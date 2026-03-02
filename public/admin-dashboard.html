@@ -465,6 +465,30 @@ function loadAllData() {
   loadUsers();
 }
 
+// Cache for IP geo lookups so we don't re-fetch on every render
+const ipGeoCache = {};
+
+async function lookupIpGeo(ip) {
+  if (!ip || ip === 'Unknown IP') return null;
+  if (ipGeoCache[ip]) return ipGeoCache[ip];
+  try {
+    const r = await fetch(`https://ip-api.com/json/${ip}?fields=country,countryCode,city,isp,query`);
+    const d = await r.json();
+    if (d.status === 'success' || d.countryCode) {
+      ipGeoCache[ip] = d;
+      return d;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function countryCodeToFlag(cc) {
+  if (!cc || cc.length !== 2) return '🌐';
+  try {
+    return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  } catch { return '🌐'; }
+}
+
 async function loadUsers() {
   try {
     const data = await apiCall('/api/admin/users');
@@ -488,50 +512,101 @@ async function loadUsers() {
       container.innerHTML = '<p class="text-center text-gray-400">No users found.</p>';
       return;
     }
-    container.innerHTML = allUsers.map(u => {
-      const isSelected = selectedIds.users.has(u.id);
-      let statusBadge = '<span class="badge-inactive">Inactive</span>';
-      let daysLeftHtml = '';
-      if (u.is_activated) {
-        if (u.activated_until) {
-          const expDate = new Date(u.activated_until);
-          const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 0) {
-            statusBadge = '<span class="badge-inactive">Expired</span>';
-            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-          } else if (diffDays <= 7) {
-            statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
-            daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
-          } else {
-            statusBadge = '<span class="badge-active">Active</span>';
-            daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
-          }
-        } else {
-          statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
-        }
-      }
-      return `
-      <div class="user-card">
-        <div class="flex items-center gap-3">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
-          <div>
-            <div class="font-bold">${u.ip_address || 'Unknown IP'}</div>
-            <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
-            ${daysLeftHtml}
-            ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          ${statusBadge}
-          ${u.is_activated ?
-            `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
-            `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
-          }
-          <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
-        </div>
-      </div>`;
-    }).join('');
+
+    // Render immediately with IPs, then enrich with geo
+    renderUsers(allUsers, {});
+
+    // Batch geo lookups (max 45/min free tier — stagger slightly)
+    const ipsToLookup = [...new Set(allUsers.map(u => u.ip_address).filter(ip => ip && !ipGeoCache[ip]))];
+    let delay = 0;
+    for (const ip of ipsToLookup) {
+      setTimeout(async () => {
+        await lookupIpGeo(ip);
+        // Re-render after each batch of lookups to show flags progressively
+        renderUsers(allUsers, ipGeoCache);
+      }, delay);
+      delay += 50; // 50ms between requests
+    }
+
   } catch (e) { console.error(e); alert('Failed to load users: ' + e.message); }
+}
+
+function renderUsers(users, geoCache) {
+  const container = document.getElementById('usersContainer');
+  container.innerHTML = users.map(u => {
+    const isSelected = selectedIds.users.has(u.id);
+    let statusBadge = '<span class="badge-inactive">Inactive</span>';
+    let daysLeftHtml = '';
+    if (u.is_activated) {
+      if (u.activated_until) {
+        const expDate = new Date(u.activated_until);
+        const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) {
+          statusBadge = '<span class="badge-inactive">Expired</span>';
+          daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+        } else if (diffDays <= 7) {
+          statusBadge = '<span class="badge-expiring">Expiring Soon</span>';
+          daysLeftHtml = `<div class="text-xs text-orange-400 font-bold">${diffDays} days left</div>`;
+        } else {
+          statusBadge = '<span class="badge-active">Active</span>';
+          daysLeftHtml = `<div class="text-xs text-green-400">${diffDays} days left</div>`;
+        }
+      } else {
+        statusBadge = '<span class="badge-active">Active (Indefinite)</span>';
+      }
+    }
+
+    const geo = geoCache[u.ip_address];
+    const flag = geo ? countryCodeToFlag(geo.countryCode) : '⏳';
+    const location = geo ? `${geo.city ? geo.city + ', ' : ''}${geo.country || ''}` : (u.ip_address ? 'Looking up...' : '');
+    const ispType = geo?.isp || '';
+    const isBot = /amazon|google|microsoft|digitalocean|cloudflare|linode|hetzner|ovh|vultr|datacenter|hosting|server|cloud|stackpath|fastly|akamai/i.test(ispType);
+    const botBadge = isBot ? '<span style="background:#7f1d1d;color:#fca5a5;font-size:0.65rem;padding:1px 6px;border-radius:99px;font-weight:700;margin-left:4px;">🤖 BOT/DC</span>' : (ispType ? '<span style="background:#0f2d1a;color:#86efac;font-size:0.65rem;padding:1px 6px;border-radius:99px;font-weight:700;margin-left:4px;">👤 REAL</span>' : '');
+    const ispHtml = ispType ? `<div class="text-xs" style="color:#6b7280;">${ispType} ${botBadge}</div>` : '';
+    const locationHtml = location ? `<div class="text-xs" style="color:#9ca3af;">${flag} ${location}</div>` : '';
+
+    // Scan activity
+    const scanCount = parseInt(u.scan_count) || 0;
+    const lastUrl = u.last_scanned_url || null;
+    const lastScore = u.last_scan_score || null;
+    const lastScanDate = u.last_scan_at ? new Date(u.last_scan_at).toLocaleDateString() : null;
+    const scoreColor = lastScore >= 70 ? '#4ade80' : lastScore >= 50 ? '#fbbf24' : '#f87171';
+    const scanBadge = scanCount > 0
+      ? `<div style="margin-top:5px;padding:5px 10px;background:#0f172a;border:1px solid #1e293b;border-radius:7px;max-width:340px;">
+          <span style="font-size:0.7rem;color:#a78bfa;font-weight:700;">🔍 ${scanCount} scan${scanCount>1?'s':''}</span>
+          ${lastUrl ? `<span style="font-size:0.7rem;color:#60a5fa;margin-left:6px;">· <a href="${lastUrl}" target="_blank" style="color:#60a5fa;text-decoration:underline;">${lastUrl.replace('https://','').replace('http://','').replace('www.','').substring(0,35)}${lastUrl.length>40?'...':''}</a></span>` : ''}
+          ${lastScore !== null ? `<span style="font-size:0.7rem;font-weight:700;color:${scoreColor};margin-left:6px;">Score: ${lastScore}</span>` : ''}
+          ${lastScanDate ? `<span style="font-size:0.68rem;color:#6b7280;margin-left:6px;">${lastScanDate}</span>` : ''}
+        </div>`
+      : `<div style="margin-top:4px;"><span style="font-size:0.68rem;color:#4b5563;font-style:italic;">No scans yet</span></div>`;
+
+    return `
+    <div class="user-card" style="${isBot ? 'opacity:0.6;' : ''}">
+      <div class="flex items-center gap-3" style="flex:1;">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('users', '${u.id}')">
+        <div style="font-size:2rem;line-height:1;min-width:36px;text-align:center;">${flag}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="font-bold" style="font-family:monospace;font-size:0.9rem;">${u.ip_address || 'Unknown IP'}</span>
+          </div>
+          ${locationHtml}
+          ${ispHtml}
+          <div class="text-xs text-gray-400">ID: ${u.id.substring(0,8)}... | Created: ${new Date(u.created_at).toLocaleDateString()}</div>
+          ${daysLeftHtml}
+          ${u.activated_until ? `<div class="text-xs text-gray-500">Expires: ${new Date(u.activated_until).toLocaleDateString()}</div>` : ''}
+          ${scanBadge}
+        </div>
+      </div>
+      <div class="flex items-center gap-2" style="flex-shrink:0;">
+        ${statusBadge}
+        ${u.is_activated ?
+          `<button onclick="extendUserAccess('${u.id}')" class="text-blue-400 hover:text-blue-300 text-xs" title="Extend Access"><i class="fas fa-clock"></i> Extend</button>` :
+          `<button onclick="activateSingleUser('${u.id}')" class="text-green-400 hover:text-green-300 text-xs" title="Activate"><i class="fas fa-check"></i> Activate</button>`
+        }
+        <button onclick="openMessageModal('single', '${u.id}')" class="text-blue-400 hover:text-blue-300" title="Message"><i class="fas fa-envelope"></i></button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function activateSingleUser(id) {
@@ -1325,9 +1400,53 @@ async function generateReport(scan) {
       <div class="flex gap-2 flex-wrap">
         <button onclick="loadScanLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
         <button id="exportScanBtn" onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2">⬇ Export CSV</button>
+        <button onclick="pushToInstantly()" id="instantlyPushBtn" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0f4c8a,#1d6cc8);color:white;border:none;">⚡ Push to Instantly</button>
         <button onclick="bulkDeleteScans()" class="btn btn-danger text-sm px-4 py-2"><i class="fas fa-trash mr-1"></i> Delete selected</button>
       </div>
     </div>
+
+    <!-- ── INSTANTLY SETTINGS PANEL ────────────────────────────── -->
+    <div id="instantlyPanel" style="background:#0a1628;border:1px solid #1d4ed8;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1rem;font-weight:800;color:#60a5fa;">⚡ Instantly.ai</span>
+          <span id="instantlyStatus" style="font-size:0.7rem;padding:2px 8px;border-radius:99px;background:#1e3a5f;color:#93c5fd;">not connected</span>
+        </div>
+        <button onclick="toggleInstantlyPanel()" style="background:transparent;border:none;color:#60a5fa;cursor:pointer;font-size:0.78rem;">✕ close</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:0.72rem;font-weight:700;color:#93c5fd;margin-bottom:4px;">🔑 API Key</label>
+          <input type="password" id="instantlyApiKey" placeholder="ee803174-c07e-49fc-ace8..."
+            style="width:100%;padding:8px 10px;background:#111827;border:1px solid #1e40af;border-radius:7px;color:#e5e7eb;font-size:0.82rem;"
+            oninput="localStorage.setItem('instantlyApiKey', this.value)">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.72rem;font-weight:700;color:#93c5fd;margin-bottom:4px;">📋 Campaign</label>
+          <div style="display:flex;gap:6px;">
+            <select id="instantlyCampaignId" style="flex:1;padding:8px 10px;background:#111827;border:1px solid #1e40af;border-radius:7px;color:#e5e7eb;font-size:0.82rem;"
+              onchange="localStorage.setItem('instantlyCampaignId', this.value); localStorage.setItem('instantlyCampaignName', this.options[this.selectedIndex]?.text || '')">
+              <option value="">— Select campaign —</option>
+            </select>
+            <button onclick="loadInstantlyCampaigns()" style="padding:8px 12px;background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:7px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+              🔄 Load
+            </button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;color:#93c5fd;">
+          <input type="checkbox" id="instantlySkipNoEmail" checked style="width:14px;height:14px;">
+          Skip leads without email
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;color:#93c5fd;">
+          <input type="checkbox" id="instantlyVerify" style="width:14px;height:14px;">
+          Verify emails (0.25 credits/lead)
+        </label>
+        <div id="instantlyFeedback" style="font-size:0.78rem;color:#60a5fa;margin-left:auto;"></div>
+      </div>
+    </div>
+    <div id="instantlyResultBox" style="display:none;background:#0a1628;border:1px solid #1d4ed8;border-radius:10px;padding:14px 18px;margin-bottom:14px;"></div>
 
     <!-- Score tier filter buttons -->
     <input type="hidden" id="activeTier" value="">
@@ -2221,6 +2340,291 @@ async function bulkDeleteScans() {
     loadScanLog();
   } catch(e) { alert('❌ ' + e.message); }
 }
+
+// ══════════════════════════════════════════════════════════════
+// ⚡  INSTANTLY.AI INTEGRATION
+// ══════════════════════════════════════════════════════════════
+
+// Proxy through server to avoid CORS
+const INSTANTLY_PROXY = '';
+
+function getInstantlyKey() {
+  return document.getElementById('instantlyApiKey')?.value.trim()
+    || localStorage.getItem('instantlyApiKey') || '';
+}
+
+function setInstantlyStatus(msg, color = '#60a5fa') {
+  const el = document.getElementById('instantlyStatus');
+  const fb = document.getElementById('instantlyFeedback');
+  if (el) { el.textContent = msg; el.style.color = color; }
+  if (fb) fb.textContent = '';
+}
+
+// Toggle panel visibility + init saved values
+function toggleInstantlyPanel() {
+  const panel = document.getElementById('instantlyPanel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // Load saved settings
+    const savedKey = localStorage.getItem('instantlyApiKey') || '';
+    const savedCamp = localStorage.getItem('instantlyCampaignId') || '';
+    const savedCampName = localStorage.getItem('instantlyCampaignName') || '';
+    document.getElementById('instantlyApiKey').value = savedKey;
+    if (savedKey) {
+      loadInstantlyCampaigns(savedCamp, savedCampName);
+    }
+  }
+}
+
+// Override switchTab to open Instantly panel when scanlog opens
+const _origSwitchTab = switchTab;
+window.switchTab = function(tab) {
+  _origSwitchTab(tab);
+  if (tab === 'scanlog') {
+    const panel = document.getElementById('instantlyPanel');
+    const savedKey = localStorage.getItem('instantlyApiKey') || 'ee803174-c07e-49fc-ace8-159efcfd0f33:jnjayRUxmMBX';
+    if (savedKey && panel && panel.style.display === 'none') {
+      panel.style.display = 'block';
+      document.getElementById('instantlyApiKey').value = savedKey;
+      const savedCamp = localStorage.getItem('instantlyCampaignId') || '';
+      const savedCampName = localStorage.getItem('instantlyCampaignName') || '';
+      loadInstantlyCampaigns(savedCamp, savedCampName);
+    }
+  }
+};
+
+// Load campaigns from Instantly API
+async function loadInstantlyCampaigns(preselectId = '', preselectName = '') {
+  const key = getInstantlyKey();
+  if (!key) { setInstantlyStatus('❌ add API key', '#f87171'); return; }
+
+  const fb = document.getElementById('instantlyFeedback');
+  if (fb) fb.textContent = 'Loading campaigns...';
+  setInstantlyStatus('connecting...', '#fbbf24');
+
+  try {
+    const res = await fetch('/api/instantly/campaigns', {
+      headers: { 
+        'x-admin-key': currentAdminId,
+        'x-instantly-key': key,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to load campaigns');
+    const campaigns = data.campaigns || [];
+
+    const sel = document.getElementById('instantlyCampaignId');
+    sel.innerHTML = '<option value="">— Select campaign —</option>';
+    campaigns.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name || c.id;
+      sel.appendChild(opt);
+    });
+
+    if (preselectId) {
+      sel.value = preselectId;
+      if (!sel.value) {
+        // Campaign not found, add it
+        const opt = document.createElement('option');
+        opt.value = preselectId;
+        opt.textContent = preselectName || preselectId;
+        sel.appendChild(opt);
+        sel.value = preselectId;
+      }
+    }
+
+    setInstantlyStatus(`✅ ${campaigns.length} campaigns`, '#4ade80');
+    if (fb) fb.textContent = '';
+  } catch (e) {
+    setInstantlyStatus('❌ ' + e.message, '#f87171');
+    if (fb) fb.textContent = 'Check API key and try again';
+    console.error('Instantly API error:', e);
+  }
+}
+
+// Main push function
+async function pushToInstantly() {
+  const key = getInstantlyKey();
+  if (!key) {
+    document.getElementById('instantlyPanel').style.display = 'block';
+    document.getElementById('instantlyApiKey').value = 'ee803174-c07e-49fc-ace8-159efcfd0f33:jnjayRUxmMBX';
+    localStorage.setItem('instantlyApiKey', 'ee803174-c07e-49fc-ace8-159efcfd0f33:jnjayRUxmMBX');
+    alert('✅ API key loaded. Select a campaign, then push again.');
+    loadInstantlyCampaigns();
+    return;
+  }
+
+  const campaignId = document.getElementById('instantlyCampaignId')?.value;
+  if (!campaignId) {
+    document.getElementById('instantlyPanel').style.display = 'block';
+    alert('❌ Select a campaign first in the Instantly panel above.');
+    return;
+  }
+
+  if (selectedScanIds.size === 0) {
+    alert('❌ Select leads first using the checkboxes.');
+    return;
+  }
+
+  const skipNoEmail = document.getElementById('instantlySkipNoEmail')?.checked ?? true;
+  const verifyEmails = document.getElementById('instantlyVerify')?.checked ?? false;
+
+  // Get selected leads
+  let leads = allScanLogs.filter(s => selectedScanIds.has(String(s.id)));
+
+  // Filter out leads without email if option set
+  const withEmail = leads.filter(s => s.email_found && s.email_found.includes('@'));
+  const skippedNoEmail = leads.length - withEmail.length;
+  if (skipNoEmail) leads = withEmail;
+
+  if (leads.length === 0) {
+    alert(`❌ No leads with valid emails to push.\n${skippedNoEmail} skipped (no email found).`);
+    return;
+  }
+
+  const btn = document.getElementById('instantlyPushBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Pushing...'; }
+
+  const resultBox = document.getElementById('instantlyResultBox');
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:#60a5fa;"><div style="width:16px;height:16px;border:3px solid #1d4ed8;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div> Pushing ${leads.length} leads to Instantly...</div>`;
+
+  // Map to Instantly lead format
+  const instantlyLeads = leads.map(s => {
+    let firstName = '';
+    if (s.business_name) {
+      firstName = s.business_name.split(' ')[0];
+      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+    } else if (s.email_found) {
+      firstName = s.email_found.split('@')[0].split('.')[0];
+      firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+    }
+
+    let topIssue = '';
+    try {
+      const recs = JSON.parse(s.recommendations || '[]');
+      topIssue = typeof recs[0] === 'string' ? recs[0] : (recs[0]?.title || '');
+    } catch {}
+
+    const fullReportUrl = s.report_url
+      ? (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url)
+      : '';
+
+    return {
+      email: s.email_found,
+      first_name: firstName,
+      company_name: s.business_name || '',
+      website: s.business_url || '',
+      personalization: topIssue ? `I noticed your biggest SEO issue is: ${topIssue}` : '',
+      custom_variables: {
+        score: String(s.score || ''),
+        top_issue: topIssue,
+        city: s.city || '',
+        country: s.country || '',
+        report_url: fullReportUrl,
+        scan_date: new Date(s.created_at).toLocaleDateString('en-GB')
+      }
+    };
+  });
+
+  try {
+    // Batch in chunks of 100 (Instantly limit)
+    const chunkSize = 100;
+    let pushed = 0, errors = 0, duplicates = 0;
+
+    for (let i = 0; i < instantlyLeads.length; i += chunkSize) {
+      const chunk = instantlyLeads.slice(i, i + chunkSize);
+      resultBox.innerHTML = `<div style="color:#60a5fa;font-size:0.85rem;">⏳ Pushing batch ${Math.ceil(i/chunkSize)+1}/${Math.ceil(instantlyLeads.length/chunkSize)} (${i+1}–${Math.min(i+chunkSize, instantlyLeads.length)} of ${instantlyLeads.length})...</div>`;
+
+      const res = await fetch('/api/instantly/push', {
+        method: 'POST',
+        headers: {
+          'x-admin-key': currentAdminId,
+          'x-instantly-key': key,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          campaign_id: campaignId,
+          leads: chunk,
+          skip_if_in_workspace: true,
+          verify_leads: verifyEmails
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const errMsg = data?.error || data?.message || `HTTP ${res.status}`;
+        if (errMsg.toLowerCase().includes('duplicate') || errMsg.toLowerCase().includes('exists')) {
+          duplicates += chunk.length;
+        } else {
+          throw new Error(errMsg);
+        }
+      } else {
+        pushed += data.added || chunk.length;
+        duplicates += data.duplicates || 0;
+      }
+    }
+
+    const campName = document.getElementById('instantlyCampaignId')?.selectedOptions?.[0]?.text || campaignId;
+
+    resultBox.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;">
+        <div style="background:#0f2d1a;border:1px solid #166534;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:900;color:#4ade80;">${pushed}</div>
+          <div style="font-size:0.7rem;color:#86efac;">✅ Pushed</div>
+        </div>
+        <div style="background:#1e3a5f;border:1px solid #1e40af;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:900;color:#60a5fa;">${leads.length}</div>
+          <div style="font-size:0.7rem;color:#93c5fd;">📋 Total selected</div>
+        </div>
+        <div style="background:#1c1917;border:1px solid #44403c;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:900;color:#9ca3af;">${duplicates}</div>
+          <div style="font-size:0.7rem;color:#d1d5db;">⏭ Duplicates skipped</div>
+        </div>
+        ${skippedNoEmail > 0 ? `<div style="background:#2d1515;border:1px solid #7f1d1d;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:900;color:#f87171;">${skippedNoEmail}</div>
+          <div style="font-size:0.7rem;color:#fca5a5;">✉ No email</div>
+        </div>` : ''}
+      </div>
+      <p style="font-size:0.82rem;color:#4ade80;font-weight:700;">
+        ⚡ ${pushed} leads pushed to campaign: <span style="color:#93c5fd;">${campName}</span>
+      </p>
+      <p style="font-size:0.75rem;color:#6b7280;margin-top:4px;">
+        Custom variables sent: {{score}}, {{top_issue}}, {{city}}, {{country}}, {{report_url}}, {{scan_date}}
+      </p>`;
+
+    setInstantlyStatus(`✅ ${pushed} pushed`, '#4ade80');
+
+  } catch (e) {
+    resultBox.innerHTML = `
+      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:14px;">
+        <p style="color:#f87171;font-weight:700;margin-bottom:4px;">❌ Push failed</p>
+        <p style="color:#fca5a5;font-size:0.85rem;">${e.message}</p>
+        <p style="color:#9ca3af;font-size:0.78rem;margin-top:8px;">
+          If you see a CORS error, add the server proxy endpoints to your server.js (see README).
+        </p>
+      </div>`;
+    console.error('Instantly push error:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Push to Instantly'; }
+  }
+}
+
+// Auto-init: pre-fill API key on load
+(function initInstantly() {
+  const defaultKey = 'ee803174-c07e-49fc-ace8-159efcfd0f33:jnjayRUxmMBX';
+  if (!localStorage.getItem('instantlyApiKey')) {
+    localStorage.setItem('instantlyApiKey', defaultKey);
+  }
+})();
 
 </script>
 
