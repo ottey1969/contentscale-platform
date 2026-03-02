@@ -1219,9 +1219,22 @@ function renderScanLog(scans) {
       ? '<button onclick=\'openOrCopyReport("' + (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url) + '",this)\' style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">🔗 Report</button>'
       : '<button onclick=\'generateReport(' + JSON.stringify(s).replace(/'/g, "\\'") + ')\' style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Generate</button>';
 
+        // Source + warm lead detection
+    const src = s.source || 'single';
+    const isWarmLead = src === 'single' && s.user_id && s.user_id !== currentAdminId && !s.user_id.startsWith('batch_job_');
+    const isServerJob = s.user_id && s.user_id.startsWith('batch_job_');
+    const sourceBadge = isWarmLead
+      ? '<span style="background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;border-radius:99px;padding:2px 7px;font-size:0.68rem;font-weight:800;white-space:nowrap;animation:pulse 2s infinite;">🔥 Warm Lead</span>'
+      : src === 'discover' || isServerJob
+      ? '<span style="background:#1c0a00;color:#f59e0b;border:1px solid #92400e;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">🚀 Apify</span>'
+      : src === 'bulk'
+      ? '<span style="background:#0f172a;color:#60a5fa;border:1px solid #1e40af;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Bulk</span>'
+      : '<span style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">🔗 Manual</span>';
+
     return '<tr style="border-bottom:1px solid #1f2937;" onmouseover="this.style.background=\'#111827\'" onmouseout="this.style.background=\'transparent\'">'
       + '<td class="py-2 pr-2"><input type="checkbox" class="scan-row-check" data-id="' + s.id + '" ' + (isChecked?'checked':'') + ' onchange="toggleScanRow(' + s.id + ',this.checked)" style="width:16px;height:16px;cursor:pointer;"></td>'
       + '<td class="py-2 pr-3" style="color:#9ca3af;white-space:nowrap;font-size:0.72rem;">' + dateStr + '</td>'
+      + '<td class="py-2 pr-2" style="white-space:nowrap;">' + sourceBadge + '</td>'
       + '<td class="py-2 pr-3" style="max-width:260px;"><div style="font-weight:600;color:#e5e7eb;">' + (s.business_name || '<span style="color:#6b7280;font-style:italic;">No name</span>') + '</div><div>' + urlDisplay + '</div></td>'
       + '<td class="py-2 pr-3">' + score + '</td>'
       + '<td class="py-2 pr-3" style="color:#d1d5db;font-size:0.78rem;">' + (s.city || '—') + '</td>'
@@ -1503,6 +1516,7 @@ async function generateReport(scan) {
           <tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;">
             <th class="pb-2 pr-2" style="width:30px;"></th>
             <th class="pb-2 pr-3">Date</th>
+            <th class="pb-2 pr-2">Source</th>
             <th class="pb-2 pr-3">Business & URL</th>
             <th class="pb-2 pr-3">Score</th>
             <th class="pb-2 pr-3">City</th>
@@ -1700,11 +1714,20 @@ async function generateReport(scan) {
       <!-- Combo counter -->
       <div id="adminBatchComboCount" style="font-size:0.82rem;color:#a78bfa;margin-bottom:16px;"></div>
 
-      <!-- Run button -->
-      <button onclick="adminRunBatch()" id="adminBatchBtn"
-        style="background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;border-radius:10px;padding:14px 32px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;">
-        🚀 Start Batch Find Leads
-      </button>
+      <!-- Run buttons: browser mode vs server background mode -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
+        <button onclick="adminRunBatch()" id="adminBatchBtn"
+          style="background:linear-gradient(135deg,#7e22ce,#4c1d95);color:white;border:none;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">
+          ▶️ Run In Browser
+        </button>
+        <button onclick="adminStartServerJob()" id="adminServerJobBtn"
+          style="background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">
+          ⚡ Run On Server (PC-off)
+        </button>
+      </div>
+      <p style="font-size:0.72rem;color:#6b7280;text-align:center;margin-bottom:12px;">
+        <strong style="color:#f59e0b;">Run On Server</strong> = Railway doet het werk, je PC mag uit ✅
+      </p>
 
       <!-- Batch progress -->
       <div id="adminBatchProgress" style="display:none;margin-top:20px;">
@@ -1721,9 +1744,20 @@ async function generateReport(scan) {
       <div id="adminBatchResults" style="display:none;margin-top:20px;"></div>
     </div><!-- end adminModeBatch -->
 
+  <!-- ⚙️ Background Jobs Monitor — always visible below batch panel -->
+  <div id="jobsMonitorPanel" style="margin-top:24px;background:#030712;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <h4 style="font-size:1rem;font-weight:800;color:#f9fafb;margin:0;">⚙️ Background Jobs <span style="font-size:0.72rem;color:#6b7280;font-weight:400;">(loopt op Railway — PC mag uit)</span></h4>
+      <button onclick="loadJobsList()" style="background:#111827;color:#9ca3af;border:1px solid #374151;border-radius:7px;padding:5px 12px;font-size:0.75rem;cursor:pointer;">🔄 Refresh</button>
+    </div>
+    <div id="jobsListContainer">
+      <p style="color:#6b7280;font-size:0.85rem;text-align:center;padding:20px;">Klik Refresh om jobs te laden.</p>
+    </div>
+  </div>
+
   </div>
 </div>
-<style>@keyframes spin{to{transform:rotate(360deg);}}
+<style>@keyframes spin{to{transform:rotate(360deg);}}@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
 .scan-tier-btn.active { outline: 2px solid white; outline-offset: 1px; }</style>
 
 <script>
@@ -1934,6 +1968,167 @@ async function adminRunBatch() {
   } finally {
     btn.disabled = false; btn.textContent = '🚀 Start Batch Find Leads';
   }
+}
+
+// ── Server-side background batch job ──────────────────────────
+async function adminStartServerJob() {
+  const apifyToken = document.getElementById('adminApifyToken').value.trim() || localStorage.getItem('apifyToken');
+  if (!apifyToken) { alert('❌ Voer je Apify token in.'); return; }
+  localStorage.setItem('apifyToken', apifyToken);
+
+  const niches = document.getElementById('adminBatchNiches').value.trim();
+  const cities = document.getElementById('adminBatchCities').value.trim();
+  const countryEl = document.getElementById('adminBatchCountrySelect');
+  const country = countryEl.value === 'Other'
+    ? document.getElementById('adminBatchCountry').value.trim()
+    : countryEl.value;
+  const maxResults = parseInt(document.getElementById('adminBatchMaxResults').value) || 50;
+  const websiteOnly = document.getElementById('adminBatchWebsiteOnly').checked;
+
+  if (!niches) { alert('❌ Voer minimaal één niche in.'); return; }
+  if (!cities) { alert('❌ Voer minimaal één stad in.'); return; }
+
+  const btn = document.getElementById('adminServerJobBtn');
+  btn.disabled = true; btn.textContent = '⏳ Submitting...';
+
+  try {
+    const res = await apiCall('/api/admin/batch-job/start', 'POST', {
+      niches, cities, country, max_results: maxResults, website_only: websiteOnly, apify_token: apifyToken
+    });
+    if (!res.success) throw new Error(res.error || 'Failed');
+    const jobId = res.job_id;
+    alert(`✅ Job gestart op Railway server!\nJob ID: ${jobId.substring(0,8)}...\n\nJe PC mag uit — job loopt door.\nKijk in "⚙️ Background Jobs" voor status.`);
+    // Switch to jobs monitor
+    showJobsMonitor();
+    pollJobStatus(jobId);
+  } catch(e) {
+    alert('❌ ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '⚡ Run On Server (PC-off)';
+  }
+}
+
+// ── Jobs Monitor ────────────────────────────────────────────────
+let jobPollTimers = {};
+
+function showJobsMonitor() {
+  const panel = document.getElementById('jobsMonitorPanel');
+  if (panel) { panel.style.display = 'block'; panel.scrollIntoView({ behavior: 'smooth' }); }
+  loadJobsList();
+}
+
+async function loadJobsList() {
+  const container = document.getElementById('jobsListContainer');
+  if (!container) return;
+  try {
+    const res = await apiCall('/api/admin/batch-jobs');
+    const jobs = res.jobs || [];
+    if (!jobs.length) {
+      container.innerHTML = '<p style="color:#6b7280;font-size:0.85rem;text-align:center;padding:20px;">Geen jobs gevonden. Start een "Run On Server" job.</p>';
+      return;
+    }
+    container.innerHTML = jobs.map(job => renderJobCard(job)).join('');
+  } catch(e) {
+    container.innerHTML = '<p style="color:#f87171;">Fout bij laden jobs.</p>';
+  }
+}
+
+function renderJobCard(job) {
+  const nicheList = job.niches.split('\n').filter(n=>n).join(', ');
+  const cityList  = job.cities.split('\n').filter(c=>c).join(', ');
+  const statusColor = {
+    queued: '#a78bfa', running: '#f59e0b', completed: '#4ade80',
+    failed: '#f87171', cancelled: '#6b7280'
+  }[job.status] || '#9ca3af';
+  const statusIcon = {
+    queued: '⏳', running: '🔄', completed: '✅', failed: '❌', cancelled: '🚫'
+  }[job.status] || '•';
+  const pct = job.progress || 0;
+  const createdAt = new Date(job.created_at).toLocaleString('nl-NL', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const isRunning = job.status === 'running' || job.status === 'queued';
+
+  return `<div id="job_${job.id}" style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${statusColor};border-radius:12px;padding:16px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+      <div>
+        <span style="font-size:0.75rem;font-family:monospace;color:#6b7280;">${job.id.substring(0,8)}...</span>
+        <span style="margin-left:8px;background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;border-radius:99px;padding:2px 8px;font-size:0.7rem;font-weight:700;">${statusIcon} ${job.status.toUpperCase()}</span>
+      </div>
+      <span style="font-size:0.72rem;color:#6b7280;">${createdAt}</span>
+    </div>
+    <div style="font-size:0.8rem;color:#d1d5db;margin-bottom:6px;">
+      <strong>Niches:</strong> ${nicheList} &nbsp;·&nbsp; <strong>Steden:</strong> ${cityList} &nbsp;·&nbsp; <strong>Land:</strong> ${job.country}
+    </div>
+    <!-- Progress bar -->
+    <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;margin-bottom:6px;">
+      <div style="height:100%;background:linear-gradient(90deg,${statusColor},${statusColor}aa);border-radius:99px;width:${pct}%;transition:width 0.5s;"></div>
+    </div>
+    <div style="font-size:0.78rem;color:#9ca3af;margin-bottom:10px;">${job.progress_text || '...'} (${pct}%)</div>
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:10px;">
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:#4ade80;">${job.scanned||0}</div>
+        <div style="font-size:0.65rem;color:#6b7280;">Gescand</div>
+      </div>
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:#a3e635;">${job.score_high||0}</div>
+        <div style="font-size:0.65rem;color:#6b7280;">85+ Elite</div>
+      </div>
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:#60a5fa;">${job.score_good||0}</div>
+        <div style="font-size:0.65rem;color:#6b7280;">70–84 Good</div>
+      </div>
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:#f87171;">${job.score_low||0}</div>
+        <div style="font-size:0.65rem;color:#6b7280;">&lt;70 Low</div>
+      </div>
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;color:#9ca3af;">${job.skipped||0}</div>
+        <div style="font-size:0.65rem;color:#6b7280;">Skip/Dedup</div>
+      </div>
+    </div>
+    ${job.error_message ? `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:6px;padding:8px;font-size:0.78rem;color:#fca5a5;margin-bottom:8px;">❌ ${job.error_message}</div>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${isRunning ? `<button onclick="cancelJob('${job.id}')" style="background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🚫 Cancel</button>` : ''}
+      ${job.status === 'completed' ? `<button onclick="loadScanLogWithFilter()" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">📊 Scan Log →</button>` : ''}
+      ${isRunning ? `<button onclick="pollJobStatus('${job.id}')" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>` : ''}
+    </div>
+  </div>`;
+}
+
+async function pollJobStatus(jobId) {
+  // Poll every 5 seconds while running
+  if (jobPollTimers[jobId]) clearInterval(jobPollTimers[jobId]);
+  jobPollTimers[jobId] = setInterval(async () => {
+    try {
+      const res = await apiCall(`/api/admin/batch-job/${jobId}`);
+      const job = res.job;
+      if (!job) return;
+      // Update just this job card if visible
+      const card = document.getElementById('job_' + jobId);
+      if (card) card.outerHTML = renderJobCard(job);
+      // Stop polling if done
+      if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+        clearInterval(jobPollTimers[jobId]);
+        delete jobPollTimers[jobId];
+      }
+    } catch(e) {}
+  }, 5000);
+}
+
+async function cancelJob(jobId) {
+  if (!confirm('Job cancellen?')) return;
+  try {
+    await apiCall(`/api/admin/batch-job/${jobId}`, 'DELETE');
+    loadJobsList();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function loadScanLogWithFilter() {
+  switchTab('scanlog');
+  setTimeout(() => {
+    const apifyBtn = document.querySelector('[onclick*="filterBySource"]');
+    if (apifyBtn) apifyBtn.click();
+  }, 500);
 }
 
 async function adminRunScan() {
