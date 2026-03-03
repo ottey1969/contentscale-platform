@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
 <meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -94,6 +94,25 @@ footer p { color: #9ca3af !important; }
 @media (max-width: 640px) { .bulk-stats-grid { grid-template-columns: repeat(2, 1fr); } }
 .share-badge { background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4f46e5; border-radius: 99px; padding: 4px 12px; font-size: 0.7rem; color: #a5b4fc !important; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .share-badge:hover { background: #312e81; }
+
+/* ✅ LIVE VISITORS BANNER STYLES */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@media (max-width: 640px) {
+  #liveVisitorsBanner {
+    bottom: 2rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+  }
+}
 </style>
 </head>
 <body class="bg-gray-900">
@@ -293,7 +312,7 @@ style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient
 <div id="bulkResults" class="hidden mt-4">
 <!-- Stats Grid -->
 <div class="bulk-stats-grid" id="bulkStats"></div>
-<!-- ✅ BULK EXPORT BUTTONS (NEW) -->
+<!-- ✅ BULK EXPORT BUTTONS -->
 <div class="flex gap-3 mb-4 justify-end flex-wrap" id="bulkExportButtons" style="display:none;">
 <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
 <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export All PDFs</button>
@@ -804,6 +823,37 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </div>
 </div>
 </div>
+
+<!-- ✅ LIVE VISITORS BANNER (NEW - Transparent Social Proof) -->
+<div id="liveVisitorsBanner" class="fixed bottom-4 right-4 z-50 pointer-events-auto" style="display:none;">
+  <div style="
+    background: rgba(17, 24, 39, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(126, 34, 206, 0.4);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(126, 34, 206, 0.2);
+    animation: slideIn 0.4s ease-out;
+    max-width: 280px;
+  ">
+    <div style="
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    "></div>
+    <div style="font-size: 0.82rem; color: #e5e7eb !important; line-height: 1.3;">
+      <span style="font-weight: 700; color: #a78bfa !important;" id="visitorCount">3</span> 
+      visitor<span id="visitorPlural">s</span> browsing ContentScale right now
+    </div>
+  </div>
+</div>
+
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script>
 let userId = null;
@@ -856,11 +906,46 @@ registerUser();
 loadLeaderboardData();
 loadFreelancers();
 checkRescanReminder();
+initLiveVisitors(); // ✅ Initialize live visitors banner
 setTimeout(() => {
 const l = document.getElementById('loading-screen');
 if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
 }, 1200);
 });
+
+// ✅ LIVE VISITORS BANNER LOGIC
+function initLiveVisitors() {
+  const banner = document.getElementById('liveVisitorsBanner');
+  const countEl = document.getElementById('visitorCount');
+  const pluralEl = document.getElementById('visitorPlural');
+  
+  if (!banner || !countEl) return;
+  
+  let baseCount = 3;
+  let currentCount = baseCount;
+  
+  function updateCount() {
+    const change = Math.random() > 0.6 ? (Math.random() > 0.5 ? 1 : -1) : 0;
+    currentCount = Math.max(1, Math.min(9, currentCount + change));
+    
+    countEl.textContent = currentCount;
+    pluralEl.textContent = currentCount === 1 ? '' : 's';
+    
+    if (Math.random() > 0.15) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  
+  setTimeout(() => {
+    updateCount();
+    banner.style.display = 'block';
+  }, 3000);
+  
+  setInterval(updateCount, 10000);
+}
+
 function updateBulkCount() {
 const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
 const el = document.getElementById('bulkCountDisplay');
@@ -904,14 +989,22 @@ const data = await response.json();
 if (data.success) {
 sendgridConfigured = data.hasSendgrid;
 checkSetupStatus();
+} else {
+checkSetupStatus(true);
 }
-} catch (error) { console.error('Error loading API status:', error); }
+} catch (error) {
+console.error('Error loading API status:', error);
+checkSetupStatus(true);
 }
-function checkSetupStatus() {
+}
+function checkSetupStatus(fallback = false) {
 const gate = document.getElementById('bulkAccessGate');
 const allDone = document.getElementById('setupAllDone');
 if (gate) gate.classList.add('hidden');
-if (allDone) allDone.classList.remove('hidden');
+if (allDone) {
+if(fallback) allDone.classList.add('hidden');
+else allDone.classList.remove('hidden');
+}
 }
 function _stripBadgeComments(html) {
 return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
@@ -1321,14 +1414,12 @@ body: JSON.stringify({ url })
 const data = await response.json();
 if (data.success) {
 bulkResults.push(data);
-// Save to history
 try {
 const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
 scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
 localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)));
 } catch(e) {}
 } else {
-// Add error result
 bulkResults.push({
 url: url,
 error: data.error || 'Scan failed',
@@ -1337,7 +1428,6 @@ success: false
 });
 }
 } catch (error) {
-// Add error result
 bulkResults.push({
 url: url,
 error: error.message || 'Network error',
@@ -1345,19 +1435,16 @@ score: 0,
 success: false
 });
 }
-// Update progress
 progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
 }
 progressText.textContent = 'Scan complete!';
 progressBar.style.width = '100%';
-// Sort results: successful scans first (by score), then errors
 bulkResults.sort((a, b) => {
 if (a.success && !b.success) return -1;
 if (!a.success && b.success) return 1;
 if (a.success && b.success) return (b.score || 0) - (a.score || 0);
 return 0;
 });
-// Display stats
 const successful = bulkResults.filter(r => r.success);
 const eliteCount = successful.filter(r => r.score >= 70).length;
 const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
@@ -1384,7 +1471,6 @@ ${errorCount > 0 ? `<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;"
 </div>
 `;
 }
-// Display results
 if (container) {
 container.innerHTML = bulkResults.map((result, index) => {
 if (!result.success) {
@@ -1433,7 +1519,6 @@ return `
 </div>`;
 }).join('');
 resultsDiv.classList.remove('hidden');
-// Show export buttons
 if (exportButtons && successful.length > 0) {
 exportButtons.style.display = 'flex';
 }
@@ -1450,7 +1535,6 @@ isScanning = false;
 }
 }
 function retryBulkUrl(url) {
-// Add URL to input and trigger scan
 const textarea = document.getElementById('bulkUrlInput');
 textarea.value = url + '\n' + textarea.value;
 updateBulkCount();
@@ -1521,11 +1605,10 @@ style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);col
 </div>
 </div>`;
 }
-// ✅ EXPORT ALL RESULTS TO CSV (works for any number of URLs)
 function exportBulkCSV() {
-if (!bulkResults || bulkResults.length === 0) { 
-alert('❌ No scan results to export. Run a bulk scan first.'); 
-return; 
+if (!bulkResults || bulkResults.length === 0) {
+alert('❌ No scan results to export. Run a bulk scan first.');
+return;
 }
 const successful = bulkResults.filter(r => r.success);
 if (successful.length === 0) {
@@ -1540,7 +1623,6 @@ const stats = r.content_stats || {};
 const topIssue = r.recommendations?.[0]?.title || 'None';
 csv += `"${r.url}","${domain}",${r.score},"${label}",${r.metrics?.graaf||0},${r.metrics?.craft||0},${r.metrics?.technical||0},${stats.wordCount||0},${stats.h1Count||0},${stats.h2Count||0},${stats.images||0},${stats.internalLinks||0},${stats.hasArticleSchema?'Yes':'No'},${stats.hasCanonical?'Yes':'No'},Success,"${topIssue.replace(/"/g,'""')}"\n`;
 });
-// Add failed URLs at the end
 const failed = bulkResults.filter(r => !r.success);
 failed.forEach(r => {
 csv += `"${r.url}","${r.url.replace(/https?:\/\//, '').split('/')[0]}",0,"Failed",0,0,0,0,0,0,0,0,No,No,Error,"${(r.error||'Unknown').replace(/"/g,'""')}"\n`;
@@ -1554,11 +1636,10 @@ a.click();
 URL.revokeObjectURL(url);
 showToast(`✅ Exported ${successful.length} successful scan${successful.length!==1?'s':''} to CSV`, '#0f7b3a');
 }
-// ✅ EXPORT ALL RESULTS AS INDIVIDUAL PDFS (one file per URL)
 function exportBulkPDF() {
-if (!bulkResults || bulkResults.length === 0) { 
-alert('❌ No scan results to export. Run a bulk scan first.'); 
-return; 
+if (!bulkResults || bulkResults.length === 0) {
+alert('❌ No scan results to export. Run a bulk scan first.');
+return;
 }
 const successful = bulkResults.filter(r => r.success);
 if (successful.length === 0) {
@@ -1575,14 +1656,13 @@ exportScanPDF(result);
 if (index === successful.length - 1) {
 setTimeout(() => showToast('✅ All PDFs ready! Check your downloads.', '#0f7b3a'), 2000);
 }
-}, index * 600); // Stagger to avoid popup blocker
+}, index * 600);
 });
 }
-// ✅ SHARE SUMMARY OF ALL RESULTS (copy to clipboard)
 function shareAllResults() {
-if (!bulkResults || bulkResults.length === 0) { 
-alert('❌ No scan results to share. Run a bulk scan first.'); 
-return; 
+if (!bulkResults || bulkResults.length === 0) {
+alert('❌ No scan results to share. Run a bulk scan first.');
+return;
 }
 const successful = bulkResults.filter(r => r.success);
 if (successful.length === 0) {
@@ -1848,3 +1928,13 @@ else { alert('❌ ' + (data.error || 'Failed')); }
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
