@@ -291,8 +291,14 @@ style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient
 <p id="bulkProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
 </div>
 <div id="bulkResults" class="hidden mt-4">
-<!-- 🔧 FIX: Added missing bulkStats element -->
+<!-- Stats Grid -->
 <div class="bulk-stats-grid" id="bulkStats"></div>
+<!-- ✅ BULK EXPORT BUTTONS (NEW) -->
+<div class="flex gap-3 mb-4 justify-end flex-wrap" id="bulkExportButtons" style="display:none;">
+<button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
+<button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export All PDFs</button>
+<button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
+</div>
 <div id="bulkResultsContainer"></div>
 </div>
 </div>
@@ -1271,7 +1277,6 @@ win.document.close();
 setTimeout(() => { win.focus(); win.print(); }, 600);
 if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; }
 }
-// 🔧 FIXED: Bulk scan with null checks and proper DOM element access
 async function startBulkScan() {
 if (isScanning) {
 alert('Scan already in progress. Please wait.');
@@ -1285,14 +1290,7 @@ const progressText = document.getElementById('bulkProgressText');
 const resultsDiv = document.getElementById('bulkResults');
 const statsDiv = document.getElementById('bulkStats');
 const container = document.getElementById('bulkResultsContainer');
-
-// 🔧 CRITICAL FIX: Null checks for all DOM elements
-if (!urlInput || !button || !progress || !progressBar || !progressText || !resultsDiv || !container) {
-console.error('Bulk scan: Missing required DOM elements');
-alert('❌ Scanner interface not ready. Please refresh the page.');
-return;
-}
-
+const exportButtons = document.getElementById('bulkExportButtons');
 const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 if (allUrls.length === 0) { alert('❌ Enter at least one URL'); return; }
 if (allUrls.length > 5) {
@@ -1359,13 +1357,13 @@ if (!a.success && b.success) return 1;
 if (a.success && b.success) return (b.score || 0) - (a.score || 0);
 return 0;
 });
-// 🔧 Display stats with null check
-if (statsDiv) {
+// Display stats
 const successful = bulkResults.filter(r => r.success);
 const eliteCount = successful.filter(r => r.score >= 70).length;
 const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
 const poorCount = successful.filter(r => r.score < 50).length;
 const errorCount = bulkResults.length - successful.length;
+if (statsDiv) {
 statsDiv.innerHTML = `
 <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
 <div style="font-size:1.5rem;font-weight:900;color:#4ade80;">${eliteCount}</div>
@@ -1386,7 +1384,7 @@ ${errorCount > 0 ? `<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;"
 </div>
 `;
 }
-// 🔧 Display results with null check
+// Display results
 if (container) {
 container.innerHTML = bulkResults.map((result, index) => {
 if (!result.success) {
@@ -1435,6 +1433,10 @@ return `
 </div>`;
 }).join('');
 resultsDiv.classList.remove('hidden');
+// Show export buttons
+if (exportButtons && successful.length > 0) {
+exportButtons.style.display = 'flex';
+}
 }
 } catch (error) {
 console.error('Bulk scan error:', error);
@@ -1519,34 +1521,94 @@ style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);col
 </div>
 </div>`;
 }
+// ✅ EXPORT ALL RESULTS TO CSV (works for any number of URLs)
 function exportBulkCSV() {
-if (bulkResults.length === 0) { alert('No results to export'); return; }
-let csv = 'URL,Score,GRAAF,CRAFT,Technical,Word Count,H1 Count,H2 Count,Images,Internal Links,Has Schema,Has Canonical,Status\n';
-bulkResults.forEach(r => {
-if (!r.success) {
-csv += `"${r.url}",0,0,0,0,0,0,0,0,0,false,false,Error: ${r.error}\n`;
+if (!bulkResults || bulkResults.length === 0) { 
+alert('❌ No scan results to export. Run a bulk scan first.'); 
+return; 
+}
+const successful = bulkResults.filter(r => r.success);
+if (successful.length === 0) {
+alert('⚠️ No successful scans to export. All URLs failed to scan.');
 return;
 }
+let csv = 'URL,Domain,Score,Label,GRAAF,CRAFT,Technical,Word Count,H1,H2,Images,Links,Schema,Canonical,Status,Top Issue\n';
+successful.forEach(r => {
+const domain = r.url.replace(/https?:\/\//, '').split('/')[0];
+const label = r.score >= 95 ? 'Elite' : r.score >= 90 ? 'Excellent' : r.score >= 85 ? 'Strong' : r.score >= 80 ? 'Good' : r.score >= 75 ? 'Solid' : r.score >= 70 ? 'Qualified' : 'Needs Work';
 const stats = r.content_stats || {};
-csv += `"${r.url}",${r.score},${r.metrics?.graaf || 0},${r.metrics?.craft || 0},${r.metrics?.technical || 0},${stats.wordCount || 0},${stats.h1Count || 0},${stats.h2Count || 0},${stats.images || 0},${stats.internalLinks || 0},${stats.hasArticleSchema || false},${stats.hasCanonical || false},Success\n`;
+const topIssue = r.recommendations?.[0]?.title || 'None';
+csv += `"${r.url}","${domain}",${r.score},"${label}",${r.metrics?.graaf||0},${r.metrics?.craft||0},${r.metrics?.technical||0},${stats.wordCount||0},${stats.h1Count||0},${stats.h2Count||0},${stats.images||0},${stats.internalLinks||0},${stats.hasArticleSchema?'Yes':'No'},${stats.hasCanonical?'Yes':'No'},Success,"${topIssue.replace(/"/g,'""')}"\n`;
 });
-const blob = new Blob([csv], { type: 'text/csv' });
+// Add failed URLs at the end
+const failed = bulkResults.filter(r => !r.success);
+failed.forEach(r => {
+csv += `"${r.url}","${r.url.replace(/https?:\/\//, '').split('/')[0]}",0,"Failed",0,0,0,0,0,0,0,0,No,No,Error,"${(r.error||'Unknown').replace(/"/g,'""')}"\n`;
+});
+const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
-a.download = `contentscale-bulk-${new Date().toISOString().split('T')[0]}.csv`;
+a.download = `ContentScale_BulkExport_${new Date().toISOString().split('T')[0]}.csv`;
 a.click();
 URL.revokeObjectURL(url);
+showToast(`✅ Exported ${successful.length} successful scan${successful.length!==1?'s':''} to CSV`, '#0f7b3a');
 }
+// ✅ EXPORT ALL RESULTS AS INDIVIDUAL PDFS (one file per URL)
 function exportBulkPDF() {
-if (bulkResults.length === 0) { alert('No results to export'); return; }
+if (!bulkResults || bulkResults.length === 0) { 
+alert('❌ No scan results to export. Run a bulk scan first.'); 
+return; 
+}
 const successful = bulkResults.filter(r => r.success);
-if (successful.length === 0) { alert('No successful scans to export'); return; }
+if (successful.length === 0) {
+alert('⚠️ No successful scans to export. All URLs failed to scan.');
+return;
+}
+if (successful.length > 10) {
+if (!confirm(`📄 Exporting ${successful.length} PDFs may take a moment. Continue?`)) return;
+}
+showToast(`🔄 Generating ${successful.length} PDF${successful.length!==1?'s':''}...`, '#7e22ce');
 successful.forEach((result, index) => {
 setTimeout(() => {
 exportScanPDF(result);
-}, index * 800);
+if (index === successful.length - 1) {
+setTimeout(() => showToast('✅ All PDFs ready! Check your downloads.', '#0f7b3a'), 2000);
+}
+}, index * 600); // Stagger to avoid popup blocker
 });
+}
+// ✅ SHARE SUMMARY OF ALL RESULTS (copy to clipboard)
+function shareAllResults() {
+if (!bulkResults || bulkResults.length === 0) { 
+alert('❌ No scan results to share. Run a bulk scan first.'); 
+return; 
+}
+const successful = bulkResults.filter(r => r.success);
+if (successful.length === 0) {
+alert('⚠️ No successful results to share.');
+return;
+}
+const summary = `📊 ContentScale Bulk Scan Summary
+🗓️ ${new Date().toLocaleDateString()}
+─────────────────────
+✅ ${successful.length} URLs scanned
+🏆 ${successful.filter(r=>r.score>=70).length} Elite (70+)
+⭐ ${successful.filter(r=>r.score>=50&&r.score<70).length} Good (50-69)
+⚠️ ${successful.filter(r=>r.score<50).length} Needs Work (<50)
+Top Performers:
+${successful.slice(0,5).map((r,i)=>`${i+1}. ${r.url.replace(/https?:\/\//,'').split('/')[0]} — ${r.score}/100`).join('\n')}
+─────────────────────
+Generated with ContentScale · app.contentscale.site`;
+if (navigator.share) {
+navigator.share({
+title: 'ContentScale Bulk Scan Results',
+text: summary,
+url: 'https://app.contentscale.site'
+}).catch(() => fallbackCopy(summary));
+} else {
+fallbackCopy(summary);
+}
 }
 function doRescan() {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
