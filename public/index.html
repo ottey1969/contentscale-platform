@@ -427,15 +427,12 @@ footer p { color: #9ca3af !important; }
 
             <!-- ACTIVE STATUS BANNER — shown when access is confirmed by server -->
             <div id="setupAllDone" class="hidden mb-5 rounded-xl p-4" style="background:rgba(16,185,129,0.08);border:1px solid #065f46;">
-              <div class="flex items-center justify-between flex-wrap gap-3">
-                <div class="flex items-center gap-3">
-                  <span style="font-size:1.5rem;">✅</span>
-                  <div>
-                    <div class="font-bold" style="color:#34d399!important;">Bulk scanning active</div>
-                    <div id="dailyLimitBadge" class="text-xs mt-1" style="color:#6b7280!important;">Loading usage...</div>
-                  </div>
+              <div class="flex items-center gap-3">
+                <span style="font-size:1.5rem;">✅</span>
+                <div>
+                  <div class="font-bold" style="color:#34d399!important;">Bulk scanning ready</div>
+                  <div class="text-xs mt-1" style="color:#6b7280!important;">Free: max 5 URLs &middot; Pro: unlimited via <a href="https://wa.me/31628073996" style="color:#a78bfa;">WhatsApp</a></div>
                 </div>
-                <div id="queueBadge" class="hidden text-xs px-3 py-1 rounded-full" style="background:#451a03;color:#fde68a!important;border:1px solid #92400e;"></div>
               </div>
             </div>
 
@@ -446,7 +443,7 @@ footer p { color: #9ca3af !important; }
               <div class="mb-5">
                 <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 &middot; <a href="https://wa.me/31628073996" style="color:#a78bfa;">Pro via WhatsApp</a>)</span></label>
                 <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
-                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkUrlCount">0/5</span></div>
+                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkUrlCount">5 left</span></div>
               </div>
 
               <!-- What happens toggle -->
@@ -573,12 +570,17 @@ footer p { color: #9ca3af !important; }
       </div>
 
             <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
-        <h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist?</h3>
-        <p class="text-lg mb-4" style="color:#e9d5ff!important;">Flexible hours, serious income. We train you in Modern SEO from day one.</p>
-        <!-- FIX: uses .btn-specialist class for correct dark text on white background -->
+        <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
+        <h3 class="text-2xl font-bold mb-2">Work With Us — Find Leads Together</h3>
+        <p class="text-lg mb-2" style="color:#e9d5ff!important;">
+          Are you in SEO, sales, or outreach? Partner with ContentScale to find and convert leads — we provide the tools, you bring the hustle.
+        </p>
+        <p class="text-sm mb-5" style="color:#c4b5fd!important;">
+          Use our scanner &middot; Share results with clients &middot; Earn per closed deal
+        </p>
         <button onclick="openFreelancerModal()" class="btn-specialist">
-          <i class="fas fa-user-plus"></i>
-          <span>Apply as Specialist</span>
+          <i class="fas fa-handshake mr-2"></i>
+          <span>Become a Partner</span>
         </button>
       </div>
 
@@ -591,8 +593,8 @@ footer p { color: #9ca3af !important; }
   <div id="templates" class="mb-16 main-section" data-section="templates">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
       <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
-        <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
+        <h2 class="text-4xl font-bold mb-3">✏️ Outreach Templates</h2>
+        <p class="text-xl" style="color:#e5e7eb!important;">Ready-to-use outreach copy for every lead scenario (Grade 3 Level)</p>
       </div>
       <div class="cards-grid">
         <!-- Congrats Template -->
@@ -928,8 +930,8 @@ footer p { color: #9ca3af !important; }
        ============================================================ -->
   <div id="freelancers" class="mb-16 main-section" data-section="experts">
     <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
-      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
+      <h2 class="text-4xl font-bold mb-3">🤝 SEO Partners &amp; Specialists</h2>
+      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Become a Partner</button>
     </div>
     <!-- FIX: was grid-3, now proper grid class -->
     <div class="cards-grid" id="freelancersGrid"></div>
@@ -1697,14 +1699,20 @@ document.addEventListener('DOMContentLoaded', function () {
 function updateBulkCount() {
   const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
   const el = document.getElementById('bulkUrlCount');
-  if (el) {
-    if (lines.length > 5) {
-      el.textContent = lines.length + '/5 \u26a0\ufe0f';
-      el.style.color = '#f87171';
-    } else {
-      el.textContent = lines.length + '/5';
-      el.style.color = '#9ca3af';
-    }
+  if (!el) return;
+  const remaining = 5 - lines.length;
+  if (lines.length === 0) {
+    el.textContent = '5 left';
+    el.style.color = '#9ca3af';
+  } else if (remaining > 0) {
+    el.textContent = remaining + ' left';
+    el.style.color = '#9ca3af';
+  } else if (remaining === 0) {
+    el.textContent = '0 left ✓';
+    el.style.color = '#4ade80';
+  } else {
+    el.textContent = Math.abs(remaining) + ' over limit ⚠️';
+    el.style.color = '#f87171';
   }
 }
 
@@ -3224,14 +3232,7 @@ function getDailySentCount() { return parseInt(localStorage.getItem(getTodayKey(
 function incrementDailySent(n = 1) { const k = getTodayKey(); localStorage.setItem(k, getDailySentCount() + n); updateDailyLimitUI(); }
 function getRemainingToday() { return Math.max(0, DAILY_LIMIT - getDailySentCount()); }
 
-function updateDailyLimitUI() {
-  const sent = getDailySentCount(), remaining = getRemainingToday();
-  const el = document.getElementById('dailyLimitBadge');
-  if (el) {
-    const color = remaining > 50 ? '#4ade80' : remaining > 20 ? '#fbbf24' : '#f87171';
-    el.innerHTML = `\ud83d\udce7 Today: <strong style="color:${color}!important;">${sent}/${DAILY_LIMIT}</strong> emails sent &nbsp;\u00b7&nbsp; <span style="color:${color}!important;">${remaining} remaining</span>`;
-  }
-}
+function updateDailyLimitUI() { /* email stats removed */ }
 
 // ============================================================
 // EMAIL QUEUE
