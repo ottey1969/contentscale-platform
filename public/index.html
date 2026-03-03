@@ -2443,7 +2443,7 @@ async function loadUserTemplates() {
       userTemplates = data.templates;
       ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
         // Only overwrite if server has a non-empty saved version
-        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 50) {
+        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 2000) {
           const subEl  = document.getElementById('template-' + t + '-subject');
           const bodyEl = document.getElementById('template-' + t + '-body');
           if (subEl)  subEl.value  = userTemplates[t].subject;
