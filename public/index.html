@@ -783,10 +783,19 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </div>
 </div>
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+// Replace the entire script section with this updated version
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+// Replace the entire script section with this updated version
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script>
 let userId = null;
 let sendgridConfigured = false;
 let userTemplates = {};
+let bulkResults = [];
+let isScanning = false;
+
 const DEFAULT_TEMPLATES = {
 congrats: {
 subject: `🏆 {{company_name}} — You scored {{score}}/100. You made the Elite Leaderboard.`,
@@ -805,6 +814,7 @@ subject: `{{company_name}} — your competitors in {{country}} are getting onlin
 body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
 }
 };
+
 function checkRescanReminder() {
 try {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
@@ -827,6 +837,7 @@ banner.classList.remove('hidden');
 }
 } catch(e) {}
 }
+
 document.addEventListener('DOMContentLoaded', function () {
 registerUser();
 loadLeaderboardData();
@@ -837,9 +848,11 @@ const l = document.getElementById('loading-screen');
 if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
 }, 1200);
 });
+
 function updateBulkCount() {
 const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
 const el = document.getElementById('bulkCountDisplay');
+const btnLabel = document.getElementById('bulkBtnLabel');
 if (el) {
 if (lines.length > 5) {
 el.textContent = lines.length + '/5 ⚠️';
@@ -849,7 +862,11 @@ el.textContent = lines.length + '/5';
 el.style.color = lines.length === 5 ? '#fbbf24' : '#9ca3af';
 }
 }
+if (btnLabel) {
+btnLabel.textContent = `Scan All URLs (${lines.length}/5)`;
 }
+}
+
 async function registerUser() {
 try {
 let storedUserId = localStorage.getItem('user_id');
@@ -868,6 +885,7 @@ loadUserTemplates();
 checkRescanReminder();
 } catch (error) { console.error('Registration error:', error); }
 }
+
 async function loadApiStatus() {
 if (!userId) return;
 try {
@@ -879,15 +897,18 @@ checkSetupStatus();
 }
 } catch (error) { console.error('Error loading API status:', error); }
 }
+
 function checkSetupStatus() {
 const gate = document.getElementById('bulkAccessGate');
 const allDone = document.getElementById('setupAllDone');
 if (gate) gate.classList.add('hidden');
 if (allDone) allDone.classList.remove('hidden');
 }
+
 function _stripBadgeComments(html) {
 return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
 }
+
 window._copyBadge = function(type, score) {
 const key = type === 'full' ? '_badgeFull_' : type === 'compact' ? '_badgeCompact_' : '_badgeText_';
 const raw = window[key + score] || '';
@@ -907,6 +928,7 @@ document.body.removeChild(ta);
 doCopied();
 });
 };
+
 async function loadUserTemplates() {
 ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
 const subEl = document.getElementById('template-' + t + '-subject');
@@ -931,6 +953,7 @@ if (bodyEl) bodyEl.value = userTemplates[t].body;
 }
 } catch (error) { console.error('Error loading templates:', error); }
 }
+
 async function saveTemplate(type) {
 if (!userId) { alert('❌ User not registered. Refresh page.'); return; }
 const subject = document.getElementById(`template-${type}-subject`).value;
@@ -947,6 +970,7 @@ if (data.success) { alert('✅ Template saved!'); userTemplates[type] = { subjec
 else { alert('❌ ' + (data.error || 'Failed')); }
 } catch (error) { alert('❌ Error: ' + error.message); }
 }
+
 function switchMode(mode) {
 const singleMode = document.getElementById('singleMode');
 const bulkMode = document.getElementById('bulkMode');
@@ -962,11 +986,13 @@ if (singleBtn) singleBtn.classList.add('active');
 } else if (mode === 'bulk') {
 if (bulkMode) bulkMode.classList.remove('hidden');
 if (bulkBtn) bulkBtn.classList.add('active');
+updateBulkCount();
 } else if (mode === 'discover') {
 if (discoverMode) discoverMode.classList.remove('hidden');
 if (discoverBtn) discoverBtn.classList.add('active');
 }
 }
+
 async function scanSingleURL() {
 const input = document.getElementById('singleUrlInput');
 const button = document.getElementById('singleScanBtn');
@@ -1042,6 +1068,7 @@ resultDiv.classList.remove('hidden');
 resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 }
+
 function displayScanResult(data, targetEl) {
 const resultDiv = targetEl || document.getElementById('singleResult');
 const url = data.url || '';
@@ -1168,6 +1195,7 @@ window._lastScanData = data;
 window._lastScanData._scoreLabel = scoreLabel;
 if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
+
 function copyScanShareLink() {
 const data = window._lastScanData;
 if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
@@ -1187,6 +1215,7 @@ return;
 exportScanPDF(data);
 showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
 }
+
 function fallbackCopy(text) {
 const ta = document.createElement('textarea');
 ta.value = text;
@@ -1198,6 +1227,7 @@ document.execCommand('copy');
 document.body.removeChild(ta);
 showToast('🔗 Share link copied!', '#0ea5e9');
 }
+
 function showToast(msg, bg) {
 const t = document.createElement('div');
 t.textContent = msg;
@@ -1205,6 +1235,7 @@ t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%
 document.body.appendChild(t);
 setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
 }
+
 function exportScanPDF(data) {
 if (!data) { alert('No scan data. Run a scan first.'); return; }
 const btn = event && event.target;
@@ -1248,87 +1279,292 @@ win.document.close();
 setTimeout(() => { win.focus(); win.print(); }, 600);
 if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; }
 }
+
 async function startBulkScan() {
-const urlInput = document.getElementById('bulkUrlInput');
-const button = document.getElementById('bulkScanBtn');
-const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-if (allUrls.length > 5) {
-alert('❌ Free plan: max 5 URLs.\nNeed more? Use the Pro dashboard at /app');
+if (isScanning) {
+alert('Scan already in progress. Please wait.');
 return;
 }
-const urls = allUrls;
-if (!urls.length) { alert('❌ Enter at least one URL'); return; }
+
+const urlInput = document.getElementById('bulkUrlInput');
+const button = document.getElementById('bulkScanBtn');
+const progress = document.getElementById('bulkProgress');
+const progressBar = document.getElementById('bulkProgressBar');
+const progressText = document.getElementById('bulkProgressText');
+const resultsDiv = document.getElementById('bulkResults');
+const statsDiv = document.getElementById('bulkStats');
+const container = document.getElementById('bulkResultsContainer');
+
+const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+if (allUrls.length === 0) { alert('❌ Enter at least one URL'); return; }
+if (allUrls.length > 5) {
+alert('❌ Free plan: max 5 URLs.\nNeed more? Contact us for Pro access.');
+return;
+}
+
+const urls = allUrls.map(u => u.startsWith('http') ? u : 'https://' + u);
+isScanning = true;
 button.disabled = true;
 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
-document.getElementById('bulkProgress').classList.remove('hidden');
-document.getElementById('bulkResults').classList.add('hidden');
-let results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
-let alreadyScannedBulk = new Set();
+progress.classList.remove('hidden');
+resultsDiv.classList.add('hidden');
+bulkResults = [];
+
 try {
-const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
-const existingData = await existingRes.json();
-if (existingData.success && existingData.scans) {
-existingData.scans.forEach(s => { if (s.business_url) alreadyScannedBulk.add(s.business_url.trim()); });
-}
-} catch(e) {}
-const urlsToProcess = urls.filter(u => !alreadyScannedBulk.has(u.trim()));
-const skippedBulk = urls.length - urlsToProcess.length;
-if (skippedBulk > 0) {
-document.getElementById('bulkProgressText').textContent = `${skippedBulk} URL(s) already scanned — skipping. Scanning ${urlsToProcess.length} new...`;
-await new Promise(r => setTimeout(r, 1200));
-}
-for (let i = 0; i < urlsToProcess.length; i++) {
-let url = urlsToProcess[i];
-if (!url.startsWith('http')) url = 'https://' + url;
-document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urlsToProcess.length} — ${url}`;
-document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urlsToProcess.length) * 100}%`;
+for (let i = 0; i < urls.length; i++) {
+const url = urls[i];
+progressText.textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
+progressBar.style.width = `${((i) / urls.length) * 100}%`;
+
 try {
 const response = await fetch('/api/scan', {
 method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
+headers: { 
+'Content-Type': 'application/json',
+'x-user-id': userId || 'anonymous' 
+},
 body: JSON.stringify({ url })
 });
+
 const data = await response.json();
 if (data.success) {
-const score = data.score || 0;
-if (score >= 70) results.leaderboard.push({ url, score, data });
-else if (score >= 65) results.almostMade.push({ url, score, data });
-else if (score > 0) results.withWebsite.push({ url, score, data });
-else results.withoutWebsite.push({ url, score, data });
+bulkResults.push(data);
+// Save to history
+try {
+const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
+localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)));
+} catch(e) {}
 } else {
-results.errors.push({ url, error: data.error });
+// Add error result
+bulkResults.push({
+url: url,
+error: data.error || 'Scan failed',
+score: 0,
+success: false
+});
 }
-} catch (e) { results.errors.push({ url, error: e.message }); }
-await new Promise(r => setTimeout(r, 300));
+} catch (error) {
+// Add error result
+bulkResults.push({
+url: url,
+error: error.message || 'Network error',
+score: 0,
+success: false
+});
 }
-displayBulkResults(results);
+
+// Update progress
+progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
+}
+
+progressText.textContent = 'Scan complete!';
+progressBar.style.width = '100%';
+
+// Sort results: successful scans first (by score), then errors
+bulkResults.sort((a, b) => {
+if (a.success && !b.success) return -1;
+if (!a.success && b.success) return 1;
+if (a.success && b.success) return (b.score || 0) - (a.score || 0);
+return 0;
+});
+
+// Display stats
+const successful = bulkResults.filter(r => r.success);
+const eliteCount = successful.filter(r => r.score >= 70).length;
+const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
+const poorCount = successful.filter(r => r.score < 50).length;
+const errorCount = bulkResults.length - successful.length;
+
+statsDiv.innerHTML = `
+<div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:1.5rem;font-weight:900;color:#4ade80;">${eliteCount}</div>
+<div style="font-size:0.7rem;color:#9ca3af;">Elite (70+)</div>
+</div>
+<div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:1.5rem;font-weight:900;color:#fbbf24;">${goodCount}</div>
+<div style="font-size:0.7rem;color:#9ca3af;">Good (50-69)</div>
+</div>
+<div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:1.5rem;font-weight:900;color:#f87171;">${poorCount}</div>
+<div style="font-size:0.7rem;color:#9ca3af;">Needs Work (<50)</div>
+</div>
+<div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div>
+<div style="font-size:0.7rem;color:#9ca3af;">Total</div>
+${errorCount > 0 ? `<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">${errorCount} errors</div>` : ''}
+</div>
+`;
+
+// Display results
+container.innerHTML = bulkResults.map((result, index) => {
+if (!result.success) {
+return `
+<div class="bulk-result-item" style="border-color:#ef4444;">
+<div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
+<div style="display:flex;align-items:center;gap:16px;">
+<div class="bulk-score-badge" style="color:#f87171!important;">❌</div>
+<div>
+<div style="font-weight:700;">${result.url.substring(0, 50)}${result.url.length > 50 ? '...' : ''}</div>
+<div style="font-size:0.75rem;color:#f87171;">Error: ${result.error || 'Scan failed'}</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;">
+<span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span>
+</div>
+</div>
+<div id="bulk-details-${index}" class="bulk-result-details hidden">
+<div style="padding:16px;background:#1a0a0a;border-radius:8px;">
+<p style="color:#f87171;">❌ Scan failed for this URL. Please try again or check if the website is accessible.</p>
+<button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button>
+</div>
+</div>
+</div>`;
+}
+
+const scoreColor = result.score >= 70 ? '#4ade80' : result.score >= 50 ? '#fbbf24' : '#f87171';
+const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
+return `
+<div class="bulk-result-item" id="bulk-result-${index}">
+<div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
+<div style="display:flex;align-items:center;gap:16px;">
+<div class="bulk-score-badge" style="color:${scoreColor}!important;">${result.score}</div>
+<div>
+<div style="font-weight:700;">${domain}</div>
+<div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0, 60)}${result.url.length > 60 ? '...' : ''}</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;">
+<span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf || 0}/50</span>
+<span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span>
+</div>
+</div>
+<div id="bulk-details-${index}" class="bulk-result-details hidden">
+<div style="padding:16px 0;">${generateBulkResultDetails(result)}</div>
+</div>
+</div>`;
+}).join('');
+
+resultsDiv.classList.remove('hidden');
+} catch (error) {
+console.error('Bulk scan error:', error);
+showToast('❌ Error during bulk scan: ' + error.message, '#ef4444');
+} finally {
+progress.classList.add('hidden');
 button.disabled = false;
 button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Scan All URLs';
-document.getElementById('bulkProgress').classList.add('hidden');
+updateBulkCount();
+isScanning = false;
 }
-function displayBulkResults(results) {
-const container = document.getElementById('bulkResultsContainer');
-if (!container) return;
-const all = [...results.leaderboard, ...(results.almostMade || []), ...results.withWebsite, ...results.withoutWebsite];
-if (!all.length && !results.errors.length) {
-container.innerHTML = '<p style="color:#6b7280;text-align:center;padding:24px;">No results.</p>';
-document.getElementById('bulkResults').classList.remove('hidden');
+}
+
+function retryBulkUrl(url) {
+// Add URL to input and trigger scan
+const textarea = document.getElementById('bulkUrlInput');
+textarea.value = url + '\n' + textarea.value;
+updateBulkCount();
+startBulkScan();
+}
+
+function toggleBulkResult(index) {
+const details = document.getElementById(`bulk-details-${index}`);
+const item = document.getElementById(`bulk-result-${index}`);
+if (details) {
+details.classList.toggle('hidden');
+item.classList.toggle('expanded', !details.classList.contains('hidden'));
+}
+}
+
+function generateBulkResultDetails(data) {
+if (!data.success) return '<p>No data available</p>';
+
+const score = data.score || 0;
+const metrics = data.metrics || { graaf: 0, craft: 0, technical: 0 };
+const stats = data.content_stats || {};
+const recs = (data.recommendations?.all || data.recommendations || []);
+const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+const priorityConfig = {
+high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
+medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
+low: { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' }
+};
+const recCards = recs.slice(0, 3).map((rec, i) => {
+const p = priorityConfig[rec.priority] || priorityConfig.low;
+return `
+<div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+<div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
+<span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;">${p.label}</span>
+</div>
+<p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;">${rec.description.substring(0, 100)}${rec.description.length > 100 ? '...' : ''}</p>
+</div>`;
+}).join('');
+return `
+<div style="background:#0f172a;border-radius:12px;padding:16px;">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+<div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;">
+<div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;">GRAAF</div>
+<div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
+<div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
+</div>
+<div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;">
+<div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;">CRAFT</div>
+<div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
+<div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
+</div>
+<div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;">
+<div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;">TECHNICAL</div>
+<div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
+<div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
+</div>
+</div>
+${recCards}
+${recs.length > 3 ? `<p style="text-align:center;font-size:0.75rem;color:#9ca3af;margin:10px 0;">+ ${recs.length - 3} more recommendations</p>` : ''}
+<div style="display:flex;gap:10px;margin-top:20px;">
+<a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100.%20Can%20you%20help%3F"
+target="_blank" rel="noopener"
+style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#0f7b3a;color:white!important;padding:8px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.8rem;">
+<i class="fab fa-whatsapp"></i> Get Help
+</a>
+<button onclick="exportScanPDF(${JSON.stringify(data).replace(/"/g, '&quot;')})"
+style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:8px;font-weight:600;font-size:0.8rem;cursor:pointer;">
+⬇ Export PDF
+</button>
+</div>
+</div>`;
+}
+
+function exportBulkCSV() {
+if (bulkResults.length === 0) { alert('No results to export'); return; }
+let csv = 'URL,Score,GRAAF,CRAFT,Technical,Word Count,H1 Count,H2 Count,Images,Internal Links,Has Schema,Has Canonical,Status\n';
+bulkResults.forEach(r => {
+if (!r.success) {
+csv += `"${r.url}",0,0,0,0,0,0,0,0,0,false,false,Error: ${r.error}\n`;
 return;
 }
-all.sort((a, b) => (b.score || 0) - (a.score || 0));
-const total = all.length;
-const lb = results.leaderboard.length;
-const almMade = (results.almostMade || []).length;
-const errs = results.errors.length;
-container.innerHTML = `
-<div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#e5e7eb;">${total}</div><div style="font-size:0.68rem;color:#6b7280;">Scanned</div></div>
-<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${lb}</div><div style="font-size:0.68rem;color:#6b7280;">Elite 70+</div></div>
-${almMade ? `<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fbbf24;">${almMade}</div><div style="font-size:0.68rem;color:#6b7280;">Almost 65-69</div></div>` : ''}
-<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${errs}</div><div style="font-size:0.68rem;color:#6b7280;">Errors</div></div>
-</div>`;
-document.getElementById('bulkResults').classList.remove('hidden');
+const stats = r.content_stats || {};
+csv += `"${r.url}",${r.score},${r.metrics?.graaf || 0},${r.metrics?.craft || 0},${r.metrics?.technical || 0},${stats.wordCount || 0},${stats.h1Count || 0},${stats.h2Count || 0},${stats.images || 0},${stats.internalLinks || 0},${stats.hasArticleSchema || false},${stats.hasCanonical || false},Success\n`;
+});
+const blob = new Blob([csv], { type: 'text/csv' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = `contentscale-bulk-${new Date().toISOString().split('T')[0]}.csv`;
+a.click();
+URL.revokeObjectURL(url);
 }
+
+function exportBulkPDF() {
+if (bulkResults.length === 0) { alert('No results to export'); return; }
+const successful = bulkResults.filter(r => r.success);
+if (successful.length === 0) { alert('No successful scans to export'); return; }
+successful.forEach((result, index) => {
+setTimeout(() => {
+exportScanPDF(result);
+}, index * 800);
+});
+}
+
 function doRescan() {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
 const input = document.getElementById('singleUrlInput');
@@ -1337,6 +1573,7 @@ if (history.length && input) input.value = history[0].url;
 if (banner) banner.classList.add('hidden');
 scanSingleURL();
 }
+
 async function submitSingleToLeaderboard(url, score, name) {
 const btn = document.getElementById('singleLbBtn');
 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
@@ -1349,6 +1586,7 @@ body: JSON.stringify({ url, score, company_name: name || '', admin_verified: fal
 const data = await res.json();
 if (data.success) {
 if (btn) { btn.innerHTML = '✅ Submitted — pending review'; btn.style.background = '#065f46'; }
+showToast('✅ Submitted to leaderboard!', '#0f7b3a');
 } else {
 if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
 alert('❌ ' + (data.error || 'Submission failed'));
@@ -1358,12 +1596,14 @@ if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
 alert('❌ Error: ' + e.message);
 }
 }
+
 let allLeaderboardEntries = [];
 const MEDAL = [
 { emoji: '🥇', label: 'GOLD', bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)', border: '#ffd700', glow: 'rgba(255,215,0,0.35)', scoreColor: '#ffd700', badgeText: '#ffd700', badgeBg: 'rgba(61,40,0,0.85)' },
 { emoji: '🥈', label: 'SILVER', bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)', border: '#b0c4d8', glow: 'rgba(176,196,216,0.25)', scoreColor: '#b0c4d8', badgeText: '#b0c4d8', badgeBg: 'rgba(30,42,53,0.85)' },
 { emoji: '🥉', label: 'BRONZE', bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)', border: '#cd7f32', glow: 'rgba(205,127,50,0.25)', scoreColor: '#cd7f32', badgeText: '#cd7f32', badgeBg: 'rgba(45,20,0,0.85)' }
 ];
+
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
@@ -1378,6 +1618,7 @@ document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!i
 document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
 }
 }
+
 function applyLeaderboardFilters() {
 const niche = document.getElementById('filterNiche').value.toLowerCase();
 const country = document.getElementById('filterCountry').value;
@@ -1394,11 +1635,13 @@ const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
 document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
 renderLeaderboard(filtered);
 }
+
 function resetLeaderboardFilters() {
 ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => { document.getElementById(id).value = ''; });
 document.getElementById('filterCount').textContent = '';
 renderLeaderboard(allLeaderboardEntries);
 }
+
 function renderLeaderboard(entries) {
 const activeNiche = document.getElementById('filterNiche')?.value || '';
 const activeCountry = document.getElementById('filterCountry')?.value || '';
@@ -1439,6 +1682,7 @@ ${!showAll ? `<div id="loadMoreWrap" style="text-align:center;margin-top:16px;">
 window._lbRestEntries = rest;
 } else { restContainer.innerHTML = ''; }
 }
+
 function buildRankRows(entries, startRank) {
 return entries.map((e, i) => {
 const rank = startRank + i;
@@ -1461,12 +1705,14 @@ ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!impor
 </div>`;
 }).join('');
 }
+
 function expandRankings() {
 const rest = window._lbRestEntries || [];
 document.getElementById('rankingsList').innerHTML = buildRankRows(rest, 4);
 const wrap = document.getElementById('loadMoreWrap');
 if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4–${rest.length + 3})</p>`;
 }
+
 async function loadFreelancers() {
 try {
 const response = await fetch('/api/freelancers');
@@ -1500,7 +1746,7 @@ var cardBg = featured ? 'background:linear-gradient(135deg,#0f0a1e,#1a1040);' : 
 var opacity = (!f.real && featured) ? 'opacity:0.75;' : (!featured ? 'opacity:0.65;' : '');
 var btn = f.real ? '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>' : '<button onclick="openFreelancerModal()" style="display:block;width:100%;background:' + (featured ? 'linear-gradient(135deg,#7e22ce,#be185d)' : '#1f2937') + ';color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:none;cursor:pointer;margin-top:auto;">Apply for This Spot</button>';
 var badge = f.badge ? '<span style="font-size:0.6rem;background:' + (f.real ? '#7e22ce' : '#4c1d95') + ';color:white!important;padding:2px 7px;border-radius:99px;white-space:nowrap;">' + f.badge + '</span>' : '';
-return '<div class="card" style="border:' + (featured ? '2' : '1') + 'px solid ' + borderColor + ';' + cardBg + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + opacity + '" onmouseover="this.style.borderColor=\'#a855f7\';this.style.opacity=\'1\'" onmouseout="this.style.borderColor=\'' + borderColor + '\';this.style.opacity=\'' + ((!f.real&&featured)||!featured?(featured?'0.75':'0.65'):'1') + '\'">'
+return '<div class="card" style="border:' + (featured ? '2' : '1') + 'px solid ' + borderColor + ';' + cardBg + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + opacity + '" onmouseover="this.style.borderColor=\'#a855f7\';this.style.opacity=\'1\'" onmouseout="this.style.borderColor=\'' + borderColor + '\';this.style.opacity=\'' + ((!f.real&&featured)||!featured?(featured?'0.75':'0.65'):'1') + '">'
 + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;"><div style="width:' + (featured?'52':'48') + 'px;height:' + (featured?'52':'48') + 'px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured?'2px solid '+(f.real?'#a855f7':'#6d28d9'):'1px solid #4b5563') + ';">' + f.initial + '</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + f.title + '</p></div></div>'
 + '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + f.bio + '</p>'
 + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.75rem;color:#6b7280!important;"><span>' + f.country + '</span><span>' + f.rate + '</span></div>'
@@ -1522,9 +1768,11 @@ grid.innerHTML = '<div class="specialists-outer-grid" style="display:grid;grid-t
 }
 } catch (e) { console.error(e); }
 }
+
 function openFreelancerModal() { document.getElementById('freelancerModal').classList.add('active'); }
 function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
+
 function switchPageSection(section) {
 document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
 const target = document.querySelector(`[data-section="${section}"]`);
@@ -1549,6 +1797,7 @@ if (section === 'templates') loadUserTemplates();
 const main = document.getElementById('main-content');
 if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
 async function submitFreelancer() {
 const name = document.getElementById('freelancerName').value;
 const email = document.getElementById('freelancerEmail').value;
