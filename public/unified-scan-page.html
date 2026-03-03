@@ -159,10 +159,15 @@ footer p { color: #9ca3af !important; }
   .mode-card-header .text-xl { font-size:0.9rem !important; }
 
   /* Apify warning — code stays inside card */
+  #apifyKeyWarning { overflow:hidden; word-break:break-word; }
+  #apifyKeyWarning code { display:block !important; white-space:pre-wrap !important; word-break:break-all !important; max-width:100%; box-sizing:border-box; font-size:0.7rem; }
 
-  /* .find-leads-pipeline { grid-template-columns:repeat(2,1fr) !important; }
+  /* Find Me Leads pipeline — stack to 2x2 on mobile */
+  .find-leads-pipeline { grid-template-columns:repeat(2,1fr) !important; }
 
-  
+  /* Discover pipeline steps — stack */
+  .discover-steps { flex-direction:column !important; align-items:flex-start !important; gap:4px !important; }
+  .discover-steps span { font-size:0.72rem; }
 
   /* Email Templates — full width single column */
   .cards-grid { grid-template-columns:1fr !important; }
@@ -262,7 +267,7 @@ footer p { color: #9ca3af !important; }
     <div class="nav-desktop">
       <a href="#lead-scanner" onclick="switchPageSection('scanner')">Scanner</a>
       <a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a>
-      <a href="javascript:void(0)" onclick="switchPageSection('experts')">Experts</a>
+      <a href="javascript:void(0)" onclick="switchPageSection('experts')">Specialists</a>
       <a href="javascript:void(0)" onclick="switchPageSection('templates')">Templates</a>
     </div>
     <div class="flex items-center gap-3">
@@ -273,7 +278,7 @@ footer p { color: #9ca3af !important; }
   <div class="mobile-menu" id="mobileMenu">
     <a href="javascript:void(0)" onclick="switchPageSection('scanner');toggleMobileMenu();" class="py-2 border-b border-gray-800">Scanner</a>
     <a href="javascript:void(0)" onclick="switchPageSection('leaderboard');toggleMobileMenu();" class="py-2 border-b border-gray-800">Leaderboard</a>
-    <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Experts</a>
+    <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Specialists</a>
     <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2">Templates</a>
   </div>
 </nav>
@@ -296,7 +301,7 @@ footer p { color: #9ca3af !important; }
   <div class="page-tabs mb-8" role="tablist">
     <button class="page-tab active" id="tab-scanner" onclick="switchPageSection('scanner')" role="tab">🎯 Scanner</button>
     <button class="page-tab" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">🏆 Leaderboard</button>
-    <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
+    <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Specialists</button>
     <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
   </div>
 
@@ -328,6 +333,7 @@ footer p { color: #9ca3af !important; }
           <span class="feature-tag">•</span>
           <span class="feature-tag">📋 I Have a List — on request</span>
           <span class="feature-tag">•</span>
+          <span class="feature-tag">🤖 Find Me Leads — on request</span>
         </div>
       </div>
 
@@ -397,7 +403,7 @@ footer p { color: #9ca3af !important; }
                 <div style="font-size:3rem;margin-bottom:12px;">🔒</div>
                 <h3 class="text-xl font-bold mb-3">Bulk Scanning is Available on Request</h3>
                 <p class="text-sm mb-2" style="color:#9ca3af!important;">
-                  Bulk scanning and lead generation are available for businesses and freelancers who want to use ContentScale as a lead generation tool.
+                  Bulk scanning, automated email outreach, and Auto-Discover are available for businesses and freelancers who want to use ContentScale as a lead generation tool.
                 </p>
                 <p class="text-sm mb-6" style="color:#9ca3af!important;">
                   Contact me on WhatsApp and I'll get you set up — usually within a few hours.
@@ -421,15 +427,12 @@ footer p { color: #9ca3af !important; }
 
             <!-- ACTIVE STATUS BANNER — shown when access is confirmed by server -->
             <div id="setupAllDone" class="hidden mb-5 rounded-xl p-4" style="background:rgba(16,185,129,0.08);border:1px solid #065f46;">
-              <div class="flex items-center justify-between flex-wrap gap-3">
-                <div class="flex items-center gap-3">
-                  <span style="font-size:1.5rem;">✅</span>
-                  <div>
-                    <div class="font-bold" style="color:#34d399!important;">Bulk scanning active</div>
-                    <div id="dailyLimitBadge" class="text-xs mt-1" style="color:#6b7280!important;">Loading usage...</div>
-                  </div>
+              <div class="flex items-center gap-3">
+                <span style="font-size:1.5rem;">✅</span>
+                <div>
+                  <div class="font-bold" style="color:#34d399!important;">Bulk scanning ready</div>
+                  <div class="text-xs mt-1" style="color:#6b7280!important;">Free: max 5 URLs &middot; Pro: unlimited via <a href="https://wa.me/31628073996" style="color:#a78bfa;">WhatsApp</a></div>
                 </div>
-                <div id="queueBadge" class="hidden text-xs px-3 py-1 rounded-full" style="background:#451a03;color:#fde68a!important;border:1px solid #92400e;"></div>
               </div>
             </div>
 
@@ -438,9 +441,9 @@ footer p { color: #9ca3af !important; }
 
               <!-- URL input -->
               <div class="mb-5">
-                <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
+                <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 &middot; <a href="https://wa.me/31628073996" style="color:#a78bfa;">Pro via WhatsApp</a>)</span></label>
                 <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
-                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0/5</span></div>
+                <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkUrlCount">5 left</span></div>
               </div>
 
               <!-- What happens toggle -->
@@ -470,6 +473,7 @@ footer p { color: #9ca3af !important; }
 
               </div>
 
+
               <!-- Start button -->
               <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
                 <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
@@ -487,83 +491,92 @@ footer p { color: #9ca3af !important; }
         </div>
       </div>
 
-            <div      <!-- FIND ME LEADS — TEASER / CTA to app.html -->
+      <!-- AUTO-DISCOVER MODE — TEASER -->
       <div id="discoverMode" class="hidden">
-        <div class="max-w-4xl mx-auto">
+        <div class="card max-w-4xl mx-auto" style="border:2px solid #f59e0b;">
+          <div class="flex flex-wrap items-center gap-3 mb-4 mode-card-header">
+            <span class="text-xl font-bold">🤖 Find Me Leads</span>
+            <span class="text-xs px-3 py-1 rounded-full font-semibold" style="background:#92400e;color:#fde68a!important;">Pro Feature</span>
+          </div>
+          <p class="text-sm mb-6" style="color:#d1d5db!important;">
+            No list yet? Pick a niche + city. Apify scrapes Google Maps. ContentScale scores every website automatically. Export clean data or push to Instantly. <strong style="color:#fbbf24;">Zero manual work.</strong>
+          </p>
 
-          <!-- Hero -->
-          <div class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#1c0a00,#0f172a);padding:40px 32px;text-align:center;margin-bottom:20px;">
-            <div style="font-size:3.5rem;margin-bottom:12px;">🤖</div>
-            <h2 style="font-size:1.8rem;font-weight:900;color:#fde68a;margin-bottom:12px;">Find Me Leads</h2>
-            <p style="color:#d1d5db;font-size:1rem;max-width:560px;margin:0 auto 28px;">
-              Pick a niche + city. Apify scrapes Google Maps. ContentScale scores every website. 
-              Export clean data or push directly to Instantly. <strong style="color:#fbbf24;">Zero manual work.</strong>
+          <!-- Pipeline -->
+          <div class="find-leads-pipeline" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:28px;">
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
+              <div style="font-size:1.6rem;margin-bottom:6px;">📍</div>
+              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">1. You pick</div>
+              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">Niche + City</div>
+            </div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
+              <div style="font-size:1.6rem;margin-bottom:6px;">🗺️</div>
+              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">2. Apify finds</div>
+              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">Google Maps</div>
+            </div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
+              <div style="font-size:1.6rem;margin-bottom:6px;">📊</div>
+              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">3. Auto-scan</div>
+              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">All scored</div>
+            </div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
+              <div style="font-size:1.6rem;margin-bottom:6px;">⚡</div>
+              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">4. Export</div>
+              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">CSV · Instantly</div>
+            </div>
+          </div>
+
+          <!-- What you get -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px;">
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
+              <div style="font-size:0.8rem;font-weight:700;color:#fbbf24!important;margin-bottom:8px;">✅ What you get</div>
+              <ul style="color:#d1d5db!important;font-size:0.8rem;line-height:2;list-style:none;padding:0;margin:0;">
+                <li>🎯 100–500 leads per combo</li>
+                <li>📊 ContentScore per site</li>
+                <li>📧 Email addresses found</li>
+                <li>⚡ Push to Instantly direct</li>
+                <li>⬇️ CSV export ready</li>
+              </ul>
+            </div>
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
+              <div style="font-size:0.8rem;font-weight:700;color:#fbbf24!important;margin-bottom:8px;">⚙️ You bring</div>
+              <ul style="color:#d1d5db!important;font-size:0.8rem;line-height:2;list-style:none;padding:0;margin:0;">
+                <li>🔑 Your Apify token</li>
+                <li>📬 Your Instantly account</li>
+                <li>🎯 Your niche + city combos</li>
+                <li>📝 Your email templates</li>
+                <li>⏱️ 15 min setup, then automated</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div style="text-align:center;background:linear-gradient(135deg,#1c0a00,#0f172a);border:2px solid #f59e0b;border-radius:14px;padding:28px 24px;">
+            <div style="font-size:2.5rem;margin-bottom:10px;">🔒</div>
+            <h3 style="font-size:1.2rem;font-weight:800;color:#fde68a!important;margin-bottom:8px;">Available on Request</h3>
+            <p style="color:#d1d5db!important;font-size:0.9rem;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;">
+              Find Me Leads runs on your own Apify token. Contact Ottmar on WhatsApp and get set up within a few hours.
             </p>
-
-            <!-- Pipeline -->
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:32px;max-width:580px;margin-left:auto;margin-right:auto;">
-              <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                <div style="font-size:1.6rem;margin-bottom:6px;">📍</div>
-                <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">1. You pick</div>
-                <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">Niche + City</div>
-              </div>
-              <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                <div style="font-size:1.6rem;margin-bottom:6px;">🗺️</div>
-                <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">2. Apify finds</div>
-                <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">Google Maps</div>
-              </div>
-              <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                <div style="font-size:1.6rem;margin-bottom:6px;">📊</div>
-                <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">3. Auto-scan</div>
-                <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">All scored</div>
-              </div>
-              <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                <div style="font-size:1.6rem;margin-bottom:6px;">⚡</div>
-                <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">4. Export</div>
-                <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">CSV · Instantly</div>
-              </div>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+              <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20Find%20Me%20Leads%20on%20ContentScale" target="_blank" rel="noopener"
+                style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:14px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
+                <i class="fab fa-whatsapp"></i> Request Access — WhatsApp
+              </a>
             </div>
-
-            <!-- What you get -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:32px;text-align:left;max-width:580px;margin-left:auto;margin-right:auto;">
-              <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-                <div style="font-size:0.8rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">✅ What you get</div>
-                <ul style="color:#d1d5db;font-size:0.78rem;line-height:1.8;list-style:none;padding:0;margin:0;">
-                  <li>🎯 100–500 leads per combo</li>
-                  <li>📊 ContentScale score per site</li>
-                  <li>📧 Email addresses found</li>
-                  <li>🔗 Hosted report per lead</li>
-                  <li>⚡ Push to Instantly direct</li>
-                </ul>
-              </div>
-              <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-                <div style="font-size:0.8rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">⚙️ You bring</div>
-                <ul style="color:#d1d5db;font-size:0.78rem;line-height:1.8;list-style:none;padding:0;margin:0;">
-                  <li>🔑 Your Apify token</li>
-                  <li>📬 Instantly account (optional)</li>
-                  <li>🚀 That's it</li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- CTA -->
-            <a href="/app" style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;padding:16px 40px;border-radius:12px;font-size:1.05rem;font-weight:800;text-decoration:none;box-shadow:0 8px 32px rgba(245,158,11,0.3);">
-              🚀 Open Lead Dashboard
-            </a>
-            <p style="color:#6b7280;font-size:0.78rem;margin-top:12px;">Requires activation · <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20the%20Lead%20Dashboard" target="_blank" style="color:#f59e0b;">Contact Ottmar on WhatsApp</a></p>
+            <p style="color:#6b7280!important;font-size:0.75rem;margin-top:12px;">Usually set up within a few hours · Bring your own Apify token</p>
           </div>
 
         </div>
       </div>
 
-      <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
+            <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
         <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
         <h3 class="text-2xl font-bold mb-2">Work With Us — Find Leads Together</h3>
         <p class="text-lg mb-2" style="color:#e9d5ff!important;">
           Are you in SEO, sales, or outreach? Partner with ContentScale to find and convert leads — we provide the tools, you bring the hustle.
         </p>
         <p class="text-sm mb-5" style="color:#c4b5fd!important;">
-          Use our scanner · Share results with clients · Earn per closed deal
+          Use our scanner &middot; Share results with clients &middot; Earn per closed deal
         </p>
         <button onclick="openFreelancerModal()" class="btn-specialist">
           <i class="fas fa-handshake mr-2"></i>
@@ -575,12 +588,350 @@ footer p { color: #9ca3af !important; }
   </div>
 
   <!-- ============================================================
+       TEMPLATES SECTION
+       ============================================================ -->
+  <div id="templates" class="mb-16 main-section" data-section="templates">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+      <div class="text-center mb-8">
+        <h2 class="text-4xl font-bold mb-3">✏️ Outreach Templates</h2>
+        <p class="text-xl" style="color:#e5e7eb!important;">Ready-to-use outreach copy for every lead scenario (Grade 3 Level)</p>
+      </div>
+      <div class="cards-grid">
+        <!-- Congrats Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with 85+ score</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('congrats')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Improvement Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">📈 Improvement Pitch</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with website &lt;85 score</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Almost Made It Template -->
+        <div class="card" style="border-color:#f59e0b!important;">
+          <h3 class="text-xl font-bold mb-2">🎯 Almost Made It</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses scoring 65–69 · {{gap}} points from leaderboard</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+        <!-- Website Template -->
+        <div class="card">
+          <h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
+          <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses without website</p>
+          <div class="template-editor">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
+            <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
+            <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
+            <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:300px;font-size:0.72rem;"></textarea>
+          </div>
+          <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
+        </div>
+      </div>
+      <div class="mt-8 rounded-lg p-5" style="background:#0f172a;border:1px solid #334155;">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-lg">📎</span>
+          <h4 class="font-bold text-base">Available Variables</h4>
+          <span class="text-xs px-2 py-0.5 rounded-full" style="background:#1e293b;color:#94a3b8!important;">Use in both Subject &amp; Body</span>
+        </div>
+
+        <!-- Group: Business -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🏢 Business</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#c084fc!important;">{{company_name}}</code><span>Business / domain name</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{domain}}</code><span>Clean domain (no https://)</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{website_url}}</code><span>Full scanned URL</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{industry}}</code><span>Detected industry / niche</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{city}}</code><span>Detected city (if found)</span></div>
+            <div class="var-row"><code style="color:#c084fc!important;">{{country}}</code><span>Detected country</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Score & Analysis -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{graaf_score}}</code><span>GRAAF sub-score (/50)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{craft_score}}</code><span>CRAFT sub-score (/30)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{tech_score}}</code><span>Technical sub-score (/20)</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{word_count}}</code><span>Detected word count</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{top_issue}}</code><span>Top recommended fix</span></div>
+            <div class="var-row"><code style="color:#38bdf8!important;">{{page_title}}</code><span>Scanned page &lt;title&gt;</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Sender / You -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">👤 Sender (You)</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_name}}</code><span>Your name (from form)</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_email}}</code><span>Your email (from form)</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_phone}}</code><span>+31 6 2807 3996</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_whatsapp}}</code><span>WhatsApp chat link</span></div>
+            <div class="var-row"><code style="color:#fb923c!important;">{{sender_company}}</code><span>ContentScale</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Links & Dates -->
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
+          <div class="var-grid">
+            <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard (app.contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{scanner_url}}</code><span>Link to scanner app (app.contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{main_site_url}}</code><span>Main website (contentscale.site)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp wa.me/31628073996)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{month}}</code><span>Current month (February)</span></div>
+            <div class="var-row"><code style="color:#a3e635!important;">{{year}}</code><span>Current year (2026)</span></div>
+          </div>
+        </div>
+
+        <!-- Group: Required -->
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">⚠️ Required</p>
+          <div class="var-grid">
+            <div class="var-row" style="border-color:#dc2626!important;"><code style="color:#f87171!important;">{{unsubscribe_url}}</code><span style="color:#fca5a5!important;">Must include in every email (GDPR)</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       LEADERBOARD SECTION
+       ============================================================ -->
+  <div id="leaderboard" class="mb-16 main-section" data-section="leaderboard">
+    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+
+      <!-- Header -->
+      <div class="text-center mb-6">
+        <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
+        <p style="color:#e5e7eb!important;">Top performing websites · ContentScore 70–100</p>
+      </div>
+
+      <!-- ── Niche context header (hidden by default) ── -->
+      <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
+
+      <!-- ── FILTERS ── -->
+      <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+          <!-- Niche -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
+            <select id="filterNiche" aria-label="Filter by niche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Niches</option>
+              <!-- Agencies & Services — sell content quality to clients -->
+              <optgroup label="── Agencies & Services">
+                <option value="seoagency">SEO Agency</option>
+                <option value="contentmarketing">Content Marketing Agency</option>
+                <option value="digitalmarketing">Digital Marketing Agency</option>
+                <option value="webdesign">Web Design & Dev Agency</option>
+                <option value="prагентство">PR Agency</option>
+              </optgroup>
+              <!-- YMYL — Google scrutinises hardest, content errors = lost trust -->
+              <optgroup label="── YMYL (High Stakes)">
+                <option value="legal">Legal / Law Firm</option>
+                <option value="healthcare">Healthcare / Medical</option>
+                <option value="finance">Finance / Fintech</option>
+                <option value="insurance">Insurance</option>
+                <option value="tax">Accounting / Tax</option>
+                <option value="mentalhealth">Mental Health / Therapy</option>
+              </optgroup>
+              <!-- High competition — ranking matters enormously -->
+              <optgroup label="── High Competition">
+                <option value="saas">SaaS / Software</option>
+                <option value="ecommerce">E-Commerce / Retail</option>
+                <option value="realestate">Real Estate</option>
+                <option value="travel">Travel & Tourism</option>
+                <option value="recruitment">Recruitment / HR</option>
+                <option value="insurance">Insurance</option>
+              </optgroup>
+              <!-- Service businesses — content IS the pitch -->
+              <optgroup label="── Service Businesses">
+                <option value="coaching">Coaching / Consulting</option>
+                <option value="local">Local Business</option>
+                <option value="homeservices">Home Services (Plumber, Builder…)</option>
+                <option value="restaurant">Restaurant / Food</option>
+                <option value="beautywellness">Beauty & Wellness</option>
+                <option value="automotive">Automotive</option>
+              </optgroup>
+              <!-- Content-driven — live and die by organic traffic -->
+              <optgroup label="── Content-Driven">
+                <option value="blog">Blog / News / Media</option>
+                <option value="education">Education / eLearning</option>
+                <option value="nonprofit">Non-Profit</option>
+                <option value="other">Other</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Country -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
+            <select id="filterCountry" aria-label="Filter by country" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Countries</option>
+              <!-- Europe -->
+              <optgroup label="── Europe">
+                <option value="Netherlands">🇳🇱 Netherlands</option>
+                <option value="Germany">🇩🇪 Germany</option>
+                <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                <option value="France">🇫🇷 France</option>
+                <option value="Spain">🇪🇸 Spain</option>
+                <option value="Italy">🇮🇹 Italy</option>
+                <option value="Belgium">🇧🇪 Belgium</option>
+                <option value="Sweden">🇸🇪 Sweden</option>
+                <option value="Norway">🇳🇴 Norway</option>
+                <option value="Denmark">🇩🇰 Denmark</option>
+                <option value="Finland">🇫🇮 Finland</option>
+                <option value="Switzerland">🇨🇭 Switzerland</option>
+                <option value="Austria">🇦🇹 Austria</option>
+                <option value="Poland">🇵🇱 Poland</option>
+                <option value="Portugal">🇵🇹 Portugal</option>
+                <option value="Ireland">🇮🇪 Ireland</option>
+                <option value="Czech Republic">🇨🇿 Czech Republic</option>
+                <option value="Hungary">🇭🇺 Hungary</option>
+                <option value="Romania">🇷🇴 Romania</option>
+                <option value="Greece">🇬🇷 Greece</option>
+                <option value="Ukraine">🇺🇦 Ukraine</option>
+              </optgroup>
+              <!-- North America -->
+              <optgroup label="── North America">
+                <option value="United States">🇺🇸 United States</option>
+                <option value="Canada">🇨🇦 Canada</option>
+                <option value="Mexico">🇲🇽 Mexico</option>
+              </optgroup>
+              <!-- Latin America -->
+              <optgroup label="── Latin America">
+                <option value="Brazil">🇧🇷 Brazil</option>
+                <option value="Argentina">🇦🇷 Argentina</option>
+                <option value="Colombia">🇨🇴 Colombia</option>
+                <option value="Chile">🇨🇱 Chile</option>
+                <option value="Peru">🇵🇪 Peru</option>
+              </optgroup>
+              <!-- Asia Pacific -->
+              <optgroup label="── Asia Pacific">
+                <option value="Australia">🇦🇺 Australia</option>
+                <option value="New Zealand">🇳🇿 New Zealand</option>
+                <option value="India">🇮🇳 India</option>
+                <option value="Japan">🇯🇵 Japan</option>
+                <option value="China">🇨🇳 China</option>
+                <option value="South Korea">🇰🇷 South Korea</option>
+                <option value="Singapore">🇸🇬 Singapore</option>
+                <option value="Indonesia">🇮🇩 Indonesia</option>
+                <option value="Malaysia">🇲🇾 Malaysia</option>
+                <option value="Philippines">🇵🇭 Philippines</option>
+                <option value="Thailand">🇹🇭 Thailand</option>
+                <option value="Vietnam">🇻🇳 Vietnam</option>
+                <option value="Pakistan">🇵🇰 Pakistan</option>
+                <option value="Bangladesh">🇧🇩 Bangladesh</option>
+              </optgroup>
+              <!-- Middle East -->
+              <optgroup label="── Middle East">
+                <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                <option value="Israel">🇮🇱 Israel</option>
+                <option value="Turkey">🇹🇷 Turkey</option>
+                <option value="Egypt">🇪🇬 Egypt</option>
+              </optgroup>
+              <!-- Africa -->
+              <optgroup label="── Africa">
+                <option value="South Africa">🇿🇦 South Africa</option>
+                <option value="Nigeria">🇳🇬 Nigeria</option>
+                <option value="Kenya">🇰🇪 Kenya</option>
+                <option value="Ghana">🇬🇭 Ghana</option>
+                <option value="Morocco">🇲🇦 Morocco</option>
+              </optgroup>
+              <!-- Other -->
+              <optgroup label="──">
+                <option value="Other">🌐 Other</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Business Type -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏢 Business Type</label>
+            <select id="filterBizType" aria-label="Filter by business type" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Types</option>
+              <option value="b2b">B2B</option>
+              <option value="b2c">B2C</option>
+              <option value="local">Local</option>
+              <option value="enterprise">Enterprise</option>
+              <option value="startup">Startup</option>
+              <option value="nonprofit">Non-Profit</option>
+            </select>
+          </div>
+
+          <!-- Score Range -->
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">📊 Score Range</label>
+            <select id="filterScore" aria-label="Filter by score range" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+              <option value="">All Scores (70–100)</option>
+              <option value="95">🏅 Elite · 95–100</option>
+              <option value="90">⭐ Excellent · 90–94</option>
+              <option value="85">💪 Strong · 85–89</option>
+              <option value="80">✅ Good · 80–84</option>
+              <option value="75">📈 Solid · 75–79</option>
+              <option value="70">🎯 Qualified · 70–74</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Active filter count + reset -->
+        <div class="flex items-center justify-between mt-3">
+          <span id="filterCount" class="text-xs" style="color:#9ca3af!important;"></span>
+          <button onclick="resetLeaderboardFilters()" class="text-xs px-3 py-1 rounded" style="background:rgba(139,92,246,0.2);color:#c084fc!important;border:1px solid #7c3aed;cursor:pointer;">Reset Filters</button>
+        </div>
+      </div>
+      <!-- ── END FILTERS ── -->
+
+      <!-- Top 3 podium -->
+      <div id="top3-container" class="top3-grid"></div>
+
+      <!-- Ranks 4–15 -->
+      <div id="rankings4to15Container" class="mt-8"></div>
+
+      <!-- Empty state for filters -->
+      <div id="leaderboardEmpty" class="hidden text-center py-8" style="color:#6b7280!important;">
+        <div class="text-4xl mb-3">🔍</div>
+        <p>No entries match your filters. Try a different combination.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
        FREELANCERS SECTION — data from server, no changes
        ============================================================ -->
   <div id="freelancers" class="mb-16 main-section" data-section="experts">
     <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">🎯 ContentScale Partners</h2>
-      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Werk Met Ons</button>
+      <h2 class="text-4xl font-bold mb-3">🤝 SEO Partners &amp; Specialists</h2>
+      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Become a Partner</button>
     </div>
     <!-- FIX: was grid-3, now proper grid class -->
     <div class="cards-grid" id="freelancersGrid"></div>
@@ -670,7 +1021,7 @@ footer p { color: #9ca3af !important; }
         <ul class="space-y-2 text-sm">
           <li><a href="#lead-scanner">Lead Scanner</a></li>
           <li><a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a></li>
-          <li><a href="#freelancers">SEO Specialists</a></li>
+          <li><a href="javascript:void(0)" onclick="switchPageSection('experts')">SEO Specialists</a></li>
           <li><a href="javascript:void(0)" onclick="switchPageSection('templates')">Email Templates</a></li>
         </ul>
       </div>
@@ -743,24 +1094,19 @@ footer p { color: #9ca3af !important; }
      ============================================================ -->
 <div id="freelancerModal" class="modal">
   <div class="modal-content">
-    <div style="text-align:center;margin-bottom:16px;">
-      <div style="font-size:2rem;margin-bottom:6px;">🤝</div>
-      <h2 class="text-2xl font-bold" style="color:#111827!important;">Work With Us</h2>
-      <p style="color:#6b7280;font-size:0.88rem;margin-top:4px;">Find leads together with ContentScale. You bring the drive, we provide the tools.</p>
-    </div>
+    <h2 class="text-2xl font-bold mb-4" style="color:#111827!important;">Apply as SEO Specialist</h2>
     <div class="space-y-4">
       <input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded">
-      <input type="email" id="freelancerEmail" placeholder="Email Address *" class="w-full p-3 rounded">
-      <input type="text" id="freelancerTitle" placeholder="Your role / expertise (e.g. SEO, Sales, Outreach)" class="w-full p-3 rounded">
-      <textarea id="freelancerBio" rows="3" placeholder="Tell us briefly about yourself and what you'd like to contribute (max 120 chars)" maxlength="120" class="w-full p-3 rounded"></textarea>
-      <select id="freelancerRate" aria-label="Collaboration preference" class="w-full p-3 rounded">
-        <option value="">How would you like to work together?</option>
-        <option value="Commission per deal">Commission per closed deal</option>
-        <option value="Freelance hourly">Freelance hourly rate</option>
-        <option value="Long-term partnership">Long-term partnership</option>
+      <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
+      <input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded">
+      <textarea id="freelancerBio" rows="3" placeholder="Bio (max 120 chars)" maxlength="120" class="w-full p-3 rounded"></textarea>
+      <select id="freelancerRate" aria-label="Hourly rate" class="w-full p-3 rounded">
+        <option value="">Select Rate...</option>
+        <option value="€50 - €75 / hour">€50 - €75 / hour</option>
+        <option value="€75 - €100 / hour">€75 - €100 / hour</option>
         <option value="Project-based">Project-based</option>
       </select>
-      <button onclick="submitFreelancer()" class="btn btn-primary w-full">✅ Submit Application</button>
+      <button onclick="submitFreelancer()" class="btn btn-primary w-full">Submit Application</button>
       <button onclick="closeModal()" class="btn btn-cancel w-full">Cancel</button>
     </div>
   </div>
@@ -1281,7 +1627,8 @@ document.addEventListener('DOMContentLoaded', function () {
   updateDailyLimitUI();
   processEmailQueue();
   checkRescanReminder();
-
+  const savedReplyTo = localStorage.getItem('discoverReplyTo');
+  if (savedReplyTo) { const el = document.getElementById('discoverReplyTo'); if (el) el.value = savedReplyTo; }
   const qc = getQueue().length;
   if (qc > 0) {
     const qb = document.getElementById('queueBadge');
@@ -1351,15 +1698,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function updateBulkCount() {
   const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
-  const el = document.getElementById('bulkCountDisplay');
-  if (el) {
-    if (lines.length > 5) {
-      el.textContent = lines.length + '/5 ⚠️';
-      el.style.color = '#f87171';
-    } else {
-      el.textContent = lines.length + '/5';
-      el.style.color = lines.length === 5 ? '#fbbf24' : '#9ca3af';
-    }
+  const el = document.getElementById('bulkUrlCount');
+  if (!el) return;
+  const remaining = 5 - lines.length;
+  if (lines.length === 0) {
+    el.textContent = '5 left';
+    el.style.color = '#9ca3af';
+  } else if (remaining > 0) {
+    el.textContent = remaining + ' left';
+    el.style.color = '#9ca3af';
+  } else if (remaining === 0) {
+    el.textContent = '0 left ✓';
+    el.style.color = '#4ade80';
+  } else {
+    el.textContent = Math.abs(remaining) + ' over limit ⚠️';
+    el.style.color = '#f87171';
   }
 }
 
@@ -1401,10 +1754,12 @@ async function loadApiStatus() {
 function checkSetupStatus() {
   const gate      = document.getElementById('bulkAccessGate');
   const allDone   = document.getElementById('setupAllDone');
-
-  // Scanning is always free — hide access gate
+  const dGate     = document.getElementById('discoverAccessGate');
+  const dForm     = document.getElementById('discoverForm');
+  // Scanning is ALWAYS free — hide the access gate
   if (gate)    gate.classList.add('hidden');
   if (allDone) allDone.classList.remove('hidden');
+  updateDailyLimitUI();
 }
 
 // ============================================================
@@ -1443,11 +1798,304 @@ window._copyBadge = function(type, score) {
   });
 };
 
-function toggleBulkEmail() { /* removed */ }
+function toggleBulkEmail() {
+  if (!sendgridConfigured) {
+    alert('📧 Email sending requires SendGrid.\n\nScanning is free — your results still show scores, recommendations, and leaderboard submissions.\n\nTo enable emails, contact Ottmar on WhatsApp to get access.');
+    return;
+  }
+  bulkEmailEnabled = !bulkEmailEnabled;
+  const box   = document.getElementById('emailToggleBox');
+  const label = document.getElementById('bulkBtnLabel');
+  if (bulkEmailEnabled) {
+    box.style.background = '#4ade80';
+    box.style.border     = '2px solid #4ade80';
+    box.innerHTML        = '<i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>';
+    label.textContent    = 'Scan All URLs + Send Emails';
+  } else {
+    box.style.background = '#374151';
+    box.style.border     = '2px solid #4b5563';
+    box.innerHTML        = '';
+    label.textContent    = 'Scan All URLs';
+  }
+}
+function setDiscoverStep(step, status) {
+  const el = document.getElementById('dStep' + step);
+  if (!el) return;
+  const labels = ['', '① Finding leads...', '② Extracting URLs', '③ Scanning scores', '④ Sending emails'];
+  const colors = { active: '#fbbf24', done: '#4ade80', idle: '#6b7280' };
+  el.textContent = labels[step];
+  el.style.color = colors[status] + '!important';
+  el.style.fontWeight = status === 'active' ? '700' : '400';
+}
 
+function setDiscoverProgress(pct, text) {
+  document.getElementById('discoverProgressBar').style.width = pct + '%';
+  document.getElementById('discoverProgressText').textContent = text;
+}
 
 // Main Auto-Discover pipeline
+async function startAutoDiscover() {
+  const apifyToken = localStorage.getItem('apifyToken');
+  if (!apifyToken) {
+    document.getElementById('apifyKeyWarning').classList.remove('hidden');
+    document.getElementById('apifyKeyWarning').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
 
+  const nicheSelect = document.getElementById('discoverNiche').value;
+  const nicheCustom = document.getElementById('discoverNicheCustom').value.trim();
+  const niche       = nicheCustom || nicheSelect;
+  const location    = document.getElementById('discoverLocation').value.trim();
+  const country     = document.getElementById('discoverCountry').value;
+  const maxResults  = parseInt(document.getElementById('discoverMaxResults').value);
+  const websiteOnly = document.getElementById('discoverWebsiteOnly').checked;
+  if (!niche)    { alert('❌ Please select or type a niche.'); return; }
+  if (!location) { alert('❌ Please enter a city or location.'); return; }
+  const replyTo = document.getElementById('discoverReplyTo').value.trim();
+  if (!replyTo)  { alert('❌ Please enter your Reply-To email so businesses can respond.'); return; }
+  localStorage.setItem('discoverReplyTo', replyTo);
+
+  const btn = document.getElementById('discoverBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Running pipeline...';
+
+  const progress = document.getElementById('discoverProgress');
+  progress.classList.remove('hidden');
+  document.getElementById('discoverResults').classList.add('hidden');
+
+  // Reset step indicators
+  [1,2,3,4].forEach(s => setDiscoverStep(s, 'idle'));
+
+  try {
+    // ── STEP 1: Call Apify Google Maps Scraper ──────────────────
+    setDiscoverStep(1, 'active');
+    setDiscoverProgress(5, `Searching Google Maps for "${niche}" in ${location}...`);
+
+    const searchQuery = `${niche} in ${location}`;
+
+    // Trigger Apify Google Maps Scraper Actor
+    const runRes = await fetch(
+      '/api/apify/start-run',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-apify-token': apifyToken
+        },
+        body: JSON.stringify({
+          actorId: 'compass~crawler-google-places',
+          input: {
+            searchStringsArray: [searchQuery],
+            maxCrawledPlacesPerSearch: maxResults,
+            language: 'en',
+            exportPlaceUrls: true,
+            includeWebResults: true,
+          skipClosedPlaces: false
+          }
+        })
+      }
+    );
+
+    if (!runRes.ok) {
+      const err = await runRes.json();
+      throw new Error(err.error?.message || `Apify error ${runRes.status}. Check your token.`);
+    }
+
+    const runData = await runRes.json();
+    const runId   = runData.data?.id;
+    if (!runId) throw new Error('Could not start Apify run. Check your token and Apify account.');
+
+    setDiscoverProgress(15, `Apify run started (ID: ${runId.slice(0,8)}...). Waiting for results...`);
+
+    // ── Poll until run finishes (max 3 min) ────────────────────
+    let attempts = 0;
+    let runStatus = 'RUNNING';
+    while (runStatus === 'RUNNING' || runStatus === 'READY') {
+      await new Promise(r => setTimeout(r, 4000));
+      attempts++;
+      const statusRes  = await fetch(
+        `/api/apify/run-status/${runId}`,
+        { headers: { 'x-apify-token': apifyToken } }
+      );
+      const statusData = await statusRes.json();
+      runStatus = statusData.data?.status;
+      const pct = Math.min(15 + attempts * 3, 40);
+      setDiscoverProgress(pct, `Scraping Google Maps... (${attempts * 4}s elapsed)`);
+      if (attempts > 45) throw new Error('Apify run timed out after 3 minutes. Try fewer leads.');
+    }
+
+    if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run ${runStatus}. Check your Apify dashboard.`);
+
+    setDiscoverStep(1, 'done');
+    setDiscoverStep(2, 'active');
+    setDiscoverProgress(42, 'Fetching business data from Apify...');
+
+    // ── STEP 2: Fetch dataset items ────────────────────────────
+    const dataRes = await fetch(
+      `/api/apify/dataset/${runId}`,
+      { headers: { 'x-apify-token': apifyToken } }
+    );
+    const dataRaw = await dataRes.json();
+    // Apify returns array directly or wrapped in {items:[]}
+    const places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
+
+    // Extract usable URLs
+    let urls = places
+      .filter(p => p.website)
+      .map(p => ({
+        url:     p.website.startsWith('http') ? p.website : 'https://' + p.website,
+        name:    p.title || p.name || '',
+        email:   p.email || (p.emails && p.emails[0]) || null,
+        emails:  p.emails || [],
+        phone:   p.phone || p.phoneUnformatted || '',
+        address: p.address || '',
+        country: country
+      }));
+
+    // If websiteOnly not checked, include places without websites (score will be 0)
+    if (!websiteOnly) {
+      const noSite = places
+        .filter(p => !p.website)
+        .map(p => ({
+          url: '', name: p.title || p.name || '',
+          email: p.email || (p.emails && p.emails[0]) || null,
+          emails: p.emails || [],
+          phone: p.phone || '', address: p.address || '', country
+        }));
+      urls = [...urls, ...noSite];
+    }
+
+    if (urls.length === 0) throw new Error('No businesses found. Try a different niche or location.');
+
+    setDiscoverStep(2, 'done');
+    setDiscoverStep(3, 'active');
+    setDiscoverProgress(50, `Found ${urls.length} businesses. Starting ContentScore scan...`);
+
+    // ── STEP 3: Run ContentScore on each URL ───────────────────
+    const results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
+    let scanned = 0;
+
+    for (const place of urls) {
+      if (!place.url) {
+        results.withoutWebsite.push({ url: place.name, score: 0, data: { country, ...place } });
+        scanned++;
+        continue;
+      }
+      try {
+        const scanRes  = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: place.url })
+        });
+        const scanData = await scanRes.json();
+        const score    = scanData.score || 0;
+        const item = { url: place.url, score, data: { ...scanData, country, name: place.name, email: place.email, emails: place.emails, phone: place.phone, address: place.address } };
+
+        if (score >= 70)       results.leaderboard.push(item);
+        else if (score >= 65) results.almostMade.push(item);
+        else               results.withWebsite.push(item);
+
+        // Log every scan — so admin can see all businesses including no-email ones
+        var emailFound = place.email || (place.emails && place.emails[0]) || null;
+        fetch('/api/scan-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            business_url: place.url,
+            business_name: place.name,
+            score: score,
+            niche: niche,
+            city: location,
+            country: country,
+            email_found: emailFound,
+            email_status: emailFound ? 'has_email' : 'no_email',
+            recommendations: scanData.recommendations ? scanData.recommendations.slice(0, 5).map(function(r){ return r.title || r; }) : []
+          })
+        }).catch(function(){});
+      } catch (e) {
+        results.errors.push({ url: place.url, error: e.message });
+      }
+      scanned++;
+      const pct = 50 + Math.round((scanned / urls.length) * 35);
+      setDiscoverProgress(pct, `Scanning ${scanned}/${urls.length}: ${place.name || place.url}`);
+    }
+
+    setDiscoverStep(3, 'done');
+    setDiscoverStep(4, 'active');
+    setDiscoverProgress(88, 'Sending emails via SendGrid...');
+
+    // ── STEP 4: Send emails ────────────────────────────────────
+    let emailStats = { sent: 0, queued: 0, skipped: 0 };
+    if (sendgridConfigured) {
+      emailStats = await sendBulkEmails(results, replyTo, replyTo.split('@')[0]);
+    }
+
+    setDiscoverStep(4, 'done');
+    setDiscoverProgress(100, '✅ Pipeline complete!');
+
+    // ── Show summary ───────────────────────────────────────────
+    const total = urls.length;
+    const errCount = results.errors.length;
+    document.getElementById('discoverResultsContainer').innerHTML = `
+      <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;margin-top:8px;">
+        <h4 style="font-weight:800;font-size:1.1rem;margin-bottom:16px;color:#f9fafb!important;">
+          🎯 Auto-Discover Complete — <em style="color:#fbbf24!important;">${niche}</em> in ${location}
+        </h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#4ade80!important;">${results.leaderboard.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🏆 Leaderboard (70+)</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#60a5fa!important;">${results.withWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">📈 Improvement emails</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#a78bfa!important;">${results.withoutWebsite.length}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">🌐 No-website offers</div>
+          </div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:16px;text-align:center;">
+            <div style="font-size:2rem;font-weight:900;color:#f87171!important;">${errCount}</div>
+            <div style="font-size:0.75rem;color:#6b7280!important;">❌ Errors</div>
+          </div>
+        </div>
+        ${results.leaderboard.length > 0 ? `
+        <div style="background:rgba(74,222,128,0.05);border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+          <p style="font-size:0.85rem;color:#4ade80!important;font-weight:700;margin-bottom:6px;">🏆 Top Performers (added to leaderboard):</p>
+          ${results.leaderboard.slice(0,5).map(r =>
+            `<div style="display:flex;justify-content:space-between;font-size:0.8rem;padding:3px 0;border-bottom:1px solid #1f2937;">
+               <span style="color:#d1d5db!important;">${r.data?.name || r.url}</span>
+               <span style="color:#4ade80!important;font-weight:700;">${r.score}/100</span>
+             </div>`
+          ).join('')}
+          ${results.leaderboard.length > 5 ? `<p style="font-size:0.75rem;color:#6b7280!important;margin-top:4px;">+${results.leaderboard.length - 5} more</p>` : ''}
+        </div>` : ''}
+        <p style="font-size:0.85rem;color:#9ca3af!important;text-align:center;margin:0;">
+          ${sendgridConfigured
+            ? `📧 Sent: <strong style="color:#4ade80!important;">${emailStats.sent}</strong> &nbsp;·&nbsp; Queued: <strong style="color:#fbbf24!important;">${emailStats.queued}</strong> &nbsp;·&nbsp; No email found: <strong style="color:#9ca3af!important;">${emailStats.skipped}</strong>`
+            : '⚠️ SendGrid not configured — no emails sent.'}
+        </p>
+      </div>`;
+
+    document.getElementById('discoverResults').classList.remove('hidden');
+    document.getElementById('discoverResults').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    console.error(err);
+    setDiscoverProgress(0, '');
+    document.getElementById('discoverResultsContainer').innerHTML = `
+      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;margin-top:8px;">
+        <p style="color:#f87171!important;font-weight:700;">❌ Pipeline Error</p>
+        <p style="color:#fca5a5!important;font-size:0.85rem;">${err.message}</p>
+        <p style="color:#9ca3af!important;font-size:0.8rem;margin-top:8px;">Common fixes: Check your Apify token · Make sure you have credits in your Apify account · Try fewer leads</p>
+      </div>`;
+    document.getElementById('discoverResults').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-rocket mr-2"></i> Find Leads & Scan Automatically';
+  }
+}
 // ============================================================
 async function loadUserTemplates() {
   // Always seed defaults first
@@ -1465,7 +2113,7 @@ async function loadUserTemplates() {
       userTemplates = data.templates;
       ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
         // Only overwrite if server has a non-empty saved version
-        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 500) {
+        if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 50) {
           const subEl  = document.getElementById('template-' + t + '-subject');
           const bodyEl = document.getElementById('template-' + t + '-body');
           if (subEl)  subEl.value  = userTemplates[t].subject;
@@ -1500,27 +2148,22 @@ function switchMode(mode) {
   const singleMode   = document.getElementById('singleMode');
   const bulkMode     = document.getElementById('bulkMode');
   const discoverMode = document.getElementById('discoverMode');
-  const templates    = document.getElementById('templates');
   const singleBtn    = document.getElementById('modeSingleBtn');
   const bulkBtn      = document.getElementById('modeBulkBtn');
   const discoverBtn  = document.getElementById('modeDiscoverBtn');
 
-  // Hide all, deactivate all buttons
   [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
   [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
 
   if (mode === 'single') {
-    singleMode.classList.remove('hidden');
-    singleBtn.classList.add('active');
-    if (templates) templates.classList.add('hidden');
+    if (singleMode) singleMode.classList.remove('hidden');
+    if (singleBtn)  singleBtn.classList.add('active');
   } else if (mode === 'bulk') {
-    bulkMode.classList.remove('hidden');
-    bulkBtn.classList.add('active');
-    if (templates) templates.classList.remove('hidden');
+    if (bulkMode) bulkMode.classList.remove('hidden');
+    if (bulkBtn)  bulkBtn.classList.add('active');
   } else if (mode === 'discover') {
-    discoverMode.classList.remove('hidden');
-    discoverBtn.classList.add('active');
-    if (templates) templates.classList.add('hidden');
+    if (discoverMode) discoverMode.classList.remove('hidden');
+    if (discoverBtn)  discoverBtn.classList.add('active');
   }
 }
 
@@ -1927,7 +2570,7 @@ function displayScanResult(data, targetEl) {
             style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;">
             <i class="fab fa-whatsapp"></i> Get Help
           </a>
-          <button onclick="copyScanShareLink();return false;"
+          <button onclick="if(window._lastScanData){copyScanShareLink(window._lastScanData.url,window._lastScanData.score,window._lastScanData._scoreLabel||'');}return false;"
             style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
             🔗 Share Link
           </button>
@@ -1958,29 +2601,18 @@ function displayScanResult(data, targetEl) {
 // ============================================================
 // SHARE LINK
 // ============================================================
-function copyScanShareLink() {
-  const data = window._lastScanData;
-  if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
-
-  // Use server-hosted report URL if available (looks like the PDF report)
-  const reportUrl = data.report_url
-    ? (data.report_url.startsWith('http') ? data.report_url : 'https://app.contentscale.site' + data.report_url)
-    : null;
-
-  if (reportUrl) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(reportUrl).then(() => {
-        showToast('🔗 Report link copied!', '#0ea5e9');
-      }).catch(() => fallbackCopy(reportUrl));
-    } else {
-      fallbackCopy(reportUrl);
-    }
-    return;
+function copyScanShareLink(url, score, label) {
+  const params = new URLSearchParams({ url, score, label });
+  const shareUrl = window.location.origin + window.location.pathname + '?' + params.toString();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showToast('🔗 Share link copied to clipboard!', '#0ea5e9');
+    }).catch(() => {
+      fallbackCopy(shareUrl);
+    });
+  } else {
+    fallbackCopy(shareUrl);
   }
-
-  // Fallback: open the full PDF-style report in a new window
-  exportScanPDF(data);
-  showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
 }
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
@@ -2183,14 +2815,10 @@ function exportScanPDF(data) {
 async function startBulkScan() {
   const urlInput = document.getElementById('bulkUrlInput');
   const button   = document.getElementById('bulkScanBtn');
-  const allUrls  = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-  if (allUrls.length > 5) {
-    alert('❌ Free plan: max 5 URLs.\n\nNeed more? Use the Pro dashboard at /app');
-    return;
-  }
-  const urls = allUrls;
+  const urls     = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 
   if (!urls.length) { alert('❌ Enter at least one URL'); return; }
+  if (urls.length > 5) { alert('❌ Free plan: max 5 URLs.\n\nNeed more? Contact Ottmar via WhatsApp (wa.me/31628073996)'); return; }
 
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
@@ -2199,27 +2827,11 @@ async function startBulkScan() {
 
   let results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
 
-  // ── Dedup: skip already-scanned URLs ──────────────────────
-  let alreadyScannedBulk = new Set();
-  try {
-    const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
-    const existingData = await existingRes.json();
-    if (existingData.success && existingData.scans) {
-      existingData.scans.forEach(s => { if (s.business_url) alreadyScannedBulk.add(s.business_url.trim()); });
-    }
-  } catch(e) { /* non-fatal */ }
-  const urlsToProcess = urls.filter(u => !alreadyScannedBulk.has(u.trim()));
-  const skippedBulk = urls.length - urlsToProcess.length;
-  if (skippedBulk > 0) {
-    document.getElementById('bulkProgressText').textContent = `${skippedBulk} URL(s) already scanned — skipping. Scanning ${urlsToProcess.length} new...`;
-    await new Promise(r => setTimeout(r, 1200));
-  }
-
-  for (let i = 0; i < urlsToProcess.length; i++) {
-    let url = urlsToProcess[i];
+  for (let i = 0; i < urls.length; i++) {
+    let url = urls[i];
     if (!url.startsWith('http')) url = 'https://' + url;
-    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urlsToProcess.length} — ${url}`;
-    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urlsToProcess.length) * 100}%`;
+    document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
+    document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urls.length) * 100}%`;
     try {
       const response = await fetch('/api/scan', {
         method: 'POST',
@@ -2620,14 +3232,7 @@ function getDailySentCount() { return parseInt(localStorage.getItem(getTodayKey(
 function incrementDailySent(n = 1) { const k = getTodayKey(); localStorage.setItem(k, getDailySentCount() + n); updateDailyLimitUI(); }
 function getRemainingToday() { return Math.max(0, DAILY_LIMIT - getDailySentCount()); }
 
-function updateDailyLimitUI() {
-  const sent = getDailySentCount(), remaining = getRemainingToday();
-  const el = document.getElementById('dailyLimitBadge');
-  if (el) {
-    const color = remaining > 50 ? '#4ade80' : remaining > 20 ? '#fbbf24' : '#f87171';
-    el.innerHTML = `\ud83d\udce7 Today: <strong style="color:${color}!important;">${sent}/${DAILY_LIMIT}</strong> emails sent &nbsp;\u00b7&nbsp; <span style="color:${color}!important;">${remaining} remaining</span>`;
-  }
-}
+function updateDailyLimitUI() { /* email stats removed */ }
 
 // ============================================================
 // EMAIL QUEUE
@@ -2986,15 +3591,72 @@ function filterActivity() {
   renderActivityTable(rows);
 }
 
+function renderActivityTable(scans) {
+  const tbody = document.getElementById('activityTableBody');
+  if (!scans.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center" style="color:#6b7280;">No scans yet - run a bulk scan or Find Me Leads to get started.</td></tr>';
+    return;
+  }
+  const tplLabel = {
+    congrats:    { t: 'Congrats',        bg: '#0f2d1a', c: '#4ade80' },
+    almostMade:  { t: 'Almost Made It',  bg: '#1c1a00', c: '#fbbf24' },
+    improvement: { t: 'Pitch Sent',      bg: '#0c1a2e', c: '#60a5fa' },
+    website:     { t: 'Website Offer',   bg: '#1a0a30', c: '#a78bfa' }
+  };
+  tbody.innerHTML = scans.map((s, idx) => {
+    const rowBg = idx % 2 === 0 ? '' : 'rgba(255,255,255,0.015)';
+    const score = s.score !== null
+      ? '<span style="font-weight:800;font-size:0.88rem;color:' + (s.score>=70?'#4ade80':s.score>=50?'#fbbf24':'#f87171') + ';">' + s.score + '<span style="font-size:0.62rem;color:#6b7280;">/100</span></span>'
+      : '-';
+
+    const emailShort = s.email_found ? s.email_found.replace(/^(.{18}).*(@.*)$/, '$1...$2') : null;
+    const emailCell  = emailShort
+      ? '<span style="font-size:0.72rem;color:#d1d5db;" title="' + s.email_found + '">' + emailShort + '</span>'
+      : '<span style="color:#4b5563;font-size:0.7rem;">not found</span>';
+
+    let tplBadge = '<span style="background:#1c1917;color:#6b7280;padding:2px 7px;border-radius:99px;font-size:0.68rem;">not sent</span>';
+    if (s.template_type && tplLabel[s.template_type]) {
+      const tl = tplLabel[s.template_type];
+      tplBadge = '<span style="background:' + tl.bg + ';color:' + tl.c + ';padding:2px 7px;border-radius:99px;font-size:0.68rem;white-space:nowrap;">' + tl.t + '</span>';
+    } else if (s.email_status === 'has_email') {
+      tplBadge = '<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.68rem;">sent</span>';
+    }
+
+    const src = s.source || 'bulk';
+    const srcBadge = src === 'discover'
+      ? '<span style="background:#1c0a00;color:#f59e0b;padding:2px 7px;border-radius:99px;font-size:0.66rem;">Find Leads</span>'
+      : src === 'single'
+        ? '<span style="background:#0f172a;color:#818cf8;padding:2px 7px;border-radius:99px;font-size:0.66rem;">Single</span>'
+        : '<span style="background:#0f172a;color:#94a3b8;padding:2px 7px;border-radius:99px;font-size:0.66rem;">Bulk</span>';
+
+    let rec = '-';
+    try { const r = JSON.parse(s.recommendations || '[]'); rec = r[0] || '-'; } catch {}
+
+    const dt      = new Date(s.created_at);
+    const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
+    const domain  = s.business_url ? s.business_url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] : '';
+    const urlCell = s.business_url
+      ? '<div><a href="' + s.business_url + '" target="_blank" style="color:#60a5fa;font-size:0.8rem;font-weight:600;">' + (s.business_name || domain) + '</a><div style="font-size:0.66rem;color:#6b7280;">' + domain + '</div></div>'
+      : '-';
+
+    return '<tr style="border-bottom:1px solid #1f2937;background:' + rowBg + ';transition:background 0.1s;" onmouseover="this.style.background=\'rgba(126,34,206,0.06)\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+      '<td class="py-3 pr-3 pl-2">' + urlCell + '</td>' +
+      '<td class="py-3 pr-3">' + score + '</td>' +
+      '<td class="py-3 pr-3">' + emailCell + '</td>' +
+      '<td class="py-3 pr-3">' + tplBadge + '</td>' +
+      '<td class="py-3 pr-3">' + srcBadge + '</td>' +
+      '<td class="py-3 pr-3" style="color:#9ca3af;font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rec + '">' + rec + '</td>' +
+      '<td class="py-3" style="color:#6b7280;font-size:0.68rem;white-space:nowrap;">' + dateStr + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
 
 function exportActivityCSV() {
-  const rows = [['Business','URL','Score','Email Found','Status','Top Issue','Report URL','Scanned']];
+  const rows = [['Business','URL','Score','Email Found','Status','Top Issue','Scanned']];
   allActivityScans.forEach(s => {
     let rec = ''; try { rec = JSON.parse(s.recommendations || '[]')[0] || ''; } catch {}
-    const fullReportUrl = s.report_url
-      ? (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url)
-      : '';
-    rows.push([s.business_name || '', s.business_url || '', s.score || '', s.email_found || '', s.email_status || '', rec, fullReportUrl, new Date(s.created_at).toLocaleString('nl-NL')]);
+    rows.push([s.business_name || '', s.business_url || '', s.score || '', s.email_found || '', s.email_status || '', rec, new Date(s.created_at).toLocaleString('nl-NL')]);
   });
   const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); a.download = 'contentscale-activity-' + new Date().toISOString().split('T')[0] + '.csv'; a.click();
@@ -3075,26 +3737,17 @@ function switchPageSection(section) {
   document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
   const activeTab = document.getElementById('tab-' + section);
   if (activeTab) activeTab.classList.add('active');
-  // Hide scanner-only panels when not on scanner tab
-  const warmup   = null; // warmup removed
-  const activity = document.getElementById('activityMode');
-  const scanner  = document.getElementById('lead-scanner');
+  // Hide scanner sub-modes when not on scanner tab
   if (section !== 'scanner') {
-    if (warmup)   warmup.classList.add('hidden');
-    if (activity) activity.classList.add('hidden');
-    // Deactivate all mode toggles so scanner state is clean on return
     ['modeSingleBtn','modeBulkBtn','modeDiscoverBtn'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('active');
     });
-    if (scanner) {
-      ['singleMode','bulkMode'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-      });
-    }
+    ['singleMode','bulkMode','discoverMode'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
   } else {
-    // Returning to scanner — restore default single mode view
     switchMode('single');
   }
   // Load data for the selected section
