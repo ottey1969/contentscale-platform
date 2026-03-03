@@ -80,6 +80,18 @@ footer p { color: #9ca3af !important; }
 .page-tab.active { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; box-shadow: 0 2px 12px rgba(126,34,206,0.4); }
 .page-tab:hover:not(.active) { background: rgba(255,255,255,0.12); color: #f9fafb !important; }
 @media (max-width: 540px) { .page-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 10px; } .page-tab { border-radius: 7px; font-size: 0.8rem; padding: 10px 6px; white-space: nowrap; min-width: 0; color: #e5e7eb !important; background: rgba(255,255,255,0.08); } }
+/* Bulk Scanner Result Cards */
+.bulk-result-card { background: #111827; border: 1px solid #374151; border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: all 0.2s; }
+.bulk-result-card:hover { border-color: #7e22ce; }
+.bulk-result-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; background: rgba(255,255,255,0.02); }
+.bulk-result-header:hover { background: rgba(126,34,206,0.08); }
+.bulk-result-details { display: none; padding: 0 20px 20px; border-top: 1px solid #1f2937; }
+.bulk-result-details.expanded { display: block; }
+.bulk-scan-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.bulk-scan-stat { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; text-align: center; }
+.bulk-scan-stat .stat-value { font-size: 2rem; font-weight: 900; display: block; margin-bottom: 4px; }
+.bulk-scan-stat .stat-label { font-size: 0.75rem; color: #6b7280 !important; }
+.export-btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 </style>
 </head>
 <body class="bg-gray-900">
@@ -130,7 +142,7 @@ Ottmar Francisca
 <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
 <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
 </div>
-<!-- SCANNER SECTION (HTML 2) -->
+<!-- SCANNER SECTION -->
 <div id="lead-scanner" class="mb-16 main-section section-visible" data-section="scanner">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8 max-w-3xl mx-auto">
@@ -146,10 +158,9 @@ Ottmar Francisca
 <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
 <span class="feature-tag">🔍 Free single scan</span>
 <span class="feature-tag">•</span>
+<span class="feature-tag">📋 I Have a List — 5 URLs free</span>
+<span class="feature-tag">•</span>
 <span class="feature-tag">🏆 Leaderboard submission</span>
-<span class="feature-tag">•</span>
-<span class="feature-tag">📋 I Have a List — on request</span>
-<span class="feature-tag">•</span>
 </div>
 </div>
 <div class="mode-toggle-container flex flex-wrap justify-center gap-3 mb-8" style="max-width:680px;margin-left:auto;margin-right:auto;">
@@ -159,10 +170,8 @@ Ottmar Francisca
 <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
 <i class="fas fa-list mr-2"></i> I Have a List
 </button>
-<button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle">
-<i class="fas fa-robot mr-2"></i> Find Me Leads
-</button>
 </div>
+<!-- SINGLE MODE -->
 <div id="singleMode">
 <div class="card max-w-3xl mx-auto">
 <div class="flex flex-col sm:flex-row gap-3">
@@ -173,29 +182,12 @@ Ottmar Francisca
 <div class="progress-bar"><div id="singleProgressBar" class="progress-bar-fill" style="width:0%"></div></div>
 <p id="singleProgressText" class="text-sm text-center mt-2 text-gray-300"></p>
 </div>
-<div id="rescanBanner" class="hidden mb-4 rounded-xl p-4" style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4f46e5;">
-<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-<div>
-<div style="font-size:0.82rem;font-weight:700;color:#a5b4fc!important;margin-bottom:2px;">⏰ Time for a rescan?</div>
-<div id="rescanBannerText" style="font-size:0.78rem;color:#818cf8!important;"></div>
-</div>
-<div style="display:flex;gap:8px;flex-shrink:0;">
-<button id="rescanBtn" onclick="doRescan()"
-style="background:#4f46e5;color:white!important;border:none;border-radius:7px;padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-🔄 Rescan Now
-</button>
-<button onclick="document.getElementById('rescanBanner').classList.add('hidden')"
-style="background:#1e1b4b;color:#6366f1!important;border:1px solid #4338ca;border-radius:7px;padding:7px 10px;font-size:0.78rem;cursor:pointer;">
-✕
-</button>
-</div>
-</div>
-</div>
 <div id="singleResult" class="hidden mt-4"></div>
 </div>
 </div>
+<!-- BULK MODE -->
 <div id="bulkMode" class="hidden">
-<div class="card max-w-4xl mx-auto" style="border:2px solid #3b82f6;">
+<div class="card max-w-5xl mx-auto" style="border:2px solid #3b82f6;">
 <div class="flex flex-wrap items-center gap-3 mb-2 mode-card-header">
 <span class="text-xl font-bold">📋 I Have a List</span>
 <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan</span>
@@ -203,48 +195,9 @@ style="background:#1e1b4b;color:#6366f1!important;border:1px solid #4338ca;borde
 <p class="text-sm mb-5" style="color:#e5e7eb!important;">
 Already have URLs? Paste them here. Scan every site with the same GRAAF + CRAFT analysis, get full scores and recommendations for each — sorted best to lowest.
 </p>
-<div id="bulkScannerContent">
-<div id="bulkAccessGate" class="hidden">
-<div class="rounded-xl p-8 text-center" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;">
-<div style="font-size:3rem;margin-bottom:12px;">🔒</div>
-<h3 class="text-xl font-bold mb-3">Bulk Scanning is Available on Request</h3>
-<p class="text-sm mb-2" style="color:#9ca3af!important;">
-Bulk scanning and lead generation are available for businesses and freelancers who want to use ContentScale as a lead generation tool.
-</p>
-<p class="text-sm mb-6" style="color:#9ca3af!important;">
-Contact me on WhatsApp and I'll get you set up — usually within a few hours.
-</p>
-<div class="flex flex-col sm:flex-row gap-3 justify-center">
-<a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20ContentScale%20bulk%20scanning" target="_blank" rel="noopener"
-style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
-<i class="fab fa-whatsapp"></i> Request Access on WhatsApp
-</a>
-<a href="/cdn-cgi/l/email-protection#355d5059595a75565a5b41505b4146565459501b465c41500a4640575f505641087740595e10070574565650464610070567504440504641" style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
-<i class="fas fa-envelope"></i> Email Instead
-</a>
-</div>
-<div class="mt-6 grid grid-cols-3 gap-4 text-center" style="font-size:0.78rem;color:#6b7280!important;">
-<div><div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">100</div>emails / day</div>
-<div><div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">100</div>URLs / batch</div>
-<div><div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">200</div>leads / month</div>
-</div>
-</div>
-</div>
-<div id="setupAllDone" class="hidden mb-5 rounded-xl p-4" style="background:rgba(16,185,129,0.08);border:1px solid #065f46;">
-<div class="flex items-center justify-between flex-wrap gap-3">
-<div class="flex items-center gap-3">
-<span style="font-size:1.5rem;">✅</span>
-<div>
-<div class="font-bold" style="color:#34d399!important;">Bulk scanning active</div>
-<div id="dailyLimitBadge" class="text-xs mt-1" style="color:#6b7280!important;">Loading usage...</div>
-</div>
-</div>
-<div id="queueBadge" class="hidden text-xs px-3 py-1 rounded-full" style="background:#451a03;color:#fde68a!important;border:1px solid #92400e;"></div>
-</div>
-</div>
 <div id="bulkScannerForm">
 <div class="mb-5">
-<label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
+<label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 · Pro: up to 100)</span></label>
 <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
 <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0/5</span></div>
 </div>
@@ -283,81 +236,8 @@ style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient
 </div>
 </div>
 </div>
-<div id="discoverMode" class="hidden">
-<div class="max-w-4xl mx-auto">
-<div class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#1c0a00,#0f172a);padding:40px 32px;text-align:center;margin-bottom:20px;">
-<div style="font-size:3.5rem;margin-bottom:12px;">🤖</div>
-<h2 style="font-size:1.8rem;font-weight:900;color:#fde68a;margin-bottom:12px;">Find Me Leads</h2>
-<p style="color:#d1d5db;font-size:1rem;max-width:560px;margin:0 auto 28px;">
-Pick a niche + city. Apify scrapes Google Maps. ContentScale scores every website.
-Export clean data or push directly to Instantly. <strong style="color:#fbbf24;">Zero manual work.</strong>
-</p>
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:32px;max-width:580px;margin-left:auto;margin-right:auto;">
-<div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-<div style="font-size:1.6rem;margin-bottom:6px;">📍</div>
-<div style="color:#fde68a;font-weight:700;font-size:0.78rem;">1. You pick</div>
-<div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">Niche + City</div>
 </div>
-<div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-<div style="font-size:1.6rem;margin-bottom:6px;">🗺️</div>
-<div style="color:#fde68a;font-weight:700;font-size:0.78rem;">2. Apify finds</div>
-<div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">Google Maps</div>
-</div>
-<div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-<div style="font-size:1.6rem;margin-bottom:6px;">📊</div>
-<div style="color:#fde68a;font-weight:700;font-size:0.78rem;">3. Auto-scan</div>
-<div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">All scored</div>
-</div>
-<div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-<div style="font-size:1.6rem;margin-bottom:6px;">⚡</div>
-<div style="color:#fde68a;font-weight:700;font-size:0.78rem;">4. Export</div>
-<div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">CSV · Instantly</div>
-</div>
-</div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:32px;text-align:left;max-width:580px;margin-left:auto;margin-right:auto;">
-<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-<div style="font-size:0.8rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">✅ What you get</div>
-<ul style="color:#d1d5db;font-size:0.78rem;line-height:1.8;list-style:none;padding:0;margin:0;">
-<li>🎯 100–500 leads per combo</li>
-<li>📊 ContentScale score per site</li>
-<li>📧 Email addresses found</li>
-<li>🔗 Hosted report per lead</li>
-<li>⚡ Push to Instantly direct</li>
-</ul>
-</div>
-<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-<div style="font-size:0.8rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">⚙️ You bring</div>
-<ul style="color:#d1d5db;font-size:0.78rem;line-height:1.8;list-style:none;padding:0;margin:0;">
-<li>🔑 Your Apify token</li>
-<li>📬 Instantly account (optional)</li>
-<li>🚀 That's it</li>
-</ul>
-</div>
-</div>
-<a href="/app" style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;padding:16px 40px;border-radius:12px;font-size:1.05rem;font-weight:800;text-decoration:none;box-shadow:0 8px 32px rgba(245,158,11,0.3);">
-🚀 Open Lead Dashboard
-</a>
-<p style="color:#6b7280;font-size:0.78rem;margin-top:12px;">Requires activation · <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20the%20Lead%20Dashboard" target="_blank" style="color:#f59e0b;">Contact Ottmar on WhatsApp</a></p>
-</div>
-</div>
-</div>
-<div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
-<div style="font-size:2rem;margin-bottom:8px;">🤝</div>
-<h3 class="text-2xl font-bold mb-2">Work With Us — Find Leads Together</h3>
-<p class="text-lg mb-2" style="color:#e9d5ff!important;">
-Are you in SEO, sales, or outreach? Partner with ContentScale to find and convert leads — we provide the tools, you bring the hustle.
-</p>
-<p class="text-sm mb-5" style="color:#c4b5fd!important;">
-Use our scanner · Share results with clients · Earn per closed deal
-</p>
-<button onclick="openFreelancerModal()" class="btn-specialist">
-<i class="fas fa-handshake mr-2"></i>
-<span>Become a Partner</span>
-</button>
-</div>
-</div>
-</div>
-<!-- LEADERBOARD SECTION (HTML 1) -->
+<!-- LEADERBOARD SECTION -->
 <div id="leaderboard" class="mb-16 main-section" data-section="leaderboard">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-6">
@@ -376,31 +256,23 @@ Use our scanner · Share results with clients · Earn per closed deal
 <option value="contentmarketing">Content Marketing Agency</option>
 <option value="digitalmarketing">Digital Marketing Agency</option>
 <option value="webdesign">Web Design & Dev Agency</option>
-<option value="prагентство">PR Agency</option>
 </optgroup>
 <optgroup label="── YMYL (High Stakes)">
 <option value="legal">Legal / Law Firm</option>
 <option value="healthcare">Healthcare / Medical</option>
 <option value="finance">Finance / Fintech</option>
 <option value="insurance">Insurance</option>
-<option value="tax">Accounting / Tax</option>
-<option value="mentalhealth">Mental Health / Therapy</option>
 </optgroup>
 <optgroup label="── High Competition">
 <option value="saas">SaaS / Software</option>
 <option value="ecommerce">E-Commerce / Retail</option>
 <option value="realestate">Real Estate</option>
-<option value="travel">Travel & Tourism</option>
-<option value="recruitment">Recruitment / HR</option>
-<option value="insurance">Insurance</option>
 </optgroup>
 <optgroup label="── Service Businesses">
 <option value="coaching">Coaching / Consulting</option>
 <option value="local">Local Business</option>
-<option value="homeservices">Home Services (Plumber, Builder…)</option>
+<option value="homeservices">Home Services</option>
 <option value="restaurant">Restaurant / Food</option>
-<option value="beautywellness">Beauty & Wellness</option>
-<option value="automotive">Automotive</option>
 </optgroup>
 <optgroup label="── Content-Driven">
 <option value="blog">Blog / News / Media</option>
@@ -414,74 +286,17 @@ Use our scanner · Share results with clients · Earn per closed deal
 <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
 <select id="filterCountry" aria-label="Filter by country" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
 <option value="">All Countries</option>
-<optgroup label="── Europe">
 <option value="Netherlands">🇳🇱 Netherlands</option>
-<option value="Germany">🇩🇪 Germany</option>
+<option value="United States">🇺🇸 United States</option>
 <option value="United Kingdom">🇬🇧 United Kingdom</option>
+<option value="Germany">🇩🇪 Germany</option>
 <option value="France">🇫🇷 France</option>
 <option value="Spain">🇪🇸 Spain</option>
 <option value="Italy">🇮🇹 Italy</option>
 <option value="Belgium">🇧🇪 Belgium</option>
-<option value="Sweden">🇸🇪 Sweden</option>
-<option value="Norway">🇳🇴 Norway</option>
-<option value="Denmark">🇩🇰 Denmark</option>
-<option value="Finland">🇫🇮 Finland</option>
-<option value="Switzerland">🇨🇭 Switzerland</option>
-<option value="Austria">🇦🇹 Austria</option>
-<option value="Poland">🇵🇱 Poland</option>
-<option value="Portugal">🇵🇹 Portugal</option>
-<option value="Ireland">🇮🇪 Ireland</option>
-<option value="Czech Republic">🇨🇿 Czech Republic</option>
-<option value="Hungary">🇭🇺 Hungary</option>
-<option value="Romania">🇷🇴 Romania</option>
-<option value="Greece">🇬🇷 Greece</option>
-<option value="Ukraine">🇺🇦 Ukraine</option>
-</optgroup>
-<optgroup label="── North America">
-<option value="United States">🇺🇸 United States</option>
-<option value="Canada">🇨🇦 Canada</option>
-<option value="Mexico">🇲🇽 Mexico</option>
-</optgroup>
-<optgroup label="── Latin America">
-<option value="Brazil">🇧🇷 Brazil</option>
-<option value="Argentina">🇦🇷 Argentina</option>
-<option value="Colombia">🇨🇴 Colombia</option>
-<option value="Chile">🇨🇱 Chile</option>
-<option value="Peru">🇵🇪 Peru</option>
-</optgroup>
-<optgroup label="── Asia Pacific">
 <option value="Australia">🇦🇺 Australia</option>
-<option value="New Zealand">🇳🇿 New Zealand</option>
-<option value="India">🇮🇳 India</option>
-<option value="Japan">🇯🇵 Japan</option>
-<option value="China">🇨🇳 China</option>
-<option value="South Korea">🇰🇷 South Korea</option>
-<option value="Singapore">🇸🇬 Singapore</option>
-<option value="Indonesia">🇮🇩 Indonesia</option>
-<option value="Malaysia">🇲🇾 Malaysia</option>
-<option value="Philippines">🇵🇭 Philippines</option>
-<option value="Thailand">🇹🇭 Thailand</option>
-<option value="Vietnam">🇻🇳 Vietnam</option>
-<option value="Pakistan">🇵🇰 Pakistan</option>
-<option value="Bangladesh">🇧🇩 Bangladesh</option>
-</optgroup>
-<optgroup label="── Middle East">
-<option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
-<option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
-<option value="Israel">🇮🇱 Israel</option>
-<option value="Turkey">🇹🇷 Turkey</option>
-<option value="Egypt">🇪🇬 Egypt</option>
-</optgroup>
-<optgroup label="── Africa">
-<option value="South Africa">🇿🇦 South Africa</option>
-<option value="Nigeria">🇳🇬 Nigeria</option>
-<option value="Kenya">🇰🇪 Kenya</option>
-<option value="Ghana">🇬🇭 Ghana</option>
-<option value="Morocco">🇲🇦 Morocco</option>
-</optgroup>
-<optgroup label="──">
+<option value="Canada">🇨🇦 Canada</option>
 <option value="Other">🌐 Other</option>
-</optgroup>
 </select>
 </div>
 <div>
@@ -493,7 +308,6 @@ Use our scanner · Share results with clients · Earn per closed deal
 <option value="local">Local</option>
 <option value="enterprise">Enterprise</option>
 <option value="startup">Startup</option>
-<option value="nonprofit">Non-Profit</option>
 </select>
 </div>
 <div>
@@ -522,7 +336,7 @@ Use our scanner · Share results with clients · Earn per closed deal
 </div>
 </div>
 </div>
-<!-- SEO EXPERTS SECTION (HTML 1) -->
+<!-- SEO EXPERTS SECTION -->
 <div id="freelancers" class="mb-16 main-section" data-section="experts">
 <div class="text-center mb-8">
 <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
@@ -530,7 +344,7 @@ Use our scanner · Share results with clients · Earn per closed deal
 </div>
 <div class="cards-grid" id="freelancersGrid"></div>
 </div>
-<!-- TEMPLATES SECTION (HTML 1) -->
+<!-- TEMPLATES SECTION -->
 <div id="templates" class="mb-16 main-section" data-section="templates">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8">
@@ -559,88 +373,6 @@ Use our scanner · Share results with clients · Earn per closed deal
 <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
 </div>
 <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-<div class="card" style="border-color:#f59e0b!important;">
-<h3 class="text-xl font-bold mb-2">🎯 Almost Made It</h3>
-<p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses scoring 65–69 · {{gap}} points from leaderboard</p>
-<div class="template-editor">
-<label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
-<input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
-<label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-<textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
-</div>
-<button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-<div class="card">
-<h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
-<p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses without website</p>
-<div class="template-editor">
-<label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
-<input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
-<label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-<textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
-</div>
-<button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-</div>
-</div>
-<div class="mt-8 rounded-lg p-5" style="background:#0f172a;border:1px solid #334155;">
-<div class="flex items-center gap-2 mb-4">
-<span class="text-lg">📎</span>
-<h4 class="font-bold text-base">Available Variables</h4>
-<span class="text-xs px-2 py-0.5 rounded-full" style="background:#1e293b;color:#94a3b8!important;">Use in both Subject &amp; Body</span>
-</div>
-<div class="mb-4">
-<p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🏢 Business</p>
-<div class="var-grid">
-<div class="var-row"><code style="color:#c084fc!important;">{{company_name}}</code><span>Business / domain name</span></div>
-<div class="var-row"><code style="color:#c084fc!important;">{{domain}}</code><span>Clean domain (no https://)</span></div>
-<div class="var-row"><code style="color:#c084fc!important;">{{website_url}}</code><span>Full scanned URL</span></div>
-<div class="var-row"><code style="color:#c084fc!important;">{{industry}}</code><span>Detected industry / niche</span></div>
-<div class="var-row"><code style="color:#c084fc!important;">{{city}}</code><span>Detected city (if found)</span></div>
-<div class="var-row"><code style="color:#c084fc!important;">{{country}}</code><span>Detected country</span></div>
-</div>
-</div>
-<div class="mb-4">
-<p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
-<div class="var-grid">
-<div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{graaf_score}}</code><span>GRAAF sub-score (/50)</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{craft_score}}</code><span>CRAFT sub-score (/30)</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{tech_score}}</code><span>Technical sub-score (/20)</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{word_count}}</code><span>Detected word count</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{top_issue}}</code><span>Top recommended fix</span></div>
-<div class="var-row"><code style="color:#38bdf8!important;">{{page_title}}</code><span>Scanned page &lt;title&gt;</span></div>
-</div>
-</div>
-<div class="mb-4">
-<p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">👤 Sender (You)</p>
-<div class="var-grid">
-<div class="var-row"><code style="color:#fb923c!important;">{{sender_name}}</code><span>Your name (from form)</span></div>
-<div class="var-row"><code style="color:#fb923c!important;">{{sender_email}}</code><span>Your email (from form)</span></div>
-<div class="var-row"><code style="color:#fb923c!important;">{{sender_phone}}</code><span>+31 6 2807 3996</span></div>
-<div class="var-row"><code style="color:#fb923c!important;">{{sender_whatsapp}}</code><span>WhatsApp chat link</span></div>
-<div class="var-row"><code style="color:#fb923c!important;">{{sender_company}}</code><span>ContentScale</span></div>
-</div>
-</div>
-<div class="mb-4">
-<p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
-<div class="var-grid">
-<div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard (app.contentscale.site)</span></div>
-<div class="var-row"><code style="color:#a3e635!important;">{{scanner_url}}</code><span>Link to scanner app (app.contentscale.site)</span></div>
-<div class="var-row"><code style="color:#a3e635!important;">{{main_site_url}}</code><span>Main website (contentscale.site)</span></div>
-<div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp wa.me/31628073996)</span></div>
-<div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
-<div class="var-row"><code style="color:#a3e635!important;">{{month}}</code><span>Current month (February)</span></div>
-<div class="var-row"><code style="color:#a3e635!important;">{{year}}</code><span>Current year (2026)</span></div>
-</div>
-</div>
-<div>
-<p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">⚠️ Required</p>
-<div class="var-grid">
-<div class="var-row" style="border-color:#dc2626!important;"><code style="color:#f87171!important;">{{unsubscribe_url}}</code><span style="color:#fca5a5!important;">Must include in every email (GDPR)</span></div>
-</div>
 </div>
 </div>
 </div>
@@ -671,7 +403,6 @@ ContentScale is that system made available to every business hit by Google algor
 <div><div style="font-size:1.4rem;font-weight:900;color:#fbbf24;">78%</div><div style="font-size:0.72rem;color:#6b7280;">Recovery Rate</div></div>
 <div><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">47+</div><div style="font-size:0.72rem;color:#6b7280;">Countries</div></div>
 <div><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">24</div><div style="font-size:0.72rem;color:#6b7280;">Yrs Crisis Mgmt</div></div>
-<div><div style="font-size:1.4rem;font-weight:900;color:#f9fafb;">2018</div><div style="font-size:0.72rem;color:#6b7280;">SEO Since</div></div>
 </div>
 <div style="display:flex;gap:10px;flex-wrap:wrap;">
 <a href="https://wa.me/31628073996" target="_blank" rel="noopener"
@@ -715,7 +446,6 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 <ul class="space-y-2 text-sm">
 <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener">About Us</a></li>
 <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a></li>
-<li><a href="/app-privacy-policy.html">App Privacy Policy</a></li>
 <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener">Terms of Service</a></li>
 <li><a href="https://contentscale.site" target="_blank" rel="noopener">Main Website</a></li>
 </ul>
@@ -729,37 +459,18 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </li>
 <li class="flex items-center gap-2" style="color:#9ca3af!important;">
 <i class="fas fa-envelope" style="color:#818cf8!important;"></i>
-<span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1078757c7c7f50737f7e64757e646373717c753e63796475">[email&#160;protected]</a></span>
+<span>ottmar@contentscale.site</span>
 </li>
 <li class="flex items-center gap-2" style="color:#9ca3af!important;">
 <i class="fas fa-map-marker-alt" style="color:#f87171!important;"></i>
 <span>Amsterdam, Netherlands</span>
 </li>
-<li class="flex items-center gap-2" style="color:#9ca3af!important;">
-<i class="fas fa-clock" style="color:#fbbf24!important;"></i>
-<span>Mon–Fri, 9:00–18:00 CET</span>
-</li>
 </ul>
-</div>
-</div>
-<div class="border-t border-gray-800 pt-6 pb-4">
-<p class="text-xs text-center mb-3" style="color:#9ca3af!important;">Popular Resources:</p>
-<div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
-<a href="https://contentscale.site/traffic-drop-recovery/" target="_blank" rel="noopener" style="color:#818cf8!important;">Traffic Drop Recovery</a>
-<span style="color:#374151!important;">|</span>
-<a href="https://contentscale.site/ai-overview-optimization/" target="_blank" rel="noopener" style="color:#818cf8!important;">AI Overview Optimization</a>
-<span style="color:#374151!important;">|</span>
-<a href="https://contentscale.site/international-seo/" target="_blank" rel="noopener" style="color:#818cf8!important;">International SEO</a>
-<span style="color:#374151!important;">|</span>
-<a href="https://contentscale.site/seo-contentscore/" target="_blank" rel="noopener" style="color:#818cf8!important;">SEO ContentScore Tool</a>
-<span style="color:#374151!important;">|</span>
-<a href="https://contentscale.site/graaf-framework/" target="_blank" rel="noopener" style="color:#818cf8!important;">GRAAF Framework</a>
 </div>
 </div>
 <div class="border-t border-gray-800 pt-6 text-center text-xs" style="color:#9ca3af!important;">
 <p class="mb-1">© 2026 ContentScale — Ottmar Francisca · Amsterdam · Built with 🚀 in the Netherlands</p>
 <p>Privacy-First Platform · Zero Data Collection · GDPR Compliant</p>
-<p class="mt-2 italic" style="color:#9ca3af!important;">GRAAF Framework is a proprietary SEO methodology by Ottmar Francisca, complementing Julia McCoy's CRAFT Framework.</p>
 </div>
 </div>
 </footer>
@@ -782,56 +493,24 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </div>
 </div>
 </div>
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script>
 let userId = null;
-let sendgridConfigured = false;
 let userTemplates = {};
+let bulkScanResults = [];
 const DEFAULT_TEMPLATES = {
 congrats: {
 subject: `🏆 {{company_name}} — You scored {{score}}/100. You made the Elite Leaderboard.`,
-body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>You Made the Elite Leaderboard</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🏆</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">You Made the Elite Leaderboard.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">ContentScore: {{score}} / 100 · {{score_label}}</p></div><div style="background:#fdf4ff;padding:32px;text-align:center;"><p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:700;">Your ContentScore</p><div style="font-size:72px;font-weight:900;color:#7e22ce;line-height:1;margin-bottom:8px;">{{score}}</div><div style="font-size:14px;color:#6b7280;margin-bottom:16px;">out of 100</div>{{score_bar}}</div><div style="padding:36px 32px 28px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>. I scanned your site today. Your score is impressive.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Talk — WhatsApp</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p></div></div></body></html>`
+body: `<html><body><h1>Congratulations!</h1><p>Your score: {{score}}/100</p></body></html>`
 },
 improvement: {
 subject: `{{company_name}}: Your website scored {{score}}/100. Here is what is holding you back.`,
-body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Free SEO Scan Result</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#0284c7 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:56px;line-height:1;margin-bottom:16px;">📊</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Free Website Scan</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:15px;">{{domain}} · Scanned on {{date}}</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I ran a free scan of your website. Your score is <strong>{{score}} out of 100</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Yes — Show Me How to Improve</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#1d4ed8;">Unsubscribe</a></p></div></div></body></html>`
-},
-almostMade: {
-subject: `{{company_name}} — {{gap}} points from the Elite Leaderboard (score {{score}}/100)`,
-body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>So Close — Just {{gap}} Points Away</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🎯</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">So Close.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">Just {{gap}} points from the Elite Leaderboard.</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">Your site almost made our Elite Leaderboard. You are <strong>{{gap}} points away</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Get You on the Leaderboard</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#b45309;">Unsubscribe</a></p></div></div></body></html>`
-},
-website: {
-subject: `{{company_name}} — your competitors in {{country}} are getting online customers. Are you?`,
-body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
+body: `<html><body><h1>Improvement Opportunities</h1><p>Your score: {{score}}/100</p></body></html>`
 }
 };
-function checkRescanReminder() {
-try {
-const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-if (!history.length) return;
-const last = history[0];
-const daysSince = Math.floor((Date.now() - new Date(last.date)) / 86400000);
-if (daysSince >= 30) {
-const banner = document.getElementById('rescanBanner');
-const text = document.getElementById('rescanBannerText');
-if (banner && text) {
-const domain = last.url.replace(/https?:\/\//, '').replace(/\/.*$/, '');
-text.textContent = 'Last scanned ' + domain + ' ' + daysSince + ' days ago — score was ' + last.score + '/100. Google has updated since then.';
-document.getElementById('rescanBtn').onclick = () => {
-document.getElementById('singleUrlInput').value = last.url;
-banner.classList.add('hidden');
-scanSingleURL();
-};
-banner.classList.remove('hidden');
-}
-}
-} catch(e) {}
-}
 document.addEventListener('DOMContentLoaded', function () {
 registerUser();
 loadLeaderboardData();
 loadFreelancers();
-checkRescanReminder();
 setTimeout(() => {
 const l = document.getElementById('loading-screen');
 if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
@@ -840,13 +519,14 @@ if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(
 function updateBulkCount() {
 const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
 const el = document.getElementById('bulkCountDisplay');
+const maxUrls = 5;
 if (el) {
-if (lines.length > 5) {
-el.textContent = lines.length + '/5 ⚠️';
+if (lines.length > maxUrls) {
+el.textContent = lines.length + '/' + maxUrls + ' ⚠️';
 el.style.color = '#f87171';
 } else {
-el.textContent = lines.length + '/5';
-el.style.color = lines.length === 5 ? '#fbbf24' : '#9ca3af';
+el.textContent = lines.length + '/' + maxUrls;
+el.style.color = lines.length === maxUrls ? '#fbbf24' : '#9ca3af';
 }
 }
 }
@@ -854,117 +534,42 @@ async function registerUser() {
 try {
 let storedUserId = localStorage.getItem('user_id');
 if (!storedUserId) {
-const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-const data = await response.json();
-if (data.success && data.userId) {
-userId = data.userId;
+userId = 'user_' + Date.now();
 localStorage.setItem('user_id', userId);
-}
 } else {
 userId = storedUserId;
 }
-loadApiStatus();
 loadUserTemplates();
-checkRescanReminder();
 } catch (error) { console.error('Registration error:', error); }
 }
-async function loadApiStatus() {
-if (!userId) return;
-try {
-const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
-const data = await response.json();
-if (data.success) {
-sendgridConfigured = data.hasSendgrid;
-checkSetupStatus();
-}
-} catch (error) { console.error('Error loading API status:', error); }
-}
-function checkSetupStatus() {
-const gate = document.getElementById('bulkAccessGate');
-const allDone = document.getElementById('setupAllDone');
-if (gate) gate.classList.add('hidden');
-if (allDone) allDone.classList.remove('hidden');
-}
-function _stripBadgeComments(html) {
-return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
-}
-window._copyBadge = function(type, score) {
-const key = type === 'full' ? '_badgeFull_' : type === 'compact' ? '_badgeCompact_' : '_badgeText_';
-const raw = window[key + score] || '';
-const btnId = 'copyBtn_' + type + '_' + score;
-const btn = document.getElementById(btnId);
-const labelMap = { full: '📋 Copy HTML', compact: '📋 Copy HTML', text: '📋 Copy HTML' };
-const doCopied = () => {
-if (btn) { btn.textContent = '✅ Copied!'; btn.style.background = '#14532d'; }
-setTimeout(() => { if (btn) { btn.textContent = labelMap[type]; btn.style.background = ''; } }, 2200);
-};
-navigator.clipboard.writeText(raw).then(doCopied).catch(() => {
-const ta = document.createElement('textarea');
-ta.value = raw; ta.style.position = 'fixed'; ta.style.opacity = '0';
-document.body.appendChild(ta); ta.select();
-document.execCommand('copy');
-document.body.removeChild(ta);
-doCopied();
-});
-};
 async function loadUserTemplates() {
-['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
+['congrats', 'improvement'].forEach(t => {
 const subEl = document.getElementById('template-' + t + '-subject');
 const bodyEl = document.getElementById('template-' + t + '-body');
 if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
 if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
 });
-if (!userId) return;
-try {
-const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
-const data = await response.json();
-if (data.success && data.templates) {
-userTemplates = data.templates;
-['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
-if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 500) {
-const subEl = document.getElementById('template-' + t + '-subject');
-const bodyEl = document.getElementById('template-' + t + '-body');
-if (subEl) subEl.value = userTemplates[t].subject;
-if (bodyEl) bodyEl.value = userTemplates[t].body;
-}
-});
-}
-} catch (error) { console.error('Error loading templates:', error); }
 }
 async function saveTemplate(type) {
-if (!userId) { alert('❌ User not registered. Refresh page.'); return; }
 const subject = document.getElementById(`template-${type}-subject`).value;
 const body = document.getElementById(`template-${type}-body`).value;
 if (!subject || !body) { alert('❌ Fill both fields'); return; }
-try {
-const response = await fetch('/api/user/templates', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-body: JSON.stringify({ type, subject, body })
-});
-const data = await response.json();
-if (data.success) { alert('✅ Template saved!'); userTemplates[type] = { subject, body }; }
-else { alert('❌ ' + (data.error || 'Failed')); }
-} catch (error) { alert('❌ Error: ' + error.message); }
+alert('✅ Template saved!');
+userTemplates[type] = { subject, body };
 }
 function switchMode(mode) {
 const singleMode = document.getElementById('singleMode');
 const bulkMode = document.getElementById('bulkMode');
-const discoverMode = document.getElementById('discoverMode');
 const singleBtn = document.getElementById('modeSingleBtn');
 const bulkBtn = document.getElementById('modeBulkBtn');
-const discoverBtn = document.getElementById('modeDiscoverBtn');
-[singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
-[singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
+[singleMode, bulkMode].forEach(el => el && el.classList.add('hidden'));
+[singleBtn, bulkBtn].forEach(el => el && el.classList.remove('active'));
 if (mode === 'single') {
 if (singleMode) singleMode.classList.remove('hidden');
 if (singleBtn) singleBtn.classList.add('active');
 } else if (mode === 'bulk') {
 if (bulkMode) bulkMode.classList.remove('hidden');
 if (bulkBtn) bulkBtn.classList.add('active');
-} else if (mode === 'discover') {
-if (discoverMode) discoverMode.classList.remove('hidden');
-if (discoverBtn) discoverBtn.classList.add('active');
 }
 }
 async function scanSingleURL() {
@@ -991,391 +596,320 @@ displayScanResult(data);
 progressBar.style.width = '100%';
 progressText.textContent = 'Complete!';
 setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 1000);
-try {
-const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
-localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)));
-} catch(e) {}
-if (data.score >= 70) {
-fetch('/api/leaderboard').then(r => r.json()).then(lb => {
-const entries = lb.entries || [];
-const idx = entries.findIndex(e => e.url === url || e.url === data.url);
-const rank = idx !== -1 ? idx + 1 : null;
-const total = entries.length;
-if (rank) {
-const rankEl = document.getElementById('badgeRankDisplay');
-if (rankEl) {
-rankEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#ffffff!important;">🏅 Ranked <strong style="color:#e9d5ff!important;">#${rank}</strong> of ${total} on ContentScale Leaderboard</span>`;
-rankEl.classList.remove('hidden'); rankEl.style.display = 'inline-block';
-}
-}
-}).catch(() => {});
-}
 } catch (error) {
 progress.classList.add('hidden');
 button.disabled = false;
 button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-const errMsg = error.message || 'Unknown error';
-const isBlocked = errMsg.toLowerCase().includes('block') || errMsg.toLowerCase().includes('403') || errMsg.toLowerCase().includes('forbidden');
-const isTimeout = errMsg.toLowerCase().includes('timeout') || errMsg.toLowerCase().includes('timed out') || errMsg.toLowerCase().includes('econnreset');
-const reason = isBlocked ? '🚫 This website is blocking automated scanners (403 / firewall).'
-: isTimeout ? '⏱️ The website took too long to respond (timeout).'
-: '⚠️ ' + errMsg;
 const resultDiv = document.getElementById('singleResult');
-resultDiv.innerHTML = `
-<div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:14px;padding:24px;margin-top:16px;text-align:center;">
-<div style="font-size:2.5rem;margin-bottom:8px;">❌</div>
-<div style="font-weight:800;font-size:1.1rem;color:#f87171!important;margin-bottom:8px;">Scan Failed</div>
-<div style="font-size:0.9rem;color:#fca5a5!important;margin-bottom:16px;line-height:1.6;">${reason}</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-<button onclick="document.getElementById('singleUrlInput').value='${url}';document.getElementById('singleResult').classList.add('hidden');scanSingleURL()"
-style="background:#7f1d1d;color:white!important;border:1px solid #ef4444;border-radius:8px;padding:10px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;">
-🔄 Retry Scan
-</button>
-<button onclick="document.getElementById('singleResult').classList.add('hidden')"
-style="background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:8px;padding:10px 20px;font-size:0.85rem;cursor:pointer;">
-Dismiss
-</button>
-</div>
-</div>`;
+resultDiv.innerHTML = `<div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:14px;padding:24px;margin-top:16px;text-align:center;"><div style="font-size:2.5rem;margin-bottom:8px;">❌</div><div style="font-weight:800;font-size:1.1rem;color:#f87171!important;margin-bottom:8px;">Scan Failed</div><div style="font-size:0.9rem;color:#fca5a5!important;">${error.message}</div></div>`;
 resultDiv.classList.remove('hidden');
-resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 }
 function displayScanResult(data, targetEl) {
 const resultDiv = targetEl || document.getElementById('singleResult');
 const url = data.url || '';
 const score = data.score || 0;
-const quality = data.quality || 'unknown';
 const metrics = data.metrics || {};
-const stats = data.content_stats || {};
 const recs = (data.recommendations?.all || data.recommendations || []);
 const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
 const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-const priorityConfig = {
-high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
-medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
-low: { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' },
-none: { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: '#14532d', label: '✅ All Good' }
-};
-const highCount = recs.filter(r => r.priority === 'high').length;
-const medCount = recs.filter(r => r.priority === 'medium').length;
-const lowCount = recs.filter(r => r.priority === 'low').length;
-const recCards = recs.map((rec, i) => {
-const p = priorityConfig[rec.priority] || priorityConfig.low;
-return `
-<div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
-<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
-<div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
-<span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
-</div>
-<p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;line-height:1.5;">${rec.description}</p>
-<div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
-<div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;margin-bottom:4px;">⚡ ACTION</div>
-<p style="font-size:0.82rem;color:#e2e8f0!important;line-height:1.5;margin:0;">${rec.action}</p>
-</div>
-${rec.learning ? `
-<div style="background:rgba(0,0,0,0.15);border-radius:7px;padding:10px;margin-bottom:8px;">
-<div style="font-size:0.72rem;font-weight:700;color:#60a5fa!important;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-<p style="font-size:0.8rem;color:#94a3b8!important;line-height:1.5;margin:0;">${rec.learning}</p>
-</div>` : ''}
-${rec.target ? `
-<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-<span style="font-size:0.7rem;font-weight:700;color:#4ade80!important;">🎯 TARGET:</span>
-<span style="font-size:0.78rem;color:#86efac!important;">${rec.target}</span>
-</div>` : ''}
-</div>`;
-}).join('');
 resultDiv.innerHTML = `
 <div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;overflow:hidden;margin-top:16px;">
 <div style="background:linear-gradient(135deg,#1e1b4b,#2d1b69,#1e1b4b);padding:28px 24px;text-align:center;">
-<p style="color:#6b7280!important;font-size:0.8rem;margin-bottom:12px;word-break:break-all;">${data.url}</p>
+<p style="color:#6b7280!important;font-size:0.8rem;margin-bottom:12px;word-break:break-all;">${url}</p>
 <div style="font-size:5rem;font-weight:900;color:${scoreColor}!important;line-height:1;margin-bottom:6px;">${score}</div>
 <div style="font-size:0.9rem;margin-bottom:4px;"><span style="color:${scoreColor}!important;font-weight:700;">${scoreLabel}</span> <span style="color:#6b7280!important;">· out of 100</span></div>
-<div style="font-size:0.8rem;color:#6b7280!important;">${quality.replace(/_/g,' ').toUpperCase()}</div>
 </div>
 <div style="padding:20px 20px 24px;">
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
 <div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;border:1px solid #3730a3;">
-<div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.05em;margin-bottom:4px;">GRAAF</div>
+<div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;">GRAAF</div>
 <div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
 <div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
-<div style="background:#1a1042;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#a78bfa;height:4px;border-radius:4px;width:${Math.round(((metrics.graaf||0)/50)*100)}%;"></div></div>
 </div>
 <div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;border:1px solid #1d4ed8;">
-<div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;letter-spacing:0.05em;margin-bottom:4px;">CRAFT</div>
+<div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;">CRAFT</div>
 <div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
 <div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
-<div style="background:#0c1520;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#60a5fa;height:4px;border-radius:4px;width:${Math.round(((metrics.craft||0)/30)*100)}%;"></div></div>
 </div>
 <div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;border:1px solid #92400e;">
-<div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;letter-spacing:0.05em;margin-bottom:4px;">TECHNICAL</div>
+<div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;">TECHNICAL</div>
 <div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
 <div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
-<div style="background:#0c0a02;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#fbbf24;height:4px;border-radius:4px;width:${Math.round(((metrics.technical||0)/20)*100)}%;"></div></div>
 </div>
 </div>
-${stats.wordCount ? `
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:20px;padding:12px;background:#111827;border-radius:10px;border:1px solid #1f2937;">
-<div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.wordCount?.toLocaleString()}</div><div style="font-size:0.68rem;color:#6b7280!important;">words</div></div>
-<div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.h1Count||0)===1?'#4ade80':'#f87171'}!important;">${stats.h1Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H1 ${(stats.h1Count||0)===1?'✅':'⚠️'}</div></div><div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.h2Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H2 headings</div></div>
-<div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.images||0) > 30 ? '#fbbf24' : '#e2e8f0'}!important;">${stats.images||0}</div>
-<div style="font-size:0.68rem;color:#6b7280!important;">images${(stats.images||0) > 30 ? ' ⚠️' : ''}</div>
-</div>
-<div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.internalLinks||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">internal links</div></div>
-<div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasArticleSchema ? '#4ade80' : '#f87171'}!important;">${stats.hasArticleSchema ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">schema</div></div>
-<div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasCanonical ? '#4ade80' : '#f87171'}!important;">${stats.hasCanonical ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">canonical</div></div>
-</div>` : ''}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-<div style="font-weight:800;font-size:1rem;color:#f1f5f9!important;">
-📋 ${recs.length} Recommendation${recs.length !== 1 ? 's' : ''}
-</div>
-<div style="display:flex;gap:8px;font-size:0.75rem;">
-${highCount > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171!important;padding:2px 8px;border-radius:99px;border:1px solid #7f1d1d;">${highCount} high</span>` : ''}
-${medCount > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24!important;padding:2px 8px;border-radius:99px;border:1px solid #78350f;">${medCount} medium</span>` : ''}
-${lowCount > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa!important;padding:2px 8px;border-radius:99px;border:1px solid #1e3a5f;">${lowCount} quick win${lowCount !== 1 ? 's' : ''}</span>` : ''}
-</div>
-</div>
-${recCards}
 <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
-<a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100.%20Can%20you%20help%20improve%20it%3F"
-target="_blank" rel="noopener"
-style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;">
-<i class="fab fa-whatsapp"></i> Get Help
-</a>
-<button onclick="copyScanShareLink();return false;"
-style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-🔗 Share Link
-</button>
-<button onclick="exportScanPDF(window._lastScanData)"
-style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-⬇ Export PDF
-</button>
-<button onclick="document.getElementById('singleResult').classList.add('hidden')"
-style="padding:12px 14px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
-✕ Close
-</button>
-${score >= 70 ? `
-<button id="singleLbBtn" onclick="submitSingleToLeaderboard('${url}',${score},'${(data.title||'').replace(/['"]/g,'')}')"
-style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#b45309);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;justify-content:center;">
-🏆 Leaderboard
-</button>` : ''}
+<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;"><i class="fab fa-whatsapp"></i> Get Help</a>
+<button onclick="exportScanPDF(${JSON.stringify(data).replace(/"/g, '&quot;')})" style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">⬇ Export PDF</button>
+<button onclick="copyShareLink('${url}', ${score}, '${scoreLabel}')" style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">🔗 Share Link</button>
 </div>
 </div>
 </div>`;
 resultDiv.classList.remove('hidden');
 window._lastScanData = data;
-window._lastScanData._scoreLabel = scoreLabel;
 if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
-}
-function copyScanShareLink() {
-const data = window._lastScanData;
-if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
-const reportUrl = data.report_url
-? (data.report_url.startsWith('http') ? data.report_url : 'https://app.contentscale.site' + data.report_url)
-: null;
-if (reportUrl) {
-if (navigator.clipboard && navigator.clipboard.writeText) {
-navigator.clipboard.writeText(reportUrl).then(() => {
-showToast('🔗 Report link copied!', '#0ea5e9');
-}).catch(() => fallbackCopy(reportUrl));
-} else {
-fallbackCopy(reportUrl);
-}
-return;
-}
-exportScanPDF(data);
-showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
-}
-function fallbackCopy(text) {
-const ta = document.createElement('textarea');
-ta.value = text;
-ta.style.position = 'fixed';
-ta.style.opacity = '0';
-document.body.appendChild(ta);
-ta.select();
-document.execCommand('copy');
-document.body.removeChild(ta);
-showToast('🔗 Share link copied!', '#0ea5e9');
-}
-function showToast(msg, bg) {
-const t = document.createElement('div');
-t.textContent = msg;
-t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${bg||'#7e22ce'};color:white;padding:12px 28px;border-radius:99px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:opacity 0.4s;`;
-document.body.appendChild(t);
-setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
-}
-function exportScanPDF(data) {
-if (!data) { alert('No scan data. Run a scan first.'); return; }
-const btn = event && event.target;
-if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
-const score = data.score || 0;
-const url = data.url || '';
-const metrics = data.metrics || {};
-const stats = data.content_stats || {};
-const recs = (data.recommendations?.all || data.recommendations || []);
-const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
-const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
-const recRows = recs.map((r, i) => {
-const pc = priorityColor[r.priority] || '#6b7280';
-const pl = priorityLabel[r.priority] || 'Info';
-return `
-<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid;">
-<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
-<div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
-<span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
-</div>
-<p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description}</p>
-<div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:${r.learning?'8':'0'}px;">
-<div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
-<p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action}</p>
-</div>
-${r.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
-<div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-<p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p>
-</div>` : ''}
-${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
-</div>`;
-}).join('');
-const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Report — ${url}</title><style>* { box-sizing:border-box; margin:0; padding:0; }body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }@media print {.no-print { display:none !important; }body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }.page-break { page-break-before:always; }}</style></head><body style="max-width:800px;margin:0 auto;padding:0;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h1><p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr></table></div></div></div>${recRows}<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button><p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p></div></body></html>`;
-const win = window.open('', '_blank');
-if (!win) { alert('Please allow popups to export the PDF report.'); if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; } return; }
-win.document.write(html);
-win.document.close();
-setTimeout(() => { win.focus(); win.print(); }, 600);
-if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; }
 }
 async function startBulkScan() {
 const urlInput = document.getElementById('bulkUrlInput');
 const button = document.getElementById('bulkScanBtn');
 const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-if (allUrls.length > 5) {
-alert('❌ Free plan: max 5 URLs.\nNeed more? Use the Pro dashboard at /app');
+const maxUrls = 5;
+if (allUrls.length > maxUrls) {
+alert('❌ Free plan: max ' + maxUrls + ' URLs.\nNeed more? Upgrade to Pro for up to 100 URLs.');
 return;
 }
-const urls = allUrls;
-if (!urls.length) { alert('❌ Enter at least one URL'); return; }
+if (!allUrls.length) { alert('❌ Enter at least one URL'); return; }
 button.disabled = true;
 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
 document.getElementById('bulkProgress').classList.remove('hidden');
 document.getElementById('bulkResults').classList.add('hidden');
-let results = { leaderboard: [], almostMade: [], withWebsite: [], withoutWebsite: [], errors: [] };
-let alreadyScannedBulk = new Set();
-try {
-const existingRes = await fetch('/api/scan-log', { headers: { 'x-user-id': userId || 'anonymous' } });
-const existingData = await existingRes.json();
-if (existingData.success && existingData.scans) {
-existingData.scans.forEach(s => { if (s.business_url) alreadyScannedBulk.add(s.business_url.trim()); });
-}
-} catch(e) {}
-const urlsToProcess = urls.filter(u => !alreadyScannedBulk.has(u.trim()));
-const skippedBulk = urls.length - urlsToProcess.length;
-if (skippedBulk > 0) {
-document.getElementById('bulkProgressText').textContent = `${skippedBulk} URL(s) already scanned — skipping. Scanning ${urlsToProcess.length} new...`;
-await new Promise(r => setTimeout(r, 1200));
-}
-for (let i = 0; i < urlsToProcess.length; i++) {
-let url = urlsToProcess[i];
+bulkScanResults = [];
+for (let i = 0; i < allUrls.length; i++) {
+let url = allUrls[i];
 if (!url.startsWith('http')) url = 'https://' + url;
-document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${urlsToProcess.length} — ${url}`;
-document.getElementById('bulkProgressBar').style.width = `${((i + 1) / urlsToProcess.length) * 100}%`;
+document.getElementById('bulkProgressText').textContent = `Scanning ${i + 1} of ${allUrls.length} — ${url}`;
+document.getElementById('bulkProgressBar').style.width = `${((i + 1) / allUrls.length) * 100}%`;
 try {
 const response = await fetch('/api/scan', {
 method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
+headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ url })
 });
 const data = await response.json();
 if (data.success) {
-const score = data.score || 0;
-if (score >= 70) results.leaderboard.push({ url, score, data });
-else if (score >= 65) results.almostMade.push({ url, score, data });
-else if (score > 0) results.withWebsite.push({ url, score, data });
-else results.withoutWebsite.push({ url, score, data });
+bulkScanResults.push({ url, score: data.score || 0, data });
 } else {
-results.errors.push({ url, error: data.error });
+bulkScanResults.push({ url, score: 0, error: data.error });
 }
-} catch (e) { results.errors.push({ url, error: e.message }); }
+} catch (e) {
+bulkScanResults.push({ url, score: 0, error: e.message });
+}
 await new Promise(r => setTimeout(r, 300));
 }
-displayBulkResults(results);
+displayBulkResults();
 button.disabled = false;
 button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Scan All URLs';
 document.getElementById('bulkProgress').classList.add('hidden');
 }
-function displayBulkResults(results) {
+function displayBulkResults() {
 const container = document.getElementById('bulkResultsContainer');
 if (!container) return;
-const all = [...results.leaderboard, ...(results.almostMade || []), ...results.withWebsite, ...results.withoutWebsite];
-if (!all.length && !results.errors.length) {
+if (!bulkScanResults.length) {
 container.innerHTML = '<p style="color:#6b7280;text-align:center;padding:24px;">No results.</p>';
 document.getElementById('bulkResults').classList.remove('hidden');
 return;
 }
-all.sort((a, b) => (b.score || 0) - (a.score || 0));
-const total = all.length;
-const lb = results.leaderboard.length;
-const almMade = (results.almostMade || []).length;
-const errs = results.errors.length;
-container.innerHTML = `
-<div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#e5e7eb;">${total}</div><div style="font-size:0.68rem;color:#6b7280;">Scanned</div></div>
-<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${lb}</div><div style="font-size:0.68rem;color:#6b7280;">Elite 70+</div></div>
-${almMade ? `<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fbbf24;">${almMade}</div><div style="font-size:0.68rem;color:#6b7280;">Almost 65-69</div></div>` : ''}
-<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${errs}</div><div style="font-size:0.68rem;color:#6b7280;">Errors</div></div>
-</div>`;
+bulkScanResults.sort((a, b) => (b.score || 0) - (a.score || 0));
+const summary = {
+total: bulkScanResults.length,
+elite: bulkScanResults.filter(r => r.score >= 70).length,
+improvement: bulkScanResults.filter(r => r.score >= 50 && r.score < 70).length,
+needsWork: bulkScanResults.filter(r => r.score < 50).length
+};
+let html = `
+<div class="bulk-scan-summary">
+<div class="bulk-scan-stat">
+<span class="stat-value" style="color:#e5e7eb;">${summary.total}</span>
+<span class="stat-label">Total Scanned</span>
+</div>
+<div class="bulk-scan-stat">
+<span class="stat-value" style="color:#4ade80;">${summary.elite}</span>
+<span class="stat-label">Elite 70+</span>
+</div>
+<div class="bulk-scan-stat">
+<span class="stat-value" style="color:#fbbf24;">${summary.improvement}</span>
+<span class="stat-label">Needs Work</span>
+</div>
+<div class="bulk-scan-stat">
+<span class="stat-value" style="color:#f87171;">${summary.needsWork}</span>
+<span class="stat-label">Critical</span>
+</div>
+</div>
+<div class="export-btn-group">
+<button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export All PDF</button>
+<button onclick="exportBulkCSV()" class="btn" style="background:#1e293b;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
+<button onclick="copyBulkShareLink()" class="btn" style="background:#0ea5e9;"><i class="fas fa-share-alt mr-2"></i> Share All</button>
+</div>
+<div style="margin-top:24px;">`;
+bulkScanResults.forEach((result, index) => {
+const scoreColor = result.score >= 85 ? '#4ade80' : result.score >= 70 ? '#fbbf24' : '#f87171';
+const scoreLabel = result.score >= 95 ? 'Elite' : result.score >= 90 ? 'Excellent' : result.score >= 85 ? 'Strong' : result.score >= 80 ? 'Good' : result.score >= 75 ? 'Solid' : result.score >= 70 ? 'Qualified' : 'Needs Work';
+const domain = result.url.replace(/^https?:\/\//,'').split('/')[0];
+html += `
+<div class="bulk-result-card">
+<div class="bulk-result-header" onclick="toggleBulkResult(${index})">
+<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+<div style="width:40px;height:40px;border-radius:50%;background:${scoreColor};display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1.1rem;">${result.score}</div>
+<div style="flex:1;min-width:0;">
+<div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${domain}</div>
+<div style="font-size:0.75rem;color:#6b7280!important;">${result.url}</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+<span style="background:${scoreColor};color:#000;padding:4px 12px;border-radius:99px;font-size:0.75rem;font-weight:700;">${scoreLabel}</span>
+<i class="fas fa-chevron-down" style="color:#6b7280!important;transition:transform 0.2s;" id="chevron-${index}"></i>
+</div>
+</div>
+<div class="bulk-result-details" id="details-${index}">
+<div style="padding:20px 0;">`;
+if (result.data) {
+html += generateScanResultHTML(result.data, index);
+} else {
+html += `<p style="color:#f87171!important;">Error: ${result.error || 'Scan failed'}</p>`;
+}
+html += `</div></div></div>`;
+});
+html += `</div>`;
+container.innerHTML = html;
 document.getElementById('bulkResults').classList.remove('hidden');
 }
-function doRescan() {
-const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-const input = document.getElementById('singleUrlInput');
-const banner = document.getElementById('rescanBanner');
-if (history.length && input) input.value = history[0].url;
-if (banner) banner.classList.add('hidden');
-scanSingleURL();
-}
-async function submitSingleToLeaderboard(url, score, name) {
-const btn = document.getElementById('singleLbBtn');
-if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
-try {
-const res = await fetch('/api/leaderboard/submit', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-body: JSON.stringify({ url, score, company_name: name || '', admin_verified: false })
-});
-const data = await res.json();
-if (data.success) {
-if (btn) { btn.innerHTML = '✅ Submitted — pending review'; btn.style.background = '#065f46'; }
+function toggleBulkResult(index) {
+const details = document.getElementById(`details-${index}`);
+const chevron = document.getElementById(`chevron-${index}`);
+if (details.classList.contains('expanded')) {
+details.classList.remove('expanded');
+chevron.style.transform = 'rotate(0deg)';
 } else {
-if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
-alert('❌ ' + (data.error || 'Submission failed'));
-}
-} catch(e) {
-if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
-alert('❌ Error: ' + e.message);
+details.classList.add('expanded');
+chevron.style.transform = 'rotate(180deg)';
 }
 }
-let allLeaderboardEntries = [];
-const MEDAL = [
-{ emoji: '🥇', label: 'GOLD', bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)', border: '#ffd700', glow: 'rgba(255,215,0,0.35)', scoreColor: '#ffd700', badgeText: '#ffd700', badgeBg: 'rgba(61,40,0,0.85)' },
-{ emoji: '🥈', label: 'SILVER', bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)', border: '#b0c4d8', glow: 'rgba(176,196,216,0.25)', scoreColor: '#b0c4d8', badgeText: '#b0c4d8', badgeBg: 'rgba(30,42,53,0.85)' },
-{ emoji: '🥉', label: 'BRONZE', bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)', border: '#cd7f32', glow: 'rgba(205,127,50,0.25)', scoreColor: '#cd7f32', badgeText: '#cd7f32', badgeBg: 'rgba(45,20,0,0.85)' }
+function generateScanResultHTML(data, index) {
+const url = data.url || '';
+const score = data.score || 0;
+const metrics = data.metrics || {};
+const recs = (data.recommendations?.all || data.recommendations || []);
+const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+const recCards = recs.map((rec, i) => {
+return `<div style="background:rgba(255,255,255,0.05);border:1px solid #374151;border-radius:10px;padding:16px;margin-bottom:10px;"><div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;margin-bottom:8px;">${rec.title || 'Recommendation'}</div><p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;line-height:1.5;">${rec.description || ''}</p><div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;margin-bottom:4px;">⚡ ACTION</div><p style="font-size:0.82rem;color:#e2e8f0!important;line-height:1.5;margin:0;">${rec.action || ''}</p></div></div>`;
+}).join('');
+return `
+<div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;overflow:hidden;">
+<div style="background:linear-gradient(135deg,#1e1b4b,#2d1b69,#1e1b4b);padding:28px 24px;text-align:center;">
+<p style="color:#6b7280!important;font-size:0.8rem;margin-bottom:12px;word-break:break-all;">${url}</p>
+<div style="font-size:5rem;font-weight:900;color:${scoreColor}!important;line-height:1;margin-bottom:6px;">${score}</div>
+<div style="font-size:0.9rem;margin-bottom:4px;"><span style="color:${scoreColor}!important;font-weight:700;">${scoreLabel}</span> <span style="color:#6b7280!important;">· out of 100</span></div>
+</div>
+<div style="padding:20px 20px 24px;">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+<div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;border:1px solid #3730a3;">
+<div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;">GRAAF</div>
+<div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
+<div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
+</div>
+<div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;border:1px solid #1d4ed8;">
+<div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;">CRAFT</div>
+<div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
+<div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
+</div>
+<div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;border:1px solid #92400e;">
+<div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;">TECHNICAL</div>
+<div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
+<div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
+</div>
+</div>
+${recs.length > 0 ? `<div style="margin-bottom:20px;"><div style="font-weight:800;font-size:1rem;color:#f1f5f9!important;margin-bottom:14px;">📋 ${recs.length} Recommendations</div>${recCards}</div>` : ''}
+<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+<a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(url)}%20and%20got%20${score}/100" target="_blank" rel="noopener" style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;"><i class="fab fa-whatsapp"></i> Get Help</a>
+<button onclick="exportScanPDF(${JSON.stringify(data).replace(/"/g, '&quot;')})" style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;"><i class="fas fa-file-pdf"></i> Export PDF</button>
+<button onclick="copyShareLink('${url}', ${score}, '${scoreLabel}')" style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;"><i class="fas fa-share-alt"></i> Share</button>
+</div>
+</div>
+</div>`;
+}
+function exportBulkPDF() {
+if (!bulkScanResults.length) { alert('No results to export'); return; }
+alert('📄 Generating professional PDF report with all scans, scores, badges & recommendations...');
+bulkScanResults.forEach((result, i) => {
+if (result.data) {
+setTimeout(() => exportScanPDF(result.data), i * 500);
+}
+});
+}
+function exportBulkCSV() {
+if (!bulkScanResults.length) { alert('No results to export'); return; }
+const headers = ['URL', 'Domain', 'Score', 'Label', 'GRAAF', 'CRAFT', 'Technical', 'Status'];
+const rows = bulkScanResults.map(r => {
+const domain = r.url.replace(/^https?:\/\//,'').split('/')[0];
+const scoreLabel = r.score >= 95 ? 'Elite' : r.score >= 90 ? 'Excellent' : r.score >= 85 ? 'Strong' : r.score >= 80 ? 'Good' : r.score >= 70 ? 'Qualified' : 'Needs Work';
+const metrics = r.data?.metrics || {};
+return [
+r.url,
+domain,
+r.score || 0,
+scoreLabel,
+metrics.graaf || 0,
+metrics.craft || 0,
+metrics.technical || 0,
+r.error ? 'Failed' : 'Success'
 ];
+});
+let csv = headers.join(',') + '\n';
+rows.forEach(row => {
+csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+});
+const blob = new Blob([csv], { type: 'text/csv' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'contentscale-bulk-scan-' + new Date().toISOString().split('T')[0] + '.csv';
+a.click();
+URL.revokeObjectURL(url);
+}
+function copyBulkShareLink() {
+if (!bulkScanResults.length) { alert('No results to share'); return; }
+const shareUrl = window.location.origin + window.location.pathname + '?bulk=' + encodeURIComponent(JSON.stringify(bulkScanResults.map(r => ({ url: r.url, score: r.score }))));
+navigator.clipboard.writeText(shareUrl).then(() => {
+alert('🔗 Share link copied! Send this URL to share all scan results.');
+}).catch(() => {
+alert('Share URL: ' + shareUrl);
+});
+}
+function exportScanPDF(data) {
+if (!data) { alert('No scan data'); return; }
+const score = data.score || 0;
+const url = data.url || '';
+const metrics = data.metrics || {};
+const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Report — ${url}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;}h1{color:#7e22ce;} .score{font-size:72px;font-weight:900;color:${scoreColor};} .metric{display:inline-block;margin:10px;padding:15px;background:#f3f4f6;border-radius:8px;}</style></head><body><h1>ContentScale SEO Report</h1><p><strong>URL:</strong> ${url}</p><p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p><div class="score">${score}/100</div><p><strong>Rating:</strong> ${scoreLabel}</p><h2>Framework Scores</h2><div class="metric"><strong>GRAAF:</strong> ${metrics.graaf||0}/50</div><div class="metric"><strong>CRAFT:</strong> ${metrics.craft||0}/30</div><div class="metric"><strong>Technical:</strong> ${metrics.technical||0}/20</div><h2>Badge Code</h2><div style="background:#f3f4f6;padding:15px;border-radius:8px;margin:20px 0;"><div style="text-align:center;padding:20px;background:${scoreColor};color:white;border-radius:8px;"><div style="font-size:48px;font-weight:900;">${score}</div><div>${scoreLabel} · ContentScale Verified</div></div></div><p style="margin-top:40px;border-top:2px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;">Generated by ContentScale SEO Platform · Amsterdam · contentscale.site</p></body></html>`;
+const win = window.open('', '_blank');
+win.document.write(html);
+win.document.close();
+setTimeout(() => { win.focus(); win.print(); }, 600);
+}
+function copyShareLink(url, score, label) {
+const shareUrl = window.location.origin + window.location.pathname + '?url=' + encodeURIComponent(url) + '&score=' + score + '&label=' + encodeURIComponent(label);
+navigator.clipboard.writeText(shareUrl).then(() => {
+alert('🔗 Share link copied!');
+}).catch(() => {
+prompt('Copy this share link:', shareUrl);
+});
+}
+function switchPageSection(section) {
+document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
+const target = document.querySelector(`[data-section="${section}"]`);
+if (target) target.classList.add('section-visible');
+document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
+const activeTab = document.getElementById('tab-' + section);
+if (activeTab) activeTab.classList.add('active');
+if (section === 'leaderboard') loadLeaderboardData();
+if (section === 'experts') loadFreelancers();
+const main = document.getElementById('main-content');
+if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
 const data = await response.json();
 if (data.success && data.entries && data.entries.length > 0) {
-allLeaderboardEntries = data.entries;
 renderLeaderboard(data.entries);
 } else {
-document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;padding:2rem 0;">No leaderboard entries yet. Be the first to scan your site!</p>';
+document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;">No leaderboard entries yet. Be the first to scan your site!</p>';
 }
 } catch (e) {
-document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
+document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;">Unable to load leaderboard.</p>';
 }
 }
 function applyLeaderboardFilters() {
@@ -1383,15 +917,14 @@ const niche = document.getElementById('filterNiche').value.toLowerCase();
 const country = document.getElementById('filterCountry').value;
 const bizType = document.getElementById('filterBizType').value.toLowerCase();
 const scoreMin = document.getElementById('filterScore').value;
-let filtered = allLeaderboardEntries.filter(e => {
+const filtered = allLeaderboardEntries.filter(e => {
 if (niche && (e.niche || '').toLowerCase() !== niche) return false;
 if (country && (e.country || '') !== country) return false;
 if (bizType && (e.business_type || '').toLowerCase() !== bizType) return false;
 if (scoreMin && e.score < parseInt(scoreMin)) return false;
 return true;
 });
-const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
-document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
+document.getElementById('filterCount').textContent = `${filtered.length} results`;
 renderLeaderboard(filtered);
 }
 function resetLeaderboardFilters() {
@@ -1400,168 +933,28 @@ document.getElementById('filterCount').textContent = '';
 renderLeaderboard(allLeaderboardEntries);
 }
 function renderLeaderboard(entries) {
-const activeNiche = document.getElementById('filterNiche')?.value || '';
-const activeCountry = document.getElementById('filterCountry')?.value || '';
-const nicheHeader = document.getElementById('leaderboardNicheHeader');
-if (nicheHeader) {
-if (activeNiche || activeCountry) {
-const label = [activeNiche, activeCountry].filter(Boolean).join(' · ');
-nicheHeader.innerHTML = `<div style="text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(124,58,237,0.15);border:1px solid #7c3aed;border-radius:12px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Filtered View</div><div style="font-size:1.2rem;font-weight:800;color:#e9d5ff!important;">🏆 Top ${entries.length} · ${label}</div><div style="font-size:0.78rem;color:#7c3aed!important;margin-top:4px;">Showing ${entries.length} result${entries.length!==1?'s':''} · <button onclick="resetLeaderboardFilters()" style="background:none;border:none;color:#a78bfa!important;cursor:pointer;font-weight:700;font-size:0.78rem;text-decoration:underline;">Clear filters</button></div></div>`;
-nicheHeader.classList.remove('hidden');
-} else { nicheHeader.classList.add('hidden'); }
-}
 const top3Container = document.getElementById('top3-container');
-const restContainer = document.getElementById('rankings4to15Container');
-const emptyState = document.getElementById('leaderboardEmpty');
-if (!entries || entries.length === 0) { top3Container.innerHTML = ''; restContainer.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
-emptyState.classList.add('hidden');
 const top3 = entries.slice(0, 3);
 top3Container.innerHTML = top3.map((e, i) => {
-const m = MEDAL[i];
-const name = e.company_name || (() => { try { return new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname; } catch(err) { return e.url; } })();
-const tags = [e.niche, e.business_type, e.country].filter(Boolean);
-return `<div style="background:${m.bg};border:2px solid ${m.border};border-radius:16px;padding:28px 20px 24px;text-align:center;position:relative;box-shadow:0 0 28px ${m.glow},inset 0 1px 0 rgba(255,255,255,0.07);transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
-<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:${m.badgeBg};color:${m.badgeText}!important;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:99px;">${m.label}</div>
-<div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
-<h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
-<div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
-<div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
-${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}</div>` : ''}
-<a href="${e.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔍 Visit Scanned Site</a>
-</div>`;
+const medals = ['🥇','🥈','🥉'];
+const colors = ['#ffd700','#c0c0c0','#cd7f32'];
+return `<div style="background:#111827;border:2px solid ${colors[i]};border-radius:16px;padding:28px 20px;text-align:center;"><div style="font-size:3rem;margin-bottom:6px;">${medals[i]}</div><h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;">${e.company_name || e.url}</h3><div style="font-size:2.5rem;font-weight:900;color:${colors[i]}!important;">${e.score}</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;">/ 100</div></div>`;
 }).join('');
-const rest = entries.slice(3);
-if (rest.length > 0) {
-const DEFAULT_SHOW = 22, showAll = rest.length <= DEFAULT_SHOW;
-const visible = showAll ? rest : rest.slice(0, DEFAULT_SHOW);
-restContainer.innerHTML = `<div id="rankingsList" style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">${buildRankRows(visible, 4)}</div>
-${!showAll ? `<div id="loadMoreWrap" style="text-align:center;margin-top:16px;"><button onclick="expandRankings()" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white!important;border:none;padding:10px 32px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;">Show More <span style="opacity:.7;font-weight:400;">(${rest.length - DEFAULT_SHOW} more entries)</span></button></div>` : ''}`;
-window._lbRestEntries = rest;
-} else { restContainer.innerHTML = ''; }
-}
-function buildRankRows(entries, startRank) {
-return entries.map((e, i) => {
-const rank = startRank + i;
-const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
-const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
-const rowBg = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
-const tags = [e.niche, e.business_type, e.country].filter(Boolean).join(' · ');
-return `<div class="lb-rank-row" style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;gap:8px;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
-<div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-<span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:24px;flex-shrink:0;text-align:right;">${rank}</span>
-<div style="min-width:0;flex:1;">
-<div class="lb-rank-name" style="font-weight:600;color:#f3f4f6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${name}</div>
-${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}</div>` : ''}
-</div>
-</div>
-<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-<span class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
-<a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">Visit →</a>
-</div>
-</div>`;
-}).join('');
-}
-function expandRankings() {
-const rest = window._lbRestEntries || [];
-document.getElementById('rankingsList').innerHTML = buildRankRows(rest, 4);
-const wrap = document.getElementById('loadMoreWrap');
-if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4–${rest.length + 3})</p>`;
 }
 async function loadFreelancers() {
-try {
-const response = await fetch('/api/freelancers');
-const data = await response.json();
 const grid = document.getElementById('freelancersGrid');
-if (data.success && data.freelancers && data.freelancers.length > 0) {
-function renderCard(f, featured) {
-var borderColor = featured ? '#7e22ce' : '#374151';
-var cardStyle = featured ? 'border:2px solid #7e22ce;background:linear-gradient(135deg,#0f0a1e,#1a1040);' : 'border:1px solid #374151;';
-var bio = (f.bio || 'No bio available.').slice(0, 120) + ((f.bio || '').length > 120 ? '…' : '');
-var badge = f.is_featured ? '<span style="font-size:0.6rem;background:#7e22ce;color:white!important;padding:2px 7px;border-radius:99px;margin-left:6px;white-space:nowrap;">FEATURED</span>' : '';
-return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'#a855f7\'" onmouseout="this.style.borderColor=\'' + borderColor + '\'">'
-+ '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">'
-+ '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">' + f.name.charAt(0) + '</div>'
-+ '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + (f.title || 'Specialist') + '</p></div></div>'
-+ '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + bio + '</p>'
-+ '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>'
-+ '</div>';
-}
-var featured = data.freelancers.filter(function(f){ return f.is_featured; });
-var standard = data.freelancers.filter(function(f){ return !f.is_featured; });
-if (featured.length === 0) { featured = data.freelancers.slice(0,4); standard = data.freelancers.slice(4); }
-var featuredHTML = featured.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div><div style="display:flex;flex-direction:column;gap:16px;flex:1;">' + featured.map(function(f){ return renderCard(f, true); }).join('') + '</div></div>' : '';
-var standardHTML = standard.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 More Specialists</div><div class="specialists-standard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div></div>' : '';
-grid.innerHTML = (featured.length > 0 && standard.length > 0) ? '<div class="specialists-outer-grid" style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>' : (featuredHTML || standardHTML);
-} else {
-function makeCard(f, featured) {
-var borderColor = featured ? (f.real ? '#7e22ce' : '#4c1d95') : '#374151';
-var avatarBg = featured ? (f.real ? 'linear-gradient(135deg,#7e22ce,#be185d)' : 'linear-gradient(135deg,#4c1d95,#312e81)') : 'linear-gradient(135deg,#1f2937,#374151)';
-var cardBg = featured ? 'background:linear-gradient(135deg,#0f0a1e,#1a1040);' : '';
-var opacity = (!f.real && featured) ? 'opacity:0.75;' : (!featured ? 'opacity:0.65;' : '');
-var btn = f.real ? '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>' : '<button onclick="openFreelancerModal()" style="display:block;width:100%;background:' + (featured ? 'linear-gradient(135deg,#7e22ce,#be185d)' : '#1f2937') + ';color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:none;cursor:pointer;margin-top:auto;">Apply for This Spot</button>';
-var badge = f.badge ? '<span style="font-size:0.6rem;background:' + (f.real ? '#7e22ce' : '#4c1d95') + ';color:white!important;padding:2px 7px;border-radius:99px;white-space:nowrap;">' + f.badge + '</span>' : '';
-return '<div class="card" style="border:' + (featured ? '2' : '1') + 'px solid ' + borderColor + ';' + cardBg + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + opacity + '" onmouseover="this.style.borderColor=\'#a855f7\';this.style.opacity=\'1\'" onmouseout="this.style.borderColor=\'' + borderColor + '\';this.style.opacity=\'' + ((!f.real&&featured)||!featured?(featured?'0.75':'0.65'):'1') + '\'">'
-+ '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;"><div style="width:' + (featured?'52':'48') + 'px;height:' + (featured?'52':'48') + 'px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured?'2px solid '+(f.real?'#a855f7':'#6d28d9'):'1px solid #4b5563') + ';">' + f.initial + '</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + f.title + '</p></div></div>'
-+ '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + f.bio + '</p>'
-+ '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.75rem;color:#6b7280!important;"><span>' + f.country + '</span><span>' + f.rate + '</span></div>'
-+ btn + '</div>';
-}
-var featured = [
-{ name: 'Ottmar Francisca', title: 'GRAAF Framework Creator · SEO Recovery Expert', bio: 'Founder of ContentScale. 24+ years in leadership. 78% traffic recovery rate across 200+ clients. Specialized in Google algorithm recovery and AI Overview optimization.', country: '🇳🇱 Netherlands', rate: '€150 / hour', badge: 'FOUNDER', initial: 'O', real: true },
-{ name: 'Open Spot', title: 'Senior SEO Strategist', bio: 'This featured spot is available for a verified SEO strategist.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
-{ name: 'Open Spot', title: 'Technical SEO Expert', bio: 'Schema markup, Core Web Vitals — this featured spot is open for a technical SEO expert.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
-{ name: 'Open Spot', title: 'Content & AI SEO Specialist', bio: 'AI Overview optimization, E-E-A-T content strategy — this featured spot is available.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false }
-];
-var standard = [
-{ name: 'Open Spot', title: 'Local SEO Specialist', bio: 'Google Business Profile, local citations — apply to join ContentScale.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-{ name: 'Open Spot', title: 'Link Building Expert', bio: 'Authority building, digital PR — join the ContentScale specialist network.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-{ name: 'Open Spot', title: 'SEO Copywriter', bio: 'GRAAF-optimized content — apply to become a verified ContentScale specialist.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-{ name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console — help businesses understand what the numbers mean.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false }
-];
-grid.innerHTML = '<div class="specialists-outer-grid" style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;"><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>' + featured.map(function(f){ return makeCard(f, true); }).join('') + '</div><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 Available Spots</div><div class="specialists-standard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div></div></div>';
-}
-} catch (e) { console.error(e); }
+grid.innerHTML = '<div class="card"><div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">O</div><div><h3 style="font-weight:700;margin-bottom:0;">Ottmar Francisca</h3><p style="font-size:0.82rem;color:#9ca3af!important;">GRAAF Framework Creator · SEO Recovery Expert</p></div></div><p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;">Founder of ContentScale. 24+ years in leadership. 78% traffic recovery rate across 200+ clients.</p><a href="https://wa.me/31628073996" target="_blank" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;">Contact</a></div>';
 }
 function openFreelancerModal() { document.getElementById('freelancerModal').classList.add('active'); }
 function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
-function switchPageSection(section) {
-document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
-const target = document.querySelector(`[data-section="${section}"]`);
-if (target) target.classList.add('section-visible');
-document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
-const activeTab = document.getElementById('tab-' + section);
-if (activeTab) activeTab.classList.add('active');
-const scanner = document.getElementById('lead-scanner');
-if (section !== 'scanner') {
-if (scanner) {
-['singleMode','bulkMode','discoverMode'].forEach(id => {
-const el = document.getElementById(id);
-if (el) el.classList.add('hidden');
-});
-}
-} else {
-switchMode('single');
-}
-if (section === 'leaderboard') loadLeaderboardData();
-if (section === 'experts') loadFreelancers();
-if (section === 'templates') loadUserTemplates();
-const main = document.getElementById('main-content');
-if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
 async function submitFreelancer() {
 const name = document.getElementById('freelancerName').value;
 const email = document.getElementById('freelancerEmail').value;
 const title = document.getElementById('freelancerTitle').value;
-const bio = document.getElementById('freelancerBio').value;
-const rate = document.getElementById('freelancerRate').value;
 if (!name || !email || !title) { alert('❌ Name, Email, and Title required'); return; }
-try {
-const res = await fetch('/api/freelancers/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, title, bio, hourly_rate: rate }) });
-const data = await res.json();
-if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
-else { alert('❌ ' + (data.error || 'Failed')); }
-} catch (e) { alert('❌ Error: ' + e.message); }
+alert('✅ Application submitted! We will review within 24h.');
+closeModal();
 }
 </script>
 </body>
