@@ -80,6 +80,20 @@ footer p { color: #9ca3af !important; }
 .page-tab.active { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; box-shadow: 0 2px 12px rgba(126,34,206,0.4); }
 .page-tab:hover:not(.active) { background: rgba(255,255,255,0.12); color: #f9fafb !important; }
 @media (max-width: 540px) { .page-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 10px; } .page-tab { border-radius: 7px; font-size: 0.8rem; padding: 10px 6px; white-space: nowrap; min-width: 0; color: #e5e7eb !important; background: rgba(255,255,255,0.08); } }
+.bulk-result-item { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; margin-bottom: 16px; overflow: hidden; transition: all 0.2s; }
+.bulk-result-item.expanded { border-color: #7e22ce; box-shadow: 0 0 0 2px rgba(126,34,206,0.3); }
+.bulk-result-summary { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; background: rgba(255,255,255,0.02); }
+.bulk-result-summary:hover { background: rgba(126,34,206,0.1); }
+.bulk-score-badge { font-size: 1.8rem; font-weight: 900; line-height: 1; min-width: 70px; text-align: center; }
+.bulk-result-details { padding: 20px; border-top: 1px solid #1e293b; background: #0a0f1a; max-height: 2000px; overflow-y: auto; }
+.scrollable-details { max-height: 600px; overflow-y: auto; padding-right: 8px; }
+.scrollable-details::-webkit-scrollbar { width: 6px; }
+.scrollable-details::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
+.scrollable-details::-webkit-scrollbar-thumb { background: #7e22ce; border-radius: 10px; }
+.bulk-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+@media (max-width: 640px) { .bulk-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+.share-badge { background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4f46e5; border-radius: 99px; padding: 4px 12px; font-size: 0.7rem; color: #a5b4fc !important; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.share-badge:hover { background: #312e81; }
 </style>
 </head>
 <body class="bg-gray-900">
@@ -130,7 +144,7 @@ Ottmar Francisca
 <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
 <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
 </div>
-<!-- SCANNER SECTION (HTML 2) -->
+<!-- SCANNER SECTION -->
 <div id="lead-scanner" class="mb-16 main-section section-visible" data-section="scanner">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8 max-w-3xl mx-auto">
@@ -277,6 +291,8 @@ style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient
 <p id="bulkProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
 </div>
 <div id="bulkResults" class="hidden mt-4">
+<!-- 🔧 FIX: Added missing bulkStats element -->
+<div class="bulk-stats-grid" id="bulkStats"></div>
 <div id="bulkResultsContainer"></div>
 </div>
 </div>
@@ -357,7 +373,7 @@ Use our scanner · Share results with clients · Earn per closed deal
 </div>
 </div>
 </div>
-<!-- LEADERBOARD SECTION (HTML 1) -->
+<!-- LEADERBOARD SECTION -->
 <div id="leaderboard" class="mb-16 main-section" data-section="leaderboard">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-6">
@@ -522,7 +538,7 @@ Use our scanner · Share results with clients · Earn per closed deal
 </div>
 </div>
 </div>
-<!-- SEO EXPERTS SECTION (HTML 1) -->
+<!-- SEO EXPERTS SECTION -->
 <div id="freelancers" class="mb-16 main-section" data-section="experts">
 <div class="text-center mb-8">
 <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
@@ -530,7 +546,7 @@ Use our scanner · Share results with clients · Earn per closed deal
 </div>
 <div class="cards-grid" id="freelancersGrid"></div>
 </div>
-<!-- TEMPLATES SECTION (HTML 1) -->
+<!-- TEMPLATES SECTION -->
 <div id="templates" class="mb-16 main-section" data-section="templates">
 <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
 <div class="text-center mb-8">
@@ -783,19 +799,12 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </div>
 </div>
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
-// Replace the entire script section with this updated version
-
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
-// Replace the entire script section with this updated version
-
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script>
 let userId = null;
 let sendgridConfigured = false;
 let userTemplates = {};
 let bulkResults = [];
 let isScanning = false;
-
 const DEFAULT_TEMPLATES = {
 congrats: {
 subject: `🏆 {{company_name}} — You scored {{score}}/100. You made the Elite Leaderboard.`,
@@ -814,7 +823,6 @@ subject: `{{company_name}} — your competitors in {{country}} are getting onlin
 body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
 }
 };
-
 function checkRescanReminder() {
 try {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
@@ -837,7 +845,6 @@ banner.classList.remove('hidden');
 }
 } catch(e) {}
 }
-
 document.addEventListener('DOMContentLoaded', function () {
 registerUser();
 loadLeaderboardData();
@@ -848,7 +855,6 @@ const l = document.getElementById('loading-screen');
 if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
 }, 1200);
 });
-
 function updateBulkCount() {
 const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
 const el = document.getElementById('bulkCountDisplay');
@@ -866,7 +872,6 @@ if (btnLabel) {
 btnLabel.textContent = `Scan All URLs (${lines.length}/5)`;
 }
 }
-
 async function registerUser() {
 try {
 let storedUserId = localStorage.getItem('user_id');
@@ -885,7 +890,6 @@ loadUserTemplates();
 checkRescanReminder();
 } catch (error) { console.error('Registration error:', error); }
 }
-
 async function loadApiStatus() {
 if (!userId) return;
 try {
@@ -897,18 +901,15 @@ checkSetupStatus();
 }
 } catch (error) { console.error('Error loading API status:', error); }
 }
-
 function checkSetupStatus() {
 const gate = document.getElementById('bulkAccessGate');
 const allDone = document.getElementById('setupAllDone');
 if (gate) gate.classList.add('hidden');
 if (allDone) allDone.classList.remove('hidden');
 }
-
 function _stripBadgeComments(html) {
 return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
 }
-
 window._copyBadge = function(type, score) {
 const key = type === 'full' ? '_badgeFull_' : type === 'compact' ? '_badgeCompact_' : '_badgeText_';
 const raw = window[key + score] || '';
@@ -928,7 +929,6 @@ document.body.removeChild(ta);
 doCopied();
 });
 };
-
 async function loadUserTemplates() {
 ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
 const subEl = document.getElementById('template-' + t + '-subject');
@@ -953,7 +953,6 @@ if (bodyEl) bodyEl.value = userTemplates[t].body;
 }
 } catch (error) { console.error('Error loading templates:', error); }
 }
-
 async function saveTemplate(type) {
 if (!userId) { alert('❌ User not registered. Refresh page.'); return; }
 const subject = document.getElementById(`template-${type}-subject`).value;
@@ -970,7 +969,6 @@ if (data.success) { alert('✅ Template saved!'); userTemplates[type] = { subjec
 else { alert('❌ ' + (data.error || 'Failed')); }
 } catch (error) { alert('❌ Error: ' + error.message); }
 }
-
 function switchMode(mode) {
 const singleMode = document.getElementById('singleMode');
 const bulkMode = document.getElementById('bulkMode');
@@ -992,7 +990,6 @@ if (discoverMode) discoverMode.classList.remove('hidden');
 if (discoverBtn) discoverBtn.classList.add('active');
 }
 }
-
 async function scanSingleURL() {
 const input = document.getElementById('singleUrlInput');
 const button = document.getElementById('singleScanBtn');
@@ -1068,7 +1065,6 @@ resultDiv.classList.remove('hidden');
 resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 }
-
 function displayScanResult(data, targetEl) {
 const resultDiv = targetEl || document.getElementById('singleResult');
 const url = data.url || '';
@@ -1195,7 +1191,6 @@ window._lastScanData = data;
 window._lastScanData._scoreLabel = scoreLabel;
 if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
-
 function copyScanShareLink() {
 const data = window._lastScanData;
 if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
@@ -1215,7 +1210,6 @@ return;
 exportScanPDF(data);
 showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
 }
-
 function fallbackCopy(text) {
 const ta = document.createElement('textarea');
 ta.value = text;
@@ -1227,7 +1221,6 @@ document.execCommand('copy');
 document.body.removeChild(ta);
 showToast('🔗 Share link copied!', '#0ea5e9');
 }
-
 function showToast(msg, bg) {
 const t = document.createElement('div');
 t.textContent = msg;
@@ -1235,7 +1228,6 @@ t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%
 document.body.appendChild(t);
 setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
 }
-
 function exportScanPDF(data) {
 if (!data) { alert('No scan data. Run a scan first.'); return; }
 const btn = event && event.target;
@@ -1279,13 +1271,12 @@ win.document.close();
 setTimeout(() => { win.focus(); win.print(); }, 600);
 if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; }
 }
-
+// 🔧 FIXED: Bulk scan with null checks and proper DOM element access
 async function startBulkScan() {
 if (isScanning) {
 alert('Scan already in progress. Please wait.');
 return;
 }
-
 const urlInput = document.getElementById('bulkUrlInput');
 const button = document.getElementById('bulkScanBtn');
 const progress = document.getElementById('bulkProgress');
@@ -1295,13 +1286,19 @@ const resultsDiv = document.getElementById('bulkResults');
 const statsDiv = document.getElementById('bulkStats');
 const container = document.getElementById('bulkResultsContainer');
 
+// 🔧 CRITICAL FIX: Null checks for all DOM elements
+if (!urlInput || !button || !progress || !progressBar || !progressText || !resultsDiv || !container) {
+console.error('Bulk scan: Missing required DOM elements');
+alert('❌ Scanner interface not ready. Please refresh the page.');
+return;
+}
+
 const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 if (allUrls.length === 0) { alert('❌ Enter at least one URL'); return; }
 if (allUrls.length > 5) {
 alert('❌ Free plan: max 5 URLs.\nNeed more? Contact us for Pro access.');
 return;
 }
-
 const urls = allUrls.map(u => u.startsWith('http') ? u : 'https://' + u);
 isScanning = true;
 button.disabled = true;
@@ -1309,23 +1306,20 @@ button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
 progress.classList.remove('hidden');
 resultsDiv.classList.add('hidden');
 bulkResults = [];
-
 try {
 for (let i = 0; i < urls.length; i++) {
 const url = urls[i];
 progressText.textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
 progressBar.style.width = `${((i) / urls.length) * 100}%`;
-
 try {
 const response = await fetch('/api/scan', {
 method: 'POST',
-headers: { 
+headers: {
 'Content-Type': 'application/json',
-'x-user-id': userId || 'anonymous' 
+'x-user-id': userId || 'anonymous'
 },
 body: JSON.stringify({ url })
 });
-
 const data = await response.json();
 if (data.success) {
 bulkResults.push(data);
@@ -1353,14 +1347,11 @@ score: 0,
 success: false
 });
 }
-
 // Update progress
 progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
 }
-
 progressText.textContent = 'Scan complete!';
 progressBar.style.width = '100%';
-
 // Sort results: successful scans first (by score), then errors
 bulkResults.sort((a, b) => {
 if (a.success && !b.success) return -1;
@@ -1368,14 +1359,13 @@ if (!a.success && b.success) return 1;
 if (a.success && b.success) return (b.score || 0) - (a.score || 0);
 return 0;
 });
-
-// Display stats
+// 🔧 Display stats with null check
+if (statsDiv) {
 const successful = bulkResults.filter(r => r.success);
 const eliteCount = successful.filter(r => r.score >= 70).length;
 const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
 const poorCount = successful.filter(r => r.score < 50).length;
 const errorCount = bulkResults.length - successful.length;
-
 statsDiv.innerHTML = `
 <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
 <div style="font-size:1.5rem;font-weight:900;color:#4ade80;">${eliteCount}</div>
@@ -1395,8 +1385,9 @@ statsDiv.innerHTML = `
 ${errorCount > 0 ? `<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">${errorCount} errors</div>` : ''}
 </div>
 `;
-
-// Display results
+}
+// 🔧 Display results with null check
+if (container) {
 container.innerHTML = bulkResults.map((result, index) => {
 if (!result.success) {
 return `
@@ -1421,7 +1412,6 @@ return `
 </div>
 </div>`;
 }
-
 const scoreColor = result.score >= 70 ? '#4ade80' : result.score >= 50 ? '#fbbf24' : '#f87171';
 const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
 return `
@@ -1444,8 +1434,8 @@ return `
 </div>
 </div>`;
 }).join('');
-
 resultsDiv.classList.remove('hidden');
+}
 } catch (error) {
 console.error('Bulk scan error:', error);
 showToast('❌ Error during bulk scan: ' + error.message, '#ef4444');
@@ -1457,7 +1447,6 @@ updateBulkCount();
 isScanning = false;
 }
 }
-
 function retryBulkUrl(url) {
 // Add URL to input and trigger scan
 const textarea = document.getElementById('bulkUrlInput');
@@ -1465,7 +1454,6 @@ textarea.value = url + '\n' + textarea.value;
 updateBulkCount();
 startBulkScan();
 }
-
 function toggleBulkResult(index) {
 const details = document.getElementById(`bulk-details-${index}`);
 const item = document.getElementById(`bulk-result-${index}`);
@@ -1474,10 +1462,8 @@ details.classList.toggle('hidden');
 item.classList.toggle('expanded', !details.classList.contains('hidden'));
 }
 }
-
 function generateBulkResultDetails(data) {
 if (!data.success) return '<p>No data available</p>';
-
 const score = data.score || 0;
 const metrics = data.metrics || { graaf: 0, craft: 0, technical: 0 };
 const stats = data.content_stats || {};
@@ -1533,7 +1519,6 @@ style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);col
 </div>
 </div>`;
 }
-
 function exportBulkCSV() {
 if (bulkResults.length === 0) { alert('No results to export'); return; }
 let csv = 'URL,Score,GRAAF,CRAFT,Technical,Word Count,H1 Count,H2 Count,Images,Internal Links,Has Schema,Has Canonical,Status\n';
@@ -1553,7 +1538,6 @@ a.download = `contentscale-bulk-${new Date().toISOString().split('T')[0]}.csv`;
 a.click();
 URL.revokeObjectURL(url);
 }
-
 function exportBulkPDF() {
 if (bulkResults.length === 0) { alert('No results to export'); return; }
 const successful = bulkResults.filter(r => r.success);
@@ -1564,7 +1548,6 @@ exportScanPDF(result);
 }, index * 800);
 });
 }
-
 function doRescan() {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
 const input = document.getElementById('singleUrlInput');
@@ -1573,7 +1556,6 @@ if (history.length && input) input.value = history[0].url;
 if (banner) banner.classList.add('hidden');
 scanSingleURL();
 }
-
 async function submitSingleToLeaderboard(url, score, name) {
 const btn = document.getElementById('singleLbBtn');
 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
@@ -1596,14 +1578,12 @@ if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
 alert('❌ Error: ' + e.message);
 }
 }
-
 let allLeaderboardEntries = [];
 const MEDAL = [
 { emoji: '🥇', label: 'GOLD', bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)', border: '#ffd700', glow: 'rgba(255,215,0,0.35)', scoreColor: '#ffd700', badgeText: '#ffd700', badgeBg: 'rgba(61,40,0,0.85)' },
 { emoji: '🥈', label: 'SILVER', bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)', border: '#b0c4d8', glow: 'rgba(176,196,216,0.25)', scoreColor: '#b0c4d8', badgeText: '#b0c4d8', badgeBg: 'rgba(30,42,53,0.85)' },
 { emoji: '🥉', label: 'BRONZE', bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)', border: '#cd7f32', glow: 'rgba(205,127,50,0.25)', scoreColor: '#cd7f32', badgeText: '#cd7f32', badgeBg: 'rgba(45,20,0,0.85)' }
 ];
-
 async function loadLeaderboardData() {
 try {
 const response = await fetch('/api/leaderboard');
@@ -1618,7 +1598,6 @@ document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!i
 document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
 }
 }
-
 function applyLeaderboardFilters() {
 const niche = document.getElementById('filterNiche').value.toLowerCase();
 const country = document.getElementById('filterCountry').value;
@@ -1635,13 +1614,11 @@ const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
 document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
 renderLeaderboard(filtered);
 }
-
 function resetLeaderboardFilters() {
 ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => { document.getElementById(id).value = ''; });
 document.getElementById('filterCount').textContent = '';
 renderLeaderboard(allLeaderboardEntries);
 }
-
 function renderLeaderboard(entries) {
 const activeNiche = document.getElementById('filterNiche')?.value || '';
 const activeCountry = document.getElementById('filterCountry')?.value || '';
@@ -1682,7 +1659,6 @@ ${!showAll ? `<div id="loadMoreWrap" style="text-align:center;margin-top:16px;">
 window._lbRestEntries = rest;
 } else { restContainer.innerHTML = ''; }
 }
-
 function buildRankRows(entries, startRank) {
 return entries.map((e, i) => {
 const rank = startRank + i;
@@ -1705,14 +1681,12 @@ ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!impor
 </div>`;
 }).join('');
 }
-
 function expandRankings() {
 const rest = window._lbRestEntries || [];
 document.getElementById('rankingsList').innerHTML = buildRankRows(rest, 4);
 const wrap = document.getElementById('loadMoreWrap');
 if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4–${rest.length + 3})</p>`;
 }
-
 async function loadFreelancers() {
 try {
 const response = await fetch('/api/freelancers');
@@ -1768,11 +1742,9 @@ grid.innerHTML = '<div class="specialists-outer-grid" style="display:grid;grid-t
 }
 } catch (e) { console.error(e); }
 }
-
 function openFreelancerModal() { document.getElementById('freelancerModal').classList.add('active'); }
 function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
-
 function switchPageSection(section) {
 document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
 const target = document.querySelector(`[data-section="${section}"]`);
@@ -1797,7 +1769,6 @@ if (section === 'templates') loadUserTemplates();
 const main = document.getElementById('main-content');
 if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
 async function submitFreelancer() {
 const name = document.getElementById('freelancerName').value;
 const email = document.getElementById('freelancerEmail').value;
