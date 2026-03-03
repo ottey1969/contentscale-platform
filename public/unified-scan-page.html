@@ -267,7 +267,8 @@ footer p { color: #9ca3af !important; }
     <div class="nav-desktop">
       <a href="#lead-scanner" onclick="switchPageSection('scanner')">Scanner</a>
       <a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a>
-      <a href="javascript:void(0)" onclick="switchPageSection('experts')">Specialists</a>
+      <a href="javascript:void(0)" onclick="switchPageSection('experts')">Experts</a>
+      <a href="javascript:void(0)" onclick="switchPageSection('templates')">Templates</a>
     </div>
     <div class="flex items-center gap-3">
       <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
@@ -277,8 +278,8 @@ footer p { color: #9ca3af !important; }
   <div class="mobile-menu" id="mobileMenu">
     <a href="javascript:void(0)" onclick="switchPageSection('scanner');toggleMobileMenu();" class="py-2 border-b border-gray-800">Scanner</a>
     <a href="javascript:void(0)" onclick="switchPageSection('leaderboard');toggleMobileMenu();" class="py-2 border-b border-gray-800">Leaderboard</a>
-    <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Specialists</a>
-    
+    <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Experts</a>
+    <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2">Templates</a>
   </div>
 </nav>
 
@@ -300,7 +301,8 @@ footer p { color: #9ca3af !important; }
   <div class="page-tabs mb-8" role="tablist">
     <button class="page-tab active" id="tab-scanner" onclick="switchPageSection('scanner')" role="tab">🎯 Scanner</button>
     <button class="page-tab" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">🏆 Leaderboard</button>
-    <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Specialists</button>
+    <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
+    <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
   </div>
 
 
@@ -346,6 +348,9 @@ footer p { color: #9ca3af !important; }
         <button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle">
           <i class="fas fa-robot mr-2"></i> Find Me Leads
         </button>
+        <button id="modeActivityBtn" onclick="switchMode('activity')" class="mode-toggle">
+          <i class="fas fa-history mr-2"></i> My Activity
+        </button>
       </div>
 
       <!-- SINGLE MODE -->
@@ -387,7 +392,7 @@ footer p { color: #9ca3af !important; }
         <div class="card max-w-4xl mx-auto" style="border:2px solid #3b82f6;">
           <div class="flex flex-wrap items-center gap-3 mb-2 mode-card-header">
             <span class="text-xl font-bold">📋 I Have a List</span>
-            <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan</span>
+            <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan + Email</span>
           </div>
           <p class="text-sm mb-5" style="color:#e5e7eb!important;">
             Already have URLs? Paste them here. Scan every site with the same GRAAF + CRAFT analysis, get full scores and recommendations for each — sorted best to lowest.
@@ -425,12 +430,15 @@ footer p { color: #9ca3af !important; }
 
             <!-- ACTIVE STATUS BANNER — shown when access is confirmed by server -->
             <div id="setupAllDone" class="hidden mb-5 rounded-xl p-4" style="background:rgba(16,185,129,0.08);border:1px solid #065f46;">
-              <div class="flex items-center gap-3">
-                <span style="font-size:1.5rem;">✅</span>
-                <div>
-                  <div class="font-bold" style="color:#34d399!important;">Bulk scanning ready</div>
-                  <div class="text-xs mt-1" style="color:#6b7280!important;">Free: max 5 URLs &middot; Pro: unlimited via <a href="https://wa.me/31628073996" style="color:#a78bfa;">WhatsApp</a></div>
+              <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                  <span style="font-size:1.5rem;">✅</span>
+                  <div>
+                    <div class="font-bold" style="color:#34d399!important;">Bulk scanning active</div>
+                    <div id="dailyLimitBadge" class="text-xs mt-1" style="color:#6b7280!important;">Loading usage...</div>
+                  </div>
                 </div>
+                <div id="queueBadge" class="hidden text-xs px-3 py-1 rounded-full" style="background:#451a03;color:#fde68a!important;border:1px solid #92400e;"></div>
               </div>
             </div>
 
@@ -439,7 +447,7 @@ footer p { color: #9ca3af !important; }
 
               <!-- URL input -->
               <div class="mb-5">
-                <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 &middot; <a href="https://wa.me/31628073996" style="color:#a78bfa;">Pro via WhatsApp</a>)</span></label>
+                <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line, max 100</label>
                 <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
                 <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkUrlCount">5 left</span></div>
               </div>
@@ -469,8 +477,21 @@ footer p { color: #9ca3af !important; }
                   </div>
                 </label>
 
+                <!-- Optional email toggle -->
+                <label class="flex items-start gap-3 cursor-pointer" id="emailToggleLabel" onclick="toggleBulkEmail()">
+                  <div id="emailToggleBox" style="width:20px;height:20px;background:#374151;border:2px solid #4b5563;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all 0.15s;">
+                  </div>
+                  <div>
+                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📧 Also send automated emails to each business</span>
+                    <p class="text-xs mt-0.5" style="color:#d1d5db!important;">Congrats email (70+) · Improvement pitch (&lt;70 with website) · Website offer (&lt;70 no website)</p>
+                  </div>
+                </label>
               </div>
 
+              <!-- Email lock note — shown when SendGrid not configured -->
+              <div id="emailLockNote" class="hidden mt-2 rounded-lg px-3 py-2" style="background:rgba(99,102,241,0.08);border:1px solid #4338ca;">
+                <p style="font-size:0.78rem;color:#818cf8!important;margin:0;">🔒 Email sending is available on request — <a href="https://wa.me/31628073996" target="_blank" style="color:#a5b4fc!important;font-weight:700;text-decoration:underline;">contact Ottmar on WhatsApp</a> to unlock. Scanning &amp; leaderboard submission are always free.</p>
+              </div>
 
               <!-- Start button -->
               <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
@@ -489,99 +510,390 @@ footer p { color: #9ca3af !important; }
         </div>
       </div>
 
-      <!-- AUTO-DISCOVER MODE — TEASER -->
+      <!-- AUTO-DISCOVER MODE -->
       <div id="discoverMode" class="hidden">
         <div class="card max-w-4xl mx-auto" style="border:2px solid #f59e0b;">
-          <div class="flex flex-wrap items-center gap-3 mb-4 mode-card-header">
+
+          <div class="flex flex-wrap items-center gap-3 mb-2 mode-card-header">
             <span class="text-xl font-bold">🤖 Find Me Leads</span>
-            <span class="text-xs px-3 py-1 rounded-full font-semibold" style="background:#92400e;color:#fde68a!important;">Pro Feature</span>
+            <span class="text-xs px-3 py-1 rounded-full font-semibold" style="background:#92400e;color:#fde68a!important;">Powered by Apify</span>
           </div>
-          <p class="text-sm mb-6" style="color:#d1d5db!important;">
-            No list yet? Pick a niche + city. Apify scrapes Google Maps. ContentScale scores every website automatically. Export clean data or push to Instantly. <strong style="color:#fbbf24;">Zero manual work.</strong>
+          <p class="text-sm mb-6" style="color:#9ca3af!important;">
+            No list yet? Pick a niche + city. Apify finds real businesses on Google Maps. ContentScore scans every website automatically. Right email sent to each business. Zero manual work.
           </p>
 
-          <!-- Pipeline -->
-          <div class="find-leads-pipeline" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:28px;">
-            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-              <div style="font-size:1.6rem;margin-bottom:6px;">📍</div>
+          <!-- Pipeline visualiser -->
+          <!-- Pipeline visualiser -->
+          <div class="find-leads-pipeline" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;">
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;">
+              <div style="font-size:1.4rem;">📍</div>
               <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">1. You pick</div>
-              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">Niche + City</div>
+              <div style="color:#94a3b8!important;font-size:0.72rem;line-height:1.3;">Niche +<br>Location</div>
             </div>
-            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-              <div style="font-size:1.6rem;margin-bottom:6px;">🗺️</div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+              <div style="font-size:1.4rem;">🗺️</div>
               <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">2. Apify finds</div>
-              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">Google Maps</div>
+              <div style="color:#94a3b8!important;font-size:0.72rem;line-height:1.3;">Google Maps<br>leads</div>
             </div>
-            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-              <div style="font-size:1.6rem;margin-bottom:6px;">📊</div>
-              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">3. Auto-scan</div>
-              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">All scored</div>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+              <div style="font-size:1.4rem;">📊</div>
+              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">3. Scan scores</div>
+              <div style="color:#94a3b8!important;font-size:0.72rem;line-height:1.3;">All URLs<br>scored</div>
             </div>
-            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-              <div style="font-size:1.6rem;margin-bottom:6px;">⚡</div>
-              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">4. Export</div>
-              <div style="color:#94a3b8!important;font-size:0.7rem;margin-top:2px;">CSV · Instantly</div>
-            </div>
-          </div>
-
-          <!-- What you get -->
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px;">
-            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-              <div style="font-size:0.8rem;font-weight:700;color:#fbbf24!important;margin-bottom:8px;">✅ What you get</div>
-              <ul style="color:#d1d5db!important;font-size:0.8rem;line-height:2;list-style:none;padding:0;margin:0;">
-                <li>🎯 100–500 leads per combo</li>
-                <li>📊 ContentScore per site</li>
-                <li>📧 Email addresses found</li>
-                <li>⚡ Push to Instantly direct</li>
-                <li>⬇️ CSV export ready</li>
-              </ul>
-            </div>
-            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-              <div style="font-size:0.8rem;font-weight:700;color:#fbbf24!important;margin-bottom:8px;">⚙️ You bring</div>
-              <ul style="color:#d1d5db!important;font-size:0.8rem;line-height:2;list-style:none;padding:0;margin:0;">
-                <li>🔑 Your Apify token</li>
-                <li>📬 Your Instantly account</li>
-                <li>🎯 Your niche + city combos</li>
-                <li>📝 Your email templates</li>
-                <li>⏱️ 15 min setup, then automated</li>
-              </ul>
+            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+              <div style="font-size:1.4rem;">📧</div>
+              <div style="color:#fde68a!important;font-weight:700;font-size:0.78rem;">4. Auto email</div>
+              <div style="color:#94a3b8!important;font-size:0.72rem;line-height:1.3;">Via<br>SendGrid</div>
             </div>
           </div>
 
-          <!-- CTA -->
-          <div style="text-align:center;background:linear-gradient(135deg,#1c0a00,#0f172a);border:2px solid #f59e0b;border-radius:14px;padding:28px 24px;">
-            <div style="font-size:2.5rem;margin-bottom:10px;">🔒</div>
-            <h3 style="font-size:1.2rem;font-weight:800;color:#fde68a!important;margin-bottom:8px;">Available on Request</h3>
-            <p style="color:#d1d5db!important;font-size:0.9rem;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;">
-              Find Me Leads runs on your own Apify token. Contact Ottmar on WhatsApp and get set up within a few hours.
+          <!-- ACCESS GATE for discover mode -->
+          <div id="discoverAccessGate" class="hidden mb-5 rounded-xl p-8 text-center" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;">
+            <div style="font-size:3rem;margin-bottom:12px;">🤖</div>
+            <h3 class="text-xl font-bold mb-3">Auto-Discover is Available on Request</h3>
+            <p class="text-sm mb-6" style="color:#9ca3af!important;">
+              Auto-Discover uses Apify to find leads on Google Maps, scan them automatically, and send emails — all in one click. Contact me to get access.
             </p>
-            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-              <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20Find%20Me%20Leads%20on%20ContentScale" target="_blank" rel="noopener"
-                style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:14px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
-                <i class="fab fa-whatsapp"></i> Request Access — WhatsApp
-              </a>
-            </div>
-            <p style="color:#6b7280!important;font-size:0.75rem;margin-top:12px;">Usually set up within a few hours · Bring your own Apify token</p>
+            <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20Auto-Discover" target="_blank" rel="noopener"
+              style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;">
+              <i class="fab fa-whatsapp"></i> Request Access on WhatsApp
+            </a>
           </div>
 
+          <div id="apifyKeyWarning" class="hidden mb-4 rounded-lg p-3" style="background:#451a03;border:1px solid #92400e;">
+            <p class="text-sm" style="color:#fde68a!important;">⚠️ Apify token not set. Add it via browser console:</p>
+            <code style="display:block;margin-top:6px;background:#1c0a00;padding:8px 10px;border-radius:6px;font-size:0.75rem;color:#fbbf24!important;word-break:break-all;white-space:pre-wrap;line-height:1.6;">localStorage.setItem('apifyToken','your_token')</code>
+            <p class="text-xs mt-2" style="color:#92400e!important;">Then refresh the page.</p>
+          </div>
+
+          <!-- Discovery Form -->
+          <div id="discoverForm" class="hidden">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+              <!-- Niche -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🏷️ Business Niche *</label>
+                <select id="discoverNiche" aria-label="Business niche" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                  <option value="">Select a niche...</option>
+                  <optgroup label="── Agencies">
+                    <option value="SEO agency">SEO Agency</option>
+                    <option value="digital marketing agency">Digital Marketing Agency</option>
+                    <option value="web design agency">Web Design Agency</option>
+                    <option value="content marketing agency">Content Marketing Agency</option>
+                  </optgroup>
+                  <optgroup label="── YMYL">
+                    <option value="law firm">Law Firm</option>
+                    <option value="dental clinic">Dental Clinic</option>
+                    <option value="medical clinic">Medical Clinic</option>
+                    <option value="financial advisor">Financial Advisor</option>
+                    <option value="accountant">Accountant</option>
+                    <option value="insurance broker">Insurance Broker</option>
+                    <option value="therapist">Therapist / Psychologist</option>
+                  </optgroup>
+                  <optgroup label="── High Competition">
+                    <option value="real estate agent">Real Estate Agent</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="car dealership">Car Dealership</option>
+                    <option value="recruitment agency">Recruitment Agency</option>
+                    <option value="software company">Software Company</option>
+                  </optgroup>
+                  <optgroup label="── Local Services">
+                    <option value="plumber">Plumber</option>
+                    <option value="electrician">Electrician</option>
+                    <option value="cleaning company">Cleaning Company</option>
+                    <option value="personal trainer">Personal Trainer</option>
+                    <option value="hairdresser">Hairdresser / Salon</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="architect">Architect</option>
+                    <option value="photographer">Photographer</option>
+                    <option value="catering">Catering Company</option>
+                  </optgroup>
+                  <optgroup label="── Other">
+                    <option value="online coach">Online Coach / Consultant</option>
+                    <option value="e-commerce store">E-Commerce Store</option>
+                    <option value="logistics company">Logistics Company</option>
+                    <option value="other business">Other</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Custom niche override -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">✏️ Or Type Custom Niche</label>
+                <input type="text" id="discoverNicheCustom" placeholder="e.g. orthodontist, yoga studio..." class="w-full p-3 rounded text-sm">
+              </div>
+
+              <!-- Location -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📍 City / Location *</label>
+                <input type="text" id="discoverLocation" placeholder="e.g. Amsterdam, London, New York..." class="w-full p-3 rounded text-sm">
+              </div>
+
+              <!-- Country context -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🌍 Country</label>
+                <select id="discoverCountry" aria-label="Country" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                  <option value="Netherlands">🇳🇱 Netherlands</option>
+                  <option value="Germany">🇩🇪 Germany</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                  <option value="United States">🇺🇸 United States</option>
+                  <option value="Belgium">🇧🇪 Belgium</option>
+                  <option value="France">🇫🇷 France</option>
+                  <option value="Spain">🇪🇸 Spain</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Singapore">🇸🇬 Singapore</option>
+                  <option value="Other">🌐 Other</option>
+                </select>
+              </div>
+
+              <!-- Max results -->
+              <div>
+                <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">🔢 Max Leads to Find</label>
+                <select id="discoverMaxResults" aria-label="Maximum leads to find" class="w-full p-3 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                  <option value="20">20 leads (fast · ~1 min)</option>
+                  <option value="50" selected>50 leads (recommended · ~2 min)</option>
+                  <option value="100">100 leads (thorough · ~4 min)</option>
+                </select>
+              </div>
+
+              <!-- Filter: only with website -->
+              <div class="flex items-center gap-3 pt-5">
+                <input type="checkbox" id="discoverWebsiteOnly" checked style="width:18px;height:18px;cursor:pointer;background:#ffffff!important;border:2px solid #7e22ce!important;">
+                <label for="discoverWebsiteOnly" class="text-sm" style="color:#e5e7eb!important;cursor:pointer;">Only scan businesses that have a website</label>
+              </div>
+
+            </div>
+
+            <!-- Your details -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              
+            </div>
+
+            <!-- Reply-To Email -->
+            <div class="mb-4">
+              <label class="block text-sm font-semibold mb-1" style="color:#e5e7eb!important;">📧 Your Reply-To Email <span style="color:#9ca3af!important;font-weight:400;">(businesses reply to this)</span></label>
+              <input type="email" id="discoverReplyTo" placeholder="e.g. hello@yourcompany.com" class="w-full p-3 rounded text-sm" autocomplete="off" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;" oninput="localStorage.setItem('discoverReplyTo', this.value)">
+            </div>
+
+            <!-- Start button -->
+            <button onclick="startAutoDiscover()" id="discoverBtn" class="btn w-full" style="background:linear-gradient(135deg,#b45309,#f59e0b);color:white!important;font-size:1rem;padding:1rem;">
+              <i class="fas fa-rocket mr-2"></i> Find Leads &amp; Scan Automatically
+            </button>
+
+            <!-- Pipeline progress -->
+            <div id="discoverProgress" class="hidden mt-5">
+              <!-- Step indicators -->
+              <div class="flex justify-between mb-3 discover-steps" style="font-size:0.75rem;flex-wrap:wrap;gap:4px;">
+                <span id="dStep1" style="color:#6b7280!important;">① Finding leads...</span>
+                <span id="dStep2" style="color:#6b7280!important;">② Extracting URLs</span>
+                <span id="dStep3" style="color:#6b7280!important;">③ Scanning scores</span>
+                <span id="dStep4" style="color:#6b7280!important;">④ Sending emails</span>
+              </div>
+              <div class="progress-bar"><div id="discoverProgressBar" class="progress-bar-fill" style="width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444);"></div></div>
+              <p id="discoverProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
+            </div>
+
+            <!-- Results -->
+            <div id="discoverResults" class="hidden mt-4">
+              <div id="discoverResultsContainer"></div>
+            </div>
+
+          </div>
         </div>
       </div>
-
-            <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
-        <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
-        <h3 class="text-2xl font-bold mb-2">Work With Us — Find Leads Together</h3>
-        <p class="text-lg mb-2" style="color:#e9d5ff!important;">
-          Are you in SEO, sales, or outreach? Partner with ContentScale to find and convert leads — we provide the tools, you bring the hustle.
-        </p>
-        <p class="text-sm mb-5" style="color:#c4b5fd!important;">
-          Use our scanner &middot; Share results with clients &middot; Earn per closed deal
-        </p>
+      <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
+        <h3 class="text-2xl font-bold mb-2">💼 Are You an SEO Specialist?</h3>
+        <p class="text-lg mb-4" style="color:#e9d5ff!important;">Work few hours, earn full-time income. We train you in Modern SEO.</p>
+        <!-- FIX: uses .btn-specialist class for correct dark text on white background -->
         <button onclick="openFreelancerModal()" class="btn-specialist">
-          <i class="fas fa-handshake mr-2"></i>
-          <span>Become a Partner</span>
+          <i class="fas fa-user-plus"></i>
+          <span>Become a Specialist</span>
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MY ACTIVITY SECTION
+       ============================================================ -->
+  <div id="activityMode" class="hidden mb-16">
+    <div class="card" style="border:1px solid #374151;">
+      <h2 class="text-2xl font-bold mb-2 text-white">📊 My Scan Activity</h2>
+      <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:20px;">Every business scanned in your sessions — including which ones received emails and which didn't.</p>
+
+      <!-- Stats row -->
+      <div class="grid grid-cols-4 gap-4 mb-6" id="activityStats">
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatScanned" class="text-2xl font-black" style="color:#60a5fa;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">Total Scanned</div>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatEmailed" class="text-2xl font-black" style="color:#4ade80;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">Emails Sent</div>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatNoEmail" class="text-2xl font-black" style="color:#f87171;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">No Email Found</div>
+        </div>
+        <div class="rounded-lg p-3 text-center" style="background:#0f172a;border:1px solid #1e293b;">
+          <div id="actStatLeaderboard" class="text-2xl font-black" style="color:#fbbf24;">—</div>
+          <div class="text-xs mt-1" style="color:#6b7280;">Leaderboard (70+)</div>
+        </div>
+      </div>
+
+      <!-- Filter + search + export -->
+      <div class="flex gap-3 mb-4 flex-wrap">
+        <input type="text" id="actSearch" placeholder="Search business or URL..." oninput="filterActivity()" class="p-2 rounded text-sm flex-1" style="background:#111827;border:1px solid #374151;color:#e5e7eb;min-width:200px;">
+        <select id="actFilter" onchange="filterActivity()" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
+          <option value="">All businesses</option>
+          <option value="no_email">No email found</option>
+          <option value="has_email">Email sent</option>
+        </select>
+        <button onclick="exportActivityCSV()" class="btn text-sm px-4 py-2" style="background:#065f46;color:white;">⬇ CSV</button>
+        <button onclick="exportActivityPDF()" class="btn text-sm px-4 py-2" style="background:#7e22ce;color:white;">⬇ PDF</button>
+        <button onclick="exportActivityDOCX()" class="btn text-sm px-4 py-2" style="background:#1e3a8a;color:white;">⬇ DOCX</button>
+      </div>
+
+      <!-- Table -->
+      <div style="overflow-x:auto;">
+        <table class="w-full text-sm" style="border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid #1f2937;background:#0f172a;text-align:left;">
+              <th class="pb-2 pt-2 pr-3 pl-2" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Business</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Score</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Email Found</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Email Sent</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Source</th>
+              <th class="pb-2 pt-2 pr-3" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Top Issue</th>
+              <th class="pb-2 pt-2" style="color:#6b7280;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Scanned</th>
+            </tr>
+          </thead>
+          <tbody id="activityTableBody">
+            <tr><td colspan="7" class="py-6 text-center" style="color:#6b7280;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EMAIL WARMUP PANEL
+       ============================================================ -->
+  <div id="warmupPanel" class="mb-8 hidden">
+    <div class="card" style="border:1px solid #374151;padding:0;overflow:hidden;">
+
+      <!-- Header -->
+      <div class="warmup-header" style="background:linear-gradient(135deg,#1e1b4b,#312e81);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 style="color:#e9d5ff;font-weight:800;font-size:1.1rem;margin:0;">🔥 Email Warmup Mode</h3>
+          <p style="color:#a78bfa;font-size:0.8rem;margin:4px 0 0;">Protects your sender reputation — daily cap increases automatically each week</p>
+        </div>
+        <div id="warmupStatusBadge" style="background:#065f46;color:#4ade80;padding:6px 14px;border-radius:99px;font-size:0.78rem;font-weight:700;">⏳ Not started</div>
+      </div>
+
+      <div style="padding:24px;">
+
+        <!-- Current cap display -->
+        <div id="warmupCurrentStats" class="hidden warmup-stats-row" style="background:#0f0f23;border:1px solid #312e81;border-radius:12px;padding:16px;margin-bottom:20px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
+          <div style="text-align:center;">
+            <div id="warmupDay" style="font-size:2rem;font-weight:900;color:#a78bfa;">—</div>
+            <div style="color:#6b7280;font-size:0.75rem;">Day of Warmup</div>
+          </div>
+          <div style="text-align:center;">
+            <div id="warmupCap" style="font-size:2rem;font-weight:900;color:#4ade80;">—</div>
+            <div style="color:#6b7280;font-size:0.75rem;">Emails/Day Cap</div>
+          </div>
+          <div style="text-align:center;">
+            <div id="warmupWeek" style="font-size:2rem;font-weight:900;color:#fbbf24;">—</div>
+            <div style="color:#6b7280;font-size:0.75rem;">Current Week</div>
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div style="color:#9ca3af;font-size:0.75rem;margin-bottom:6px;">Overall warmup progress</div>
+            <div style="background:#1f2937;border-radius:99px;height:10px;">
+              <div id="warmupProgressBar" style="background:linear-gradient(90deg,#7e22ce,#4ade80);height:10px;border-radius:99px;width:0%;transition:width 0.5s;"></div>
+            </div>
+            <div id="warmupProgressLabel" style="color:#6b7280;font-size:0.72rem;margin-top:4px;">Week 1 of 5</div>
+          </div>
+        </div>
+
+        <!-- Week schedule -->
+        <div style="margin-bottom:20px;">
+          <div style="color:#9ca3af;font-size:0.78rem;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em;">Warmup Schedule</div>
+          <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;" id="warmupScheduleGrid" class="warmup-schedule-grid">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+        <!-- What to do each week advice -->
+        <div id="warmupAdvice" style="background:#0f172a;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:0.82rem;color:#d1d5db;line-height:1.6;">
+          <strong style="color:#a78bfa;">💡 Warmup tip:</strong> Start warmup mode first, then run your scans. The cap resets each day and picks up exactly where you left off — even if you close the browser.
+        </div>
+
+        <!-- SPF / DKIM / DMARC section -->
+        <div style="border-top:1px solid #1f2937;padding-top:20px;margin-top:4px;">
+          <div style="color:#9ca3af;font-size:0.78rem;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.06em;">🔐 DNS Authentication (Required Before Sending)</div>
+          <p style="color:#6b7280;font-size:0.78rem;margin-bottom:14px;">Without these 3 DNS records, your emails will land in spam regardless of warmup. Set these in your domain registrar (Cloudflare / GoDaddy / Namecheap).</p>
+
+          <div style="display:grid;gap:10px;">
+
+            <div style="background:#0f2d1a;border:1px solid #166534;border-radius:10px;padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="color:#4ade80;font-weight:700;font-size:0.85rem;">✅ SPF Record</span>
+                <span style="background:#14532d;color:#86efac;padding:2px 8px;border-radius:99px;font-size:0.7rem;">TXT Record</span>
+              </div>
+              <p style="color:#86efac;font-size:0.78rem;margin-bottom:8px;">Tells mail servers that SendGrid is authorised to send email on behalf of your domain.</p>
+              <div style="background:#052e16;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:0.75rem;color:#4ade80;">
+                <div style="color:#6b7280;margin-bottom:2px;">Name: @ (or your domain)</div>
+                v=spf1 include:sendgrid.net ~all
+              </div>
+            </div>
+
+            <div style="background:#1e1b4b;border:1px solid #4c1d95;border-radius:10px;padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="color:#a78bfa;font-weight:700;font-size:0.85rem;">🔑 DKIM Record</span>
+                <span style="background:#2e1065;color:#c4b5fd;padding:2px 8px;border-radius:99px;font-size:0.7rem;">CNAME Record</span>
+              </div>
+              <p style="color:#c4b5fd;font-size:0.78rem;margin-bottom:8px;">Cryptographic signature proving emails actually came from you. Generated automatically in SendGrid — go to <strong>Settings → Sender Authentication → Authenticate Your Domain</strong>.</p>
+              <div style="background:#1a0533;border-radius:6px;padding:8px 12px;font-size:0.75rem;color:#a78bfa;">
+                SendGrid generates 2 CNAME records for your domain. Copy them exactly into your DNS. Takes 24–48 hrs to propagate.
+              </div>
+            </div>
+
+            <div style="background:#1c0a00;border:1px solid #92400e;border-radius:10px;padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="color:#fbbf24;font-weight:700;font-size:0.85rem;">🛡️ DMARC Record</span>
+                <span style="background:#431407;color:#fed7aa;padding:2px 8px;border-radius:99px;font-size:0.7rem;">TXT Record</span>
+              </div>
+              <p style="color:#fde68a;font-size:0.78rem;margin-bottom:8px;">Protects your domain from being spoofed. Tells receiving servers what to do if SPF/DKIM fail.</p>
+              <div style="background:#0c0500;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:0.75rem;color:#fbbf24;">
+                <div style="color:#6b7280;margin-bottom:2px;">Name: _dmarc (or _dmarc.yourdomain.com)</div>
+                v=DMARC1; p=none; rua=mailto:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e2868f839081a29b8d9790868d8f838b8ccc818d8f">[email&#160;protected]</a>
+              </div>
+              <p style="color:#92400e;font-size:0.72rem;margin-top:6px;">Start with p=none (monitor only). Move to p=quarantine after 2 weeks of clean reports.</p>
+            </div>
+
+          </div>
+
+          <div style="margin-top:14px;background:#111827;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:1.2rem;">🧪</span>
+            <div style="flex:1;">
+              <div style="color:#e5e7eb;font-size:0.82rem;font-weight:600;">Test your setup at mail-tester.com</div>
+              <div style="color:#6b7280;font-size:0.75rem;">Send a test email to their address — aim for 9+/10. Checks SPF, DKIM, DMARC, blacklists and content.</div>
+            </div>
+            <a href="https://www.mail-tester.com" target="_blank" style="background:#374151;color:#e5e7eb;padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;text-decoration:none;white-space:nowrap;">Open mail-tester.com →</a>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+          <button id="warmupStartBtn" onclick="startWarmup()" class="btn btn-success flex-1" style="min-width:160px;">🚀 Start Warmup Today</button>
+          <button id="warmupStopBtn" onclick="stopWarmup()" class="btn btn-danger hidden" style="min-width:160px;">⏹ Stop Warmup (use full 100/day)</button>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -591,8 +903,8 @@ footer p { color: #9ca3af !important; }
   <div id="templates" class="mb-16" data-section="templates">
     <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
       <div class="text-center mb-8">
-        <h2 class="text-4xl font-bold mb-3">✏️ Outreach Templates</h2>
-        <p class="text-xl" style="color:#e5e7eb!important;">Ready-to-use outreach copy for every lead scenario (Grade 3 Level)</p>
+        <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
+        <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
       </div>
       <div class="cards-grid">
         <!-- Congrats Template -->
@@ -928,8 +1240,8 @@ footer p { color: #9ca3af !important; }
        ============================================================ -->
   <div id="freelancers" class="mb-16 main-section" data-section="experts">
     <div class="text-center mb-8">
-      <h2 class="text-4xl font-bold mb-3">🤝 SEO Partners &amp; Specialists</h2>
-      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-handshake mr-2"></i> Become a Partner</button>
+      <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
+      <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
     </div>
     <!-- FIX: was grid-3, now proper grid class -->
     <div class="cards-grid" id="freelancersGrid"></div>
@@ -1019,7 +1331,7 @@ footer p { color: #9ca3af !important; }
         <ul class="space-y-2 text-sm">
           <li><a href="#lead-scanner">Lead Scanner</a></li>
           <li><a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a></li>
-          <li><a href="javascript:void(0)" onclick="switchPageSection('experts')">SEO Specialists</a></li>
+          <li><a href="#freelancers">SEO Specialists</a></li>
           <li><a href="javascript:void(0)" onclick="switchPageSection('templates')">Email Templates</a></li>
         </ul>
       </div>
@@ -1092,7 +1404,7 @@ footer p { color: #9ca3af !important; }
      ============================================================ -->
 <div id="freelancerModal" class="modal">
   <div class="modal-content">
-    <h2 class="text-2xl font-bold mb-4" style="color:#111827!important;">Apply as SEO Specialist</h2>
+    <h2 class="text-2xl font-bold mb-4" style="color:#111827!important;">Register as Specialist</h2>
     <div class="space-y-4">
       <input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded">
       <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
@@ -1754,10 +2066,30 @@ function checkSetupStatus() {
   const allDone   = document.getElementById('setupAllDone');
   const dGate     = document.getElementById('discoverAccessGate');
   const dForm     = document.getElementById('discoverForm');
+  const emailToggleLabel = document.getElementById('emailToggleLabel');
+  const emailLockNote    = document.getElementById('emailLockNote');
+
   // Scanning is ALWAYS free — hide the access gate
   if (gate)    gate.classList.add('hidden');
-  if (allDone) allDone.classList.remove('hidden');
-  updateDailyLimitUI();
+
+  if (sendgridConfigured) {
+    // SendGrid configured — unlock email toggle + show active banner
+    if (allDone) allDone.classList.remove('hidden');
+    if (dGate)   dGate.classList.add('hidden');
+    if (dForm)   dForm.classList.remove('hidden');
+    // Remove lock styling from email toggle
+    if (emailToggleLabel) emailToggleLabel.style.opacity = '1';
+    if (emailLockNote)    emailLockNote.classList.add('hidden');
+    updateDailyLimitUI();
+  } else {
+    // No SendGrid — scanning still works, but email toggle is greyed out
+    if (allDone) allDone.classList.add('hidden');
+    if (dGate)   dGate.classList.remove('hidden');
+    if (dForm)   dForm.classList.add('hidden');
+    // Grey out email toggle so it's clear it's locked
+    if (emailToggleLabel) emailToggleLabel.style.opacity = '0.45';
+    if (emailLockNote)    emailLockNote.classList.remove('hidden');
+  }
 }
 
 // ============================================================
@@ -2146,22 +2478,44 @@ function switchMode(mode) {
   const singleMode   = document.getElementById('singleMode');
   const bulkMode     = document.getElementById('bulkMode');
   const discoverMode = document.getElementById('discoverMode');
+  const activityMode = document.getElementById('activityMode');
+  const templates    = document.getElementById('templates');
   const singleBtn    = document.getElementById('modeSingleBtn');
   const bulkBtn      = document.getElementById('modeBulkBtn');
   const discoverBtn  = document.getElementById('modeDiscoverBtn');
+  const activityBtn  = document.getElementById('modeActivityBtn');
 
-  [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
-  [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
+  // hide all, deactivate all buttons
+  [singleMode, bulkMode, discoverMode, activityMode].forEach(el => el && el.classList.add('hidden'));
+  [singleBtn, bulkBtn, discoverBtn, activityBtn].forEach(el => el && el.classList.remove('active'));
 
   if (mode === 'single') {
-    if (singleMode) singleMode.classList.remove('hidden');
-    if (singleBtn)  singleBtn.classList.add('active');
+    singleMode.classList.remove('hidden');
+    singleBtn.classList.add('active');
+    if (templates) templates.classList.add('hidden');
+    document.getElementById('warmupPanel').classList.remove('hidden');
+    loadWarmupStatus();
   } else if (mode === 'bulk') {
-    if (bulkMode) bulkMode.classList.remove('hidden');
-    if (bulkBtn)  bulkBtn.classList.add('active');
+    bulkMode.classList.remove('hidden');
+    bulkBtn.classList.add('active');
+    if (templates) templates.classList.remove('hidden');
+    document.getElementById('warmupPanel').classList.remove('hidden');
+    loadWarmupStatus();
   } else if (mode === 'discover') {
-    if (discoverMode) discoverMode.classList.remove('hidden');
-    if (discoverBtn)  discoverBtn.classList.add('active');
+    discoverMode.classList.remove('hidden');
+    discoverBtn.classList.add('active');
+    if (templates) templates.classList.remove('hidden');
+    document.getElementById('warmupPanel').classList.remove('hidden');
+    loadWarmupStatus();
+    // show warning if Apify token missing
+    const hasToken = !!localStorage.getItem('apifyToken');
+    const warn = document.getElementById('apifyKeyWarning');
+    if (warn) warn.classList.toggle('hidden', hasToken);
+  } else if (mode === 'activity') {
+    if (activityMode) activityMode.classList.remove('hidden');
+    if (activityBtn) activityBtn.classList.add('active');
+    if (templates) templates.classList.add('hidden');
+    loadUserActivity();
   }
 }
 
@@ -2816,7 +3170,6 @@ async function startBulkScan() {
   const urls     = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 
   if (!urls.length) { alert('❌ Enter at least one URL'); return; }
-  if (urls.length > 5) { alert('❌ Free plan: max 5 URLs.\n\nNeed more? Contact Ottmar via WhatsApp (wa.me/31628073996)'); return; }
 
   button.disabled = true;
   button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
@@ -3230,7 +3583,14 @@ function getDailySentCount() { return parseInt(localStorage.getItem(getTodayKey(
 function incrementDailySent(n = 1) { const k = getTodayKey(); localStorage.setItem(k, getDailySentCount() + n); updateDailyLimitUI(); }
 function getRemainingToday() { return Math.max(0, DAILY_LIMIT - getDailySentCount()); }
 
-function updateDailyLimitUI() { /* email stats removed */ }
+function updateDailyLimitUI() {
+  const sent = getDailySentCount(), remaining = getRemainingToday();
+  const el = document.getElementById('dailyLimitBadge');
+  if (el) {
+    const color = remaining > 50 ? '#4ade80' : remaining > 20 ? '#fbbf24' : '#f87171';
+    el.innerHTML = `\ud83d\udce7 Today: <strong style="color:${color}!important;">${sent}/${DAILY_LIMIT}</strong> emails sent &nbsp;\u00b7&nbsp; <span style="color:${color}!important;">${remaining} remaining</span>`;
+  }
+}
 
 // ============================================================
 // EMAIL QUEUE
@@ -3735,17 +4095,26 @@ function switchPageSection(section) {
   document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
   const activeTab = document.getElementById('tab-' + section);
   if (activeTab) activeTab.classList.add('active');
-  // Hide scanner sub-modes when not on scanner tab
+  // Hide scanner-only panels when not on scanner tab
+  const warmup   = document.getElementById('warmupPanel');
+  const activity = document.getElementById('activityMode');
+  const scanner  = document.getElementById('lead-scanner');
   if (section !== 'scanner') {
-    ['modeSingleBtn','modeBulkBtn','modeDiscoverBtn'].forEach(id => {
+    if (warmup)   warmup.classList.add('hidden');
+    if (activity) activity.classList.add('hidden');
+    // Deactivate all mode toggles so scanner state is clean on return
+    ['modeSingleBtn','modeBulkBtn','modeDiscoverBtn','modeActivityBtn'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('active');
     });
-    ['singleMode','bulkMode','discoverMode'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('hidden');
-    });
+    if (scanner) {
+      ['singleMode','bulkMode','discoverMode'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
   } else {
+    // Returning to scanner — restore default single mode view
     switchMode('single');
   }
   // Load data for the selected section
