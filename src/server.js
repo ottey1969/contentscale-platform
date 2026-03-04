@@ -19,7 +19,7 @@
 // ✅ FIX: DOCX export Status column shows template type (Congrats/Pitch/Almost/Website)
 // ✅ FIX v3: /api/admin/users SELECT adds activated_until alias + is_activated computed column
 // ✅ FIX v3: /api/admin/users/:id/deactivate endpoint added (was missing — caused 404)
-// ✅ FIX v3: Instantly Bearer token now uses only secret (after ':') not full id:secret string
+// ✅ FIX v4: Instantly Bearer token = UUID part (BEFORE ':'), not secret after colon
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -1967,14 +1967,14 @@ setTimeout(async () => {
 
 // ============================================
 // INSTANTLY.AI PROXY ENDPOINTS
-// ✅ FIX v3: Bearer token now uses only the secret part (after ':') of the id:secret key format
+// ✅ FIX v4: Bearer token = UUID part (before ':') — Instantly v2 API auth fix
 // ============================================
 
 app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
-    // ✅ FIX: Instantly v2 API expects only the secret (after colon), not the full id:secret string
-    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[1] : apiKey;
+    // ✅ FIX v3: Instantly v2 Bearer = UUID part (BEFORE colon in id:secret format)
+    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[0] : apiKey;
     try {
         const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
             headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' }
@@ -1991,8 +1991,8 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
 app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
-    // ✅ FIX: Instantly v2 API expects only the secret (after colon), not the full id:secret string
-    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[1] : apiKey;
+    // ✅ FIX v3: Instantly v2 Bearer = UUID part (BEFORE colon in id:secret format)
+    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[0] : apiKey;
     const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
     if (!campaign_id || !leads || !leads.length) {
         return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
