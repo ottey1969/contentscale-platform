@@ -1976,12 +1976,12 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     // ✅ FIX: Instantly v2 API expects only the secret (after colon), not the full id:secret string
     const bearerKey = apiKey.includes(':') ? apiKey.split(':')[1] : apiKey;
     try {
-        const r = await fetch('https://api.instantly.ai/api/v2/campaign/list?limit=100&status=all', {
+        const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
             headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' }
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
-        res.json({ success: true, campaigns: data.items || data || [] });
+        res.json({ success: true, campaigns: data.items || data.campaigns || data || [] });
     } catch (e) {
         console.error('Instantly campaigns error:', e.message);
         res.status(500).json({ success: false, error: e.message });
@@ -1998,7 +1998,7 @@ app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
         return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
     }
     try {
-        const r = await fetch('https://api.instantly.ai/api/v2/lead/add', {
+        const r = await fetch('https://api.instantly.ai/api/v2/leads', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' },
             body: JSON.stringify({
