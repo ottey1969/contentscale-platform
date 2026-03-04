@@ -1677,8 +1677,6 @@ async function adminRunBatch() {
       const source = document.getElementById('adminBatchSource')?.value || 'google_maps';
       let actorId, actorInput;
       if (source === 'yellow_pages_world') {
-        actorId = 'apify~contact-info-scraper';
-        // Use Google Maps first then scrape contact pages for emails
         actorId = 'compass~crawler-google-places';
         actorInput = { searchStringsArray: [`${niche} in ${city} ${country}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
       } else if (source === 'contact_scraper') {
@@ -1929,7 +1927,7 @@ async function findEmailsForLeads() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
       body: JSON.stringify({
-        actorId: 'apify/contact-info-scraper',
+        actorId: 'apify~contact-info-scraper',
         input: { startUrls: urls.map(u => ({ url: u })), maxDepth: 1 }
       })
     });
