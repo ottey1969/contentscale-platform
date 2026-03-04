@@ -1914,7 +1914,11 @@ async function pushToInstantly() {
     let topIssue = '';
     try { const recs = JSON.parse(s.recommendations || '[]'); topIssue = typeof recs[0] === 'string' ? recs[0] : (recs[0]?.title || ''); } catch {}
     const fullReportUrl = s.report_url ? (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url) : '';
-    return { email: s.email_found, first_name: firstName, company_name: s.business_name || '', website: s.business_url || '', personalization: topIssue ? `I noticed your biggest SEO issue is: ${topIssue}` : '', custom_variables: { score: String(s.score||''), top_issue: topIssue, city: s.city||'', country: s.country||'', report_url: fullReportUrl, scan_date: new Date(s.created_at).toLocaleDateString('en-GB') } };
+    const scoreNum = parseInt(s.score) || 0;
+    const gap = scoreNum < 85 ? String(85 - scoreNum) : '0';
+    const scoreLabel = scoreNum >= 85 ? 'Elite' : scoreNum >= 70 ? 'Good' : scoreNum >= 50 ? 'Needs Work' : 'Critical';
+    const domain = s.business_url ? s.business_url.replace(/https?:\/\//,'').replace(/\/.*$/,'').replace('www.','') : '';
+    return { email: s.email_found, first_name: firstName, company_name: s.business_name || '', website: s.business_url || '', personalization: topIssue ? `I noticed your biggest SEO issue is: ${topIssue}` : '', custom_variables: { score: String(scoreNum), score_label: scoreLabel, gap, top_issue: topIssue, city: s.city||'', country: s.country||'', report_url: fullReportUrl, scan_date: new Date(s.created_at).toLocaleDateString('en-GB'), domain, year: String(new Date().getFullYear()) } };
   });
   try {
     const chunkSize = 100;
