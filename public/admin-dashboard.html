@@ -304,6 +304,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
             <button onclick="loadScanLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
             <button id="exportScanBtn" onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2">⬇ Export CSV</button>
             <button onclick="pushToInstantly()" id="instantlyPushBtn" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0f4c8a,#1d6cc8);color:white;border:none;">⚡ Push to Instantly</button>
+            <button onclick="findEmailsForLeads()" id="findEmailsBtn" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0369a1,#0284c7);color:white;border:none;">🔍 Find Emails</button>
             <button onclick="bulkDeleteScans()" class="btn btn-danger text-sm px-4 py-2"><i class="fas fa-trash mr-1"></i> Delete selected</button>
           </div>
         </div>
@@ -514,6 +515,13 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
             <div style="flex:1;min-width:160px;display:flex;align-items:flex-end;padding-bottom:2px;">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;color:#e5e7eb;">
                 <input type="checkbox" id="adminBatchWebsiteOnly" checked style="width:16px;height:16px;"> Alleen met website
+              </div>
+              <div style="margin-top:12px;">
+                <label style="font-size:0.82rem;color:#9ca3af;display:block;margin-bottom:6px;">📂 Bron</label>
+                <select id="adminBatchSource" style="width:100%;padding:9px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;">
+                  <option value="google_maps">🗺️ Google Maps</option>
+                  <option value="yellow_pages">📒 Yellow Pages</option>
+                </select>
               </label>
             </div>
           </div>
@@ -1665,7 +1673,16 @@ async function adminRunBatch() {
     for (let ci = 0; ci < combos.length; ci++) {
       const { niche, city } = combos[ci];
       setProgress(Math.round((ci / combos.length) * 90), `Combo ${ci+1}/${combos.length}: ${niche} — ${city}`);
-      const runRes = await fetch('/api/apify/start-run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken }, body: JSON.stringify({ actorId: 'compass~crawler-google-places', input: { searchStringsArray: [`${niche} in ${city}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false } }) });
+      const source = document.getElementById('adminBatchSource')?.value || 'google_maps';
+      let actorId, actorInput;
+      if (source === 'yellow_pages') {
+        actorId = 'petr_cermak~yellow-pages-scraper';
+        actorInput = { search: `${niche}`, location: city, country: country, maxItems: maxResults };
+      } else {
+        actorId = 'compass~crawler-google-places';
+        actorInput = { searchStringsArray: [`${niche} in ${city}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
+      }
+      const runRes = await fetch('/api/apify/start-run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken }, body: JSON.stringify({ actorId, input: actorInput }) });
       if (!runRes.ok) { const err = await runRes.json(); throw new Error(err.error?.message || 'Apify error'); }
       const runData = await runRes.json();
       const runId = runData.data?.id;
@@ -1881,6 +1898,57 @@ async function loadInstantlyCampaigns(preselectId = '', preselectName = '') {
   }
 }
 
+async function findEmailsForLeads() {
+  const apifyToken = localStorage.getItem('apifyToken');
+  if (!apifyToken) { alert('Voer eerst je Apify token in bij Find Leads tab.'); return; }
+  const btn = document.getElementById('findEmailsBtn');
+  btn.disabled = true; btn.textContent = '⏳ Zoeken...';
+  try {
+    // Get all scans without email
+    const res = await apiCall('/api/admin/scans?limit=200');
+    const noEmail = (res.scans || []).filter(s => !s.email_found && s.business_url);
+    if (!noEmail.length) { alert('Alle scans hebben al een email.'); return; }
+    const urls = noEmail.map(s => s.business_url).filter(Boolean);
+    btn.textContent = `⏳ ${urls.length} sites...`;
+    // Run website-contact-scraper on these URLs
+    const runRes = await fetch('/api/apify/start-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
+      body: JSON.stringify({
+        actorId: 'apify~website-content-crawler',
+        input: { startUrls: urls.map(u => ({ url: u })), maxCrawlPages: 3, maxCrawlDepth: 1, crawlerType: 'cheerio' }
+      })
+    });
+    const runData = await runRes.json();
+    const runId = runData.run_id || runData.id;
+    if (!runId) { alert('Apify start mislukt'); return; }
+    // Poll until done
+    let done = false, attempts = 0;
+    while (!done && attempts < 30) {
+      await new Promise(r => setTimeout(r, 5000));
+      const s = await (await fetch(`/api/apify/run-status/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
+      if (s.status === 'SUCCEEDED' || s.status === 'FAILED') done = true;
+      attempts++;
+    }
+    // Get results and extract emails
+    const data = await (await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
+    const items = data.items || data || [];
+    let found = 0;
+    for (const item of items) {
+      const emails = (item.emails || []);
+      const url = item.url || item.loadedUrl || '';
+      if (!emails.length) continue;
+      const scan = noEmail.find(s => s.business_url && url.includes(s.business_url.replace(/https?:\/\//,'')));
+      if (!scan) continue;
+      await apiCall(`/api/admin/scans/${scan.id}/email`, 'POST', { email: emails[0] });
+      found++;
+    }
+    alert(`✅ ${found} emails gevonden en opgeslagen.`);
+    loadScanLog();
+  } catch(e) { alert('Error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '🔍 Find Emails'; }
+}
+
 async function pushToInstantly() {
   const key = getInstantlyKey();
   if (!key) {
@@ -1918,7 +1986,7 @@ async function pushToInstantly() {
     const gap = scoreNum < 85 ? String(85 - scoreNum) : '0';
     const scoreLabel = scoreNum >= 85 ? 'Elite' : scoreNum >= 70 ? 'Good' : scoreNum >= 50 ? 'Needs Work' : 'Critical';
     const domain = s.business_url ? s.business_url.replace(/https?:\/\//,'').replace(/\/.*$/,'').replace('www.','') : '';
-    return { email: s.email_found, first_name: firstName, company_name: s.business_name || '', website: s.business_url || '', personalization: topIssue ? `I noticed your biggest SEO issue is: ${topIssue}` : '', custom_variables: { score: String(scoreNum), score_label: scoreLabel, gap, top_issue: topIssue, city: s.city||'', country: s.country||'', report_url: fullReportUrl, scan_date: new Date(s.created_at).toLocaleDateString('en-GB'), domain, year: String(new Date().getFullYear()) } };
+    return { email: s.email_found, first_name: firstName, company_name: s.business_name || '', website: s.business_url || '', personalization: topIssue ? `I noticed your biggest SEO issue is: ${topIssue}` : '', custom_variables: { score: String(scoreNum), domain, city: s.city||'', gap, top_issue: topIssue, report_url: fullReportUrl, year: String(new Date().getFullYear()) } };
   });
   try {
     const chunkSize = 100;
