@@ -1905,8 +1905,8 @@ async function findEmailsForLeads() {
   btn.disabled = true; btn.textContent = '⏳ Zoeken...';
   try {
     // Get all scans without email
-    const res = await apiCall('/api/admin/scans?limit=200');
-    const noEmail = (res.scans || []).filter(s => !s.email_found && s.business_url);
+    const res = await apiCall('/api/admin/scan-log?limit=200');
+    const noEmail = (res.scans || res.data || []).filter(s => !s.email_found && s.business_url);
     if (!noEmail.length) { alert('Alle scans hebben al een email.'); return; }
     const urls = noEmail.map(s => s.business_url).filter(Boolean);
     btn.textContent = `⏳ ${urls.length} sites...`;
