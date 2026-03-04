@@ -1974,39 +1974,29 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
     // Try full key, before-colon, and after-colon — log all attempts for debugging
-    const keyFull   = apiKey;
-    const keyBefore = apiKey.includes(':') ? apiKey.split(':')[0] : apiKey;
-    const keyAfter  = apiKey.includes(':') ? apiKey.split(':')[1] : apiKey;
-    const keysToTry = [...new Set([keyFull, keyBefore, keyAfter])];
-    let lastBody = null;
-    for (const bearerKey of keysToTry) {
-        try {
-            const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
-                headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' }
-            });
-            const rawText = await r.text();
-            let data;
-            try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
-            console.log('Instantly campaigns attempt key=' + bearerKey.substring(0,12) + '... status=' + r.status + ' body=' + rawText.substring(0, 300));
-            if (r.ok) {
-                return res.json({ success: true, campaigns: data.items || data.campaigns || (Array.isArray(data) ? data : []) });
-            }
-            lastBody = data;
-        } catch (e) {
-            console.error('Instantly campaigns fetch error:', e.message);
-            lastBody = { error: e.message };
-        }
+    // Instantly v2 uses 'Api-Key' header, NOT 'Authorization: Bearer'
+    const cleanKey = apiKey.includes(':') ? apiKey.split(':')[0] : apiKey;
+    try {
+        const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
+            headers: { 'Api-Key': cleanKey, 'Content-Type': 'application/json' }
+        });
+        const rawText = await r.text();
+        let data;
+        try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+        console.log('Instantly campaigns status=' + r.status + ' body=' + rawText.substring(0, 300));
+        if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
+        res.json({ success: true, campaigns: data.items || data.campaigns || (Array.isArray(data) ? data : []) });
+    } catch (e) {
+        console.error('Instantly campaigns error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
     }
-    const errMsg = (lastBody && (lastBody.error || lastBody.message || lastBody.raw)) || 'All auth formats failed';
-    console.error('Instantly campaigns ALL formats failed. Raw key prefix=' + apiKey.substring(0,12) + '...');
-    res.status(500).json({ success: false, error: errMsg });
 });
 
 app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
-    // ✅ FIX v3: Instantly v2 Bearer = UUID part (BEFORE colon in id:secret format)
-    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[0] : apiKey;
+    // Instantly v2 uses 'Api-Key' header, NOT 'Authorization: Bearer'
+    const cleanKey = apiKey.includes(':') ? apiKey.split(':')[0] : apiKey;
     const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
     if (!campaign_id || !leads || !leads.length) {
         return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
@@ -2014,7 +2004,7 @@ app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
     try {
         const r = await fetch('https://api.instantly.ai/api/v2/leads', {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' },
+            headers: { 'Api-Key': cleanKey, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 campaign_id, leads,
                 skip_if_in_workspace: skip_if_in_workspace !== false,
