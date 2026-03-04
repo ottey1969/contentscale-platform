@@ -1814,13 +1814,7 @@ function loadScanLogWithFilter() {
 // ✅ FIX: handle both "key" and "id:secret" formats — always use the secret part
 function getInstantlyKey() {
   const raw = document.getElementById('instantlyApiKey')?.value.trim() || localStorage.getItem('instantlyApiKey') || '';
-  if (!raw) return '';
-  // If key contains colon separator (id:secret format), use the secret part
-  if (raw.includes(':')) {
-    const parts = raw.split(':');
-    return parts[1] || parts[0];
-  }
-  return raw;
+  return raw; // Send full key to server — server handles format
 }
 
 function setInstantlyStatus(msg, color = '#60a5fa') {
