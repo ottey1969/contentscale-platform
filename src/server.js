@@ -1043,6 +1043,34 @@ app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => 
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ✅ Bulk Delete Scan Logs
+app.post('/api/admin/scan-log/bulk-delete', verifyAdmin, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'No IDs provided' });
+        }
+        
+        // Delete associated scan reports first (cascade cleanup)
+        await pool.query('DELETE FROM scan_reports WHERE scan_log_id = ANY($1)', [ids]);
+        
+        // Delete scan logs
+        const result = await pool.query('DELETE FROM scan_log WHERE id = ANY($1)', [ids]);
+        
+        console.log(`✅ Bulk deleted ${result.rowCount} scan log(s)`);
+        
+        res.json({ 
+            success: true, 
+            message: `Deleted ${result.rowCount} scan log(s)`,
+            deleted: result.rowCount 
+        });
+    } catch (e) {
+        console.error('❌ Bulk delete scan logs error:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+
 // Leaderboard Public
 app.get('/api/leaderboard', async (req, res) => {
     if (!pool) return res.json({ success: true, entries: [], stats: {} });
