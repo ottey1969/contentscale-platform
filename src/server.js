@@ -1974,8 +1974,11 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
     // Try full key, before-colon, and after-colon — log all attempts for debugging
-    // Instantly v2: Authorization: Bearer <full_api_key> (no splitting)
-    const cleanKey = apiKey.trim();
+    // Instantly v2: Bearer token = UUID part before colon in 'id:secret' format
+    // Full key format: ee803174-c07e-49fc-ace8-159efcfd0f33:ztFjtNWabspZ
+    // Bearer needs:    ee803174-c07e-49fc-ace8-159efcfd0f33  (the UUID, before colon)
+    const cleanKey = apiKey.includes(':') ? apiKey.split(':')[0].trim() : apiKey.trim();
+    console.log('Instantly using key prefix=' + cleanKey.substring(0,8) + '... len=' + cleanKey.length);
     try {
         const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
             headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' }
@@ -1995,8 +1998,11 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
 app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
-    // Instantly v2: Authorization: Bearer <full_api_key> (no splitting)
-    const cleanKey = apiKey.trim();
+    // Instantly v2: Bearer token = UUID part before colon in 'id:secret' format
+    // Full key format: ee803174-c07e-49fc-ace8-159efcfd0f33:ztFjtNWabspZ
+    // Bearer needs:    ee803174-c07e-49fc-ace8-159efcfd0f33  (the UUID, before colon)
+    const cleanKey = apiKey.includes(':') ? apiKey.split(':')[0].trim() : apiKey.trim();
+    console.log('Instantly using key prefix=' + cleanKey.substring(0,8) + '... len=' + cleanKey.length);
     const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
     if (!campaign_id || !leads || !leads.length) {
         return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
