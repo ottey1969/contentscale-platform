@@ -1,5 +1,5 @@
 //
-// CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED)
+// CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ Database Migration: country VARCHAR(100) (Fixes "value too long" error)
 // ✅ Bulk Delete Routes Added (Users, Leaderboard, Freelancers)
 // ✅ Tab Refresh Logic Preserved
@@ -17,6 +17,9 @@
 // ✅ FIX: ON CONFLICT DO NOTHING removed from scan_log INSERT (no unique constraint)
 // ✅ FIX: /api/scan-log POST now stores + returns source field
 // ✅ FIX: DOCX export Status column shows template type (Congrats/Pitch/Almost/Website)
+// ✅ FIX v3: /api/admin/users SELECT adds activated_until alias + is_activated computed column
+// ✅ FIX v3: /api/admin/users/:id/deactivate endpoint added (was missing — caused 404)
+// ✅ FIX v3: Instantly Bearer token now uses only secret (after ':') not full id:secret string
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
@@ -212,16 +215,14 @@ async function createAllTables() {
         )`);
         // Migrations for existing deployments
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
-        // ✅ FIX: Add source column to existing scan_log tables that pre-date this version
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
-        // ✅ Auto report_url — generated on every scan-log insert
         await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
 
-        // 7. Email suppression list (unsubscribes — respected forever across all future scans)
+        // 7. Email suppression list
         await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
-        // 8. Warmup config — tracks when each user started their email warmup
+        // 8. Warmup config
         await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);
-        // Scan reports — hosted HTML report pages with unique URL per scan
+        // Scan reports
         await client.query(`CREATE TABLE IF NOT EXISTS scan_reports (
             id VARCHAR(64) PRIMARY KEY,
             scan_log_id INTEGER,
@@ -235,7 +236,7 @@ async function createAllTables() {
             recommendations TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         )`);
-        // Batch jobs — server-side background scan jobs (survive browser close / PC off)
+        // Batch jobs
         await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
             id VARCHAR(64) PRIMARY KEY,
             admin_id VARCHAR(255),
@@ -262,7 +263,7 @@ async function createAllTables() {
         )`);
         await client.query(`ALTER TABLE batch_jobs ADD COLUMN IF NOT EXISTS score_low INTEGER DEFAULT 0`).catch(() => {});
 
-        // Migrate: add columns if they don't exist yet
+        // Migrate email_queue columns
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
         await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS score INTEGER`).catch(() => {});
@@ -276,7 +277,7 @@ async function createAllTables() {
 }
 
 // ============================================
-// API ENDPOINTS — User, Templates, Bulk, Admin
+// API ENDPOINTS
 // ============================================
 app.post('/api/user/register', async (req, res) => {
     try {
@@ -295,18 +296,12 @@ app.post('/api/user/register', async (req, res) => {
     } catch (error) { res.json({ success: false, error: 'Registration failed' }); }
 });
 
-// ============================================
-// ✅ UPDATED: hasSendgrid is TRUE when server env var SENDGRID_API_KEY is set.
-// Users no longer need to paste their own key — the server key is used for everyone.
-// ============================================
 app.get('/api/user/keys/status', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    // Server-level SendGrid key takes priority — if set, all users have access
     const serverHasSendgrid = !!process.env.SENDGRID_API_KEY;
     if (serverHasSendgrid) {
         return res.json({ success: true, hasSendgrid: true, source: 'server' });
     }
-    // Fallback: check if this user has their own key stored (legacy / future per-user support)
     if (!userId) return res.json({ success: true, hasSendgrid: false });
     try {
         const result = await pool.query('SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1', [userId]);
@@ -343,18 +338,13 @@ app.post('/api/user/templates', async (req, res) => {
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-// ============================================
-// ✅ UPDATED: /api/email/send
-// Priority: server SENDGRID_API_KEY env var → user's own stored key → error
-// Daily limit tracked server-side in email_queue table (counts per calendar day)
-// ============================================
 // ── Warmup Config ──────────────────────────────────────────────────────────
 function calcWarmupCap(dayNumber) {
-    if (dayNumber <= 7)  return 5;   // Week 1: 5/day
-    if (dayNumber <= 14) return 20;  // Week 2: 20/day
-    if (dayNumber <= 21) return 40;  // Week 3: 40/day
-    if (dayNumber <= 28) return 70;  // Week 4: 70/day
-    return 100;                       // Week 5+: full 100/day
+    if (dayNumber <= 7)  return 5;
+    if (dayNumber <= 14) return 20;
+    if (dayNumber <= 21) return 40;
+    if (dayNumber <= 28) return 70;
+    return 100;
 }
 
 app.get('/api/warmup', async (req, res) => {
@@ -394,7 +384,7 @@ app.post('/api/warmup/stop', async (req, res) => {
 
 // ── Unsubscribe ────────────────────────────────────────────────────────────
 app.get('/unsubscribe', async (req, res) => {
-    const { email, token } = req.query;
+    const { email } = req.query;
     if (!email) return res.send(`<!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:60px;background:#030712;color:#e5e7eb;"><h2>⚠️ Invalid unsubscribe link.</h2></body></html>`);
     try {
         if (pool) await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
@@ -404,7 +394,7 @@ app.get('/unsubscribe', async (req, res) => {
   <div style="text-align:center;max-width:480px;padding:40px;">
     <div style="font-size:56px;margin-bottom:16px;">✅</div>
     <h1 style="color:#4ade80;margin-bottom:8px;">You've been unsubscribed.</h1>
-    <p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails. This is permanent and respected across all future scans.</p>
+    <p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails.</p>
     <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a>
   </div>
 </body></html>`);
@@ -425,7 +415,6 @@ app.post('/api/email/send', async (req, res) => {
     const { to_email, subject, html, business_url, business_name, score, template_type } = req.body;
     if (!to_email || !subject || !html) return res.json({ success: false, error: 'Missing fields' });
 
-    // Check warmup cap — use warmup daily limit if active, otherwise default
     let dailyLimit = parseInt(process.env.SENDGRID_DAILY_LIMIT || '100');
     if (pool) {
         const wup = await pool.query(`SELECT warmup_start_date FROM warmup_config WHERE user_id = $1 AND is_active = TRUE`, [userId || 'server']).catch(() => ({ rows: [] }));
@@ -435,7 +424,6 @@ app.post('/api/email/send', async (req, res) => {
         }
     }
 
-    // Check suppression list — respect unsubscribes permanently
     if (pool) {
         const sup = await pool.query(`SELECT id FROM email_suppression WHERE email = $1`, [to_email.toLowerCase()]).catch(() => ({ rows: [] }));
         if (sup.rows.length > 0) return res.json({ success: false, suppressed: true, error: 'Email unsubscribed' });
@@ -443,17 +431,14 @@ app.post('/api/email/send', async (req, res) => {
 
     let apiKeyToUse = null;
 
-    // 1. Try server-level key first (Railway env var)
     if (process.env.SENDGRID_API_KEY) {
         apiKeyToUse = process.env.SENDGRID_API_KEY;
     } else if (userId && pool) {
-        // 2. Fallback: user's own stored key
         try {
             const result = await pool.query("SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
             if (result.rows.length > 0) {
                 apiKeyToUse = result.rows[0].api_key;
                 dailyLimit = result.rows[0].daily_limit;
-                // Check user-level daily limit
                 if (result.rows[0].used_today >= dailyLimit) {
                     return res.json({ success: false, limit_reached: true, error: 'Daily limit reached' });
                 }
@@ -463,7 +448,6 @@ app.post('/api/email/send', async (req, res) => {
 
     if (!apiKeyToUse) return res.json({ success: false, needs_api_key: true, error: 'No SendGrid key configured' });
 
-    // Check server-level daily limit (count rows in email_queue sent today)
     if (process.env.SENDGRID_API_KEY && pool) {
         try {
             const today = new Date().toISOString().slice(0, 10);
@@ -487,7 +471,6 @@ app.post('/api/email/send', async (req, res) => {
             html
         });
 
-        // Log sent email to queue table for daily tracking
         if (pool) {
             await pool.query(
                 `INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at, business_url, business_name, score, template_type) VALUES ($1, $2, $3, $4, 'sent', NOW(), $5, $6, $7, $8)`,
@@ -495,7 +478,6 @@ app.post('/api/email/send', async (req, res) => {
             ).catch(e => console.warn('Email log failed:', e.message));
         }
 
-        // Also increment user-level counter if using user key
         if (!process.env.SENDGRID_API_KEY && userId && pool) {
             await pool.query(
                 "UPDATE user_api_keys SET used_today = used_today + 1 WHERE user_id = $1 AND service_name = 'sendgrid'",
@@ -549,12 +531,15 @@ app.post('/api/setup/verify-admin', async (req, res) => {
         res.json({ success: true, admin_id: result.rows[0].id });
     } catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
 });
+
+// ✅ FIX v3: Added activated_until alias + computed is_activated so admin.html renderUsers works correctly
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     try {
-        // Join with scan_log to get scan count + last scanned URL per user
         const r = await pool.query(`
             SELECT 
                 u.*,
+                u.activation_expires AS activated_until,
+                CASE WHEN u.activation_expires > NOW() THEN TRUE ELSE FALSE END AS is_activated,
                 COUNT(s.id) AS scan_count,
                 MAX(s.created_at) AS last_scan_at,
                 (SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
@@ -568,6 +553,7 @@ app.get('/api/admin/users', verifyAdmin, async (req, res) => {
     }
     catch (e) { res.json({ success: false, error: e.message }); }
 });
+
 app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
     try {
         const days = req.body.days || 7;
@@ -576,6 +562,18 @@ app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
         res.json({ success: true });
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
+
+// ✅ FIX v3: Added missing deactivate endpoint (was causing 404 in admin.html)
+app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE users SET is_activated = FALSE, activation_expires = NULL WHERE id = $1',
+            [req.params.id]
+        );
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
 app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
     try {
         await pool.query('DELETE FROM user_api_keys WHERE user_id = $1', [req.params.id]);
@@ -606,8 +604,6 @@ app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-// Leaderboard Admin
-
 // ── DOCX Export endpoint ─────────────────────────────────────────────────────
 app.post('/api/export/scan-report-docx', async (req, res) => {
     const { scans } = req.body;
@@ -623,7 +619,6 @@ app.post('/api/export/scan-report-docx', async (req, res) => {
 
     fs.writeFileSync(tmpJson, JSON.stringify(scans));
 
-    // ✅ FIX: Status column now shows template type (Congrats/Pitch/Almost/Website) instead of generic Sent/No email
     const pyScript = `
 import sys, json
 from docx import Document
@@ -641,14 +636,12 @@ with open(json_path) as f:
 
 doc = Document()
 
-# Page margins
 for section in doc.sections:
     section.top_margin    = Cm(2)
     section.bottom_margin = Cm(2)
     section.left_margin   = Cm(2.5)
     section.right_margin  = Cm(2.5)
 
-# Title block
 title = doc.add_paragraph()
 title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 run = title.add_run('ContentScale — Scan Activity Report')
@@ -662,7 +655,6 @@ sub.add_run('Generated: ' + datetime.datetime.now().strftime('%d %B %Y') + '  ·
 
 doc.add_paragraph()
 
-# Summary stats
 total   = len(scans)
 emailed = sum(1 for s in scans if s.get('email_status') == 'has_email')
 no_em   = sum(1 for s in scans if s.get('email_status') == 'no_email')
@@ -675,7 +667,6 @@ stats_p.add_run(f'Total scanned: {total}   |   Emails sent: {emailed}   |   No e
 doc.add_paragraph()
 
 def get_template_label(s):
-    """Return human-readable template type label for the DOCX Status column."""
     tt = s.get('template_type') or ''
     status = s.get('email_status') or 'no_email'
     if status != 'has_email':
@@ -691,20 +682,17 @@ def get_template_label(s):
     return 'Sent'
 
 def get_source_label(s):
-    """Return human-readable source label."""
     src = s.get('source') or 'single'
     if src == 'bulk':     return 'Bulk'
     if src == 'discover': return 'Find Leads'
     return 'Single'
 
-# Table — 8 columns now includes Source
 headers = ['Business', 'URL', 'Score', 'Email Found', 'Template', 'Source', 'Top Issue', 'Scanned']
 widths  = [Cm(3.8), Cm(4.5), Cm(1.5), Cm(4.2), Cm(2.2), Cm(1.8), Cm(4.5), Cm(2.5)]
 
 table = doc.add_table(rows=1, cols=len(headers))
 table.style = 'Table Grid'
 
-# Header row
 hdr = table.rows[0]
 for i, (cell, w) in enumerate(zip(hdr.cells, widths)):
     cell.width = w
@@ -721,7 +709,6 @@ for i, (cell, w) in enumerate(zip(hdr.cells, widths)):
     shd.set(qn('w:fill'), '7E22CE')
     tcPr.append(shd)
 
-# Data rows
 for idx, s in enumerate(scans):
     score = s.get('score')
     if score is None: score_str = '—'
@@ -760,20 +747,17 @@ for idx, s in enumerate(scans):
         p = cell.paragraphs[0]
         run = p.add_run(val)
         run.font.size = Pt(7.5)
-        # Score color
         if i == 2 and score is not None:
             if score >= 70:   run.font.color.rgb = RGBColor(5, 150, 105)
             elif score >= 50: run.font.color.rgb = RGBColor(180, 83, 9)
             else:             run.font.color.rgb = RGBColor(185, 28, 28)
             run.bold = True
-        # Template/Status color
         if i == 4:
             if val == 'Congrats':         run.font.color.rgb = RGBColor(5, 150, 105)
             elif val == 'Almost Made It': run.font.color.rgb = RGBColor(180, 83, 9)
             elif val == 'Pitch Sent':     run.font.color.rgb = RGBColor(29, 78, 216)
             elif val == 'Website Offer':  run.font.color.rgb = RGBColor(126, 34, 206)
             else:                         run.font.color.rgb = RGBColor(107, 114, 128)
-        # Row shading
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         shd = OxmlElement('w:shd')
@@ -782,7 +766,6 @@ for idx, s in enumerate(scans):
         shd.set(qn('w:fill'), fill)
         tcPr.append(shd)
 
-# Footer
 doc.add_paragraph()
 footer_p = doc.add_paragraph()
 footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -814,7 +797,7 @@ print('OK')
     });
 });
 
-// ✅ FIX: /api/scan-log GET — now returns source column
+// ✅ /api/scan-log GET
 app.get('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const userId = req.headers['x-user-id'];
@@ -828,12 +811,11 @@ app.get('/api/scan-log', async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ✅ FIX: /api/scan-log POST — stores source field; auto-generates report_url; dedup by business_url
+// ✅ /api/scan-log POST
 app.post('/api/scan-log', async (req, res) => {
     if (!pool) return res.json({ success: false });
     const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations } = req.body;
     try {
-        // ── Dedup: skip if this URL was already scanned ──────────
         if (business_url) {
             const existing = await pool.query(
                 `SELECT id, report_url FROM scan_log WHERE business_url = $1 LIMIT 1`,
@@ -847,60 +829,41 @@ app.post('/api/scan-log', async (req, res) => {
                 return res.json({ success: true, skipped: true, reason: 'duplicate', report_url: existingReportUrl });
             }
         }
-        const crypto = require('crypto');
         const reportId = crypto.randomBytes(20).toString('hex');
         const reportUrl = '/report/' + reportId;
 
-        // Insert scan log with report_url
         const insertResult = await pool.query(
             `INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
             [
-                user_id || null,
-                business_url,
-                business_name || null,
-                score || null,
-                niche || null,
-                city || null,
-                country || null,
-                email_found || null,
-                email_status || 'no_email',
-                source || 'single',
+                user_id || null, business_url, business_name || null, score || null,
+                niche || null, city || null, country || null, email_found || null,
+                email_status || 'no_email', source || 'single',
                 recommendations ? JSON.stringify(recommendations) : null,
                 reportUrl
             ]
         );
         const scanLogId = insertResult.rows[0]?.id || null;
 
-        // Auto-generate hosted report in scan_reports
         await pool.query(
             `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-            [
-                reportId,
-                scanLogId,
-                business_url || null,
-                business_name || null,
-                score || null,
-                niche || null,
-                city || null,
-                country || null,
-                email_found || null,
-                recommendations ? JSON.stringify(recommendations) : null
-            ]
+            [reportId, scanLogId, business_url || null, business_name || null, score || null,
+             niche || null, city || null, country || null, email_found || null,
+             recommendations ? JSON.stringify(recommendations) : null]
         );
 
         res.json({ success: true, report_url: 'https://app.contentscale.site' + reportUrl });
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-// ✅ FIX: /api/admin/scan-log GET — now returns source column
+// ✅ /api/admin/scan-log GET
 app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const limit = parseInt(req.query.limit) || 1000;
     try {
         const r = await pool.query(
-            `SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
+            `SELECT id, user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
              FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
         );
         res.json({ success: true, scans: r.rows });
@@ -1050,26 +1013,15 @@ app.post('/api/admin/scan-log/bulk-delete', verifyAdmin, async (req, res) => {
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ success: false, error: 'No IDs provided' });
         }
-        
-        // Delete associated scan reports first (cascade cleanup)
         await pool.query('DELETE FROM scan_reports WHERE scan_log_id = ANY($1)', [ids]);
-        
-        // Delete scan logs
         const result = await pool.query('DELETE FROM scan_log WHERE id = ANY($1)', [ids]);
-        
         console.log(`✅ Bulk deleted ${result.rowCount} scan log(s)`);
-        
-        res.json({ 
-            success: true, 
-            message: `Deleted ${result.rowCount} scan log(s)`,
-            deleted: result.rowCount 
-        });
+        res.json({ success: true, message: `Deleted ${result.rowCount} scan log(s)`, deleted: result.rowCount });
     } catch (e) {
         console.error('❌ Bulk delete scan logs error:', e.message);
         res.status(500).json({ success: false, error: e.message });
     }
 });
-
 
 // Leaderboard Public
 app.get('/api/leaderboard', async (req, res) => {
@@ -1086,15 +1038,10 @@ app.get('/api/leaderboard', async (req, res) => {
     } catch (e) { res.json({ success: true, entries: [], stats: {} }); }
 });
 
-// ✅ NEW: Public Leaderboard Submission (Fixes 404)
 app.post('/api/leaderboard/submit', async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'Database unavailable' });
-    const { url, company_name, score, country, niche, email } = req.body;
-    
-    if (!url || score === undefined) {
-        return res.status(400).json({ success: false, error: 'URL and Score are required' });
-    }
-
+    const { url, company_name, score, country, niche } = req.body;
+    if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL and Score are required' });
     try {
         const finalScore = parseInt(score);
         const r = await pool.query(
@@ -1104,12 +1051,10 @@ app.post('/api/leaderboard/submit', async (req, res) => {
             score = EXCLUDED.score,
             company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
             niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
-            admin_verified = FALSE,
-            is_verified = FALSE
+            admin_verified = FALSE, is_verified = FALSE
             RETURNING id`,
             [url, company_name || null, finalScore, country || 'NL', niche || null, req.ip || req.connection.remoteAddress]
         );
-        
         res.json({ success: true, id: r.rows[0]?.id, message: 'Submission received. Pending admin approval.' });
     } catch (e) {
         console.error('Leaderboard submit error:', e.message);
@@ -1138,7 +1083,6 @@ app.post('/api/freelancers/register', async (req, res) => {
 
 // ============================================
 // 🏆 ELITE SCANNER — GRAAF + CRAFT + TECHNICAL
-// 34 recommendation checks with Learning + Target
 // ============================================
 app.post('/api/scan', async (req, res) => {
     const { url } = req.body;
@@ -1153,14 +1097,12 @@ app.post('/api/scan', async (req, res) => {
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
         await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
         
-        // ── PAGE EVALUATE — all detections happen inside the page ──
         const analysis = await page.evaluate((scanUrlParam) => {
             const text = document.body ? document.body.innerText : '';
             const cleanText = text.replace(/\s+/g, ' ').trim();
             const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
             const rawHtml = document.documentElement.outerHTML;
             
-            // Headings
             const h1Els = document.querySelectorAll('h1');
             const h1Count = h1Els.length;
             let h1Text = '';
@@ -1169,12 +1111,8 @@ app.post('/api/scan', async (req, res) => {
             h1Els.forEach(el => {
                 const style = window.getComputedStyle(el);
                 const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
-                if (!isHidden) {
-                    h1VisibleCount++;
-                    if (!h1Text) h1Text = el.textContent.trim();
-                } else {
-                    h1IsHidden = true;
-                }
+                if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
+                else { h1IsHidden = true; }
             });
             const h1Length = h1Text.length;
             const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
@@ -1197,7 +1135,6 @@ app.post('/api/scan', async (req, res) => {
             const metaDescriptionLength = metaDescription.length;
             const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
             const hasCanonical = !!document.querySelector('link[rel="canonical"]');
-            
             const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
             const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
             
@@ -1215,13 +1152,10 @@ app.post('/api/scan', async (req, res) => {
             schemaScripts.forEach(script => {
                 try {
                     const data = JSON.parse(script.textContent);
-                    if (Array.isArray(data)) {
-                        data.forEach(item => { checkSchemaType(item['@type']); });
-                    } else {
+                    if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
+                    else {
                         checkSchemaType(data['@type']);
-                        if (Array.isArray(data['@graph'])) {
-                            data['@graph'].forEach(item => { checkSchemaType(item['@type']); });
-                        }
+                        if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
                     }
                 } catch (e) {}
             });
@@ -1255,11 +1189,7 @@ app.post('/api/scan', async (req, res) => {
             });
             const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
             testimonialSelectors.forEach(sel => {
-                try {
-                    document.querySelectorAll(sel).forEach(el => {
-                        if (el.textContent.trim().length > 40) expertQuoteCount++;
-                    });
-                } catch (e) {}
+                try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
             });
             
             let caseStudyCount = 0;
@@ -1308,15 +1238,13 @@ app.post('/api/scan', async (req, res) => {
             return {
                 wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
                 metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
-                hasOpenGraph, hasTwitterCard,
-                hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+                hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
                 hasFAQContent, images: images.length, imagesWithAlt,
                 internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
                 statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
             };
         }, scanUrl);
         
-        // Extract emails from page HTML (mailto: links + regex)
         let extractedEmails = [];
         try {
             const pageHtml = await page.content();
@@ -1329,84 +1257,60 @@ app.post('/api/scan', async (req, res) => {
             extractedEmails = allEmails.slice(0, 3);
         } catch (e) {}
 
-        // ⚠️ FIX: Close page ONLY after evaluation is complete
         await page.close();
         
-        // ============================================
-        // 📊 SCORING — GRAAF 50 + CRAFT 30 + TECH 20
-        // ============================================
+        // ── SCORING ──
         let graafScore = 0;
         if (analysis.wordCount >= 2500)      graafScore += 10;
         else if (analysis.wordCount >= 1500) graafScore += 7;
         else if (analysis.wordCount >= 1000) graafScore += 4;
         else if (analysis.wordCount >= 500)  graafScore += 2;
-        
         if (analysis.statsFound >= 8)        graafScore += 8;
         else if (analysis.statsFound >= 5)   graafScore += 5;
         else if (analysis.statsFound >= 3)   graafScore += 3;
-        
         if (analysis.expertQuoteCount >= 4)  graafScore += 8;
         else if (analysis.expertQuoteCount >= 2) graafScore += 5;
         else if (analysis.expertQuoteCount >= 1) graafScore += 2;
-        
         if (analysis.caseStudyCount >= 2)    graafScore += 8;
         else if (analysis.caseStudyCount >= 1) graafScore += 4;
-        
         if (analysis.hasDirectAnswer)        graafScore += 6;
         if (analysis.hasTLDR)               graafScore += 4;
-        
         if (analysis.listItemCount >= 15)    graafScore += 6;
         else if (analysis.listItemCount >= 8) graafScore += 4;
         else if (analysis.listItemCount >= 3) graafScore += 2;
-        
         graafScore = Math.min(50, graafScore);
         
         let craftScore = 0;
         if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric && !analysis.h1IsTooShort) craftScore += 8;
         else if (analysis.h1VisibleCount === 1) craftScore += 3;
         else if (analysis.h1VisibleCount > 1)   craftScore += 2;
-        
         if (analysis.h2Count >= 5)          craftScore += 7;
         else if (analysis.h2Count >= 3)     craftScore += 5;
         else if (analysis.h2Count >= 1)     craftScore += 2;
-        
         if (analysis.avgParagraphLength <= 60)       craftScore += 5;
         else if (analysis.avgParagraphLength <= 100) craftScore += 3;
-        
         if (analysis.hasFAQContent)         craftScore += 5;
         if (analysis.hasTOC)                craftScore += 3;
         if (analysis.hasAuthorBio)          craftScore += 2;
-        
         craftScore = Math.min(30, craftScore);
         
         let technicalScore = 0;
         if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
         else if (analysis.metaTitleLength > 0) technicalScore += 1;
-        
         if (analysis.metaDescriptionLength >= 140 && analysis.metaDescriptionLength <= 165) technicalScore += 3;
         else if (analysis.metaDescriptionLength > 0) technicalScore += 1;
-        
         if (analysis.hasArticleSchema)      technicalScore += 4;
         if (analysis.hasFAQPageSchema)      technicalScore += 4;
         if (analysis.hasCanonical)          technicalScore += 2;
-        
         if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 2;
         else if (analysis.images > 0 && analysis.imagesWithAlt > 0) technicalScore += 1;
-        
         if (analysis.hasMetaViewport)       technicalScore += 2;
-        
         technicalScore = Math.min(20, technicalScore);
         
         const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
-        const quality = totalScore >= 95 ? 'elite' :
-            totalScore >= 90 ? 'excellent' :
-            totalScore >= 80 ? 'very good' :
-            totalScore >= 70 ? 'good' :
-            totalScore >= 60 ? 'average' : 'needs improvement';
+        const quality = totalScore >= 95 ? 'elite' : totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
         
-        // ============================================
-        // 📋 RECOMMENDATIONS — 34 checks
-        // ============================================
+        // ── RECOMMENDATIONS ──
         const recommendations = [];
         
         if (analysis.wordCount < 500) {
@@ -1414,73 +1318,73 @@ app.post('/api/scan', async (req, res) => {
         } else if (analysis.wordCount < 1500) {
             recommendations.push({ title: '📝 Increase Content Depth', description: `${analysis.wordCount} words found — decent start, but below the threshold for competitive rankings.`, priority: 'medium', action: "Add a FAQ section (5–8 questions), a 'How it works' breakdown, or real client examples.", learning: "Pages ranking on page 1 average 1,890 words. Google's QRG rewards 'comprehensive, accurate, clearly written' content.", target: '1,500+ words minimum; 2,500+ for competitive terms' });
         } else if (analysis.wordCount < 2500) {
-            recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content. It satisfies Google's comprehensiveness signal.", target: '2,500+ words for GRAAF Elite tier' });
+            recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
         }
         
         if (analysis.statsFound < 3) {
-            recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found. Google rewards content built on real evidence.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
+            recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
         } else if (analysis.statsFound < 8) {
             recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.", target: '8+ cited statistics with source and year' });
         }
         
         if (analysis.expertQuoteCount === 0) {
-            recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: "Add 3–5 quotes from named experts. Format: \"Quote text\" — [Name, Title, Organization].", learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources. Pages with 3+ expert citations outrank those without by 52%.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
+            recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: `Add 3–5 quotes from named experts. Format: "Quote text" — [Name, Title, Organization].`, learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
         } else if (analysis.expertQuoteCount < 3) {
             recommendations.push({ title: '💬 Add More Expert Citations', description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`, priority: 'medium', action: "Add quotes from industry publications or recognized professionals.", learning: "Expert citations are the fastest way to improve your GRAAF Authoritativeness score.", target: '3–5 attributed expert quotes' });
         }
         
         if (analysis.caseStudyCount === 0) {
-            recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected. This is the most powerful E-E-A-T signal — first-hand Experience.", priority: 'high', action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.", learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.", target: '2 case studies with Challenge/Solution/Results format and measurable metrics' });
+            recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected.", priority: 'high', action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.", learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.", target: '2 case studies with Challenge/Solution/Results format and measurable metrics' });
         } else if (analysis.caseStudyCount < 2) {
-            recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section. A second would maximize your GRAAF case study score.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
+            recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
         }
         
         if (!analysis.hasDirectAnswer) {
-            recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words. Google uses this for Featured Snippets and AI Overviews.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
+            recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
         }
         
         if (!analysis.hasTLDR) {
-            recommendations.push({ title: '📌 Add a TL;DR / Key Takeaways Section', description: "No 'Key Takeaways' or 'Quick Summary' section detected. This is one of the fastest wins for AI Overview inclusion.", priority: 'medium', action: "Add a 'Key Takeaways' section near the top with 5 bullet points.", learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.", target: '5 bullet takeaways with specific stats near the top of the page' });
+            recommendations.push({ title: '📌 Add a TL;DR / Key Takeaways Section', description: "No 'Key Takeaways' or 'Quick Summary' section detected.", priority: 'medium', action: "Add a 'Key Takeaways' section near the top with 5 bullet points.", learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.", target: '5 bullet takeaways with specific stats near the top of the page' });
         }
         
         if (analysis.listItemCount < 5) {
-            recommendations.push({ title: '📋 Improve Scannability With Lists', description: `Only ${analysis.listItemCount} list items found. Content without lists is harder to scan.`, priority: 'medium', action: "Convert key points into bulleted or numbered lists. Aim for 15+ list items.", learning: "79% of users scan web content. Lists increase chances of featured snippet selection.", target: '15+ list items spread naturally through the content' });
+            recommendations.push({ title: '📋 Improve Scannability With Lists', description: `Only ${analysis.listItemCount} list items found.`, priority: 'medium', action: "Convert key points into bulleted or numbered lists. Aim for 15+ list items.", learning: "79% of users scan web content. Lists increase chances of featured snippet selection.", target: '15+ list items spread naturally through the content' });
         } else if (analysis.listItemCount < 15) {
-            recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found. Reaching 15+ improves both scannability and GRAAF scoring.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
+            recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
         }
         
         if (analysis.h1Count === 0) {
-            recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected. This is one of the most impactful on-page SEO issues you can fix.', priority: 'high', action: "Add exactly one H1 tag near the top of the page containing your primary keyword.", learning: "The H1 is Google's strongest on-page keyword signal. Without it, Google has to guess what your page is about — and it often guesses wrong.", target: 'Exactly 1 H1 tag with primary keyword in the first 30 characters' });
+            recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected.', priority: 'high', action: "Add exactly one H1 tag near the top of the page containing your primary keyword.", learning: "The H1 is Google's strongest on-page keyword signal.", target: 'Exactly 1 H1 tag with primary keyword in the first 30 characters' });
         } else if (analysis.h1IsHidden && analysis.h1VisibleCount === 0) {
-            recommendations.push({ title: '🚨 Critical: H1 Is Hidden (display:none / visibility:hidden)', description: `An H1 exists in the HTML but is hidden with CSS. Google sees through this — it counts as no real H1.`, priority: 'high', action: "Remove the CSS hiding your H1. Make it visible. If you are hiding it for design reasons, rethink the design.", learning: "Hidden H1s are sometimes used as an SEO trick. Google ignores hidden content for ranking signals.", target: '1 fully visible H1 containing primary keyword' });
+            recommendations.push({ title: '🚨 Critical: H1 Is Hidden (display:none / visibility:hidden)', description: `An H1 exists in the HTML but is hidden with CSS.`, priority: 'high', action: "Remove the CSS hiding your H1. Make it visible.", learning: "Hidden H1s are sometimes used as an SEO trick. Google ignores hidden content for ranking signals.", target: '1 fully visible H1 containing primary keyword' });
         } else if (analysis.h1VisibleCount > 1) {
-            recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1VisibleCount} visible H1 tags. This dilutes your topical signal and confuses Google.`, priority: 'medium', action: "Keep only one H1. Demote the rest to H2 or H3.", learning: "Multiple H1s tell Google your page has multiple main topics — it then ranks you for none of them well.", target: 'Exactly 1 H1 tag per page' });
+            recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1VisibleCount} visible H1 tags.`, priority: 'medium', action: "Keep only one H1. Demote the rest to H2 or H3.", learning: "Multiple H1s tell Google your page has multiple main topics.", target: 'Exactly 1 H1 tag per page' });
         } else if (analysis.h1IsGeneric) {
-            recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword', description: `Your H1 "${analysis.h1Text}" contains no specific keyword. Generic H1s waste the strongest on-page signal.`, priority: 'high', action: "Replace your H1 with a specific keyword phrase. Example: 'SEO Content Scanner for Dutch Businesses' not 'Welcome'.", learning: "Generic H1s like 'Home' or 'Welcome' provide zero keyword signal to Google. Your H1 should be your page's value proposition.", target: 'H1 with primary keyword + specific value in 30–70 characters' });
+            recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword', description: `Your H1 "${analysis.h1Text}" contains no specific keyword.`, priority: 'high', action: "Replace your H1 with a specific keyword phrase.", learning: "Generic H1s like 'Home' or 'Welcome' provide zero keyword signal to Google.", target: 'H1 with primary keyword + specific value in 30–70 characters' });
         } else if (analysis.h1IsTooShort) {
-            recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters. This is too thin to carry a keyword signal.`, priority: 'medium', action: "Expand your H1 to 30–70 characters. Include your primary keyword and a qualifier (year, location, benefit).", learning: "H1s under 10 characters provide minimal keyword signal. The sweet spot is 30–70 characters.", target: 'H1 of 30–70 characters with primary keyword' });
+            recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters.`, priority: 'medium', action: "Expand your H1 to 30–70 characters.", learning: "H1s under 10 characters provide minimal keyword signal.", target: 'H1 of 30–70 characters with primary keyword' });
         } else if (analysis.h1IsTooLong) {
-            recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters. Long H1s dilute keyword focus and look spammy.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer. Move secondary information to your subtitle (H2) or intro paragraph.", learning: "H1s over 70 characters reduce keyword density and can trigger spam filters in quality reviews.", target: 'H1 under 70 characters' });
+            recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer.", learning: "H1s over 70 characters reduce keyword density.", target: 'H1 under 70 characters' });
         }
         
         if (analysis.h2Count < 3) {
-            recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found. Poor heading structure reduces crawlability.`, priority: 'medium', action: "Structure your content with 5+ H2 headings. Each major topic gets its own H2.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
+            recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found.`, priority: 'medium', action: "Structure your content with 5+ H2 headings.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
         }
         
         if (analysis.avgParagraphLength > 100) {
-            recommendations.push({ title: '📱 Shorten Paragraphs for Mobile Readability', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words. Long paragraphs kill mobile engagement.`, priority: 'medium', action: "Break paragraphs at 50–80 words maximum. One idea per paragraph.", learning: "Paragraphs over 100 words increase mobile abandonment by 37%.", target: 'Average paragraph length 40–80 words' });
+            recommendations.push({ title: '📱 Shorten Paragraphs for Mobile Readability', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words.`, priority: 'medium', action: "Break paragraphs at 50–80 words maximum.", learning: "Paragraphs over 100 words increase mobile abandonment by 37%.", target: 'Average paragraph length 40–80 words' });
         }
         
         if (!analysis.hasFAQContent) {
-            recommendations.push({ title: '❓ Add a FAQ Section', description: "No FAQ section detected. FAQs are powerful for capturing 'People Also Ask' rankings.", priority: 'medium', action: "Add an FAQ section with 5–10 real questions your audience asks.", learning: "'People Also Ask' boxes now appear in 80% of Google searches.", target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs" });
+            recommendations.push({ title: '❓ Add a FAQ Section', description: "No FAQ section detected.", priority: 'medium', action: "Add an FAQ section with 5–10 real questions your audience asks.", learning: "'People Also Ask' boxes now appear in 80% of Google searches.", target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs" });
         }
         
         if (!analysis.hasTOC) {
-            recommendations.push({ title: '📑 Add a Table of Contents', description: 'No Table of Contents detected. A TOC improves crawlability and user experience.', priority: 'low', action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.", learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.", target: 'Table of Contents with anchor links to all H2 sections' });
+            recommendations.push({ title: '📑 Add a Table of Contents', description: 'No Table of Contents detected.', priority: 'low', action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.", learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.", target: 'Table of Contents with anchor links to all H2 sections' });
         }
         
         if (!analysis.hasAuthorBio) {
-            recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected. Google explicitly evaluates author expertise.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
+            recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
         }
         
         if (!analysis.hasArticleSchema) {
@@ -1494,43 +1398,43 @@ app.post('/api/scan', async (req, res) => {
         }
         
         if (!analysis.hasCanonical) {
-            recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected. Without it, Google may index multiple versions as duplicates.', priority: 'medium', action: "Add <link rel=\"canonical\" href=\"...\"> to your <head>.", learning: "Canonical tags prevent duplicate content penalties and concentrate ranking signals.", target: 'Self-referencing canonical tag in <head>' });
+            recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
         }
         
         if (analysis.metaTitleLength === 0) {
-            recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found. This is a critical SEO issue.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
+            recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
         } else if (analysis.metaTitleLength < 40) {
-            recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters. You have unused SERP real estate.`, priority: 'low', action: "Expand to 50–60 characters. Add a year or benefit phrase.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
+            recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
         } else if (analysis.metaTitleLength > 65) {
-            recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters. Google truncates at ~60–65 characters.`, priority: 'low', action: "Trim to 50–60 characters. Move the primary keyword to the front.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
+            recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
         }
         
         if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found. Google will auto-generate one — usually poorly.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
         } else if (analysis.metaDescriptionLength < 100) {
-            recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters. You have unused SERP space.`, priority: 'low', action: "Expand to 140–160 characters. Add a benefit statement.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
+            recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
         } else if (analysis.metaDescriptionLength > 165) {
-            recommendations.push({ title: '📝 Meta Description Too Long', description: `Description is ${analysis.metaDescriptionLength} characters. Google truncates after ~160 characters.`, priority: 'low', action: "Trim to 140–160 characters. Put the most important information first.", learning: "Truncated descriptions end mid-sentence in search results.", target: '140–160 characters' });
+            recommendations.push({ title: '📝 Meta Description Too Long', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Trim to 140–160 characters.", learning: "Truncated descriptions end mid-sentence in search results.", target: '140–160 characters' });
         }
         
         if (analysis.images === 0) {
-            recommendations.push({ title: '🖼️ Add Images to Your Content', description: 'No images detected. Images are critical for engagement and UX.', priority: 'medium', action: "Add at least 3–5 images with descriptive alt text.", learning: "Content with images gets 94% more views. Alt text is how Google reads images.", target: '3–5 images with descriptive alt text on every image' });
+            recommendations.push({ title: '🖼️ Add Images to Your Content', description: 'No images detected.', priority: 'medium', action: "Add at least 3–5 images with descriptive alt text.", learning: "Content with images gets 94% more views.", target: '3–5 images with descriptive alt text on every image' });
         } else if (analysis.imagesWithAlt < Math.min(analysis.images, 3)) {
             recommendations.push({ title: '🖼️ Add Alt Text to Your Images', description: `${analysis.images} images found but only ${analysis.imagesWithAlt} have alt text.`, priority: 'medium', action: "Add descriptive alt text to every image.", learning: "Alt text serves three purposes: Google understanding, accessibility, and keyword signals.", target: 'Alt text on 100% of images' });
         }
         
         if (analysis.internalLinks < 5) {
-            recommendations.push({ title: '🔗 Add More Internal Links', description: `Only ${analysis.internalLinks} internal links found. Internal linking is underused.`, priority: 'medium', action: "Add 8–12 contextual internal links to related pages.", learning: "Internal links transfer link equity and help Google crawl faster.", target: '8–12 internal links with descriptive anchor text' });
+            recommendations.push({ title: '🔗 Add More Internal Links', description: `Only ${analysis.internalLinks} internal links found.`, priority: 'medium', action: "Add 8–12 contextual internal links to related pages.", learning: "Internal links transfer link equity and help Google crawl faster.", target: '8–12 internal links with descriptive anchor text' });
         } else if (analysis.internalLinks < 8) {
-            recommendations.push({ title: '🔗 Strengthen Internal Link Structure', description: `${analysis.internalLinks} internal links found — close to optimal.`, priority: 'low', action: "Find unlinked topic mentions and add contextual links.", learning: "Every internal link is a vote for the destination page.", target: '8–12 internal links' });
+            recommendations.push({ title: '🔗 Strengthen Internal Link Structure', description: `${analysis.internalLinks} internal links found.`, priority: 'low', action: "Find unlinked topic mentions and add contextual links.", learning: "Every internal link is a vote for the destination page.", target: '8–12 internal links' });
         }
         
         if (analysis.externalLinks === 0) {
-            recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found. Linking to high-quality sources is a direct E-E-A-T signal.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
+            recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
         }
         
         if (!analysis.hasOpenGraph) {
-            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected. Your page displays poorly when shared socially.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially, driving referral traffic.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
         }
         
         const finalRecommendations = recommendations.length > 0 ? recommendations : [{
@@ -1543,56 +1447,31 @@ app.post('/api/scan', async (req, res) => {
         }];
         
         const result = {
-            success: true,
-            url: scanUrl,
-            score: totalScore,
-            quality: quality,
-            metrics: {
-                graaf: graafScore,
-                craft: craftScore,
-                technical: technicalScore
-            },
+            success: true, url: scanUrl, score: totalScore, quality,
+            metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
             content_stats: {
-                wordCount: analysis.wordCount,
-                emails_found: extractedEmails,
+                wordCount: analysis.wordCount, emails_found: extractedEmails,
                 extractedEmail: extractedEmails[0] || null,
-                h1Count: analysis.h1Count,
-                h1Text: analysis.h1Text,
-                h1Length: analysis.h1Length,
-                h1VisibleCount: analysis.h1VisibleCount,
-                h1IsGeneric: analysis.h1IsGeneric,
-                h1IsTooShort: analysis.h1IsTooShort,
-                h1IsTooLong: analysis.h1IsTooLong,
-                h2Count: analysis.h2Count,
-                h3Count: analysis.h3Count,
+                h1Count: analysis.h1Count, h1Text: analysis.h1Text, h1Length: analysis.h1Length,
+                h1VisibleCount: analysis.h1VisibleCount, h1IsGeneric: analysis.h1IsGeneric,
+                h1IsTooShort: analysis.h1IsTooShort, h1IsTooLong: analysis.h1IsTooLong,
+                h2Count: analysis.h2Count, h3Count: analysis.h3Count,
                 listItemCount: analysis.listItemCount,
                 avgParagraphLength: Math.round(analysis.avgParagraphLength),
-                metaTitleLength: analysis.metaTitleLength,
-                metaDescriptionLength: analysis.metaDescriptionLength,
-                hasMetaViewport: analysis.hasMetaViewport,
-                hasCanonical: analysis.hasCanonical,
-                hasArticleSchema: analysis.hasArticleSchema,
-                hasFAQPageSchema: analysis.hasFAQPageSchema,
+                metaTitleLength: analysis.metaTitleLength, metaDescriptionLength: analysis.metaDescriptionLength,
+                hasMetaViewport: analysis.hasMetaViewport, hasCanonical: analysis.hasCanonical,
+                hasArticleSchema: analysis.hasArticleSchema, hasFAQPageSchema: analysis.hasFAQPageSchema,
                 hasOrganizationSchema: analysis.hasOrganizationSchema,
-                hasOpenGraph: analysis.hasOpenGraph,
-                hasTwitterCard: analysis.hasTwitterCard,
-                hasDirectAnswer: analysis.hasDirectAnswer,
-                hasTLDR: analysis.hasTLDR,
-                hasTOC: analysis.hasTOC,
-                hasAuthorBio: analysis.hasAuthorBio,
+                hasOpenGraph: analysis.hasOpenGraph, hasTwitterCard: analysis.hasTwitterCard,
+                hasDirectAnswer: analysis.hasDirectAnswer, hasTLDR: analysis.hasTLDR,
+                hasTOC: analysis.hasTOC, hasAuthorBio: analysis.hasAuthorBio,
                 hasFAQContent: analysis.hasFAQContent,
-                images: analysis.images,
-                imagesWithAlt: analysis.imagesWithAlt,
-                internalLinks: analysis.internalLinks,
-                externalLinks: analysis.externalLinks,
-                expertQuoteCount: analysis.expertQuoteCount,
-                caseStudyCount: analysis.caseStudyCount,
+                images: analysis.images, imagesWithAlt: analysis.imagesWithAlt,
+                internalLinks: analysis.internalLinks, externalLinks: analysis.externalLinks,
+                expertQuoteCount: analysis.expertQuoteCount, caseStudyCount: analysis.caseStudyCount,
                 statsFound: analysis.statsFound
             },
-            recommendations: {
-                all: finalRecommendations,
-                count: finalRecommendations.length
-            },
+            recommendations: { all: finalRecommendations, count: finalRecommendations.length },
             timestamp: new Date().toISOString()
         };
         console.log(`✅ Scan: ${scanUrl} → ${totalScore}/100 (${quality}) — ${finalRecommendations.length} recommendations`);
@@ -1607,7 +1486,7 @@ app.post('/api/scan', async (req, res) => {
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 
-// ── Apify proxy routes (avoids CORS from browser) ──────────────────────────
+// ── Apify proxy routes ──────────────────────────────────────────────────────
 const APIFY_BASE = 'https://api.apify.com/v2';
 
 app.post('/api/apify/start-run', async (req, res) => {
@@ -1649,11 +1528,7 @@ app.get('/api/apify/dataset/:runId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ============================================
-// 📄 SCAN REPORTS — Generate & Host per-scan reports
-// POST /api/report/generate  → saves record, returns {id, url}
-// GET  /report/:id           → renders full HTML report (public, URL = key)
-// ============================================
+// ── Scan Reports ────────────────────────────────────────────────────────────
 app.post('/api/report/generate', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const { scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations } = req.body;
@@ -1674,7 +1549,7 @@ app.get('/report/:id', async (req, res) => {
     if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
     try {
         const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
-        if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2><p style="color:#6b7280;">This report link may have expired or is invalid.</p></div></body></html>');
+        if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
         const report = r.rows[0];
         let recs = [];
         try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
@@ -1688,12 +1563,9 @@ app.get('/report/:id', async (req, res) => {
         const dateStr = new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
         const priorityColor = p => p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : p === 'none' ? '#4ade80' : '#94a3b8';
         const priorityLabel = p => p === 'high' ? '🔴 High Priority' : p === 'medium' ? '🟡 Medium Priority' : p === 'none' ? '✅ Elite' : '🔵 Low Priority';
-        // Handle both legacy string-only recs and full-object recs
-        const normalizeRec = (rec, i) => typeof rec === 'string'
-            ? { title: rec, description: null, action: null, learning: null, target: null, priority: 'low' }
-            : rec;
+        const normalizeRec = (rec) => typeof rec === 'string' ? { title: rec, description: null, action: null, learning: null, target: null, priority: 'low' } : rec;
         const recsHtml = recs.map((rawRec, i) => {
-            const rec = normalizeRec(rawRec, i);
+            const rec = normalizeRec(rawRec);
             return `
           <div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${priorityColor(rec.priority)};border-radius:12px;padding:20px;margin-bottom:14px;page-break-inside:avoid;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
@@ -1736,30 +1608,11 @@ app.get('/report/:id', async (req, res) => {
   .progress-lbl{display:flex;justify-content:space-between;font-size:0.75rem;color:#6b7280;margin-bottom:5px;}
   .progress-bar{height:10px;background:#1f2937;border-radius:99px;overflow:hidden;}
   .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,${scoreColor},${scoreColor}aa);}
-  .section-title{font-size:1.2rem;font-weight:700;color:#f9fafb;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #1f2937;display:flex;align-items:center;gap:8px;}
+  .section-title{font-size:1.2rem;font-weight:700;color:#f9fafb;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #1f2937;}
   .rec-count{font-size:0.75rem;background:#7e22ce30;color:#a78bfa;border:1px solid #7e22ce50;border-radius:99px;padding:2px 10px;}
-  .pdf-btn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 8px 32px rgba(126,34,206,0.4);display:flex;align-items:center;gap:8px;z-index:999;}
-  .pdf-btn:hover{transform:translateY(-2px);}
+  .pdf-btn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 8px 32px rgba(126,34,206,0.4);z-index:999;}
   .footer{margin-top:48px;text-align:center;color:#374151;font-size:0.78rem;padding-top:24px;border-top:1px solid #111827;}
-  @media print{
-    body{background:white;color:#111;}
-    .pdf-btn{display:none!important;}
-    .container{padding:20px;}
-    .header{background:white;border:2px solid #7e22ce;}
-    .brand-logo{-webkit-text-fill-color:#7e22ce;}
-    .biz-name{color:#111;}
-    .section-title{color:#111;}
-    div[style*="background:#0f172a"]{background:white!important;border:1px solid #e5e7eb!important;}
-    div[style*="background:#111827"]{background:#f9fafb!important;}
-    p[style*="color:#9ca3af"]{color:#374151!important;}
-    p[style*="color:#d1d5db"]{color:#374151!important;}
-    .score-circle{border-color:#7e22ce;}
-    .score-num{color:#7e22ce;}
-    .pill{background:#f9fafb;border-color:#e5e7eb;}
-    .chip{background:#f3f4f6;border-color:#e5e7eb;}
-    .progress-bar{background:#e5e7eb;}
-    @page{margin:15mm;}
-  }
+  @media print{body{background:white;color:#111;}.pdf-btn{display:none!important;}.container{padding:20px;}.header{background:white;border:2px solid #7e22ce;}.brand-logo{-webkit-text-fill-color:#7e22ce;}.biz-name{color:#111;}.section-title{color:#111;}div[style*="background:#0f172a"]{background:white!important;border:1px solid #e5e7eb!important;}div[style*="background:#111827"]{background:#f9fafb!important;}p[style*="color:#9ca3af"]{color:#374151!important;}p[style*="color:#d1d5db"]{color:#374151!important;}@page{margin:15mm;}}
   @media(max-width:600px){.score-block{flex-direction:column;}}
 </style>
 </head>
@@ -1826,7 +1679,7 @@ app.get('/api/health', async (req, res) => {
             freelancerTotal = parseInt(flAll.rows[0].count) || 0;
         } catch (e) {}
     }
-    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v2', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+    res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 
 app.use((err, req, res, next) => {
@@ -1836,15 +1689,16 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
     console.log('\n🚀 =====================================');
-    console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v2)');
+    console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
+    console.log('🚀  FIX: activated_until alias in users SELECT');
+    console.log('🚀  FIX: deactivate endpoint added');
+    console.log('🚀  FIX: Instantly Bearer uses secret only');
     console.log('🚀  DB Migration: country VARCHAR(100)');
-    console.log('🚀  scan_log.source column added');
-    console.log('🚀  ON CONFLICT bug fixed in scan_log INSERT');
-    console.log('🚀  DOCX export: template type column added');
-    console.log('🚀  Bulk Delete Routes Added');
+    console.log('🚀  scan_log.source column');
+    console.log('🚀  DOCX: template type column');
+    console.log('🚀  Bulk Delete Routes');
     console.log('🚀  34 Recommendation Checks');
     console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
-    console.log('🚀  SendGrid: Server env var (no user setup needed)');
     console.log('🚀 =====================================\n');
     const dbConnected = await waitForDatabase();
     app.listen(PORT, () => {
@@ -1854,15 +1708,12 @@ async function startServer() {
         console.log('\n✅ Elite scanner ready\n');
     });
 }
+
 // ============================================
 // BACKGROUND BATCH JOB SYSTEM
-// Jobs run on Railway server — survive browser close / PC off
 // ============================================
-
-// Active job runners (in-memory map so only 1 per job runs)
 const activeJobs = new Map();
 
-// POST /api/admin/batch-job/start — submit a new batch job
 app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     const { niches, cities, country, max_results, website_only, apify_token } = req.body;
@@ -1878,13 +1729,11 @@ app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
              VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',$8,$9,NOW())`,
             [jobId, req.admin.id, niches, cities, country || 'Netherlands', max_results || 50, website_only !== false, totalCombos, apify_token]
         );
-        // Start running in background (non-blocking)
         runBatchJobInBackground(jobId);
         res.json({ success: true, job_id: jobId, total_combos: totalCombos });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// GET /api/admin/batch-jobs — list recent jobs
 app.get('/api/admin/batch-jobs', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, jobs: [] });
     try {
@@ -1899,7 +1748,6 @@ app.get('/api/admin/batch-jobs', verifyAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, jobs: [] }); }
 });
 
-// GET /api/admin/batch-job/:id — single job status
 app.get('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     try {
@@ -1909,7 +1757,6 @@ app.get('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// DELETE /api/admin/batch-job/:id — cancel a running job
 app.delete('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
     if (!pool) return res.json({ success: false, error: 'No DB' });
     try {
@@ -1919,7 +1766,6 @@ app.delete('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// Background runner — called async, does not block the HTTP response
 async function runBatchJobInBackground(jobId) {
     if (!pool) return;
     const jobRef = { cancelled: false };
@@ -1941,27 +1787,23 @@ async function runBatchJobInBackground(jobId) {
         const cityArr  = job.cities.split('\n').map(c => c.trim()).filter(c => c);
         const combos   = [];
         nicheArr.forEach(niche => cityArr.forEach(city => combos.push({ niche, city })));
-        const maxResults  = parseInt(job.max_results) || 50;
-        const maxResultsActual = maxResults === 0 ? 9999 : maxResults;
+        const maxResultsActual = (!job.max_results || job.max_results === 0) ? 9999 : parseInt(job.max_results);
         const websiteOnly = job.website_only;
         const country     = job.country;
         const apifyToken  = job.apify_token;
-        const APIFY_BASE  = 'https://api.apify.com/v2';
 
         await updateJob({ status: 'running', started_at: new Date(), progress: 1, progress_text: 'Loading existing scans for dedup...' });
 
-        // Load already-scanned URLs for dedup
         let alreadyScanned = new Set();
         try {
             const existing = await pool.query('SELECT business_url FROM scan_log WHERE business_url IS NOT NULL');
             existing.rows.forEach(r => alreadyScanned.add(r.business_url.trim()));
-        } catch(e) { /* non-fatal */ }
+        } catch(e) {}
 
         let totalScanned = 0, totalSkipped = 0;
         let scoreHigh = 0, scoreGood = 0, scoreLow = 0;
 
         for (let ci = 0; ci < combos.length; ci++) {
-            // Check for cancellation
             if (activeJobs.get(jobId)?.cancelled) {
                 await updateJob({ status: 'cancelled', completed_at: new Date(), progress_text: 'Cancelled by user' });
                 return;
@@ -1969,13 +1811,8 @@ async function runBatchJobInBackground(jobId) {
 
             const { niche, city } = combos[ci];
             const pct = Math.round((ci / combos.length) * 85);
-            await updateJob({
-                current_combo: ci + 1,
-                progress: pct,
-                progress_text: `Combo ${ci+1}/${combos.length}: ${niche} — ${city}`
-            });
+            await updateJob({ current_combo: ci + 1, progress: pct, progress_text: `Combo ${ci+1}/${combos.length}: ${niche} — ${city}` });
 
-            // Start Apify run
             let runId;
             try {
                 const runRes = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs`, {
@@ -1996,7 +1833,6 @@ async function runBatchJobInBackground(jobId) {
                 continue;
             }
 
-            // Poll for completion
             let attempts = 0, runStatus = 'RUNNING';
             while (runStatus === 'RUNNING' || runStatus === 'READY') {
                 await new Promise(r => setTimeout(r, 5000));
@@ -2017,7 +1853,6 @@ async function runBatchJobInBackground(jobId) {
                 continue;
             }
 
-            // Fetch dataset
             let places = [];
             try {
                 const dataRaw = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}/dataset/items?format=json&clean=true`, {
@@ -2048,7 +1883,6 @@ async function runBatchJobInBackground(jobId) {
                 if (activeJobs.get(jobId)?.cancelled) break;
                 if (!place.url) { comboScanned++; continue; }
                 try {
-                    // Use internal scan endpoint
                     const scanRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/scan`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2060,7 +1894,6 @@ async function runBatchJobInBackground(jobId) {
                     else if (score >= 70) scoreGood++;
                     else scoreLow++;
 
-                    // Save to scan_log
                     const reportId = crypto.randomBytes(20).toString('hex');
                     const reportUrl = '/report/' + reportId;
                     const insertResult = await pool.query(
@@ -2076,7 +1909,6 @@ async function runBatchJobInBackground(jobId) {
                         ]
                     ).catch(() => null);
 
-                    // Auto-create report
                     if (insertResult) {
                         await pool.query(
                             `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
@@ -2088,31 +1920,24 @@ async function runBatchJobInBackground(jobId) {
 
                     alreadyScanned.add(place.url.trim());
                     totalScanned++;
-                } catch(e) { /* non-fatal, continue */ }
+                } catch(e) {}
 
                 comboScanned++;
                 const innerPct = Math.round((ci / combos.length) * 85) + Math.round((comboScanned / Math.max(urlsToScan.length, 1)) * 10);
                 await updateJob({
                     progress: Math.min(innerPct, 95),
                     progress_text: `Combo ${ci+1}/${combos.length} · ${comboScanned}/${urlsToScan.length}: ${place.name || place.url}`,
-                    scanned: totalScanned,
-                    skipped: totalSkipped,
-                    score_high: scoreHigh,
-                    score_good: scoreGood,
-                    score_low: scoreLow
+                    scanned: totalScanned, skipped: totalSkipped,
+                    score_high: scoreHigh, score_good: scoreGood, score_low: scoreLow
                 });
             }
         }
 
         await updateJob({
-            status: 'completed',
-            progress: 100,
+            status: 'completed', progress: 100,
             progress_text: `✅ Done — ${totalScanned} scanned, ${totalSkipped} skipped`,
-            scanned: totalScanned,
-            skipped: totalSkipped,
-            score_high: scoreHigh,
-            score_good: scoreGood,
-            score_low: scoreLow,
+            scanned: totalScanned, skipped: totalSkipped,
+            score_high: scoreHigh, score_good: scoreGood, score_low: scoreLow,
             completed_at: new Date()
         });
         console.log(`✅ Batch job ${jobId} complete: ${totalScanned} scanned`);
@@ -2125,7 +1950,7 @@ async function runBatchJobInBackground(jobId) {
     }
 }
 
-// On server restart: resume any 'running' jobs that were interrupted
+// On server restart: resume any interrupted jobs
 setTimeout(async () => {
     if (!pool) return;
     try {
@@ -2135,23 +1960,22 @@ setTimeout(async () => {
             await pool.query(`UPDATE batch_jobs SET status='running', progress_text='Resuming after server restart...' WHERE id=$1`, [row.id]);
             runBatchJobInBackground(row.id);
         }
-    } catch(e) { /* non-fatal */ }
+    } catch(e) {}
 }, 5000);
-
 
 // ============================================
 // INSTANTLY.AI PROXY ENDPOINTS
-// Browser cannot call api.instantly.ai directly (CORS)
-// These server-side proxies solve that
+// ✅ FIX v3: Bearer token now uses only the secret part (after ':') of the id:secret key format
 // ============================================
 
-// GET /api/instantly/campaigns
 app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+    // ✅ FIX: Instantly v2 API expects only the secret (after colon), not the full id:secret string
+    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[1] : apiKey;
     try {
         const r = await fetch('https://api.instantly.ai/api/v2/campaign/list?limit=100&status=all', {
-            headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' }
+            headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' }
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
@@ -2162,10 +1986,11 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     }
 });
 
-// POST /api/instantly/push
 app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+    // ✅ FIX: Instantly v2 API expects only the secret (after colon), not the full id:secret string
+    const bearerKey = apiKey.includes(':') ? apiKey.split(':')[1] : apiKey;
     const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
     if (!campaign_id || !leads || !leads.length) {
         return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
@@ -2173,10 +1998,9 @@ app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
     try {
         const r = await fetch('https://api.instantly.ai/api/v2/lead/add', {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': 'Bearer ' + bearerKey, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                campaign_id,
-                leads,
+                campaign_id, leads,
                 skip_if_in_workspace: skip_if_in_workspace !== false,
                 skip_if_in_campaign: false,
                 verify_leads: verify_leads || false
@@ -2190,6 +2014,5 @@ app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, error: e.message });
     }
 });
-
 
 startServer();
