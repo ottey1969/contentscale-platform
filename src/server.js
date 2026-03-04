@@ -1970,6 +1970,15 @@ setTimeout(async () => {
 // ✅ FIX v4: Bearer token = UUID part (before ':') — Instantly v2 API auth fix
 // ============================================
 
+app.post('/api/admin/scans/:id/email', verifyAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: 'No email' });
+    await pool.query('UPDATE scan_log SET email_found=$1, email_status=$2 WHERE id=$3', [email, 'has_email', req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
