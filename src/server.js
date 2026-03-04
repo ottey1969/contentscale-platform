@@ -1973,15 +1973,21 @@ setTimeout(async () => {
 app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
-    const keyFull   = apiKey.trim();
-    const keyBefore = apiKey.includes(':') ? apiKey.split(':')[0].trim() : apiKey.trim();
-    const keyAfter  = apiKey.includes(':') ? apiKey.split(':')[1].trim() : apiKey.trim();
+    const raw = apiKey.trim();
+    // Detect if input is base64 (Instantly shows key as base64 in their UI)
+    let decoded = raw;
+    try { const d = Buffer.from(raw, 'base64').toString('utf8'); if (d.includes(':') || d.length > 8) decoded = d; } catch {}
+    const keyRaw    = raw;
+    const keyDec    = decoded;
+    const keyBefore = decoded.includes(':') ? decoded.split(':')[0].trim() : decoded;
+    const keyAfter  = decoded.includes(':') ? decoded.split(':')[1].trim() : decoded;
     const attempts = [
-        { label: 'full',   key: keyFull },
-        { label: 'before', key: keyBefore },
-        { label: 'after',  key: keyAfter },
+        { label: 'decoded-before', key: keyBefore },
+        { label: 'decoded-after',  key: keyAfter },
+        { label: 'raw-b64',        key: keyRaw },
+        { label: 'decoded-full',   key: keyDec },
     ].filter((a, i, arr) => arr.findIndex(b => b.key === a.key) === i);
-    console.log('Instantly campaigns received apiKey len=' + apiKey.length + ' preview=' + apiKey.substring(0,6) + '...');
+    console.log('Instantly campaigns raw len=' + raw.length + ' decoded=' + decoded.substring(0,20) + '...');
     let lastStatus = 0, lastBody = '';
     for (const attempt of attempts) {
         try {
