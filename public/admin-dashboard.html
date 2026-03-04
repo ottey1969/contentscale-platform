@@ -1684,7 +1684,7 @@ async function adminRunBatch() {
         const scanRes = await apiCall('/api/admin/scan-log?limit=500');
         const noEmailUrls = (scanRes.scans || []).filter(s => !s.email_found && s.business_url).map(s => ({ url: s.business_url }));
         if (!noEmailUrls.length) { alert('Geen URLs zonder email gevonden in Scan Log.'); btn.disabled = false; btn.textContent = '▶️ Run In Browser'; return; }
-        actorId = 'apify~contact-info-scraper';
+        actorId = 'vdrmota~contact-info-scraper';
         actorInput = { startUrls: noEmailUrls.slice(0, 50), maxDepth: 1 };
       } else {
         actorId = 'compass~crawler-google-places';
@@ -1927,7 +1927,7 @@ async function findEmailsForLeads() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
       body: JSON.stringify({
-        actorId: 'apify~contact-info-scraper',
+        actorId: 'vdrmota~contact-info-scraper',
         input: { startUrls: urls.map(u => ({ url: u })), maxDepth: 1 }
       })
     });
