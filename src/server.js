@@ -1983,20 +1983,9 @@ app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
     const apiKey = req.headers['x-instantly-key'];
     if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
     const raw = apiKey.trim();
-    // Detect if input is base64 (Instantly shows key as base64 in their UI)
-    let decoded = raw;
-    try { const d = Buffer.from(raw, 'base64').toString('utf8'); if (d.includes(':') || d.length > 8) decoded = d; } catch {}
-    const keyRaw    = raw;
-    const keyDec    = decoded;
-    const keyBefore = decoded.includes(':') ? decoded.split(':')[0].trim() : decoded;
-    const keyAfter  = decoded.includes(':') ? decoded.split(':')[1].trim() : decoded;
-    const attempts = [
-        { label: 'decoded-before', key: keyBefore },
-        { label: 'decoded-after',  key: keyAfter },
-        { label: 'raw-b64',        key: keyRaw },
-        { label: 'decoded-full',   key: keyDec },
-    ].filter((a, i, arr) => arr.findIndex(b => b.key === a.key) === i);
-    console.log('Instantly campaigns raw len=' + raw.length + ' decoded=' + decoded.substring(0,20) + '...');
+    // raw-b64 (full base64 key) is confirmed working - use directly
+    const attempts = [{ label: 'raw-b64', key: raw }];
+    console.log('Instantly campaigns key len=' + raw.length);
     let lastStatus = 0, lastBody = '';
     for (const attempt of attempts) {
         try {
