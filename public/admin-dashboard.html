@@ -519,8 +519,9 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
               <div style="margin-top:12px;">
                 <label style="font-size:0.82rem;color:#9ca3af;display:block;margin-bottom:6px;">📂 Bron</label>
                 <select id="adminBatchSource" style="width:100%;padding:9px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;">
-                  <option value="google_maps">🗺️ Google Maps</option>
-                  <option value="yellow_pages">📒 Yellow Pages</option>
+                  <option value="google_maps">🗺️ Google Maps (geen email)</option>
+                  <option value="yellow_pages_world">📒 Yellow Pages Worldwide (met email)</option>
+                  <option value="contact_scraper">📧 Website Contact Scraper (email van bestaande URLs)</option>
                 </select>
               </label>
             </div>
@@ -1675,9 +1676,16 @@ async function adminRunBatch() {
       setProgress(Math.round((ci / combos.length) * 90), `Combo ${ci+1}/${combos.length}: ${niche} — ${city}`);
       const source = document.getElementById('adminBatchSource')?.value || 'google_maps';
       let actorId, actorInput;
-      if (source === 'yellow_pages') {
-        actorId = 'petr_cermak~yellow-pages-scraper';
-        actorInput = { search: `${niche}`, location: city, country: country, maxItems: maxResults };
+      if (source === 'yellow_pages_world') {
+        actorId = 'tuguidragos~yellow-pages-business-scraper-worldwide';
+        actorInput = { keyword: `${niche}`, location: city, country: country, maxResults, deepScan: true };
+      } else if (source === 'contact_scraper') {
+        // Run contact scraper on existing scan log URLs without email
+        const scanRes = await apiCall('/api/admin/scan-log?limit=500');
+        const noEmailUrls = (scanRes.scans || []).filter(s => !s.email_found && s.business_url).map(s => ({ url: s.business_url }));
+        if (!noEmailUrls.length) { alert('Geen URLs zonder email gevonden in Scan Log.'); btn.disabled = false; btn.textContent = '▶️ Run In Browser'; return; }
+        actorId = 'apify~contact-info-scraper';
+        actorInput = { startUrls: noEmailUrls.slice(0, 50), maxDepth: 1 };
       } else {
         actorId = 'compass~crawler-google-places';
         actorInput = { searchStringsArray: [`${niche} in ${city}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
@@ -1699,7 +1707,11 @@ async function adminRunBatch() {
       if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run: ${runStatus}`);
       const dataRaw = await (await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
       const places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
-      let urls = places.filter(p => p.website).map(p => ({ url: p.website.startsWith('http') ? p.website : 'https://' + p.website, name: p.title || p.name || '', email: p.email || (p.emails && p.emails[0]) || null, emails: p.emails || [], phone: p.phone || '', address: p.address || '', country }));
+      let urls = places.filter(p => p.website || p.websiteUrl).map(p => {
+        const website = p.website || p.websiteUrl || '';
+        const email = p.email || p.emailAddress || (p.emails && p.emails[0]) || (p.contacts && p.contacts[0]?.email) || null;
+        return { url: website.startsWith('http') ? website : (website ? 'https://' + website : ''), name: p.title || p.name || p.businessName || '', email, emails: p.emails || [], phone: p.phone || p.phoneNumber || '', address: p.address || p.fullAddress || '', country };
+      }).filter(p => p.url);
       if (!websiteOnly) places.filter(p => !p.website).forEach(p => urls.push({ url: '', name: p.title || p.name || '', email: p.email || (p.emails && p.emails[0]) || null, emails: p.emails || [], phone: p.phone || '', address: p.address || '', country }));
       const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
       totalSkipped += urls.length - urlsToScan.length;
@@ -1915,13 +1927,13 @@ async function findEmailsForLeads() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
       body: JSON.stringify({
-        actorId: 'apify~website-content-crawler',
-        input: { startUrls: urls.map(u => ({ url: u })), maxCrawlPages: 3, maxCrawlDepth: 1, crawlerType: 'cheerio' }
+        actorId: 'apify/contact-info-scraper',
+        input: { startUrls: urls.map(u => ({ url: u })), maxDepth: 1 }
       })
     });
     const runData = await runRes.json();
-    const runId = runData.run_id || runData.id;
-    if (!runId) { alert('Apify start mislukt'); return; }
+    const runId = runData.run_id || runData.id || runData.data?.id;
+    if (!runId) { alert('Apify start mislukt: ' + JSON.stringify(runData).substring(0,200)); return; }
     // Poll until done
     let done = false, attempts = 0;
     while (!done && attempts < 30) {
