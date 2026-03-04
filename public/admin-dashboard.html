@@ -742,11 +742,15 @@ async function lookupIpGeo(ip) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    const r = await fetch(`https://ip-api.com/json/${ip}?fields=country,countryCode,city,isp,query`, { signal: controller.signal });
+    // ✅ FIXED: ipapi.co — no 403 on datacenter IPs, 1000 req/day free
+    const r = await fetch(`https://ipapi.co/${ip}/json/`, { signal: controller.signal });
     clearTimeout(timeoutId);
-    if (!r.ok) return null; // 403/429 silently ignored
+    if (!r.ok) return null;
     const d = await r.json();
-    if (d.status === 'success' || d.countryCode) { ipGeoCache[ip] = d; return d; }
+    if (d.error || !d.country_code) return null;
+    const normalized = { countryCode: d.country_code, country: d.country_name, city: d.city, isp: d.org, query: ip };
+    ipGeoCache[ip] = normalized;
+    return normalized;
   } catch (e) { /* silently fail — rate limit or network */ }
   return null;
 }
