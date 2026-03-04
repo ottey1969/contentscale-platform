@@ -481,7 +481,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
             </div>
             <div>
               <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">📍 Steden <span style="color:#9ca3af;font-weight:400;">(één per regel)</span></label>
-              <textarea id="adminBatchCities" rows="5" placeholder="Amsterdam&#10;Rotterdam&#10;Utrecht" style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;resize:vertical;" oninput="adminUpdateBatchCombos()"></textarea>
+              <textarea id="adminBatchCities" rows="5" placeholder="Amsterdam Netherlands&#10;Rotterdam Netherlands&#10;Utrecht Netherlands" style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;resize:vertical;" oninput="adminUpdateBatchCombos()"></textarea>
             </div>
           </div>
           <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;">
@@ -1677,8 +1677,10 @@ async function adminRunBatch() {
       const source = document.getElementById('adminBatchSource')?.value || 'google_maps';
       let actorId, actorInput;
       if (source === 'yellow_pages_world') {
-        actorId = 'tuguidragos~yellow-pages-business-scraper-worldwide';
-        actorInput = { keyword: `${niche}`, location: city, country: country, maxResults, deepScan: true };
+        actorId = 'apify~contact-info-scraper';
+        // Use Google Maps first then scrape contact pages for emails
+        actorId = 'compass~crawler-google-places';
+        actorInput = { searchStringsArray: [`${niche} in ${city} ${country}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
       } else if (source === 'contact_scraper') {
         // Run contact scraper on existing scan log URLs without email
         const scanRes = await apiCall('/api/admin/scan-log?limit=500');
