@@ -428,43 +428,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
               <div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div>
             </div>
           </div>
-          <div id="adminScanResults" style="display:none;">
-            <div id="adminScoreHeader" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:14px;padding:28px;margin-bottom:20px;">
-              <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-                <div id="adminScoreCircle" style="width:90px;height:90px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;">
-                  <div id="adminScoreNum" style="font-size:2rem;font-weight:900;line-height:1;"></div>
-                  <div style="font-size:0.7rem;color:#6b7280;">/100</div>
-                  <div id="adminScoreLabel" style="font-size:0.72rem;font-weight:600;margin-top:2px;"></div>
-                </div>
-                <div style="flex:1;min-width:200px;">
-                  <div id="adminScanUrl2" style="color:#60a5fa;font-size:0.85rem;word-break:break-all;margin-bottom:10px;"></div>
-                  <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                    <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:8px 14px;text-align:center;"><div id="adminGraafScore" style="font-size:1.3rem;font-weight:800;color:#a78bfa;"></div><div style="font-size:0.65rem;color:#6b7280;">GRAAF /50</div></div>
-                    <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:8px 14px;text-align:center;"><div id="adminCraftScore" style="font-size:1.3rem;font-weight:800;color:#60a5fa;"></div><div style="font-size:0.65rem;color:#6b7280;">CRAFT /30</div></div>
-                    <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:8px 14px;text-align:center;"><div id="adminTechScore" style="font-size:1.3rem;font-weight:800;color:#34d399;"></div><div style="font-size:0.65rem;color:#6b7280;">Tech /20</div></div>
-                  </div>
-                </div>
-                <div id="adminEmailBlock" style="background:#111827;border:1px solid #374151;border-radius:10px;padding:12px 16px;min-width:180px;">
-                  <div style="font-size:0.7rem;color:#6b7280;margin-bottom:4px;">✉ EMAIL FOUND</div>
-                  <div id="adminEmailFound" style="font-size:0.9rem;font-weight:600;color:#4ade80;word-break:break-all;">—</div>
-                </div>
-              </div>
-              <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
-                <button onclick="adminLogScan()" id="adminLogBtn" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">📋 Log to Scan Log</button>
-                <button onclick="adminGenerateReport()" id="adminReportBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">📄 Generate Report</button>
-                <button onclick="adminExportPDF()" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">⬇ Export PDF</button>
-                <div id="adminReportLink" style="display:none;align-items:center;gap:8px;">
-                  <a id="adminReportHref" href="#" target="_blank" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:600;text-decoration:none;">🔗 Open Report</a>
-                  <button onclick="adminCopyReportLink()" id="adminCopyBtn" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">📋 Copy URL</button>
-                </div>
-              </div>
-            </div>
-            <div id="adminStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px;"></div>
-            <div style="font-size:1.1rem;font-weight:700;color:#f9fafb;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #1f2937;">
-              📋 Recommendations <span id="adminRecCount" style="font-size:0.75rem;background:#7e22ce30;color:#a78bfa;border:1px solid #7e22ce50;border-radius:99px;padding:2px 10px;"></span>
-            </div>
-            <div id="adminRecsList"></div>
-          </div>
+          <div id="adminScanResults" style="display:none;"></div>
         </div>
 
         <!-- BATCH MODE -->
@@ -728,7 +692,6 @@ function switchTab(tab) {
   if (tab === 'emaillog') loadEmailLog();
   if (tab === 'scanlog') {
     loadScanLog();
-    // Auto-open Instantly panel if API key saved
     const panel = document.getElementById('instantlyPanel');
     const savedKey = localStorage.getItem('instantlyApiKey') || '';
     if (savedKey && panel && panel.style.display === 'none') {
@@ -743,7 +706,6 @@ function switchTab(tab) {
 
 function loadAllData() { loadLeaderboard(); loadFreelancers(); loadUsers(); }
 
-// IP Geo cache
 const ipGeoCache = {};
 async function lookupIpGeo(ip) {
   if (!ip || ip === 'Unknown IP') return null;
@@ -751,7 +713,6 @@ async function lookupIpGeo(ip) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    // ✅ FIXED: ipapi.co — no 403 on datacenter IPs, 1000 req/day free
     const r = await fetch(`https://ipapi.co/${ip}/json/`, { signal: controller.signal });
     clearTimeout(timeoutId);
     if (!r.ok) return null;
@@ -760,7 +721,7 @@ async function lookupIpGeo(ip) {
     const normalized = { countryCode: d.country_code, country: d.country_name, city: d.city, isp: d.org, query: ip };
     ipGeoCache[ip] = normalized;
     return normalized;
-  } catch (e) { /* silently fail — rate limit or network */ }
+  } catch (e) {}
   return null;
 }
 
@@ -1182,12 +1143,6 @@ async function loadEmailLog() {
       <div style="font-size:1.5rem;margin-bottom:8px;">⚠️</div>
       <div style="font-weight:700;">Email Log Error</div>
       <div style="font-size:0.82rem;color:#9ca3af;margin-top:4px;">${e.message}</div>
-      <div style="font-size:0.75rem;color:#6b7280;margin-top:6px;">
-        If this is a DB column error, run:<br>
-        <code style="background:#0f172a;padding:2px 6px;border-radius:4px;color:#a78bfa;">
-          ALTER TABLE email_log RENAME COLUMN email TO to_email;
-        </code><br>or check your server's email-log query.
-      </div>
     </td></tr>`;
   }
 }
@@ -1200,7 +1155,6 @@ function renderEmailLog(emails) {
     const dt = e.sent_at ? new Date(e.sent_at) : new Date(e.created_at);
     const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short', year:'numeric' });
     const timeStr = dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
-    // ✅ FIX: fallback chain for different possible column names
     const recipientEmail = e.to_email || e.email || e.recipient_email || e.recipient || '—';
     const score = e.score ? '<span style="color:' + (e.score >= 70 ? '#4ade80' : e.score >= 50 ? '#fbbf24' : '#f87171') + ';font-weight:700;">' + e.score + '</span>' : '—';
     const typeColor = typeColors[e.template_type] || '#9ca3af';
@@ -1444,9 +1398,9 @@ async function adminRunScan() {
   btn.disabled = true; btn.textContent = '⏳ Scanning...';
   prog.style.display = 'block'; res.style.display = 'none';
   adminLastScanResult = null; adminLastReportUrl = null;
-  document.getElementById('adminReportLink').style.display = 'none';
-  document.getElementById('adminLogBtn').textContent = '📋 Log to Scan Log'; document.getElementById('adminLogBtn').disabled = false;
-  document.getElementById('adminReportBtn').textContent = '📄 Generate Report'; document.getElementById('adminReportBtn').disabled = false;
+  const _rl = document.getElementById('adminReportLink'); if (_rl) _rl.style.display = 'none';
+  const _lb = document.getElementById('adminLogBtn'); if (_lb) { _lb.textContent = '📋 Log to Scan Log'; _lb.disabled = false; }
+  const _rb = document.getElementById('adminReportBtn'); if (_rb) { _rb.textContent = '📄 Generate Report'; _rb.disabled = false; }
   let pct = 0;
   const steps = ['Loading page...','Extracting content...','Analysing headings...','Checking schema...','Computing GRAAF score...','Building recommendations...'];
   let si = 0;
@@ -1468,72 +1422,119 @@ async function adminRunScan() {
 
 function adminRenderScanResults(data) {
   const score = data.score || 0;
-  const scoreColor = score >= 70 ? '#4ade80' : score >= 50 ? '#fbbf24' : '#f87171';
-  const scoreLabel = score >= 70 ? 'Good' : score >= 50 ? 'Needs Work' : 'Critical';
+  const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#a3e635' : score >= 50 ? '#fbbf24' : '#f87171';
+  const scoreLabel = score >= 85 ? 'Elite' : score >= 70 ? 'Good' : score >= 50 ? 'Needs Work' : 'Critical';
   const recs = data.recommendations?.all || [];
   const cs = data.content_stats || {};
-  document.getElementById('adminScoreCircle').style.border = '4px solid ' + scoreColor;
-  document.getElementById('adminScoreCircle').style.background = scoreColor + '15';
-  document.getElementById('adminScoreNum').style.color = scoreColor;
-  document.getElementById('adminScoreNum').textContent = score;
-  document.getElementById('adminScoreLabel').style.color = scoreColor;
-  document.getElementById('adminScoreLabel').textContent = scoreLabel;
-  document.getElementById('adminScanUrl2').textContent = data.url;
-  document.getElementById('adminGraafScore').textContent = data.metrics?.graaf ?? '—';
-  document.getElementById('adminCraftScore').textContent = data.metrics?.craft ?? '—';
-  document.getElementById('adminTechScore').textContent  = data.metrics?.technical ?? '—';
+  const m = data.metrics || {};
   const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
-  document.getElementById('adminEmailFound').textContent = email || 'Not found';
-  document.getElementById('adminEmailFound').style.color = email ? '#4ade80' : '#6b7280';
-  const stats = [
-    ['📝 Words', cs.wordCount], ['📊 Stats found', cs.statsFound], ['💬 Expert quotes', cs.expertQuoteCount],
-    ['📁 Case studies', cs.caseStudyCount], ['H1 visible', cs.h1VisibleCount], ['H2 count', cs.h2Count],
-    ['🖼 Images', cs.images], ['🔗 Internal links', cs.internalLinks], ['📄 Meta title len', cs.metaTitleLength],
-    ['📝 Meta desc len', cs.metaDescriptionLength], ['✅ Canonical', cs.hasCanonical ? 'Yes' : 'No'],
-    ['📱 Viewport', cs.hasMetaViewport ? 'Yes' : 'No'], ['🗂 Article schema', cs.hasArticleSchema ? 'Yes' : 'No'],
-    ['❓ FAQ schema', cs.hasFAQPageSchema ? 'Yes' : 'No'], ['🎯 Direct answer', cs.hasDirectAnswer ? 'Yes' : 'No'],
-    ['📌 TL;DR', cs.hasTLDR ? 'Yes' : 'No'],
-  ];
-  document.getElementById('adminStatsGrid').innerHTML = stats.map(([label, val]) =>
-    `<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;"><div style="font-size:0.7rem;color:#6b7280;margin-bottom:2px;">${label}</div><div style="font-size:1rem;font-weight:700;color:#e5e7eb;">${val ?? '—'}</div></div>`).join('');
-  const adminPrioCfg = {
-    high:   { color: '#f87171', bg: 'rgba(239,68,68,0.08)',   border: '#7f1d1d', label: '🔴 High Priority' },
-    medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: '#78350f', label: '🟡 Medium Priority' },
-    low:    { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: '#1e3a5f', label: '🔵 Quick Win' },
-    none:   { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: '#14532d', label: '✅ All Good' }
-};
-const highC = recs.filter(r => r.priority === 'high').length;
-const medC  = recs.filter(r => r.priority === 'medium').length;
-const lowC  = recs.filter(r => r.priority === 'low').length;
-document.getElementById('adminRecCount').textContent = recs.length + ' items';
-document.getElementById('adminRecsList').innerHTML = `
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-    ${highC > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;padding:2px 10px;border-radius:99px;border:1px solid #7f1d1d;font-size:0.75rem;">${highC} high</span>` : ''}
-    ${medC  > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:2px 10px;border-radius:99px;border:1px solid #78350f;font-size:0.75rem;">${medC} medium</span>` : ''}
-    ${lowC  > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa;padding:2px 10px;border-radius:99px;border:1px solid #1e3a5f;font-size:0.75rem;">${lowC} quick win${lowC!==1?'s':''}</span>` : ''}
-  </div>
-` + recs.map(rec => {
-  const p = adminPrioCfg[rec.priority] || adminPrioCfg.low;
-  return `<div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
-      <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9;line-height:1.3;">${rec.title}</div>
-      <span style="font-size:0.7rem;color:${p.color};white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
+
+  const highC = recs.filter(r => r.priority === 'high').length;
+  const medC  = recs.filter(r => r.priority === 'medium').length;
+  const lowC  = recs.filter(r => r.priority === 'low').length;
+
+  const pCfg = {
+    high:   { color: '#f87171', border: '#7f1d1d', bg: 'rgba(239,68,68,0.08)',   label: '🔴 High Priority' },
+    medium: { color: '#fbbf24', border: '#78350f', bg: 'rgba(251,191,36,0.08)',  label: '🟡 Medium Priority' },
+    low:    { color: '#60a5fa', border: '#1e3a5f', bg: 'rgba(96,165,250,0.08)',  label: '🔵 Quick Win' },
+    none:   { color: '#4ade80', border: '#14532d', bg: 'rgba(74,222,128,0.08)', label: '✅ All Good' }
+  };
+
+  const statItem = (icon, label, val, alert) => {
+    const valColor = alert ? '#f87171' : '#e2e8f0';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 14px;background:#1e1b4b;border-radius:10px;border:1px solid #2d2b5e;min-width:70px;">
+      <div style="font-size:1.1rem;font-weight:800;color:${valColor};">${val ?? '—'}${alert ? ' ⚠️' : ''}</div>
+      <div style="font-size:0.65rem;color:#6b7280;white-space:nowrap;">${icon} ${label}</div>
+    </div>`;
+  };
+
+  const recCards = recs.map(rec => {
+    const p = pCfg[rec.priority] || pCfg.low;
+    return `<div style="background:${p.bg};border:1px solid ${p.border};border-radius:12px;padding:16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+        <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9;line-height:1.3;">${rec.title}</div>
+        <span style="font-size:0.7rem;color:${p.color};white-space:nowrap;font-weight:600;flex-shrink:0;">${p.label}</span>
+      </div>
+      <p style="font-size:0.82rem;color:#94a3b8;margin:0 0 10px;line-height:1.5;">${rec.description || ''}</p>
+      ${rec.action ? `<div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-size:0.7rem;font-weight:800;color:#a78bfa;margin-bottom:4px;">⚡ ACTION</div>
+        <p style="font-size:0.82rem;color:#e2e8f0;margin:0;line-height:1.5;">${rec.action}</p>
+      </div>` : ''}
+      ${rec.learning ? `<div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-size:0.7rem;font-weight:800;color:#60a5fa;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+        <p style="font-size:0.8rem;color:#94a3b8;margin:0;line-height:1.5;">${rec.learning}</p>
+      </div>` : ''}
+      ${rec.target ? `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+        <span style="font-size:0.7rem;font-weight:700;color:#4ade80;">🎯 TARGET:</span>
+        <span style="font-size:0.78rem;color:#86efac;">${rec.target}</span>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('adminScanResults').innerHTML = `
+    <!-- Business name + URL -->
+    <div style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:14px;padding:20px 24px;margin-bottom:16px;">
+      <div style="font-size:0.75rem;color:#60a5fa;word-break:break-all;margin-bottom:4px;">${data.url}</div>
+      ${data.business_name ? `<div style="font-size:1.1rem;font-weight:800;color:#f1f5f9;margin-bottom:12px;">${data.business_name}</div>` : ''}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="adminLogScan()" id="adminLogBtn" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:8px;padding:7px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;">📋 Log to Scan Log</button>
+        <button onclick="adminGenerateReport()" id="adminReportBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;">📄 Generate Report</button>
+        <button onclick="adminExportPDF()" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;">⬇ Export PDF</button>
+        <div id="adminReportLink" style="display:none;align-items:center;gap:8px;">
+          <a id="adminReportHref" href="#" target="_blank" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:7px 16px;font-size:0.82rem;font-weight:600;text-decoration:none;">🔗 Open Report</a>
+          <button onclick="adminCopyReportLink()" id="adminCopyBtn" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:7px 12px;font-size:0.82rem;cursor:pointer;">📋 Copy</button>
+        </div>
+      </div>
     </div>
-    <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:10px;line-height:1.5;">${rec.description || ''}</p>
-    ${rec.action ? `<div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
-      <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;margin-bottom:4px;">⚡ ACTION</div>
-      <p style="font-size:0.82rem;color:#e2e8f0;line-height:1.5;margin:0;">${rec.action}</p>
-    </div>` : ''}
-    ${rec.learning ? `<div style="background:rgba(0,0,0,0.15);border-radius:7px;padding:10px;margin-bottom:8px;">
-      <div style="font-size:0.72rem;font-weight:700;color:#60a5fa;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-      <p style="font-size:0.8rem;color:#94a3b8;line-height:1.5;margin:0;">${rec.learning}</p>
-    </div>` : ''}
-    ${rec.target ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-      <span style="font-size:0.7rem;font-weight:700;color:#4ade80;">🎯 TARGET:</span>
-      <span style="font-size:0.78rem;color:#86efac;">${rec.target}</span>
-    </div>` : ''}
-  </div>`;
-}).join('');
+
+    <!-- Score circle + GRAAF/CRAFT/Tech -->
+    <div style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);border-radius:16px;padding:32px 24px;text-align:center;margin-bottom:16px;">
+      <div style="font-size:5rem;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+      <div style="font-size:1rem;color:${scoreColor};font-weight:700;margin-bottom:4px;">${scoreLabel}</div>
+      <div style="font-size:0.8rem;color:#6b7280;margin-bottom:24px;">out of 100</div>
+      <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
+        <div style="background:#1e1b4b;border:2px solid #4c1d95;border-radius:12px;padding:16px 24px;min-width:110px;">
+          <div style="font-size:0.7rem;font-weight:700;color:#a78bfa;letter-spacing:1px;margin-bottom:6px;">GRAAF</div>
+          <div style="font-size:2rem;font-weight:900;color:#a78bfa;">${m.graaf ?? '—'}</div>
+          <div style="font-size:0.7rem;color:#6b7280;">/ 50</div>
+        </div>
+        <div style="background:#0f172a;border:2px solid #1e40af;border-radius:12px;padding:16px 24px;min-width:110px;">
+          <div style="font-size:0.7rem;font-weight:700;color:#60a5fa;letter-spacing:1px;margin-bottom:6px;">CRAFT</div>
+          <div style="font-size:2rem;font-weight:900;color:#60a5fa;">${m.craft ?? '—'}</div>
+          <div style="font-size:0.7rem;color:#6b7280;">/ 30</div>
+        </div>
+        <div style="background:#1c0a00;border:2px solid #92400e;border-radius:12px;padding:16px 24px;min-width:110px;">
+          <div style="font-size:0.7rem;font-weight:700;color:#fbbf24;letter-spacing:1px;margin-bottom:6px;">TECHNICAL</div>
+          <div style="font-size:2rem;font-weight:900;color:#fbbf24;">${m.technical ?? '—'}</div>
+          <div style="font-size:0.7rem;color:#6b7280;">/ 20</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;justify-content:center;">
+      ${statItem('', 'words', cs.wordCount, cs.wordCount < 300)}
+      ${statItem('', 'H1', cs.h1VisibleCount, !cs.h1VisibleCount)}
+      ${statItem('', 'H2 headings', cs.h2Count)}
+      ${statItem('', 'images', cs.images)}
+      ${statItem('', 'internal links', cs.internalLinks)}
+      ${statItem('', 'schema', cs.hasArticleSchema || cs.hasFAQPageSchema ? '✅' : '✗', !cs.hasArticleSchema && !cs.hasFAQPageSchema)}
+      ${statItem('', 'canonical', cs.hasCanonical ? '✅' : '✗', !cs.hasCanonical)}
+      ${email ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 14px;background:#0f2d1a;border-radius:10px;border:1px solid #166534;min-width:70px;">
+        <div style="font-size:0.82rem;font-weight:700;color:#4ade80;word-break:break-all;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${email}</div>
+        <div style="font-size:0.65rem;color:#6b7280;">✉ email found</div>
+      </div>` : ''}
+    </div>
+
+    <!-- Recommendations -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="font-size:1rem;font-weight:800;color:#f1f5f9;">📋 ${recs.length} Recommendations</div>
+      ${highC > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;padding:3px 12px;border-radius:99px;border:1px solid #7f1d1d;font-size:0.75rem;font-weight:700;">${highC} high</span>` : ''}
+      ${medC  > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:3px 12px;border-radius:99px;border:1px solid #78350f;font-size:0.75rem;font-weight:700;">${medC} medium</span>` : ''}
+      ${lowC  > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa;padding:3px 12px;border-radius:99px;border:1px solid #1e3a5f;font-size:0.75rem;font-weight:700;">${lowC} quick win${lowC!==1?'s':''}</span>` : ''}
+    </div>
+    ${recCards}
+  `;
   document.getElementById('adminScanResults').style.display = 'block';
 }
 
@@ -1546,7 +1547,7 @@ function openOrCopyReport(fullUrl, btn) {
 async function adminLogScan() {
   if (!adminLastScanResult) return;
   const btn = document.getElementById('adminLogBtn');
-  btn.textContent = '⏳ Logging...'; btn.disabled = true;
+  if (btn) { btn.textContent = '⏳ Logging...'; btn.disabled = true; }
   const d = adminLastScanResult;
   const cs = d.content_stats || {};
   const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
@@ -1558,20 +1559,22 @@ async function adminLogScan() {
     });
     const result = await r.json();
     if (result.success) {
-      btn.textContent = '✅ Logged!';
+      if (btn) btn.textContent = '✅ Logged!';
       if (result.report_url) {
         adminLastReportUrl = result.report_url.replace('https://app.contentscale.site', '');
-        document.getElementById('adminReportHref').href = result.report_url;
-        document.getElementById('adminReportLink').style.display = 'flex';
+        const rl = document.getElementById('adminReportLink');
+        const rh = document.getElementById('adminReportHref');
+        if (rh) rh.href = result.report_url;
+        if (rl) rl.style.display = 'flex';
       }
     } else throw new Error(result.error);
-  } catch (e) { btn.textContent = '❌ Failed'; btn.disabled = false; alert('Log failed: ' + e.message); }
+  } catch (e) { if (btn) { btn.textContent = '❌ Failed'; btn.disabled = false; } alert('Log failed: ' + e.message); }
 }
 
 async function adminGenerateReport() {
   if (!adminLastScanResult) return;
   const btn = document.getElementById('adminReportBtn');
-  btn.textContent = '⏳ Generating...'; btn.disabled = true;
+  if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
   const d = adminLastScanResult;
   const cs = d.content_stats || {};
   const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
@@ -1584,17 +1587,19 @@ async function adminGenerateReport() {
     const result = await r.json();
     if (!result.success) throw new Error(result.error);
     adminLastReportUrl = result.url;
-    btn.textContent = '✅ Report Ready';
-    document.getElementById('adminReportHref').href = 'https://app.contentscale.site' + result.url;
-    document.getElementById('adminReportLink').style.display = 'flex';
+    if (btn) btn.textContent = '✅ Report Ready';
+    const rh = document.getElementById('adminReportHref');
+    const rl = document.getElementById('adminReportLink');
+    if (rh) rh.href = 'https://app.contentscale.site' + result.url;
+    if (rl) rl.style.display = 'flex';
     window.open('https://app.contentscale.site' + result.url, '_blank');
-  } catch (e) { btn.textContent = '❌ Failed'; btn.disabled = false; alert('Report failed: ' + e.message); }
+  } catch (e) { if (btn) { btn.textContent = '❌ Failed'; btn.disabled = false; } alert('Report failed: ' + e.message); }
 }
 
 function adminCopyReportLink() {
   if (!adminLastReportUrl) return;
   const fullUrl = 'https://app.contentscale.site' + adminLastReportUrl;
-  navigator.clipboard.writeText(fullUrl).then(() => { const btn = document.getElementById('adminCopyBtn'); btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy URL', 2000); });
+  navigator.clipboard.writeText(fullUrl).then(() => { const btn = document.getElementById('adminCopyBtn'); if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy', 2000); } });
 }
 
 function adminExportPDF() {
@@ -1704,7 +1709,6 @@ async function adminRunBatch() {
         actorId = 'compass~crawler-google-places';
         actorInput = { searchStringsArray: [`${niche} in ${city} ${country}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
       } else if (source === 'contact_scraper') {
-        // Run contact scraper on existing scan log URLs without email
         const scanRes = await apiCall('/api/admin/scan-log?limit=500');
         const noEmailUrls = (scanRes.scans || []).filter(s => !s.email_found && s.business_url).map(s => ({ url: s.business_url }));
         if (!noEmailUrls.length) { alert('Geen URLs zonder email gevonden in Scan Log.'); btn.disabled = false; btn.textContent = '▶️ Run In Browser'; return; }
@@ -1861,13 +1865,12 @@ function loadScanLogWithFilter() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⚡  INSTANTLY.AI INTEGRATION — FIXED
+// ⚡  INSTANTLY.AI INTEGRATION
 // ══════════════════════════════════════════════════════════════
 
-// ✅ FIX: handle both "key" and "id:secret" formats — always use the secret part
 function getInstantlyKey() {
   const raw = document.getElementById('instantlyApiKey')?.value.trim() || localStorage.getItem('instantlyApiKey') || '';
-  return raw; // Send full key to server — server handles format
+  return raw;
 }
 
 function setInstantlyStatus(msg, color = '#60a5fa') {
@@ -1875,7 +1878,6 @@ function setInstantlyStatus(msg, color = '#60a5fa') {
   if (el) { el.textContent = msg; el.style.color = color; }
 }
 
-// ✅ NEW: Test Connection button handler
 async function testInstantlyConnection() {
   const key = getInstantlyKey();
   const fb = document.getElementById('instantlyFeedback');
@@ -1940,13 +1942,11 @@ async function findEmailsForLeads() {
   const btn = document.getElementById('findEmailsBtn');
   btn.disabled = true; btn.textContent = '⏳ Zoeken...';
   try {
-    // Get all scans without email
     const res = await apiCall('/api/admin/scan-log?limit=200');
     const noEmail = (res.scans || res.data || []).filter(s => !s.email_found && s.business_url);
     if (!noEmail.length) { alert('Alle scans hebben al een email.'); return; }
     const urls = noEmail.map(s => s.business_url).filter(Boolean);
     btn.textContent = `⏳ ${urls.length} sites...`;
-    // Run website-contact-scraper on these URLs
     const runRes = await fetch('/api/apify/start-run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken },
@@ -1958,7 +1958,6 @@ async function findEmailsForLeads() {
     const runData = await runRes.json();
     const runId = runData.run_id || runData.id || runData.data?.id;
     if (!runId) { alert('Apify start mislukt: ' + JSON.stringify(runData).substring(0,200)); return; }
-    // Poll until done
     let done = false, attempts = 0;
     while (!done && attempts < 30) {
       await new Promise(r => setTimeout(r, 5000));
@@ -1966,7 +1965,6 @@ async function findEmailsForLeads() {
       if (s.status === 'SUCCEEDED' || s.status === 'FAILED') done = true;
       attempts++;
     }
-    // Get results and extract emails
     const data = await (await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
     const items = data.items || data || [];
     let found = 0;
@@ -2054,11 +2052,9 @@ async function pushToInstantly() {
   } finally { if (btn) { btn.disabled = false; btn.textContent = '⚡ Push to Instantly'; } }
 }
 
-// ✅ Auto-init: use decoded key
 (function initInstantly() {
-  const defaultKey = 'ZWU4MDMxNzQtYzA3ZS00OWZjLWFjZTgtMTU5ZWZjZmQwZjMzOm9PYUJxWGlSenB4UQ=='; // b64 confirmed working
+  const defaultKey = 'ZWU4MDMxNzQtYzA3ZS00OWZjLWFjZTgtMTU5ZWZjZmQwZjMzOm9PYUJxWGlSenB4UQ==';
   const stored = localStorage.getItem('instantlyApiKey') || '';
-  // Always update if empty or contains old secret
   if (!stored || stored.includes('ztFjtNWabspZ') || stored.includes('jnjayRUx') || stored === 'ee803174-c07e-49fc-ace8-159efcfd0f33:oOaBqXiRzpxQ') {
     localStorage.setItem('instantlyApiKey', defaultKey);
   }
