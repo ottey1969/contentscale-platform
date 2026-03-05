@@ -1496,20 +1496,44 @@ function adminRenderScanResults(data) {
   ];
   document.getElementById('adminStatsGrid').innerHTML = stats.map(([label, val]) =>
     `<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;"><div style="font-size:0.7rem;color:#6b7280;margin-bottom:2px;">${label}</div><div style="font-size:1rem;font-weight:700;color:#e5e7eb;">${val ?? '—'}</div></div>`).join('');
-  const pColor = p => p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : p === 'none' ? '#4ade80' : '#94a3b8';
-  const pLabel = p => p === 'high' ? '🔴 High' : p === 'medium' ? '🟡 Medium' : p === 'none' ? '✅ Elite' : '🔵 Low';
-  document.getElementById('adminRecCount').textContent = recs.length + ' items';
-  document.getElementById('adminRecsList').innerHTML = recs.map(rec =>
-    `<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${pColor(rec.priority)};border-radius:10px;padding:16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-        <span style="font-weight:700;color:#f9fafb;">${rec.title}</span>
-        <span style="font-size:0.68rem;font-weight:600;padding:2px 9px;border-radius:99px;background:${pColor(rec.priority)}20;color:${pColor(rec.priority)};border:1px solid ${pColor(rec.priority)}40;">${pLabel(rec.priority)}</span>
-      </div>
-      ${rec.description ? `<p style="color:#9ca3af;font-size:0.85rem;margin:0 0 8px;">${rec.description}</p>` : ''}
-      ${rec.action ? `<div style="margin-top:8px;padding:8px 12px;background:#111827;border-radius:7px;font-size:0.82rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.7rem;text-transform:uppercase;margin-bottom:3px;">✅ Action</span><span style="color:#d1d5db;">${rec.action}</span></div>` : ''}
-      ${rec.learning ? `<div style="margin-top:8px;padding:8px 12px;background:#111827;border-radius:7px;font-size:0.82rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.7rem;text-transform:uppercase;margin-bottom:3px;">💡 Why it matters</span><span style="color:#d1d5db;">${rec.learning}</span></div>` : ''}
-      ${rec.target ? `<div style="margin-top:8px;padding:8px 12px;background:#111827;border-radius:7px;font-size:0.82rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.7rem;text-transform:uppercase;margin-bottom:3px;">🎯 Target</span><span style="color:#d1d5db;">${rec.target}</span></div>` : ''}
-    </div>`).join('');
+  const adminPrioCfg = {
+    high:   { color: '#f87171', bg: 'rgba(239,68,68,0.08)',   border: '#7f1d1d', label: '🔴 High Priority' },
+    medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: '#78350f', label: '🟡 Medium Priority' },
+    low:    { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: '#1e3a5f', label: '🔵 Quick Win' },
+    none:   { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: '#14532d', label: '✅ All Good' }
+};
+const highC = recs.filter(r => r.priority === 'high').length;
+const medC  = recs.filter(r => r.priority === 'medium').length;
+const lowC  = recs.filter(r => r.priority === 'low').length;
+document.getElementById('adminRecCount').textContent = recs.length + ' items';
+document.getElementById('adminRecsList').innerHTML = `
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    ${highC > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;padding:2px 10px;border-radius:99px;border:1px solid #7f1d1d;font-size:0.75rem;">${highC} high</span>` : ''}
+    ${medC  > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:2px 10px;border-radius:99px;border:1px solid #78350f;font-size:0.75rem;">${medC} medium</span>` : ''}
+    ${lowC  > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa;padding:2px 10px;border-radius:99px;border:1px solid #1e3a5f;font-size:0.75rem;">${lowC} quick win${lowC!==1?'s':''}</span>` : ''}
+  </div>
+` + recs.map(rec => {
+  const p = adminPrioCfg[rec.priority] || adminPrioCfg.low;
+  return `<div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9;line-height:1.3;">${rec.title}</div>
+      <span style="font-size:0.7rem;color:${p.color};white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
+    </div>
+    <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:10px;line-height:1.5;">${rec.description || ''}</p>
+    ${rec.action ? `<div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;margin-bottom:4px;">⚡ ACTION</div>
+      <p style="font-size:0.82rem;color:#e2e8f0;line-height:1.5;margin:0;">${rec.action}</p>
+    </div>` : ''}
+    ${rec.learning ? `<div style="background:rgba(0,0,0,0.15);border-radius:7px;padding:10px;margin-bottom:8px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#60a5fa;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+      <p style="font-size:0.8rem;color:#94a3b8;line-height:1.5;margin:0;">${rec.learning}</p>
+    </div>` : ''}
+    ${rec.target ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+      <span style="font-size:0.7rem;font-weight:700;color:#4ade80;">🎯 TARGET:</span>
+      <span style="font-size:0.78rem;color:#86efac;">${rec.target}</span>
+    </div>` : ''}
+  </div>`;
+}).join('');
   document.getElementById('adminScanResults').style.display = 'block';
 }
 
