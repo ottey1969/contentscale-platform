@@ -1677,16 +1677,20 @@ async function adminRunBatch() {
       const source = document.getElementById('adminBatchSource')?.value || 'google_maps';
       let actorId, actorInput;
       if (source === 'yellow_pages_world') {
-        actorId = 'lukaskrivka~google-maps-with-contact-details';
-actorInput = { searchTerms: [`${niche} in ${city} ${country}`], maxPlacesPerCrawl: maxResults, language: 'en', scrapeContacts: true };        // Run contact scraper on existing scan log URLs without email
+        actorId = 'compass~crawler-google-places';
+        actorInput = { searchStringsArray: [`${niche} in ${city} ${country}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
+      } else if (source === 'contact_scraper') {
+        // Run contact scraper on existing scan log URLs without email
         const scanRes = await apiCall('/api/admin/scan-log?limit=500');
         const noEmailUrls = (scanRes.scans || []).filter(s => !s.email_found && s.business_url).map(s => ({ url: s.business_url }));
         if (!noEmailUrls.length) { alert('Geen URLs zonder email gevonden in Scan Log.'); btn.disabled = false; btn.textContent = '▶️ Run In Browser'; return; }
         actorId = 'vdrmota~contact-info-scraper';
         actorInput = { startUrls: noEmailUrls.slice(0, 50), maxDepth: 1 };
       } else {
-        actorId = 'lukaskrivka~google-maps-with-contact-details';
-actorInput = { searchTerms: [`${niche} in ${city}`], maxPlacesPerCrawl: maxResults, language: 'en', scrapeContacts: true };      const runRes = await fetch('/api/apify/start-run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken }, body: JSON.stringify({ actorId, input: actorInput }) });
+        actorId = 'compass~crawler-google-places';
+        actorInput = { searchStringsArray: [`${niche} in ${city}`], maxCrawledPlacesPerSearch: maxResults, language: 'en', exportPlaceUrls: true, includeWebResults: true, skipClosedPlaces: false };
+      }
+      const runRes = await fetch('/api/apify/start-run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-apify-token': apifyToken }, body: JSON.stringify({ actorId, input: actorInput }) });
       if (!runRes.ok) { const err = await runRes.json(); throw new Error(err.error?.message || 'Apify error'); }
       const runData = await runRes.json();
       const runId = runData.data?.id;
