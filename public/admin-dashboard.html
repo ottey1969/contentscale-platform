@@ -2032,10 +2032,10 @@ async function pushToInstantly() {
 
 // ✅ Auto-init: use decoded key
 (function initInstantly() {
-  const defaultKey = 'ee803174-c07e-49fc-ace8-159efcfd0f33:oOaBqXiRzpxQ';
+  const defaultKey = 'ZWU4MDMxNzQtYzA3ZS00OWZjLWFjZTgtMTU5ZWZjZmQwZjMzOm9PYUJxWGlSenB4UQ=='; // b64 confirmed working
   const stored = localStorage.getItem('instantlyApiKey') || '';
   // Always update if empty or contains old secret
-  if (!stored || stored.includes('ztFjtNWabspZ') || stored.includes('jnjayRUx')) {
+  if (!stored || stored.includes('ztFjtNWabspZ') || stored.includes('jnjayRUx') || stored === 'ee803174-c07e-49fc-ace8-159efcfd0f33:oOaBqXiRzpxQ') {
     localStorage.setItem('instantlyApiKey', defaultKey);
   }
 })();
