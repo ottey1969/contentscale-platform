@@ -1,3 +1,12 @@
+
+</think>
+
+Here is the modified code. I have made the following changes to meet your requirements:
+
+1.  **Unlimited Bulk Scans:** Removed the "max 5 URLs" restriction in the JavaScript logic and updated the UI text to reflect "Unlimited".
+2.  **Selective Leaderboard Submission:** Added a checkbox to each bulk scan result. You can now select specific successful scans (score 70+) and submit only those to the leaderboard using a new "Submit Selected" button.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +18,7 @@
 <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script>
-  tailwind = { config: { theme: { extend: {} } } };
+tailwind = { config: { theme: { extend: {} } } };
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -97,24 +106,23 @@ footer p { color: #9ca3af !important; }
 @media (max-width: 640px) { .bulk-stats-grid { grid-template-columns: repeat(2, 1fr); } }
 .share-badge { background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4f46e5; border-radius: 99px; padding: 4px 12px; font-size: 0.7rem; color: #a5b4fc !important; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .share-badge:hover { background: #312e81; }
-
 /* ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage */
 @keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+from { transform: translateX(100%); opacity: 0; }
+to { transform: translateX(0); opacity: 1; }
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 @media (max-width: 640px) {
-  #realActivityBanner {
-    bottom: 2rem;
-    right: 1rem;
-    left: 1rem;
-    max-width: none;
-  }
+#realActivityBanner {
+bottom: 2rem;
+right: 1rem;
+left: 1rem;
+max-width: none;
+}
 }
 </style>
 </head>
@@ -125,37 +133,35 @@ footer p { color: #9ca3af !important; }
 <p style="color:#a855f7;font-weight:700;margin-top:1rem;">Loading ContentScale...</p>
 </div>
 <script>setTimeout(function(){var l=document.getElementById('loading-screen');if(l){l.style.opacity='0';l.style.transition='opacity 0.3s';setTimeout(function(){l.style.display='none';},300);}},2000);</script>
-
 <!-- ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage (100% HONEST) -->
 <div id="realActivityBanner" class="fixed bottom-4 right-4 z-50" style="display:none;">
-  <div style="
-    background: rgba(17, 24, 39, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(126, 34, 206, 0.6);
-    border-radius: 12px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(126, 34, 206, 0.3);
-    animation: slideIn 0.5s ease-out;
-    max-width: 280px;
-  ">
-    <div style="
-      width: 10px; height: 10px; border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-      animation: pulse 2s infinite;
-      flex-shrink: 0;
-    "></div>
-    <div style="font-size: 0.8rem; color: #e5e7eb !important; line-height: 1.3;">
-      <span style="font-weight: 700; color: #a78bfa !important;" id="realScansCount">0</span> 
-      <span id="realScansLabel">scans today</span>
-    </div>
-  </div>
+<div style="
+background: rgba(17, 24, 39, 0.95);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+border: 1px solid rgba(126, 34, 206, 0.6);
+border-radius: 12px;
+padding: 12px 16px;
+display: flex;
+align-items: center;
+gap: 10px;
+box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(126, 34, 206, 0.3);
+animation: slideIn 0.5s ease-out;
+max-width: 280px;
+">
+<div style="
+width: 10px; height: 10px; border-radius: 50%;
+background: #10b981;
+box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+animation: pulse 2s infinite;
+flex-shrink: 0;
+"></div>
+<div style="font-size: 0.8rem; color: #e5e7eb !important; line-height: 1.3;">
+<span style="font-weight: 700; color: #a78bfa !important;" id="realScansCount">0</span>
+<span id="realScansLabel">scans today</span>
 </div>
-
+</div>
+</div>
 <nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.97)">
 <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 <div class="flex items-center gap-3">
@@ -311,7 +317,8 @@ style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient
 </div>
 <div id="bulkScannerForm">
 <div class="mb-5">
-<label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(free: max 5 · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
+<!-- UPDATED LABEL TEXT -->
+<label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(Unlimited · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
 <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
 <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0/5</span></div>
 </div>
@@ -351,6 +358,8 @@ style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient
 <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
 <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export All PDFs</button>
 <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
+<!-- NEW BUTTON FOR SELECTIVE LEADERBOARD SUBMISSION -->
+<button onclick="submitSelectedToLeaderboard()" class="btn" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-trophy mr-2"></i> Submit Selected</button>
 </div>
 <div id="bulkResultsContainer"></div>
 </div>
@@ -542,7 +551,7 @@ Use our scanner · Share results with clients · Earn per closed deal
 </optgroup>
 <optgroup label="── Middle East">
 <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
-<option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+<option value="Saudi Arabia">🇸🇸 Saudi Arabia</option>
 <option value="Israel">🇮🇱 Israel</option>
 <option value="Turkey">🇹🇷 Turkey</option>
 <option value="Egypt">🇪🇬 Egypt</option>
@@ -857,7 +866,6 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </div>
 </div>
 </div>
-
 <script>
 let userId = null;
 let sendgridConfigured = false;
@@ -882,38 +890,31 @@ subject: `{{company_name}} — your competitors in {{country}} are getting onlin
 body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
 }
 };
-
 // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from localStorage (100% HONEST)
 function initRealActivityBanner() {
-  const banner = document.getElementById('realActivityBanner');
-  const countEl = document.getElementById('realScansCount');
-  const labelEl = document.getElementById('realScansLabel');
-  
-  if (!banner || !countEl || !labelEl) return;
-  
-  // Get today's scan count from localStorage (REAL DATA)
-  const today = new Date().toDateString();
-  const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-  const todayScans = scanHistory.filter(scan => {
-    const scanDate = new Date(scan.date).toDateString();
-    return scanDate === today;
-  }).length;
-  
-  // Show banner with REAL count (0 if no scans, real number if scans exist)
-  countEl.textContent = todayScans;
-  labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
-  
-  // Only show banner if there are scans OR always show (your choice)
-  if (todayScans >= 0) { // Always show, even if 0
-    banner.style.display = 'block';
-  }
+const banner = document.getElementById('realActivityBanner');
+const countEl = document.getElementById('realScansCount');
+const labelEl = document.getElementById('realScansLabel');
+if (!banner || !countEl || !labelEl) return;
+// Get today's scan count from localStorage (REAL DATA)
+const today = new Date().toDateString();
+const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+const todayScans = scanHistory.filter(scan => {
+const scanDate = new Date(scan.date).toDateString();
+return scanDate === today;
+}).length;
+// Show banner with REAL count (0 if no scans, real number if scans exist)
+countEl.textContent = todayScans;
+labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
+// Only show banner if there are scans OR always show (your choice)
+if (todayScans >= 0) { // Always show, even if 0
+banner.style.display = 'block';
 }
-
+}
 // Update banner after scan completes
 function updateRealActivityBanner() {
-  initRealActivityBanner();
+initRealActivityBanner();
 }
-
 function checkRescanReminder() {
 try {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
@@ -952,16 +953,12 @@ const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u
 const el = document.getElementById('bulkCountDisplay');
 const btnLabel = document.getElementById('bulkBtnLabel');
 if (el) {
-if (lines.length > 5) {
-el.textContent = lines.length + '/5 ⚠️';
-el.style.color = '#f87171';
-} else {
-el.textContent = lines.length + '/5';
-el.style.color = lines.length === 5 ? '#fbbf24' : '#9ca3af';
-}
+// REMOVED LIMIT WARNING LOGIC
+el.textContent = lines.length + ' URLs';
+el.style.color = '#9ca3af';
 }
 if (btnLabel) {
-btnLabel.textContent = `Scan All URLs (${lines.length}/5)`;
+btnLabel.textContent = `Scan All URLs (${lines.length})`;
 }
 }
 async function registerUser() {
@@ -1380,10 +1377,14 @@ const container = document.getElementById('bulkResultsContainer');
 const exportButtons = document.getElementById('bulkExportButtons');
 const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
 if (allUrls.length === 0) { alert('❌ Enter at least one URL'); return; }
+// REMOVED LIMIT CHECK FOR UNLIMITED SCANS
+/*
 if (allUrls.length > 5) {
-alert('❌ Free plan: max 5 URLs.\nNeed more? Contact us for Pro access.');
+alert('❌ Free plan: max 5 URLs.
+Need more? Contact us for Pro access.');
 return;
 }
+*/
 const urls = allUrls.map(u => u.startsWith('http') ? u : 'https://' + u);
 isScanning = true;
 button.disabled = true;
@@ -1407,7 +1408,8 @@ body: JSON.stringify({ url })
 });
 const data = await response.json();
 if (data.success) {
-bulkResults.push(data);
+// ADDED selected PROPERTY
+bulkResults.push({ ...data, selected: false });
 // Save to history
 try {
 const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
@@ -1416,20 +1418,24 @@ localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)))
 } catch(e) {}
 } else {
 // Add error result
+// ADDED selected PROPERTY
 bulkResults.push({
 url: url,
 error: data.error || 'Scan failed',
 score: 0,
-success: false
+success: false,
+selected: false
 });
 }
 } catch (error) {
 // Add error result
+// ADDED selected PROPERTY
 bulkResults.push({
 url: url,
 error: error.message || 'Network error',
 score: 0,
-success: false
+success: false,
+selected: false
 });
 }
 // Update progress
@@ -1499,10 +1505,16 @@ return `
 }
 const scoreColor = result.score >= 70 ? '#4ade80' : result.score >= 50 ? '#fbbf24' : '#f87171';
 const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
+// ADDED CHECKBOX FOR LEADERBOARD SELECTION
 return `
 <div class="bulk-result-item" id="bulk-result-${index}">
 <div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
 <div style="display:flex;align-items:center;gap:16px;">
+<!-- CHECKBOX -->
+<input type="checkbox" ${result.score >= 70 ? '' : 'disabled'} ${result.selected ? 'checked' : ''} 
+onclick="event.stopPropagation(); toggleLeaderboardSelection(${index}, this.checked)" 
+style="accent-color:#7e22ce; width:18px; height:18px; cursor:${result.score >= 70 ? 'pointer' : 'not-allowed'}" 
+title="${result.score >= 70 ? 'Select for Leaderboard' : 'Score < 70 (Not eligible)'}">
 <div class="bulk-score-badge" style="color:${scoreColor}!important;">${result.score}</div>
 <div>
 <div style="font-weight:700;">${domain}</div>
@@ -1552,6 +1564,54 @@ details.classList.toggle('hidden');
 item.classList.toggle('expanded', !details.classList.contains('hidden'));
 }
 }
+// ✅ NEW FUNCTION: TOGGLE LEADERBOARD SELECTION
+function toggleLeaderboardSelection(index, isChecked) {
+if (bulkResults[index]) {
+bulkResults[index].selected = isChecked;
+}
+}
+// ✅ NEW FUNCTION: SUBMIT SELECTED TO LEADERBOARD
+async function submitSelectedToLeaderboard() {
+if (!userId) {
+alert('❌ Please register or log in to submit to the leaderboard.');
+return;
+}
+const selected = bulkResults.filter(r => r.success && r.selected && r.score >= 70);
+if (selected.length === 0) {
+alert('⚠️ No valid scans selected. Please select successful scans with a score of 70 or higher.');
+return;
+}
+if (!confirm(`Submit ${selected.length} selected scan${selected.length !== 1 ? 's' : ''} to the Leaderboard?`)) return;
+
+const btn = event && event.target;
+if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
+
+let successCount = 0;
+let failCount = 0;
+
+for (const result of selected) {
+try {
+const name = result.title || result.url.replace(/https?:\/\//, '').split('/')[0];
+const res = await fetch('/api/leaderboard/submit', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
+body: JSON.stringify({ url: result.url, score: result.score, company_name: name, admin_verified: false })
+});
+const data = await res.json();
+if (data.success) {
+successCount++;
+} else {
+failCount++;
+}
+} catch(e) {
+failCount++;
+}
+}
+
+if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trophy mr-2"></i> Submit Selected'; }
+showToast(`✅ Submitted ${successCount} to Leaderboard. ${failCount > 0 ? failCount + ' failed.' : ''}`, successCount > 0 ? '#0f7b3a' : '#ef4444');
+}
+
 function generateBulkResultDetails(data) {
 if (!data.success) return '<p>No data available</p>';
 const score = data.score || 0;
@@ -1952,3 +2012,4 @@ else { alert('❌ ' + (data.error || 'Failed')); }
 </script>
 </body>
 </html>
+```
