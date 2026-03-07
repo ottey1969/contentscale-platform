@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
 <meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<script>
+  tailwind = { config: { theme: { extend: {} } } };
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
@@ -94,6 +97,25 @@ footer p { color: #9ca3af !important; }
 @media (max-width: 640px) { .bulk-stats-grid { grid-template-columns: repeat(2, 1fr); } }
 .share-badge { background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4f46e5; border-radius: 99px; padding: 4px 12px; font-size: 0.7rem; color: #a5b4fc !important; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .share-badge:hover { background: #312e81; }
+
+/* ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@media (max-width: 640px) {
+  #realActivityBanner {
+    bottom: 2rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+  }
+}
 </style>
 </head>
 <body class="bg-gray-900">
@@ -103,6 +125,37 @@ footer p { color: #9ca3af !important; }
 <p style="color:#a855f7;font-weight:700;margin-top:1rem;">Loading ContentScale...</p>
 </div>
 <script>setTimeout(function(){var l=document.getElementById('loading-screen');if(l){l.style.opacity='0';l.style.transition='opacity 0.3s';setTimeout(function(){l.style.display='none';},300);}},2000);</script>
+
+<!-- ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage (100% HONEST) -->
+<div id="realActivityBanner" class="fixed bottom-4 right-4 z-50" style="display:none;">
+  <div style="
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(126, 34, 206, 0.6);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(126, 34, 206, 0.3);
+    animation: slideIn 0.5s ease-out;
+    max-width: 280px;
+  ">
+    <div style="
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    "></div>
+    <div style="font-size: 0.8rem; color: #e5e7eb !important; line-height: 1.3;">
+      <span style="font-weight: 700; color: #a78bfa !important;" id="realScansCount">0</span> 
+      <span id="realScansLabel">scans today</span>
+    </div>
+  </div>
+</div>
+
 <nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.97)">
 <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 <div class="flex items-center gap-3">
@@ -233,7 +286,7 @@ Contact me on WhatsApp and I'll get you set up — usually within a few hours.
 style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
 <i class="fab fa-whatsapp"></i> Request Access on WhatsApp
 </a>
-<a href="/cdn-cgi/l/email-protection#355d5059595a75565a5b41505b4146565459501b465c41500a4640575f505641087740595e10070574565650464610070567504440504641" style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
+<a href="mailto:info@contentscale.site" style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
 <i class="fas fa-envelope"></i> Email Instead
 </a>
 </div>
@@ -751,7 +804,7 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </li>
 <li class="flex items-center gap-2" style="color:#9ca3af!important;">
 <i class="fas fa-envelope" style="color:#818cf8!important;"></i>
-<span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1078757c7c7f50737f7e64757e646373717c753e63796475">[email&#160;protected]</a></span>
+<span><a href="mailto:info@contentscale.site">info@contentscale.site</a></span>
 </li>
 <li class="flex items-center gap-2" style="color:#9ca3af!important;">
 <i class="fas fa-map-marker-alt" style="color:#f87171!important;"></i>
@@ -804,7 +857,7 @@ style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#
 </div>
 </div>
 </div>
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+
 <script>
 let userId = null;
 let sendgridConfigured = false;
@@ -829,6 +882,38 @@ subject: `{{company_name}} — your competitors in {{country}} are getting onlin
 body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
 }
 };
+
+// ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from localStorage (100% HONEST)
+function initRealActivityBanner() {
+  const banner = document.getElementById('realActivityBanner');
+  const countEl = document.getElementById('realScansCount');
+  const labelEl = document.getElementById('realScansLabel');
+  
+  if (!banner || !countEl || !labelEl) return;
+  
+  // Get today's scan count from localStorage (REAL DATA)
+  const today = new Date().toDateString();
+  const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+  const todayScans = scanHistory.filter(scan => {
+    const scanDate = new Date(scan.date).toDateString();
+    return scanDate === today;
+  }).length;
+  
+  // Show banner with REAL count (0 if no scans, real number if scans exist)
+  countEl.textContent = todayScans;
+  labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
+  
+  // Only show banner if there are scans OR always show (your choice)
+  if (todayScans >= 0) { // Always show, even if 0
+    banner.style.display = 'block';
+  }
+}
+
+// Update banner after scan completes
+function updateRealActivityBanner() {
+  initRealActivityBanner();
+}
+
 function checkRescanReminder() {
 try {
 const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
@@ -856,6 +941,7 @@ registerUser();
 loadLeaderboardData();
 loadFreelancers();
 checkRescanReminder();
+initRealActivityBanner(); // Initialize real activity banner
 setTimeout(() => {
 const l = document.getElementById('loading-screen');
 if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
@@ -1024,6 +1110,7 @@ try {
 const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
 scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
 localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 20)));
+updateRealActivityBanner(); // Update real activity banner after scan
 } catch(e) {}
 if (data.score >= 70) {
 fetch('/api/leaderboard').then(r => r.json()).then(lb => {
@@ -1447,6 +1534,7 @@ button.disabled = false;
 button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Scan All URLs';
 updateBulkCount();
 isScanning = false;
+updateRealActivityBanner(); // Update real activity banner after bulk scan
 }
 }
 function retryBulkUrl(url) {
@@ -1507,7 +1595,23 @@ return `
 </div>
 </div>
 ${recCards}
-${recs.length > 3 ? `<p style="text-align:center;font-size:0.75rem;color:#9ca3af;margin:10px 0;">+ ${recs.length - 3} more recommendations</p>` : ''}
+${(() => {
+if (recs.length <= 3) return '';
+const uid = 'xrec_' + Math.random().toString(36).slice(2,8);
+const count = recs.length - 3;
+const extraCards = recs.slice(3).map((rec) => {
+const p = priorityConfig[rec.priority] || priorityConfig.low;
+return '<div style="background:' + p.bg + ';border:1px solid ' + p.border + ';border-radius:10px;padding:16px;margin-bottom:10px;">'
++ '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">'
++ '<div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">' + rec.title + '</div>'
++ '<span style="font-size:0.7rem;color:' + p.color + '!important;white-space:nowrap;font-weight:600;">' + p.label + '</span>'
++ '</div>'
++ '<p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:6px;">' + rec.description.substring(0,100) + (rec.description.length>100?'...':'') + '</p>'
++ '</div>';
+}).join('');
+return '<div id="' + uid + '" style="display:none;">' + extraCards + '</div>'
++ '<button onclick="(function(b){var el=document.getElementById(\'' + uid + '\');var open=el.style.display===\'block\';el.style.display=open?\'none\':\'block\';b.textContent=open?\'+' + count + ' more recommendations\':\'\\u2212 Hide ' + count + ' recommendations\';})(this)" style="width:100%;background:rgba(126,34,206,0.12);color:#a78bfa;border:1px dashed #7e22ce;border-radius:8px;padding:8px;font-size:0.78rem;font-weight:700;cursor:pointer;margin:4px 0 10px;" onmouseover="this.style.background=\'rgba(126,34,206,0.22)\'" onmouseout="this.style.background=\'rgba(126,34,206,0.12)\'">+ ' + count + ' more recommendations</button>';
+})()}
 <div style="display:flex;gap:10px;margin-top:20px;">
 <a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100.%20Can%20you%20help%3F"
 target="_blank" rel="noopener"
@@ -1523,9 +1627,9 @@ style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);col
 }
 // ✅ EXPORT ALL RESULTS TO CSV (works for any number of URLs)
 function exportBulkCSV() {
-if (!bulkResults || bulkResults.length === 0) { 
-alert('❌ No scan results to export. Run a bulk scan first.'); 
-return; 
+if (!bulkResults || bulkResults.length === 0) {
+alert('❌ No scan results to export. Run a bulk scan first.');
+return;
 }
 const successful = bulkResults.filter(r => r.success);
 if (successful.length === 0) {
@@ -1556,9 +1660,9 @@ showToast(`✅ Exported ${successful.length} successful scan${successful.length!
 }
 // ✅ EXPORT ALL RESULTS AS INDIVIDUAL PDFS (one file per URL)
 function exportBulkPDF() {
-if (!bulkResults || bulkResults.length === 0) { 
-alert('❌ No scan results to export. Run a bulk scan first.'); 
-return; 
+if (!bulkResults || bulkResults.length === 0) {
+alert('❌ No scan results to export. Run a bulk scan first.');
+return;
 }
 const successful = bulkResults.filter(r => r.success);
 if (successful.length === 0) {
@@ -1580,9 +1684,9 @@ setTimeout(() => showToast('✅ All PDFs ready! Check your downloads.', '#0f7b3a
 }
 // ✅ SHARE SUMMARY OF ALL RESULTS (copy to clipboard)
 function shareAllResults() {
-if (!bulkResults || bulkResults.length === 0) { 
-alert('❌ No scan results to share. Run a bulk scan first.'); 
-return; 
+if (!bulkResults || bulkResults.length === 0) {
+alert('❌ No scan results to share. Run a bulk scan first.');
+return;
 }
 const successful = bulkResults.filter(r => r.success);
 if (successful.length === 0) {
