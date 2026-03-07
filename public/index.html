@@ -1774,6 +1774,37 @@
          const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
          const avgScore = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
          const eliteCount = successful.filter(r => r.score >= 70).length;
+         const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
+         const poorCount = successful.filter(r => r.score < 50).length;
+
+         // Shared header HTML (matches single-scan PDF exactly)
+         const pdfHeader = `
+         <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
+           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+             <div>
+               <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+               <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="font-size:12px;opacity:0.75;">Generated</div>
+               <div style="font-size:13px;font-weight:700;">${today}</div>
+             </div>
+           </div>
+         </div>`;
+
+         // Shared footer HTML (matches single-scan PDF exactly)
+         const pdfFooter = `
+         <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+           <div>
+             <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+             <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+           </div>
+           <div style="text-align:right;">
+             <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+             <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+           </div>
+         </div>`;
+
          // Build one page per site
          const sitePages = successful.map((data, idx) => {
          const score = data.score || 0;
@@ -1783,136 +1814,206 @@
          const recs = (data.recommendations?.all || data.recommendations || []);
          const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
          const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+         const scoreColorLight = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
          const recRows = recs.map((r, i) => {
          const pc = priorityColor[r.priority] || '#6b7280';
          const pl = priorityLabel[r.priority] || 'Info';
-         return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:10px;page-break-inside:avoid;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;">
-         <div style="font-weight:700;font-size:13px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
-         <span style="font-size:10px;color:${pc};font-weight:700;padding:2px 8px;border:1px solid ${pc};border-radius:99px;white-space:nowrap;flex-shrink:0;">${pl}</span>
+         return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:10px;page-break-inside:avoid;">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+         <div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
+         <span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
          </div>
-         <p style="font-size:12px;color:#374151;margin:0 0 8px;line-height:1.5;">${r.description}</p>
-         <div style="background:#f8fafc;border-radius:6px;padding:8px 12px;${r.learning?'margin-bottom:6px;':''}">
-         <span style="font-size:10px;font-weight:700;color:#7e22ce;">⚡ ACTION: </span>
-         <span style="font-size:12px;color:#1e293b;">${r.action}</span>
+         <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description}</p>
+         <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;${r.learning?'margin-bottom:8px;':''}">
+         <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
+         <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action}</p>
          </div>
-         ${r.learning ? `<div style="background:#f0f9ff;border-radius:6px;padding:8px 12px;">
-         <span style="font-size:10px;font-weight:700;color:#0369a1;">📚 WHY: </span>
-         <span style="font-size:11px;color:#374151;">${r.learning}</span>
+         ${r.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
+         <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+         <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p>
          </div>` : ''}
-         ${r.target ? `<p style="font-size:11px;color:#16a34a;margin:6px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
+         ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
          </div>`;
          }).join('');
+
          return `
-         <div style="page-break-before:${idx===0?'avoid':'always'};padding:32px 40px;">
-         <!-- Site Header -->
-         <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);border-radius:12px;padding:24px 28px;color:white;margin-bottom:20px;">
-         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-         <div>
-         <div style="font-size:11px;opacity:0.7;margin-bottom:4px;">Site ${idx+1} of ${successful.length}</div>
-         <div style="font-size:15px;font-weight:700;word-break:break-all;">${url}</div>
-         </div>
-         <div style="text-align:center;background:rgba(0,0,0,0.25);border-radius:10px;padding:12px 20px;">
-         <div style="font-size:42px;font-weight:900;color:${scoreColor === '#16a34a' ? '#4ade80' : scoreColor === '#b45309' ? '#fbbf24' : '#f87171'};line-height:1;">${score}</div>
-         <div style="font-size:11px;opacity:0.8;">/ 100 · ${scoreLabel}</div>
-         </div>
-         </div>
-         </div>
-         <!-- Scores -->
-         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;margin-bottom:20px;">
-         <tr>
-         <td style="background:#f5f3ff;padding:10px 16px;border-radius:8px 0 0 8px;font-size:13px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:11px;">Credibility &amp; Relevance</span></td>
-         <td style="background:#f5f3ff;padding:10px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#7e22ce;text-align:right;">${metrics.graaf||0} / 50</td>
-         </tr>
-         <tr>
-         <td style="background:#eff6ff;padding:10px 16px;border-radius:8px 0 0 8px;font-size:13px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:11px;">Content Quality</span></td>
-         <td style="background:#eff6ff;padding:10px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#1d4ed8;text-align:right;">${metrics.craft||0} / 30</td>
-         </tr>
-         <tr>
-         <td style="background:#fefce8;padding:10px 16px;border-radius:8px 0 0 8px;font-size:13px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:11px;">Speed &amp; Structure</span></td>
-         <td style="background:#fefce8;padding:10px 16px;border-radius:0 8px 8px 0;font-size:16px;font-weight:900;color:#b45309;text-align:right;">${metrics.technical||0} / 20</td>
-         </tr>
-         </table>
-         <!-- Recommendations -->
-         <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:10px;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
-         ${recRows || '<p style="color:#6b7280;font-size:13px;">No specific recommendations — site is performing well.</p>'}
+         <div style="page-break-before:${idx===0?'avoid':'always'};">
+           <!-- Per-site header: same gradient as single scan -->
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:11px;opacity:0.65;">Site ${idx+1} of ${successful.length}</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+             <div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div>
+             <h2 style="font-size:24px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h2>
+             <p style="font-size:13px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendation${recs.length!==1?'s':''}</p>
+           </div>
+           <!-- Score band -->
+           <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+             <div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;">
+               <div style="text-align:center;">
+                 <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+                 <div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div>
+                 <div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div>
+               </div>
+               <div style="flex:1;min-width:200px;">
+                 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;">
+                   <tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr>
+                   <tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr>
+                   <tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr>
+                 </table>
+               </div>
+             </div>
+           </div>
+           <!-- Recommendations -->
+           <div style="padding:28px 40px;">
+             <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
+             ${recRows || '<p style="color:#6b7280;font-size:13px;">No specific recommendations — site is performing well.</p>'}
+           </div>
+           <!-- Per-site footer: same dark footer as single scan -->
+           <div style="background:#111827;padding:20px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
+             <div>
+               <div style="color:white;font-weight:700;font-size:13px;">ContentScale SEO Platform</div>
+               <div style="color:#9ca3af;font-size:11px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="color:#9ca3af;font-size:11px;">app.contentscale.site</div>
+               <div style="color:#9ca3af;font-size:11px;">+31 6 2807 3996</div>
+             </div>
+           </div>
          </div>`;
          }).join('');
+
          const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-         <title>ContentScale Bulk Report — ${today}</title>
+         <title>ContentScale Bulk Scan Report — ${today}</title>
          <style>
          * { box-sizing:border-box; margin:0; padding:0; }
          body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }
          @media print {
-         .no-print { display:none !important; }
-         body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-         .page-break-before { page-break-before:always; }
+           .no-print { display:none !important; }
+           body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
          }
          </style>
          </head><body>
-         <!-- Cover Page -->
-         <div style="min-height:100vh;background:linear-gradient(135deg,#030712,#1e1b4b);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;page-break-after:always;">
-         <div style="font-size:28px;font-weight:900;color:white;letter-spacing:-0.5px;margin-bottom:8px;">ContentScale</div>
-         <div style="font-size:13px;color:#a78bfa;margin-bottom:48px;">SEO Recovery Platform · Amsterdam</div>
-         <div style="font-size:48px;font-weight:900;color:white;margin-bottom:12px;">Bulk SEO Report</div>
-         <div style="font-size:16px;color:#a5b4fc;margin-bottom:48px;">Generated ${today}</div>
-         <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;margin-bottom:48px;">
-         <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:20px 32px;text-align:center;">
-         <div style="font-size:40px;font-weight:900;color:#c084fc;">${successful.length}</div>
-         <div style="font-size:12px;color:#a78bfa;margin-top:4px;">Sites Scanned</div>
+
+         <!-- ═══ COVER PAGE ═══ -->
+         <div style="min-height:100vh;display:flex;flex-direction:column;page-break-after:always;">
+           <!-- Cover header -->
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:12px;opacity:0.75;">Generated</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+           </div>
+           <!-- Cover body -->
+           <div style="flex:1;background:linear-gradient(160deg,#030712,#1e1b4b);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;">
+             <div style="font-size:52px;font-weight:900;color:white;margin-bottom:10px;line-height:1.1;">Bulk SEO Report</div>
+             <div style="font-size:16px;color:#a5b4fc;margin-bottom:52px;">GRAAF + CRAFT + Technical Analysis</div>
+             <div style="display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-bottom:52px;">
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
+                 <div style="font-size:44px;font-weight:900;color:#c084fc;">${successful.length}</div>
+                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Sites Scanned</div>
+               </div>
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
+                 <div style="font-size:44px;font-weight:900;color:#4ade80;">${avgScore}</div>
+                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Avg Score</div>
+               </div>
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
+                 <div style="font-size:44px;font-weight:900;color:#fbbf24;">${eliteCount}</div>
+                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Elite (70+)</div>
+               </div>
+             </div>
+             <!-- Summary table -->
+             <table style="border-collapse:collapse;min-width:500px;max-width:680px;background:rgba(255,255,255,0.05);border-radius:12px;overflow:hidden;width:100%;">
+               <thead><tr style="background:rgba(126,34,206,0.5);">
+                 <th style="padding:11px 16px;text-align:left;color:white;font-size:12px;">#</th>
+                 <th style="padding:11px 16px;text-align:left;color:white;font-size:12px;">Domain</th>
+                 <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Score</th>
+                 <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Label</th>
+               </tr></thead>
+               <tbody>${successful.map((r,i) => {
+               const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
+               const sc = r.score>=70?'#4ade80':r.score>=50?'#fbbf24':'#f87171';
+               return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
+               <td style="padding:9px 16px;color:#a5b4fc;font-size:12px;">${i+1}</td>
+               <td style="padding:9px 16px;color:#f1f5f9;font-size:12px;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
+               <td style="padding:9px 16px;text-align:right;font-weight:700;font-size:13px;color:${sc};">${r.score}</td>
+               <td style="padding:9px 16px;text-align:right;font-size:11px;color:${sc};">${lbl}</td>
+               </tr>`;
+               }).join('')}</tbody>
+             </table>
+           </div>
+           <!-- Cover footer -->
+           <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+             <div>
+               <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+               <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+               <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+             </div>
+           </div>
          </div>
-         <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:20px 32px;text-align:center;">
-         <div style="font-size:40px;font-weight:900;color:#4ade80;">${avgScore}</div>
-         <div style="font-size:12px;color:#a78bfa;margin-top:4px;">Avg Score</div>
-         </div>
-         <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:20px 32px;text-align:center;">
-         <div style="font-size:40px;font-weight:900;color:#fbbf24;">${eliteCount}</div>
-         <div style="font-size:12px;color:#a78bfa;margin-top:4px;">Elite (70+)</div>
-         </div>
-         </div>
-         <!-- Summary table -->
-         <table style="border-collapse:collapse;min-width:500px;max-width:700px;background:rgba(255,255,255,0.05);border-radius:12px;overflow:hidden;">
-         <thead><tr style="background:rgba(126,34,206,0.5);">
-         <th style="padding:10px 16px;text-align:left;color:white;font-size:12px;">#</th>
-         <th style="padding:10px 16px;text-align:left;color:white;font-size:12px;">Domain</th>
-         <th style="padding:10px 16px;text-align:right;color:white;font-size:12px;">Score</th>
-         <th style="padding:10px 16px;text-align:right;color:white;font-size:12px;">Label</th>
-         </tr></thead>
-         <tbody>${successful.map((r,i) => {
-         const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
-         const sc = r.score>=70?'#4ade80':r.score>=50?'#fbbf24':'#f87171';
-         return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
-         <td style="padding:9px 16px;color:#a5b4fc;font-size:12px;">${i+1}</td>
-         <td style="padding:9px 16px;color:#f1f5f9;font-size:12px;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
-         <td style="padding:9px 16px;text-align:right;font-weight:700;font-size:13px;color:${sc};">${r.score}</td>
-         <td style="padding:9px 16px;text-align:right;font-size:11px;color:${sc};">${lbl}</td>
-         </tr>`;
-         }).join('')}</tbody>
-         </table>
-         <div style="margin-top:48px;font-size:12px;color:#6b7280;">Ottmar JG Francisca · ContentScale · app.contentscale.site · +31 6 2807 3996</div>
-         </div>
-         <!-- Individual site pages -->
+
+         <!-- ═══ INDIVIDUAL SITE PAGES ═══ -->
          ${sitePages}
-         <!-- Back Cover -->
-         <div style="page-break-before:always;background:#111827;min-height:40vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;text-align:center;">
-         <div style="font-size:22px;font-weight:900;color:white;margin-bottom:8px;">ContentScale SEO Platform</div>
-         <div style="font-size:13px;color:#9ca3af;margin-bottom:24px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
-         <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:12px;color:#6b7280;">
-         <span>app.contentscale.site</span><span>·</span><span>+31 6 2807 3996</span><span>·</span><span>info@contentscale.site</span>
+
+         <!-- ═══ BACK COVER ═══ -->
+         <div style="page-break-before:always;display:flex;flex-direction:column;min-height:50vh;">
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:12px;opacity:0.75;">End of Report</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+           </div>
+           <div style="flex:1;background:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;">
+             <div style="font-size:28px;font-weight:900;color:white;margin-bottom:6px;">ContentScale SEO Platform</div>
+             <div style="font-size:14px;color:#9ca3af;margin-bottom:32px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:40px;">
+               <span>app.contentscale.site</span><span style="color:#374151;">·</span><span>+31 6 2807 3996</span><span style="color:#374151;">·</span><span>info@contentscale.site</span>
+             </div>
+             <div style="background:rgba(255,255,255,0.04);border:1px solid #374151;border-radius:14px;padding:24px 40px;max-width:500px;">
+               <div style="font-size:13px;color:#9ca3af;line-height:1.8;">
+                 <div style="font-weight:700;color:#a78bfa;margin-bottom:8px;">Report Summary</div>
+                 <div>${successful.length} sites scanned · Avg score: ${avgScore}/100</div>
+                 <div style="margin-top:4px;">🟢 Elite (70+): ${eliteCount} &nbsp;·&nbsp; 🟡 Good (50–69): ${goodCount} &nbsp;·&nbsp; 🔴 Needs Work: ${poorCount}</div>
+               </div>
+             </div>
+           </div>
          </div>
-         </div>
+
          <div class="no-print" style="position:fixed;bottom:24px;right:24px;z-index:999;">
-         <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(126,34,206,0.5);">🖨️ Print / Save as PDF</button>
+           <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(126,34,206,0.5);">🖨️ Print / Save as PDF</button>
          </div>
          </body></html>`;
+
          const win = window.open('', '_blank');
          if (!win) { alert('Please allow popups to export the combined PDF report.'); return; }
          win.document.write(html);
          win.document.close();
-         // Store reference for Share All
          window._lastBulkReportHTML = html;
          setTimeout(() => { win.focus(); showToast('✅ Combined PDF ready — use Print → Save as PDF', '#0f7b3a'); }, 500);
          }
+
          // ✅ SHARE ALL — copies individual hosted report URLs to clipboard
          function shareAllResults() {
          if (!bulkResults || bulkResults.length === 0) {
