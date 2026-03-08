@@ -1988,7 +1988,13 @@
                </div>
                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:16px 24px;text-align:center;min-width:160px;">
                  <div style="font-size:11px;color:#a78bfa;margin-bottom:8px;font-weight:700;letter-spacing:.5px;">SCORE BREAKDOWN</div>
-                 ${[['🏅','95+',eliteCount,'#c084fc'],['✨','90+',excellentCount,'#4ade80'],['💪','85+',strongCount,'#86efac'],['👍','80+',goodCount,'#fbbf24'],['📈','75+',solidCount,'#fde68a'],['✅','70+',qualifiedCount,'#fb923c'],['🔴','<70',needsWorkCount,'#f87171']].map(([e,r,n,c])=>\`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">\${e} \${r}</span><span style="font-size:13px;font-weight:900;color:\${c};">\${n}</span></div>\`).join('')}
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">🏅 95+</span><span style="font-size:13px;font-weight:900;color:#c084fc;">${eliteCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">✨ 90+</span><span style="font-size:13px;font-weight:900;color:#4ade80;">${excellentCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">💪 85+</span><span style="font-size:13px;font-weight:900;color:#86efac;">${strongCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">👍 80+</span><span style="font-size:13px;font-weight:900;color:#fbbf24;">${goodCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">📈 75+</span><span style="font-size:13px;font-weight:900;color:#fde68a;">${solidCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">✅ 70+</span><span style="font-size:13px;font-weight:900;color:#fb923c;">${qualifiedCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><span style="font-size:11px;color:#d1d5db;">🔴 &lt;70</span><span style="font-size:13px;font-weight:900;color:#f87171;">${needsWorkCount}</span></div>
                </div>
              </div>
              <!-- Summary table -->
