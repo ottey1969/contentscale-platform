@@ -457,7 +457,7 @@
                            </div>
                         </div>
                         <a href="/app" style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;padding:16px 40px;border-radius:12px;font-size:1.05rem;font-weight:800;text-decoration:none;box-shadow:0 8px 32px rgba(245,158,11,0.3);">
-                        🚀 Constructing it...
+                        🚀 Open Lead Dashboard
                         </a>
                         <p style="color:#6b7280;font-size:0.78rem;margin-top:12px;">Requires activation · <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20the%20Lead%20Dashboard" target="_blank" style="color:#f59e0b;">Contact Ottmar on WhatsApp</a></p>
                      </div>
@@ -1216,7 +1216,7 @@
          const metrics = data.metrics || {};
          const stats = data.content_stats || {};
          const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+         const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
          const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
          const priorityConfig = {
          high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
@@ -1505,23 +1505,43 @@
          });
          // Display stats
          const successful = bulkResults.filter(r => r.success);
-         const eliteCount = successful.filter(r => r.score >= 70).length;
-         const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
-         const poorCount = successful.filter(r => r.score < 50).length;
+         const eliteCount     = successful.filter(r => r.score >= 95).length;
+         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
+         const strongCount    = successful.filter(r => r.score >= 85 && r.score < 90).length;
+         const goodCount      = successful.filter(r => r.score >= 80 && r.score < 85).length;
+         const solidCount     = successful.filter(r => r.score >= 75 && r.score < 80).length;
+         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
+         const needsWorkCount = successful.filter(r => r.score < 70).length;
          const errorCount = bulkResults.length - successful.length;
          if (statsDiv) {
          statsDiv.innerHTML = `
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#4ade80;">${eliteCount}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Elite (70+)</div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#c084fc;">${eliteCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">🏅 Elite 95+</div>
          </div>
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#fbbf24;">${goodCount}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Good (50-69)</div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${excellentCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">✨ Excellent 90+</div>
          </div>
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#f87171;">${poorCount}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Needs Work (<50)</div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#86efac;">${strongCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">💪 Strong 85+</div>
+         </div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#fbbf24;">${goodCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">👍 Good 80+</div>
+         </div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${solidCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">📈 Solid 75+</div>
+         </div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qualifiedCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">✅ Qualified 70+</div>
+         </div>
+         <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;">
+         <div style="font-size:1.4rem;font-weight:900;color:#f87171;">${needsWorkCount}</div>
+         <div style="font-size:0.65rem;color:#9ca3af;">🔴 Needs Work</div>
          </div>
          <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
          <div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div>
@@ -1556,7 +1576,7 @@
          </div>
          </div>`;
          }
-         const scoreColor = result.score >= 70 ? '#4ade80' : result.score >= 50 ? '#fbbf24' : '#f87171';
+         const scoreColor = result.score >= 85 ? '#16a34a' : result.score >= 70 ? '#b45309' : '#dc2626';
          const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
          // ADDED CHECKBOX FOR LEADERBOARD SELECTION
          return `
@@ -1805,9 +1825,13 @@
          const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
          const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
          const avgScore = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
-         const eliteCount = successful.filter(r => r.score >= 70).length;
-         const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
-         const poorCount = successful.filter(r => r.score < 50).length;
+         const eliteCount     = successful.filter(r => r.score >= 95).length;
+         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
+         const strongCount    = successful.filter(r => r.score >= 85 && r.score < 90).length;
+         const goodCount      = successful.filter(r => r.score >= 80 && r.score < 85).length;
+         const solidCount     = successful.filter(r => r.score >= 75 && r.score < 80).length;
+         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
+         const needsWorkCount = successful.filter(r => r.score < 70).length;
 
          // Shared header HTML (matches single-scan PDF exactly)
          const pdfHeader = `
@@ -1962,9 +1986,9 @@
                  <div style="font-size:44px;font-weight:900;color:#4ade80;">${avgScore}</div>
                  <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Avg Score</div>
                </div>
-               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
-                 <div style="font-size:44px;font-weight:900;color:#fbbf24;">${eliteCount}</div>
-                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Elite (70+)</div>
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:16px 24px;text-align:center;min-width:160px;">
+                 <div style="font-size:11px;color:#a78bfa;margin-bottom:8px;font-weight:700;letter-spacing:.5px;">SCORE BREAKDOWN</div>
+                 ${[['🏅','95+',eliteCount,'#c084fc'],['✨','90+',excellentCount,'#4ade80'],['💪','85+',strongCount,'#86efac'],['👍','80+',goodCount,'#fbbf24'],['📈','75+',solidCount,'#fde68a'],['✅','70+',qualifiedCount,'#fb923c'],['🔴','<70',needsWorkCount,'#f87171']].map(([e,r,n,c])=>\`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">\${e} \${r}</span><span style="font-size:13px;font-weight:900;color:\${c};">\${n}</span></div>\`).join('')}
                </div>
              </div>
              <!-- Summary table -->
@@ -1976,8 +2000,8 @@
                  <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Label</th>
                </tr></thead>
                <tbody>${successful.map((r,i) => {
-               const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
-               const sc = r.score>=70?'#4ade80':r.score>=50?'#fbbf24':'#f87171';
+               const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
+               const sc = r.score>=85?'#4ade80':r.score>=70?'#fbbf24':r.score>=60?'#fb923c':'#f87171';
                return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
                <td style="padding:9px 16px;color:#a5b4fc;font-size:12px;">${i+1}</td>
                <td style="padding:9px 16px;color:#f1f5f9;font-size:12px;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
@@ -2027,7 +2051,7 @@
                <div style="font-size:13px;color:#9ca3af;line-height:1.8;">
                  <div style="font-weight:700;color:#a78bfa;margin-bottom:8px;">Report Summary</div>
                  <div>${successful.length} sites scanned · Avg score: ${avgScore}/100</div>
-                 <div style="margin-top:4px;">🟢 Elite (70+): ${eliteCount} &nbsp;·&nbsp; 🟡 Good (50–69): ${goodCount} &nbsp;·&nbsp; 🔴 Needs Work: ${poorCount}</div>
+                 <div style="margin-top:6px;line-height:2;">🏅 ${eliteCount} Elite &nbsp;·&nbsp; ✨ ${excellentCount} Excellent &nbsp;·&nbsp; 💪 ${strongCount} Strong &nbsp;·&nbsp; 👍 ${goodCount} Good &nbsp;·&nbsp; 📈 ${solidCount} Solid &nbsp;·&nbsp; ✅ ${qualifiedCount} Qualified &nbsp;·&nbsp; 🔴 ${needsWorkCount} Needs Work</div>
                </div>
              </div>
            </div>
@@ -2075,14 +2099,18 @@
          const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
          const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
          const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
-         const avgScore = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
-         const eliteCount = successful.filter(r => r.score >= 70).length;
-         const goodCount  = successful.filter(r => r.score >= 50 && r.score < 70).length;
-         const poorCount  = successful.filter(r => r.score < 50).length;
+         const avgScore    = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
+         const eliteCount  = successful.filter(r => r.score >= 95).length;
+         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
+         const strongCount = successful.filter(r => r.score >= 85 && r.score < 90).length;
+         const goodCount   = successful.filter(r => r.score >= 80 && r.score < 85).length;
+         const solidCount  = successful.filter(r => r.score >= 75 && r.score < 80).length;
+         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
+         const needsWorkCount = successful.filter(r => r.score < 70).length;
 
          const siteRows = successful.map((r, i) => {
-           const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
-           const sc  = r.score>=70?'#16a34a':r.score>=50?'#b45309':'#dc2626';
+           const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
+           const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':r.score>=60?'#ea580c':'#dc2626';
            const recs = (r.recommendations?.all || r.recommendations || []);
            return `<tr style="border-bottom:1px solid #e5e7eb;">
              <td style="padding:10px 14px;font-size:13px;color:#6b7280;">${i+1}</td>
@@ -2121,7 +2149,7 @@
                </div>
              </div>
              <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;color:white;">Bulk Scan Results</h1>
-             <p style="font-size:14px;opacity:0.85;">GRAAF + CRAFT + Technical analysis across ${successful.length} site${successful.length!==1?'s':''}</p>
+             <p style="font-size:14px;opacity:0.85;">GRAAF + CRAFT + Technical analysis across ${successful.length} site${successful.length!==1?'s':''} · ${eliteCount + excellentCount + strongCount} scoring 85+</p>
            </div>
 
            <!-- ══ SCORE SUMMARY BAND ══ -->
@@ -2132,11 +2160,15 @@
                  <div style="font-size:13px;color:#6b7280;margin-top:2px;">avg score</div>
                  <div style="display:inline-block;background:#7e22ce;color:white;font-size:11px;font-weight:700;padding:3px 14px;border-radius:99px;margin-top:6px;">out of 100</div>
                </div>
-               <div style="flex:1;min-width:220px;">
-                 <table cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;width:100%;">
-                   <tr><td style="background:#f5f3ff;padding:11px 16px;border-radius:8px 0 0 8px;font-size:13px;font-weight:600;color:#374151;">🟢 Elite <span style="font-weight:400;color:#9ca3af;font-size:11px;">Score 70+</span></td><td style="background:#f5f3ff;padding:11px 16px;border-radius:0 8px 8px 0;font-size:17px;font-weight:900;color:#16a34a;text-align:right;">${eliteCount} sites</td></tr>
-                   <tr><td style="background:#fefce8;padding:11px 16px;border-radius:8px 0 0 8px;font-size:13px;font-weight:600;color:#374151;">🟡 Good <span style="font-weight:400;color:#9ca3af;font-size:11px;">Score 50–69</span></td><td style="background:#fefce8;padding:11px 16px;border-radius:0 8px 8px 0;font-size:17px;font-weight:900;color:#b45309;text-align:right;">${goodCount} sites</td></tr>
-                   <tr><td style="background:#fff1f2;padding:11px 16px;border-radius:8px 0 0 8px;font-size:13px;font-weight:600;color:#374151;">🔴 Needs Work <span style="font-weight:400;color:#9ca3af;font-size:11px;">Score &lt;50</span></td><td style="background:#fff1f2;padding:11px 16px;border-radius:0 8px 8px 0;font-size:17px;font-weight:900;color:#dc2626;text-align:right;">${poorCount} sites</td></tr>
+               <div style="flex:1;min-width:240px;">
+                 <table cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 5px;width:100%;">
+                   <tr><td style="background:#f5f3ff;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🏅 Elite <span style="font-weight:400;color:#9ca3af;font-size:11px;">95–100</span></td><td style="background:#f5f3ff;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#7e22ce;text-align:right;">${eliteCount}</td></tr>
+                   <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✨ Excellent <span style="font-weight:400;color:#9ca3af;font-size:11px;">90–94</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${excellentCount}</td></tr>
+                   <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">💪 Strong <span style="font-weight:400;color:#9ca3af;font-size:11px;">85–89</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${strongCount}</td></tr>
+                   <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">👍 Good <span style="font-weight:400;color:#9ca3af;font-size:11px;">80–84</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${goodCount}</td></tr>
+                   <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">📈 Solid <span style="font-weight:400;color:#9ca3af;font-size:11px;">75–79</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${solidCount}</td></tr>
+                   <tr><td style="background:#fff7ed;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✅ Qualified <span style="font-weight:400;color:#9ca3af;font-size:11px;">70–74</span></td><td style="background:#fff7ed;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#ea580c;text-align:right;">${qualifiedCount}</td></tr>
+                   <tr><td style="background:#fff1f2;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🔴 Needs Work <span style="font-weight:400;color:#9ca3af;font-size:11px;">&lt;70</span></td><td style="background:#fff1f2;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#dc2626;text-align:right;">${needsWorkCount}</td></tr>
                  </table>
                </div>
              </div>
