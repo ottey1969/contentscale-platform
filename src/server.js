@@ -1462,8 +1462,8 @@ const report = r.rows[0];
 let recs = [];
 try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
 const score = report.score || 0;
-const scoreColor = score >= 70 ? '#4ade80' : score >= 50 ? '#fbbf24' : '#f87171';
-const scoreLabel = score >= 70 ? 'Good' : score >= 50 ? 'Needs Work' : 'Critical Issues';
+const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
 const graafScore = Math.round(score * 0.50);
 const craftScore = Math.round(score * 0.30);
 const techScore  = Math.round(score * 0.20);
