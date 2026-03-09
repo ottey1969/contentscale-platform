@@ -1262,163 +1262,8 @@ app.get('/share/:token', async (req, res) => {
   res.send(html);
 });
 
-// ============================================
-app.post('/api/scan', async (req, res) => {
-const { url } = req.body;
-if (!url) return res.status(400).json({ success: false, error: 'URL required' });
-let scanUrl = url.startsWith('http') ? url : 'https://' + url;
-try {
-console.log(`🔍 Elite Scanning: ${scanUrl}`);
-const browser = await getBrowser();
-if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
-const page = await browser.newPage();
-await page.setViewport({ width: 1920, height: 1080 });
-await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-const analysis = await page.evaluate((scanUrlParam) => {
-const text = document.body ? document.body.innerText : '';
-const cleanText = text.replace(/\s+/g, ' ').trim();
-const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-const rawHtml = document.documentElement.outerHTML;
-const h1Els = document.querySelectorAll('h1');
-const h1Count = h1Els.length;
-let h1Text = '';
-let h1IsHidden = false;
-let h1VisibleCount = 0;
-h1Els.forEach(el => {
-const style = window.getComputedStyle(el);
-const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
-if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
-else { h1IsHidden = true; }
-});
-const h1Length = h1Text.length;
-const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
-const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
-const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
-const h1IsTooLong  = h1Text.length > 70;
-const h2Count = document.querySelectorAll('h2').length;
-const h3Count = document.querySelectorAll('h3').length;
-const listItemCount = document.querySelectorAll('li').length;
-const paragraphs = Array.from(document.querySelectorAll('p'));
-const avgParagraphLength = paragraphs.length > 0
-? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
-: 0;
-const metaTitle = (document.querySelector('title') || {}).textContent || '';
-const metaTitleLength = metaTitle.length;
-const metaDescEl = document.querySelector('meta[name="description"]');
-const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
-const metaDescriptionLength = metaDescription.length;
-const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
-const hasCanonical = !!document.querySelector('link[rel="canonical"]');
-const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
-const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
-const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-let hasArticleSchema = false;
-let hasFAQPageSchema = false;
-let hasOrganizationSchema = false;
-const checkSchemaType = (typeVal) => {
-if (!typeVal) return;
-const types = Array.isArray(typeVal) ? typeVal : [typeVal];
-if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
-if (types.includes('FAQPage')) hasFAQPageSchema = true;
-if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
-};
-schemaScripts.forEach(script => {
-try {
-const data = JSON.parse(script.textContent);
-if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
-else {
-checkSchemaType(data['@type']);
-if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
-}
-} catch (e) {}
-});
-const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
-h.textContent.toLowerCase().includes('faq') ||
-h.textContent.toLowerCase().includes('frequently asked') ||
-h.textContent.toLowerCase().includes('common question')
-);
-const images = document.querySelectorAll('img');
-const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
-let baseHostname = '';
-try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
-const allLinks = Array.from(document.querySelectorAll('a[href]'));
-const internalLinks = allLinks.filter(a => {
-try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
-}).length;
-const externalLinks = allLinks.filter(a => {
-try {
-const h = new URL(a.href).hostname.replace('www.', '');
-return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
-} catch (e) { return false; }
-}).length;
-let expertQuoteCount = 0;
-document.querySelectorAll('blockquote').forEach(bq => {
-const cite = bq.querySelector('cite');
-if (bq.textContent.trim().length > 30 && cite && cite.textContent.trim().length > 3) expertQuoteCount++;
-});
-const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
-testimonialSelectors.forEach(sel => {
-try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
-});
-let caseStudyCount = 0;
-const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
-const seen = new Set();
-document.querySelectorAll('section, article').forEach(el => {
-if (seen.has(el)) return;
-const txt = el.textContent.toLowerCase();
-const len = txt.length;
-if (len > 300 && len < 6000) {
-const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
-const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
-if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
-}
-});
-const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
-const statsFound = (cleanText.match(statsPattern) || []).length;
-const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
-const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
-const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
-(() => {
-const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
-for (const list of earlyLists) {
-const items = list.querySelectorAll('li');
-if (items.length >= 3) {
-const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
-const listText = list.innerText || '';
-const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
-if (listPos < bodyLen * 0.5) return true;
-}
-}
-return false;
-})();
-const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
-!!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
-const hasAuthorBio = (
-!!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
-/about the author|written by/i.test(rawHtml)
-) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
-return {
-wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
-metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
-hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
-hasFAQContent, images: images.length, imagesWithAlt,
-internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
-statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
-};
-}, scanUrl);
-let extractedEmails = [];
-try {
-const pageHtml = await page.content();
-const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
-const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
-const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
-!e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
-!e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
-);
-extractedEmails = allEmails.slice(0, 3);
-} catch (e) {}
-await page.close();
+function computeScore(scanUrl, analysis, extractedEmails) {
+  extractedEmails = extractedEmails || [];
 // ── SCORING ──
 let graafScore = 0;
 if (analysis.wordCount >= 2500)      graafScore += 10;
@@ -1606,8 +1451,278 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                recommendations: { all: finalRecommendations, count: finalRecommendations.length },
                timestamp: new Date().toISOString()
                };
-               console.log(`✅ Scan: ${scanUrl} → ${totalScore}/100 (${quality}) — ${finalRecommendations.length} recommendations`);
-               res.json(result);
+               console.log(`✅ computeScore: ${scanUrl} → ${totalScore}/100`);
+  return result;
+}
+
+
+// ============================================================
+// SERVER-SIDE BULK JOB QUEUE
+// ============================================================
+const bulkJobs = new Map();
+
+async function internalScanPage(page, scanUrl) {
+  const analysis = await page.evaluate((su) => {
+    const text = document.body ? document.body.innerText : '';
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+    const rawHtml = document.documentElement.outerHTML;
+    const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
+    h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
+    const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
+    const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
+    const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
+    const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
+    const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length;
+    const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
+    const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
+    const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
+    const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
+    const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
+    const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOrganizationSchema=flatSchemas.some(s=>['Organization','LocalBusiness','WebSite'].includes(s['@type']));
+    const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
+    const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
+    const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
+    const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
+    const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
+    const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema;
+    const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
+    let host=''; try{host=new URL(su).hostname;}catch(e){}
+    const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
+    const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
+    const expertQuoteCount=(rawHtml.match(/<blockquote/gi)||[]).length;
+    const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after/g)||[]).length;
+    const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
+    const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+    const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
+    return {wordCount,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
+  }, scanUrl);
+  return computeScore(scanUrl, analysis);
+}
+
+async function scanOneUrl(rawUrl) {
+  const scanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
+  const browser = await getBrowser();
+  if (!browser) throw new Error('Browser unavailable');
+  const page = await browser.newPage();
+  try {
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    try {
+      await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
+    } catch(e) {
+      try { await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }); await new Promise(r => setTimeout(r, 2500)); }
+      catch(e2) { throw new Error('Page unreachable'); }
+    }
+    return await internalScanPage(page, scanUrl);
+  } finally { try { await page.close(); } catch(e) {} }
+}
+
+// Start bulk job
+app.post('/api/scan/bulk-job', async (req, res) => {
+  const { urls } = req.body;
+  if (!Array.isArray(urls) || !urls.length) return res.status(400).json({ success: false, error: 'urls array required' });
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const job = { id: jobId, status: 'running', total: urls.length, done: 0, failed: 0, results: [], createdAt: Date.now() };
+  bulkJobs.set(jobId, job);
+  res.json({ success: true, jobId });
+  (async () => {
+    const DELAY_MS = 1500;
+    const RETRY = 1;
+    for (const url of urls) {
+      if (job.status === 'cancelled') break;
+      let result = null;
+      for (let attempt = 0; attempt <= RETRY; attempt++) {
+        try { result = await scanOneUrl(url); break; }
+        catch(e) { if (attempt === RETRY) result = { success: false, url, error: e.message, score: 0 }; else await new Promise(r => setTimeout(r, 3000)); }
+      }
+      job.results.push(result);
+      job.done++;
+      if (!result || !result.success) job.failed++;
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
+    job.status = 'done';
+    console.log('Bulk job ' + jobId + ' done: ' + job.done + ' scanned, ' + job.failed + ' failed');
+  })();
+});
+
+// Poll job status
+app.get('/api/scan/bulk-job/:jobId', (req, res) => {
+  const job = bulkJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results });
+});
+
+// Cancel job
+app.post('/api/scan/bulk-job/:jobId/cancel', (req, res) => {
+  const job = bulkJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  job.status = 'cancelled';
+  res.json({ success: true });
+});
+
+
+// ============================================
+app.post('/api/scan', async (req, res) => {
+const { url } = req.body;
+if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+let scanUrl = url.startsWith('http') ? url : 'https://' + url;
+try {
+console.log(`🔍 Elite Scanning: ${scanUrl}`);
+const browser = await getBrowser();
+if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
+const page = await browser.newPage();
+await page.setViewport({ width: 1920, height: 1080 });
+await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+const analysis = await page.evaluate((scanUrlParam) => {
+const text = document.body ? document.body.innerText : '';
+const cleanText = text.replace(/\s+/g, ' ').trim();
+const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+const rawHtml = document.documentElement.outerHTML;
+const h1Els = document.querySelectorAll('h1');
+const h1Count = h1Els.length;
+let h1Text = '';
+let h1IsHidden = false;
+let h1VisibleCount = 0;
+h1Els.forEach(el => {
+const style = window.getComputedStyle(el);
+const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
+else { h1IsHidden = true; }
+});
+const h1Length = h1Text.length;
+const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
+const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
+const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+const h1IsTooLong  = h1Text.length > 70;
+const h2Count = document.querySelectorAll('h2').length;
+const h3Count = document.querySelectorAll('h3').length;
+const listItemCount = document.querySelectorAll('li').length;
+const paragraphs = Array.from(document.querySelectorAll('p'));
+const avgParagraphLength = paragraphs.length > 0
+? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
+: 0;
+const metaTitle = (document.querySelector('title') || {}).textContent || '';
+const metaTitleLength = metaTitle.length;
+const metaDescEl = document.querySelector('meta[name="description"]');
+const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
+const metaDescriptionLength = metaDescription.length;
+const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
+const hasCanonical = !!document.querySelector('link[rel="canonical"]');
+const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
+const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
+const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+let hasArticleSchema = false;
+let hasFAQPageSchema = false;
+let hasOrganizationSchema = false;
+const checkSchemaType = (typeVal) => {
+if (!typeVal) return;
+const types = Array.isArray(typeVal) ? typeVal : [typeVal];
+if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
+if (types.includes('FAQPage')) hasFAQPageSchema = true;
+if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
+};
+schemaScripts.forEach(script => {
+try {
+const data = JSON.parse(script.textContent);
+if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
+else {
+checkSchemaType(data['@type']);
+if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
+}
+} catch (e) {}
+});
+const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
+h.textContent.toLowerCase().includes('faq') ||
+h.textContent.toLowerCase().includes('frequently asked') ||
+h.textContent.toLowerCase().includes('common question')
+);
+const images = document.querySelectorAll('img');
+const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
+let baseHostname = '';
+try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
+const allLinks = Array.from(document.querySelectorAll('a[href]'));
+const internalLinks = allLinks.filter(a => {
+try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
+}).length;
+const externalLinks = allLinks.filter(a => {
+try {
+const h = new URL(a.href).hostname.replace('www.', '');
+return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
+} catch (e) { return false; }
+}).length;
+let expertQuoteCount = 0;
+document.querySelectorAll('blockquote').forEach(bq => {
+const cite = bq.querySelector('cite');
+if (bq.textContent.trim().length > 30 && cite && cite.textContent.trim().length > 3) expertQuoteCount++;
+});
+const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
+testimonialSelectors.forEach(sel => {
+try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
+});
+let caseStudyCount = 0;
+const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
+const seen = new Set();
+document.querySelectorAll('section, article').forEach(el => {
+if (seen.has(el)) return;
+const txt = el.textContent.toLowerCase();
+const len = txt.length;
+if (len > 300 && len < 6000) {
+const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
+const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
+if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
+}
+});
+const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
+const statsFound = (cleanText.match(statsPattern) || []).length;
+const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
+const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
+(() => {
+const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
+for (const list of earlyLists) {
+const items = list.querySelectorAll('li');
+if (items.length >= 3) {
+const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
+const listText = list.innerText || '';
+const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
+if (listPos < bodyLen * 0.5) return true;
+}
+}
+return false;
+})();
+const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
+!!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
+const hasAuthorBio = (
+!!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
+/about the author|written by/i.test(rawHtml)
+) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
+return {
+wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
+metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
+hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+hasFAQContent, images: images.length, imagesWithAlt,
+internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
+statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
+};
+}, scanUrl);
+let extractedEmails = [];
+try {
+const pageHtml = await page.content();
+const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
+const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
+const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
+!e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+!e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
+);
+extractedEmails = allEmails.slice(0, 3);
+} catch (e) {}
+await page.close();
+// ── SCORING ──
+const result = computeScore(scanUrl, analysis, extractedEmails);
+console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+res.json(result);
                } catch (error) {
                console.error('❌ Scan error:', error.message);
                res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
