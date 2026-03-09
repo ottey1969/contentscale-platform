@@ -1109,23 +1109,27 @@ app.post('/api/sitemap/urls', async (req, res) => {
 
 // Submit aggregate sitemap scan result as pending leaderboard entry
 app.post('/api/sitemap/submit', async (req, res) => {
-  const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country } = req.body;
+  const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country, niche, business_type } = req.body;
   if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
   try {
     const r = await pool.query(
-      `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, page_count, page_scores, scan_source, admin_verified, is_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'sitemap', FALSE, FALSE)
+      `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', FALSE, FALSE)
        ON CONFLICT (url) DO UPDATE SET
          score = EXCLUDED.score,
          graaf_score = EXCLUDED.graaf_score,
          craft_score = EXCLUDED.craft_score,
          technical_score = EXCLUDED.technical_score,
+         country = EXCLUDED.country,
+         niche = EXCLUDED.niche,
+         business_type = EXCLUDED.business_type,
+         company_name = EXCLUDED.company_name,
          page_count = EXCLUDED.page_count,
          page_scores = EXCLUDED.page_scores,
          scan_source = 'sitemap',
          admin_verified = FALSE
        RETURNING id`,
-      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || 'NL', page_count, JSON.stringify(page_scores || [])]
+      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || [])]
     );
     res.json({ success: true, id: r.rows[0].id });
   } catch (e) {
