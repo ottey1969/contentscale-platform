@@ -991,26 +991,29 @@
          body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
          }
          };
-         // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from localStorage (100% HONEST)
+         // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from server (all sources: single, bulk, campaign)
          function initRealActivityBanner() {
          const banner = document.getElementById('realActivityBanner');
          const countEl = document.getElementById('realScansCount');
          const labelEl = document.getElementById('realScansLabel');
          if (!banner || !countEl || !labelEl) return;
-         // Get today's scan count from localStorage (REAL DATA)
-         const today = new Date().toDateString();
-         const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         const todayScans = scanHistory.filter(scan => {
-         const scanDate = new Date(scan.date).toDateString();
-         return scanDate === today;
-         }).length;
-         // Show banner with REAL count (0 if no scans, real number if scans exist)
-         countEl.textContent = todayScans;
-         labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
-         // Only show banner if there are scans OR always show (your choice)
-         if (todayScans >= 0) { // Always show, even if 0
-         banner.style.display = 'block';
-         }
+         fetch('/api/stats/scans-today')
+           .then(r => r.json())
+           .then(data => {
+             const count = data.count || 0;
+             countEl.textContent = count;
+             labelEl.textContent = count === 1 ? 'scan today' : 'scans today';
+             banner.style.display = 'block';
+           })
+           .catch(() => {
+             // Fallback to localStorage if server unreachable
+             const today = new Date().toDateString();
+             const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+             const todayScans = scanHistory.filter(scan => new Date(scan.date).toDateString() === today).length;
+             countEl.textContent = todayScans;
+             labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
+             banner.style.display = 'block';
+           });
          }
          // Update banner after scan completes
          function updateRealActivityBanner() {
