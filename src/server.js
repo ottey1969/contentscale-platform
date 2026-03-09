@@ -2642,9 +2642,9 @@ async function runCampaign(campaign) {
       domainObj.technical = avg(successful.map(r => r.metrics?.technical || 0));
       domainObj.pageCount = successful.length;
 
-      // Step 4: extract email
+      // Step 4: extract email (skip if already known from CSV)
       domainObj.status = 'extracting_email';
-      const email = await extractDomainEmail(domainObj.domain, successful);
+      const email = domainObj.email || await extractDomainEmail(domainObj.domain, successful);
       domainObj.email = email;
 
       // Step 5: create share URL
@@ -2709,13 +2709,14 @@ async function runCampaign(campaign) {
 // ── Campaign endpoints ────────────────────────────────────────
 
 app.post('/api/campaign/start', verifyAdmin, async (req, res) => {
-  const { domains, name, instantly_api_key, instantly_campaign_id } = req.body;
+  const { domains, name, instantly_api_key, instantly_campaign_id, preset_emails } = req.body;
   if (!Array.isArray(domains) || !domains.length)
     return res.status(400).json({ success: false, error: 'domains array required' });
 
   const cleanDomains = [...new Set(domains.map(d => d.trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0]).filter(d => d.includes('.')))];
   if (!cleanDomains.length) return res.status(400).json({ success: false, error: 'No valid domains' });
 
+  const presetEmails = preset_emails || {};
   const campaignId = crypto.randomBytes(8).toString('hex');
   const campaign = {
     id: campaignId,
@@ -2728,7 +2729,8 @@ app.post('/api/campaign/start', verifyAdmin, async (req, res) => {
     createdAt: Date.now(),
     domains: cleanDomains.map(d => ({
       domain: d, status: 'queued', score: null,
-      email: null, shareUrl: null, instantlyStatus: null,
+      email: presetEmails[d] || null, // pre-fill from CSV
+      shareUrl: null, instantlyStatus: null,
       error: null, pageCount: 0
     }))
   };
