@@ -1010,6 +1010,16 @@ console.error('❌ Bulk delete scan logs error:', e.message);
 res.status(500).json({ success: false, error: e.message });
 }
 });
+app.delete('/api/admin/scan-log/delete-all', verifyAdmin, async (req, res) => {
+try {
+await pool.query('DELETE FROM scan_reports');
+const result = await pool.query('DELETE FROM scan_log');
+console.log(`✅ Deleted all ${result.rowCount} scan log entries`);
+res.json({ success: true, deleted: result.rowCount });
+} catch(e) {
+res.status(500).json({ success: false, error: e.message });
+}
+});
 // Leaderboard Public
 app.get('/api/leaderboard', async (req, res) => {
 if (!pool) return res.json({ success: true, entries: [], stats: {} });
@@ -2267,63 +2277,32 @@ email: p.email || (p.emails && p.emails[0]) || null,
 country
 }));
 }
-const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
-totalSkipped += urls.length - urlsToScan.length;
-let comboScanned = 0;
-for (const place of urlsToScan) {
+let allDomains = [];
+const urlsToCollect = urls.filter(p => p.url && !alreadyScanned.has(p.url.trim()));
+totalSkipped += urls.length - urlsToCollect.length;
+for (const place of urlsToCollect) {
 if (activeJobs.get(jobId)?.cancelled) break;
-if (!place.url) { comboScanned++; continue; }
-try {
-const scanRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/scan`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ url: place.url })
-});
-const scanData = await scanRes.json();
-const score = scanData.score || 0;
-if (score >= 85) scoreHigh++;
-else if (score >= 70) scoreGood++;
-else scoreLow++;
-const reportId = crypto.randomBytes(20).toString('hex');
-const reportUrl = '/report/' + reportId;
-const insertResult = await pool.query(
-`INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'discover',$10,$11) RETURNING id`,
-[
-'batch_job_' + jobId,
-place.url, place.name, score, niche, city, country,
-place.email || null,
-place.email ? 'has_email' : 'no_email',
-scanData.recommendations ? JSON.stringify((scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r)) : null,
-reportUrl
-]
-).catch(() => null);
-if (insertResult) {
+alreadyScanned.add(place.url.trim());
+allDomains.push(place);
+totalScanned++;
+// Save to scan_log as 'discovered' (no scan yet — campaign will scan)
 await pool.query(
-`INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-[reportId, insertResult.rows[0]?.id, place.url, place.name, score, niche, city, country, place.email || null,
-scanData.recommendations ? JSON.stringify((scanData.recommendations.all || scanData.recommendations).slice(0,5)) : null]
+`INSERT INTO scan_log (user_id, business_url, business_name, niche, city, country, email_found, email_status, source, score)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'discover',0)
+ON CONFLICT DO NOTHING`,
+['batch_job_' + jobId, place.url, place.name, niche, city, country, place.email || null, place.email ? 'has_email' : 'no_email']
 ).catch(() => {});
 }
-alreadyScanned.add(place.url.trim());
-totalScanned++;
-} catch(e) {}
-comboScanned++;
-const innerPct = Math.round((ci / combos.length) * 85) + Math.round((comboScanned / Math.max(urlsToScan.length, 1)) * 10);
 await updateJob({
-progress: Math.min(innerPct, 95),
-progress_text: `Combo ${ci+1}/${combos.length} · ${comboScanned}/${urlsToScan.length}: ${place.name || place.url}`,
-scanned: totalScanned, skipped: totalSkipped,
-score_high: scoreHigh, score_good: scoreGood, score_low: scoreLow
+progress: Math.min(Math.round(((ci+1) / combos.length) * 95), 95),
+progress_text: `${ci+1}/${combos.length} combos done · ${totalScanned} domains collected`,
+scanned: totalScanned, skipped: totalSkipped
 });
-}
 }
 await updateJob({
 status: 'completed', progress: 100,
-progress_text: `✅ Done — ${totalScanned} scanned, ${totalSkipped} skipped`,
+progress_text: `✅ Done — ${totalScanned} domains collected, ${totalSkipped} skipped`,
 scanned: totalScanned, skipped: totalSkipped,
-score_high: scoreHigh, score_good: scoreGood, score_low: scoreLow,
 completed_at: new Date()
 });
 console.log(`✅ Batch job ${jobId} complete: ${totalScanned} scanned`);
