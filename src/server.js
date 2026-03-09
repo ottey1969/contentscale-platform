@@ -1,2742 +1,2352 @@
-<!DOCTYPE html>
-<html lang="en">
+//
+// CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
+// ✅ Database Migration: country VARCHAR(100) (Fixes "value too long" error)
+// ✅ Bulk Delete Routes Added (Users, Leaderboard, Freelancers)
+// ✅ Tab Refresh Logic Preserved
+// ✅ GRAAF + CRAFT + Technical (100-point scale)
+// ✅ 34 Recommendation Checks — with Learning + Target
+// ✅ Bug-fixed: no page.content() after page.close()
+// ✅ Bug-fixed: Schema @graph array support
+// ✅ Bug-fixed: Strict case study detection (% patterns)
+// ✅ Expert quote detection: blockquote + testimonial CSS
+// ✅ New: Direct Answer, TL;DR, TOC, Author Bio, Stats
+// ✅ SendGrid + Admin + Leaderboard + Freelancers preserved
+// ✅ UPDATE: /api/user/keys/status returns hasSendgrid:true when SENDGRID_API_KEY env var is set
+// ✅ UPDATE: /api/email/send falls back to server SENDGRID_API_KEY env var (no user key required)
+// ✅ FIX: scan_log.source column added — stores 'bulk'/'single'/'discover' per row
+// ✅ FIX: ON CONFLICT DO NOTHING removed from scan_log INSERT (no unique constraint)
+// ✅ FIX: /api/scan-log POST now stores + returns source field
+// ✅ FIX: DOCX export Status column shows template type (Congrats/Pitch/Almost/Website)
+// ✅ FIX v3: /api/admin/users SELECT adds activated_until alias + is_activated computed column
+// ✅ FIX v3: /api/admin/users/:id/deactivate endpoint added (was missing — caused 404)
+// ✅ FIX v4: Instantly Bearer token = UUID part (BEFORE ':'), not secret after colon
+// ✅ FIX v5: All pages get favicon tags + blink effect + site.webmanifest route
+// ============================================
+process.env.PGSSLMODE = 'verify-full';
+process.env.NODE_NO_WARNINGS = '1';
+const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
+const { Pool } = require('pg');
+const puppeteer = require('puppeteer');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const sgMail = require('@sendgrid/mail');
+const app = express();
+const PORT = process.env.PORT || 3000;
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log('📧 SendGrid Key:', process.env.SENDGRID_API_KEY ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+// ============================================
+// DATABASE CONFIGURATIE
+// ============================================
+let dbConfig;
+let pool;
+function initDatabaseConfig() {
+if (process.env.DATABASE_URL) {
+console.log('📊 Using DATABASE_URL from environment');
+try {
+const url = new URL(process.env.DATABASE_URL);
+dbConfig = {
+user: url.username,
+password: url.password,
+host: url.hostname,
+port: url.port || 5432,
+database: url.pathname.slice(1),
+ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+connectionTimeoutMillis: 10000,
+idleTimeoutMillis: 30000,
+max: 20
+};
+} catch (e) {
+console.error('❌ Ongeldige DATABASE_URL:', e.message);
+return null;
+}
+} else {
+dbConfig = {
+host: process.env.DB_HOST || 'localhost',
+port: parseInt(process.env.DB_PORT || '5432'),
+database: process.env.DB_NAME || 'contentscale',
+user: process.env.DB_USER || 'postgres',
+password: process.env.DB_PASSWORD || 'postgres',
+ssl: false,
+connectionTimeoutMillis: 5000,
+idleTimeoutMillis: 30000,
+max: 10
+};
+}
+console.log('📊 Database configuratie:', dbConfig.host, dbConfig.database);
+return new Pool(dbConfig);
+}
+try {
+pool = initDatabaseConfig();
+} catch (e) {
+console.error('❌ Fout bij initialiseren database pool:', e.message);
+pool = null;
+}
+async function waitForDatabase(retries = 5, delay = 3000) {
+if (!pool) return false;
+console.log('🔄 Verbinden met database...');
+for (let i = 0; i < retries; i++) {
+try {
+const client = await pool.connect();
+await client.query('SELECT NOW()');
+client.release();
+console.log('✅ Database verbonden!');
+setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
+return true;
+} catch (err) {
+console.error(`❌ DB Attempt ${i + 1}/${retries} failed`);
+if (i === retries - 1) return false;
+await new Promise(resolve => setTimeout(resolve, delay));
+}
+}
+return false;
+}
+app.set('trust proxy', 1);
+app.use(compression({ level: 9, threshold: 0 }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// CORS
+app.use((req, res, next) => {
+const allowedOrigins = ['https://app.contentscale.site', 'https://contentscale.site', 'http://localhost:3000'];
+const origin = req.headers.origin;
+if (allowedOrigins.includes(origin)) res.header('Access-Control-Allow-Origin', origin);
+res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key, x-user-id');
+res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+if (req.method === 'OPTIONS') return res.sendStatus(200);
+next();
+});
+app.use(express.static('public', { maxAge: '1y', etag: true }));
+// ── Favicon & manifest ──────────────────────────────────────────────────────
+app.get('/site.webmanifest', (req, res) => {
+res.setHeader('Content-Type', 'application/manifest+json');
+res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+});
+// ── Favicon & manifest ──────────────────────────────────────────────────────
+app.get('/site.webmanifest', (req, res) => {
+res.setHeader('Content-Type', 'application/manifest+json');
+res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+});
+// Admin Auth Middleware
+const verifyAdmin = async (req, res, next) => {
+const adminKey = req.headers['x-admin-key'];
+if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
+if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
+try {
+const result = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+req.admin = result.rows[0];
+next();
+} catch (error) {
+res.status(500).json({ success: false, error: 'Auth error' });
+}
+};
+// Puppeteer Browser
+let browserInstance = null;
+async function getBrowser() {
+if (!browserInstance) {
+console.log('🚀 Launching Puppeteer...');
+browserInstance = await puppeteer.launch({
+headless: 'new',
+args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+}).catch(err => { console.error('❌ Puppeteer error:', err.message); return null; });
+}
+return browserInstance;
+}
+process.on('SIGTERM', async () => {
+if (browserInstance) await browserInstance.close();
+process.exit(0);
+});
+// Database Tables & Migration
+async function createAllTables() {
+if (!pool) return;
+let client;
+try {
+client = await pool.connect();
+// 1. Super Admins
+await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP)`);
+const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
+if (parseInt(adminCheck.rows[0].count) === 0) {
+const hashedPassword = await bcrypt.hash('admin123', 10);
+await client.query(`INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)`, ['ot', hashedPassword, 'Super Admin', 'super_admin']);
+console.log('✅ Default admin created (ot/admin123)');
+}
+// 2. Users & Keys
+await client.query(`CREATE TABLE IF NOT EXISTS users (id VARCHAR(255) PRIMARY KEY, ip_address VARCHAR(50), is_activated BOOLEAN DEFAULT FALSE, activation_expires TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
+// 🛠️ MIGRATION: add activation_expires if table existed before this column was added
+await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_expires TIMESTAMP`).catch(() => {});;
+await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`);
+await client.query(`CREATE TABLE IF NOT EXISTS user_email_templates (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, template_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, template_type))`);
+await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
+await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
+// 3. Leaderboard (WITH MIGRATION FIX)
+await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
+// 🛠️ MIGRATION: Ensure country column is wide enough (Fixes "value too long" error)
+try {
+await client.query(`ALTER TABLE leaderboard ALTER COLUMN country TYPE VARCHAR(100)`);
+console.log('✅ Migration: leaderboard.country set to VARCHAR(100)');
+} catch (e) {
+// Ignore if already correct or other minor issues
+}
+// Ensure niche exists
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS niche VARCHAR(100)`);
+// Sitemap scan columns
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_count INTEGER DEFAULT 1`);
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_scores JSONB DEFAULT '[]'`);
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS scan_source VARCHAR(50) DEFAULT 'manual'`);
+// 4. Freelancers
+await client.query(`CREATE TABLE IF NOT EXISTS freelancers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, title VARCHAR(255), location VARCHAR(255), country VARCHAR(100), bio TEXT, linkedin_url TEXT, hourly_rate VARCHAR(50), availability VARCHAR(100), is_approved BOOLEAN DEFAULT FALSE, is_verified BOOLEAN DEFAULT FALSE, is_featured BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
+// 5. Email Queue
+await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW(), business_url TEXT, business_name VARCHAR(255), score INTEGER, template_type VARCHAR(50))`);
+// 6. Scan Log — ✅ FIX: source column added to track bulk/single/discover origin
+await client.query(`CREATE TABLE IF NOT EXISTS scan_log (
+id SERIAL PRIMARY KEY,
+user_id VARCHAR(255),
+business_url TEXT,
+business_name VARCHAR(255),
+score INTEGER,
+niche VARCHAR(100),
+city VARCHAR(255),
+country VARCHAR(100),
+email_found VARCHAR(255),
+email_status VARCHAR(50) DEFAULT 'no_email',
+source VARCHAR(50) DEFAULT 'single',
+recommendations TEXT,
+created_at TIMESTAMP DEFAULT NOW()
+)`);
+// Migrations for existing deployments
+await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
+await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
+await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
+// 7. Email suppression list
+await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
+// 8. Warmup config
+await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);
+// Scan reports
+await client.query(`CREATE TABLE IF NOT EXISTS scan_reports (
+id VARCHAR(64) PRIMARY KEY,
+scan_log_id INTEGER,
+business_url TEXT,
+business_name VARCHAR(255),
+score INTEGER,
+niche VARCHAR(100),
+city VARCHAR(255),
+country VARCHAR(100),
+email_found VARCHAR(255),
+recommendations TEXT,
+created_at TIMESTAMP DEFAULT NOW()
+)`);
+// Batch jobs
+await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
+id VARCHAR(64) PRIMARY KEY,
+admin_id VARCHAR(255),
+niches TEXT NOT NULL,
+cities TEXT NOT NULL,
+country VARCHAR(100) DEFAULT 'Netherlands',
+max_results INTEGER DEFAULT 50,
+website_only BOOLEAN DEFAULT TRUE,
+status VARCHAR(50) DEFAULT 'queued',
+progress INTEGER DEFAULT 0,
+progress_text TEXT DEFAULT 'Queued...',
+total_combos INTEGER DEFAULT 0,
+current_combo INTEGER DEFAULT 0,
+scanned INTEGER DEFAULT 0,
+skipped INTEGER DEFAULT 0,
+score_high INTEGER DEFAULT 0,
+score_good INTEGER DEFAULT 0,
+score_low INTEGER DEFAULT 0,
+error_message TEXT,
+apify_token TEXT,
+started_at TIMESTAMP,
+completed_at TIMESTAMP,
+created_at TIMESTAMP DEFAULT NOW()
+)`);
+await client.query(`ALTER TABLE batch_jobs ADD COLUMN IF NOT EXISTS score_low INTEGER DEFAULT 0`).catch(() => {});
+// Migrate email_queue columns
+await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
+await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
+await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS score INTEGER`).catch(() => {});
+await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS template_type VARCHAR(50)`).catch(() => {});
+console.log('✅ All tables ready & migrated');
+} catch (error) {
+console.error('❌ DB Setup error:', error.message);
+} finally {
+if (client) client.release();
+}
+}
+// ============================================
+// API ENDPOINTS
+// ============================================
+app.post('/api/user/register', async (req, res) => {
+try {
+const userId = crypto.randomUUID();
+const ip = req.ip || req.connection.remoteAddress;
+await pool.query(`INSERT INTO users (id, ip_address, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING`, [userId, ip]);
+const defaultTemplates = [
+{ type: 'congrats', subject: '🎉 Congratulations!', body: `
+<h1>Congratulations!</h1>
+<p>Score: {{score}}/100</p>
+` },
+{ type: 'improvement', subject: '🚀 SEO Opportunity', body: `
+<h1>SEO Opportunity</h1>
+<p>Score: {{score}}/100</p>
+` },
+{ type: 'website', subject: '💻 Website Offer', body: `
+<h1>Website Offer</h1>
+` }
+];
+for (const t of defaultTemplates) {
+await pool.query(`INSERT INTO user_email_templates (user_id, template_type, subject, body) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, template_type) DO NOTHING`, [userId, t.type, t.subject, t.body]);
+}
+res.json({ success: true, userId });
+} catch (error) { res.json({ success: false, error: 'Registration failed' }); }
+});
+app.get('/api/user/keys/status', async (req, res) => {
+const userId = req.headers['x-user-id'];
+const serverHasSendgrid = !!process.env.SENDGRID_API_KEY;
+if (serverHasSendgrid) {
+return res.json({ success: true, hasSendgrid: true, source: 'server' });
+}
+if (!userId) return res.json({ success: true, hasSendgrid: false });
+try {
+const result = await pool.query('SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1', [userId]);
+const hasSendgrid = result.rows.some(r => r.service_name === 'sendgrid');
+res.json({ success: true, hasSendgrid, source: 'user', sendgrid: hasSendgrid ? result.rows.find(r => r.service_name === 'sendgrid') : null });
+} catch (e) { res.json({ success: true, hasSendgrid: false }); }
+});
+app.post('/api/user/sendgrid/configure', async (req, res) => {
+const { userId, apiKey, dailyLimit } = req.body;
+if (!userId || !apiKey) return res.json({ success: false, error: 'Missing fields' });
+try {
+await pool.query(`INSERT INTO user_api_keys (user_id, service_name, api_key, daily_limit) VALUES ($1, 'sendgrid', $2, $3) ON CONFLICT (user_id, service_name) DO UPDATE SET api_key = $2, daily_limit = $3`, [userId, apiKey, dailyLimit || 100]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.get('/api/user/templates', async (req, res) => {
+const userId = req.headers['x-user-id'];
+if (!userId) return res.json({ success: false, error: 'No ID' });
+try {
+const result = await pool.query('SELECT template_type, subject, body FROM user_email_templates WHERE user_id = $1', [userId]);
+const templates = { congrats: {}, improvement: {}, website: {} };
+result.rows.forEach(r => { if (templates[r.template_type]) templates[r.template_type] = { subject: r.subject, body: r.body }; });
+res.json({ success: true, templates });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/user/templates', async (req, res) => {
+const { userId, type, subject, body } = req.body;
+if (!userId || !type) return res.json({ success: false, error: 'Missing' });
+try {
+await pool.query(`INSERT INTO user_email_templates (user_id, template_type, subject, body, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, template_type) DO UPDATE SET subject = $3, body = $4, updated_at = NOW()`, [userId, type, subject, body]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ── Warmup Config ──────────────────────────────────────────────────────────
+function calcWarmupCap(dayNumber) {
+if (dayNumber <= 7)  return 5;
+if (dayNumber <= 14) return 20;
+if (dayNumber <= 21) return 40;
+if (dayNumber <= 28) return 70;
+return 100;
+}
+app.get('/api/warmup', async (req, res) => {
+const userId = req.headers['x-user-id'];
+if (!userId || !pool) return res.json({ success: false, active: false, cap: 100 });
+try {
+const r = await pool.query(`SELECT warmup_start_date, is_active FROM warmup_config WHERE user_id = $1`, [userId]);
+if (!r.rows.length) return res.json({ success: true, active: false, startDate: null, dayNumber: 0, dailyCap: 100 });
+const row = r.rows[0];
+if (!row.is_active) return res.json({ success: true, active: false, dailyCap: 100 });
+const dayNumber = Math.floor((new Date() - new Date(row.warmup_start_date)) / 86400000) + 1;
+const dailyCap  = calcWarmupCap(dayNumber);
+res.json({ success: true, active: true, startDate: row.warmup_start_date, dayNumber, dailyCap });
+} catch (e) { res.json({ success: false, active: false, dailyCap: 100 }); }
+});
+app.post('/api/warmup/start', async (req, res) => {
+const userId = req.headers['x-user-id'];
+if (!userId || !pool) return res.json({ success: false });
+try {
+await pool.query(
+`INSERT INTO warmup_config (user_id, warmup_start_date, is_active) VALUES ($1, CURRENT_DATE, TRUE)
+ON CONFLICT (user_id) DO UPDATE SET warmup_start_date = CURRENT_DATE, is_active = TRUE`, [userId]
+);
+res.json({ success: true, dailyCap: 5 });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/warmup/stop', async (req, res) => {
+const userId = req.headers['x-user-id'];
+if (!userId || !pool) return res.json({ success: false });
+try {
+await pool.query(`UPDATE warmup_config SET is_active = FALSE WHERE user_id = $1`, [userId]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ── Unsubscribe ────────────────────────────────────────────────────────────
+app.get('/unsubscribe', async (req, res) => {
+const { email } = req.query;
+if (!email) return res.send(`<!DOCTYPE html>
+<html>
+   <body style="font-family:Arial;text-align:center;padding:60px;background:#030712;color:#e5e7eb;">
+      <h2>⚠️ Invalid unsubscribe link.</h2>
+   </body>
+</html>
+`);
+try {
+if (pool) await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
+res.send(`<!DOCTYPE html>
+<html>
    <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
-      <meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
-      <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0">
+      <title>Unsubscribed — ContentScale</title>
+      <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="shortcut icon" href="/favicon.ico">
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+      <link rel="manifest" href="/site.webmanifest">
+      <meta name="theme-color" content="#7e22ce">
+   </head>
+   <body style="font-family:Arial,Helvetica,sans-serif;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+      <div style="text-align:center;max-width:480px;padding:40px;">
+         <div style="font-size:56px;margin-bottom:16px;">✅</div>
+         <h1 style="color:#4ade80;margin-bottom:8px;">You've been unsubscribed.</h1>
+         <p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails.</p>
+         <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a>
+      </div>
       <script>
-         // Blinking tab: alternates title and favicon when tab is not active
-         (function() {
-           const titles = ['ContentScale ⚡', '🎯 SEO Scanner', '⭐ ContentScale'];
-           const favicons = [
-             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
-             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
-             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f59e0b'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"
-           ];
-           let blinkInterval = null;
-           let idx = 0;
-           const originalTitle = 'ContentScale - Elite SEO Content Quality Scanner 2026';
-           function startBlink() {
-             if (blinkInterval) return;
-             blinkInterval = setInterval(function() {
-               idx = (idx + 1) % favicons.length;
-               document.title = titles[idx];
-               var el = document.getElementById('dynamicFavicon');
-               if (el) el.href = favicons[idx];
-             }, 800);
-           }
-           function stopBlink() {
-             if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
-             idx = 0;
-             document.title = originalTitle;
-             var el = document.getElementById('dynamicFavicon');
-             if (el) el.href = favicons[0];
-           }
-           document.addEventListener('visibilitychange', function() {
-             if (document.hidden) { startBlink(); } else { stopBlink(); }
+         (function(){
+           var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+           var favs=['/favicon.svg','/favicon-pink.svg'];
+           var t=0,iv=null;
+           var orig=document.title;
+           var fl=document.querySelector('link[rel~=\"icon\"]');
+           document.addEventListener('visibilitychange',function(){
+             if(document.hidden){
+               iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+             } else {
+               clearInterval(iv);iv=null;t=0;
+               document.title=orig; if(fl) fl.href='/favicon.svg';
+             }
            });
          })();
       </script>
-      <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-      <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-      <script>
-         tailwind = { config: { theme: { extend: {} } } };
-      </script>
-      <script src="https://cdn.tailwindcss.com"></script>
-      <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-      <noscript>
-         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      </noscript>
-      <style>
-         body { visibility: visible; opacity: 1; font-family: system-ui, -apple-system, sans-serif; background: #030712; color: white; }
-         h1, h2, h3, h4, h5, h6, p, a, span, div, label, li { color: white !important; }
-         input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
-         input::placeholder, textarea::placeholder { color: #6b7280 !important; }
-         .template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
-         .template-editor input[type="text"] { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
-         .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
-         .btn-primary { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; }
-         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(126, 34, 206, 0.5); }
-         .btn-success { background: #0f7b3a !important; color: white !important; }
-         .btn-specialist { background: #ffffff; color: #5b21b6 !important; font-weight: 700; padding: 0.75rem 2rem; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
-         .btn-specialist:hover { background: #f3f0ff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
-         .btn-specialist i, .btn-specialist span { color: #5b21b6 !important; }
-         .mode-toggle { position: relative; padding: 0.8rem 1.25rem; border-radius: 0.75rem; font-weight: 600; background: #374151; color: white !important; border: 2px solid transparent; cursor: pointer; flex: 1; min-width: 130px; max-width: 220px; text-align: center; font-size:0.88rem; }
-         .mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255,255,255,0.3); }
-         .mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; }
-         .card { background: #111827; border: 1px solid #374151; border-radius: 1rem; padding: 1.5rem; }
-         .progress-bar { height: 0.75rem; background: #374151; border-radius: 9999px; overflow: hidden; }
-         .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s; }
-         .hidden { display: none; }
-         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
-         .modal.active { display: flex; }
-         .modal-content { background: white !important; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-         .modal-content h2, .modal-content label, .modal-content p { color: #111827 !important; }
-         .modal input, .modal textarea, .modal select { color: #000000 !important; background-color: #ffffff !important; }
-         .modal select option { color: #000000 !important; background-color: #ffffff !important; }
-         .modal .btn-primary { color: white !important; }
-         .modal .btn-cancel { background: #dc2626; color: white !important; }
-         .var-row { display:flex; align-items:baseline; gap:8px; padding:5px 8px; border-radius:6px; border:1px solid #1e293b; background:#0f172a; font-size:0.78rem; }
-         .var-row code { white-space:nowrap; font-family:monospace; font-size:0.78rem; flex-shrink:0; }
-         .var-row span { color:#94a3b8!important; }
-         #filterNiche, #filterCountry, #filterBizType, #filterScore { background: #1e1b4b !important; color: #e5e7eb !important; border: 1px solid #4c1d95 !important; appearance: auto; }
-         #filterNiche option, #filterCountry option, #filterBizType option, #filterScore option { background: #1e1b4b !important; color: #e5e7eb !important; }
-         .skip-link { position: absolute; top: -40px; left: 0; background: #7e22ce; color: white !important; padding: 8px; z-index: 100; transition: top 0.2s; }
-         .skip-link:focus { top: 0; }
-         .nav-desktop { display: flex; gap: 1.5rem; align-items: center; }
-         .nav-desktop a { color: #d1d5db !important; text-decoration: none; font-size: 0.95rem; transition: color 0.15s; }
-         .nav-desktop a:hover { color: #ffffff !important; }
-         .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 6px; }
-         .hamburger span { width: 24px; height: 2px; background: white; display: block; border-radius: 2px; }
-         @media (max-width: 767px) { .nav-desktop { display: none !important; } .hamburger { display: flex !important; } }
-         .mobile-menu { display: none; flex-direction: column; background: #030712; border-bottom: 2px solid #7e22ce; }
-         .mobile-menu.open { display: flex; }
-         .mobile-menu a { padding: 0.75rem 1.5rem; border-bottom: 1px solid #1f2937; color: #d1d5db !important; text-decoration: none; font-size: 0.95rem; }
-         .mobile-menu a:hover { background: rgba(126,34,206,0.15); color: white !important; }
-         footer a { color: #9ca3af !important; text-decoration: none; transition: color 0.2s; }
-         footer a:hover { color: #ffffff !important; }
-         footer h3, footer h4 { color: #ffffff !important; }
-         footer p { color: #9ca3af !important; }
-         .footer-brand-desc { color: #9ca3af !important; }
-         .top3-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-         .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
-         .feature-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; color: #d1d5db !important; }
-         .stat-badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); border-radius: 0.75rem; padding: 1rem 1.5rem; text-align: center; min-width: 120px; }
-         .stat-badge .stat-num { font-size: 1.75rem; font-weight: 800; color: white !important; display: block; }
-         .stat-badge .stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.8) !important; display: block; margin-top: 2px; }
-         @media (max-width: 768px) { .hamburger { display: flex; } .mobile-menu { display: none; flex-direction: column; background: #030712; padding: 1rem; border-bottom: 2px solid #7e22ce; } .mobile-menu.open { display: flex; } .top3-grid { grid-template-columns: 1fr; } }
-         @media (max-width: 640px) { .mode-toggle-container { flex-direction:column !important; align-items:stretch !important; max-width:100% !important; } .mode-toggle { max-width:100% !important; min-width:0 !important; width:100% !important; padding:0.75rem 1rem !important; font-size:0.9rem; text-align:center; } .mode-card-header { flex-wrap:wrap; gap:6px; } .mode-card-header .text-xl { font-size:0.9rem !important; } .cards-grid { grid-template-columns:1fr !important; } .template-editor textarea { font-size:0.72rem !important; min-height:200px !important; } .var-grid { grid-template-columns:1fr !important; } .var-row { flex-wrap:wrap; word-break:break-word; } .var-row code { font-size:0.7rem; word-break:break-all; max-width:100%; } .var-row span { font-size:0.7rem; } .lb-rank-row { padding:9px 10px !important; } .lb-rank-name { font-size:0.78rem !important; } .lb-rank-tags { display:none !important; } .lb-rank-score { font-size:0.85rem !important; } .specialists-outer-grid { grid-template-columns:1fr !important; gap:16px !important; } .specialists-standard-grid { grid-template-columns:1fr !important; } .author-section-inner { flex-direction:column !important; align-items:center !important; text-align:center !important; } .card { overflow:hidden; } pre, code { max-width:100%; overflow-x:auto; } }
-         .var-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr)); gap:6px; }
-         .badge-code-ta { color: #f8fafc !important; background-color: #0d1117 !important; font-family: 'Cascadia Code','Fira Code','Consolas',monospace !important; font-size: 0.73rem !important; line-height: 1.65 !important; border: none !important; padding: 10px 14px !important; resize: none !important; width: 100% !important; box-sizing: border-box !important; display: block !important; letter-spacing: 0.01em; }
-         .main-section { display: none !important; }
-         .main-section.section-visible { display: block !important; }
-         .page-tabs { display: flex; gap: 0; background: #1f2937; border-radius: 12px; padding: 4px; border: 1px solid #374151; flex-wrap: nowrap; }
-         .page-tab { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; border: none; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.06); color: #d1d5db !important; text-align: center; white-space: nowrap; border: 1px solid rgba(255,255,255,0.08); }
-         .page-tabs::-webkit-scrollbar { display:none; }
-         .page-tab.active { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; box-shadow: 0 2px 12px rgba(126,34,206,0.4); }
-         .page-tab:hover:not(.active) { background: rgba(255,255,255,0.12); color: #f9fafb !important; }
-         @media (max-width: 540px) { .page-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 10px; } .page-tab { border-radius: 7px; font-size: 0.8rem; padding: 10px 6px; white-space: nowrap; min-width: 0; color: #e5e7eb !important; background: rgba(255,255,255,0.08); } }
-         .bulk-result-item { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; margin-bottom: 16px; overflow: hidden; transition: all 0.2s; }
-         .bulk-result-item.expanded { border-color: #7e22ce; box-shadow: 0 0 0 2px rgba(126,34,206,0.3); }
-         .bulk-result-summary { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; background: rgba(255,255,255,0.02); }
-         .bulk-result-summary:hover { background: rgba(126,34,206,0.1); }
-         .bulk-score-badge { font-size: 1.8rem; font-weight: 900; line-height: 1; min-width: 70px; text-align: center; }
-         .bulk-result-details { padding: 20px; border-top: 1px solid #1e293b; background: #0a0f1a; max-height: 2000px; overflow-y: auto; }
-         .scrollable-details { max-height: 600px; overflow-y: auto; padding-right: 8px; }
-         .scrollable-details::-webkit-scrollbar { width: 6px; }
-         .scrollable-details::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
-         .scrollable-details::-webkit-scrollbar-thumb { background: #7e22ce; border-radius: 10px; }
-         .bulk-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-         @media (max-width: 640px) { .bulk-stats-grid { grid-template-columns: repeat(2, 1fr); } }
-         .share-badge { background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4f46e5; border-radius: 99px; padding: 4px 12px; font-size: 0.7rem; color: #a5b4fc !important; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-         .share-badge:hover { background: #312e81; }
-         /* ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage */
-         @keyframes slideIn {
-         from { transform: translateX(100%); opacity: 0; }
-         to { transform: translateX(0); opacity: 1; }
-         }
-         @keyframes pulse {
-         0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-         70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-         100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-         }
-         @media (max-width: 640px) {
-         #realActivityBanner {
-         bottom: 2rem;
-         right: 1rem;
-         left: 1rem;
-         max-width: none;
-         }
-         }
-         /* ── BADGE MODAL ── */
-         #badgeModal { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:99999;padding:16px; }
-         #badgeModal.open { display:flex; }
-         #badgeModalBox { background:#0f172a;border:1px solid #4c1d95;border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto; }
-         #badgePreviewWrap { background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;margin:16px 0;display:flex;justify-content:center; }
-         #badgeEmbedCode { width:100%;background:#0a0a14;border:1px solid #2d1b69;border-radius:8px;padding:12px;color:#c084fc;font-family:monospace;font-size:0.72rem;resize:vertical;min-height:80px;max-height:140px; }
-      </style>
-   </head>
-   <body class="bg-gray-900">
-      <a href="#main-content" class="skip-link">Skip to main content</a>
-      <div id="loading-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#030712;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-         <div style="width:50px;height:50px;border:5px solid #374151;border-top:5px solid #a855f7;border-radius:50%;animation:spin 1s linear infinite;"></div>
-         <p style="color:#a855f7;font-weight:700;margin-top:1rem;">Loading ContentScale...</p>
-      </div>
-      <script>setTimeout(function(){var l=document.getElementById('loading-screen');if(l){l.style.opacity='0';l.style.transition='opacity 0.3s';setTimeout(function(){l.style.display='none';},300);}},2000);</script>
-      <!-- ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage (100% HONEST) -->
-      <div id="realActivityBanner" class="fixed bottom-4 right-4 z-50" style="display:none;">
-         <div style="
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(126, 34, 206, 0.6);
-            border-radius: 12px;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(126, 34, 206, 0.3);
-            animation: slideIn 0.5s ease-out;
-            max-width: 280px;
-            ">
-            <div style="
-               width: 10px; height: 10px; border-radius: 50%;
-               background: #10b981;
-               box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-               animation: pulse 2s infinite;
-               flex-shrink: 0;
-               "></div>
-            <div style="font-size: 0.8rem; color: #e5e7eb !important; line-height: 1.3;">
-               <span style="font-weight: 700; color: #a78bfa !important;" id="realScansCount">0</span>
-               <span id="realScansLabel">scans today</span>
-            </div>
-         </div>
-      </div>
-      <nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.97)">
-         <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-               <span class="text-2xl font-bold" style="background:linear-gradient(90deg,#c084fc,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ContentScale</span>
-               <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded font-semibold" style="color:white!important;">Pro</span>
-            </div>
-            <div class="nav-desktop">
-               <a href="#lead-scanner" onclick="switchPageSection('scanner')">Scanner</a>
-               <a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a>
-               <a href="javascript:void(0)" onclick="switchPageSection('experts')">Experts</a>
-               <a href="javascript:void(0)" onclick="switchPageSection('templates')">Templates</a>
-            </div>
-            <div class="flex items-center gap-3">
-               <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
-               <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Open menu"><span></span><span></span><span></span></button>
-            </div>
-         </div>
-         <div class="mobile-menu" id="mobileMenu">
-            <a href="javascript:void(0)" onclick="switchPageSection('scanner');toggleMobileMenu();" class="py-2 border-b border-gray-800">Scanner</a>
-            <a href="javascript:void(0)" onclick="switchPageSection('leaderboard');toggleMobileMenu();" class="py-2 border-b border-gray-800">Leaderboard</a>
-            <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Experts</a>
-            <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2">Templates</a>
-         </div>
-      </nav>
-      <div style="background:linear-gradient(90deg,#1e1b4b 0%,#0f172a 50%,#1e1b4b 100%);border-bottom:1px solid #312e81;padding:6px 24px;text-align:center;">
-         <span style="font-size:0.72rem;color:#6366f1!important;letter-spacing:0.04em;">
-         Designed &amp; built by
-         <a href="https://wa.me/31628073996" target="_blank" rel="noopener"
-            style="color:#a5b4fc!important;font-weight:700;text-decoration:none;border-bottom:1px solid #6366f1;">
-         Ottmar Francisca
-         </a>
-         &nbsp;·&nbsp; ContentScale SEO ContentScore Platform &nbsp;·&nbsp; Amsterdam 🇳🇱
-         </span>
-      </div>
-      <main id="main-content" class="max-w-7xl mx-auto px-6 py-8">
-         <div class="page-tabs mb-8" role="tablist">
-            <button class="page-tab active" id="tab-scanner" onclick="switchPageSection('scanner')" role="tab">🎯 Scanner</button>
-            <button class="page-tab" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">🏆 Leaderboard</button>
-            <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
-            <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
-         </div>
-         <!-- SCANNER SECTION -->
-         <div id="lead-scanner" class="mb-16 main-section section-visible" data-section="scanner">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-               <div class="text-center mb-8 max-w-3xl mx-auto">
-                  <h2 class="text-4xl font-bold mb-3">🎯 SEO Content Quality Scanner</h2>
-                  <h1 class="text-xl text-gray-200 mb-4" style="font-size:1.25rem;font-weight:400;color:#e5e7eb!important;">Check Your SEO Content Quality in Seconds (E.E.A.T. approved!)</h1>
-                  <div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 20px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:10px 24px;margin:0 auto 20px;max-width:600px;">
-                     <span style="font-size:0.8rem;color:#d1d5db;white-space:nowrap;">🛡️ Free &amp; Secure Scan</span>
-                     <span style="color:#4b5563;font-size:0.7rem;">|</span>
-                     <span style="font-size:0.8rem;color:#d1d5db;white-space:nowrap;">📊 50+ E-E-A-T Signals</span>
-                     <span style="color:#4b5563;font-size:0.7rem;">|</span>
-                     <span style="font-size:0.8rem;color:#d1d5db;white-space:nowrap;">⚡ Results in &lt; 5 sec</span>
-                  </div>
-                  <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
-                     <span class="feature-tag">🔍 Free single scan</span>
-                     <span class="feature-tag">•</span>
-                     <span class="feature-tag">🏆 Leaderboard submission</span>
-                     <span class="feature-tag">•</span>
-                     <span class="feature-tag">📋 I Have a List — on request</span>
-                     <span class="feature-tag">•</span>
-                  </div>
-               </div>
-               <div class="mode-toggle-container flex flex-wrap justify-center gap-3 mb-8" style="max-width:680px;margin-left:auto;margin-right:auto;">
-                  <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
-                  <i class="fas fa-search mr-2"></i> Scan a Website
-                  </button>
-                  <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
-                  <i class="fas fa-list mr-2"></i> I Have a List
-                  </button>
-                  <button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle">
-                  <i class="fas fa-robot mr-2"></i> Find Me Leads
-                  </button>
-               </div>
-               <div id="singleMode">
-                  <div class="card max-w-3xl mx-auto">
-                     <div class="flex flex-col sm:flex-row gap-3">
-                        <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
-                        <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
-                     </div>
-                     <div id="singleProgress" class="hidden mt-4">
-                        <div class="progress-bar">
-                           <div id="singleProgressBar" class="progress-bar-fill" style="width:0%"></div>
-                        </div>
-                        <p id="singleProgressText" class="text-sm text-center mt-2 text-gray-300"></p>
-                     </div>
-                     <div id="rescanBanner" class="hidden mb-4 rounded-xl p-4" style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4f46e5;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                           <div>
-                              <div style="font-size:0.82rem;font-weight:700;color:#a5b4fc!important;margin-bottom:2px;">⏰ Time for a rescan?</div>
-                              <div id="rescanBannerText" style="font-size:0.78rem;color:#818cf8!important;"></div>
-                           </div>
-                           <div style="display:flex;gap:8px;flex-shrink:0;">
-                              <button id="rescanBtn" onclick="doRescan()"
-                                 style="background:#4f46e5;color:white!important;border:none;border-radius:7px;padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-                              🔄 Rescan Now
-                              </button>
-                              <button onclick="document.getElementById('rescanBanner').classList.add('hidden')"
-                                 style="background:#1e1b4b;color:#6366f1!important;border:1px solid #4338ca;border-radius:7px;padding:7px 10px;font-size:0.78rem;cursor:pointer;">
-                              ✕
-                              </button>
-                           </div>
-                        </div>
-                     </div>
-                     <div id="singleResult" class="hidden mt-4"></div>
-                  </div>
-               </div>
-               <div id="bulkMode" class="hidden">
-                  <div class="card max-w-4xl mx-auto" style="border:2px solid #3b82f6;">
-                     <div class="flex flex-wrap items-center gap-3 mb-2 mode-card-header">
-                        <span class="text-xl font-bold">📋 I Have a List</span>
-                        <span class="text-xs px-3 py-1 bg-blue-600 rounded-full" style="color:white!important;">Batch Scan</span>
-                     </div>
-                     <p class="text-sm mb-5" style="color:#e5e7eb!important;">
-                        Already have URLs? Paste them here. Scan every site with the same GRAAF + CRAFT analysis, get full scores and recommendations for each — sorted best to lowest.
-                     </p>
-                     <div id="bulkScannerContent">
-                        <div id="bulkAccessGate" class="hidden">
-                           <div class="rounded-xl p-8 text-center" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;">
-                              <div style="font-size:3rem;margin-bottom:12px;">🔒</div>
-                              <h3 class="text-xl font-bold mb-3">Bulk Scanning is Available on Request</h3>
-                              <p class="text-sm mb-2" style="color:#9ca3af!important;">
-                                 Bulk scanning and lead generation are available for businesses and freelancers who want to use ContentScale as a lead generation tool.
-                              </p>
-                              <p class="text-sm mb-6" style="color:#9ca3af!important;">
-                                 Contact me on WhatsApp and I'll get you set up — usually within a few hours.
-                              </p>
-                              <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                                 <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20ContentScale%20bulk%20scanning" target="_blank" rel="noopener"
-                                    style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.95rem;">
-                                 <i class="fab fa-whatsapp"></i> Request Access on WhatsApp
-                                 </a>
-                                 <a href="/cdn-cgi/l/email-protection#f79e999198b7949899839299838494969b92d9849e8392" style="display:inline-flex;align-items:center;gap:8px;background:#1e293b;color:#e2e8f0!important;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;font-size:0.95rem;border:1px solid #334155;">
-                                 <i class="fas fa-envelope"></i> Email Instead
-                                 </a>
-                              </div>
-                              <div class="mt-6 grid grid-cols-3 gap-4 text-center" style="font-size:0.78rem;color:#6b7280!important;">
-                                 <div>
-                                    <div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">100</div>
-                                    emails / day
-                                 </div>
-                                 <div>
-                                    <div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">100</div>
-                                    URLs / batch
-                                 </div>
-                                 <div>
-                                    <div style="font-size:1.5rem;color:#a78bfa!important;font-weight:900;">200</div>
-                                    leads / month
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                        <div id="setupAllDone" class="hidden mb-5 rounded-xl p-4" style="background:rgba(16,185,129,0.08);border:1px solid #065f46;">
-                           <div class="flex items-center justify-between flex-wrap gap-3">
-                              <div class="flex items-center gap-3">
-                                 <span style="font-size:1.5rem;">✅</span>
-                                 <div>
-                                    <div class="font-bold" style="color:#34d399!important;">Bulk scanning active</div>
-                                    <div id="dailyLimitBadge" class="text-xs mt-1" style="color:#6b7280!important;">Loading usage...</div>
-                                 </div>
-                              </div>
-                              <div id="queueBadge" class="hidden text-xs px-3 py-1 rounded-full" style="background:#451a03;color:#fde68a!important;border:1px solid #92400e;"></div>
-                           </div>
-                        </div>
-                        <div id="bulkScannerForm">
-                           <!-- MODE TOGGLE -->
-                           <div class="flex gap-2 mb-4" style="background:#0f172a;border-radius:10px;padding:4px;border:1px solid #1e293b;">
-                             <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;cursor:pointer;">
-                               📋 Manual URLs
-                             </button>
-                             <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;">
-                               🗺️ Sitemap Scan
-                             </button>
-                           </div>
-
-                           <!-- MANUAL MODE -->
-                           <div id="manualModeSection" class="mb-5">
-                              <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(Unlimited · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
-                              <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
-                              <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0 URLs</span></div>
-                           </div>
-
-                           <!-- SITEMAP MODE -->
-                           <div id="sitemapModeSection" class="hidden mb-5">
-                             <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml of sitemap_index.xml)</span></label>
-                             <div class="flex gap-2 mb-3">
-                               <input id="sitemapUrlInput" type="url" placeholder="https://example.com/sitemap.xml" class="flex-1 p-3 rounded text-sm" style="background:#1e293b;border:1px solid #374151;color:#e5e7eb;">
-                               <button onclick="fetchSitemapUrls()" id="fetchSitemapBtn" class="btn btn-primary px-4 text-sm" style="white-space:nowrap;">
-                                 <i class="fas fa-download mr-1"></i> Fetch URLs
-                               </button>
-                             </div>
-                             <div id="sitemapFetchStatus" class="hidden rounded-lg p-3 text-sm mb-3" style="background:#0f2d1a;border:1px solid #166534;color:#4ade80;"></div>
-                             <div id="sitemapUrlPreview" class="hidden">
-                               <label class="block text-xs font-semibold mb-1" style="color:#6b7280;">Found URLs:</label>
-                               <div id="sitemapUrlList" class="rounded-lg p-3 max-h-48 overflow-y-auto text-xs" style="background:#111827;border:1px solid #1e293b;color:#9ca3af;line-height:2;font-family:monospace;"></div>
-                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af;"><span id="sitemapUrlCount">0 URLs</span><button onclick="clearSitemapUrls()" style="color:#f87171;background:none;border:none;cursor:pointer;">✕ Clear</button></div>
-                             </div>
-                             <div class="rounded-xl p-4 mt-3" style="background:#0f172a;border:1px solid #4c1d95;">
-                               <p class="text-xs font-semibold mb-1" style="color:#a78bfa!important;">🗺️ Sitemap Scan works automatically</p>
-                               <p class="text-xs" style="color:#6b7280!important;">All pages are scanned → average domain score calculated → automatically submitted to admin for approval on the leaderboard.</p>
-                             </div>
-                           </div>
-
-                           <!-- WHAT HAPPENS WITH RESULTS (manual mode only) -->
-                           <div id="manualResultsInfo" class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
-                              <p class="text-sm font-semibold mb-3" style="color:#e5e7eb!important;">What do you want to do with the results?</p>
-                              <label class="flex items-start gap-3 mb-3 cursor-default">
-                                 <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-                                    <i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>
-                                 </div>
-                                 <div>
-                                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📊 Scan &amp; score every URL</span>
-                                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
-                                 </div>
-                              </label>
-
-                           </div>
-
-
-                           <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
-                           <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
-                           </button>
-                           <div id="bulkProgress" class="hidden mt-4">
-                              <div class="progress-bar">
-                                 <div id="bulkProgressBar" class="progress-bar-fill" style="width:0%"></div>
-                              </div>
-                              <p id="bulkProgressText" class="text-sm text-center mt-2" style="color:#d1d5db!important;"></p>
-                           </div>
-                           <div id="bulkResults" class="hidden mt-4">
-                              <!-- Stats Grid -->
-                              <div class="bulk-stats-grid" id="bulkStats"></div>
-                              <!-- ✅ BULK EXPORT BUTTONS (NEW) -->
-                              <div class="flex gap-3 mb-4 justify-end flex-wrap" id="bulkExportButtons" style="display:none;">
-                                 <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
-                                 <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export Combined PDF</button>
-                                 <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
-                                 <button id="domainBadgeBtn" onclick="showBulkDomainBadge()" style="display:none;" class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><span style="margin-right:6px;">🏅</span> Domain Badge</button>
-
-                              </div>
-                              <div id="bulkResultsContainer"></div>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-               <div id="discoverMode" class="hidden">
-                  <div class="max-w-4xl mx-auto">
-                     <div class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#1c0a00,#0f172a);padding:40px 32px;text-align:center;margin-bottom:20px;">
-                        <div style="font-size:3.5rem;margin-bottom:12px;">🤖</div>
-                        <h2 style="font-size:1.8rem;font-weight:900;color:#fde68a;margin-bottom:12px;">Find Me Leads</h2>
-                        <p style="color:#d1d5db;font-size:1rem;max-width:560px;margin:0 auto 28px;">
-                           Pick a niche + city. Apify scrapes Google Maps. ContentScale scores every website.
-                           Export clean data or push directly to Instantly. <strong style="color:#fbbf24;">Zero manual work.</strong>
-                        </p>
-                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:32px;max-width:580px;margin-left:auto;margin-right:auto;">
-                           <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                              <div style="font-size:1.6rem;margin-bottom:6px;">📍</div>
-                              <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">1. You pick</div>
-                              <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">Niche + City</div>
-                           </div>
-                           <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                              <div style="font-size:1.6rem;margin-bottom:6px;">🗺️</div>
-                              <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">2. Apify finds</div>
-                              <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">Google Maps</div>
-                           </div>
-                           <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                              <div style="font-size:1.6rem;margin-bottom:6px;">📊</div>
-                              <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">3. Auto-scan</div>
-                              <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">All scored</div>
-                           </div>
-                           <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
-                              <div style="font-size:1.6rem;margin-bottom:6px;">⚡</div>
-                              <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">4. Export</div>
-                              <div style="color:#94a3b8;font-size:0.7rem;margin-top:2px;">CSV · Instantly</div>
-                           </div>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:32px;text-align:left;max-width:580px;margin-left:auto;margin-right:auto;">
-                           <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-                              <div style="font-size:0.8rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">✅ What you get</div>
-                              <ul style="color:#d1d5db;font-size:0.78rem;line-height:1.8;list-style:none;padding:0;margin:0;">
-                                 <li>🎯 100–500 leads per combo</li>
-                                 <li>📊 ContentScale score per site</li>
-                                 <li>📧 Email addresses found</li>
-                                 <li>🔗 Hosted report per lead</li>
-                                 <li>⚡ Push to Instantly direct</li>
-                              </ul>
-                           </div>
-                           <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;">
-                              <div style="font-size:0.8rem;font-weight:700;color:#fbbf24;margin-bottom:6px;">⚙️ You bring</div>
-                              <ul style="color:#d1d5db;font-size:0.78rem;line-height:1.8;list-style:none;padding:0;margin:0;">
-                                 <li>🔑 Your Apify token</li>
-                                 <li>📬 Instantly account (optional)</li>
-                                 <li>🚀 That's it</li>
-                              </ul>
-                           </div>
-                        </div>
-                        <a href="/app" style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;padding:16px 40px;border-radius:12px;font-size:1.05rem;font-weight:800;text-decoration:none;box-shadow:0 8px 32px rgba(245,158,11,0.3);">
-                        🚀 Open Lead Dashboard
-                        </a>
-                        <p style="color:#6b7280;font-size:0.78rem;margin-top:12px;">Requires activation · <a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20want%20access%20to%20the%20Lead%20Dashboard" target="_blank" style="color:#f59e0b;">Contact Ottmar on WhatsApp</a></p>
-                     </div>
-                  </div>
-               </div>
-               <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
-                  <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
-                  <h3 class="text-2xl font-bold mb-2">Work With Us — Find Leads Together</h3>
-                  <p class="text-lg mb-2" style="color:#e9d5ff!important;">
-                     Are you in SEO, sales, or outreach? Partner with ContentScale to find and convert leads — we provide the tools, you bring the hustle.
-                  </p>
-                  <p class="text-sm mb-5" style="color:#c4b5fd!important;">
-                     Use our scanner · Share results with clients · Earn per closed deal
-                  </p>
-                  <button onclick="openFreelancerModal()" class="btn-specialist">
-                  <i class="fas fa-handshake mr-2"></i>
-                  <span>Become a Partner</span>
-                  </button>
-               </div>
-            </div>
-         </div>
-         <!-- LEADERBOARD SECTION -->
-         <div id="leaderboard" class="mb-16 main-section" data-section="leaderboard">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-               <div class="text-center mb-6">
-                  <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
-                  <p style="color:#e5e7eb!important;">Top performing websites · ContentScore 70–100</p>
-               </div>
-               <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
-               <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
-                  <!-- SEARCH BAR -->
-                  <div class="mb-3">
-                     <div class="relative">
-                        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:0.85rem;"></i>
-                        <input id="lbSearch" type="text" placeholder="Search by company name, domain or niche…" oninput="applyLeaderboardFilters()" class="w-full pl-9 pr-4 p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                     </div>
-                  </div>
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                     <div>
-                        <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
-                        <select id="filterNiche" aria-label="Filter by niche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                           <option value="">All Niches</option>
-                           <optgroup label="── Agencies & Services">
-                              <option value="seo agency">SEO Agency</option>
-                              <option value="content marketing">Content Marketing Agency</option>
-                              <option value="digital marketing">Digital Marketing Agency</option>
-                              <option value="web design">Web Design & Dev Agency</option>
-                              <option value="pr agency">PR Agency</option>
-                           </optgroup>
-                           <optgroup label="── YMYL (High Stakes)">
-                              <option value="legal">Legal / Law Firm</option>
-                              <option value="healthcare">Healthcare / Medical</option>
-                              <option value="finance">Finance / Fintech</option>
-                              <option value="insurance">Insurance</option>
-                              <option value="tax">Accounting / Tax</option>
-                              <option value="mental health">Mental Health / Therapy</option>
-                           </optgroup>
-                           <optgroup label="── High Competition">
-                              <option value="saas">SaaS / Software</option>
-                              <option value="ecommerce">E-Commerce / Retail</option>
-                              <option value="real estate">Real Estate</option>
-                              <option value="travel">Travel & Tourism</option>
-                              <option value="recruitment">Recruitment / HR</option>
-                           </optgroup>
-                           <optgroup label="── Service Businesses">
-                              <option value="coaching">Coaching / Consulting</option>
-                              <option value="local">Local Business</option>
-                              <option value="home services">Home Services (Plumber, Builder…)</option>
-                              <option value="restaurant">Restaurant / Food</option>
-                              <option value="beauty">Beauty & Wellness</option>
-                              <option value="automotive">Automotive</option>
-                           </optgroup>
-                           <optgroup label="── Content-Driven">
-                              <option value="blog">Blog / News / Media</option>
-                              <option value="education">Education / eLearning</option>
-                              <option value="nonprofit">Non-Profit</option>
-                              <option value="other">Other</option>
-                           </optgroup>
-                        </select>
-                     </div>
-                     <div>
-                        <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🌍 Country</label>
-                        <select id="filterCountry" aria-label="Filter by country" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                           <option value="">All Countries</option>
-                           <optgroup label="── Europe">
-                              <option value="Netherlands">🇳🇱 Netherlands</option>
-                              <option value="Germany">🇩🇪 Germany</option>
-                              <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                              <option value="France">🇫🇷 France</option>
-                              <option value="Spain">🇪🇸 Spain</option>
-                              <option value="Italy">🇮🇹 Italy</option>
-                              <option value="Belgium">🇧🇪 Belgium</option>
-                              <option value="Sweden">🇸🇪 Sweden</option>
-                              <option value="Norway">🇳🇴 Norway</option>
-                              <option value="Denmark">🇩🇰 Denmark</option>
-                              <option value="Finland">🇫🇮 Finland</option>
-                              <option value="Switzerland">🇨🇭 Switzerland</option>
-                              <option value="Austria">🇦🇹 Austria</option>
-                              <option value="Poland">🇵🇱 Poland</option>
-                              <option value="Portugal">🇵🇹 Portugal</option>
-                              <option value="Ireland">🇮🇪 Ireland</option>
-                              <option value="Czech Republic">🇨🇿 Czech Republic</option>
-                              <option value="Hungary">🇭🇺 Hungary</option>
-                              <option value="Romania">🇷🇴 Romania</option>
-                              <option value="Greece">🇬🇷 Greece</option>
-                              <option value="Ukraine">🇺🇦 Ukraine</option>
-                           </optgroup>
-                           <optgroup label="── North America">
-                              <option value="United States">🇺🇸 United States</option>
-                              <option value="Canada">🇨🇦 Canada</option>
-                              <option value="Mexico">🇲🇽 Mexico</option>
-                           </optgroup>
-                           <optgroup label="── Latin America">
-                              <option value="Brazil">🇧🇷 Brazil</option>
-                              <option value="Argentina">🇦🇷 Argentina</option>
-                              <option value="Colombia">🇨🇴 Colombia</option>
-                              <option value="Chile">🇨🇱 Chile</option>
-                              <option value="Peru">🇵🇪 Peru</option>
-                           </optgroup>
-                           <optgroup label="── Asia Pacific">
-                              <option value="Australia">🇦🇺 Australia</option>
-                              <option value="New Zealand">🇳🇿 New Zealand</option>
-                              <option value="India">🇮🇳 India</option>
-                              <option value="Japan">🇯🇵 Japan</option>
-                              <option value="China">🇨🇳 China</option>
-                              <option value="South Korea">🇰🇷 South Korea</option>
-                              <option value="Singapore">🇸🇬 Singapore</option>
-                              <option value="Indonesia">🇮🇩 Indonesia</option>
-                              <option value="Malaysia">🇲🇾 Malaysia</option>
-                              <option value="Philippines">🇵🇭 Philippines</option>
-                              <option value="Thailand">🇹🇭 Thailand</option>
-                              <option value="Vietnam">🇻🇳 Vietnam</option>
-                              <option value="Pakistan">🇵🇰 Pakistan</option>
-                              <option value="Bangladesh">🇧🇩 Bangladesh</option>
-                           </optgroup>
-                           <optgroup label="── Middle East">
-                              <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
-                              <option value="Saudi Arabia">🇸🇸 Saudi Arabia</option>
-                              <option value="Israel">🇮🇱 Israel</option>
-                              <option value="Turkey">🇹🇷 Turkey</option>
-                              <option value="Egypt">🇪🇬 Egypt</option>
-                           </optgroup>
-                           <optgroup label="── Africa">
-                              <option value="South Africa">🇿🇦 South Africa</option>
-                              <option value="Nigeria">🇳🇬 Nigeria</option>
-                              <option value="Kenya">🇰🇪 Kenya</option>
-                              <option value="Ghana">🇬🇭 Ghana</option>
-                              <option value="Morocco">🇲🇦 Morocco</option>
-                           </optgroup>
-                           <optgroup label="──">
-                              <option value="Other">🌐 Other</option>
-                           </optgroup>
-                        </select>
-                     </div>
-                     <div>
-                        <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏢 Business Type</label>
-                        <select id="filterBizType" aria-label="Filter by business type" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                           <option value="">All Types</option>
-                           <option value="b2b">B2B</option>
-                           <option value="b2c">B2C</option>
-                           <option value="local">Local</option>
-                           <option value="enterprise">Enterprise</option>
-                           <option value="startup">Startup</option>
-                           <option value="nonprofit">Non-Profit</option>
-                        </select>
-                     </div>
-                     <div>
-                        <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">📊 Score Range</label>
-                        <select id="filterScore" aria-label="Filter by score range" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
-                           <option value="">All Scores (70–100)</option>
-                           <option value="95">🏅 Elite · 95–100</option>
-                           <option value="90">⭐ Excellent · 90–94</option>
-                           <option value="85">💪 Strong · 85–89</option>
-                           <option value="80">✅ Good · 80–84</option>
-                           <option value="75">📈 Solid · 75–79</option>
-                           <option value="70">🎯 Qualified · 70–74</option>
-                        </select>
-                     </div>
-                  </div>
-                  <div class="flex items-center justify-between mt-3">
-                     <span id="filterCount" class="text-xs" style="color:#9ca3af!important;"></span>
-                     <button onclick="resetLeaderboardFilters()" class="text-xs px-3 py-1 rounded" style="background:rgba(139,92,246,0.2);color:#c084fc!important;border:1px solid #7c3aed;cursor:pointer;">Reset Filters</button>
-                  </div>
-               </div>
-               <div id="top3-container" class="top3-grid"></div>
-               <div id="rankings4to15Container" class="mt-8"></div>
-               <div id="leaderboardEmpty" class="hidden text-center py-8" style="color:#6b7280!important;">
-                  <div class="text-4xl mb-3">🔍</div>
-                  <p>No entries match your filters. Try a different combination.</p>
-               </div>
-            </div>
-         </div>
-         <!-- SEO EXPERTS SECTION -->
-         <div id="freelancers" class="mb-16 main-section" data-section="experts">
-            <div class="text-center mb-8">
-               <h2 class="text-4xl font-bold mb-3">🎯 Verified SEO Specialists</h2>
-               <button onclick="openFreelancerModal()" class="btn btn-primary mt-2"><i class="fas fa-user-plus mr-2"></i> Become a Specialist</button>
-            </div>
-            <div class="cards-grid" id="freelancersGrid"></div>
-         </div>
-         <!-- TEMPLATES SECTION -->
-         <div id="templates" class="mb-16 main-section" data-section="templates">
-            <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-               <div class="text-center mb-8">
-                  <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
-                  <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
-               </div>
-               <div class="cards-grid" style="grid-template-columns:repeat(2,1fr)!important;">
-                  <div class="card">
-                     <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
-                     <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with 85+ score</p>
-                     <div class="template-editor">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
-                        <input type="text" id="template-congrats-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-                        <textarea id="template-congrats-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
-                     </div>
-                     <button onclick="saveTemplate('congrats')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-                  </div>
-                  <div class="card">
-                     <h3 class="text-xl font-bold mb-2">📈 Improvement Pitch</h3>
-                     <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with website &lt;85 score</p>
-                     <div class="template-editor">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
-                        <input type="text" id="template-improvement-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-                        <textarea id="template-improvement-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
-                     </div>
-                     <button onclick="saveTemplate('improvement')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-                  </div>
-                  <div class="card" style="border-color:#f59e0b!important;">
-                     <h3 class="text-xl font-bold mb-2">🎯 Almost Made It</h3>
-                     <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses scoring 65–69 · {{gap}} points from leaderboard</p>
-                     <div class="template-editor">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
-                        <input type="text" id="template-almostMade-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-                        <textarea id="template-almostMade-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
-                     </div>
-                     <button onclick="saveTemplate('almostMade')" class="btn btn-primary w-full mt-4" style="background:linear-gradient(135deg,#b45309,#d97706)!important;"><i class="fas fa-save mr-2"></i> Save Template</button>
-                  </div>
-                  <div class="card">
-                     <h3 class="text-xl font-bold mb-2">🌐 Website Offer</h3>
-                     <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses without website</p>
-                     <div class="template-editor">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Subject</label>
-                        <input type="text" id="template-website-subject" class="w-full p-2 rounded mb-2" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:0.85rem;">
-                        <label class="block text-sm mb-1" style="color:#e5e7eb!important;">Body (HTML)</label>
-                        <textarea id="template-website-body" class="w-full p-2 rounded badge-code-ta" style="min-height:420px;font-size:0.72rem;"></textarea>
-                     </div>
-                     <button onclick="saveTemplate('website')" class="btn btn-primary w-full mt-4"><i class="fas fa-save mr-2"></i> Save Template</button>
-                  </div>
-               </div>
-               <div class="mt-8 rounded-lg p-5" style="background:#0f172a;border:1px solid #334155;">
-                  <div class="flex items-center gap-2 mb-4">
-                     <span class="text-lg">📎</span>
-                     <h4 class="font-bold text-base">Available Variables</h4>
-                     <span class="text-xs px-2 py-0.5 rounded-full" style="background:#1e293b;color:#94a3b8!important;">Use in both Subject &amp; Body</span>
-                  </div>
-                  <div class="mb-4">
-                     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🏢 Business</p>
-                     <div class="var-grid">
-                        <div class="var-row"><code style="color:#c084fc!important;">{{company_name}}</code><span>Business / domain name</span></div>
-                        <div class="var-row"><code style="color:#c084fc!important;">{{domain}}</code><span>Clean domain (no https://)</span></div>
-                        <div class="var-row"><code style="color:#c084fc!important;">{{website_url}}</code><span>Full scanned URL</span></div>
-                        <div class="var-row"><code style="color:#c084fc!important;">{{industry}}</code><span>Detected industry / niche</span></div>
-                        <div class="var-row"><code style="color:#c084fc!important;">{{city}}</code><span>Detected city (if found)</span></div>
-                        <div class="var-row"><code style="color:#c084fc!important;">{{country}}</code><span>Detected country</span></div>
-                     </div>
-                  </div>
-                  <div class="mb-4">
-                     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
-                     <div class="var-grid">
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{graaf_score}}</code><span>GRAAF sub-score (/50)</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{craft_score}}</code><span>CRAFT sub-score (/30)</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{tech_score}}</code><span>Technical sub-score (/20)</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{word_count}}</code><span>Detected word count</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{top_issue}}</code><span>Top recommended fix</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{page_title}}</code><span>Scanned page &lt;title&gt;</span></div>
-                     </div>
-                  </div>
-                  <div class="mb-4">
-                     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">👤 Sender (You)</p>
-                     <div class="var-grid">
-                        <div class="var-row"><code style="color:#fb923c!important;">{{sender_name}}</code><span>Your name (from form)</span></div>
-                        <div class="var-row"><code style="color:#fb923c!important;">{{sender_email}}</code><span>Your email (from form)</span></div>
-                        <div class="var-row"><code style="color:#fb923c!important;">{{sender_phone}}</code><span>+31 6 2807 3996</span></div>
-                        <div class="var-row"><code style="color:#fb923c!important;">{{sender_whatsapp}}</code><span>WhatsApp chat link</span></div>
-                        <div class="var-row"><code style="color:#fb923c!important;">{{sender_company}}</code><span>ContentScale</span></div>
-                     </div>
-                  </div>
-                  <div class="mb-4">
-                     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">🔗 Links &amp; Dates</p>
-                     <div class="var-grid">
-                        <div class="var-row"><code style="color:#a3e635!important;">{{leaderboard_url}}</code><span>Link to leaderboard (app.contentscale.site)</span></div>
-                        <div class="var-row"><code style="color:#a3e635!important;">{{scanner_url}}</code><span>Link to scanner app (app.contentscale.site)</span></div>
-                        <div class="var-row"><code style="color:#a3e635!important;">{{main_site_url}}</code><span>Main website (contentscale.site)</span></div>
-                        <div class="var-row"><code style="color:#a3e635!important;">{{cta_url}}</code><span>Main CTA link (WhatsApp wa.me/31628073996)</span></div>
-                        <div class="var-row"><code style="color:#a3e635!important;">{{date}}</code><span>Today's date (Feb 22, 2026)</span></div>
-                        <div class="var-row"><code style="color:#a3e635!important;">{{month}}</code><span>Current month (February)</span></div>
-                        <div class="var-row"><code style="color:#a3e635!important;">{{year}}</code><span>Current year (2026)</span></div>
-                     </div>
-                  </div>
-                  <div>
-                     <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">⚠️ Required</p>
-                     <div class="var-grid">
-                        <div class="var-row" style="border-color:#dc2626!important;"><code style="color:#f87171!important;">{{unsubscribe_url}}</code><span style="color:#fca5a5!important;">Must include in every email (GDPR)</span></div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-      </main>
-      <section style="background:linear-gradient(135deg,#0f0a1e 0%,#1a1040 50%,#0f0a1e 100%);border-top:1px solid #2d1b69;border-bottom:1px solid #2d1b69;padding:60px 24px;">
-         <div style="max-width:900px;margin:0 auto;display:flex;gap:40px;align-items:center;flex-wrap:wrap;" class="author-section-inner">
-            <div style="flex-shrink:0;text-align:center;">
-               <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png"
-                  alt="Ottmar JG Francisca — Founder ContentScale"
-                  style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #a855f7;box-shadow:0 0 32px rgba(168,85,247,0.4);display:block;margin:0 auto 12px;"
-                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-               <div style="width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:none;align-items:center;justify-content:center;font-size:2.5rem;font-weight:900;color:white;border:3px solid #a855f7;box-shadow:0 0 32px rgba(168,85,247,0.4);margin:0 auto 12px;">O</div>
-               <div style="display:inline-flex;align-items:center;gap:6px;background:#065f46;color:#4ade80;padding:4px 12px;border-radius:99px;font-size:0.72rem;font-weight:700;">✅ Verified Founder</div>
-            </div>
-            <div style="flex:1;min-width:260px;">
-               <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Built by</div>
-               <h2 style="font-size:1.6rem;font-weight:900;color:#f9fafb;margin-bottom:4px;line-height:1.2;">Ottmar JG Francisca</h2>
-               <p style="color:#a78bfa;font-size:0.9rem;font-weight:600;margin-bottom:14px;">Creator of the GRAAF Framework · SEO Recovery Specialist</p>
-               <p style="color:#d1d5db;font-size:0.88rem;line-height:1.7;margin-bottom:20px;">
-                  24 years of crisis management across Dutch Police and municipal leadership — where every decision had to be right under pressure.
-                  Since 2018, I've applied that same methodology to SEO: diagnosing exactly what went wrong, building a recovery plan, and executing it.
-                  ContentScale is that system made available to every business hit by Google algorithm updates and AI Overviews.
-                  <strong style="color:#e9d5ff;">78% traffic recovery rate across 200+ clients in 47+ countries.</strong>
-               </p>
-               <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;">
-                  <div>
-                     <div style="font-size:1.4rem;font-weight:900;color:#4ade80;">200+</div>
-                     <div style="font-size:0.72rem;color:#6b7280;">Clients</div>
-                  </div>
-                  <div>
-                     <div style="font-size:1.4rem;font-weight:900;color:#fbbf24;">78%</div>
-                     <div style="font-size:0.72rem;color:#6b7280;">Recovery Rate</div>
-                  </div>
-                  <div>
-                     <div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">47+</div>
-                     <div style="font-size:0.72rem;color:#6b7280;">Countries</div>
-                  </div>
-                  <div>
-                     <div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">24</div>
-                     <div style="font-size:0.72rem;color:#6b7280;">Yrs Crisis Mgmt</div>
-                  </div>
-                  <div>
-                     <div style="font-size:1.4rem;font-weight:900;color:#f9fafb;">2018</div>
-                     <div style="font-size:0.72rem;color:#6b7280;">SEO Since</div>
-                  </div>
-               </div>
-               <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                  <a href="https://wa.me/31628073996" target="_blank" rel="noopener"
-                     style="display:inline-flex;align-items:center;gap:8px;background:#0f7b3a;color:white;padding:10px 20px;border-radius:10px;font-weight:700;font-size:0.85rem;text-decoration:none;">
-                  💬 WhatsApp Me
-                  </a>
-                  <a href="https://contentscale.site" target="_blank" rel="noopener"
-                     style="display:inline-flex;align-items:center;gap:8px;background:#1e1b4b;color:#c4b5fd;border:1px solid #4c1d95;padding:10px 20px;border-radius:10px;font-weight:700;font-size:0.85rem;text-decoration:none;">
-                  🌐 ContentScale.site
-                  </a>
-                  <span style="display:inline-flex;align-items:center;gap:6px;color:#9ca3af;font-size:0.82rem;padding:10px 0;">
-                  🇳🇱 Amsterdam, Netherlands
-                  </span>
-               </div>
-            </div>
-         </div>
-      </section>
-      <footer class="border-t-2 border-gray-800 pt-12 pb-8 mt-8" style="background:#030712;">
-         <div class="max-w-7xl mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8">
-               <div class="md:col-span-1">
-                  <span class="text-xl font-bold" style="background:linear-gradient(90deg,#c084fc,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ContentScale</span>
-                  <p class="text-sm mt-3 footer-brand-desc leading-relaxed">Elite SEO Content Quality Scanner. GRAAF Framework, CRAFT Methodology + Technical SEO. Helping businesses recover traffic from Google algorithm updates and AI Overviews since 2018.</p>
-                  <p class="text-xs mt-3 footer-brand-desc">Amsterdam, Netherlands · 47+ countries served</p>
-                  <div class="flex gap-3 mt-4">
-                     <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="text-green-400 hover:text-green-300 transition-colors text-xl" style="color:#4ade80!important;"><i class="fab fa-whatsapp"></i></a>
-                     <a href="https://linkedin.com/in/ottmar-joseph-gregory-francisca" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 transition-colors text-xl" style="color:#60a5fa!important;"><i class="fab fa-linkedin"></i></a>
-                  </div>
-               </div>
-               <div>
-                  <h4 class="font-semibold mb-4 text-white">Product</h4>
-                  <ul class="space-y-2 text-sm">
-                     <li><a href="#lead-scanner">Lead Scanner</a></li>
-                     <li><a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a></li>
-                     <li><a href="#freelancers">SEO Specialists</a></li>
-                     <li><a href="javascript:void(0)" onclick="switchPageSection('templates')">Email Templates</a></li>
-                  </ul>
-               </div>
-               <div>
-                  <h4 class="font-semibold mb-4 text-white">Company</h4>
-                  <ul class="space-y-2 text-sm">
-                     <li><a href="https://contentscale.site/about-us" target="_blank" rel="noopener">About Us</a></li>
-                     <li><a href="https://contentscale.site/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a></li>
-                     <li><a href="/app-privacy-policy.html">App Privacy Policy</a></li>
-                     <li><a href="https://contentscale.site/terms" target="_blank" rel="noopener">Terms of Service</a></li>
-                     <li><a href="https://contentscale.site" target="_blank" rel="noopener">Main Website</a></li>
-                  </ul>
-               </div>
-               <div>
-                  <h4 class="font-semibold mb-4 text-white">Contact</h4>
-                  <ul class="space-y-2 text-sm">
-                     <li class="flex items-center gap-2" style="color:#9ca3af!important;">
-                        <i class="fab fa-whatsapp" style="color:#4ade80!important;"></i>
-                        <a href="https://wa.me/31628073996" target="_blank" rel="noopener">+31 6 2807 3996</a>
-                     </li>
-                     <li class="flex items-center gap-2" style="color:#9ca3af!important;">
-                        <i class="fas fa-envelope" style="color:#818cf8!important;"></i>
-                        <span><a href="/cdn-cgi/l/email-protection#660f08000926050908120308121505070a0348150f1203"><span class="__cf_email__" data-cfemail="3c55525a537c5f5352485952484f5f5d5059124f554859">[email&#160;protected]</span></a></span>
-                     </li>
-                     <li class="flex items-center gap-2" style="color:#9ca3af!important;">
-                        <i class="fas fa-map-marker-alt" style="color:#f87171!important;"></i>
-                        <span>Amsterdam, Netherlands</span>
-                     </li>
-                     <li class="flex items-center gap-2" style="color:#9ca3af!important;">
-                        <i class="fas fa-clock" style="color:#fbbf24!important;"></i>
-                        <span>Mon–Fri, 9:00–18:00 CET</span>
-                     </li>
-                  </ul>
-               </div>
-            </div>
-            <div class="border-t border-gray-800 pt-6 pb-4">
-               <p class="text-xs text-center mb-3" style="color:#9ca3af!important;">Popular Resources:</p>
-               <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
-                  <a href="https://contentscale.site/traffic-drop-recovery/" target="_blank" rel="noopener" style="color:#818cf8!important;">Traffic Drop Recovery</a>
-                  <span style="color:#374151!important;">|</span>
-                  <a href="https://contentscale.site/ai-overview-optimization/" target="_blank" rel="noopener" style="color:#818cf8!important;">AI Overview Optimization</a>
-                  <span style="color:#374151!important;">|</span>
-                  <a href="https://contentscale.site/international-seo/" target="_blank" rel="noopener" style="color:#818cf8!important;">International SEO</a>
-                  <span style="color:#374151!important;">|</span>
-                  <a href="https://contentscale.site/seo-contentscore/" target="_blank" rel="noopener" style="color:#818cf8!important;">SEO ContentScore Tool</a>
-                  <span style="color:#374151!important;">|</span>
-                  <a href="https://contentscale.site/graaf-framework/" target="_blank" rel="noopener" style="color:#818cf8!important;">GRAAF Framework</a>
-               </div>
-            </div>
-            <div class="border-t border-gray-800 pt-6 text-center text-xs" style="color:#9ca3af!important;">
-               <p class="mb-1">© 2026 ContentScale — Ottmar Francisca · Amsterdam · Built with 🚀 in the Netherlands</p>
-               <p>Privacy-First Platform · Zero Data Collection · GDPR Compliant</p>
-               <p class="mt-2 italic" style="color:#9ca3af!important;">GRAAF Framework is a proprietary SEO methodology by Ottmar Francisca, complementing Julia McCoy's CRAFT Framework.</p>
-            </div>
-         </div>
-      </footer>
-      <div id="freelancerModal" class="modal">
-         <div class="modal-content">
-            <h2 class="text-2xl font-bold mb-4" style="color:#111827!important;">Register as Specialist</h2>
-            <div class="space-y-4">
-               <input type="text" id="freelancerName" placeholder="Full Name *" class="w-full p-3 rounded">
-               <input type="email" id="freelancerEmail" placeholder="Email *" class="w-full p-3 rounded">
-               <input type="text" id="freelancerTitle" placeholder="Professional Title *" class="w-full p-3 rounded">
-               <textarea id="freelancerBio" rows="3" placeholder="Bio (max 120 chars)" maxlength="120" class="w-full p-3 rounded"></textarea>
-               <select id="freelancerRate" aria-label="Hourly rate" class="w-full p-3 rounded">
-                  <option value="">Select Rate...</option>
-                  <option value="€50 - €75 / hour">€50 - €75 / hour</option>
-                  <option value="€75 - €100 / hour">€75 - €100 / hour</option>
-                  <option value="Project-based">Project-based</option>
-               </select>
-               <button onclick="submitFreelancer()" class="btn btn-primary w-full">Submit Application</button>
-               <button onclick="closeModal()" class="btn btn-cancel w-full">Cancel</button>
-            </div>
-         </div>
-      </div>
-      <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-         let userId = null;
-         let sendgridConfigured = false;
-         let userTemplates = {};
-         let bulkResults = [];
-         let isScanning = false;
-         const DEFAULT_TEMPLATES = {
-         congrats: {
-         subject: `🏆 {{company_name}} — You scored {{score}}/100. You made the Elite Leaderboard.`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>You Made the Elite Leaderboard</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🏆</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">You Made the Elite Leaderboard.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">ContentScore: {{score}} / 100 · {{score_label}}</p></div><div style="background:#fdf4ff;padding:32px;text-align:center;"><p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:700;">Your ContentScore</p><div style="font-size:72px;font-weight:900;color:#7e22ce;line-height:1;margin-bottom:8px;">{{score}}</div><div style="font-size:14px;color:#6b7280;margin-bottom:16px;">out of 100</div>{{score_bar}}</div><div style="padding:36px 32px 28px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>. I scanned your site today. Your score is impressive.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Talk — WhatsApp</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p></div></div></body></html>`
-         },
-         improvement: {
-         subject: `{{company_name}}: Your website scored {{score}}/100. Here is what is holding you back.`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Free SEO Scan Result</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#0284c7 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:56px;line-height:1;margin-bottom:16px;">📊</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Free Website Scan</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:15px;">{{domain}} · Scanned on {{date}}</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I ran a free scan of your website. Your score is <strong>{{score}} out of 100</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Yes — Show Me How to Improve</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#1d4ed8;">Unsubscribe</a></p></div></div></body></html>`
-         },
-         almostMade: {
-         subject: `{{company_name}} — {{gap}} points from the Elite Leaderboard (score {{score}}/100)`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>So Close — Just {{gap}} Points Away</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🎯</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">So Close.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">Just {{gap}} points from the Elite Leaderboard.</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">Your site almost made our Elite Leaderboard. You are <strong>{{gap}} points away</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Get You on the Leaderboard</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#b45309;">Unsubscribe</a></p></div></div></body></html>`
-         },
-         website: {
-         subject: `{{company_name}} — your competitors in {{country}} are getting online customers. Are you?`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
-         }
-         };
-         // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from localStorage (100% HONEST)
-         function initRealActivityBanner() {
-         const banner = document.getElementById('realActivityBanner');
-         const countEl = document.getElementById('realScansCount');
-         const labelEl = document.getElementById('realScansLabel');
-         if (!banner || !countEl || !labelEl) return;
-         // Get today's scan count from localStorage (REAL DATA)
-         const today = new Date().toDateString();
-         const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         const todayScans = scanHistory.filter(scan => {
-         const scanDate = new Date(scan.date).toDateString();
-         return scanDate === today;
-         }).length;
-         // Show banner with REAL count (0 if no scans, real number if scans exist)
-         countEl.textContent = todayScans;
-         labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
-         // Only show banner if there are scans OR always show (your choice)
-         if (todayScans >= 0) { // Always show, even if 0
-         banner.style.display = 'block';
-         }
-         }
-         // Update banner after scan completes
-         function updateRealActivityBanner() {
-         initRealActivityBanner();
-         }
-         function checkRescanReminder() {
-         try {
-         const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         if (!history.length) return;
-         const last = history[0];
-         const daysSince = Math.floor((Date.now() - new Date(last.date)) / 86400000);
-         if (daysSince >= 30) {
-         const banner = document.getElementById('rescanBanner');
-         const text = document.getElementById('rescanBannerText');
-         if (banner && text) {
-         const domain = last.url.replace(/https?:\/\//, '').replace(/\/.*$/, '');
-         text.textContent = 'Last scanned ' + domain + ' ' + daysSince + ' days ago — score was ' + last.score + '/100. Google has updated since then.';
-         document.getElementById('rescanBtn').onclick = () => {
-         document.getElementById('singleUrlInput').value = last.url;
-         banner.classList.add('hidden');
-         scanSingleURL();
-         };
-         banner.classList.remove('hidden');
-         }
-         }
-         } catch(e) {}
-         }
-         document.addEventListener('DOMContentLoaded', function () {
-         registerUser();
-         loadLeaderboardData();
-         loadFreelancers();
-         checkRescanReminder();
-         initRealActivityBanner(); // Initialize real activity banner
-         setTimeout(() => {
-         const l = document.getElementById('loading-screen');
-         if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
-         }, 1200);
-         });
-         function updateBulkCount() {
-         const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
-         const el = document.getElementById('bulkCountDisplay');
-         const btnLabel = document.getElementById('bulkBtnLabel');
-         if (el) {
-         // REMOVED LIMIT WARNING LOGIC
-         el.textContent = lines.length + ' URLs';
-         el.style.color = '#9ca3af';
-         }
-         if (btnLabel) {
-         btnLabel.textContent = `Scan All URLs (${lines.length})`;
-         }
-         }
-
-         // ========== SITEMAP MODE ==========
-         let currentBulkMode = 'manual';
-         let sitemapFetchedUrls = [];
-
-         function setBulkMode(mode) {
-           currentBulkMode = mode;
-           const manualSec  = document.getElementById('manualModeSection');
-           const sitemapSec = document.getElementById('sitemapModeSection');
-           const manualBtn  = document.getElementById('modeManualBtn');
-           const sitemapBtn = document.getElementById('modeSitemapBtn');
-           const btnLabel   = document.getElementById('bulkBtnLabel');
-
-           if (mode === 'manual') {
-             manualSec.classList.remove('hidden');
-             sitemapSec.classList.add('hidden');
-             manualBtn.style.background  = 'linear-gradient(135deg,#4f46e5,#7e22ce)';
-             manualBtn.style.color       = 'white';
-             sitemapBtn.style.background = 'transparent';
-             sitemapBtn.style.color      = '#9ca3af';
-             if (btnLabel) btnLabel.textContent = 'Scan All URLs';
-           } else {
-             manualSec.classList.add('hidden');
-             sitemapSec.classList.remove('hidden');
-             sitemapBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)';
-             sitemapBtn.style.color      = 'white';
-             manualBtn.style.background  = 'transparent';
-             manualBtn.style.color       = '#9ca3af';
-             const count = sitemapFetchedUrls.length;
-             if (btnLabel) btnLabel.textContent = count > 0 ? `Scan Sitemap (${count} pages)` : 'Fetch URLs First';
-           }
-         }
-
-         async function fetchSitemapUrls() {
-           const input = document.getElementById('sitemapUrlInput');
-           const btn   = document.getElementById('fetchSitemapBtn');
-           const status= document.getElementById('sitemapFetchStatus');
-           const preview= document.getElementById('sitemapUrlPreview');
-           const listDiv= document.getElementById('sitemapUrlList');
-           const countEl= document.getElementById('sitemapUrlCount');
-           const url = input.value.trim();
-           if (!url) { showToast('❌ Enter a sitemap URL', '#ef4444'); return; }
-           btn.disabled = true;
-           btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Fetching...';
-           status.classList.remove('hidden');
-           status.style.background = '#1e293b';
-           status.style.borderColor = '#374151';
-           status.style.color = '#9ca3af';
-           status.textContent = 'Sitemap ophalen...';
-           try {
-             const res = await fetch('/api/sitemap/urls', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ url })
-             });
-             const data = await res.json();
-             if (!data.success) throw new Error(data.error || 'Fetch mislukt');
-             sitemapFetchedUrls = data.urls;
-             status.style.background  = '#0f2d1a';
-             status.style.borderColor = '#166534';
-             status.style.color       = '#4ade80';
-             status.textContent       = `✅ ${data.total} URL's gevonden in sitemap`;
-             listDiv.innerHTML = sitemapFetchedUrls.map(u =>
-               `<div style="padding:2px 0;border-bottom:1px solid #1e293b;">${u}</div>`
-             ).join('');
-             countEl.textContent = `${sitemapFetchedUrls.length} URL's`;
-             preview.classList.remove('hidden');
-             const btnLabel = document.getElementById('bulkBtnLabel');
-             if (btnLabel) btnLabel.textContent = `Scan Sitemap (${sitemapFetchedUrls.length} pages)`;
-           } catch(e) {
-             status.style.background  = '#1a0a0a';
-             status.style.borderColor = '#7f1d1d';
-             status.style.color       = '#f87171';
-             status.textContent       = '❌ ' + e.message;
-           } finally {
-             btn.disabled = false;
-             btn.innerHTML = '<i class="fas fa-download mr-1"></i> Fetch URLs';
-           }
-         }
-
-         function clearSitemapUrls() {
-           sitemapFetchedUrls = [];
-           document.getElementById('sitemapUrlPreview').classList.add('hidden');
-           document.getElementById('sitemapFetchStatus').classList.add('hidden');
-           document.getElementById('sitemapUrlInput').value = '';
-           const btnLabel = document.getElementById('bulkBtnLabel');
-           if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
-         }
-
-         async function submitSitemapWithMeta(domain, avgScore, pageCount, sitemapUrl) {
-           const company_name  = document.getElementById('sbCompanyName')?.value.trim() || domain;
-           const country       = document.getElementById('sbCountry')?.value || '';
-           const niche         = document.getElementById('sbNiche')?.value || '';
-           const business_type = document.getElementById('sbBizType')?.value || '';
-           // Filter ONLY results from this specific domain to avoid cross-scan contamination
-           const successful = bulkResults.filter(r => r.success && r.score > 0 && r.url && r.url.replace(/https?:\/\//,'').split('/')[0] === domain);
-           const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a,b) => a+b, 0) / arr.length) : 0;
-           // Use passed-in avgScore as authoritative (it was computed at render time from correct results)
-           const payload = {
-             domain: 'https://' + domain,
-             company_name,
-             avg_score:     avgScore,
-             avg_graaf:     avg(successful.map(r => r.metrics?.graaf || 0)),
-             avg_craft:     avg(successful.map(r => r.metrics?.craft || 0)),
-             avg_technical: avg(successful.map(r => r.metrics?.technical || 0)),
-             page_count: successful.length || pageCount,
-             page_scores: successful.map(r => ({ url: r.url, score: r.score, graaf: r.metrics?.graaf||0, craft: r.metrics?.craft||0, technical: r.metrics?.technical||0 })),
-             country, niche, business_type
-           };
-           try {
-             const res = await fetch('/api/sitemap/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-             const data = await res.json();
-             const banner = document.getElementById('sitemapSubmitBanner');
-             if (banner) {
-               if (data.success) {
-                 banner.querySelector('button').outerHTML = `<div style="text-align:center;padding:10px;background:rgba(74,222,128,0.1);border:1px solid #166534;border-radius:8px;color:#4ade80;font-weight:700;">✅ Submitted — pending admin approval</div>`;
-               } else {
-                 showToast('❌ Submit mislukt: ' + (data.error || 'unknown'), '#ef4444');
-               }
-             }
-           } catch(e) { showToast('❌ Submit mislukt', '#ef4444'); }
-         }
-         // ========== END SITEMAP MODE ==========
-
-         async function registerUser() {
-         try {
-         let storedUserId = localStorage.getItem('user_id');
-         if (!storedUserId) {
-         const response = await fetch('/api/user/register', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-         const data = await response.json();
-         if (data.success && data.userId) {
-         userId = data.userId;
-         localStorage.setItem('user_id', userId);
-         }
-         } else {
-         userId = storedUserId;
-         }
-         loadApiStatus();
-         loadUserTemplates();
-         checkRescanReminder();
-         } catch (error) { console.error('Registration error:', error); }
-         }
-         async function loadApiStatus() {
-         if (!userId) return;
-         try {
-         const response = await fetch('/api/user/keys/status', { headers: { 'x-user-id': userId } });
-         const data = await response.json();
-         if (data.success) {
-         sendgridConfigured = data.hasSendgrid;
-         checkSetupStatus();
-         }
-         } catch (error) { console.error('Error loading API status:', error); }
-         }
-         function checkSetupStatus() {
-         const gate = document.getElementById('bulkAccessGate');
-         const allDone = document.getElementById('setupAllDone');
-         if (gate) gate.classList.add('hidden');
-         if (allDone) allDone.classList.remove('hidden');
-         }
-         function _stripBadgeComments(html) {
-         return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
-         }
-         window._copyBadge = function(type, score) {
-         const key = type === 'full' ? '_badgeFull_' : type === 'compact' ? '_badgeCompact_' : '_badgeText_';
-         const raw = window[key + score] || '';
-         const btnId = 'copyBtn_' + type + '_' + score;
-         const btn = document.getElementById(btnId);
-         const labelMap = { full: '📋 Copy HTML', compact: '📋 Copy HTML', text: '📋 Copy HTML' };
-         const doCopied = () => {
-         if (btn) { btn.textContent = '✅ Copied!'; btn.style.background = '#14532d'; }
-         setTimeout(() => { if (btn) { btn.textContent = labelMap[type]; btn.style.background = ''; } }, 2200);
-         };
-         navigator.clipboard.writeText(raw).then(doCopied).catch(() => {
-         const ta = document.createElement('textarea');
-         ta.value = raw; ta.style.position = 'fixed'; ta.style.opacity = '0';
-         document.body.appendChild(ta); ta.select();
-         document.execCommand('copy');
-         document.body.removeChild(ta);
-         doCopied();
-         });
-         };
-         async function loadUserTemplates() {
-         ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
-         const subEl = document.getElementById('template-' + t + '-subject');
-         const bodyEl = document.getElementById('template-' + t + '-body');
-         if (subEl && DEFAULT_TEMPLATES[t]) subEl.value = DEFAULT_TEMPLATES[t].subject;
-         if (bodyEl && DEFAULT_TEMPLATES[t]) bodyEl.value = DEFAULT_TEMPLATES[t].body;
-         });
-         if (!userId) return;
-         try {
-         const response = await fetch('/api/user/templates', { headers: { 'x-user-id': userId } });
-         const data = await response.json();
-         if (data.success && data.templates) {
-         userTemplates = data.templates;
-         ['congrats', 'almostMade', 'improvement', 'website'].forEach(t => {
-         if (userTemplates[t] && userTemplates[t].subject && userTemplates[t].body && userTemplates[t].body.trim().length > 500) {
-         const subEl = document.getElementById('template-' + t + '-subject');
-         const bodyEl = document.getElementById('template-' + t + '-body');
-         if (subEl) subEl.value = userTemplates[t].subject;
-         if (bodyEl) bodyEl.value = userTemplates[t].body;
-         }
-         });
-         }
-         } catch (error) { console.error('Error loading templates:', error); }
-         }
-         async function saveTemplate(type) {
-         if (!userId) { alert('❌ User not registered. Refresh page.'); return; }
-         const subject = document.getElementById(`template-${type}-subject`).value;
-         const body = document.getElementById(`template-${type}-body`).value;
-         if (!subject || !body) { alert('❌ Fill both fields'); return; }
-         try {
-         const response = await fetch('/api/user/templates', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-         body: JSON.stringify({ type, subject, body })
-         });
-         const data = await response.json();
-         if (data.success) { alert('✅ Template saved!'); userTemplates[type] = { subject, body }; }
-         else { alert('❌ ' + (data.error || 'Failed')); }
-         } catch (error) { alert('❌ Error: ' + error.message); }
-         }
-         function switchMode(mode) {
-         const singleMode = document.getElementById('singleMode');
-         const bulkMode = document.getElementById('bulkMode');
-         const discoverMode = document.getElementById('discoverMode');
-         const singleBtn = document.getElementById('modeSingleBtn');
-         const bulkBtn = document.getElementById('modeBulkBtn');
-         const discoverBtn = document.getElementById('modeDiscoverBtn');
-         [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
-         [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
-         if (mode === 'single') {
-         if (singleMode) singleMode.classList.remove('hidden');
-         if (singleBtn) singleBtn.classList.add('active');
-         } else if (mode === 'bulk') {
-         if (bulkMode) bulkMode.classList.remove('hidden');
-         if (bulkBtn) bulkBtn.classList.add('active');
-         updateBulkCount();
-         } else if (mode === 'discover') {
-         if (discoverMode) discoverMode.classList.remove('hidden');
-         if (discoverBtn) discoverBtn.classList.add('active');
-         }
-         }
-         async function scanSingleURL() {
-         const input = document.getElementById('singleUrlInput');
-         const button = document.getElementById('singleScanBtn');
-         const progress = document.getElementById('singleProgress');
-         const progressBar = document.getElementById('singleProgressBar');
-         const progressText = document.getElementById('singleProgressText');
-         let url = input.value.trim();
-         if (!url) { alert('❌ Enter URL'); return; }
-         if (!url.startsWith('http')) url = 'https://' + url;
-         button.disabled = true;
-         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-         progress.classList.remove('hidden');
-         progressBar.style.width = '20%';
-         progressText.textContent = 'Starting...';
-         try {
-         const response = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
-         progressBar.style.width = '60%';
-         progressText.textContent = 'Analyzing...';
-         const data = await response.json();
-         if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
-         displayScanResult(data);
-         progressBar.style.width = '100%';
-         progressText.textContent = 'Complete!';
-         setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 1000);
-         try {
-         const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
-         localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory));
-         updateRealActivityBanner(); // Update real activity banner after scan
-         } catch(e) {}
-         if (data.score >= 70) {
-         fetch('/api/leaderboard').then(r => r.json()).then(lb => {
-         const entries = lb.entries || [];
-         const idx = entries.findIndex(e => e.url === url || e.url === data.url);
-         const rank = idx !== -1 ? idx + 1 : null;
-         const total = entries.length;
-         if (rank) {
-         const rankEl = document.getElementById('badgeRankDisplay');
-         if (rankEl) {
-         rankEl.innerHTML = `<span style="font-size:0.78rem;font-weight:700;color:#ffffff!important;">🏅 Ranked <strong style="color:#e9d5ff!important;">#${rank}</strong> of ${total} on ContentScale Leaderboard</span>`;
-         rankEl.classList.remove('hidden'); rankEl.style.display = 'inline-block';
-         }
-         }
-         }).catch(() => {});
-         }
-         } catch (error) {
-         progress.classList.add('hidden');
-         button.disabled = false;
-         button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan';
-         const errMsg = error.message || 'Unknown error';
-         const isBlocked = errMsg.toLowerCase().includes('block') || errMsg.toLowerCase().includes('403') || errMsg.toLowerCase().includes('forbidden');
-         const isTimeout = errMsg.toLowerCase().includes('timeout') || errMsg.toLowerCase().includes('timed out') || errMsg.toLowerCase().includes('econnreset');
-         const reason = isBlocked ? '🚫 This website is blocking automated scanners (403 / firewall).'
-         : isTimeout ? '⏱️ The website took too long to respond (timeout).'
-         : '⚠️ ' + errMsg;
-         const resultDiv = document.getElementById('singleResult');
-         resultDiv.innerHTML = `
-         <div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:14px;padding:24px;margin-top:16px;text-align:center;">
-         <div style="font-size:2.5rem;margin-bottom:8px;">❌</div>
-         <div style="font-weight:800;font-size:1.1rem;color:#f87171!important;margin-bottom:8px;">Scan Failed</div>
-         <div style="font-size:0.9rem;color:#fca5a5!important;margin-bottom:16px;line-height:1.6;">${reason}</div>
-         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-         <button onclick="document.getElementById('singleUrlInput').value='${url}';document.getElementById('singleResult').classList.add('hidden');scanSingleURL()"
-         style="background:#7f1d1d;color:white!important;border:1px solid #ef4444;border-radius:8px;padding:10px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;">
-         🔄 Retry Scan
-         </button>
-         <button onclick="document.getElementById('singleResult').classList.add('hidden')"
-         style="background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:8px;padding:10px 20px;font-size:0.85rem;cursor:pointer;">
-         Dismiss
-         </button>
-         </div>
-         </div>`;
-         resultDiv.classList.remove('hidden');
-         resultDiv.scrollIntoView({ behavior: 'smooth' });
-         }
-         }
-         function displayScanResult(data, targetEl) {
-         const resultDiv = targetEl || document.getElementById('singleResult');
-         const url = data.url || '';
-         const score = data.score || 0;
-         const quality = data.quality || 'unknown';
-         const metrics = data.metrics || {};
-         const stats = data.content_stats || {};
-         const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-         const priorityConfig = {
-         high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
-         medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
-         low: { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' },
-         none: { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: '#14532d', label: '✅ All Good' }
-         };
-         const highCount = recs.filter(r => r.priority === 'high').length;
-         const medCount = recs.filter(r => r.priority === 'medium').length;
-         const lowCount = recs.filter(r => r.priority === 'low').length;
-         const recCards = recs.map((rec, i) => {
-         const p = priorityConfig[rec.priority] || priorityConfig.low;
-         return `
-         <div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
-         <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
-         <span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
-         </div>
-         <p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;line-height:1.5;">${rec.description}</p>
-         <div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
-         <div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;margin-bottom:4px;">⚡ ACTION</div>
-         <p style="font-size:0.82rem;color:#e2e8f0!important;line-height:1.5;margin:0;">${rec.action}</p>
-         </div>
-         ${rec.learning ? `
-         <div style="background:rgba(0,0,0,0.15);border-radius:7px;padding:10px;margin-bottom:8px;">
-         <div style="font-size:0.72rem;font-weight:700;color:#60a5fa!important;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-         <p style="font-size:0.8rem;color:#94a3b8!important;line-height:1.5;margin:0;">${rec.learning}</p>
-         </div>` : ''}
-         ${rec.target ? `
-         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-         <span style="font-size:0.7rem;font-weight:700;color:#4ade80!important;">🎯 TARGET:</span>
-         <span style="font-size:0.78rem;color:#86efac!important;">${rec.target}</span>
-         </div>` : ''}
-         </div>`;
-         }).join('');
-         resultDiv.innerHTML = `
-         <div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;overflow:hidden;margin-top:16px;">
-         <div style="background:linear-gradient(135deg,#1e1b4b,#2d1b69,#1e1b4b);padding:28px 24px;text-align:center;">
-         <p style="color:#6b7280!important;font-size:0.8rem;margin-bottom:12px;word-break:break-all;">${data.url}</p>
-         <div style="font-size:5rem;font-weight:900;color:${scoreColor}!important;line-height:1;margin-bottom:6px;">${score}</div>
-         <div style="font-size:0.9rem;margin-bottom:4px;"><span style="color:${scoreColor}!important;font-weight:700;">${scoreLabel}</span> <span style="color:#6b7280!important;">· out of 100</span></div>
-         <div style="font-size:0.8rem;color:#6b7280!important;">${quality.replace(/_/g,' ').toUpperCase()}</div>
-         </div>
-         <div style="padding:20px 20px 24px;">
-         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
-         <div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;border:1px solid #3730a3;">
-         <div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.05em;margin-bottom:4px;">GRAAF</div>
-         <div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
-         <div style="background:#1a1042;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#a78bfa;height:4px;border-radius:4px;width:${Math.round(((metrics.graaf||0)/50)*100)}%;"></div></div>
-         </div>
-         <div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;border:1px solid #1d4ed8;">
-         <div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;letter-spacing:0.05em;margin-bottom:4px;">CRAFT</div>
-         <div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
-         <div style="background:#0c1520;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#60a5fa;height:4px;border-radius:4px;width:${Math.round(((metrics.craft||0)/30)*100)}%;"></div></div>
-         </div>
-         <div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;border:1px solid #92400e;">
-         <div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;letter-spacing:0.05em;margin-bottom:4px;">TECHNICAL</div>
-         <div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
-         <div style="background:#0c0a02;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#fbbf24;height:4px;border-radius:4px;width:${Math.round(((metrics.technical||0)/20)*100)}%;"></div></div>
-         </div>
-         </div>
-         ${stats.wordCount ? `
-         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:20px;padding:12px;background:#111827;border-radius:10px;border:1px solid #1f2937;">
-         <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.wordCount?.toLocaleString()}</div><div style="font-size:0.68rem;color:#6b7280!important;">words</div></div>
-         <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.h1Count||0)===1?'#4ade80':'#f87171'}!important;">${stats.h1Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H1 ${(stats.h1Count||0)===1?'✅':'⚠️'}</div></div><div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.h2Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H2 headings</div></div>
-         <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.images||0) > 30 ? '#fbbf24' : '#e2e8f0'}!important;">${stats.images||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">images${(stats.images||0) > 30 ? ' ⚠️' : ''}</div>
-         </div>
-         <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.internalLinks||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">internal links</div></div>
-         <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasArticleSchema ? '#4ade80' : '#f87171'}!important;">${stats.hasArticleSchema ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">schema</div></div>
-         <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasCanonical ? '#4ade80' : '#f87171'}!important;">${stats.hasCanonical ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">canonical</div></div>
-         </div>` : ''}
-         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-         <div style="font-weight:800;font-size:1rem;color:#f1f5f9!important;">
-         📋 ${recs.length} Recommendation${recs.length !== 1 ? 's' : ''}
-         </div>
-         <div style="display:flex;gap:8px;font-size:0.75rem;">
-         ${highCount > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171!important;padding:2px 8px;border-radius:99px;border:1px solid #7f1d1d;">${highCount} high</span>` : ''}
-         ${medCount > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24!important;padding:2px 8px;border-radius:99px;border:1px solid #78350f;">${medCount} medium</span>` : ''}
-         ${lowCount > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa!important;padding:2px 8px;border-radius:99px;border:1px solid #1e3a5f;">${lowCount} quick win${lowCount !== 1 ? 's' : ''}</span>` : ''}
-         </div>
-         </div>
-         ${recCards}
-         <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
-         <a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100.%20Can%20you%20help%20improve%20it%3F"
-         target="_blank" rel="noopener"
-         style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;">
-         <i class="fab fa-whatsapp"></i> Get Help
-         </a>
-         <button onclick="copyScanShareLink();return false;"
-         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-         🔗 Share Link
-         </button>
-         <button onclick="exportScanPDF(window._lastScanData)"
-         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-         ⬇ Export PDF
-         </button>
-         <button onclick="(function(){const d=window._lastScanData;if(!d)return;showPageBadge(d.url,d.score||0,d.metrics?.graaf||0,d.metrics?.craft||0,d.metrics?.technical||0);})()"
-         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-         🏅 Get Badge
-         </button>
-         <button onclick="document.getElementById('singleResult').classList.add('hidden')"
-         style="padding:12px 14px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
-         ✕ Close
-         </button>
-         ${score >= 70 ? `
-         <button id="singleLbBtn" onclick="submitSingleToLeaderboard('${url}',${score},'${(data.title||'').replace(/['"]/g,'')}')"
-         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#b45309);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;justify-content:center;">
-         🏆 Leaderboard
-         </button>` : ''}
-         </div>
-         </div>
-         </div>`;
-         resultDiv.classList.remove('hidden');
-         window._lastScanData = data;
-         window._lastScanData._scoreLabel = scoreLabel;
-         if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
-         }
-         function copyScanShareLink() {
-         const data = window._lastScanData;
-         if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
-         const reportUrl = data.report_url
-         ? (data.report_url.startsWith('http') ? data.report_url : 'https://app.contentscale.site' + data.report_url)
-         : null;
-         if (reportUrl) {
-         if (navigator.clipboard && navigator.clipboard.writeText) {
-         navigator.clipboard.writeText(reportUrl).then(() => {
-         showToast('🔗 Report link copied!', '#0ea5e9');
-         }).catch(() => fallbackCopy(reportUrl));
-         } else {
-         fallbackCopy(reportUrl);
-         }
-         return;
-         }
-         exportScanPDF(data);
-         showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
-         }
-         function fallbackCopy(text) {
-         const ta = document.createElement('textarea');
-         ta.value = text;
-         ta.style.position = 'fixed';
-         ta.style.opacity = '0';
-         document.body.appendChild(ta);
-         ta.select();
-         document.execCommand('copy');
-         document.body.removeChild(ta);
-         showToast('🔗 Share link copied!', '#0ea5e9');
-         }
-         function showToast(msg, bg) {
-         const t = document.createElement('div');
-         t.textContent = msg;
-         t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${bg||'#7e22ce'};color:white;padding:12px 28px;border-radius:99px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:opacity 0.4s;`;
-         document.body.appendChild(t);
-         setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
-         }
-         function exportScanPDF(data) {
-         if (!data) { alert('No scan data. Run a scan first.'); return; }
-         const btn = event && event.target;
-         if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
-         const score = data.score || 0;
-         const url = data.url || '';
-         const metrics = data.metrics || {};
-         const stats = data.content_stats || {};
-         const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-         const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-         const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-         const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
-         const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
-         const recRows = recs.map((r, i) => {
-         const pc = priorityColor[r.priority] || '#6b7280';
-         const pl = priorityLabel[r.priority] || 'Info';
-         return `
-         <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
-         <div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
-         <span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
-         </div>
-         <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description}</p>
-         <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:${r.learning?'8':'0'}px;">
-         <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
-         <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action}</p>
-         </div>
-         ${r.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
-         <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-         <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p>
-         </div>` : ''}
-         ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
-         </div>`;
-         }).join('');
-         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Report — ${url}</title><style>* { box-sizing:border-box; margin:0; padding:0; }body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }@media print {.no-print { display:none !important; }body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }.page-break { page-break-before:always; }}</style></head><body style="max-width:800px;margin:0 auto;padding:0;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h1><p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr></table></div></div></div>${recRows}<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button><p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p></div></body></html>`;
-         const win = window.open('', '_blank');
-         if (!win) { alert('Please allow popups to export the PDF report.'); if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; } return; }
-         win.document.write(html);
-         win.document.close();
-         setTimeout(() => { win.focus(); win.print(); }, 600);
-         if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; }
-         }
-         let activeBulkJobId = null;
-         let bulkPollInterval = null;
-
-         async function startBulkScan() {
-         if (isScanning) { alert('Scan already in progress. Please wait.'); return; }
-         if (currentBulkMode === 'sitemap') {
-           if (sitemapFetchedUrls.length === 0) { showToast('\u274c Fetch sitemap URLs first', '#ef4444'); return; }
-           document.getElementById('bulkUrlInput').value = sitemapFetchedUrls.join('\n');
-         }
-         const urlInput   = document.getElementById('bulkUrlInput');
-         const button     = document.getElementById('bulkScanBtn');
-         const progress   = document.getElementById('bulkProgress');
-         const progressBar= document.getElementById('bulkProgressBar');
-         const progressText=document.getElementById('bulkProgressText');
-         const resultsDiv = document.getElementById('bulkResults');
-         const container  = document.getElementById('bulkResultsContainer');
-         const exportButtons = document.getElementById('bulkExportButtons');
-         const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-         if (allUrls.length === 0) { alert('\u274c Enter at least one URL'); return; }
-         const urls = allUrls.map(u => u.startsWith('http') ? u : 'https://' + u);
-         isScanning = true;
-         button.disabled = true;
-         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Starting...';
-         progress.classList.remove('hidden');
-         resultsDiv.classList.add('hidden');
-         bulkResults = [];
-         if (container) container.innerHTML = '';
-         if (exportButtons) exportButtons.style.display = 'none';
-         // Remove previous sitemap banner
-         const oldBanner = document.getElementById('sitemapSubmitBanner');
-         if (oldBanner) oldBanner.remove();
-
-         try {
-           // Start server-side job
-           const startRes = await fetch('/api/scan/bulk-job', {
-             method: 'POST',
-             headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
-             body: JSON.stringify({ urls })
-           });
-           const startData = await startRes.json();
-           if (!startData.success) throw new Error(startData.error || 'Failed to start job');
-           activeBulkJobId = startData.jobId;
-           // Warn if URLs were capped at 500
-           if (startData.capped) showToast('⚠️ Capped at 500 URLs. Remaining skipped.', '#f59e0b', 6000);
-           const queuedMsg = startData.queued ? ' ⏳ In queue — server busy, starts soon...' : '';
-           button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server' + (startData.queued ? ' (queued)' : '') + '... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
-           if (startData.queued) progressText.textContent = '⏳ Waiting for scan slot — another job is running. Your job starts automatically.';
-
-           // Poll for results
-           let lastDone = 0;
-           await new Promise((resolve, reject) => {
-             bulkPollInterval = setInterval(async () => {
-               try {
-                 const pollRes = await fetch('/api/scan/bulk-job/' + activeBulkJobId);
-                 const job = await pollRes.json();
-                 if (!job.success) { clearInterval(bulkPollInterval); reject(new Error('Job not found')); return; }
-                 // Show new results as they come in
-                 const newResults = job.results.slice(lastDone);
-                 newResults.forEach(r => {
-                   bulkResults.push({ ...r, selected: false });
-                   try {
-                     const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-                     scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
-                     localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
-                   } catch(e) {}
-                 });
-                 lastDone = job.results.length;
-                 // Update progress bar
-                 const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
-                 progressBar.style.width = pct + '%';
-                 const currentUrl = job.results[job.done - 1]?.url || '';
-                 const shortUrl = currentUrl.replace(/https?:\/\//, '').substring(0, 50);
-                 if (job.status === 'queued') {
-                   progressText.textContent = '⏳ Waiting for scan slot — your job starts automatically when ready.';
-                 } else if (job.status === 'done') {
-                   progressText.textContent = '✅ Scan complete! ' + job.done + '/' + job.total + ' pages — tab was safe to close';
-                 } else if (job.status === 'error') {
-                   progressText.textContent = '❌ Job error: ' + (job.error || 'unknown');
-                 } else {
-                   progressText.textContent = 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' — ' + shortUrl : '') + ' · server-side · safe to close tab';
-                 }
-                 if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
-                   clearInterval(bulkPollInterval);
-                   bulkPollInterval = null;
-                   resolve(job);
-                 }
-               } catch(e) { clearInterval(bulkPollInterval); reject(e); }
-             }, 3000); // poll every 3 seconds
-           });
-
-           progressBar.style.width = '100%';
-
-           // SITEMAP MODE: show banner
-           if (currentBulkMode === 'sitemap') {
-             const sitemapUrl = document.getElementById('sitemapUrlInput').value.trim();
-             const succ = bulkResults.filter(r => r.success && r.score > 0);
-             if (succ.length > 0) {
-               const avgScore = Math.round(succ.reduce((a,r) => a+r.score, 0) / succ.length);
-               const avgColor = avgScore>=95?'#a78bfa':avgScore>=85?'#4ade80':avgScore>=70?'#a3e635':avgScore>=50?'#fbbf24':'#f87171';
-               const avgLabel = avgScore>=95?'Elite':avgScore>=90?'Excellent':avgScore>=85?'Strong':avgScore>=80?'Good':avgScore>=75?'Solid':avgScore>=70?'Qualified':'Needs Work';
-               const domain = sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
-               const banner = document.createElement('div');
-               banner.id = 'sitemapSubmitBanner';
-               banner.style.cssText = 'background:linear-gradient(135deg,#0f0c29,#302b63);border:1px solid #4c1d95;border-radius:14px;padding:24px;margin-bottom:16px;';
-               banner.innerHTML = `
-                 <div style="text-align:center;margin-bottom:20px;">
-                   <div style="font-size:0.75rem;color:#6b7280;margin-bottom:6px;">${domain} \u2014 ${succ.length} pages scanned</div>
-                   <div style="font-size:3.5rem;font-weight:900;color:${avgColor};line-height:1;">${avgScore}</div>
-                   <div style="font-size:0.9rem;color:${avgColor};font-weight:700;margin:4px 0;">${avgLabel} \u00b7 Average domain score</div>
-                 </div>
-                 ${avgScore >= 70 ? `
-                 <div style="background:rgba(0,0,0,0.3);border-radius:10px;padding:16px;margin-bottom:16px;">
-                   <p style="font-size:0.8rem;color:#a78bfa;font-weight:700;margin-bottom:12px;">\ud83d\udccb Add details before submitting to leaderboard</p>
-                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Company Name</label><input id="sbCompanyName" type="text" placeholder="e.g. Acme SEO Agency" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"></div>
-                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Country</label><select id="sbCountry" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"><option value="">Select country\u2026</option><option value="Netherlands">\ud83c\uddf3\ud83c\uddf1 Netherlands</option><option value="Belgium">\ud83c\udde7\ud83c\uddea Belgium</option><option value="Germany">\ud83c\udde9\ud83c\uddea Germany</option><option value="United Kingdom">\ud83c\uddec\ud83c\udde7 United Kingdom</option><option value="France">\ud83c\uddeb\ud83c\uddf7 France</option><option value="Spain">\ud83c\uddea\ud83c\uddf8 Spain</option><option value="United States">\ud83c\uddfa\ud83c\uddf8 United States</option><option value="Canada">\ud83c\udde8\ud83c\udde6 Canada</option><option value="Australia">\ud83c\udde6\ud83c\uddfa Australia</option><option value="Other">\ud83c\udf10 Other</option></select></div>
-                   </div>
-                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Niche</label><select id="sbNiche" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"><option value="">Select niche\u2026</option><option value="SEO Agency">SEO Agency</option><option value="Content Marketing Agency">Content Marketing Agency</option><option value="Digital Marketing Agency">Digital Marketing Agency</option><option value="Web Design Agency">Web Design Agency</option><option value="SaaS">SaaS / Software</option><option value="Legal">Legal / Law Firm</option><option value="Healthcare">Healthcare / Medical</option><option value="Finance">Finance / Fintech</option><option value="Real Estate">Real Estate</option><option value="E-Commerce">E-Commerce</option><option value="Coaching">Coaching / Consulting</option><option value="Education">Education</option><option value="Local Business">Local Business</option><option value="Other">Other</option></select></div>
-                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Business Type</label><select id="sbBizType" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"><option value="">Select type\u2026</option><option value="B2B">B2B</option><option value="B2C">B2C</option><option value="Local">Local</option><option value="Enterprise">Enterprise</option><option value="Startup">Startup</option></select></div>
-                   </div>
-                 </div>
-                 <div style="display:flex;gap:10px;">
-                   <button onclick="submitSitemapWithMeta('${domain}', ${avgScore}, ${succ.length}, '${sitemapUrl}')" style="flex:1;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;">\ud83c\udfc6 Submit to Leaderboard</button>
-                   <button onclick="showDomainBadge('${domain}', ${avgScore}, ${succ.length}, bulkResults.filter(r=>r.success&&r.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(r=>({url:r.url,score:r.score})))" style="padding:12px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;white-space:nowrap;">\ud83c\udfc5 Badge</button>
-                 </div>` : `
-                 <div style="display:flex;gap:10px;align-items:center;">
-                   <div style="flex:1;padding:12px;background:rgba(239,68,68,0.1);border:1px solid #7f1d1d;border-radius:8px;text-align:center;font-size:0.82rem;color:#f87171;">\u26a0\ufe0f Score ${avgScore}/100 \u2014 minimum 70 required for leaderboard</div>
-                   <button onclick="showDomainBadge('${domain}', ${avgScore}, ${succ.length}, bulkResults.filter(r=>r.success&&r.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(r=>({url:r.url,score:r.score})))" style="padding:12px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;white-space:nowrap;">\ud83c\udfc5 Badge</button>
-                 </div>`}
-               `;
-               if (container) container.parentNode.insertBefore(banner, container);
-             }
-           }
-
-           // Sort + render results
-           bulkResults.sort((a,b) => { if(a.success&&!b.success)return -1; if(!a.success&&b.success)return 1; if(a.success&&b.success)return(b.score||0)-(a.score||0); return 0; });
-           const successful = bulkResults.filter(r => r.success);
-           const eliteCount=successful.filter(r=>r.score>=95).length; const excellentCount=successful.filter(r=>r.score>=90&&r.score<95).length;
-           const strongCount=successful.filter(r=>r.score>=85&&r.score<90).length; const goodCount=successful.filter(r=>r.score>=80&&r.score<85).length;
-           const solidCount=successful.filter(r=>r.score>=75&&r.score<80).length; const qualifiedCount=successful.filter(r=>r.score>=70&&r.score<75).length;
-           const needsWorkCount=successful.filter(r=>r.score<70).length; const errorCount=bulkResults.length-successful.length;
-           const statsDiv = document.getElementById('bulkStats');
-           if (statsDiv) statsDiv.innerHTML = `
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${eliteCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83c\udfc5 Elite 95+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">${excellentCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\u2728 Excellent 90+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${strongCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcaa Strong 85+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a3e635;">${goodCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udc4d Good 80+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${solidCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcc8 Solid 75+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qualifiedCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\u2705 Qualified 70+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${needsWorkCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udd34 Needs Work</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${errorCount>0?'<div style=\"font-size:0.65rem;color:#ef4444;margin-top:4px;\">'+errorCount+' errors</div>':''}</div>`;
-           if (container) container.innerHTML = bulkResults.map((result, index) => {
-             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">\u274c</div><div><div style="font-weight:700;">${result.url.substring(0,50)}${result.url.length>50?'...':''}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><div style="display:flex;align-items:center;gap:12px;"><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">\u274c Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">\ud83d\udd04 Retry</button></div></div></div>`;
-             const sc = result.score>=95?'#a78bfa':result.score>=85?'#4ade80':result.score>=70?'#a3e635':'#f87171';
-             const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
-             return `<div class="bulk-result-item" id="bulk-result-${index}"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0,60)}${result.url.length>60?'...':''}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" title="Get Badge" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">\ud83c\udfc5</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>`;
-           }).join('');
-           resultsDiv.classList.remove('hidden');
-           if (exportButtons && successful.length > 0) {
-             exportButtons.style.display = 'flex';
-             const domainBadgeBtn = document.getElementById('domainBadgeBtn');
-             if (domainBadgeBtn) { const doms=[...new Set(successful.map(r=>r.url.replace(/https?:\/\//,'').split('/')[0]))]; domainBadgeBtn.style.display=doms.length===1?'inline-flex':'none'; }
-           }
-           updateRealActivityBanner();
-         } catch(error) {
-           console.error('Bulk scan error:', error);
-           showToast('\u274c Error: ' + error.message, '#ef4444');
-         } finally {
-           if (bulkPollInterval) { clearInterval(bulkPollInterval); bulkPollInterval = null; }
-           progress.classList.add('hidden');
-           button.disabled = false;
-           button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>';
-           updateBulkCount();
-           isScanning = false;
-         }
-         }
-
-         function cancelBulkJob() {
-           if (!activeBulkJobId) return;
-           fetch('/api/scan/bulk-job/' + activeBulkJobId + '/cancel', { method: 'POST' });
-           if (bulkPollInterval) { clearInterval(bulkPollInterval); bulkPollInterval = null; }
-           showToast('\u23f9 Scan cancelled', '#6b7280');
-         }
-
-         function retryBulkUrl(url) {
-         // Add URL to input and trigger scan
-         const textarea = document.getElementById('bulkUrlInput');
-         textarea.value = url + '\n' + textarea.value;
-         updateBulkCount();
-         startBulkScan();
-         }
-         function toggleBulkResult(index) {
-         const details = document.getElementById(`bulk-details-${index}`);
-         const item = document.getElementById(`bulk-result-${index}`);
-         if (details) {
-         details.classList.toggle('hidden');
-         item.classList.toggle('expanded', !details.classList.contains('hidden'));
-         }
-         }
-         // ✅ NEW FUNCTION: TOGGLE LEADERBOARD SELECTION
-
-         
-         function generateBulkResultDetails(data) {
-         if (!data.success) return '<p>No data available</p>';
-         const score = data.score || 0;
-         const metrics = data.metrics || { graaf: 0, craft: 0, technical: 0 };
-         const stats = data.content_stats || {};
-         const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-         const priorityConfig = {
-         high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
-         medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
-         low: { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' }
-         };
-         const recCards = recs.slice(0, 3).map((rec, i) => {
-         const p = priorityConfig[rec.priority] || priorityConfig.low;
-         return `
-         <div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
-         <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
-         <span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;">${p.label}</span>
-         </div>
-         <p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;">${rec.description.substring(0, 100)}${rec.description.length > 100 ? '...' : ''}</p>
-         </div>`;
-         }).join('');
-         return `
-         <div style="background:#0f172a;border-radius:12px;padding:16px;">
-         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
-         <div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;">
-         <div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;">GRAAF</div>
-         <div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
-         </div>
-         <div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;">
-         <div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;">CRAFT</div>
-         <div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
-         </div>
-         <div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;">
-         <div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;">TECHNICAL</div>
-         <div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
-         <div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
-         </div>
-         </div>
-         ${recCards}
-         ${(() => {
-         if (recs.length <= 3) return '';
-         const uid = 'xrec_' + Math.random().toString(36).slice(2,8);
-         const count = recs.length - 3;
-         const extraCards = recs.slice(3).map((rec) => {
-         const p = priorityConfig[rec.priority] || priorityConfig.low;
-         return '<div style="background:' + p.bg + ';border:1px solid ' + p.border + ';border-radius:10px;padding:16px;margin-bottom:10px;">'
-         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">'
-         + '<div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">' + rec.title + '</div>'
-         + '<span style="font-size:0.7rem;color:' + p.color + '!important;white-space:nowrap;font-weight:600;">' + p.label + '</span>'
-         + '</div>'
-         + '<p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:6px;">' + rec.description.substring(0,100) + (rec.description.length>100?'...':'') + '</p>'
-         + '</div>';
-         }).join('');
-         return '<div id="' + uid + '" style="display:none;">' + extraCards + '</div>'
-         + '<button onclick="(function(b){var el=document.getElementById(\'' + uid + '\');var open=el.style.display===\'block\';el.style.display=open?\'none\':\'block\';b.textContent=open?\'+' + count + ' more recommendations\':\'\\u2212 Hide ' + count + ' recommendations\';})(this)" style="width:100%;background:rgba(126,34,206,0.12);color:#a78bfa;border:1px dashed #7e22ce;border-radius:8px;padding:8px;font-size:0.78rem;font-weight:700;cursor:pointer;margin:4px 0 10px;" onmouseover="this.style.background=\'rgba(126,34,206,0.22)\'" onmouseout="this.style.background=\'rgba(126,34,206,0.12)\'">+ ' + count + ' more recommendations</button>';
-         })()}
-         <div style="display:flex;gap:10px;margin-top:20px;">
-         <a href="https://wa.me/31628073996?text=Hi%2C%20I%20just%20scanned%20${encodeURIComponent(data.url)}%20and%20got%20${score}/100.%20Can%20you%20help%3F"
-         target="_blank" rel="noopener"
-         style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#0f7b3a;color:white!important;padding:8px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.8rem;">
-         <i class="fab fa-whatsapp"></i> Get Help
-         </a>
-         <button onclick="exportScanPDF(${JSON.stringify(data).replace(/"/g, '&quot;')})"
-         style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:8px;font-weight:600;font-size:0.8rem;cursor:pointer;">
-         ⬇ Export PDF
-         </button>
-         </div>
-         </div>`;
-         }
-         // ✅ EXPORT ALL RESULTS TO CSV (works for any number of URLs)
-         function exportBulkCSV() {
-         if (!bulkResults || bulkResults.length === 0) {
-         alert('❌ No scan results to export. Run a bulk scan first.');
-         return;
-         }
-         const successful = bulkResults.filter(r => r.success);
-         if (successful.length === 0) {
-         alert('⚠️ No successful scans to export. All URLs failed to scan.');
-         return;
-         }
-         // Find max number of recommendations across all results (cap at 10 for clean CSV)
-         const maxRecs = Math.min(10, Math.max(...successful.map(r => (r.recommendations?.all || r.recommendations || []).length)));
-         // Build dynamic recommendation headers
-         let recHeaders = '';
-         for (let i = 1; i <= maxRecs; i++) {
-         recHeaders += `,Rec ${i} Priority,Rec ${i} Title,Rec ${i} Action`;
-         }
-         let csv = `URL,Domain,Score,Label,GRAAF,CRAFT,Technical,Word Count,H1,H2,Images,Links,Schema,Canonical,Status${recHeaders}\n`;
-         successful.forEach(r => {
-         const domain = r.url.replace(/https?:\/\//, '').split('/')[0];
-         const label = r.score >= 95 ? 'Elite' : r.score >= 90 ? 'Excellent' : r.score >= 85 ? 'Strong' : r.score >= 80 ? 'Good' : r.score >= 75 ? 'Solid' : r.score >= 70 ? 'Qualified' : 'Needs Work';
-         const stats = r.content_stats || {};
-         const recs = (r.recommendations?.all || r.recommendations || []);
-         const esc = s => '"' + (s || '').replace(/"/g, '""') + '"';
-         let recCols = '';
-         for (let i = 0; i < maxRecs; i++) {
-         const rec = recs[i];
-         recCols += rec
-         ? `,${esc(rec.priority)},${esc(rec.title)},${esc(rec.action)}`
-         : `,,,`;
-         }
-         csv += `${esc(r.url)},${esc(domain)},${r.score},${esc(label)},${r.metrics?.graaf||0},${r.metrics?.craft||0},${r.metrics?.technical||0},${stats.wordCount||0},${stats.h1Count||0},${stats.h2Count||0},${stats.images||0},${stats.internalLinks||0},${stats.hasArticleSchema?'Yes':'No'},${stats.hasCanonical?'Yes':'No'},Success${recCols}\n`;
-         });
-         // Add failed URLs at the end
-         const failed = bulkResults.filter(r => !r.success);
-         failed.forEach(r => {
-         const esc = s => '"' + (s || '').replace(/"/g, '""') + '"';
-         let emptyCols = '';
-         for (let i = 0; i < maxRecs; i++) emptyCols += ',,,';
-         csv += `${esc(r.url)},${esc(r.url.replace(/https?:\/\//, '').split('/')[0])},0,"Failed",0,0,0,0,0,0,0,0,No,No,Error${emptyCols}\n`;
-         });
-         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel UTF-8
-         const url = URL.createObjectURL(blob);
-         const a = document.createElement('a');
-         a.href = url;
-         a.download = `ContentScale_BulkExport_${new Date().toISOString().split('T')[0]}.csv`;
-         a.click();
-         URL.revokeObjectURL(url);
-         showToast(`✅ Exported ${successful.length} scan${successful.length!==1?'s':''} with up to ${maxRecs} recommendations each`, '#0f7b3a');
-         }
-         // ✅ EXPORT ALL RESULTS AS ONE COMBINED PDF
-         function exportBulkPDF() {
-         if (!bulkResults || bulkResults.length === 0) {
-         alert('❌ No scan results to export. Run a bulk scan first.');
-         return;
-         }
-         const successful = bulkResults.filter(r => r.success);
-         if (successful.length === 0) {
-         alert('⚠️ No successful scans to export. All URLs failed to scan.');
-         return;
-         }
-         showToast(`🔄 Building combined PDF for ${successful.length} site${successful.length!==1?'s':''}...`, '#7e22ce');
-         const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-         const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
-         const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
-         const avgScore = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
-         const eliteCount     = successful.filter(r => r.score >= 95).length;
-         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
-         const strongCount    = successful.filter(r => r.score >= 85 && r.score < 90).length;
-         const goodCount      = successful.filter(r => r.score >= 80 && r.score < 85).length;
-         const solidCount     = successful.filter(r => r.score >= 75 && r.score < 80).length;
-         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
-         const needsWorkCount = successful.filter(r => r.score < 70).length;
-         
-         // Shared header HTML (matches single-scan PDF exactly)
-         const pdfHeader = `
-         <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
-           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-             <div>
-               <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
-               <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
-             </div>
-             <div style="text-align:right;">
-               <div style="font-size:12px;opacity:0.75;">Generated</div>
-               <div style="font-size:13px;font-weight:700;">${today}</div>
-             </div>
-           </div>
-         </div>`;
-         
-         // Shared footer HTML (matches single-scan PDF exactly)
-         const pdfFooter = `
-         <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-           <div>
-             <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
-             <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
-           </div>
-           <div style="text-align:right;">
-             <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
-             <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
-           </div>
-         </div>`;
-         
-         // Build one page per site
-         const sitePages = successful.map((data, idx) => {
-         const score = data.score || 0;
-         const url = data.url || '';
-         const metrics = data.metrics || {};
-         const stats = data.content_stats || {};
-         const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
-         const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-         const scoreColorLight = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
-         const recRows = recs.map((r, i) => {
-         const pc = priorityColor[r.priority] || '#6b7280';
-         const pl = priorityLabel[r.priority] || 'Info';
-         return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:10px;page-break-inside:avoid;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
-         <div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
-         <span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
-         </div>
-         <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description}</p>
-         <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;${r.learning?'margin-bottom:8px;':''}">
-         <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
-         <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action}</p>
-         </div>
-         ${r.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
-         <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-         <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p>
-         </div>` : ''}
-         ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
-         </div>`;
-         }).join('');
-         
-         return `
-         <div style="page-break-before:${idx===0?'avoid':'always'};">
-           <!-- Per-site header: same gradient as single scan -->
-           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
-             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-               <div>
-                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
-                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
-               </div>
-               <div style="text-align:right;">
-                 <div style="font-size:11px;opacity:0.65;">Site ${idx+1} of ${successful.length}</div>
-                 <div style="font-size:13px;font-weight:700;">${today}</div>
-               </div>
-             </div>
-             <div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div>
-             <h2 style="font-size:24px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h2>
-             <p style="font-size:13px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendation${recs.length!==1?'s':''}</p>
-           </div>
-           <!-- Score band -->
-           <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
-             <div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;">
-               <div style="text-align:center;">
-                 <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
-                 <div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div>
-                 <div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div>
-               </div>
-               <div style="flex:1;min-width:200px;">
-                 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;">
-                   <tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr>
-                   <tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr>
-                   <tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr>
-                 </table>
-               </div>
-             </div>
-           </div>
-           <!-- Recommendations -->
-           <div style="padding:28px 40px;">
-             <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
-             ${recRows || '<p style="color:#6b7280;font-size:13px;">No specific recommendations — site is performing well.</p>'}
-           </div>
-           <!-- Per-site footer: same dark footer as single scan -->
-           <div style="background:#111827;padding:20px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
-             <div>
-               <div style="color:white;font-weight:700;font-size:13px;">ContentScale SEO Platform</div>
-               <div style="color:#9ca3af;font-size:11px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
-             </div>
-             <div style="text-align:right;">
-               <div style="color:#9ca3af;font-size:11px;">app.contentscale.site</div>
-               <div style="color:#9ca3af;font-size:11px;">+31 6 2807 3996</div>
-             </div>
-           </div>
-         </div>`;
-         }).join('');
-         
-         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-         <title>ContentScale Bulk Scan Report — ${today}</title>
-         <style>
-         * { box-sizing:border-box; margin:0; padding:0; }
-         body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }
-         @media print {
-           .no-print { display:none !important; }
-           body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-         }
-         </style>
-         </head><body>
-         
-         <!-- ═══ COVER PAGE ═══ -->
-         <div style="min-height:100vh;display:flex;flex-direction:column;page-break-after:always;">
-           <!-- Cover header -->
-           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
-             <div style="display:flex;align-items:center;justify-content:space-between;">
-               <div>
-                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
-                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
-               </div>
-               <div style="text-align:right;">
-                 <div style="font-size:12px;opacity:0.75;">Generated</div>
-                 <div style="font-size:13px;font-weight:700;">${today}</div>
-               </div>
-             </div>
-           </div>
-           <!-- Cover body -->
-           <div style="flex:1;background:linear-gradient(160deg,#030712,#1e1b4b);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;">
-             <div style="font-size:52px;font-weight:900;color:white;margin-bottom:10px;line-height:1.1;">Bulk SEO Report</div>
-             <div style="font-size:16px;color:#a5b4fc;margin-bottom:52px;">GRAAF + CRAFT + Technical Analysis</div>
-             <div style="display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-bottom:52px;">
-               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
-                 <div style="font-size:44px;font-weight:900;color:#c084fc;">${successful.length}</div>
-                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Sites Scanned</div>
-               </div>
-               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
-                 <div style="font-size:44px;font-weight:900;color:#4ade80;">${avgScore}</div>
-                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Avg Score</div>
-               </div>
-               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:16px 24px;text-align:center;min-width:160px;">
-                 <div style="font-size:11px;color:#a78bfa;margin-bottom:8px;font-weight:700;letter-spacing:.5px;">SCORE BREAKDOWN</div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">🏅 95+</span><span style="font-size:13px;font-weight:900;color:#c084fc;">${eliteCount}</span></div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">✨ 90+</span><span style="font-size:13px;font-weight:900;color:#4ade80;">${excellentCount}</span></div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">💪 85+</span><span style="font-size:13px;font-weight:900;color:#86efac;">${strongCount}</span></div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">👍 80+</span><span style="font-size:13px;font-weight:900;color:#fbbf24;">${goodCount}</span></div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">📈 75+</span><span style="font-size:13px;font-weight:900;color:#fde68a;">${solidCount}</span></div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">✅ 70+</span><span style="font-size:13px;font-weight:900;color:#fb923c;">${qualifiedCount}</span></div>
-                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><span style="font-size:11px;color:#d1d5db;">🔴 &lt;70</span><span style="font-size:13px;font-weight:900;color:#f87171;">${needsWorkCount}</span></div>
-               </div>
-             </div>
-             <!-- Summary table -->
-             <table style="border-collapse:collapse;min-width:500px;max-width:680px;background:rgba(255,255,255,0.05);border-radius:12px;overflow:hidden;width:100%;">
-               <thead><tr style="background:rgba(126,34,206,0.5);">
-                 <th style="padding:11px 16px;text-align:left;color:white;font-size:12px;">#</th>
-                 <th style="padding:11px 16px;text-align:left;color:white;font-size:12px;">Domain</th>
-                 <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Score</th>
-                 <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Label</th>
-               </tr></thead>
-               <tbody>${successful.map((r,i) => {
-               const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
-               const sc = r.score>=85?'#4ade80':r.score>=70?'#fbbf24':r.score>=60?'#fb923c':'#f87171';
-               return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
-               <td style="padding:9px 16px;color:#a5b4fc;font-size:12px;">${i+1}</td>
-               <td style="padding:9px 16px;color:#f1f5f9;font-size:12px;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
-               <td style="padding:9px 16px;text-align:right;font-weight:700;font-size:13px;color:${sc};">${r.score}</td>
-               <td style="padding:9px 16px;text-align:right;font-size:11px;color:${sc};">${lbl}</td>
-               </tr>`;
-               }).join('')}</tbody>
-             </table>
-           </div>
-           <!-- Cover footer -->
-           <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-             <div>
-               <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
-               <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
-             </div>
-             <div style="text-align:right;">
-               <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
-               <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
-             </div>
-           </div>
-         </div>
-         
-         <!-- ═══ INDIVIDUAL SITE PAGES ═══ -->
-         ${sitePages}
-         
-         <!-- ═══ BACK COVER ═══ -->
-         <div style="page-break-before:always;display:flex;flex-direction:column;min-height:50vh;">
-           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
-             <div style="display:flex;align-items:center;justify-content:space-between;">
-               <div>
-                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
-                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
-               </div>
-               <div style="text-align:right;">
-                 <div style="font-size:12px;opacity:0.75;">End of Report</div>
-                 <div style="font-size:13px;font-weight:700;">${today}</div>
-               </div>
-             </div>
-           </div>
-           <div style="flex:1;background:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;">
-             <div style="font-size:28px;font-weight:900;color:white;margin-bottom:6px;">ContentScale SEO Platform</div>
-             <div style="font-size:14px;color:#9ca3af;margin-bottom:32px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
-             <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:40px;">
-               <span>app.contentscale.site</span><span style="color:#374151;">·</span><span>+31 6 2807 3996</span><span style="color:#374151;">·</span><span>info@contentscale.site</span>
-             </div>
-             <div style="background:rgba(255,255,255,0.04);border:1px solid #374151;border-radius:14px;padding:24px 40px;max-width:500px;">
-               <div style="font-size:13px;color:#9ca3af;line-height:1.8;">
-                 <div style="font-weight:700;color:#a78bfa;margin-bottom:8px;">Report Summary</div>
-                 <div>${successful.length} sites scanned · Avg score: ${avgScore}/100</div>
-                 <div style="margin-top:6px;line-height:2;">🏅 ${eliteCount} Elite &nbsp;·&nbsp; ✨ ${excellentCount} Excellent &nbsp;·&nbsp; 💪 ${strongCount} Strong &nbsp;·&nbsp; 👍 ${goodCount} Good &nbsp;·&nbsp; 📈 ${solidCount} Solid &nbsp;·&nbsp; ✅ ${qualifiedCount} Qualified &nbsp;·&nbsp; 🔴 ${needsWorkCount} Needs Work</div>
-               </div>
-             </div>
-           </div>
-         </div>
-         
-         <div class="no-print" style="position:fixed;bottom:24px;right:24px;z-index:999;">
-           <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(126,34,206,0.5);">🖨️ Print / Save as PDF</button>
-         </div>
-         </body></html>`;
-         
-         const win = window.open('', '_blank');
-         if (!win) { alert('Please allow popups to export the combined PDF report.'); return; }
-         win.document.write(html);
-         win.document.close();
-         window._lastBulkReportHTML = html;
-         setTimeout(() => { win.focus(); showToast('✅ Combined PDF ready — use Print → Save as PDF', '#0f7b3a'); }, 500);
-         }
-         
-         // ✅ SHARE ALL — copies individual hosted report URLs to clipboard
-         function shareAllResults() {
-         if (!bulkResults || bulkResults.length === 0) {
-           alert('❌ No scan results to share. Run a bulk scan first.');
-           return;
-         }
-         const successful = bulkResults.filter(r => r.success);
-         if (successful.length === 0) {
-           alert('⚠️ No successful results to share.');
-           return;
-         }
-         
-         // If API returned real hosted URLs — copy those as plain text (best case)
-         const hostedReports = successful.filter(r => r.report_url).map(r => {
-           const url = r.report_url.startsWith('http') ? r.report_url : 'https://app.contentscale.site' + r.report_url;
-           const domain = r.url.replace(/https?:\/\//, '').split('/')[0];
-           return `${domain} — Score ${r.score}/100\n${url}`;
-         });
-         if (hostedReports.length > 0) {
-           const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-           const shareText = `📊 ContentScale Bulk Scan Results — ${today}\n${'─'.repeat(40)}\n${hostedReports.join('\n\n')}\n${'─'.repeat(40)}\nGenerated by ContentScale · app.contentscale.site`;
-           navigator.clipboard ? navigator.clipboard.writeText(shareText).then(() => showToast(`🔗 ${hostedReports.length} report link${hostedReports.length!==1?'s':''} copied!`, '#0ea5e9')).catch(() => { fallbackCopy(shareText); showToast('🔗 Links copied!', '#0ea5e9'); }) : (fallbackCopy(shareText), showToast('🔗 Links copied!', '#0ea5e9'));
-           return;
-         }
-         
-         // No hosted URLs — open a fully-styled share page in a new tab (no blob URLs)
-         const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-         const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
-         const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
-         const avgScore    = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
-         const eliteCount  = successful.filter(r => r.score >= 95).length;
-         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
-         const strongCount = successful.filter(r => r.score >= 85 && r.score < 90).length;
-         const goodCount   = successful.filter(r => r.score >= 80 && r.score < 85).length;
-         const solidCount  = successful.filter(r => r.score >= 75 && r.score < 80).length;
-         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
-         const needsWorkCount = successful.filter(r => r.score < 70).length;
-         
-         const siteRows = successful.map((r, i) => {
-           const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
-           const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':r.score>=60?'#ea580c':'#dc2626';
-           const recs = (r.recommendations?.all || r.recommendations || []);
-           return `<tr style="border-bottom:1px solid #e5e7eb;">
-             <td style="padding:10px 14px;font-size:13px;color:#6b7280;">${i+1}</td>
-             <td style="padding:10px 14px;font-size:13px;color:#111827;font-weight:600;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
-             <td style="padding:10px 14px;font-weight:900;font-size:15px;color:${sc};">${r.score}</td>
-             <td style="padding:10px 14px;font-size:12px;color:${sc};">${lbl}</td>
-             <td style="padding:10px 14px;font-size:12px;color:#6b7280;">${recs.length} recs</td>
-             <td style="padding:10px 14px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
-           </tr>`;
-         }).join('');
-         
-         const shareHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-         <title>ContentScale — Bulk Scan Results · ${today}</title>
-         <style>
-           * { box-sizing:border-box; margin:0; padding:0; }
-           body { font-family:Arial,Helvetica,sans-serif; background:#f9fafb; color:#111827; }
-           table { width:100%; border-collapse:collapse; }
-           tr:hover td { background:#f5f3ff; }
-           @media print {
-             .no-print { display:none !important; }
-             body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-           }
-         </style>
-         </head><body style="max-width:860px;margin:0 auto;padding:0;">
-         
-           <!-- ══ HEADER (identical to single-scan PDF) ══ -->
-           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
-             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-               <div>
-                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
-                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
-               </div>
-               <div style="text-align:right;">
-                 <div style="font-size:12px;opacity:0.75;">Generated</div>
-                 <div style="font-size:13px;font-weight:700;">${today}</div>
-               </div>
-             </div>
-             <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;color:white;">Bulk Scan Results</h1>
-             <p style="font-size:14px;opacity:0.85;">GRAAF + CRAFT + Technical analysis across ${successful.length} site${successful.length!==1?'s':''} · ${eliteCount + excellentCount + strongCount} scoring 85+</p>
-           </div>
-         
-           <!-- ══ SCORE SUMMARY BAND ══ -->
-           <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
-             <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
-               <div style="text-align:center;">
-                 <div style="font-size:64px;font-weight:900;color:#7e22ce;line-height:1;">${avgScore}</div>
-                 <div style="font-size:13px;color:#6b7280;margin-top:2px;">avg score</div>
-                 <div style="display:inline-block;background:#7e22ce;color:white;font-size:11px;font-weight:700;padding:3px 14px;border-radius:99px;margin-top:6px;">out of 100</div>
-               </div>
-               <div style="flex:1;min-width:240px;">
-                 <table cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 5px;width:100%;">
-                   <tr><td style="background:#f5f3ff;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🏅 Elite <span style="font-weight:400;color:#9ca3af;font-size:11px;">95–100</span></td><td style="background:#f5f3ff;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#7e22ce;text-align:right;">${eliteCount}</td></tr>
-                   <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✨ Excellent <span style="font-weight:400;color:#9ca3af;font-size:11px;">90–94</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${excellentCount}</td></tr>
-                   <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">💪 Strong <span style="font-weight:400;color:#9ca3af;font-size:11px;">85–89</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${strongCount}</td></tr>
-                   <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">👍 Good <span style="font-weight:400;color:#9ca3af;font-size:11px;">80–84</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${goodCount}</td></tr>
-                   <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">📈 Solid <span style="font-weight:400;color:#9ca3af;font-size:11px;">75–79</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${solidCount}</td></tr>
-                   <tr><td style="background:#fff7ed;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✅ Qualified <span style="font-weight:400;color:#9ca3af;font-size:11px;">70–74</span></td><td style="background:#fff7ed;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#ea580c;text-align:right;">${qualifiedCount}</td></tr>
-                   <tr><td style="background:#fff1f2;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🔴 Needs Work <span style="font-weight:400;color:#9ca3af;font-size:11px;">&lt;70</span></td><td style="background:#fff1f2;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#dc2626;text-align:right;">${needsWorkCount}</td></tr>
-                 </table>
-               </div>
-             </div>
-           </div>
-         
-           <!-- ══ RESULTS TABLE ══ -->
-           <div style="padding:28px 40px;">
-             <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;">📋 All ${successful.length} Scanned Sites — Sorted Best to Lowest</div>
-             <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-               <table>
-                 <thead><tr style="background:#f3f4f6;">
-                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">#</th>
-                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">DOMAIN</th>
-                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">SCORE</th>
-                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">LABEL</th>
-                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">RECS</th>
-                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">LINK</th>
-                 </tr></thead>
-                 <tbody>${siteRows}</tbody>
-               </table>
-             </div>
-           </div>
-         
-           <!-- ══ FOOTER (identical to single-scan PDF) ══ -->
-           <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
-             <div>
-               <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
-               <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
-             </div>
-             <div style="text-align:right;">
-               <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
-               <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
-             </div>
-           </div>
-         
-           <!-- ══ PRINT BUTTON ══ -->
-           <div class="no-print" style="text-align:center;padding:24px;">
-             <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button>
-             <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
-           </div>
-         
-         </body></html>`;
-         
-         const win = window.open('', '_blank');
-         if (!win) {
-           // Popup blocked — fall back to copying plain-text summary
-           const summary = `📊 ContentScale Bulk Scan Results — ${today}\n${'─'.repeat(40)}\n${successful.map((r,i)=>`${i+1}. ${r.url.replace(/https?:\/\//,'').split('/')[0]} — ${r.score}/100`).join('\n')}\n${'─'.repeat(40)}\napp.contentscale.site`;
-           fallbackCopy(summary);
-           showToast('📋 Summary copied — allow popups for full share page', '#f59e0b');
-           return;
-         }
-         win.document.write(shareHTML);
-         win.document.close();
-         showToast('✅ Share page opened in new tab', '#0ea5e9');
-         }
-         
-         function doRescan() {
-         const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         const input = document.getElementById('singleUrlInput');
-         const banner = document.getElementById('rescanBanner');
-         if (history.length && input) input.value = history[0].url;
-         if (banner) banner.classList.add('hidden');
-         scanSingleURL();
-         }
-         async function submitSingleToLeaderboard(url, score, name) {
-         const btn = document.getElementById('singleLbBtn');
-         if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
-         try {
-         const res = await fetch('/api/leaderboard/submit', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-         body: JSON.stringify({ url, score, company_name: name || '', admin_verified: false })
-         });
-         const data = await res.json();
-         if (data.success) {
-         if (btn) { btn.innerHTML = '✅ Submitted — pending review'; btn.style.background = '#065f46'; }
-         showToast('✅ Submitted to leaderboard!', '#0f7b3a');
-         } else {
-         if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
-         alert('❌ ' + (data.error || 'Submission failed'));
-         }
-         } catch(e) {
-         if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
-         alert('❌ Error: ' + e.message);
-         }
-         }
-         let allLeaderboardEntries = [];
-         const MEDAL = [
-         { emoji: '🥇', label: 'GOLD', bg: 'linear-gradient(160deg,#3d2800 0%,#6b3f00 40%,#1a1000 100%)', border: '#ffd700', glow: 'rgba(255,215,0,0.35)', scoreColor: '#ffd700', badgeText: '#ffd700', badgeBg: 'rgba(61,40,0,0.85)' },
-         { emoji: '🥈', label: 'SILVER', bg: 'linear-gradient(160deg,#1e2a35 0%,#37505f 40%,#0d1520 100%)', border: '#b0c4d8', glow: 'rgba(176,196,216,0.25)', scoreColor: '#b0c4d8', badgeText: '#b0c4d8', badgeBg: 'rgba(30,42,53,0.85)' },
-         { emoji: '🥉', label: 'BRONZE', bg: 'linear-gradient(160deg,#2d1400 0%,#7c3a00 40%,#1a0a00 100%)', border: '#cd7f32', glow: 'rgba(205,127,50,0.25)', scoreColor: '#cd7f32', badgeText: '#cd7f32', badgeBg: 'rgba(45,20,0,0.85)' }
-         ];
-         async function loadLeaderboardData() {
-         try {
-         const response = await fetch('/api/leaderboard');
-         const data = await response.json();
-         if (data.success && data.entries && data.entries.length > 0) {
-         allLeaderboardEntries = data.entries;
-         renderLeaderboard(data.entries);
-         } else {
-         document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;padding:2rem 0;">No leaderboard entries yet. Be the first to scan your site!</p>';
-         }
-         } catch (e) {
-         document.getElementById('top3-container').innerHTML = '<p style="color:#6b7280!important;text-align:center;grid-column:1/-1;">Unable to load leaderboard.</p>';
-         }
-         }
-         function applyLeaderboardFilters() {
-         const search  = (document.getElementById('lbSearch')?.value || '').toLowerCase().trim();
-         const niche   = document.getElementById('filterNiche').value.toLowerCase().replace(/[\s_-]/g, '');
-         const country = document.getElementById('filterCountry').value;
-         const bizType = document.getElementById('filterBizType').value.toLowerCase();
-         const scoreMin= document.getElementById('filterScore').value;
-         let filtered = allLeaderboardEntries.filter(e => {
-           // Search: match on company name, domain, or niche
-           if (search) {
-             const name   = (e.company_name || '').toLowerCase();
-             const domain = (e.url || '').toLowerCase();
-             const en     = (e.niche || '').toLowerCase();
-             if (!name.includes(search) && !domain.includes(search) && !en.includes(search)) return false;
-           }
-           // Niche: fuzzy — strip spaces/underscores/dashes before comparing
-           if (niche) {
-             const en = (e.niche || '').toLowerCase().replace(/[\s_-]/g, '');
-             if (!en.includes(niche) && !niche.includes(en)) return false;
-           }
-           // Country: exact
-           if (country && (e.country || '') !== country) return false;
-           // Business type: fuzzy
-           if (bizType) {
-             const bt = (e.business_type || '').toLowerCase();
-             if (!bt.includes(bizType) && !bizType.includes(bt)) return false;
-           }
-           // Score min
-           if (scoreMin && e.score < parseInt(scoreMin)) return false;
-           return true;
-         });
-         const active = [search, niche, country, bizType, scoreMin].filter(Boolean).length;
-         document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
-         renderLeaderboard(filtered);
-         }
-         function resetLeaderboardFilters() {
-         ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => { document.getElementById(id).value = ''; });
-         const lbSearch = document.getElementById('lbSearch');
-         if (lbSearch) lbSearch.value = '';
-         document.getElementById('filterCount').textContent = '';
-         renderLeaderboard(allLeaderboardEntries);
-         }
-         function renderLeaderboard(entries) {
-         const activeNiche = document.getElementById('filterNiche')?.value || '';
-         const activeCountry = document.getElementById('filterCountry')?.value || '';
-         const nicheHeader = document.getElementById('leaderboardNicheHeader');
-         if (nicheHeader) {
-         if (activeNiche || activeCountry) {
-         const label = [activeNiche, activeCountry].filter(Boolean).join(' · ');
-         nicheHeader.innerHTML = `<div style="text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(124,58,237,0.15);border:1px solid #7c3aed;border-radius:12px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Filtered View</div><div style="font-size:1.2rem;font-weight:800;color:#e9d5ff!important;">🏆 Top ${entries.length} · ${label}</div><div style="font-size:0.78rem;color:#7c3aed!important;margin-top:4px;">Showing ${entries.length} result${entries.length!==1?'s':''} · <button onclick="resetLeaderboardFilters()" style="background:none;border:none;color:#a78bfa!important;cursor:pointer;font-weight:700;font-size:0.78rem;text-decoration:underline;">Clear filters</button></div></div>`;
-         nicheHeader.classList.remove('hidden');
-         } else { nicheHeader.classList.add('hidden'); }
-         }
-         const top3Container = document.getElementById('top3-container');
-         const restContainer = document.getElementById('rankings4to15Container');
-         const emptyState = document.getElementById('leaderboardEmpty');
-         if (!entries || entries.length === 0) { top3Container.innerHTML = ''; restContainer.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
-         emptyState.classList.add('hidden');
-         const top3 = entries.slice(0, 3);
-         top3Container.innerHTML = top3.map((e, i) => {
-         const m = MEDAL[i];
-         const name = e.company_name || (() => { try { return new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname; } catch(err) { return e.url; } })();
-         const tags = [e.niche, e.business_type, e.country].filter(Boolean);
-         return `<div style="background:${m.bg};border:2px solid ${m.border};border-radius:16px;padding:28px 20px 24px;text-align:center;position:relative;box-shadow:0 0 28px ${m.glow},inset 0 1px 0 rgba(255,255,255,0.07);transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
-         <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:${m.badgeBg};color:${m.badgeText}!important;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:99px;">${m.label}</div>
-         <div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
-         <h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
-         <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
-         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
-         ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}</div>` : ''}
-         <a href="${e.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔍 Visit Scanned Site</a>
-         </div>`;
-         }).join('');
-         const rest = entries.slice(3);
-         if (rest.length > 0) {
-         const DEFAULT_SHOW = 22, showAll = rest.length <= DEFAULT_SHOW;
-         const visible = showAll ? rest : rest.slice(0, DEFAULT_SHOW);
-         restContainer.innerHTML = `<div id="rankingsList" style="background:#111827;border:1px solid #374151;border-radius:12px;overflow:hidden;margin-top:8px;">${buildRankRows(visible, 4)}</div>
-         ${!showAll ? `<div id="loadMoreWrap" style="text-align:center;margin-top:16px;"><button onclick="expandRankings()" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white!important;border:none;padding:10px 32px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;">Show More <span style="opacity:.7;font-weight:400;">(${rest.length - DEFAULT_SHOW} more entries)</span></button></div>` : ''}`;
-         window._lbRestEntries = rest;
-         } else { restContainer.innerHTML = ''; }
-         }
-         function buildRankRows(entries, startRank) {
-         return entries.map((e, i) => {
-         const rank = startRank + i;
-         const name = e.company_name || (e.url.replace(/https?:\/\//,'').split('/')[0]);
-         const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
-         const rowBg = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
-         const tags = [e.niche, e.business_type, e.country].filter(Boolean).join(' · ');
-         return `<div class="lb-rank-row" style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;gap:8px;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
-         <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-         <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:24px;flex-shrink:0;text-align:right;">${rank}</span>
-         <div style="min-width:0;flex:1;">
-         <div class="lb-rank-name" style="font-weight:600;color:#f3f4f6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${name}</div>
-         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}</div>` : ''}
-         </div>
-         </div>
-         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-         <span class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
-         <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">Visit →</a>
-         </div>
-         </div>`;
-         }).join('');
-         }
-         function expandRankings() {
-         const rest = window._lbRestEntries || [];
-         document.getElementById('rankingsList').innerHTML = buildRankRows(rest, 4);
-         const wrap = document.getElementById('loadMoreWrap');
-         if (wrap) wrap.innerHTML = `<p style="text-align:center;font-size:0.8rem;color:#6b7280!important;margin-top:12px;">Showing all ${rest.length} entries (ranks 4–${rest.length + 3})</p>`;
-         }
-         async function loadFreelancers() {
-         try {
-         const response = await fetch('/api/freelancers');
-         const data = await response.json();
-         const grid = document.getElementById('freelancersGrid');
-         if (data.success && data.freelancers && data.freelancers.length > 0) {
-         function renderCard(f, featured) {
-         var borderColor = featured ? '#7e22ce' : '#374151';
-         var cardStyle = featured ? 'border:2px solid #7e22ce;background:linear-gradient(135deg,#0f0a1e,#1a1040);' : 'border:1px solid #374151;';
-         var bio = (f.bio || 'No bio available.').slice(0, 120) + ((f.bio || '').length > 120 ? '…' : '');
-         var badge = f.is_featured ? '<span style="font-size:0.6rem;background:#7e22ce;color:white!important;padding:2px 7px;border-radius:99px;margin-left:6px;white-space:nowrap;">FEATURED</span>' : '';
-         return '<div class="card" style="' + cardStyle + 'transition:border-color 0.2s;display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'#a855f7\'" onmouseout="this.style.borderColor=\'' + borderColor + '\'">'
-         + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">'
-         + '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;">' + f.name.charAt(0) + '</div>'
-         + '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + (f.title || 'Specialist') + '</p></div></div>'
-         + '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + bio + '</p>'
-         + '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>'
-         + '</div>';
-         }
-         var featured = data.freelancers.filter(function(f){ return f.is_featured; });
-         var standard = data.freelancers.filter(function(f){ return !f.is_featured; });
-         if (featured.length === 0) { featured = data.freelancers.slice(0,4); standard = data.freelancers.slice(4); }
-         var featuredHTML = featured.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div><div style="display:flex;flex-direction:column;gap:16px;flex:1;">' + featured.map(function(f){ return renderCard(f, true); }).join('') + '</div></div>' : '';
-         var standardHTML = standard.length > 0 ? '<div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 More Specialists</div><div class="specialists-standard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;">' + standard.map(function(f){ return renderCard(f, false); }).join('') + '</div></div>' : '';
-         grid.innerHTML = (featured.length > 0 && standard.length > 0) ? '<div class="specialists-outer-grid" style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;">' + featuredHTML + standardHTML + '</div>' : (featuredHTML || standardHTML);
-         } else {
-         function makeCard(f, featured) {
-         var borderColor = featured ? (f.real ? '#7e22ce' : '#4c1d95') : '#374151';
-         var avatarBg = featured ? (f.real ? 'linear-gradient(135deg,#7e22ce,#be185d)' : 'linear-gradient(135deg,#4c1d95,#312e81)') : 'linear-gradient(135deg,#1f2937,#374151)';
-         var cardBg = featured ? 'background:linear-gradient(135deg,#0f0a1e,#1a1040);' : '';
-         var opacity = (!f.real && featured) ? 'opacity:0.75;' : (!featured ? 'opacity:0.65;' : '');
-         var btn = f.real ? '<a href="https://wa.me/31628073996" target="_blank" rel="noopener" style="display:block;width:100%;background:#0f7b3a;color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;text-decoration:none;margin-top:auto;">Contact</a>' : '<button onclick="openFreelancerModal()" style="display:block;width:100%;background:' + (featured ? 'linear-gradient(135deg,#7e22ce,#be185d)' : '#1f2937') + ';color:white!important;text-align:center;padding:10px;border-radius:8px;font-weight:600;border:none;cursor:pointer;margin-top:auto;">Apply for This Spot</button>';
-         var badge = f.badge ? '<span style="font-size:0.6rem;background:' + (f.real ? '#7e22ce' : '#4c1d95') + ';color:white!important;padding:2px 7px;border-radius:99px;white-space:nowrap;">' + f.badge + '</span>' : '';
-         return '<div class="card" style="border:' + (featured ? '2' : '1') + 'px solid ' + borderColor + ';' + cardBg + 'transition:border-color 0.2s;display:flex;flex-direction:column;' + opacity + '" onmouseover="this.style.borderColor=\'#a855f7\';this.style.opacity=\'1\'" onmouseout="this.style.borderColor=\'' + borderColor + '\';this.style.opacity=\'' + ((!f.real&&featured)||!featured?(featured?'0.75':'0.65'):'1') + '">'
-         + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;"><div style="width:' + (featured?'52':'48') + 'px;height:' + (featured?'52':'48') + 'px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;border:' + (featured?'2px solid '+(f.real?'#a855f7':'#6d28d9'):'1px solid #4b5563') + ';">' + f.initial + '</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><h3 style="font-weight:700;margin-bottom:0;">' + f.name + '</h3>' + badge + '</div><p style="font-size:0.82rem;color:#9ca3af!important;margin-top:2px;">' + f.title + '</p></div></div>'
-         + '<p style="font-size:0.85rem;color:#d1d5db!important;margin-bottom:16px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;max-height:3.9rem;">' + f.bio + '</p>'
-         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.75rem;color:#6b7280!important;"><span>' + f.country + '</span><span>' + f.rate + '</span></div>'
-         + btn + '</div>';
-         }
-         var featured = [
-         { name: 'Ottmar Francisca', title: 'GRAAF Framework Creator · SEO Recovery Expert', bio: 'Founder of ContentScale. 24+ years in leadership. 78% traffic recovery rate across 200+ clients. Specialized in Google algorithm recovery and AI Overview optimization.', country: '🇳🇱 Netherlands', rate: '€150 / hour', badge: 'FOUNDER', initial: 'O', real: true },
-         { name: 'Open Spot', title: 'Senior SEO Strategist', bio: 'This featured spot is available for a verified SEO strategist.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
-         { name: 'Open Spot', title: 'Technical SEO Expert', bio: 'Schema markup, Core Web Vitals — this featured spot is open for a technical SEO expert.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false },
-         { name: 'Open Spot', title: 'Content & AI SEO Specialist', bio: 'AI Overview optimization, E-E-A-T content strategy — this featured spot is available.', country: '🌍 Any country', rate: 'Your rate', badge: 'FEATURED', initial: '★', real: false }
-         ];
-         var standard = [
-         { name: 'Open Spot', title: 'Local SEO Specialist', bio: 'Google Business Profile, local citations — apply to join ContentScale.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-         { name: 'Open Spot', title: 'Link Building Expert', bio: 'Authority building, digital PR — join the ContentScale specialist network.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-         { name: 'Open Spot', title: 'SEO Copywriter', bio: 'GRAAF-optimized content — apply to become a verified ContentScale specialist.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false },
-         { name: 'Open Spot', title: 'Analytics & Reporting Expert', bio: 'GA4, Search Console — help businesses understand what the numbers mean.', country: '🌍 Any country', rate: 'Your rate', initial: '?', real: false }
-         ];
-         grid.innerHTML = '<div class="specialists-outer-grid" style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:stretch;"><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;">⭐ Featured Specialists</div>' + featured.map(function(f){ return makeCard(f, true); }).join('') + '</div><div style="display:flex;flex-direction:column;gap:16px;"><div style="font-size:0.7rem;font-weight:700;color:#6b7280!important;letter-spacing:0.1em;text-transform:uppercase;">🔍 Available Spots</div><div class="specialists-standard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' + standard.map(function(f){ return makeCard(f, false); }).join('') + '</div></div></div>';
-         }
-         } catch (e) { console.error(e); }
-         }
-         function openFreelancerModal() { document.getElementById('freelancerModal').classList.add('active'); }
-         function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
-         function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
-         function switchPageSection(section) {
-         document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
-         const target = document.querySelector(`[data-section="${section}"]`);
-         if (target) target.classList.add('section-visible');
-         document.querySelectorAll('.page-tab').forEach(btn => btn.classList.remove('active'));
-         const activeTab = document.getElementById('tab-' + section);
-         if (activeTab) activeTab.classList.add('active');
-         const scanner = document.getElementById('lead-scanner');
-         if (section !== 'scanner') {
-         if (scanner) {
-         ['singleMode','bulkMode','discoverMode'].forEach(id => {
-         const el = document.getElementById(id);
-         if (el) el.classList.add('hidden');
-         });
-         }
-         } else {
-         switchMode('single');
-         }
-         if (section === 'leaderboard') loadLeaderboardData();
-         if (section === 'experts') loadFreelancers();
-         if (section === 'templates') loadUserTemplates();
-         const main = document.getElementById('main-content');
-         if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
-         }
-         async function submitFreelancer() {
-         const name = document.getElementById('freelancerName').value;
-         const email = document.getElementById('freelancerEmail').value;
-         const title = document.getElementById('freelancerTitle').value;
-         const bio = document.getElementById('freelancerBio').value;
-         const rate = document.getElementById('freelancerRate').value;
-         if (!name || !email || !title) { alert('❌ Name, Email, and Title required'); return; }
-         try {
-         const res = await fetch('/api/freelancers/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, title, bio, hourly_rate: rate }) });
-         const data = await res.json();
-         if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
-         else { alert('❌ ' + (data.error || 'Failed')); }
-         } catch (e) { alert('❌ Error: ' + e.message); }
-         }
-
-         // ============================================================
-         // BADGE SYSTEM
-         // ============================================================
-         function buildPageBadgeHTML(url, score, graaf, craft, technical) {
-           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
-           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
-           const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
-           const pct = (v,max) => Math.round(v/max*100);
-           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-    <div>
-      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
-      <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
-    </div>
-    <div style="text-align:center;min-width:52px;">
-      <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
-      <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
-    </div>
-  </div>
-  <div style="margin-bottom:10px;">
-    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
-    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
-    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
-    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
-  </div>
-  <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
-    <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
-  </div>
-</div>`;
-         }
-
-         function buildDomainBadgeHTML(domain, score, pageCount, topPages) {
-           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
-           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
-           const rows = (topPages||[]).slice(0,3).map(p => {
-             const c = p.score>=95?'#a78bfa':p.score>=90?'#60a5fa':p.score>=85?'#4ade80':p.score>=80?'#a3e635':p.score>=75?'#fde68a':p.score>=70?'#fb923c':'#f87171';
-             const short = p.url.replace(/https?:\/\//,'').replace(/\/$/,'');
-             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1e293b;">
-    <a href="${p.url}" target="_blank" style="font-size:0.65rem;color:#818cf8;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${short}</a>
-    <span style="font-size:0.7rem;font-weight:800;color:${c};min-width:28px;text-align:right;">${p.score}</span>
-  </div>`;
-           }).join('');
-           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:320px;box-sizing:border-box;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <div>
-      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Domain ContentScore</div>
-      <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">${domain}</div>
-      <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${pageCount} pages scanned</div>
-    </div>
-    <div style="text-align:center;min-width:60px;">
-      <div style="font-size:2.4rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
-      <div style="font-size:0.62rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
-    </div>
-  </div>
-  ${rows ? `<div style="margin-bottom:10px;">${rows}</div>` : ''}
-  <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
-    <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
-  </div>
-</div>`;
-         }
-
-         function showPageBadge(url, score, graaf, craft, technical) {
-           const html = buildPageBadgeHTML(url, score, graaf, craft, technical);
-           document.getElementById('badgePreview').innerHTML = html;
-           document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
-           document.getElementById('badgeModal').classList.add('open');
-         }
-
-         function showDomainBadge(domain, score, pageCount, topPages) {
-           const html = buildDomainBadgeHTML(domain, score, pageCount, topPages);
-           document.getElementById('badgePreview').innerHTML = html;
-           document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
-           document.getElementById('badgeModal').classList.add('open');
-         }
-
-         function showBulkDomainBadge() {
-           const successful = bulkResults.filter(r => r.success && r.score > 0);
-           if (!successful.length) return;
-           // Detect if all same domain
-           const domains = [...new Set(successful.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
-           const domain = domains[0];
-           const isSameDomain = domains.length === 1;
-           if (!isSameDomain) { showToast('\u26a0\ufe0f Multiple domains — use the \xf0\x9f\x8f\x85 per row for individual badges', '#f59e0b'); return; }
-           const avgScore = Math.round(successful.reduce((a,r) => a+r.score, 0) / successful.length);
-           const topPages = successful.sort((a,b) => b.score-a.score).slice(0,3).map(r => ({url:r.url, score:r.score}));
-           showDomainBadge(domain, avgScore, successful.length, topPages);
-         }
-
-         function closeBadgeModal() {
-           document.getElementById('badgeModal').classList.remove('open');
-         }
-
-         function copyBadgeCode() {
-           const ta = document.getElementById('badgeEmbedCode');
-           ta.select();
-           if (navigator.clipboard) {
-             navigator.clipboard.writeText(ta.value).then(() => showToast('\u2705 Badge code copied!', '#7e22ce'));
-           } else {
-             document.execCommand('copy');
-             showToast('\u2705 Copied!', '#7e22ce');
-           }
-         }
-
-         // ============================================================
-         // SHARE ALL AS URL
-         // ============================================================
-         async function shareAllResults() {
-           if (!bulkResults || bulkResults.length === 0) { showToast('\u274c No results to share', '#ef4444'); return; }
-           const successful = bulkResults.filter(r => r.success);
-           if (!successful.length) { showToast('\u26a0\ufe0f No successful results', '#f59e0b'); return; }
-           const btn = event?.target?.closest('button');
-           if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Creating link...'; }
-           try {
-             const res = await fetch('/api/share/bulk', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ results: successful })
-             });
-             const data = await res.json();
-             if (data.success && data.token) {
-               const url = window.location.origin + '/share/' + data.token;
-               if (navigator.clipboard) {
-                 await navigator.clipboard.writeText(url);
-                 showToast('\ud83d\udd17 Share link copied!', '#0ea5e9');
-               } else {
-                 prompt('Copy this link:', url);
-               }
-             } else { showToast('\u274c Could not create share link', '#ef4444'); }
-           } catch(e) { showToast('\u274c Error: ' + e.message, '#ef4444'); }
-           finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; } }
-         }
-
-      </script>
-   <!-- BADGE MODAL -->
-<div id="badgeModal" onclick="if(event.target===this)closeBadgeModal()">
-  <div id="badgeModalBox">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <h3 style="font-size:1rem;font-weight:800;color:#e9d5ff!important;">🏅 Get Your Badge</h3>
-      <button onclick="closeBadgeModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
-    </div>
-    <p style="font-size:0.75rem;color:#9ca3af!important;margin-bottom:2px;">Copy & paste this on your website. The link back to ContentScale is a dofollow backlink.</p>
-    <div id="badgePreviewWrap"><div id="badgePreview"></div></div>
-    <label style="font-size:0.72rem;color:#a78bfa!important;font-weight:700;display:block;margin-bottom:6px;">✂️ Embed Code</label>
-    <textarea id="badgeEmbedCode" readonly onclick="this.select()"></textarea>
-    <button onclick="copyBadgeCode()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">📋 Copy Embed Code</button>
-  </div>
-</div>
-</body>
+   </body>
 </html>
+`);
+} catch (e) { res.send(`
+<p>Error: ${e.message}</p>
+`); }
+});
+app.post('/api/unsubscribe', async (req, res) => {
+const { email } = req.body;
+if (!email || !pool) return res.json({ success: false });
+try {
+await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/email/send', async (req, res) => {
+const userId = req.headers['x-user-id'];
+const { to_email, subject, html, business_url, business_name, score, template_type } = req.body;
+if (!to_email || !subject || !html) return res.json({ success: false, error: 'Missing fields' });
+let dailyLimit = parseInt(process.env.SENDGRID_DAILY_LIMIT || '100');
+if (pool) {
+const wup = await pool.query(`SELECT warmup_start_date FROM warmup_config WHERE user_id = $1 AND is_active = TRUE`, [userId || 'server']).catch(() => ({ rows: [] }));
+if (wup.rows.length) {
+const day = Math.floor((new Date() - new Date(wup.rows[0].warmup_start_date)) / 86400000) + 1;
+dailyLimit = calcWarmupCap(day);
+}
+}
+if (pool) {
+const sup = await pool.query(`SELECT id FROM email_suppression WHERE email = $1`, [to_email.toLowerCase()]).catch(() => ({ rows: [] }));
+if (sup.rows.length > 0) return res.json({ success: false, suppressed: true, error: 'Email unsubscribed' });
+}
+let apiKeyToUse = null;
+if (process.env.SENDGRID_API_KEY) {
+apiKeyToUse = process.env.SENDGRID_API_KEY;
+} else if (userId && pool) {
+try {
+const result = await pool.query("SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
+if (result.rows.length > 0) {
+apiKeyToUse = result.rows[0].api_key;
+dailyLimit = result.rows[0].daily_limit;
+if (result.rows[0].used_today >= dailyLimit) {
+return res.json({ success: false, limit_reached: true, error: 'Daily limit reached' });
+}
+}
+} catch (e) { console.error('Key lookup error:', e.message); }
+}
+if (!apiKeyToUse) return res.json({ success: false, needs_api_key: true, error: 'No SendGrid key configured' });
+if (process.env.SENDGRID_API_KEY && pool) {
+try {
+const today = new Date().toISOString().slice(0, 10);
+const countRes = await pool.query(
+"SELECT COUNT(*) FROM email_queue WHERE status = 'sent' AND sent_at::date = $1::date",
+[today]
+);
+const sentToday = parseInt(countRes.rows[0].count) || 0;
+if (sentToday >= dailyLimit) {
+return res.json({ success: false, limit_reached: true, error: `Daily limit of ${dailyLimit} reached` });
+}
+} catch (e) { console.warn('Daily limit check failed:', e.message); }
+}
+try {
+sgMail.setApiKey(apiKeyToUse);
+await sgMail.send({
+to: to_email,
+from: process.env.SENDGRID_FROM_EMAIL || 'noreply@contentscale.site',
+subject,
+html
+});
+if (pool) {
+await pool.query(
+`INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at, business_url, business_name, score, template_type) VALUES ($1, $2, $3, $4, 'sent', NOW(), $5, $6, $7, $8)`,
+[userId || 'server', to_email, subject, html, business_url || null, business_name || null, score || null, template_type || null]
+).catch(e => console.warn('Email log failed:', e.message));
+}
+if (!process.env.SENDGRID_API_KEY && userId && pool) {
+await pool.query(
+"UPDATE user_api_keys SET used_today = used_today + 1 WHERE user_id = $1 AND service_name = 'sendgrid'",
+[userId]
+).catch(e => console.warn('Counter update failed:', e.message));
+}
+res.json({ success: true });
+} catch (e) {
+console.error('❌ SendGrid send error:', e.message);
+res.json({ success: false, error: e.message });
+}
+});
+// Bulk Scan Placeholders
+app.post('/api/bulk-scan/send-summary', async (req, res) => { res.json({ success: true }); });
+app.post('/api/bulk-scan/submit-leaderboard', async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const { entries, submittedBy } = req.body;
+if (!entries || !Array.isArray(entries)) return res.json({ success: false, error: 'No entries' });
+let inserted = 0;
+for (const e of entries) {
+try {
+await pool.query(
+`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified)
+VALUES ($1, $2, $3, $4, $5, FALSE, FALSE)
+ON CONFLICT (url) DO UPDATE SET
+score = EXCLUDED.score,
+company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
+admin_verified = FALSE`,
+[e.url, e.company_name || e.name || null, e.score, e.country || 'NL', e.niche || null]
+);
+inserted++;
+} catch (err) { console.warn('Leaderboard insert failed:', err.message); }
+}
+res.json({ success: true, inserted });
+});
+app.post('/api/bulk-scan/send-improvement-emails', async (req, res) => { res.json({ success: true }); });
+app.post('/api/bulk-scan/send-website-offers', async (req, res) => { res.json({ success: true }); });
+// Admin Endpoints
+app.post('/api/setup/verify-admin', async (req, res) => {
+const { username, password } = req.body;
+if (!pool) return res.status(503).json({ success: false, error: 'DB down' });
+try {
+const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid' });
+const valid = await bcrypt.compare(password, result.rows[0].password_hash);
+if (!valid) return res.status(401).json({ success: false, error: 'Invalid' });
+res.json({ success: true, admin_id: result.rows[0].id });
+} catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
+});
+// ✅ FIX v3: Added activated_until alias + computed is_activated so admin.html renderUsers works correctly
+app.get('/api/admin/users', verifyAdmin, async (req, res) => {
+try {
+const r = await pool.query(`
+SELECT 
+u.*,
+u.activation_expires AS activated_until,
+CASE WHEN u.activation_expires > NOW() THEN TRUE ELSE FALSE END AS is_activated,
+COUNT(s.id) AS scan_count,
+MAX(s.created_at) AS last_scan_at,
+(SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
+(SELECT s3.score FROM scan_log s3 WHERE s3.user_id = u.id ORDER BY s3.created_at DESC LIMIT 1) AS last_scan_score
+FROM users u
+LEFT JOIN scan_log s ON s.user_id = u.id
+GROUP BY u.id
+ORDER BY u.created_at DESC
+`);
+res.json({ success: true, users: r.rows });
+}
+catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
+try {
+const days = req.body.days || 7;
+const date = new Date(); date.setDate(date.getDate() + parseInt(days));
+await pool.query('UPDATE users SET is_activated = TRUE, activation_expires = $2 WHERE id = $1', [req.params.id, date]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ✅ FIX v3: Added missing deactivate endpoint (was causing 404 in admin.html)
+app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
+try {
+await pool.query(
+'UPDATE users SET is_activated = FALSE, activation_expires = NULL WHERE id = $1',
+[req.params.id]
+);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
+try {
+await pool.query('DELETE FROM user_api_keys WHERE user_id = $1', [req.params.id]);
+await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Users
+app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs provided' });
+await pool.query('DELETE FROM user_api_keys WHERE user_id = ANY($1)', [ids]);
+const result = await pool.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
+res.json({ success: true, message: `Deleted ${result.rowCount} users` });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
+try { const r = await pool.query('SELECT * FROM admin_messages ORDER BY created_at DESC LIMIT 50'); res.json({ success: true, messages: r.rows }); }
+catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
+try {
+await pool.query(`INSERT INTO admin_messages (sent_by, recipient_type, subject, body, is_bulk) VALUES ($1, $2, $3, $4, $5)`, [req.admin.id, req.body.recipients, req.body.subject, req.body.body, req.body.is_bulk || false]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ── DOCX Export endpoint ─────────────────────────────────────────────────────
+app.post('/api/export/scan-report-docx', async (req, res) => {
+const { scans } = req.body;
+if (!scans || !Array.isArray(scans)) return res.status(400).json({ error: 'No scan data' });
+const { spawn } = require('child_process');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
+const tmpJson = path.join(os.tmpdir(), 'scandata_' + Date.now() + '.json');
+const tmpDocx = path.join(os.tmpdir(), 'scanreport_' + Date.now() + '.docx');
+fs.writeFileSync(tmpJson, JSON.stringify(scans));
+const pyScript = `
+import sys, json
+from docx import Document
+from docx.shared import Pt, RGBColor, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+import datetime
+json_path = sys.argv[1]
+out_path  = sys.argv[2]
+with open(json_path) as f:
+scans = json.load(f)
+doc = Document()
+for section in doc.sections:
+section.top_margin    = Cm(2)
+section.bottom_margin = Cm(2)
+section.left_margin   = Cm(2.5)
+section.right_margin  = Cm(2.5)
+title = doc.add_paragraph()
+title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = title.add_run('ContentScale — Scan Activity Report')
+run.bold = True
+run.font.size = Pt(20)
+run.font.color.rgb = RGBColor(126, 34, 206)
+sub = doc.add_paragraph()
+sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+sub.add_run('Generated: ' + datetime.datetime.now().strftime('%d %B %Y') + '  ·  app.contentscale.site').font.color.rgb = RGBColor(120, 120, 120)
+doc.add_paragraph()
+total   = len(scans)
+emailed = sum(1 for s in scans if s.get('email_status') == 'has_email')
+no_em   = sum(1 for s in scans if s.get('email_status') == 'no_email')
+lb      = sum(1 for s in scans if (s.get('score') or 0) >= 70)
+stats_p = doc.add_paragraph()
+stats_p.add_run('Summary   ').bold = True
+stats_p.add_run(f'Total scanned: {total}   |   Emails sent: {emailed}   |   No email found: {no_em}   |   Leaderboard (70+): {lb}')
+doc.add_paragraph()
+def get_template_label(s):
+tt = s.get('template_type') or ''
+status = s.get('email_status') or 'no_email'
+if status != 'has_email':
+return 'No email'
+if tt == 'congrats':
+return 'Congrats'
+if tt == 'almost':
+return 'Almost Made It'
+if tt == 'improvement':
+return 'Pitch Sent'
+if tt == 'website':
+return 'Website Offer'
+return 'Sent'
+def get_source_label(s):
+src = s.get('source') or 'single'
+if src == 'bulk':     return 'Bulk'
+if src == 'discover': return 'Find Leads'
+return 'Single'
+headers = ['Business', 'URL', 'Score', 'Email Found', 'Template', 'Source', 'Top Issue', 'Scanned']
+widths  = [Cm(3.8), Cm(4.5), Cm(1.5), Cm(4.2), Cm(2.2), Cm(1.8), Cm(4.5), Cm(2.5)]
+table = doc.add_table(rows=1, cols=len(headers))
+table.style = 'Table Grid'
+hdr = table.rows[0]
+for i, (cell, w) in enumerate(zip(hdr.cells, widths)):
+cell.width = w
+p = cell.paragraphs[0]
+run = p.add_run(headers[i])
+run.bold = True
+run.font.size = Pt(8)
+run.font.color.rgb = RGBColor(255, 255, 255)
+tc = cell._tc
+tcPr = tc.get_or_add_tcPr()
+shd = OxmlElement('w:shd')
+shd.set(qn('w:val'), 'clear')
+shd.set(qn('w:color'), 'auto')
+shd.set(qn('w:fill'), '7E22CE')
+tcPr.append(shd)
+for idx, s in enumerate(scans):
+score = s.get('score')
+if score is None: score_str = '—'
+else: score_str = str(score)
+rec = ''
+try:
+import json as j2
+recs = j2.loads(s.get('recommendations') or '[]')
+rec = recs[0] if recs else ''
+except: pass
+dt_str = ''
+try:
+from datetime import datetime
+dt_str = datetime.fromisoformat(s.get('created_at','').replace('Z','+00:00')).strftime('%d/%m/%Y')
+except: dt_str = str(s.get('created_at',''))[:10]
+template_label = get_template_label(s)
+source_label   = get_source_label(s)
+row_data = [
+(s.get('business_name') or '—')[:40],
+(s.get('business_url') or '—').replace('https://','').replace('http://','').replace('www.','')[:40],
+score_str,
+(s.get('email_found') or 'not found')[:35],
+template_label,
+source_label,
+rec[:50],
+dt_str
+]
+row = table.add_row()
+fill = 'F5F3FF' if idx % 2 == 0 else 'FFFFFF'
+for i, (cell, val) in enumerate(zip(row.cells, row_data)):
+p = cell.paragraphs[0]
+run = p.add_run(val)
+run.font.size = Pt(7.5)
+if i == 2 and score is not None:
+if score >= 70:   run.font.color.rgb = RGBColor(5, 150, 105)
+elif score >= 50: run.font.color.rgb = RGBColor(180, 83, 9)
+else:             run.font.color.rgb = RGBColor(185, 28, 28)
+run.bold = True
+if i == 4:
+if val == 'Congrats':         run.font.color.rgb = RGBColor(5, 150, 105)
+elif val == 'Almost Made It': run.font.color.rgb = RGBColor(180, 83, 9)
+elif val == 'Pitch Sent':     run.font.color.rgb = RGBColor(29, 78, 216)
+elif val == 'Website Offer':  run.font.color.rgb = RGBColor(126, 34, 206)
+else:                         run.font.color.rgb = RGBColor(107, 114, 128)
+tc = cell._tc
+tcPr = tc.get_or_add_tcPr()
+shd = OxmlElement('w:shd')
+shd.set(qn('w:val'), 'clear')
+shd.set(qn('w:color'), 'auto')
+shd.set(qn('w:fill'), fill)
+tcPr.append(shd)
+doc.add_paragraph()
+footer_p = doc.add_paragraph()
+footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+fr = footer_p.add_run('ContentScale  ·  app.contentscale.site  ·  GRAAF + CRAFT Framework  ·  By Ottmar Francisca')
+fr.font.size = Pt(7)
+fr.font.color.rgb = RGBColor(150, 150, 150)
+doc.save(out_path)
+print('OK')
+`;
+const tmpPy = path.join(os.tmpdir(), 'gendocx_' + Date.now() + '.py');
+fs.writeFileSync(tmpPy, pyScript);
+const py = spawn('python3', [tmpPy, tmpJson, tmpDocx]);
+let stderr = '';
+py.stderr.on('data', d => stderr += d);
+py.on('close', code => {
+fs.unlinkSync(tmpPy);
+fs.unlinkSync(tmpJson);
+if (code !== 0 || !fs.existsSync(tmpDocx)) {
+return res.status(500).json({ error: 'DOCX generation failed', detail: stderr });
+}
+const buf = fs.readFileSync(tmpDocx);
+fs.unlinkSync(tmpDocx);
+res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+res.setHeader('Content-Disposition', 'attachment; filename="contentscale-scan-report.docx"');
+res.send(buf);
+});
+});
+// ✅ /api/scan-log GET
+app.get('/api/scan-log', async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const userId = req.headers['x-user-id'];
+if (!userId) return res.json({ success: false, error: 'No user ID' });
+try {
+const r = await pool.query(
+`SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
+FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1000`, [userId]
+);
+res.json({ success: true, scans: r.rows });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ /api/scan-log POST
+app.post('/api/scan-log', async (req, res) => {
+if (!pool) return res.json({ success: false });
+const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations } = req.body;
+try {
+if (business_url) {
+const existing = await pool.query(
+`SELECT id, report_url FROM scan_log WHERE business_url = $1 LIMIT 1`,
+[business_url]
+);
+if (existing.rows.length > 0) {
+const row = existing.rows[0];
+const existingReportUrl = row.report_url
+? (row.report_url.startsWith('http') ? row.report_url : 'https://app.contentscale.site' + row.report_url)
+: null;
+return res.json({ success: true, skipped: true, reason: 'duplicate', report_url: existingReportUrl });
+}
+}
+const reportId = crypto.randomBytes(20).toString('hex');
+const reportUrl = '/report/' + reportId;
+const insertResult = await pool.query(
+`INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+[
+user_id || null, business_url, business_name || null, score || null,
+niche || null, city || null, country || null, email_found || null,
+email_status || 'no_email', source || 'single',
+recommendations ? JSON.stringify(recommendations) : null,
+reportUrl
+]
+);
+const scanLogId = insertResult.rows[0]?.id || null;
+await pool.query(
+`INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+[reportId, scanLogId, business_url || null, business_name || null, score || null,
+niche || null, city || null, country || null, email_found || null,
+recommendations ? JSON.stringify(recommendations) : null]
+);
+res.json({ success: true, report_url: 'https://app.contentscale.site' + reportUrl });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ✅ /api/admin/scan-log GET
+app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const limit = parseInt(req.query.limit) || 1000;
+try {
+const r = await pool.query(
+`SELECT id, user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
+FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
+);
+res.json({ success: true, scans: r.rows });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/email-log', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const limit = parseInt(req.query.limit) || 200;
+const offset = parseInt(req.query.offset) || 0;
+try {
+const r = await pool.query(
+`SELECT id, to_email, business_name, business_url, score, template_type, subject, status, sent_at, created_at
+FROM email_queue ORDER BY COALESCE(sent_at, created_at) DESC LIMIT $1 OFFSET $2`,
+[limit, offset]
+);
+const countRes = await pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent'`);
+res.json({ success: true, emails: r.rows, total: parseInt(countRes.rows[0].count) });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/email-stats', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+try {
+const today = new Date().toISOString().split('T')[0];
+const [sentToday, queued, totalSent] = await Promise.all([
+pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent' AND sent_at::date = $1::date`, [today]),
+pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='pending'`),
+pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent'`)
+]);
+const dailyLimit = 100;
+res.json({
+success: true,
+sentToday: parseInt(sentToday.rows[0].count),
+dailyLimit,
+remainingToday: Math.max(0, dailyLimit - parseInt(sentToday.rows[0].count)),
+queued: parseInt(queued.rows[0].count),
+totalSent: parseInt(totalSent.rows[0].count)
+});
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+try { const r = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
+catch (e) { res.json({ success: true, pending: [] }); }
+});
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+try {
+const { final_country, city, niche } = req.body;
+await pool.query(
+`UPDATE leaderboard SET admin_verified = TRUE, is_verified = TRUE,
+country = COALESCE($2, country),
+city = COALESCE($3, city),
+niche = COALESCE($4, niche)
+WHERE id = $1`,
+[req.params.id, final_country || null, city || null, niche || null]
+);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+try { await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+try {
+const { company_name, url, score, country, niche } = req.body;
+const updates = []; const vals = []; let i = 1;
+if (company_name) { updates.push(`company_name=$${i++}`); vals.push(company_name); }
+if (url) { updates.push(`url=$${i++}`); vals.push(url); }
+if (score) { updates.push(`score=$${i++}`); vals.push(parseInt(score)); }
+if (country) { updates.push(`country=$${i++}`); vals.push(country); }
+if (niche) { updates.push(`niche=$${i++}`); vals.push(niche); }
+if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields' });
+vals.push(req.params.id);
+await pool.query(`UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${i}`, vals);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+try { await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+try {
+const { url, company_name, score, country, niche } = req.body;
+if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL/Score required' });
+const r = await pool.query(`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified) VALUES ($1, $2, $3, $4, $5, true, true) ON CONFLICT (url) DO UPDATE SET score=EXCLUDED.score, company_name=COALESCE(EXCLUDED.company_name, leaderboard.company_name), niche=COALESCE(EXCLUDED.niche, leaderboard.niche), admin_verified=true RETURNING id`, [url, company_name, score, country, niche]);
+res.json({ success: true, id: r.rows[0].id });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Leaderboard
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs provided' });
+const result = await pool.query('DELETE FROM leaderboard WHERE id = ANY($1)', [ids]);
+res.json({ success: true, message: `Deleted ${result.rowCount} entries` });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// Freelancers Admin
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+try { const r = await pool.query(`SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
+catch (e) { res.json({ success: true, pending: [] }); }
+});
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+try { await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+try { await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+try {
+const { name, email, title, bio, hourly_rate, is_featured } = req.body;
+const updates = []; const vals = []; let i = 1;
+if (name) { updates.push(`name=$${i++}`); vals.push(name); }
+if (email) { updates.push(`email=$${i++}`); vals.push(email); }
+if (title) { updates.push(`title=$${i++}`); vals.push(title); }
+if (bio) { updates.push(`bio=$${i++}`); vals.push(bio); }
+if (hourly_rate) { updates.push(`hourly_rate=$${i++}`); vals.push(hourly_rate); }
+if (is_featured !== undefined) { updates.push(`is_featured=$${i++}`); vals.push(is_featured); }
+if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields' });
+vals.push(req.params.id);
+await pool.query(`UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${i}`, vals);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Freelancers
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs provided' });
+const result = await pool.query('DELETE FROM freelancers WHERE id = ANY($1)', [ids]);
+res.json({ success: true, message: `Deleted ${result.rowCount} profiles` });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Scan Logs
+app.post('/api/admin/scan-log/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) {
+return res.status(400).json({ success: false, error: 'No IDs provided' });
+}
+await pool.query('DELETE FROM scan_reports WHERE scan_log_id = ANY($1)', [ids]);
+const result = await pool.query('DELETE FROM scan_log WHERE id = ANY($1)', [ids]);
+console.log(`✅ Bulk deleted ${result.rowCount} scan log(s)`);
+res.json({ success: true, message: `Deleted ${result.rowCount} scan log(s)`, deleted: result.rowCount });
+} catch (e) {
+console.error('❌ Bulk delete scan logs error:', e.message);
+res.status(500).json({ success: false, error: e.message });
+}
+});
+// Leaderboard Public
+app.get('/api/leaderboard', async (req, res) => {
+if (!pool) return res.json({ success: true, entries: [], stats: {} });
+try {
+const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
+const entries = r.rows;
+const total = entries.length;
+const avg = total > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / total) : 0;
+const countries = [...new Set(entries.map(e => e.country))].length;
+const verified = entries.filter(e => e.admin_verified).length;
+const fr = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: 0 }] }));
+res.json({ success: true, entries, total, averageScore: avg, stats: { totalAgencies: total, avgScore: avg, countriesCount: countries, activeHelpers: parseInt(fr.rows[0].count) || 0, verifiedCount: verified } });
+} catch (e) { res.json({ success: true, entries: [], stats: {} }); }
+});
+app.post('/api/leaderboard/submit', async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'Database unavailable' });
+const { url, company_name, score, country, niche } = req.body;
+if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL and Score are required' });
+try {
+const finalScore = parseInt(score);
+const r = await pool.query(
+`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified, submission_ip)
+VALUES ($1, $2, $3, $4, $5, FALSE, FALSE, $6)
+ON CONFLICT (url) DO UPDATE SET
+score = EXCLUDED.score,
+company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
+admin_verified = FALSE, is_verified = FALSE
+RETURNING id`,
+[url, company_name || null, finalScore, country || 'NL', niche || null, req.ip || req.connection.remoteAddress]
+);
+res.json({ success: true, id: r.rows[0]?.id, message: 'Submission received. Pending admin approval.' });
+} catch (e) {
+console.error('Leaderboard submit error:', e.message);
+res.status(500).json({ success: false, error: e.message });
+}
+});
+app.get('/api/freelancers', async (req, res) => {
+if (!pool) return res.json({ success: true, freelancers: [] });
+try {
+const r = await pool.query(`SELECT id, name, email, title, location, country, bio, hourly_rate, is_verified, is_featured FROM freelancers WHERE is_approved = TRUE ORDER BY is_featured DESC, created_at DESC LIMIT 50`);
+res.json({ success: true, freelancers: r.rows });
+} catch (e) { res.json({ success: true, freelancers: [] }); }
+});
+app.post('/api/freelancers/register', async (req, res) => {
+if (!pool) return res.status(503).json({ success: false, error: 'DB down' });
+try {
+const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
+if (!name || !email) return res.status(400).json({ success: false, error: 'Name/Email required' });
+const exists = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
+if (exists.rows.length > 0) return res.status(400).json({ success: false, error: 'Email exists' });
+const r = await pool.query(`INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`, [name, email, title || null, location || null, country || null, bio || null, linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]);
+res.json({ success: true, id: r.rows[0].id });
+} catch (e) { res.status(500).json({ success: false, error: 'Failed' }); }
+});
+// ============================================
+// 🗺️ SITEMAP SCANNER ENDPOINTS
+// ============================================
+
+// Fetch and parse sitemap → return URL list
+app.post('/api/sitemap/urls', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
+  try {
+    const axios = require('axios');
+
+    // No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
+    const extractLocs = (xml) => {
+      const locs = [];
+      const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
+      let m;
+      while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
+      return locs;
+    };
+
+    const fetchXml = async (sitemapUrl) => {
+      const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+      return resp.data;
+    };
+
+    const xml = await fetchXml(url);
+    let urls = [];
+
+    // Sitemap index — contains sub-sitemap URLs
+    if (xml.includes('<sitemapindex')) {
+      const subSitemapUrls = extractLocs(xml);
+      for (const smUrl of subSitemapUrls.slice(0, 10)) {
+        try {
+          const subXml = await fetchXml(smUrl);
+          urls.push(...extractLocs(subXml));
+        } catch(e) { /* skip broken sub-sitemap */ }
+      }
+    } else {
+      // Regular urlset
+      urls = extractLocs(xml);
+    }
+
+    // Deduplicate + filter out non-page URLs
+    const filtered = [...new Set(urls)].filter(u => {
+      const skip = ['/tag/', '/category/', '/author/', '/feed/', '?', '#', '.xml', '.pdf', '.jpg', '.png'];
+      return !skip.some(s => u.includes(s));
+    });
+
+    res.json({ success: true, urls: filtered, total: filtered.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'Could not fetch sitemap: ' + e.message });
+  }
+});
+
+// Submit aggregate sitemap scan result as pending leaderboard entry
+app.post('/api/sitemap/submit', async (req, res) => {
+  const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country, niche, business_type } = req.body;
+  if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
+  try {
+    const r = await pool.query(
+      `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', FALSE, FALSE)
+       ON CONFLICT (url) DO UPDATE SET
+         score = EXCLUDED.score,
+         graaf_score = EXCLUDED.graaf_score,
+         craft_score = EXCLUDED.craft_score,
+         technical_score = EXCLUDED.technical_score,
+         country = EXCLUDED.country,
+         niche = EXCLUDED.niche,
+         business_type = EXCLUDED.business_type,
+         company_name = EXCLUDED.company_name,
+         page_count = EXCLUDED.page_count,
+         page_scores = EXCLUDED.page_scores,
+         scan_source = 'sitemap',
+         admin_verified = FALSE
+       RETURNING id`,
+      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || [])]
+    );
+    res.json({ success: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// 🔗 SHARE BULK RESULTS AS URL
+// ============================================================
+const shareStore = new Map(); // in-memory, survives restarts via DB below
+
+app.post('/api/share/bulk', async (req, res) => {
+  const { results } = req.body;
+  if (!results || !results.length) return res.status(400).json({ success: false, error: 'No results' });
+  const token = crypto.randomBytes(8).toString('hex');
+  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+  try {
+    await pool.query(
+      `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))
+       ON CONFLICT DO NOTHING`,
+      [token, JSON.stringify(results), expires]
+    );
+  } catch(e) {
+    // Table may not exist yet — try create
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS share_results (
+        id SERIAL PRIMARY KEY,
+        token VARCHAR(20) UNIQUE NOT NULL,
+        results_json JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        expires_at TIMESTAMPTZ
+      )`);
+      await pool.query(
+        `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`,
+        [token, JSON.stringify(results), expires]
+      );
+    } catch(e2) {
+      // Fallback: memory only
+      shareStore.set(token, { results, expires });
+    }
+  }
+  shareStore.set(token, { results, expires });
+  res.json({ success: true, token });
+});
+
+app.get('/share/:token', async (req, res) => {
+  const { token } = req.params;
+  let results = null;
+  // Try memory first
+  const mem = shareStore.get(token);
+  if (mem && mem.expires > Date.now()) results = mem.results;
+  // Try DB
+  if (!results) {
+    try {
+      const r = await pool.query(`SELECT results_json FROM share_results WHERE token=$1 AND expires_at > NOW()`, [token]);
+      if (r.rows.length) results = r.rows[0].results_json;
+    } catch(e) {}
+  }
+  if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
+
+  const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
+  const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
+  const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+  const sameDomain = domains.length === 1;
+
+  const rows = results.map((r,i) => {
+    const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
+    const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
+    const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
+    const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
+    return `<tr style="border-bottom:1px solid #e5e7eb;">
+      <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td>
+      <td style="padding:12px 16px;">
+        <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
+        <div style="font-size:12px;color:#6b7280;">${path}</div>
+      </td>
+      <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#7e22ce;">${r.metrics?.graaf||0}/50</td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#1d4ed8;">${r.metrics?.craft||0}/30</td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#b45309;">${r.metrics?.technical||0}/20</td>
+      <td style="padding:12px 16px;"><span style="background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">${lbl}</span></td>
+      <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title>
+    <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>
+  </head><body style="max-width:900px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+        <div>
+          <div style="font-size:20px;font-weight:900;">ContentScale</div>
+          <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+        </div>
+        <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div>
+      </div>
+      <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
+      <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p>
+    </div>
+    ${sameDomain?`<div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;">
+      <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
+      <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${avgScore}</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div>
+    </div>`:''}
+    <div style="padding:32px 40px;overflow-x:auto;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <thead><tr style="background:#f5f3ff;">
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">URL</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#6b7280;">Score</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#7e22ce;">GRAAF</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#1d4ed8;">CRAFT</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#b45309;">Technical</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Tier</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div><div style="color:white;font-weight:700;font-size:14px;">ContentScale</div><div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div></div>
+      <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a>
+    </div>
+    <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
+  </body></html>`;
+  res.send(html);
+});
+
+function computeScore(scanUrl, analysis, extractedEmails) {
+  extractedEmails = extractedEmails || [];
+// ── SCORING ──
+let graafScore = 0;
+if (analysis.wordCount >= 2500)      graafScore += 10;
+else if (analysis.wordCount >= 1500) graafScore += 7;
+else if (analysis.wordCount >= 1000) graafScore += 4;
+else if (analysis.wordCount >= 500)  graafScore += 2;
+if (analysis.statsFound >= 8)        graafScore += 8;
+else if (analysis.statsFound >= 5)   graafScore += 5;
+else if (analysis.statsFound >= 3)   graafScore += 3;
+if (analysis.expertQuoteCount >= 4)  graafScore += 8;
+else if (analysis.expertQuoteCount >= 2) graafScore += 5;
+else if (analysis.expertQuoteCount >= 1) graafScore += 2;
+if (analysis.caseStudyCount >= 2)    graafScore += 8;
+else if (analysis.caseStudyCount >= 1) graafScore += 4;
+if (analysis.hasDirectAnswer)        graafScore += 6;
+if (analysis.hasTLDR)               graafScore += 4;
+if (analysis.listItemCount >= 15)    graafScore += 6;
+else if (analysis.listItemCount >= 8) graafScore += 4;
+else if (analysis.listItemCount >= 3) graafScore += 2;
+graafScore = Math.min(50, graafScore);
+let craftScore = 0;
+if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric && !analysis.h1IsTooShort) craftScore += 8;
+else if (analysis.h1VisibleCount === 1) craftScore += 3;
+else if (analysis.h1VisibleCount > 1)   craftScore += 2;
+if (analysis.h2Count >= 5)          craftScore += 7;
+else if (analysis.h2Count >= 3)     craftScore += 5;
+else if (analysis.h2Count >= 1)     craftScore += 2;
+if (analysis.avgParagraphLength <= 60)       craftScore += 5;
+else if (analysis.avgParagraphLength <= 100) craftScore += 3;
+if (analysis.hasFAQContent)         craftScore += 5;
+if (analysis.hasTOC)                craftScore += 3;
+if (analysis.hasAuthorBio)          craftScore += 2;
+craftScore = Math.min(30, craftScore);
+let technicalScore = 0;
+if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
+else if (analysis.metaTitleLength > 0) technicalScore += 1;
+if (analysis.metaDescriptionLength >= 140 && analysis.metaDescriptionLength <= 165) technicalScore += 3;
+else if (analysis.metaDescriptionLength > 0) technicalScore += 1;
+if (analysis.hasArticleSchema)      technicalScore += 4;
+if (analysis.hasFAQPageSchema)      technicalScore += 4;
+if (analysis.hasCanonical)          technicalScore += 2;
+if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 2;
+else if (analysis.images > 0 && analysis.imagesWithAlt > 0) technicalScore += 1;
+if (analysis.hasMetaViewport)       technicalScore += 2;
+technicalScore = Math.min(20, technicalScore);
+const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
+const quality = totalScore >= 95 ? 'elite' : totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
+// ── RECOMMENDATIONS ──
+const recommendations = [];
+if (analysis.wordCount < 500) {
+recommendations.push({ title: '🚨 Critical: Content Is Too Thin', description: `Only ${analysis.wordCount} words found. This is well below what Google considers a substantive page.`, priority: 'high', action: 'Expand with deep explanations, examples, case studies, and FAQs. Aim for 2,500+ words.', learning: "Thin content (< 500 words) is the #1 trigger for Google Helpful Content penalties. Pages with 2,500+ words earn 3.7x more backlinks on average (Backlinko).", target: 'Minimum 1,500 words; ideal 2,500+' });
+} else if (analysis.wordCount < 1500) {
+recommendations.push({ title: '📝 Increase Content Depth', description: `${analysis.wordCount} words found — decent start, but below the threshold for competitive rankings.`, priority: 'medium', action: "Add a FAQ section (5–8 questions), a 'How it works' breakdown, or real client examples.", learning: "Pages ranking on page 1 average 1,890 words. Google's QRG rewards 'comprehensive, accurate, clearly written' content.", target: '1,500+ words minimum; 2,500+ for competitive terms' });
+} else if (analysis.wordCount < 2500) {
+recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
+}
+if (analysis.statsFound < 3) {
+recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
+} else if (analysis.statsFound < 8) {
+recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.", target: '8+ cited statistics with source and year' });
+}
+if (analysis.expertQuoteCount === 0) {
+recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: `Add 3–5 quotes from named experts. Format: "Quote text" — [Name, Title, Organization].`, learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
+} else if (analysis.expertQuoteCount < 3) {
+recommendations.push({ title: '💬 Add More Expert Citations', description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`, priority: 'medium', action: "Add quotes from industry publications or recognized professionals.", learning: "Expert citations are the fastest way to improve your GRAAF Authoritativeness score.", target: '3–5 attributed expert quotes' });
+}
+if (analysis.caseStudyCount === 0) {
+recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected.", priority: 'high', action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.", learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.", target: '2 case studies with Challenge/Solution/Results format and measurable metrics' });
+} else if (analysis.caseStudyCount < 2) {
+recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
+}
+if (!analysis.hasDirectAnswer) {
+recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
+}
+if (!analysis.hasTLDR) {
+recommendations.push({ title: '📌 Add a TL;DR / Key Takeaways Section', description: "No 'Key Takeaways' or 'Quick Summary' section detected.", priority: 'medium', action: "Add a 'Key Takeaways' section near the top with 5 bullet points.", learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.", target: '5 bullet takeaways with specific stats near the top of the page' });
+}
+if (analysis.listItemCount < 5) {
+recommendations.push({ title: '📋 Improve Scannability With Lists', description: `Only ${analysis.listItemCount} list items found.`, priority: 'medium', action: "Convert key points into bulleted or numbered lists. Aim for 15+ list items.", learning: "79% of users scan web content. Lists increase chances of featured snippet selection.", target: '15+ list items spread naturally through the content' });
+} else if (analysis.listItemCount < 15) {
+recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
+}
+if (analysis.h1Count === 0) {
+recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected.', priority: 'high', action: "Add exactly one H1 tag near the top of the page containing your primary keyword.", learning: "The H1 is Google's strongest on-page keyword signal.", target: 'Exactly 1 H1 tag with primary keyword in the first 30 characters' });
+} else if (analysis.h1IsHidden && analysis.h1VisibleCount === 0) {
+recommendations.push({ title: '🚨 Critical: H1 Is Hidden (display:none / visibility:hidden)', description: `An H1 exists in the HTML but is hidden with CSS.`, priority: 'high', action: "Remove the CSS hiding your H1. Make it visible.", learning: "Hidden H1s are sometimes used as an SEO trick. Google ignores hidden content for ranking signals.", target: '1 fully visible H1 containing primary keyword' });
+} else if (analysis.h1VisibleCount > 1) {
+recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1VisibleCount} visible H1 tags.`, priority: 'medium', action: "Keep only one H1. Demote the rest to H2 or H3.", learning: "Multiple H1s tell Google your page has multiple main topics.", target: 'Exactly 1 H1 tag per page' });
+} else if (analysis.h1IsGeneric) {
+recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword', description: `Your H1 "${analysis.h1Text}" contains no specific keyword.`, priority: 'high', action: "Replace your H1 with a specific keyword phrase.", learning: "Generic H1s like 'Home' or 'Welcome' provide zero keyword signal to Google.", target: 'H1 with primary keyword + specific value in 30–70 characters' });
+} else if (analysis.h1IsTooShort) {
+recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters.`, priority: 'medium', action: "Expand your H1 to 30–70 characters.", learning: "H1s under 10 characters provide minimal keyword signal.", target: 'H1 of 30–70 characters with primary keyword' });
+} else if (analysis.h1IsTooLong) {
+recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer.", learning: "H1s over 70 characters reduce keyword density.", target: 'H1 under 70 characters' });
+}
+if (analysis.h2Count < 3) {
+recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found.`, priority: 'medium', action: "Structure your content with 5+ H2 headings.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
+}
+if (analysis.avgParagraphLength > 100) {
+recommendations.push({ title: '📱 Shorten Paragraphs for Mobile Readability', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words.`, priority: 'medium', action: "Break paragraphs at 50–80 words maximum.", learning: "Paragraphs over 100 words increase mobile abandonment by 37%.", target: 'Average paragraph length 40–80 words' });
+}
+if (!analysis.hasFAQContent) {
+recommendations.push({ title: '❓ Add a FAQ Section', description: "No FAQ section detected.", priority: 'medium', action: "Add an FAQ section with 5–10 real questions your audience asks.", learning: "'People Also Ask' boxes now appear in 80% of Google searches.", target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs" });
+}
+if (!analysis.hasTOC) {
+recommendations.push({ title: '📑 Add a Table of Contents', description: 'No Table of Contents detected.', priority: 'low', action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.", learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.", target: 'Table of Contents with anchor links to all H2 sections' });
+}
+if (!analysis.hasAuthorBio) {
+recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
+}
+if (!analysis.hasArticleSchema) {
+recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
+   }
+   if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
+   recommendations.push({ title: '🛠️ Add FAQPage Schema to Your FAQ Section', description: 'FAQ content detected but no FAQPage schema found.', priority: 'high', action: "Generate FAQPage JSON-LD for all your FAQ questions.", learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.", target: 'FAQPage JSON-LD with all Q&A pairs marked up' });
+   } else if (!analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
+   recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
+   }
+   if (!analysis.hasCanonical) {
+   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
+         }
+         if (analysis.metaTitleLength === 0) {
+         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
+            } else if (analysis.metaTitleLength < 40) {
+            recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
+            } else if (analysis.metaTitleLength > 65) {
+            recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
+            }
+            if (analysis.metaDescriptionLength === 0) {
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            } else if (analysis.metaDescriptionLength < 100) {
+            recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
+            } else if (analysis.metaDescriptionLength > 165) {
+            recommendations.push({ title: '📝 Meta Description Too Long', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Trim to 140–160 characters.", learning: "Truncated descriptions end mid-sentence in search results.", target: '140–160 characters' });
+            }
+            if (analysis.images === 0) {
+            recommendations.push({ title: '🖼️ Add Images to Your Content', description: 'No images detected.', priority: 'medium', action: "Add at least 3–5 images with descriptive alt text.", learning: "Content with images gets 94% more views.", target: '3–5 images with descriptive alt text on every image' });
+            } else if (analysis.imagesWithAlt < Math.min(analysis.images, 3)) {
+            recommendations.push({ title: '🖼️ Add Alt Text to Your Images', description: `${analysis.images} images found but only ${analysis.imagesWithAlt} have alt text.`, priority: 'medium', action: "Add descriptive alt text to every image.", learning: "Alt text serves three purposes: Google understanding, accessibility, and keyword signals.", target: 'Alt text on 100% of images' });
+            }
+            if (analysis.internalLinks < 5) {
+            recommendations.push({ title: '🔗 Add More Internal Links', description: `Only ${analysis.internalLinks} internal links found.`, priority: 'medium', action: "Add 8–12 contextual internal links to related pages.", learning: "Internal links transfer link equity and help Google crawl faster.", target: '8–12 internal links with descriptive anchor text' });
+            } else if (analysis.internalLinks < 8) {
+            recommendations.push({ title: '🔗 Strengthen Internal Link Structure', description: `${analysis.internalLinks} internal links found.`, priority: 'low', action: "Find unlinked topic mentions and add contextual links.", learning: "Every internal link is a vote for the destination page.", target: '8–12 internal links' });
+            }
+            if (analysis.externalLinks === 0) {
+            recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
+            }
+            if (!analysis.hasOpenGraph) {
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
+               }
+               const finalRecommendations = recommendations.length > 0 ? recommendations : [{
+               title: '🏆 Elite Content — Outstanding Work!',
+               description: 'Your page meets all GRAAF Framework, CRAFT, and Technical SEO requirements.',
+               priority: 'none',
+               action: 'Maintain this standard. Review content quarterly for freshness updates.',
+               learning: 'Consistent, high-quality content builds domain authority over time.',
+               target: 'Maintain Elite score; review and update quarterly'
+               }];
+               const result = {
+               success: true, url: scanUrl, score: totalScore, quality,
+               metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+               content_stats: {
+               wordCount: analysis.wordCount, emails_found: extractedEmails,
+               extractedEmail: extractedEmails[0] || null,
+               h1Count: analysis.h1Count, h1Text: analysis.h1Text, h1Length: analysis.h1Length,
+               h1VisibleCount: analysis.h1VisibleCount, h1IsGeneric: analysis.h1IsGeneric,
+               h1IsTooShort: analysis.h1IsTooShort, h1IsTooLong: analysis.h1IsTooLong,
+               h2Count: analysis.h2Count, h3Count: analysis.h3Count,
+               listItemCount: analysis.listItemCount,
+               avgParagraphLength: Math.round(analysis.avgParagraphLength),
+               metaTitleLength: analysis.metaTitleLength, metaDescriptionLength: analysis.metaDescriptionLength,
+               hasMetaViewport: analysis.hasMetaViewport, hasCanonical: analysis.hasCanonical,
+               hasArticleSchema: analysis.hasArticleSchema, hasFAQPageSchema: analysis.hasFAQPageSchema,
+               hasOrganizationSchema: analysis.hasOrganizationSchema,
+               hasOpenGraph: analysis.hasOpenGraph, hasTwitterCard: analysis.hasTwitterCard,
+               hasDirectAnswer: analysis.hasDirectAnswer, hasTLDR: analysis.hasTLDR,
+               hasTOC: analysis.hasTOC, hasAuthorBio: analysis.hasAuthorBio,
+               hasFAQContent: analysis.hasFAQContent,
+               images: analysis.images, imagesWithAlt: analysis.imagesWithAlt,
+               internalLinks: analysis.internalLinks, externalLinks: analysis.externalLinks,
+               expertQuoteCount: analysis.expertQuoteCount, caseStudyCount: analysis.caseStudyCount,
+               statsFound: analysis.statsFound
+               },
+               recommendations: { all: finalRecommendations, count: finalRecommendations.length },
+               timestamp: new Date().toISOString()
+               };
+               console.log(`✅ computeScore: ${scanUrl} → ${totalScore}/100`);
+  return result;
+}
+
+
+// ============================================================
+// ============================================================
+// SERVER-SIDE BULK JOB QUEUE — ROBUST VERSION
+// Fixes: concurrency limit, own browser per job, DB persistence,
+//        500 URL cap, 1 active job per user, auto-cleanup, jitter
+// ============================================================
+const bulkJobs = new Map();          // in-memory mirror for fast polling
+const JOB_MAX_URLS   = 500;          // hard cap per job
+const JOB_CONCUR     = 2;            // max parallel jobs
+const JOB_TTL_MS     = 24*60*60*1000;// clean up after 24h
+let   activeJobCount = 0;
+const jobQueue       = [];           // waiting jobs when at concur limit
+
+// ── DB table for job persistence ─────────────────────────────
+async function ensureBulkJobsTable() {
+  if (!pool) return;
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS bulk_jobs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      status TEXT DEFAULT 'queued',
+      total INTEGER DEFAULT 0,
+      done INTEGER DEFAULT 0,
+      failed INTEGER DEFAULT 0,
+      results JSONB DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+  } catch(e) { console.error('bulk_jobs table error:', e.message); }
+}
+ensureBulkJobsTable();
+
+// Persist job snapshot to DB (fire-and-forget, don't await in hot path)
+function persistJob(job) {
+  if (!pool) return;
+  pool.query(
+    'INSERT INTO bulk_jobs(id,user_id,status,total,done,failed,results,updated_at) VALUES(,,,,,,,NOW()) ON CONFLICT(id) DO UPDATE SET status=,done=,failed=,results=,updated_at=NOW()',
+    [job.id, job.userId||'anon', job.status, job.total, job.done, job.failed, JSON.stringify(job.results)]
+  ).catch(e => console.error('persistJob error:', e.message));
+}
+
+// Clean up old jobs from memory
+function cleanOldJobs() {
+  const cutoff = Date.now() - JOB_TTL_MS;
+  for (const [id, job] of bulkJobs) {
+    if (job.createdAt < cutoff) bulkJobs.delete(id);
+  }
+}
+setInterval(cleanOldJobs, 60*60*1000); // hourly
+
+// ── Own browser per job — no shared state ────────────────────
+async function launchJobBrowser() {
+  return puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--memory-pressure-off']
+  }).catch(err => { console.error('Job browser launch failed:', err.message); return null; });
+}
+
+async function scanOneUrlWithBrowser(rawUrl, browser) {
+  const scanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
+  const page = await browser.newPage();
+  try {
+    await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
+    await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+    // Block images/fonts/media to save memory and speed up
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const rt = req.resourceType();
+      if (['image','media','font','stylesheet'].includes(rt)) req.abort();
+      else req.continue();
+    });
+    try {
+      await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await new Promise(r => setTimeout(r, 1500)); // let JS render
+    } catch(e) { throw new Error('Unreachable: ' + e.message.substring(0,80)); }
+    return await internalScanPage(page, scanUrl);
+  } finally { try { await page.close(); } catch(e) {} }
+}
+
+// ── Run a job (called when slot opens) ───────────────────────
+async function runBulkJob(job) {
+  activeJobCount++;
+  job.status = 'running';
+  persistJob(job);
+  let browser = null;
+  try {
+    browser = await launchJobBrowser();
+    if (!browser) throw new Error('Could not launch browser');
+    // Delay: 2s base + 0-1s jitter — gentler on target site
+    const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+    for (const url of job.urls) {
+      if (job.status === 'cancelled') break;
+      let result = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try { result = await scanOneUrlWithBrowser(url, browser); break; }
+        catch(e) {
+          if (attempt === 1) result = { success: false, url, error: e.message, score: 0 };
+          else await new Promise(r => setTimeout(r, 4000));
+        }
+      }
+      // Trim result to save memory: keep only essentials for bulk view
+      const slim = result.success ? {
+        success: true, url: result.url, score: result.score, quality: result.quality,
+        metrics: result.metrics,
+        content_stats: { wordCount: result.content_stats?.wordCount, h1Text: result.content_stats?.h1Text }
+      } : { success: false, url, error: result.error, score: 0 };
+      job.results.push(slim);
+      job.done++;
+      if (!result || !result.success) job.failed++;
+      // Persist every 25 pages
+      if (job.done % 25 === 0) persistJob(job);
+      await delay();
+    }
+    job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
+  } catch(e) {
+    job.status = 'error';
+    job.error = e.message;
+    console.error('Job ' + job.id + ' fatal:', e.message);
+  } finally {
+    if (browser) try { await browser.close(); } catch(e) {}
+    activeJobCount--;
+    persistJob(job);
+    console.log(`✅ Job ${job.id}: ${job.done}/${job.total} done, ${job.failed} failed`);
+    // Drain queue
+    if (jobQueue.length > 0) {
+      const next = jobQueue.shift();
+      runBulkJob(next);
+    }
+  }
+}
+
+// Start bulk job endpoint
+app.post('/api/scan/bulk-job', async (req, res) => {
+  const { urls } = req.body;
+  const userId = req.headers['x-user-id'] || 'anon';
+  if (!Array.isArray(urls) || !urls.length)
+    return res.status(400).json({ success: false, error: 'urls array required' });
+
+  // Check user already has active job
+  for (const [, j] of bulkJobs) {
+    if (j.userId === userId && (j.status === 'running' || j.status === 'queued'))
+      return res.status(429).json({ success: false, error: 'You already have an active scan job. Wait for it to finish or cancel it first.' });
+  }
+
+  // Cap at 500
+  const capped = urls.slice(0, JOB_MAX_URLS);
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const job = {
+    id: jobId, userId,
+    status: activeJobCount < JOB_CONCUR ? 'running' : 'queued',
+    total: capped.length, done: 0, failed: 0, results: [],
+    urls: capped, createdAt: Date.now()
+  };
+  bulkJobs.set(jobId, job);
+  persistJob(job);
+  res.json({ success: true, jobId, total: capped.length, capped: capped.length < urls.length, queued: activeJobCount >= JOB_CONCUR });
+
+  if (activeJobCount < JOB_CONCUR) runBulkJob(job);
+  else jobQueue.push(job);
+});
+
+// Poll job
+app.get('/api/scan/bulk-job/:jobId', async (req, res) => {
+  let job = bulkJobs.get(req.params.jobId);
+  // Fallback: load from DB if not in memory (after restart)
+  if (!job && pool) {
+    try {
+      const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=', [req.params.jobId]);
+      if (row.rows[0]) {
+        const r = row.rows[0];
+        job = { id: r.id, userId: r.user_id, status: r.status, total: r.total, done: r.done, failed: r.failed, results: r.results, createdAt: new Date(r.created_at).getTime() };
+        bulkJobs.set(job.id, job); // re-cache
+      }
+    } catch(e) {}
+  }
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results, error: job.error||null });
+});
+
+// Cancel job
+app.post('/api/scan/bulk-job/:jobId/cancel', (req, res) => {
+  const job = bulkJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  job.status = 'cancelled';
+  // Also remove from queue if waiting
+  const qi = jobQueue.findIndex(j => j.id === job.id);
+  if (qi !== -1) jobQueue.splice(qi, 1);
+  persistJob(job);
+  res.json({ success: true });
+});
+
+
+// ============================================
+app.post('/api/scan', async (req, res) => {
+const { url } = req.body;
+if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+let scanUrl = url.startsWith('http') ? url : 'https://' + url;
+try {
+console.log(`🔍 Elite Scanning: ${scanUrl}`);
+const browser = await getBrowser();
+if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
+const page = await browser.newPage();
+await page.setViewport({ width: 1920, height: 1080 });
+await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+const analysis = await page.evaluate((scanUrlParam) => {
+const text = document.body ? document.body.innerText : '';
+const cleanText = text.replace(/\s+/g, ' ').trim();
+const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+const rawHtml = document.documentElement.outerHTML;
+const h1Els = document.querySelectorAll('h1');
+const h1Count = h1Els.length;
+let h1Text = '';
+let h1IsHidden = false;
+let h1VisibleCount = 0;
+h1Els.forEach(el => {
+const style = window.getComputedStyle(el);
+const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
+else { h1IsHidden = true; }
+});
+const h1Length = h1Text.length;
+const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
+const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
+const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+const h1IsTooLong  = h1Text.length > 70;
+const h2Count = document.querySelectorAll('h2').length;
+const h3Count = document.querySelectorAll('h3').length;
+const listItemCount = document.querySelectorAll('li').length;
+const paragraphs = Array.from(document.querySelectorAll('p'));
+const avgParagraphLength = paragraphs.length > 0
+? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
+: 0;
+const metaTitle = (document.querySelector('title') || {}).textContent || '';
+const metaTitleLength = metaTitle.length;
+const metaDescEl = document.querySelector('meta[name="description"]');
+const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
+const metaDescriptionLength = metaDescription.length;
+const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
+const hasCanonical = !!document.querySelector('link[rel="canonical"]');
+const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
+const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
+const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+let hasArticleSchema = false;
+let hasFAQPageSchema = false;
+let hasOrganizationSchema = false;
+const checkSchemaType = (typeVal) => {
+if (!typeVal) return;
+const types = Array.isArray(typeVal) ? typeVal : [typeVal];
+if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
+if (types.includes('FAQPage')) hasFAQPageSchema = true;
+if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
+};
+schemaScripts.forEach(script => {
+try {
+const data = JSON.parse(script.textContent);
+if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
+else {
+checkSchemaType(data['@type']);
+if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
+}
+} catch (e) {}
+});
+const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
+h.textContent.toLowerCase().includes('faq') ||
+h.textContent.toLowerCase().includes('frequently asked') ||
+h.textContent.toLowerCase().includes('common question')
+);
+const images = document.querySelectorAll('img');
+const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
+let baseHostname = '';
+try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
+const allLinks = Array.from(document.querySelectorAll('a[href]'));
+const internalLinks = allLinks.filter(a => {
+try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
+}).length;
+const externalLinks = allLinks.filter(a => {
+try {
+const h = new URL(a.href).hostname.replace('www.', '');
+return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
+} catch (e) { return false; }
+}).length;
+let expertQuoteCount = 0;
+document.querySelectorAll('blockquote').forEach(bq => {
+const cite = bq.querySelector('cite');
+if (bq.textContent.trim().length > 30 && cite && cite.textContent.trim().length > 3) expertQuoteCount++;
+});
+const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
+testimonialSelectors.forEach(sel => {
+try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
+});
+let caseStudyCount = 0;
+const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
+const seen = new Set();
+document.querySelectorAll('section, article').forEach(el => {
+if (seen.has(el)) return;
+const txt = el.textContent.toLowerCase();
+const len = txt.length;
+if (len > 300 && len < 6000) {
+const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
+const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
+if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
+}
+});
+const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
+const statsFound = (cleanText.match(statsPattern) || []).length;
+const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
+const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
+(() => {
+const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
+for (const list of earlyLists) {
+const items = list.querySelectorAll('li');
+if (items.length >= 3) {
+const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
+const listText = list.innerText || '';
+const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
+if (listPos < bodyLen * 0.5) return true;
+}
+}
+return false;
+})();
+const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
+!!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
+const hasAuthorBio = (
+!!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
+/about the author|written by/i.test(rawHtml)
+) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
+return {
+wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
+metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
+hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+hasFAQContent, images: images.length, imagesWithAlt,
+internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
+statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
+};
+}, scanUrl);
+let extractedEmails = [];
+try {
+const pageHtml = await page.content();
+const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
+const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
+const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
+!e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+!e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
+);
+extractedEmails = allEmails.slice(0, 3);
+} catch (e) {}
+await page.close();
+// ── SCORING ──
+const result = computeScore(scanUrl, analysis, extractedEmails);
+console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+res.json(result);
+               } catch (error) {
+               console.error('❌ Scan error:', error.message);
+               res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
+               }
+               });
+               // Routes
+               app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')));
+               app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+               // ── Apify proxy routes ──────────────────────────────────────────────────────
+               const APIFY_BASE = 'https://api.apify.com/v2';
+               app.post('/api/apify/start-run', async (req, res) => {
+               const token = req.headers['x-apify-token'];
+               if (!token) return res.status(401).json({ error: 'No Apify token' });
+               try {
+               const { actorId, input } = req.body;
+               const r = await fetch(`${APIFY_BASE}/acts/${actorId}/runs`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+               body: JSON.stringify(input)
+               });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
+               app.get('/api/apify/run-status/:runId', async (req, res) => {
+               const token = req.headers['x-apify-token'];
+               if (!token) return res.status(401).json({ error: 'No Apify token' });
+               try {
+               const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}`, {
+               headers: { 'Authorization': `Bearer ${token}` }
+               });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
+               app.get('/api/apify/dataset/:runId', async (req, res) => {
+               const token = req.headers['x-apify-token'];
+               if (!token) return res.status(401).json({ error: 'No Apify token' });
+               try {
+               const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
+               headers: { 'Authorization': `Bearer ${token}` }
+               });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
+               // ── Scan Reports ────────────────────────────────────────────────────────────
+               app.post('/api/report/generate', verifyAdmin, async (req, res) => {
+               if (!pool) return res.json({ success: false, error: 'No DB' });
+               const { scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations } = req.body;
+               try {
+               const id = crypto.randomBytes(20).toString('hex');
+               await pool.query(
+               `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+               [id, scan_log_id || null, business_url || null, business_name || null, score || null,
+               niche || null, city || null, country || null, email_found || null,
+               JSON.stringify(recommendations || [])]
+               );
+               res.json({ success: true, id, url: `/report/${id}` });
+               } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+               });
+               app.get('/report/:id', async (req, res) => {
+               if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
+               try {
+               const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
+               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
+const report = r.rows[0];
+let recs = [];
+try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
+const score = report.score || 0;
+const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+const graafScore = Math.round(score * 0.50);
+const craftScore = Math.round(score * 0.30);
+const techScore  = Math.round(score * 0.20);
+const domain = (() => { try { return new URL(report.business_url || 'https://unknown').hostname.replace('www.', ''); } catch { return report.business_url || 'Unknown'; } })();
+const dateStr = new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+const priorityColor = p => p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : p === 'none' ? '#4ade80' : '#94a3b8';
+const priorityLabel = p => p === 'high' ? '🔴 High Priority' : p === 'medium' ? '🟡 Medium Priority' : p === 'none' ? '✅ Elite' : '🔵 Low Priority';
+const normalizeRec = (rec) => typeof rec === 'string' ? { title: rec, description: null, action: null, learning: null, target: null, priority: 'low' } : rec;
+const recsHtml = recs.map((rawRec, i) => {
+const rec = normalizeRec(rawRec);
+return `
+<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${priorityColor(rec.priority)};border-radius:12px;padding:20px;margin-bottom:14px;page-break-inside:avoid;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+<span style="font-size:1rem;font-weight:700;color:#f9fafb;flex:1;">${rec.title || 'Recommendation ' + (i + 1)}</span>
+<span style="font-size:0.68rem;font-weight:600;border-radius:99px;padding:3px 10px;white-space:nowrap;background:${priorityColor(rec.priority)}20;color:${priorityColor(rec.priority)};border:1px solid ${priorityColor(rec.priority)}40;">${priorityLabel(rec.priority)}</span>
+</div>
+${rec.description ? `<p style="color:#9ca3af;font-size:0.875rem;margin:0 0 12px;">${rec.description}</p>` : ''}
+${rec.action ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Action</span><p style="color:#d1d5db;margin:0;">${rec.action}</p></div>` : ''}
+${rec.learning ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💡 Why It Matters</span><p style="color:#d1d5db;margin:0;">${rec.learning}</p></div>` : ''}
+${rec.target ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">🎯 Target</span><p style="color:#d1d5db;margin:0;">${rec.target}</p></div>` : ''}
+</div>`;
+}).join('');
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SEO Report — ${report.business_name || domain} — ContentScale</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#7e22ce">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#030712;color:#e5e7eb;line-height:1.6;}
+.container{max-width:860px;margin:0 auto;padding:32px 20px 100px;}
+.header{background:linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%);border:1px solid #4f46e5;border-radius:16px;padding:36px;margin-bottom:28px;}
+.brand-logo{font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#7e22ce,#be185d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.brand-sub{font-size:0.75rem;color:#6b7280;margin-bottom:20px;}
+.biz-name{font-size:1.9rem;font-weight:800;color:#f9fafb;margin-bottom:6px;}
+.biz-url{color:#60a5fa;font-size:0.9rem;margin-bottom:16px;word-break:break-all;}
+.meta-row{display:flex;gap:10px;flex-wrap:wrap;font-size:0.78rem;}
+.chip{background:#111827;border:1px solid #374151;border-radius:99px;padding:3px 12px;color:#9ca3af;}
+.score-block{display:flex;align-items:center;gap:28px;margin-top:24px;padding-top:24px;border-top:1px solid #1e293b;flex-wrap:wrap;}
+.score-circle{width:100px;height:100px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid ${scoreColor};background:${scoreColor}15;flex-shrink:0;}
+.score-num{font-size:2.2rem;font-weight:900;color:${scoreColor};line-height:1;}
+.score-max{font-size:0.75rem;color:#6b7280;}
+.score-lbl{font-size:0.8rem;color:${scoreColor};font-weight:600;margin-top:2px;}
+.breakdown{display:flex;gap:14px;flex-wrap:wrap;}
+.pill{background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;text-align:center;min-width:90px;}
+.pill-val{font-size:1.4rem;font-weight:800;}
+.pill-lbl{font-size:0.7rem;color:#6b7280;margin-top:2px;}
+.progress-wrap{margin-top:14px;}
+.progress-lbl{display:flex;justify-content:space-between;font-size:0.75rem;color:#6b7280;margin-bottom:5px;}
+.progress-bar{height:10px;background:#1f2937;border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,${scoreColor},${scoreColor}aa);}
+.section-title{font-size:1.2rem;font-weight:700;color:#f9fafb;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #1f2937;}
+.rec-count{font-size:0.75rem;background:#7e22ce30;color:#a78bfa;border:1px solid #7e22ce50;border-radius:99px;padding:2px 10px;}
+.pdf-btn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 8px 32px rgba(126,34,206,0.4);z-index:999;}
+.footer{margin-top:48px;text-align:center;color:#374151;font-size:0.78rem;padding-top:24px;border-top:1px solid #111827;}
+@media print{body{background:white;color:#111;}.pdf-btn{display:none!important;}.container{padding:20px;}.header{background:white;border:2px solid #7e22ce;}.brand-logo{-webkit-text-fill-color:#7e22ce;}.biz-name{color:#111;}.section-title{color:#111;}div[style*="background:#0f172a"]{background:white!important;border:1px solid #e5e7eb!important;}div[style*="background:#111827"]{background:#f9fafb!important;}p[style*="color:#9ca3af"]{color:#374151!important;}p[style*="color:#d1d5db"]{color:#374151!important;}@page{margin:15mm;}}
+@media(max-width:600px){.score-block{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<div class="brand-logo">ContentScale</div>
+<div class="brand-sub">GRAAF + CRAFT + Technical SEO Framework</div>
+<div class="biz-name">${report.business_name || domain}</div>
+<div class="biz-url">🌐 ${report.business_url || 'N/A'}</div>
+<div class="meta-row">
+${report.niche ? `<span class="chip">🏷 ${report.niche}</span>` : ''}
+${report.city ? `<span class="chip">📍 ${report.city}</span>` : ''}
+${report.country ? `<span class="chip">🌍 ${report.country}</span>` : ''}
+${report.email_found ? `<span class="chip">✉ ${report.email_found}</span>` : ''}
+<span class="chip">📅 ${dateStr}</span>
+</div>
+<div class="score-block">
+<div class="score-circle">
+<div class="score-num">${score}</div>
+<div class="score-max">/100</div>
+<div class="score-lbl">${scoreLabel}</div>
+</div>
+<div>
+<div class="breakdown">
+<div class="pill"><div class="pill-val" style="color:#a78bfa;">${graafScore}<span style="font-size:0.85rem;color:#6b7280;">/50</span></div><div class="pill-lbl">GRAAF</div></div>
+<div class="pill"><div class="pill-val" style="color:#60a5fa;">${craftScore}<span style="font-size:0.85rem;color:#6b7280;">/30</span></div><div class="pill-lbl">CRAFT</div></div>
+<div class="pill"><div class="pill-val" style="color:#34d399;">${techScore}<span style="font-size:0.85rem;color:#6b7280;">/20</span></div><div class="pill-lbl">Technical</div></div>
+</div>
+<div class="progress-wrap">
+<div class="progress-lbl"><span>Overall Score</span><span>${score}/100</span></div>
+<div class="progress-bar"><div class="progress-fill" style="width:${score}%;"></div></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section-title">📋 Recommendations <span class="rec-count">${recs.length} items</span></div>
+${recsHtml}
+<div class="footer">Generated by ContentScale &nbsp;·&nbsp; app.contentscale.site &nbsp;·&nbsp; GRAAF + CRAFT Framework &nbsp;·&nbsp; By Ottmar Francisca</div>
+</div>
+<button class="pdf-btn" onclick="window.print()">⬇ Download PDF</button>
+<script>
+   (function(){
+     var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+     var favs=['/favicon.svg','/favicon-pink.svg'];
+     var t=0,iv=null;
+     var orig=document.title;
+     var fl=document.querySelector('link[rel~=\"icon\"]');
+     document.addEventListener('visibilitychange',function(){
+       if(document.hidden){
+         iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+       } else {
+         clearInterval(iv);iv=null;t=0;
+         document.title=orig; if(fl) fl.href='/favicon.svg';
+       }
+     });
+   })();
+</script>
+</body>
+</html>`;
+res.setHeader('Content-Type', 'text/html');
+res.send(html);
+} catch (e) {
+console.error('Report error:', e.message);
+res.status(500).send('Error loading report');
+}
+});
+app.get('/api/health', async (req, res) => {
+let db = 'disconnected';
+let leaderboardTotal = 0, leaderboardApproved = 0, freelancerTotal = 0;
+if (pool) {
+try {
+await pool.query('SELECT 1');
+db = 'connected';
+const lbAll = await pool.query('SELECT COUNT(*) FROM leaderboard').catch(() => ({ rows: [{ count: 0 }] }));
+const lbApproved = await pool.query("SELECT COUNT(*) FROM leaderboard WHERE admin_verified = TRUE AND is_opted_out = FALSE").catch(() => ({ rows: [{ count: 0 }] }));
+const flAll = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: 0 }] }));
+leaderboardTotal = parseInt(lbAll.rows[0].count) || 0;
+leaderboardApproved = parseInt(lbApproved.rows[0].count) || 0;
+freelancerTotal = parseInt(flAll.rows[0].count) || 0;
+} catch (e) {}
+}
+res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+});
+app.use((err, req, res, next) => {
+console.error('Server Error:', err.message);
+res.status(500).json({ success: false, error: 'Internal Server Error' });
+});
+async function startServer() {
+console.log('\n🚀 =====================================');
+console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
+console.log('🚀  FIX: activated_until alias in users SELECT');
+console.log('🚀  FIX: deactivate endpoint added');
+console.log('🚀  FIX: Instantly Bearer uses secret only');
+console.log('🚀  DB Migration: country VARCHAR(100)');
+console.log('🚀  scan_log.source column');
+console.log('🚀  DOCX: template type column');
+console.log('🚀  Bulk Delete Routes');
+console.log('🚀  34 Recommendation Checks');
+console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
+console.log('🚀 =====================================\n');
+const dbConnected = await waitForDatabase();
+app.listen(PORT, () => {
+console.log(`📍 Server: http://localhost:${PORT}`);
+console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
+console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
+console.log('\n✅ Elite scanner ready\n');
+});
+}
+// ============================================
+// BACKGROUND BATCH JOB SYSTEM
+// ============================================
+const activeJobs = new Map();
+app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const { niches, cities, country, max_results, website_only, apify_token } = req.body;
+if (!niches || !cities || !apify_token) return res.status(400).json({ success: false, error: 'Missing niches, cities or apify_token' });
+const nicheArr = niches.split('\n').map(n => n.trim()).filter(n => n);
+const cityArr  = cities.split('\n').map(c => c.trim()).filter(c => c);
+if (!nicheArr.length || !cityArr.length) return res.status(400).json({ success: false, error: 'No valid niches or cities' });
+const jobId = crypto.randomBytes(16).toString('hex');
+const totalCombos = nicheArr.length * cityArr.length;
+try {
+await pool.query(
+`INSERT INTO batch_jobs (id, admin_id, niches, cities, country, max_results, website_only, status, total_combos, apify_token, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',$8,$9,NOW())`,
+[jobId, req.admin.id, niches, cities, country || 'Netherlands', max_results || 50, website_only !== false, totalCombos, apify_token]
+);
+runBatchJobInBackground(jobId);
+res.json({ success: true, job_id: jobId, total_combos: totalCombos });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/batch-jobs', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, jobs: [] });
+try {
+const r = await pool.query(
+`SELECT id, status, progress, progress_text, total_combos, current_combo,
+scanned, skipped, score_high, score_good, score_low,
+niches, cities, country, max_results, error_message,
+started_at, completed_at, created_at
+FROM batch_jobs ORDER BY created_at DESC LIMIT 20`
+);
+res.json({ success: true, jobs: r.rows });
+} catch (e) { res.status(500).json({ success: false, jobs: [] }); }
+});
+app.get('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+try {
+const r = await pool.query('SELECT * FROM batch_jobs WHERE id = $1', [req.params.id]);
+if (!r.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+res.json({ success: true, job: r.rows[0] });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+try {
+activeJobs.set(req.params.id, { cancelled: true });
+await pool.query(`UPDATE batch_jobs SET status='cancelled', completed_at=NOW() WHERE id=$1`, [req.params.id]);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+async function runBatchJobInBackground(jobId) {
+if (!pool) return;
+const jobRef = { cancelled: false };
+activeJobs.set(jobId, jobRef);
+const updateJob = async (fields) => {
+if (!pool) return;
+const keys = Object.keys(fields);
+const vals = Object.values(fields);
+const sets = keys.map((k, i) => `${k}=$${i+1}`).join(',');
+await pool.query(`UPDATE batch_jobs SET ${sets} WHERE id=$${keys.length+1}`, [...vals, jobId]).catch(() => {});
+};
+try {
+const jr = await pool.query('SELECT * FROM batch_jobs WHERE id=$1', [jobId]);
+if (!jr.rows.length) return;
+const job = jr.rows[0];
+const nicheArr = job.niches.split('\n').map(n => n.trim()).filter(n => n);
+const cityArr  = job.cities.split('\n').map(c => c.trim()).filter(c => c);
+const combos   = [];
+nicheArr.forEach(niche => cityArr.forEach(city => combos.push({ niche, city })));
+const maxResultsActual = (!job.max_results || job.max_results === 0) ? 9999 : parseInt(job.max_results);
+const websiteOnly = job.website_only;
+const country     = job.country;
+const apifyToken  = job.apify_token;
+await updateJob({ status: 'running', started_at: new Date(), progress: 1, progress_text: 'Loading existing scans for dedup...' });
+let alreadyScanned = new Set();
+try {
+const existing = await pool.query('SELECT business_url FROM scan_log WHERE business_url IS NOT NULL');
+existing.rows.forEach(r => alreadyScanned.add(r.business_url.trim()));
+} catch(e) {}
+let totalScanned = 0, totalSkipped = 0;
+let scoreHigh = 0, scoreGood = 0, scoreLow = 0;
+for (let ci = 0; ci < combos.length; ci++) {
+if (activeJobs.get(jobId)?.cancelled) {
+await updateJob({ status: 'cancelled', completed_at: new Date(), progress_text: 'Cancelled by user' });
+return;
+}
+const { niche, city } = combos[ci];
+const pct = Math.round((ci / combos.length) * 85);
+await updateJob({ current_combo: ci + 1, progress: pct, progress_text: `Combo ${ci+1}/${combos.length}: ${niche} — ${city}` });
+let runId;
+try {
+const runRes = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apifyToken}` },
+body: JSON.stringify({
+searchStringsArray: [`${niche} in ${city}`],
+maxCrawledPlacesPerSearch: maxResultsActual,
+language: 'en', exportPlaceUrls: true,
+includeWebResults: true, skipClosedPlaces: false
+})
+});
+const runData = await runRes.json();
+runId = runData.data?.id;
+if (!runId) throw new Error('Apify run not started');
+} catch (e) {
+await updateJob({ progress_text: `Combo ${ci+1}: Apify error — ${e.message}` });
+continue;
+}
+let attempts = 0, runStatus = 'RUNNING';
+while (runStatus === 'RUNNING' || runStatus === 'READY') {
+await new Promise(r => setTimeout(r, 5000));
+attempts++;
+try {
+const statusData = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}`, {
+headers: { 'Authorization': `Bearer ${apifyToken}` }
+})).json();
+runStatus = statusData.data?.status || 'FAILED';
+} catch(e) { runStatus = 'FAILED'; }
+await updateJob({ progress_text: `${niche} — ${city}: scraping... (${attempts*5}s)` });
+if (attempts > 60) { runStatus = 'TIMEOUT'; break; }
+if (activeJobs.get(jobId)?.cancelled) break;
+}
+if (runStatus !== 'SUCCEEDED') {
+await updateJob({ progress_text: `${niche} — ${city}: ${runStatus}, continuing...` });
+continue;
+}
+let places = [];
+try {
+const dataRaw = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}/dataset/items?format=json&clean=true`, {
+headers: { 'Authorization': `Bearer ${apifyToken}` }
+})).json();
+places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
+} catch(e) { continue; }
+let urls = places.filter(p => p.website).map(p => ({
+url: p.website.startsWith('http') ? p.website : 'https://' + p.website,
+name: p.title || p.name || '',
+email: p.email || (p.emails && p.emails[0]) || null,
+country
+}));
+if (!websiteOnly) {
+places.filter(p => !p.website).forEach(p => urls.push({
+url: '', name: p.title || p.name || '',
+email: p.email || (p.emails && p.emails[0]) || null,
+country
+}));
+}
+const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
+totalSkipped += urls.length - urlsToScan.length;
+let comboScanned = 0;
+for (const place of urlsToScan) {
+if (activeJobs.get(jobId)?.cancelled) break;
+if (!place.url) { comboScanned++; continue; }
+try {
+const scanRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/scan`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ url: place.url })
+});
+const scanData = await scanRes.json();
+const score = scanData.score || 0;
+if (score >= 85) scoreHigh++;
+else if (score >= 70) scoreGood++;
+else scoreLow++;
+const reportId = crypto.randomBytes(20).toString('hex');
+const reportUrl = '/report/' + reportId;
+const insertResult = await pool.query(
+`INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'discover',$10,$11) RETURNING id`,
+[
+'batch_job_' + jobId,
+place.url, place.name, score, niche, city, country,
+place.email || null,
+place.email ? 'has_email' : 'no_email',
+scanData.recommendations ? JSON.stringify((scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r)) : null,
+reportUrl
+]
+).catch(() => null);
+if (insertResult) {
+await pool.query(
+`INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+[reportId, insertResult.rows[0]?.id, place.url, place.name, score, niche, city, country, place.email || null,
+scanData.recommendations ? JSON.stringify((scanData.recommendations.all || scanData.recommendations).slice(0,5)) : null]
+).catch(() => {});
+}
+alreadyScanned.add(place.url.trim());
+totalScanned++;
+} catch(e) {}
+comboScanned++;
+const innerPct = Math.round((ci / combos.length) * 85) + Math.round((comboScanned / Math.max(urlsToScan.length, 1)) * 10);
+await updateJob({
+progress: Math.min(innerPct, 95),
+progress_text: `Combo ${ci+1}/${combos.length} · ${comboScanned}/${urlsToScan.length}: ${place.name || place.url}`,
+scanned: totalScanned, skipped: totalSkipped,
+score_high: scoreHigh, score_good: scoreGood, score_low: scoreLow
+});
+}
+}
+await updateJob({
+status: 'completed', progress: 100,
+progress_text: `✅ Done — ${totalScanned} scanned, ${totalSkipped} skipped`,
+scanned: totalScanned, skipped: totalSkipped,
+score_high: scoreHigh, score_good: scoreGood, score_low: scoreLow,
+completed_at: new Date()
+});
+console.log(`✅ Batch job ${jobId} complete: ${totalScanned} scanned`);
+} catch (e) {
+console.error(`❌ Batch job ${jobId} error:`, e.message);
+await updateJob({ status: 'failed', error_message: e.message, completed_at: new Date() }).catch(() => {});
+} finally {
+activeJobs.delete(jobId);
+}
+}
+// On server restart: resume any interrupted jobs
+setTimeout(async () => {
+if (!pool) return;
+try {
+const r = await pool.query(`SELECT id FROM batch_jobs WHERE status='running' OR status='queued'`);
+for (const row of r.rows) {
+console.log(`🔄 Resuming interrupted batch job: ${row.id}`);
+await pool.query(`UPDATE batch_jobs SET status='running', progress_text='Resuming after server restart...' WHERE id=$1`, [row.id]);
+runBatchJobInBackground(row.id);
+}
+} catch(e) {}
+}, 5000);
+// ============================================
+// INSTANTLY.AI PROXY ENDPOINTS
+// ✅ FIX v4: Bearer token = UUID part (before ':') — Instantly v2 API auth fix
+// ============================================
+app.post('/api/admin/scans/:id/email', verifyAdmin, async (req, res) => {
+try {
+const { email } = req.body;
+if (!email) return res.status(400).json({ success: false, error: 'No email' });
+await pool.query('UPDATE scan_log SET email_found=$1, email_status=$2 WHERE id=$3', [email, 'has_email', req.params.id]);
+res.json({ success: true });
+} catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
+const apiKey = req.headers['x-instantly-key'];
+if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+const raw = apiKey.trim();
+// raw-b64 (full base64 key) is confirmed working - use directly
+const attempts = [{ label: 'raw-b64', key: raw }];
+console.log('Instantly campaigns key len=' + raw.length);
+let lastStatus = 0, lastBody = '';
+for (const attempt of attempts) {
+try {
+const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
+headers: { 'Authorization': 'Bearer ' + attempt.key, 'Content-Type': 'application/json' }
+});
+const rawText = await r.text();
+console.log('Instantly [' + attempt.label + '] key=' + attempt.key.substring(0,8) + '... len=' + attempt.key.length + ' status=' + r.status + ' body=' + rawText.substring(0,200));
+lastStatus = r.status; lastBody = rawText;
+if (r.ok) {
+let data; try { data = JSON.parse(rawText); } catch { data = {}; }
+return res.json({ success: true, campaigns: data.items || data.campaigns || (Array.isArray(data) ? data : []) });
+}
+} catch (e) {
+console.error('Instantly fetch error [' + attempt.label + ']:', e.message);
+}
+}
+console.error('Instantly ALL attempts failed. lastStatus=' + lastStatus + ' body=' + lastBody.substring(0,300));
+let errMsg = 'Unauthorized'; try { errMsg = JSON.parse(lastBody).message || errMsg; } catch {}
+res.status(500).json({ success: false, error: errMsg });
+});
+app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
+const apiKey = req.headers['x-instantly-key'];
+if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+const cleanKey = apiKey.trim(); // raw-b64 confirmed working
+const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
+if (!campaign_id || !leads || !leads.length) {
+return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
+}
+try {
+const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
+body: JSON.stringify({
+campaign_id, leads,
+skip_if_in_workspace: skip_if_in_workspace !== false,
+skip_if_in_campaign: false,
+verify_leads: verify_leads || false
+})
+});
+const data = await r.json();
+if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
+res.json({ success: true, added: data.added || leads.length, duplicates: data.duplicates || 0 });
+} catch (e) {
+console.error('Instantly push error:', e.message);
+res.status(500).json({ success: false, error: e.message });
+}
+});
+startServer();
