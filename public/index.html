@@ -402,7 +402,7 @@
                                     <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
                                  </div>
                               </label>
-                              <label class="flex items-start gap-3 mb-3 cursor-default">
+                              <label id="leaderboardInfoRow" class="flex items-start gap-3 mb-3 cursor-default" style="display:none!important;">
                                  <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
                                     <i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>
                                  </div>
@@ -1065,11 +1065,13 @@
            const manualBtn  = document.getElementById('modeManualBtn');
            const sitemapBtn = document.getElementById('modeSitemapBtn');
            const btnLabel   = document.getElementById('bulkBtnLabel');
+           const lbRow      = document.getElementById('leaderboardInfoRow');
            if (mode === 'manual') {
              manualSec.classList.remove('hidden');
              sitemapSec.classList.add('hidden');
              manualInfo.classList.remove('hidden');
              sitemapInfo.classList.add('hidden');
+             if (lbRow) lbRow.style.display = 'none';
              manualBtn.style.background  = 'linear-gradient(135deg,#4f46e5,#7e22ce)';
              manualBtn.style.color       = 'white';
              sitemapBtn.style.background = 'transparent';
@@ -1078,8 +1080,9 @@
            } else {
              manualSec.classList.add('hidden');
              sitemapSec.classList.remove('hidden');
-             manualInfo.classList.add('hidden');
-             sitemapInfo.classList.remove('hidden');
+             manualInfo.classList.remove('hidden');
+             sitemapInfo.classList.add('hidden');
+             if (lbRow) lbRow.style.display = 'flex';
              sitemapBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)';
              sitemapBtn.style.color      = 'white';
              manualBtn.style.background  = 'transparent';
