@@ -959,7 +959,14 @@
             </div>
          </div>
       </div>
-      <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+      <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+      <script>
+         // Global stubs — defined early so onclick attributes work even if rest of script is slow
+         window.switchMode = function(m) { document._switchMode && document._switchMode(m); };
+         window.setBulkMode = function(m) { document._setBulkMode && document._setBulkMode(m); };
+         window.switchPageSection = function(s) { document._switchPageSection && document._switchPageSection(s); };
+      </script>
+      <script>
          let userId = null;
          let sendgridConfigured = false;
          let userTemplates = {};
@@ -1061,6 +1068,7 @@
          let sitemapFetchedUrls = [];
 
          function setBulkMode(mode) {
+         window.setBulkMode = setBulkMode; document._setBulkMode = setBulkMode;
            currentBulkMode = mode;
            const manualSec  = document.getElementById('manualModeSection');
            const sitemapSec = document.getElementById('sitemapModeSection');
@@ -1294,6 +1302,7 @@
          } catch (error) { alert('❌ Error: ' + error.message); }
          }
          function switchMode(mode) {
+         window.switchMode = switchMode; document._switchMode = switchMode;
          const singleMode = document.getElementById('singleMode');
          const bulkMode = document.getElementById('bulkMode');
          const discoverMode = document.getElementById('discoverMode');
@@ -2734,12 +2743,14 @@
          const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
          const rowBg = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
          const tags = [e.niche, e.business_type, e.country].filter(Boolean).join(' · ');
+         let homepage = e.url;
+         try { const u = new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url); homepage = u.protocol+'//'+u.hostname; } catch(err) {}
          return `<div class="lb-rank-row" style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;gap:8px;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
          <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
          <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:24px;flex-shrink:0;text-align:right;">${rank}</span>
          <div style="min-width:0;flex:1;">
          <div class="lb-rank-name" style="font-weight:600;color:#f3f4f6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${name}</div>
-         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}${e.page_count ? ' · 📄 ' + e.page_count + ' pages' : ''}</div>` : (e.page_count ? `<div style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;">📄 ${e.page_count} pages</div>` : '')}
+         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}${e.page_count ? ' · \u{1F4C4} ' + e.page_count + ' pages' : ''}</div>` : (e.page_count ? `<div style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;">\u{1F4C4} ${e.page_count} pages</div>` : '')}
          </div>
          </div>
          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
@@ -2747,7 +2758,7 @@
            <div class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></div>
            <div style="font-size:0.62rem;color:#6b7280!important;">avg score</div>
          </div>
-         <a href="${(() => { try { const u = new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url); return u.protocol+'//'+u.hostname; } catch(err) { return e.url; }})()" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">🌐 Visit →</a>
+         <a href="${homepage}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">\uD83C\uDF10 Visit \u2192</a>
          </div>
          </div>`;
          }).join('');
@@ -2817,6 +2828,7 @@
          function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
          function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
          function switchPageSection(section) {
+         window.switchPageSection = switchPageSection; document._switchPageSection = switchPageSection;
          document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
          const target = document.querySelector(`[data-section="${section}"]`);
          if (target) target.classList.add('section-visible');
