@@ -1457,100 +1457,182 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 
 
 // ============================================================
-// SERVER-SIDE BULK JOB QUEUE
 // ============================================================
-const bulkJobs = new Map();
+// SERVER-SIDE BULK JOB QUEUE — ROBUST VERSION
+// Fixes: concurrency limit, own browser per job, DB persistence,
+//        500 URL cap, 1 active job per user, auto-cleanup, jitter
+// ============================================================
+const bulkJobs = new Map();          // in-memory mirror for fast polling
+const JOB_MAX_URLS   = 500;          // hard cap per job
+const JOB_CONCUR     = 2;            // max parallel jobs
+const JOB_TTL_MS     = 24*60*60*1000;// clean up after 24h
+let   activeJobCount = 0;
+const jobQueue       = [];           // waiting jobs when at concur limit
 
-async function internalScanPage(page, scanUrl) {
-  const analysis = await page.evaluate((su) => {
-    const text = document.body ? document.body.innerText : '';
-    const cleanText = text.replace(/\s+/g, ' ').trim();
-    const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-    const rawHtml = document.documentElement.outerHTML;
-    const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
-    h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
-    const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
-    const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
-    const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
-    const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
-    const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length;
-    const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
-    const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
-    const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
-    const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
-    const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
-    const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOrganizationSchema=flatSchemas.some(s=>['Organization','LocalBusiness','WebSite'].includes(s['@type']));
-    const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
-    const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
-    const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
-    const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
-    const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
-    const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema;
-    const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
-    let host=''; try{host=new URL(su).hostname;}catch(e){}
-    const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
-    const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
-    const expertQuoteCount=(rawHtml.match(/<blockquote/gi)||[]).length;
-    const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after/g)||[]).length;
-    const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
-    const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-    const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
-    return {wordCount,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
-  }, scanUrl);
-  return computeScore(scanUrl, analysis);
+// ── DB table for job persistence ─────────────────────────────
+async function ensureBulkJobsTable() {
+  if (!pool) return;
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS bulk_jobs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      status TEXT DEFAULT 'queued',
+      total INTEGER DEFAULT 0,
+      done INTEGER DEFAULT 0,
+      failed INTEGER DEFAULT 0,
+      results JSONB DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+  } catch(e) { console.error('bulk_jobs table error:', e.message); }
+}
+ensureBulkJobsTable();
+
+// Persist job snapshot to DB (fire-and-forget, don't await in hot path)
+function persistJob(job) {
+  if (!pool) return;
+  pool.query(
+    'INSERT INTO bulk_jobs(id,user_id,status,total,done,failed,results,updated_at) VALUES(,,,,,,,NOW()) ON CONFLICT(id) DO UPDATE SET status=,done=,failed=,results=,updated_at=NOW()',
+    [job.id, job.userId||'anon', job.status, job.total, job.done, job.failed, JSON.stringify(job.results)]
+  ).catch(e => console.error('persistJob error:', e.message));
 }
 
-async function scanOneUrl(rawUrl) {
+// Clean up old jobs from memory
+function cleanOldJobs() {
+  const cutoff = Date.now() - JOB_TTL_MS;
+  for (const [id, job] of bulkJobs) {
+    if (job.createdAt < cutoff) bulkJobs.delete(id);
+  }
+}
+setInterval(cleanOldJobs, 60*60*1000); // hourly
+
+// ── Own browser per job — no shared state ────────────────────
+async function launchJobBrowser() {
+  return puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--memory-pressure-off']
+  }).catch(err => { console.error('Job browser launch failed:', err.message); return null; });
+}
+
+async function scanOneUrlWithBrowser(rawUrl, browser) {
   const scanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
-  const browser = await getBrowser();
-  if (!browser) throw new Error('Browser unavailable');
   const page = await browser.newPage();
   try {
-    await page.setViewport({ width: 1920, height: 1080 });
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
+    await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+    // Block images/fonts/media to save memory and speed up
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const rt = req.resourceType();
+      if (['image','media','font','stylesheet'].includes(rt)) req.abort();
+      else req.continue();
+    });
     try {
-      await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 });
-    } catch(e) {
-      try { await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }); await new Promise(r => setTimeout(r, 2500)); }
-      catch(e2) { throw new Error('Page unreachable'); }
-    }
+      await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await new Promise(r => setTimeout(r, 1500)); // let JS render
+    } catch(e) { throw new Error('Unreachable: ' + e.message.substring(0,80)); }
     return await internalScanPage(page, scanUrl);
   } finally { try { await page.close(); } catch(e) {} }
 }
 
-// Start bulk job
-app.post('/api/scan/bulk-job', async (req, res) => {
-  const { urls } = req.body;
-  if (!Array.isArray(urls) || !urls.length) return res.status(400).json({ success: false, error: 'urls array required' });
-  const jobId = crypto.randomBytes(8).toString('hex');
-  const job = { id: jobId, status: 'running', total: urls.length, done: 0, failed: 0, results: [], createdAt: Date.now() };
-  bulkJobs.set(jobId, job);
-  res.json({ success: true, jobId });
-  (async () => {
-    const DELAY_MS = 1500;
-    const RETRY = 1;
-    for (const url of urls) {
+// ── Run a job (called when slot opens) ───────────────────────
+async function runBulkJob(job) {
+  activeJobCount++;
+  job.status = 'running';
+  persistJob(job);
+  let browser = null;
+  try {
+    browser = await launchJobBrowser();
+    if (!browser) throw new Error('Could not launch browser');
+    // Delay: 2s base + 0-1s jitter — gentler on target site
+    const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+    for (const url of job.urls) {
       if (job.status === 'cancelled') break;
       let result = null;
-      for (let attempt = 0; attempt <= RETRY; attempt++) {
-        try { result = await scanOneUrl(url); break; }
-        catch(e) { if (attempt === RETRY) result = { success: false, url, error: e.message, score: 0 }; else await new Promise(r => setTimeout(r, 3000)); }
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try { result = await scanOneUrlWithBrowser(url, browser); break; }
+        catch(e) {
+          if (attempt === 1) result = { success: false, url, error: e.message, score: 0 };
+          else await new Promise(r => setTimeout(r, 4000));
+        }
       }
-      job.results.push(result);
+      // Trim result to save memory: keep only essentials for bulk view
+      const slim = result.success ? {
+        success: true, url: result.url, score: result.score, quality: result.quality,
+        metrics: result.metrics,
+        content_stats: { wordCount: result.content_stats?.wordCount, h1Text: result.content_stats?.h1Text }
+      } : { success: false, url, error: result.error, score: 0 };
+      job.results.push(slim);
       job.done++;
       if (!result || !result.success) job.failed++;
-      await new Promise(r => setTimeout(r, DELAY_MS));
+      // Persist every 25 pages
+      if (job.done % 25 === 0) persistJob(job);
+      await delay();
     }
-    job.status = 'done';
-    console.log('Bulk job ' + jobId + ' done: ' + job.done + ' scanned, ' + job.failed + ' failed');
-  })();
+    job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
+  } catch(e) {
+    job.status = 'error';
+    job.error = e.message;
+    console.error('Job ' + job.id + ' fatal:', e.message);
+  } finally {
+    if (browser) try { await browser.close(); } catch(e) {}
+    activeJobCount--;
+    persistJob(job);
+    console.log(`✅ Job ${job.id}: ${job.done}/${job.total} done, ${job.failed} failed`);
+    // Drain queue
+    if (jobQueue.length > 0) {
+      const next = jobQueue.shift();
+      runBulkJob(next);
+    }
+  }
+}
+
+// Start bulk job endpoint
+app.post('/api/scan/bulk-job', async (req, res) => {
+  const { urls } = req.body;
+  const userId = req.headers['x-user-id'] || 'anon';
+  if (!Array.isArray(urls) || !urls.length)
+    return res.status(400).json({ success: false, error: 'urls array required' });
+
+  // Check user already has active job
+  for (const [, j] of bulkJobs) {
+    if (j.userId === userId && (j.status === 'running' || j.status === 'queued'))
+      return res.status(429).json({ success: false, error: 'You already have an active scan job. Wait for it to finish or cancel it first.' });
+  }
+
+  // Cap at 500
+  const capped = urls.slice(0, JOB_MAX_URLS);
+  const jobId = crypto.randomBytes(8).toString('hex');
+  const job = {
+    id: jobId, userId,
+    status: activeJobCount < JOB_CONCUR ? 'running' : 'queued',
+    total: capped.length, done: 0, failed: 0, results: [],
+    urls: capped, createdAt: Date.now()
+  };
+  bulkJobs.set(jobId, job);
+  persistJob(job);
+  res.json({ success: true, jobId, total: capped.length, capped: capped.length < urls.length, queued: activeJobCount >= JOB_CONCUR });
+
+  if (activeJobCount < JOB_CONCUR) runBulkJob(job);
+  else jobQueue.push(job);
 });
 
-// Poll job status
-app.get('/api/scan/bulk-job/:jobId', (req, res) => {
-  const job = bulkJobs.get(req.params.jobId);
+// Poll job
+app.get('/api/scan/bulk-job/:jobId', async (req, res) => {
+  let job = bulkJobs.get(req.params.jobId);
+  // Fallback: load from DB if not in memory (after restart)
+  if (!job && pool) {
+    try {
+      const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=', [req.params.jobId]);
+      if (row.rows[0]) {
+        const r = row.rows[0];
+        job = { id: r.id, userId: r.user_id, status: r.status, total: r.total, done: r.done, failed: r.failed, results: r.results, createdAt: new Date(r.created_at).getTime() };
+        bulkJobs.set(job.id, job); // re-cache
+      }
+    } catch(e) {}
+  }
   if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
-  res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results });
+  res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results, error: job.error||null });
 });
 
 // Cancel job
@@ -1558,6 +1640,10 @@ app.post('/api/scan/bulk-job/:jobId/cancel', (req, res) => {
   const job = bulkJobs.get(req.params.jobId);
   if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
   job.status = 'cancelled';
+  // Also remove from queue if waiting
+  const qi = jobQueue.findIndex(j => j.id === job.id);
+  if (qi !== -1) jobQueue.splice(qi, 1);
+  persistJob(job);
   res.json({ success: true });
 });
 
