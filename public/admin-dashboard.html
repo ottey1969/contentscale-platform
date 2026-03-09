@@ -335,6 +335,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
             <button onclick="pushToInstantly()" id="instantlyPushBtn" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0f4c8a,#1d6cc8);color:white;border:none;">⚡ Push to Instantly</button>
             <button onclick="findEmailsForLeads()" id="findEmailsBtn" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0369a1,#0284c7);color:white;border:none;">🔍 Find Emails</button>
             <button onclick="bulkDeleteScans()" class="btn btn-danger text-sm px-4 py-2"><i class="fas fa-trash mr-1"></i> Delete selected</button>
+            <button onclick="deleteAllScans()" class="btn btn-danger text-sm px-4 py-2" style="background:#7f1d1d;border-color:#dc2626;">🗑 Delete All</button>
           </div>
         </div>
 
@@ -694,6 +695,9 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
         <textarea id="campDomains" rows="6" placeholder="One per line:&#10;seoagency.nl&#10;digitalmarketing.co.uk&#10;&#10;Or CSV format:&#10;domain,email&#10;example.com,info@example.com&#10;agency.nl,"
           style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.82rem;font-family:monospace;resize:vertical;"></textarea>
         <div id="campDomainCount" style="font-size:0.72rem;color:#6b7280;margin-top:4px;">0 domains</div>
+        <div id="campBatchWarning" style="display:none;margin-top:6px;background:#1c0a0a;border:1px solid #7f1d1d;border-radius:6px;padding:8px 12px;font-size:0.75rem;color:#fca5a5;">
+          ⚠️ Large list detected. Will run in batches of <strong>50 domains</strong> — when one batch finishes a <strong>Resume</strong> button appears to continue with the next batch.
+        </div>
         <div id="campCsvPreview" style="display:none;margin-top:8px;background:#0f2d1a;border:1px solid #166534;border-radius:6px;padding:8px 12px;font-size:0.75rem;color:#4ade80;"></div>
       </div>
 
@@ -738,6 +742,9 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
         🚀 Start Campaign Scan
       </button>
     </div>
+
+    <!-- Resume Bar - shown when batch completes with remaining domains -->
+    <div id="campResumeBar" style="display:none;background:#0f2d1a;border:1px solid #166534;border-radius:10px;padding:14px 18px;margin-bottom:16px;"></div>
 
     <!-- Active Campaign Progress -->
     <div id="campActiveBox" style="display:none;background:#0d1117;border:1px solid #21262d;border-radius:12px;padding:20px;margin-bottom:20px;">
@@ -886,10 +893,18 @@ function switchTab(tab) {
   if (tab === 'campaigns') {
     loadCampaignsList();
     if (!window._campListRefresh) window._campListRefresh = setInterval(() => {
-      if (document.getElementById('tab-campaigns')?.style.display !== 'none') loadCampaignsList();
-    }, 10000);
+      if (!document.getElementById('tab-campaigns')?.classList.contains('hidden')) loadCampaignsList();
+    }, 8000);
   } else {
     clearInterval(window._campListRefresh); window._campListRefresh = null;
+  }
+  if (tab === 'scanner') {
+    loadBatchJobs();
+    if (!window._scannerAutoRefresh) window._scannerAutoRefresh = setInterval(() => {
+      if (!document.getElementById('tab-scanner')?.classList.contains('hidden')) loadBatchJobs();
+    }, 8000);
+  } else {
+    clearInterval(window._scannerAutoRefresh); window._scannerAutoRefresh = null;
   }
 }
 
@@ -1567,6 +1582,18 @@ async function bulkDeleteScans() {
   } catch(e) { alert('❌ ' + e.message); }
 }
 
+async function deleteAllScans() {
+  const countEl = document.getElementById('scanLogCount');
+  const count = countEl ? countEl.textContent.replace(/\D/g,'') : '?';
+  if (!confirm('⚠️ Delete ALL ' + count + ' scans from the log? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/admin/scan-log/delete-all', { method: 'DELETE', headers: { 'x-admin-key': currentAdminId } });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error || 'Delete failed');
+    alert('✅ All scans deleted.'); selectedScanIds.clear(); updateScanExportBtn(); loadScanLog();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
 // ── SCANNER ───────────────────────────────────────────────────
 let adminLastScanResult = null;
 let adminLastReportUrl  = null;
@@ -1923,11 +1950,12 @@ async function adminRunBatch() {
   const txt = document.getElementById('adminBatchProgressText');
   const setProgress = (pct, msg) => { bar.style.width = pct + '%'; txt.textContent = msg; };
   let alreadyScanned = new Set();
+  let allCollected = []; // accumulate across all combos
   try {
     const r = await apiCall('/api/admin/scan-log?limit=2000');
     if (r.success && r.scans) r.scans.forEach(s => { if (s.business_url) alreadyScanned.add(s.business_url.trim()); });
   } catch(e) {}
-  let totalScanned = 0, totalSkipped = 0, totalErrors = 0, scoreHigh = 0, scoreGood = 0, scoreLow = 0;
+  let totalScanned = 0, totalSkipped = 0;
   try {
     for (let ci = 0; ci < combos.length; ci++) {
       const { niche, city } = combos[ci];
@@ -1940,7 +1968,7 @@ async function adminRunBatch() {
       } else if (source === 'contact_scraper') {
         const scanRes = await apiCall('/api/admin/scan-log?limit=500');
         const noEmailUrls = (scanRes.scans || []).filter(s => !s.email_found && s.business_url).map(s => ({ url: s.business_url }));
-        if (!noEmailUrls.length) { alert('Geen URLs zonder email gevonden in Scan Log.'); btn.disabled = false; btn.textContent = '▶️ Run In Browser'; return; }
+        if (!noEmailUrls.length) { alert('No URLs without email found in Scan Log.'); btn.disabled = false; btn.textContent = '▶️ Run In Browser'; return; }
         actorId = 'vdrmota~contact-info-scraper';
         actorInput = { startUrls: noEmailUrls.slice(0, 50), maxDepth: 1 };
       } else {
@@ -1951,7 +1979,7 @@ async function adminRunBatch() {
       if (!runRes.ok) { const err = await runRes.json(); throw new Error(err.error?.message || 'Apify error'); }
       const runData = await runRes.json();
       const runId = runData.data?.id;
-      if (!runId) throw new Error('Apify run niet gestart. Check je token.');
+      if (!runId) throw new Error('Apify run not started. Check your token.');
       let attempts = 0, runStatus = 'RUNNING';
       while (runStatus === 'RUNNING' || runStatus === 'READY') {
         await new Promise(r => setTimeout(r, 4000));
@@ -1964,45 +1992,33 @@ async function adminRunBatch() {
       if (runStatus !== 'SUCCEEDED') throw new Error(`Apify run: ${runStatus}`);
       const dataRaw = await (await fetch(`/api/apify/dataset/${runId}`, { headers: { 'x-apify-token': apifyToken } })).json();
       const places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
-      let urls = places.filter(p => p.website || p.websiteUrl).map(p => {
+      const urls = places.filter(p => p.website || p.websiteUrl).map(p => {
         const website = p.website || p.websiteUrl || '';
         const email = p.email || p.emailAddress || (p.emails && p.emails[0]) || (p.contacts && p.contacts[0]?.email) || null;
-        return { url: website.startsWith('http') ? website : (website ? 'https://' + website : ''), name: p.title || p.name || p.businessName || '', email, emails: p.emails || [], phone: p.phone || p.phoneNumber || '', address: p.address || p.fullAddress || '', country };
+        return { url: website.startsWith('http') ? website : (website ? 'https://' + website : ''), name: p.title || p.name || p.businessName || '', email, phone: p.phone || p.phoneNumber || '', address: p.address || p.fullAddress || '', niche, city, country };
       }).filter(p => p.url);
-      if (!websiteOnly) places.filter(p => !p.website).forEach(p => urls.push({ url: '', name: p.title || p.name || '', email: p.email || (p.emails && p.emails[0]) || null, emails: p.emails || [], phone: p.phone || '', address: p.address || '', country }));
-      const urlsToScan = urls.filter(p => !p.url || !alreadyScanned.has(p.url.trim()));
-      totalSkipped += urls.length - urlsToScan.length;
-      let comboScanned = 0;
-      for (const place of urlsToScan) {
-        if (!place.url) { comboScanned++; continue; }
-        try {
-          const scanRes = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: place.url }) });
-          const scanData = await scanRes.json();
-          const s = scanData.score || 0;
-          if (s >= 85) scoreHigh++; else if (s >= 70) scoreGood++; else scoreLow++;
-          const emailFound = place.email || (place.emails && place.emails[0]) || null;
-          await fetch('/api/scan-log', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId }, body: JSON.stringify({ user_id: currentAdminId, business_url: place.url, business_name: place.name, score: s, niche, city, country, email_found: emailFound, email_status: emailFound ? 'has_email' : 'no_email', source: 'discover', recommendations: scanData.recommendations ? (scanData.recommendations.all || scanData.recommendations).slice(0,5).map(r => r.title || r) : [] }) });
-          alreadyScanned.add(place.url.trim()); totalScanned++;
-        } catch(e) { totalErrors++; }
-        comboScanned++;
-        setProgress(Math.min(Math.round((ci / combos.length) * 90) + Math.round((comboScanned / urlsToScan.length) * 8), 95), `Combo ${ci+1}/${combos.length} · ${comboScanned}/${urlsToScan.length}: ${place.name || place.url}`);
-      }
+      // Dedup
+      urls.forEach(p => {
+        if (!alreadyScanned.has(p.url.trim())) { alreadyScanned.add(p.url.trim()); allCollected.push(p); totalScanned++; }
+        else { totalSkipped++; }
+      });
+      setProgress(Math.round(((ci+1) / combos.length) * 95), `${ci+1}/${combos.length} combos done · ${totalScanned} new domains`);
     }
-    setProgress(100, '✅ Batch complete!');
-    // Store domains for copy-to-campaigns
-    window._batchDomains = urls.map(p => p.url.replace(/^https?:\/\//,'').split('/')[0]).filter(Boolean);
-    const highDomains = window._batchDomains; // all domains with website
+    setProgress(100, '✅ Done!');
+    window._batchDomains = allCollected.map(p => p.url.replace(/^https?:\/\//,'').split('/')[0]).filter(Boolean);
+    window._batchPlaces = allCollected;
+    const withEmail = allCollected.filter(p => p.email).length;
+    const highDomains = window._batchDomains;
     document.getElementById('adminBatchResults').style.display = 'block';
     document.getElementById('adminBatchResults').innerHTML = `
       <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;">
-        <h4 style="font-weight:800;font-size:1rem;color:#f9fafb;margin-bottom:16px;">✅ Batch complete — ${combos.length} combo(s)</h4>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
-          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#4ade80;">${totalScanned}</div><div style="font-size:0.72rem;color:#6b7280;">✅ Scanned</div></div>
-          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#a3e635;">${scoreHigh}</div><div style="font-size:0.72rem;color:#6b7280;">🏆 85+</div></div>
-          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#60a5fa;">${scoreGood}</div><div style="font-size:0.72rem;color:#6b7280;">👍 70–84</div></div>
-          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#9ca3af;">${totalSkipped}</div><div style="font-size:0.72rem;color:#6b7280;">⏭ Skipped</div></div>
-          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#e5e7eb;">${highDomains.length}</div><div style="font-size:0.72rem;color:#6b7280;">🌐 Domains</div></div>
+        <h4 style="font-weight:800;font-size:1rem;color:#f9fafb;margin-bottom:16px;">✅ Scrape complete — ${combos.length} combo(s)</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;">
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#4ade80;">${highDomains.length}</div><div style="font-size:0.72rem;color:#6b7280;">🌐 Domains</div></div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#60a5fa;">${withEmail}</div><div style="font-size:0.72rem;color:#6b7280;">📧 With email</div></div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#9ca3af;">${totalSkipped}</div><div style="font-size:0.72rem;color:#6b7280;">⏭ Dedup skipped</div></div>
         </div>
+        <p style="font-size:0.78rem;color:#6b7280;margin-bottom:12px;">Scanning + email finding will happen inside Campaign — no double work.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button onclick="copyDomainsToCampaigns()" style="flex:1;min-width:180px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">🚀 Load ${highDomains.length} domains into Campaigns</button>
           <button onclick="navigator.clipboard.writeText(window._batchDomains.join('\\n')).then(()=>{this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy domain list',2000)})" style="background:#1e293b;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">📋 Copy domain list</button>
@@ -2063,15 +2079,12 @@ function renderJobCard(job) {
       <div><span style="font-size:0.75rem;font-family:monospace;color:#6b7280;">${job.id.substring(0,8)}...</span><span style="margin-left:8px;background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;border-radius:99px;padding:2px 8px;font-size:0.7rem;font-weight:700;">${statusIcon} ${job.status.toUpperCase()}</span></div>
       <span style="font-size:0.72rem;color:#6b7280;">${createdAt}</span>
     </div>
-    <div style="font-size:0.8rem;color:#d1d5db;margin-bottom:6px;"><strong>Niches:</strong> ${job.niches.split('\n').filter(n=>n).join(', ')} &nbsp;·&nbsp; <strong>Steden:</strong> ${job.cities.split('\n').filter(c=>c).join(', ')}</div>
+    <div style="font-size:0.8rem;color:#d1d5db;margin-bottom:6px;"><strong>Niches:</strong> ${job.niches.split('\n').filter(n=>n).join(', ')} &nbsp;·&nbsp; <strong>Cities:</strong> ${job.cities.split('\n').filter(c=>c).join(', ')}</div>
     <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;margin-bottom:6px;"><div style="height:100%;background:${statusColor};border-radius:99px;width:${pct}%;transition:width 0.5s;"></div></div>
     <div style="font-size:0.78rem;color:#9ca3af;margin-bottom:10px;">${job.progress_text || '...'} (${pct}%)</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:10px;">
-      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#4ade80;">${job.scanned||0}</div><div style="font-size:0.65rem;color:#6b7280;">Gescand</div></div>
-      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#a3e635;">${job.score_high||0}</div><div style="font-size:0.65rem;color:#6b7280;">85+</div></div>
-      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#60a5fa;">${job.score_good||0}</div><div style="font-size:0.65rem;color:#6b7280;">70-84</div></div>
-      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#f87171;">${job.score_low||0}</div><div style="font-size:0.65rem;color:#6b7280;">&lt;70</div></div>
-      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#9ca3af;">${job.skipped||0}</div><div style="font-size:0.65rem;color:#6b7280;">Skip</div></div>
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#4ade80;">${job.scanned||0}</div><div style="font-size:0.65rem;color:#6b7280;">🌐 Domains</div></div>
+      <div style="background:#030712;border:1px solid #1f2937;border-radius:7px;padding:8px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#9ca3af;">${job.skipped||0}</div><div style="font-size:0.65rem;color:#6b7280;">⏭ Skipped</div></div>
     </div>
     ${job.error_message ? `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:6px;padding:8px;font-size:0.78rem;color:#fca5a5;margin-bottom:8px;">❌ ${job.error_message}</div>` : ''}
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2310,9 +2323,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const ta = document.getElementById('campDomains');
   const key = document.getElementById('campInstantlyKey');
   if (ta) ta.addEventListener('input', () => {
-    const n = ta.value.split('\n').map(s=>s.trim()).filter(s=>s.includes('.')).length;
+    const allDomains = ta.value.split('\n').map(s=>s.trim()).filter(s=>s.includes('.'));
+    const n = allDomains.length;
     const el = document.getElementById('campDomainCount');
-    if (el) el.textContent = n + ' domain' + (n===1?'':'s') + ' — estimated ' + Math.round(n * 100 * 3 / 60) + ' min scan time at 100 pages/domain';
+    const warn = document.getElementById('campBatchWarning');
+    const batchSize = 50;
+    if (n > batchSize) {
+      const batches = Math.ceil(n / batchSize);
+      if (el) el.textContent = `${n} domains — will run in ${batches} batches of ${batchSize}`;
+      if (warn) warn.style.display = 'block';
+    } else {
+      if (el) el.textContent = n + ' domain' + (n===1?'':'s') + ' — estimated ' + Math.round(n * 100 * 3 / 60) + ' min';
+      if (warn) warn.style.display = 'none';
+    }
   });
   if (key) key.value = localStorage.getItem('instantlyApiKey') || '';
 
@@ -2350,8 +2373,20 @@ async function loadCampInstantlyCampaigns() {
 
 async function startCampaign() {
   const domainsRaw = document.getElementById('campDomains').value;
-  const domains = domainsRaw.split('\n').map(s=>s.trim()).filter(s=>s.includes('.'));
-  if (!domains.length) { alert('Enter at least one domain'); return; }
+  const allDomains = domainsRaw.split('\n').map(s=>s.trim()).filter(s=>s.includes('.'));
+  if (!allDomains.length) { alert('Enter at least one domain'); return; }
+
+  const BATCH_SIZE = 50;
+  const domains = allDomains.slice(0, BATCH_SIZE);
+  const remaining = allDomains.slice(BATCH_SIZE);
+
+  // Store remaining for resume
+  if (remaining.length) {
+    localStorage.setItem('cs_remainingDomains', remaining.join('\n'));
+    console.log(`Batch: ${domains.length} domains now, ${remaining.length} queued for resume`);
+  } else {
+    localStorage.removeItem('cs_remainingDomains');
+  }
 
   const name = document.getElementById('campName').value.trim() || ('Campaign ' + new Date().toLocaleDateString('en-GB'));
   const instantlyKey = document.getElementById('campInstantlyKey').value.trim() || localStorage.getItem('instantlyApiKey') || '';
@@ -2376,11 +2411,13 @@ async function startCampaign() {
     if (!data.success) throw new Error(data.error);
     activeCampaignId = data.campaignId;
     localStorage.setItem('cs_activeCampaignId', activeCampaignId);
-    showActiveCampaign(activeCampaignId, name, data.totalDomains);
+    const label = remaining.length ? `${name} (1/${Math.ceil(allDomains.length/BATCH_SIZE)})` : name;
+    showActiveCampaign(activeCampaignId, label, data.totalDomains);
     startCampaignPoll(activeCampaignId);
     // Clear form
     document.getElementById('campDomains').value = '';
-    document.getElementById('campDomainCount').textContent = '0 domains';
+    document.getElementById('campDomainCount').textContent = remaining.length ? `${remaining.length} domains queued — Resume button will appear when this batch finishes` : '0 domains';
+    document.getElementById('campBatchWarning').style.display = 'none';
   } catch(e) {
     alert('Failed to start campaign: ' + e.message);
   } finally {
@@ -2418,6 +2455,27 @@ async function pollCampaign(campaignId) {
       localStorage.removeItem('cs_activeCampaignId');
       window._campStartTime = null;
       loadCampaignsList();
+
+      // Show resume button if there are more domains queued
+      const remaining = localStorage.getItem('cs_remainingDomains');
+      if (remaining && remaining.trim() && data.status === 'done') {
+        const remainingCount = remaining.split('\n').filter(s=>s.includes('.')).length;
+        const resumeBar = document.getElementById('campResumeBar');
+        if (resumeBar) {
+          resumeBar.style.display = 'block';
+          resumeBar.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+              <div>
+                <div style="font-weight:700;color:#4ade80;font-size:0.9rem;">✅ Batch complete!</div>
+                <div style="font-size:0.78rem;color:#9ca3af;margin-top:2px;">${remainingCount} domains still queued from your original list</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button onclick="resumeNextBatch()" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:0.85rem;cursor:pointer;">▶️ Resume — next ${Math.min(50,remainingCount)} domains</button>
+                <button onclick="localStorage.removeItem('cs_remainingDomains');document.getElementById('campResumeBar').style.display='none';" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:8px;padding:10px 16px;font-weight:700;font-size:0.85rem;cursor:pointer;">✕ Clear queue</button>
+              </div>
+            </div>`;
+        }
+      }
     }
   } catch(e) {}
 }
@@ -2544,18 +2602,25 @@ async function loadCampaignsList() {
     if (!data.success || !data.campaigns.length) { el.textContent = 'No campaigns yet.'; return; }
     const statusColor = { done:'#4ade80', running:'#60a5fa', cancelled:'#9ca3af', error:'#f87171' };
     const statusLabel = { done:'✅ Done', running:'🔄 Running', cancelled:'⛔ Cancelled', error:'❌ Error', queued:'⏳ Queued' };
-    el.innerHTML = data.campaigns.map(c => `
+    el.innerHTML = data.campaigns.map(c => {
+      const interrupted = (c.status === 'cancelled' || c.status === 'error' || (c.status === 'done' && c.doneDomains < c.totalDomains));
+      const canResume = c.status !== 'running' && c.doneDomains < c.totalDomains;
+      const canRetryPush = c.status === 'done';
+      return `
       <div style="background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#4c1d95'" onmouseout="this.style.borderColor='#21262d'">
         <div onclick="loadCampaignDetail('${c.id}')" style="flex:1;cursor:pointer;min-width:0;">
           <div style="font-weight:700;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div>
           <div style="font-size:0.72rem;color:#6b7280;margin-top:2px;">${new Date(c.createdAt).toLocaleString('en-GB')} · ${c.totalDomains} domains · ${c.doneDomains}/${c.totalDomains} done</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;">
           <span style="font-size:0.78rem;font-weight:700;color:${statusColor[c.status]||'#9ca3af'};">${statusLabel[c.status]||c.status}</span>
+          ${canResume ? `<button onclick="resumeCampaign('${c.id}', this)" style="background:#0f2d1a;border:1px solid #166534;color:#4ade80;padding:4px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;">▶️ Resume</button>` : ''}
+          ${canRetryPush ? `<button onclick="retryPush('${c.id}', this)" style="background:#0a1628;border:1px solid #1e40af;color:#60a5fa;padding:4px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;">📤 Retry push</button>` : ''}
           <button onclick="deleteCampaign('${c.id}', this)" style="background:#1c0a0a;border:1px solid #7f1d1d;color:#f87171;padding:4px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;">🗑 Delete</button>
           <span onclick="loadCampaignDetail('${c.id}')" style="color:#6b7280;cursor:pointer;">›</span>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) { el.textContent = 'Error: ' + e.message; }
 }
 
@@ -2566,6 +2631,48 @@ async function deleteCampaign(id, btn) {
     await fetch('/api/campaign/' + id, { method: 'DELETE', headers: { 'x-admin-key': currentAdminId } });
     loadCampaignsList();
   } catch(e) { alert('Delete failed: ' + e.message); btn.disabled = false; btn.textContent = '🗑 Delete'; }
+}
+
+async function resumeCampaign(id, btn) {
+  btn.disabled = true; btn.textContent = '⏳ Resuming...';
+  try {
+    const instantlyKey = localStorage.getItem('instantlyApiKey') || '';
+    const r = await fetch('/api/campaign/' + id + '/resume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify({ instantly_api_key: instantlyKey || undefined })
+    });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+    activeCampaignId = id;
+    localStorage.setItem('cs_activeCampaignId', id);
+    // Show active campaign box and start polling
+    const campaignRes = await fetch('/api/campaign/' + id, { headers: { 'x-admin-key': currentAdminId } });
+    const cData = await campaignRes.json();
+    showActiveCampaign(id, cData.name, cData.totalDomains);
+    updateCampaignUI(cData);
+    startCampaignPoll(id);
+    loadCampaignsList();
+  } catch(e) { alert('Resume failed: ' + e.message); btn.disabled = false; btn.textContent = '▶️ Resume'; }
+}
+
+async function retryPush(id, btn) {
+  const instantlyKey = document.getElementById('campInstantlyKey')?.value.trim() || localStorage.getItem('instantlyApiKey') || '';
+  const instantlyCampaign = document.getElementById('campInstantlyCampaign')?.value || '';
+  if (!instantlyKey) { alert('Enter your Instantly API key in the campaign form above first.'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Pushing...';
+  try {
+    const r = await fetch('/api/campaign/' + id + '/retry-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify({ instantly_api_key: instantlyKey, instantly_campaign_id: instantlyCampaign || undefined })
+    });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+    btn.textContent = `✅ ${data.pushed} pushed`;
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📤 Retry push'; }, 3000);
+    if (data.failed > 0) alert(`${data.pushed} pushed, ${data.failed} failed. Check campaign detail for errors.`);
+  } catch(e) { alert('Retry push failed: ' + e.message); btn.disabled = false; btn.textContent = '📤 Retry push'; }
 }
 
 async function loadCampaignDetail(campaignId) {
@@ -2687,6 +2794,18 @@ async function pushDomainToInstantly(domain, email, score, shareUrl, apiKey, cam
     localStorage.setItem('instantlyApiKey', defaultKey);
   }
 })();
+
+function resumeNextBatch() {
+  const remaining = localStorage.getItem('cs_remainingDomains');
+  if (!remaining) return;
+  const allRemaining = remaining.split('\n').filter(s => s.includes('.'));
+  // Put back into textarea and trigger start
+  const ta = document.getElementById('campDomains');
+  if (ta) { ta.value = allRemaining.join('\n'); ta.dispatchEvent(new Event('input')); }
+  document.getElementById('campResumeBar').style.display = 'none';
+  // Auto-scroll to form
+  document.getElementById('tab-campaigns').scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function addNicheChip(niche) {
   const ta = document.getElementById('adminBatchNiches');
