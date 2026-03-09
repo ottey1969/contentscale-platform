@@ -119,17 +119,15 @@ if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
 app.use(express.static('public', { maxAge: '1y', etag: true }));
-
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
-    res.setHeader('Content-Type', 'application/manifest+json');
-    res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+res.setHeader('Content-Type', 'application/manifest+json');
+res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
 });
-
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
-    res.setHeader('Content-Type', 'application/manifest+json');
-    res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+res.setHeader('Content-Type', 'application/manifest+json');
+res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
 });
 // Admin Auth Middleware
 const verifyAdmin = async (req, res, next) => {
@@ -194,6 +192,10 @@ console.log('✅ Migration: leaderboard.country set to VARCHAR(100)');
 }
 // Ensure niche exists
 await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS niche VARCHAR(100)`);
+// Sitemap scan columns
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_count INTEGER DEFAULT 1`);
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_scores JSONB DEFAULT '[]'`);
+await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS scan_source VARCHAR(50) DEFAULT 'manual'`);
 // 4. Freelancers
 await client.query(`CREATE TABLE IF NOT EXISTS freelancers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, title VARCHAR(255), location VARCHAR(255), country VARCHAR(100), bio TEXT, linkedin_url TEXT, hourly_rate VARCHAR(50), availability VARCHAR(100), is_approved BOOLEAN DEFAULT FALSE, is_verified BOOLEAN DEFAULT FALSE, is_featured BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
 // 5. Email Queue
@@ -283,9 +285,17 @@ const userId = crypto.randomUUID();
 const ip = req.ip || req.connection.remoteAddress;
 await pool.query(`INSERT INTO users (id, ip_address, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING`, [userId, ip]);
 const defaultTemplates = [
-{ type: 'congrats', subject: '🎉 Congratulations!', body: `<h1>Congratulations!</h1><p>Score: {{score}}/100</p>` },
-{ type: 'improvement', subject: '🚀 SEO Opportunity', body: `<h1>SEO Opportunity</h1><p>Score: {{score}}/100</p>` },
-{ type: 'website', subject: '💻 Website Offer', body: `<h1>Website Offer</h1>` }
+{ type: 'congrats', subject: '🎉 Congratulations!', body: `
+<h1>Congratulations!</h1>
+<p>Score: {{score}}/100</p>
+` },
+{ type: 'improvement', subject: '🚀 SEO Opportunity', body: `
+<h1>SEO Opportunity</h1>
+<p>Score: {{score}}/100</p>
+` },
+{ type: 'website', subject: '💻 Website Offer', body: `
+<h1>Website Offer</h1>
+` }
 ];
 for (const t of defaultTemplates) {
 await pool.query(`INSERT INTO user_email_templates (user_id, template_type, subject, body) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, template_type) DO NOTHING`, [userId, t.type, t.subject, t.body]);
@@ -391,12 +401,12 @@ res.send(`<!DOCTYPE html>
       <meta name="viewport" content="width=device-width,initial-scale=1.0">
       <title>Unsubscribed — ContentScale</title>
       <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="shortcut icon" href="/favicon.ico">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#7e22ce">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="shortcut icon" href="/favicon.ico">
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+      <link rel="manifest" href="/site.webmanifest">
+      <meta name="theme-color" content="#7e22ce">
    </head>
    <body style="font-family:Arial,Helvetica,sans-serif;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
       <div style="text-align:center;max-width:480px;padding:40px;">
@@ -405,23 +415,23 @@ res.send(`<!DOCTYPE html>
          <p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails.</p>
          <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a>
       </div>
-   <script>
-(function(){
-  var titles=['ContentScale ⚡','🎯 SEO Scanner'];
-  var favs=['/favicon.svg','/favicon-pink.svg'];
-  var t=0,iv=null;
-  var orig=document.title;
-  var fl=document.querySelector('link[rel~=\"icon\"]');
-  document.addEventListener('visibilitychange',function(){
-    if(document.hidden){
-      iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
-    } else {
-      clearInterval(iv);iv=null;t=0;
-      document.title=orig; if(fl) fl.href='/favicon.svg';
-    }
-  });
-})();
-</script>
+      <script>
+         (function(){
+           var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+           var favs=['/favicon.svg','/favicon-pink.svg'];
+           var t=0,iv=null;
+           var orig=document.title;
+           var fl=document.querySelector('link[rel~=\"icon\"]');
+           document.addEventListener('visibilitychange',function(){
+             if(document.hidden){
+               iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+             } else {
+               clearInterval(iv);iv=null;t=0;
+               document.title=orig; if(fl) fl.href='/favicon.svg';
+             }
+           });
+         })();
+      </script>
    </body>
 </html>
 `);
@@ -1044,6 +1054,85 @@ res.json({ success: true, id: r.rows[0].id });
 } catch (e) { res.status(500).json({ success: false, error: 'Failed' }); }
 });
 // ============================================
+// 🗺️ SITEMAP SCANNER ENDPOINTS
+// ============================================
+
+// Fetch and parse sitemap → return URL list
+app.post('/api/sitemap/urls', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
+  try {
+    const axios = require('axios');
+    const { parseStringPromise } = require('xml2js');
+
+    const fetchAndParse = async (sitemapUrl) => {
+      const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' } });
+      return parseStringPromise(resp.data, { explicitArray: false });
+    };
+
+    const parsed = await fetchAndParse(url);
+    let urls = [];
+
+    // Sitemap index — contains sub-sitemaps
+    if (parsed.sitemapindex) {
+      const sitemaps = Array.isArray(parsed.sitemapindex.sitemap)
+        ? parsed.sitemapindex.sitemap
+        : [parsed.sitemapindex.sitemap];
+      for (const sm of sitemaps.slice(0, 10)) { // max 10 sub-sitemaps
+        try {
+          const sub = await fetchAndParse(sm.loc);
+          if (sub.urlset && sub.urlset.url) {
+            const subUrls = Array.isArray(sub.urlset.url) ? sub.urlset.url : [sub.urlset.url];
+            urls.push(...subUrls.map(u => u.loc).filter(Boolean));
+          }
+        } catch(e) { /* skip broken sub-sitemap */ }
+      }
+    }
+    // Regular urlset
+    else if (parsed.urlset && parsed.urlset.url) {
+      const rawUrls = Array.isArray(parsed.urlset.url) ? parsed.urlset.url : [parsed.urlset.url];
+      urls = rawUrls.map(u => u.loc).filter(Boolean);
+    }
+
+    // Deduplicate + filter out non-page URLs
+    const filtered = [...new Set(urls)].filter(u => {
+      const skip = ['/tag/', '/category/', '/author/', '/feed/', '?', '#', '.xml', '.pdf', '.jpg', '.png'];
+      return !skip.some(s => u.includes(s));
+    });
+
+    res.json({ success: true, urls: filtered, total: filtered.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'Could not fetch sitemap: ' + e.message });
+  }
+});
+
+// Submit aggregate sitemap scan result as pending leaderboard entry
+app.post('/api/sitemap/submit', async (req, res) => {
+  const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country } = req.body;
+  if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
+  try {
+    const r = await pool.query(
+      `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, page_count, page_scores, scan_source, admin_verified, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'sitemap', FALSE, FALSE)
+       ON CONFLICT (url) DO UPDATE SET
+         score = EXCLUDED.score,
+         graaf_score = EXCLUDED.graaf_score,
+         craft_score = EXCLUDED.craft_score,
+         technical_score = EXCLUDED.technical_score,
+         page_count = EXCLUDED.page_count,
+         page_scores = EXCLUDED.page_scores,
+         scan_source = 'sitemap',
+         admin_verified = FALSE
+       RETURNING id`,
+      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || 'NL', page_count, JSON.stringify(page_scores || [])]
+    );
+    res.json({ success: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ============================================
 // 🏆 ELITE SCANNER — GRAAF + CRAFT + TECHNICAL
 // ============================================
 app.post('/api/scan', async (req, res) => {
@@ -1313,7 +1402,9 @@ if (!analysis.hasAuthorBio) {
 recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
 }
 if (!analysis.hasArticleSchema) {
-recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
+recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your 
+<head>
+   with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
    }
    if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
    recommendations.push({ title: '🛠️ Add FAQPage Schema to Your FAQ Section', description: 'FAQ content detected but no FAQPage schema found.', priority: 'high', action: "Generate FAQPage JSON-LD for all your FAQ questions.", learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.", target: 'FAQPage JSON-LD with all Q&A pairs marked up' });
@@ -1321,17 +1412,27 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
    recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
    }
    if (!analysis.hasCanonical) {
-   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
+   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add 
+   <link rel="canonical" href="...">
+   to your 
+   <head>
+      .`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in 
+      <head>
+         ' });
          }
          if (analysis.metaTitleLength === 0) {
-         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
+         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a 
+         <title>
+            tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
             } else if (analysis.metaTitleLength < 40) {
             recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
             } else if (analysis.metaTitleLength > 65) {
             recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
             }
             if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a 
+            <meta name=\"description\">
+            with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
             } else if (analysis.metaDescriptionLength < 100) {
             recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
             } else if (analysis.metaDescriptionLength > 165) {
@@ -1351,7 +1452,9 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
             recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
             }
             if (!analysis.hasOpenGraph) {
-            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your  <head> .", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your  
+            <head>
+               .", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
                }
                const finalRecommendations = recommendations.length > 0 ? recommendations : [{
                title: '🏆 Elite Content — Outstanding Work!',
@@ -1454,10 +1557,14 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                } catch (e) { res.status(500).json({ success: false, error: e.message }); }
                });
                app.get('/report/:id', async (req, res) => {
-               if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
+               if (!pool) return res.status(503).send('
+               <h1>Service unavailable</h1>
+               ');
                try {
                const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
-               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
+               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html>
+               <html>
+<body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
 const report = r.rows[0];
 let recs = [];
 try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
@@ -1570,21 +1677,21 @@ ${recsHtml}
 </div>
 <button class="pdf-btn" onclick="window.print()">⬇ Download PDF</button>
 <script>
-(function(){
-  var titles=['ContentScale ⚡','🎯 SEO Scanner'];
-  var favs=['/favicon.svg','/favicon-pink.svg'];
-  var t=0,iv=null;
-  var orig=document.title;
-  var fl=document.querySelector('link[rel~=\"icon\"]');
-  document.addEventListener('visibilitychange',function(){
-    if(document.hidden){
-      iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
-    } else {
-      clearInterval(iv);iv=null;t=0;
-      document.title=orig; if(fl) fl.href='/favicon.svg';
-    }
-  });
-})();
+   (function(){
+     var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+     var favs=['/favicon.svg','/favicon-pink.svg'];
+     var t=0,iv=null;
+     var orig=document.title;
+     var fl=document.querySelector('link[rel~=\"icon\"]');
+     document.addEventListener('visibilitychange',function(){
+       if(document.hidden){
+         iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+       } else {
+         clearInterval(iv);iv=null;t=0;
+         document.title=orig; if(fl) fl.href='/favicon.svg';
+       }
+     });
+   })();
 </script>
 </body>
 </html>`;
