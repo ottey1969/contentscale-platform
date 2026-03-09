@@ -398,7 +398,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
           <input type="text" id="scanLogSearch" placeholder="Search name, URL or email..." style="flex:1;min-width:200px;max-width:300px;padding:8px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;" oninput="filterScanLog()">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;color:#e5e7eb;">
-            <input type="checkbox" id="filterHasEmail" checked onchange="filterScanLog()" style="width:16px;height:16px;"> ✉ Email gevonden
+            <input type="checkbox" id="filterHasEmail" checked onchange="filterScanLog()" style="width:16px;height:16px;"> ✉ Email found
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;color:#e5e7eb;">
             <input type="checkbox" id="filterHasName" checked onchange="filterScanLog()" style="width:16px;height:16px;"> 🏢 Bedrijfsnaam bekend
@@ -1961,7 +1961,7 @@ async function adminRunBatch() {
   } catch(e) {
     setProgress(0, '');
     document.getElementById('adminBatchResults').style.display = 'block';
-    document.getElementById('adminBatchResults').innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;"><p style="color:#f87171;font-weight:700;">❌ Batch fout</p><p style="color:#fca5a5;font-size:0.85rem;">${e.message}</p></div>`;
+    document.getElementById('adminBatchResults').innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:16px;"><p style="color:#f87171;font-weight:700;">❌ Batch error</p><p style="color:#fca5a5;font-size:0.85rem;">${e.message}</p></div>`;
   } finally { btn.disabled = false; btn.textContent = '▶️ Run In Browser'; }
 }
 
@@ -2153,7 +2153,7 @@ async function findEmailsForLeads() {
     });
     const runData = await runRes.json();
     const runId = runData.run_id || runData.id || runData.data?.id;
-    if (!runId) { alert('Apify start mislukt: ' + JSON.stringify(runData).substring(0,200)); return; }
+    if (!runId) { alert('Apify start failed: ' + JSON.stringify(runData).substring(0,200)); return; }
     let done = false, attempts = 0;
     while (!done && attempts < 30) {
       await new Promise(r => setTimeout(r, 5000));
@@ -2252,7 +2252,7 @@ async function pushToInstantly() {
 // ============================================================
 // CAMPAIGN JS
 // ============================================================
-let activeCampaignId = null;
+let activeCampaignId = localStorage.getItem('cs_activeCampaignId') || null;
 let campPollInterval = null;
 
 // Count domains as user types
@@ -2265,6 +2265,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.textContent = n + ' domain' + (n===1?'':'s') + ' — estimated ' + Math.round(n * 100 * 3 / 60) + ' min scan time at 100 pages/domain';
   });
   if (key) key.value = localStorage.getItem('instantlyApiKey') || '';
+
+  // Resume active campaign if one was running
+  if (activeCampaignId) {
+    fetch('/api/campaign/' + activeCampaignId, { headers: { 'x-admin-key': currentAdminId } })
+      .then(r => r.json()).then(data => {
+        if (!data.success) { localStorage.removeItem('cs_activeCampaignId'); activeCampaignId = null; return; }
+        if (data.status === 'running' || data.status === 'queued') {
+          showActiveCampaign(activeCampaignId, data.name || 'Campaign', data.totalDomains);
+          updateCampaignUI(data);
+          startCampaignPoll(activeCampaignId);
+        } else {
+          // Already done — show result but don't poll
+          showActiveCampaign(activeCampaignId, data.name || 'Campaign', data.totalDomains);
+          updateCampaignUI(data);
+          localStorage.removeItem('cs_activeCampaignId');
+        }
+      }).catch(() => { localStorage.removeItem('cs_activeCampaignId'); activeCampaignId = null; });
+  }
 });
 
 async function loadCampInstantlyCampaigns() {
@@ -2285,7 +2303,7 @@ async function startCampaign() {
   const domains = domainsRaw.split('\n').map(s=>s.trim()).filter(s=>s.includes('.'));
   if (!domains.length) { alert('Enter at least one domain'); return; }
 
-  const name = document.getElementById('campName').value.trim() || ('Campaign ' + new Date().toLocaleDateString('nl-NL'));
+  const name = document.getElementById('campName').value.trim() || ('Campaign ' + new Date().toLocaleDateString('en-GB'));
   const instantlyKey = document.getElementById('campInstantlyKey').value.trim() || localStorage.getItem('instantlyApiKey') || '';
   const instantlyCampaign = document.getElementById('campInstantlyCampaign').value;
 
@@ -2307,6 +2325,7 @@ async function startCampaign() {
     const data = await r.json();
     if (!data.success) throw new Error(data.error);
     activeCampaignId = data.campaignId;
+    localStorage.setItem('cs_activeCampaignId', activeCampaignId);
     showActiveCampaign(activeCampaignId, name, data.totalDomains);
     startCampaignPoll(activeCampaignId);
     // Clear form
@@ -2332,6 +2351,7 @@ function showActiveCampaign(campaignId, name, total) {
 
 function startCampaignPoll(campaignId) {
   if (campPollInterval) clearInterval(campPollInterval);
+  window._campStartTime = window._campStartTime || Date.now();
   campPollInterval = setInterval(() => pollCampaign(campaignId), 4000);
   pollCampaign(campaignId);
 }
@@ -2345,33 +2365,58 @@ async function pollCampaign(campaignId) {
     if (data.status === 'done' || data.status === 'cancelled' || data.status === 'error') {
       clearInterval(campPollInterval);
       campPollInterval = null;
+      localStorage.removeItem('cs_activeCampaignId');
+      window._campStartTime = null;
       loadCampaignsList();
     }
   } catch(e) {}
 }
 
 function updateCampaignUI(c) {
-  window._activeCampaignData = c; // store for email editing
+  window._activeCampaignData = c;
   const pct = c.totalDomains > 0 ? Math.round((c.doneDomains / c.totalDomains) * 100) : 0;
   document.getElementById('campProgressBar').style.width = pct + '%';
 
-  const statusEmoji = { running:'🔄', done:'✅', cancelled:'⛔', error:'❌', queued:'⏳' };
-  document.getElementById('campProgressText').textContent =
-    (statusEmoji[c.status]||'') + ' ' + c.doneDomains + ' / ' + c.totalDomains + ' domains — ' +
-    (c.status === 'done' ? 'Complete!' : c.status === 'running' ? 'Scanning...' : c.status);
+  // Elapsed + ETA
+  const elapsed = window._campStartTime ? Math.round((Date.now() - window._campStartTime) / 1000) : null;
+  const elapsedStr = elapsed ? (elapsed < 60 ? elapsed + 's' : Math.floor(elapsed/60) + 'm ' + (elapsed%60) + 's') : '';
+  let etaStr = '';
+  if (elapsed && c.doneDomains > 0 && c.status === 'running') {
+    const rate = c.doneDomains / elapsed; // domains/sec
+    const remaining = c.totalDomains - c.doneDomains;
+    const etaSec = Math.round(remaining / rate);
+    etaStr = etaSec < 60 ? ' · ETA ' + etaSec + 's' : ' · ETA ~' + Math.ceil(etaSec/60) + 'min';
+  }
 
-  // Domain table
+  const statusLabel = { running:'Scanning', done:'Complete', cancelled:'Cancelled', error:'Error', queued:'Queued' }[c.status] || c.status;
+  const statusEmoji = { running:'🔄', done:'✅', cancelled:'⛔', error:'❌', queued:'⏳' }[c.status] || '';
+  document.getElementById('campProgressText').textContent =
+    statusEmoji + ' ' + c.doneDomains + ' / ' + c.totalDomains + ' domains — ' + statusLabel +
+    (elapsedStr ? ' · ' + elapsedStr + ' elapsed' : '') + etaStr;
+
+  // Domain table — English status labels + scanning page counter
   const tbody = document.getElementById('campLiveDomains');
   if (!tbody || !c.domains) return;
   const statusColor = { done:'#4ade80', error:'#f87171', no_sitemap:'#f87171', queued:'#6b7280',
     scanning:'#60a5fa', fetching_sitemap:'#fbbf24', extracting_email:'#a78bfa',
     creating_share:'#a78bfa', pushing_to_instantly:'#60a5fa', no_results:'#9ca3af' };
+  const statusLabel2 = {
+    done: '✅ Done', error: '❌ Error', no_sitemap: '❌ No sitemap', queued: '⏳ Queued',
+    scanning: '🔄 Scanning', fetching_sitemap: '🗺️ Fetching sitemap',
+    extracting_email: '📧 Finding email', creating_share: '🔗 Creating report',
+    pushing_to_instantly: '📤 Pushing', no_results: '— No results'
+  };
   tbody.innerHTML = c.domains.map(d => {
     const sc = d.score !== null ? (d.score>=85?'#4ade80':d.score>=70?'#a3e635':d.score>=50?'#fbbf24':'#f87171') : '#6b7280';
     const instColor = d.instantlyStatus==='pushed'?'#4ade80':d.instantlyStatus==='no_email'?'#9ca3af':d.instantlyStatus?.startsWith('error')?'#f87171':'#6b7280';
+    // Page counter: show scanned/total if scanning
+    const pagesCell = d.status === 'scanning' && d.pageCount
+      ? `<span style="color:#60a5fa;">⟳ ${d.pageCount}</span>`
+      : (d.pageCount || '—');
+    const statusText = statusLabel2[d.status] || (d.status || '—');
     return `<tr style="border-bottom:1px solid #1f2937;">
       <td style="padding:7px 8px;color:#e5e7eb;font-weight:600;">${d.domain}</td>
-      <td style="padding:7px 8px;text-align:center;color:#9ca3af;">${d.pageCount||'—'}</td>
+      <td style="padding:7px 8px;text-align:center;color:#9ca3af;">${pagesCell}</td>
       <td style="padding:7px 8px;text-align:center;font-weight:800;color:${sc};">${d.score!==null?d.score+'/100':'—'}</td>
       <td style="padding:7px 8px;color:#93c5fd;font-size:0.75rem;max-width:160px;">
         <div style="display:flex;align-items:center;gap:4px;">
@@ -2381,7 +2426,7 @@ function updateCampaignUI(c) {
       </td>
       <td style="padding:7px 8px;text-align:center;font-size:0.72rem;color:${instColor};">${d.instantlyStatus||'—'}</td>
       <td style="padding:7px 8px;text-align:center;font-size:0.72rem;">
-        <span style="color:${statusColor[d.status]||'#9ca3af'};">${d.status||'—'}${d.error?'<br><span style="color:#f87171;font-size:0.65rem;">'+d.error.substring(0,40)+'</span>':''}</span>
+        <span style="color:${statusColor[d.status]||'#9ca3af'};">${statusText}${d.error?'<br><span style="color:#f87171;font-size:0.65rem;">'+d.error.substring(0,40)+'</span>':''}</span>
       </td>
       <td style="padding:7px 8px;text-align:center;">
         ${d.shareUrl?`<a href="${d.shareUrl}" target="_blank" style="color:#7c3aed;font-size:0.75rem;font-weight:700;">📊 View</a>`:'—'}
@@ -2389,12 +2434,18 @@ function updateCampaignUI(c) {
     </tr>`;
   }).join('');
 
-  // Stats bar
+  // Stats bar with avg score + pages/min
   const domains = c.domains || [];
   const done = domains.filter(d=>d.status==='done');
   const withEmail = done.filter(d=>d.email);
   const pushed = done.filter(d=>d.instantlyStatus==='pushed');
   const noSitemap = domains.filter(d=>d.status==='no_sitemap');
+  const scores = done.filter(d=>d.score!==null).map(d=>d.score);
+  const avgScore = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+  const totalPages = domains.reduce((a,d)=>a+(d.pageCount||0),0);
+  const elapsed2 = window._campStartTime ? (Date.now() - window._campStartTime) / 60000 : null; // minutes
+  const pagesPerMin = elapsed2 && totalPages > 0 ? Math.round(totalPages / elapsed2) : null;
+
   document.getElementById('campStatsBar').innerHTML = `
     <div style="background:#0f2d1a;border:1px solid #166534;border-radius:8px;padding:8px 14px;text-align:center;">
       <div style="font-size:1.3rem;font-weight:900;color:#4ade80;">${done.length}</div>
@@ -2412,6 +2463,14 @@ function updateCampaignUI(c) {
       <div style="font-size:1.3rem;font-weight:900;color:#f87171;">${noSitemap.length}</div>
       <div style="font-size:0.65rem;color:#6b7280;">❌ No sitemap</div>
     </div>
+    ${avgScore !== null ? `<div style="background:#0d1f0d;border:1px solid #166534;border-radius:8px;padding:8px 14px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:900;color:${avgScore>=70?'#4ade80':avgScore>=50?'#fbbf24':'#f87171'};">${avgScore}</div>
+      <div style="font-size:0.65rem;color:#6b7280;">Avg score</div>
+    </div>` : ''}
+    ${totalPages > 0 ? `<div style="background:#0d1627;border:1px solid #1e3a5f;border-radius:8px;padding:8px 14px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:900;color:#38bdf8;">${totalPages}</div>
+      <div style="font-size:0.65rem;color:#6b7280;">${pagesPerMin ? pagesPerMin + ' pages/min' : 'pages scanned'}</div>
+    </div>` : ''}
     ${withEmail.length > 0 ? `<div style="background:#1c0a00;border:1px solid #92400e;border-radius:8px;padding:8px 14px;text-align:center;">
       <div style="font-size:1.1rem;font-weight:900;color:#fbbf24;">${Math.round(withEmail.length/Math.max(done.length,1)*100)}%</div>
       <div style="font-size:0.65rem;color:#6b7280;">Email rate</div>
@@ -2558,7 +2617,7 @@ async function pushDomainToInstantly(domain, email, score, shareUrl, apiKey, cam
       if (span) span.parentNode.parentNode.parentNode.cells[4].textContent = '⚡ pushed';
       alert('✅ Gepusht naar Instantly!');
     } else throw new Error(d.error);
-  } catch(e) { alert('❌ Push mislukt: ' + e.message); }
+  } catch(e) { alert('❌ Push failed: ' + e.message); }
 }
 
 (function initInstantly() {
