@@ -1111,12 +1111,29 @@
              const lbData = await apiCall('/api/admin/leaderboard/pending');
              const frData = await apiCall('/api/admin/freelancers/pending');
              const lbContainer = document.getElementById('pending-leaderboard-container');
-             lbContainer.innerHTML = lbData.pending.length ? lbData.pending.map(p => `
-               <div class="pending-card" style="border:1px solid #374151;">
+             lbContainer.innerHTML = lbData.pending.length ? lbData.pending.map(p => {
+               const isSitemap = p.scan_source === 'sitemap';
+               const pageScores = (p.page_scores && Array.isArray(p.page_scores) ? p.page_scores : []).slice(0,10);
+               return `
+               <div class="pending-card" style="border:1px solid ${isSitemap ? '#4c1d95' : '#374151'};">
                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-                   <div><h4 class="font-bold text-white text-lg">${p.company_name || extractDomain(p.url)}</h4><a href="${p.url}" target="_blank" style="color:#60a5fa;font-size:0.8rem;">${p.url}</a></div>
+                   <div>
+                     ${isSitemap ? `<span style="font-size:0.65rem;font-weight:700;background:#4c1d95;color:#a78bfa;padding:2px 8px;border-radius:99px;margin-bottom:6px;display:inline-block;">🗺️ Sitemap Scan${p.page_count ? ' · ' + p.page_count + ' pages' : ''}</span><br>` : ''}
+                     <h4 class="font-bold text-white text-lg">${p.company_name || extractDomain(p.url)}</h4>
+                     <a href="${p.url}" target="_blank" style="color:#60a5fa;font-size:0.8rem;">${p.url}</a>
+                   </div>
                    <span style="font-size:1.8rem;font-weight:900;color:${p.score>=85?'#4ade80':p.score>=70?'#fbbf24':'#f87171'};white-space:nowrap;margin-left:12px;">${p.score}/100</span>
                  </div>
+                 ${isSitemap && pageScores.length > 0 ? `
+                 <div style="background:#0f172a;border-radius:8px;padding:10px 12px;margin-bottom:10px;max-height:140px;overflow-y:auto;">
+                   <div style="font-size:0.65rem;font-weight:700;color:#6b7280;margin-bottom:6px;">TOP PAGE SCORES</div>
+                   ${pageScores.map(ps => {
+                     const c = ps.score >= 85 ? '#4ade80' : ps.score >= 70 ? '#a3e635' : ps.score >= 50 ? '#fbbf24' : '#f87171';
+                     const shortUrl = ps.url.replace(/https?:\/\/[^\/]+/, '').substring(0,40) || '/';
+                     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #1e293b;font-size:0.72rem;"><span style="color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;">${shortUrl}</span><span style="color:${c};font-weight:700;flex-shrink:0;">${ps.score}</span></div>`;
+                   }).join('')}
+                   ${p.page_count > 10 ? `<div style="font-size:0.65rem;color:#6b7280;padding-top:4px;">+ ${p.page_count - 10} more pages</div>` : ''}
+                 </div>` : ''}
                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
                    <input id="approve-niche-${p.id}" type="text" placeholder="Niche" value="${p.niche||''}" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
                    <input id="approve-city-${p.id}" type="text" placeholder="City" value="${p.city||''}" class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;color:#e5e7eb;">
@@ -1126,7 +1143,8 @@
                    <button onclick="approveLB(${p.id})" class="flex-1 btn btn-success">✅ Approve</button>
                    <button onclick="apiCall('/api/admin/leaderboard/${p.id}/reject','POST').then(()=>{alert('Rejected');loadPendingData();})" class="btn btn-danger px-4">✗ Reject</button>
                  </div>
-               </div>`).join('') : '<p class="text-gray-400">✅ No pending submissions</p>';
+               </div>`;
+             }).join('') : '<p class="text-gray-400">✅ No pending submissions</p>';
              const frContainer = document.getElementById('pending-freelancers-container');
              frContainer.innerHTML = frData.pending.length ? frData.pending.map(p => `
                <div class="pending-card">
