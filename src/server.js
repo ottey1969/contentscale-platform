@@ -2349,4 +2349,401 @@ console.error('Instantly push error:', e.message);
 res.status(500).json({ success: false, error: e.message });
 }
 });
+
+// ============================================================
+// 🎯 CAMPAIGN ENGINE — Weekend Bulk Domain Scanner
+// Flow: domains → fetch sitemaps → queue jobs → extract email
+//       → create share URL → push to Instantly
+// ============================================================
+
+const campaigns = new Map(); // campaignId → campaign state
+
+async function ensureCampaignsTable() {
+  if (!pool) return;
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS campaigns (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      status TEXT DEFAULT 'running',
+      total_domains INTEGER DEFAULT 0,
+      done_domains INTEGER DEFAULT 0,
+      domains JSONB DEFAULT '[]',
+      instantly_campaign_id TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+  } catch(e) { console.error('campaigns table error:', e.message); }
+}
+ensureCampaignsTable();
+
+function persistCampaign(c) {
+  if (!pool) return;
+  const slim = { ...c, domains: c.domains.map(d => ({
+    domain: d.domain, status: d.status, score: d.score,
+    email: d.email, shareUrl: d.shareUrl, instantlyStatus: d.instantlyStatus,
+    error: d.error, pageCount: d.pageCount
+  }))};
+  pool.query(
+    `INSERT INTO campaigns(id,name,status,total_domains,done_domains,domains,instantly_campaign_id,updated_at)
+     VALUES($1,$2,$3,$4,$5,$6,$7,NOW())
+     ON CONFLICT(id) DO UPDATE SET status=$3,done_domains=$5,domains=$6,updated_at=NOW()`,
+    [slim.id, slim.name||'Campaign', slim.status, slim.totalDomains, slim.doneDomains,
+     JSON.stringify(slim.domains), slim.instantlyCampaignId||null]
+  ).catch(e => console.error('persistCampaign:', e.message));
+}
+
+// Fetch sitemap URLs for a domain
+async function fetchSitemapUrls(domain) {
+  const base = domain.startsWith('http') ? domain : 'https://' + domain;
+  const host = new URL(base).hostname;
+  const candidates = [
+    base + '/sitemap.xml',
+    base + '/sitemap_index.xml',
+    base + '/sitemap-index.xml',
+    base + '/wp-sitemap.xml',
+  ];
+  // Also check robots.txt
+  try {
+    const rb = await fetch(base + '/robots.txt', { signal: AbortSignal.timeout(8000) });
+    if (rb.ok) {
+      const txt = await rb.text();
+      const matches = txt.match(/Sitemap:\s*(\S+)/gi) || [];
+      matches.forEach(m => { const u = m.replace(/Sitemap:\s*/i,'').trim(); if (!candidates.includes(u)) candidates.unshift(u); });
+    }
+  } catch(e) {}
+
+  for (const url of candidates) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) continue;
+      const xml = await r.text();
+      // Sub-sitemap index?
+      const subMatches = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
+      if (subMatches.length > 0) {
+        let allUrls = [];
+        for (const sub of subMatches.slice(0, 8)) {
+          try {
+            const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
+            if (!sr.ok) continue;
+            const sx = await sr.text();
+            const us = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+            allUrls = allUrls.concat(us);
+          } catch(e) {}
+        }
+        if (allUrls.length > 0) return { urls: allUrls, sitemapUrl: url };
+      }
+      // Direct URLs
+      const urls = [...xml.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)]
+        .map(m => m[1]).filter(u => !u.endsWith('.xml'));
+      if (urls.length > 0) return { urls, sitemapUrl: url };
+    } catch(e) {}
+  }
+  return { urls: [], sitemapUrl: null };
+}
+
+// Extract best email for a domain — scans contact/about pages
+async function extractDomainEmail(domain, scannedResults) {
+  // 1. From already-scanned pages
+  for (const r of scannedResults) {
+    const em = r.content_stats?.emails_found?.[0] || r.content_stats?.extractedEmail;
+    if (em && em.includes('@') && !em.includes('example') && !em.includes('sentry')) return em;
+  }
+  // 2. Scrape contact/about/impressum pages specifically
+  const base = domain.startsWith('http') ? domain : 'https://' + domain;
+  const contactPages = ['/contact', '/contact-us', '/about', '/about-us', '/over-ons', '/impressum', '/team'];
+  const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  for (const path of contactPages) {
+    try {
+      const r = await fetch(base + path, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) continue;
+      const html = await r.text();
+      const found = [...new Set(html.match(emailRegex)||[])].filter(e =>
+        !e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+        !e.endsWith('.png') && !e.endsWith('.jpg'));
+      // Prefer info@, contact@, hello@ over noreply
+      const preferred = found.find(e => /^(info|contact|hello|hallo|mail|support)@/.test(e));
+      if (preferred) return preferred;
+      if (found.length > 0) return found[0];
+    } catch(e) {}
+  }
+  // 3. Common pattern guess — check if MX exists
+  const guesses = ['info', 'contact', 'hello', 'mail'];
+  const domainHost = domain.replace(/https?:\/\//, '').split('/')[0];
+  for (const prefix of guesses) {
+    const guess = prefix + '@' + domainHost;
+    try {
+      const dns = require('dns').promises;
+      const mx = await dns.resolveMx(domainHost).catch(() => []);
+      if (mx.length > 0) return guess; // MX exists, guess is plausible
+    } catch(e) {}
+    break; // only try dns once
+  }
+  return null;
+}
+
+// Create a share URL for domain results
+async function createShareUrl(domain, results, req) {
+  const token = crypto.randomBytes(8).toString('hex');
+  const expires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days for campaign
+  try {
+    await pool.query(
+      `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT DO NOTHING`,
+      [token, JSON.stringify(results), expires]
+    );
+  } catch(e) {
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS share_results (id SERIAL PRIMARY KEY, token VARCHAR(20) UNIQUE NOT NULL, results_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), expires_at TIMESTAMPTZ)`);
+      await pool.query(`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`, [token, JSON.stringify(results), expires]);
+    } catch(e2) {}
+  }
+  // Build base URL from env or default
+  const base = process.env.BASE_URL || 'https://contentscale.site';
+  return base + '/share/' + token;
+}
+
+// Push one lead to Instantly
+async function pushLeadToInstantly(apiKey, campaignId, lead) {
+  const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey.trim(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      campaign_id: campaignId,
+      leads: [lead],
+      skip_if_in_workspace: true,
+      skip_if_in_campaign: false
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || data.message || 'HTTP ' + r.status);
+  return data;
+}
+
+// ── Main campaign runner ──────────────────────────────────────
+async function runCampaign(campaign) {
+  campaign.status = 'running';
+  persistCampaign(campaign);
+
+  for (const domainObj of campaign.domains) {
+    if (campaign.status === 'cancelled') break;
+    domainObj.status = 'fetching_sitemap';
+    persistCampaign(campaign);
+
+    try {
+      // Step 1: fetch sitemap
+      const { urls, sitemapUrl } = await fetchSitemapUrls(domainObj.domain);
+      if (!urls.length) {
+        domainObj.status = 'no_sitemap';
+        domainObj.error = 'No sitemap found';
+        campaign.doneDomains++;
+        persistCampaign(campaign);
+        continue;
+      }
+      const capped = urls.slice(0, 500); // cap at 500 per domain in campaign mode
+      domainObj.pageCount = capped.length;
+      domainObj.status = 'scanning';
+      persistCampaign(campaign);
+
+      // Step 2: scan pages using job queue
+      const jobId = crypto.randomBytes(8).toString('hex');
+      const job = {
+        id: jobId, userId: 'campaign_' + campaign.id,
+        status: 'running', total: capped.length, done: 0, failed: 0,
+        results: [], urls: capped, createdAt: Date.now()
+      };
+      bulkJobs.set(jobId, job);
+
+      // Run inline (campaign manages concurrency at domain level)
+      let jobBrowser = null;
+      try {
+        jobBrowser = await launchJobBrowser();
+        if (!jobBrowser) throw new Error('Browser unavailable');
+        const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+        for (const url of capped) {
+          if (campaign.status === 'cancelled' || job.status === 'cancelled') break;
+          let result = null;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try { result = await scanOneUrlWithBrowser(url, jobBrowser); break; }
+            catch(e) {
+              if (attempt === 1) result = { success: false, url, error: e.message, score: 0 };
+              else await new Promise(r => setTimeout(r, 3000));
+            }
+          }
+          const slim = result && result.success ? {
+            success: true, url: result.url, score: result.score, quality: result.quality,
+            metrics: result.metrics,
+            content_stats: {
+              wordCount: result.content_stats?.wordCount,
+              h1Text: result.content_stats?.h1Text,
+              emails_found: result.content_stats?.emails_found,
+              extractedEmail: result.content_stats?.extractedEmail
+            }
+          } : { success: false, url, error: result?.error || 'failed', score: 0 };
+          job.results.push(slim);
+          job.done++;
+          await delay();
+        }
+      } finally {
+        if (jobBrowser) try { await jobBrowser.close(); } catch(e) {}
+        job.status = 'done';
+      }
+
+      // Step 3: compute domain avg score
+      const successful = job.results.filter(r => r.success && r.score > 0);
+      if (!successful.length) {
+        domainObj.status = 'no_results';
+        campaign.doneDomains++;
+        persistCampaign(campaign);
+        continue;
+      }
+      const avg = arr => Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
+      domainObj.score = avg(successful.map(r => r.score));
+      domainObj.graaf = avg(successful.map(r => r.metrics?.graaf || 0));
+      domainObj.craft = avg(successful.map(r => r.metrics?.craft || 0));
+      domainObj.technical = avg(successful.map(r => r.metrics?.technical || 0));
+      domainObj.pageCount = successful.length;
+
+      // Step 4: extract email
+      domainObj.status = 'extracting_email';
+      const email = await extractDomainEmail(domainObj.domain, successful);
+      domainObj.email = email;
+
+      // Step 5: create share URL
+      domainObj.status = 'creating_share';
+      domainObj.shareUrl = await createShareUrl(domainObj.domain, successful);
+
+      // Step 6: top 3 issues from first successful scan
+      const topIssues = (successful[0]?.recommendations?.all || [])
+        .filter(r => r.priority === 'high').slice(0, 3).map(r => r.title.replace(/^[^\w]+/, ''));
+
+      // Step 7: push to Instantly if configured and email found
+      domainObj.instantlyStatus = 'skipped';
+      if (campaign.instantlyApiKey && campaign.instantlyCampaignId && email) {
+        try {
+          domainObj.status = 'pushing_to_instantly';
+          const lead = {
+            email,
+            first_name: '',
+            last_name: '',
+            company_name: domainObj.domain.replace(/https?:\/\//, '').replace(/^www\./, ''),
+            website: 'https://' + domainObj.domain.replace(/https?:\/\//, ''),
+            custom_variables: {
+              score: String(domainObj.score),
+              share_url: domainObj.shareUrl,
+              top_issue_1: topIssues[0] || '',
+              top_issue_2: topIssues[1] || '',
+              top_issue_3: topIssues[2] || '',
+              graaf_score: String(domainObj.graaf),
+              page_count: String(domainObj.pageCount)
+            }
+          };
+          await pushLeadToInstantly(campaign.instantlyApiKey, campaign.instantlyCampaignId, lead);
+          domainObj.instantlyStatus = 'pushed';
+        } catch(e) {
+          domainObj.instantlyStatus = 'error: ' + e.message.substring(0, 60);
+        }
+      } else if (!email) {
+        domainObj.instantlyStatus = 'no_email';
+      }
+
+      domainObj.status = 'done';
+      campaign.doneDomains++;
+      persistCampaign(campaign);
+
+      // Delay between domains to be polite
+      await new Promise(r => setTimeout(r, 3000));
+
+    } catch(e) {
+      domainObj.status = 'error';
+      domainObj.error = e.message.substring(0, 120);
+      campaign.doneDomains++;
+      console.error('Campaign domain error:', domainObj.domain, e.message);
+      persistCampaign(campaign);
+    }
+  }
+
+  campaign.status = campaign.status === 'cancelled' ? 'cancelled' : 'done';
+  persistCampaign(campaign);
+  console.log(`✅ Campaign ${campaign.id} done: ${campaign.doneDomains}/${campaign.totalDomains} domains`);
+}
+
+// ── Campaign endpoints ────────────────────────────────────────
+
+app.post('/api/campaign/start', verifyAdmin, async (req, res) => {
+  const { domains, name, instantly_api_key, instantly_campaign_id } = req.body;
+  if (!Array.isArray(domains) || !domains.length)
+    return res.status(400).json({ success: false, error: 'domains array required' });
+
+  const cleanDomains = [...new Set(domains.map(d => d.trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0]).filter(d => d.includes('.')))];
+  if (!cleanDomains.length) return res.status(400).json({ success: false, error: 'No valid domains' });
+
+  const campaignId = crypto.randomBytes(8).toString('hex');
+  const campaign = {
+    id: campaignId,
+    name: name || 'Campaign ' + new Date().toLocaleDateString('nl-NL'),
+    status: 'running',
+    totalDomains: cleanDomains.length,
+    doneDomains: 0,
+    instantlyApiKey: instantly_api_key || null,
+    instantlyCampaignId: instantly_campaign_id || null,
+    createdAt: Date.now(),
+    domains: cleanDomains.map(d => ({
+      domain: d, status: 'queued', score: null,
+      email: null, shareUrl: null, instantlyStatus: null,
+      error: null, pageCount: 0
+    }))
+  };
+  campaigns.set(campaignId, campaign);
+  persistCampaign(campaign);
+  res.json({ success: true, campaignId, totalDomains: cleanDomains.length });
+  // Run in background - domains processed sequentially (one browser at a time)
+  runCampaign(campaign);
+});
+
+app.get('/api/campaign/:campaignId', async (req, res) => {
+  let c = campaigns.get(req.params.campaignId);
+  if (!c && pool) {
+    try {
+      const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+      if (row.rows[0]) {
+        c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+              totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime() };
+        campaigns.set(c.id, c);
+      }
+    } catch(e) {}
+  }
+  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+  res.json({ success: true, ...c });
+});
+
+app.post('/api/campaign/:campaignId/cancel', verifyAdmin, (req, res) => {
+  const c = campaigns.get(req.params.campaignId);
+  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+  c.status = 'cancelled';
+  persistCampaign(c);
+  res.json({ success: true });
+});
+
+app.get('/api/campaign', verifyAdmin, async (req, res) => {
+  const list = [];
+  for (const [, c] of campaigns) {
+    list.push({ id: c.id, name: c.name, status: c.status, totalDomains: c.totalDomains,
+                doneDomains: c.doneDomains, createdAt: c.createdAt });
+  }
+  // Also load from DB
+  if (pool) {
+    try {
+      const rows = await pool.query('SELECT id,name,status,total_domains,done_domains,created_at FROM campaigns ORDER BY created_at DESC LIMIT 20');
+      rows.rows.forEach(r => {
+        if (!list.find(l => l.id === r.id))
+          list.push({ id: r.id, name: r.name, status: r.status, totalDomains: r.total_domains,
+                      doneDomains: r.done_domains, createdAt: new Date(r.created_at).getTime() });
+      });
+    } catch(e) {}
+  }
+  list.sort((a,b) => b.createdAt - a.createdAt);
+  res.json({ success: true, campaigns: list.slice(0, 30) });
+});
+
+
 startServer();
