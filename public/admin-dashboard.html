@@ -467,13 +467,39 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
             <input type="text" id="adminApifyToken" placeholder="apify_api_xxxx..." style="width:100%;padding:8px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;" oninput="localStorage.setItem('apifyToken', this.value)">
             <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px;">Wordt opgeslagen in browser.</div>
           </div>
+          <!-- High-Score Niche Reference -->
+          <details style="background:#0a0f1a;border:1px solid #1e3a5f;border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+            <summary style="font-size:0.82rem;font-weight:700;color:#93c5fd;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">⭐ High-Score Niches — click to add</summary>
+            <div style="margin-top:12px;">
+              <p style="font-size:0.72rem;color:#6b7280;margin-bottom:10px;">These niches produce content-heavy pages (blogs, articles, guides) that score 65–90+ on GRAAF+CRAFT+Technical. Click any chip to add it to the Niches field.</p>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${[
+                  'SEO agency','content marketing agency','digital marketing agency',
+                  'law firm','legal advice','notary',
+                  'financial advisor','accountant','mortgage broker',
+                  'medical clinic','health blog','physiotherapist',
+                  'B2B software','SaaS','HR software',
+                  'recruitment agency','staffing agency',
+                  'IT consultancy','cybersecurity',
+                  'architect','interior designer',
+                  'business coach','management consultant',
+                  'insurance broker','wealth management'
+                ].map(n => `<span onclick="addNicheChip('${n}')" style="background:#0f2d4a;border:1px solid #1e40af;color:#93c5fd;padding:4px 10px;border-radius:99px;font-size:0.72rem;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0f2d4a'">${n}</span>`).join('')}
+              </div>
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="loadHighScoreNiches()" style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">📋 Load all content niches</button>
+                <button onclick="document.getElementById('adminBatchNiches').value='';adminUpdateBatchCombos();" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">✕ Clear</button>
+              </div>
+            </div>
+          </details>
+
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
             <div>
-              <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🏷️ Niches <span style="color:#9ca3af;font-weight:400;">(één per regel)</span></label>
+              <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🏷️ Niches <span style="color:#9ca3af;font-weight:400;">(one per line)</span></label>
               <textarea id="adminBatchNiches" rows="5" placeholder="dental clinic&#10;law firm&#10;cleaning company" style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;resize:vertical;" oninput="adminUpdateBatchCombos()"></textarea>
             </div>
             <div>
-              <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">📍 Steden <span style="color:#9ca3af;font-weight:400;">(één per regel)</span></label>
+              <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">📍 Cities <span style="color:#9ca3af;font-weight:400;">(one per line)</span></label>
               <textarea id="adminBatchCities" rows="5" placeholder="Amsterdam Netherlands&#10;Rotterdam Netherlands&#10;Utrecht Netherlands" style="width:100%;padding:10px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;resize:vertical;" oninput="adminUpdateBatchCombos()"></textarea>
             </div>
           </div>
@@ -857,7 +883,14 @@ function switchTab(tab) {
       loadInstantlyCampaigns(savedCamp, savedCampName);
     }
   }
-  if (tab === 'campaigns') loadCampaignsList();
+  if (tab === 'campaigns') {
+    loadCampaignsList();
+    if (!window._campListRefresh) window._campListRefresh = setInterval(() => {
+      if (document.getElementById('tab-campaigns')?.style.display !== 'none') loadCampaignsList();
+    }, 10000);
+  } else {
+    clearInterval(window._campListRefresh); window._campListRefresh = null;
+  }
 }
 
 function loadAllData() { loadLeaderboard(); loadFreelancers(); loadUsers(); }
@@ -1869,7 +1902,7 @@ function adminHandleCountrySelect(val) {
 
 async function adminRunBatch() {
   const apifyToken = document.getElementById('adminApifyToken').value.trim() || localStorage.getItem('apifyToken');
-  if (!apifyToken) { alert('❌ Voer je Apify token in.'); return; }
+  if (!apifyToken) { alert('❌ Enter your Apify token first.'); return; }
   localStorage.setItem('apifyToken', apifyToken);
   const niches = document.getElementById('adminBatchNiches').value.split('\n').map(n => n.trim()).filter(n => n);
   const cities = document.getElementById('adminBatchCities').value.split('\n').map(c => c.trim()).filter(c => c);
@@ -1956,8 +1989,25 @@ async function adminRunBatch() {
       }
     }
     setProgress(100, '✅ Batch complete!');
+    // Store domains for copy-to-campaigns
+    window._batchDomains = urls.map(p => p.url.replace(/^https?:\/\//,'').split('/')[0]).filter(Boolean);
+    const highDomains = window._batchDomains; // all domains with website
     document.getElementById('adminBatchResults').style.display = 'block';
-    document.getElementById('adminBatchResults').innerHTML = `<div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;"><h4 style="font-weight:800;font-size:1rem;color:#f9fafb;margin-bottom:16px;">✅ Batch klaar — ${combos.length} combo's</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;"><div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#4ade80;">${totalScanned}</div><div style="font-size:0.72rem;color:#6b7280;">✅ Gescand</div></div><div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#a3e635;">${scoreHigh}</div><div style="font-size:0.72rem;color:#6b7280;">🏆 85+</div></div><div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#60a5fa;">${scoreGood}</div><div style="font-size:0.72rem;color:#6b7280;">👍 70-84</div></div><div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#9ca3af;">${totalSkipped}</div><div style="font-size:0.72rem;color:#6b7280;">⏭ Dedup skip</div></div></div><p style="font-size:0.82rem;color:#a78bfa;text-align:center;margin-top:12px;">Ga naar <strong>Scan Log</strong> → filter → selecteer → Export CSV</p></div>`;
+    document.getElementById('adminBatchResults').innerHTML = `
+      <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;">
+        <h4 style="font-weight:800;font-size:1rem;color:#f9fafb;margin-bottom:16px;">✅ Batch complete — ${combos.length} combo(s)</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#4ade80;">${totalScanned}</div><div style="font-size:0.72rem;color:#6b7280;">✅ Scanned</div></div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#a3e635;">${scoreHigh}</div><div style="font-size:0.72rem;color:#6b7280;">🏆 85+</div></div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#60a5fa;">${scoreGood}</div><div style="font-size:0.72rem;color:#6b7280;">👍 70–84</div></div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#9ca3af;">${totalSkipped}</div><div style="font-size:0.72rem;color:#6b7280;">⏭ Skipped</div></div>
+          <div style="background:#030712;border:1px solid #374151;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:1.8rem;font-weight:900;color:#e5e7eb;">${highDomains.length}</div><div style="font-size:0.72rem;color:#6b7280;">🌐 Domains</div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="copyDomainsToCampaigns()" style="flex:1;min-width:180px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">🚀 Load ${highDomains.length} domains into Campaigns</button>
+          <button onclick="navigator.clipboard.writeText(window._batchDomains.join('\\n')).then(()=>{this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy domain list',2000)})" style="background:#1e293b;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">📋 Copy domain list</button>
+        </div>
+      </div>`;
   } catch(e) {
     setProgress(0, '');
     document.getElementById('adminBatchResults').style.display = 'block';
@@ -1967,7 +2017,7 @@ async function adminRunBatch() {
 
 async function adminStartServerJob() {
   const apifyToken = document.getElementById('adminApifyToken').value.trim() || localStorage.getItem('apifyToken');
-  if (!apifyToken) { alert('❌ Voer je Apify token in.'); return; }
+  if (!apifyToken) { alert('❌ Enter your Apify token first.'); return; }
   localStorage.setItem('apifyToken', apifyToken);
   const niches = document.getElementById('adminBatchNiches').value.trim();
   const cities = document.getElementById('adminBatchCities').value.trim();
@@ -2134,7 +2184,7 @@ async function loadInstantlyCampaigns(preselectId = '', preselectName = '') {
 
 async function findEmailsForLeads() {
   const apifyToken = localStorage.getItem('apifyToken');
-  if (!apifyToken) { alert('Voer eerst je Apify token in bij Find Leads tab.'); return; }
+  if (!apifyToken) { alert('Enter your Apify token in the Find Leads tab first.'); return; }
   const btn = document.getElementById('findEmailsBtn');
   btn.disabled = true; btn.textContent = '⏳ Zoeken...';
   try {
@@ -2414,6 +2464,7 @@ function updateCampaignUI(c) {
       ? `<span style="color:#60a5fa;">⟳ ${d.pageCount}</span>`
       : (d.pageCount || '—');
     const statusText = statusLabel2[d.status] || (d.status || '—');
+      const safeShareUrl = d.shareUrl ? (d.shareUrl.startsWith('http') ? d.shareUrl.replace('//contentscale.site', '//app.contentscale.site') : 'https://app.contentscale.site' + d.shareUrl) : null;
     return `<tr style="border-bottom:1px solid #1f2937;">
       <td style="padding:7px 8px;color:#e5e7eb;font-weight:600;">${d.domain}</td>
       <td style="padding:7px 8px;text-align:center;color:#9ca3af;">${pagesCell}</td>
@@ -2429,7 +2480,7 @@ function updateCampaignUI(c) {
         <span style="color:${statusColor[d.status]||'#9ca3af'};">${statusText}${d.error?'<br><span style="color:#f87171;font-size:0.65rem;">'+d.error.substring(0,40)+'</span>':''}</span>
       </td>
       <td style="padding:7px 8px;text-align:center;">
-        ${d.shareUrl?`<a href="${d.shareUrl}" target="_blank" style="color:#7c3aed;font-size:0.75rem;font-weight:700;">📊 View</a>`:'—'}
+        ${safeShareUrl?`<a href="${safeShareUrl}" target="_blank" style="color:#7c3aed;font-size:0.75rem;font-weight:700;">📊 View</a>`:'—'}
       </td>
     </tr>`;
   }).join('');
@@ -2492,21 +2543,29 @@ async function loadCampaignsList() {
     const data = await r.json();
     if (!data.success || !data.campaigns.length) { el.textContent = 'No campaigns yet.'; return; }
     const statusColor = { done:'#4ade80', running:'#60a5fa', cancelled:'#9ca3af', error:'#f87171' };
+    const statusLabel = { done:'✅ Done', running:'🔄 Running', cancelled:'⛔ Cancelled', error:'❌ Error', queued:'⏳ Queued' };
     el.innerHTML = data.campaigns.map(c => `
-      <div onclick="loadCampaignDetail('${c.id}')" style="background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px 18px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#4c1d95'" onmouseout="this.style.borderColor='#21262d'">
-        <div>
-          <div style="font-weight:700;color:#e5e7eb;">${c.name}</div>
-          <div style="font-size:0.72rem;color:#6b7280;margin-top:2px;">${new Date(c.createdAt).toLocaleString('nl-NL')} · ${c.totalDomains} domains</div>
+      <div style="background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#4c1d95'" onmouseout="this.style.borderColor='#21262d'">
+        <div onclick="loadCampaignDetail('${c.id}')" style="flex:1;cursor:pointer;min-width:0;">
+          <div style="font-weight:700;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div>
+          <div style="font-size:0.72rem;color:#6b7280;margin-top:2px;">${new Date(c.createdAt).toLocaleString('en-GB')} · ${c.totalDomains} domains · ${c.doneDomains}/${c.totalDomains} done</div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="text-align:right;">
-            <div style="font-size:0.82rem;font-weight:700;color:${statusColor[c.status]||'#9ca3af'};">${c.status}</div>
-            <div style="font-size:0.72rem;color:#6b7280;">${c.doneDomains}/${c.totalDomains}</div>
-          </div>
-          <span style="color:#6b7280;">›</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-size:0.78rem;font-weight:700;color:${statusColor[c.status]||'#9ca3af'};">${statusLabel[c.status]||c.status}</span>
+          <button onclick="deleteCampaign('${c.id}', this)" style="background:#1c0a0a;border:1px solid #7f1d1d;color:#f87171;padding:4px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;cursor:pointer;">🗑 Delete</button>
+          <span onclick="loadCampaignDetail('${c.id}')" style="color:#6b7280;cursor:pointer;">›</span>
         </div>
       </div>`).join('');
   } catch(e) { el.textContent = 'Error: ' + e.message; }
+}
+
+async function deleteCampaign(id, btn) {
+  if (!confirm('Delete this campaign? This cannot be undone.')) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    await fetch('/api/campaign/' + id, { method: 'DELETE', headers: { 'x-admin-key': currentAdminId } });
+    loadCampaignsList();
+  } catch(e) { alert('Delete failed: ' + e.message); btn.disabled = false; btn.textContent = '🗑 Delete'; }
 }
 
 async function loadCampaignDetail(campaignId) {
@@ -2564,7 +2623,7 @@ function parseCampCSV(input) {
 
     // Show preview
     preview.style.display = 'block';
-    preview.innerHTML = `✅ CSV geladen: <strong>${domains.length}</strong> domeinen · <strong>${withEmail}</strong> emails al bekend · <strong>${domains.length - withEmail}</strong> worden automatisch gezocht`;
+    preview.innerHTML = `✅ CSV loaded: <strong>${domains.length}</strong> domains · <strong>${withEmail}</strong> emails found · <strong>${domains.length - withEmail}</strong> will be auto-detected`;
   };
   reader.readAsText(file);
 }
@@ -2589,8 +2648,9 @@ function editCampEmail(domain) {
         if (d.status === 'done' && clean && d.instantlyStatus !== 'pushed') {
           const apiKey = document.getElementById('campInstantlyKey')?.value.trim() || localStorage.getItem('instantlyApiKey');
           const campId = document.getElementById('campInstantlyCampaign')?.value;
-          if (apiKey && campId && confirm('Email toegevoegd. Nu direct naar Instantly pushen?')) {
-            pushDomainToInstantly(domain, clean, d.score, d.shareUrl, apiKey, campId);
+          if (apiKey && campId && confirm('Email added. Push to Instantly now?')) {
+            const safeUrl = d.shareUrl ? d.shareUrl.replace('//contentscale.site', '//app.contentscale.site') : d.shareUrl;
+            pushDomainToInstantly(domain, clean, d.score, safeUrl, apiKey, campId);
           }
         }
       }
@@ -2627,6 +2687,37 @@ async function pushDomainToInstantly(domain, email, score, shareUrl, apiKey, cam
     localStorage.setItem('instantlyApiKey', defaultKey);
   }
 })();
+
+function addNicheChip(niche) {
+  const ta = document.getElementById('adminBatchNiches');
+  if (!ta) return;
+  const lines = ta.value.trim() ? ta.value.trim().split('\n').map(l => l.trim()) : [];
+  if (!lines.includes(niche)) { ta.value = lines.concat(niche).join('\n'); adminUpdateBatchCombos(); }
+}
+
+function loadHighScoreNiches() {
+  document.getElementById('adminBatchNiches').value = [
+    'SEO agency','content marketing agency','digital marketing agency',
+    'law firm','financial advisor','accountant',
+    'medical clinic','physiotherapist',
+    'B2B software','SaaS','IT consultancy',
+    'recruitment agency','management consultant','business coach'
+  ].join('\n');
+  adminUpdateBatchCombos();
+}
+
+function copyDomainsToCampaigns() {
+  const domains = window._batchDomains || [];
+  if (!domains.length) { alert('No domains to copy.'); return; }
+  switchTab('campaigns');
+  const ta = document.getElementById('campDomains');
+  if (ta) { ta.value = domains.join('\n'); ta.dispatchEvent(new Event('input')); }
+  const el = document.createElement('div');
+  el.textContent = '✅ ' + domains.length + ' domains loaded into Campaigns';
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#166534;color:#4ade80;padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:9999;';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
 </script>
 </body>
 </html>
