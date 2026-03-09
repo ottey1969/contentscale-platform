@@ -1148,16 +1148,18 @@
            const country       = document.getElementById('sbCountry')?.value || '';
            const niche         = document.getElementById('sbNiche')?.value || '';
            const business_type = document.getElementById('sbBizType')?.value || '';
-           const successful = bulkResults.filter(r => r.success && r.score > 0);
-           const avg = arr => arr.reduce((a,b) => a+b, 0) / arr.length;
+           // Filter ONLY results from this specific domain to avoid cross-scan contamination
+           const successful = bulkResults.filter(r => r.success && r.score > 0 && r.url && r.url.replace(/https?:\/\//,'').split('/')[0] === domain);
+           const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a,b) => a+b, 0) / arr.length) : 0;
+           // Use passed-in avgScore as authoritative (it was computed at render time from correct results)
            const payload = {
              domain: 'https://' + domain,
              company_name,
-             avg_score:     avg(successful.map(r => r.score)),
+             avg_score:     avgScore,
              avg_graaf:     avg(successful.map(r => r.metrics?.graaf || 0)),
              avg_craft:     avg(successful.map(r => r.metrics?.craft || 0)),
              avg_technical: avg(successful.map(r => r.metrics?.technical || 0)),
-             page_count: successful.length,
+             page_count: successful.length || pageCount,
              page_scores: successful.map(r => ({ url: r.url, score: r.score, graaf: r.metrics?.graaf||0, craft: r.metrics?.craft||0, technical: r.metrics?.technical||0 })),
              country, niche, business_type
            };
