@@ -1117,13 +1117,8 @@
              status.style.borderColor = '#166534';
              status.style.color       = '#4ade80';
              status.textContent       = `✅ ${data.total} URL's gevonden in sitemap`;
-             listDiv.innerHTML = sitemapFetchedUrls.map(u =>
-               `<div style="padding:2px 0;border-bottom:1px solid #1e293b;">${u}</div>`
-             ).join('');
-             countEl.textContent = `${sitemapFetchedUrls.length} URL's`;
+             renderSitemapUrlList();
              preview.classList.remove('hidden');
-             const btnLabel = document.getElementById('bulkBtnLabel');
-             if (btnLabel) btnLabel.textContent = `Scan Sitemap (${sitemapFetchedUrls.length} pages)`;
            } catch(e) {
              status.style.background  = '#1a0a0a';
              status.style.borderColor = '#7f1d1d';
@@ -1138,6 +1133,27 @@
          function clearSitemapUrls() {
            sitemapFetchedUrls = [];
            document.getElementById('sitemapUrlPreview').classList.add('hidden');
+
+         function renderSitemapUrlList() {
+           const listDiv  = document.getElementById('sitemapUrlList');
+           const countEl  = document.getElementById('sitemapUrlCount');
+           const btnLabel = document.getElementById('bulkBtnLabel');
+           if (!listDiv) return;
+           listDiv.innerHTML = sitemapFetchedUrls.map((u, i) => {
+             const path = u.replace(/https?:\/\/[^\/]+/, '') || '/';
+             return `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 4px;border-bottom:1px solid #1e293b;gap:8px;">
+               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:0.75rem;" title="${u}">${path}</span>
+               <button onclick="removeSitemapUrl(${i})" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.8rem;flex-shrink:0;padding:0 2px;line-height:1;" title="Verwijder">✕</button>
+             </div>`;
+           }).join('');
+           if (countEl) countEl.textContent = `${sitemapFetchedUrls.length} URL's`;
+           if (btnLabel) btnLabel.textContent = sitemapFetchedUrls.length > 0 ? `Scan Sitemap (${sitemapFetchedUrls.length} pages)` : 'Fetch URLs First';
+         }
+
+         function removeSitemapUrl(index) {
+           sitemapFetchedUrls.splice(index, 1);
+           renderSitemapUrlList();
+         }
            document.getElementById('sitemapFetchStatus').classList.add('hidden');
            document.getElementById('sitemapUrlInput').value = '';
            const btnLabel = document.getElementById('bulkBtnLabel');
@@ -1760,11 +1776,18 @@
                <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${err>0?'<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">'+err+' errors</div>':''}</div>`;
            }
            if (container) container.innerHTML = bulkResults.map((result, index) => {
-             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">✕</div><div><div style="font-weight:700;">${result.url.substring(0,50)}${result.url.length>50?'...':''}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">❌ Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button></div></div></div>`;
+             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" ${result.selected?'checked':''} onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">✕</div><div><div style="font-weight:700;">${result.url.replace(/https?:\/\//,'').split('/')[0]}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">❌ Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button></div></div></div>
+             </div>`;
              const sc = result.score>=95?'#a78bfa':result.score>=85?'#4ade80':result.score>=70?'#a3e635':'#f87171';
              const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
-             return `<div class="bulk-result-item" id="bulk-result-${index}"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0,60)}${result.url.length>60?'...':''}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">🏅</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>`;
+             return `<div class="bulk-result-item" id="bulk-result-${index}" style="display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" ${result.selected?'checked':''} onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#a78bfa;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${(()=>{const p=result.url.replace(/https?:\/\//,'').split('/').slice(1).join('/');return p?('/'+p).substring(0,45)+((p.length>45)?'..':''):'homepage'})()}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">🏅</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>
+             </div>`;
            }).join('');
+           updateDeleteBar();
            if (resultsDiv) resultsDiv.classList.remove('hidden');
            if (exportButtons && successful.length > 0) {
              exportButtons.style.display = 'flex';
@@ -1925,11 +1948,18 @@
              <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${needsWorkCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udd34 Needs Work</div></div>
              <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${errorCount>0?'<div style=\"font-size:0.65rem;color:#ef4444;margin-top:4px;\">'+errorCount+' errors</div>':''}</div>`;
            if (container) container.innerHTML = bulkResults.map((result, index) => {
-             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">\u274c</div><div><div style="font-weight:700;">${result.url.substring(0,50)}${result.url.length>50?'...':''}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><div style="display:flex;align-items:center;gap:12px;"><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">\u274c Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">\ud83d\udd04 Retry</button></div></div></div>`;
+             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">✕</div><div><div style="font-weight:700;">${result.url.replace(/https?:\/\//,'').split('/')[0]}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><div style="display:flex;align-items:center;gap:12px;"><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">❌ Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button></div></div></div>
+             </div>`;
              const sc = result.score>=95?'#a78bfa':result.score>=85?'#4ade80':result.score>=70?'#a3e635':'#f87171';
              const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
-             return `<div class="bulk-result-item" id="bulk-result-${index}"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0,60)}${result.url.length>60?'...':''}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" title="Get Badge" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">\ud83c\udfc5</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>`;
+             return `<div class="bulk-result-item" id="bulk-result-${index}" style="display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#a78bfa;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${(()=>{const p=result.url.replace(/https?:\/\//,'').split('/').slice(1).join('/');return p?('/'+p).substring(0,45)+((p.length>45)?'..':''):'homepage'})()}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" title="Get Badge" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🏅</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>
+             </div>`;
            }).join('');
+           updateDeleteBar();
            resultsDiv.classList.remove('hidden');
            if (exportButtons && successful.length > 0) {
              exportButtons.style.display = 'flex';
@@ -1971,6 +2001,46 @@
          details.classList.toggle('hidden');
          item.classList.toggle('expanded', !details.classList.contains('hidden'));
          }
+         }
+
+         function toggleBulkSelect(index, checked) {
+           if (bulkResults[index]) bulkResults[index].selected = checked;
+           updateDeleteBar();
+         }
+
+         function selectAllBulk(checked) {
+           bulkResults.forEach(r => r.selected = checked);
+           renderBulkResults();
+         }
+
+         function updateDeleteBar() {
+           const selectedCount = bulkResults.filter(r => r.selected).length;
+           let bar = document.getElementById('bulkDeleteBar');
+           if (!bar) {
+             const resultsDiv = document.getElementById('bulkResults');
+             if (!resultsDiv) return;
+             bar = document.createElement('div');
+             bar.id = 'bulkDeleteBar';
+             bar.style.cssText = 'position:sticky;top:0;z-index:20;background:#1a0a2e;border:1px solid #7e22ce;border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+             resultsDiv.prepend(bar);
+           }
+           bar.innerHTML = `
+             <div style="display:flex;align-items:center;gap:12px;">
+               <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;color:#c4b5fd;">
+                 <input type="checkbox" onchange="selectAllBulk(this.checked)" ${selectedCount===bulkResults.length&&bulkResults.length>0?'checked':''} style="width:15px;height:15px;accent-color:#a78bfa;cursor:pointer;">
+                 Alles selecteren
+               </label>
+               <span style="font-size:0.78rem;color:#9ca3af;">${selectedCount > 0 ? selectedCount + ' geselecteerd' : 'Selecteer om te verwijderen'}</span>
+             </div>
+             ${selectedCount > 0 ? `<button onclick="deleteSelectedBulk()" style="background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;padding:6px 16px;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;">🗑 Verwijder ${selectedCount}</button>` : ''}
+           `;
+         }
+
+         function deleteSelectedBulk() {
+           const count = bulkResults.filter(r => r.selected).length;
+           bulkResults = bulkResults.filter(r => !r.selected);
+           renderBulkResults();
+           showToast('🗑 ' + count + ' resultaten verwijderd', '#6b7280', 2500);
          }
          // ✅ NEW FUNCTION: TOGGLE LEADERBOARD SELECTION
 
