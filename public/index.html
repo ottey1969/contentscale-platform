@@ -1032,6 +1032,7 @@
          }
          document.addEventListener('DOMContentLoaded', function () {
          registerUser();
+         setTimeout(resumeActiveJob, 1500); // check for active job after page loads
          loadLeaderboardData();
          loadFreelancers();
          checkRescanReminder();
@@ -1585,10 +1586,127 @@
          let activeBulkJobId = null;
          let bulkPollInterval = null;
 
+         // Resume any active job on page load
+         async function resumeActiveJob() {
+           const savedJobId = localStorage.getItem('cs_activeJobId');
+           if (!savedJobId) return;
+           try {
+             const r = await fetch('/api/scan/bulk-job/' + savedJobId);
+             const job = await r.json();
+             if (!job.success || job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+               localStorage.removeItem('cs_activeJobId');
+               return;
+             }
+             // Job still running — show resume banner
+             activeBulkJobId = savedJobId;
+             const progress = document.getElementById('bulkProgress');
+             const progressBar = document.getElementById('bulkProgressBar');
+             const progressText = document.getElementById('bulkProgressText');
+             const button = document.getElementById('bulkScanBtn');
+             if (progress) progress.classList.remove('hidden');
+             if (button) {
+               button.disabled = true;
+               button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scan running on server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+             }
+             showToast('🔄 Scan still running on server — reconnecting...', '#7e22ce', 5000);
+             isScanning = true;
+             // Switch to bulk tab
+             if (typeof setBulkMode === 'function') setBulkMode('manual');
+             // Resume polling
+             bulkResults = job.results || [];
+             resumePollJob(savedJobId, job.results.length);
+           } catch(e) {
+             localStorage.removeItem('cs_activeJobId');
+           }
+         }
+
+         function resumePollJob(jobId, startFrom) {
+           let lastDone = startFrom || 0;
+           const progress = document.getElementById('bulkProgress');
+           const progressBar = document.getElementById('bulkProgressBar');
+           const progressText = document.getElementById('bulkProgressText');
+           const button = document.getElementById('bulkScanBtn');
+
+           bulkPollInterval = setInterval(async () => {
+             try {
+               const pollRes = await fetch('/api/scan/bulk-job/' + jobId);
+               const job = await pollRes.json();
+               if (!job.success) { clearInterval(bulkPollInterval); localStorage.removeItem('cs_activeJobId'); return; }
+               const newResults = job.results.slice(lastDone);
+               newResults.forEach(r => {
+                 bulkResults.push({ ...r, selected: false });
+                 try {
+                   const h = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+                   h.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
+                   localStorage.setItem('cs_scanHistory', JSON.stringify(h.slice(0, 100)));
+                 } catch(e) {}
+               });
+               lastDone = job.results.length;
+               const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+               if (progressBar) progressBar.style.width = pct + '%';
+               const currentUrl = job.results[job.done - 1]?.url || '';
+               const shortUrl = currentUrl.replace(/https?:\/\//, '').substring(0, 50);
+               if (progressText) {
+                 if (job.status === 'queued') progressText.textContent = '⏳ Waiting for scan slot...';
+                 else if (job.status === 'done') progressText.textContent = '✅ Scan complete! ' + job.done + '/' + job.total + ' pages';
+                 else progressText.textContent = 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' — ' + shortUrl : '') + ' · server-side · safe to close tab';
+               }
+               if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+                 clearInterval(bulkPollInterval);
+                 bulkPollInterval = null;
+                 localStorage.removeItem('cs_activeJobId');
+                 isScanning = false;
+                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>'; }
+                 if (progress) progress.classList.add('hidden');
+                 updateBulkCount();
+                 renderBulkResults();
+               }
+             } catch(e) {}
+           }, 4000);
+         }
+
+         function renderBulkResults() {
+           const resultsDiv = document.getElementById('bulkResults');
+           const container = document.getElementById('bulkResultsContainer');
+           const exportButtons = document.getElementById('bulkExportButtons');
+           if (!bulkResults.length) return;
+           bulkResults.sort((a,b) => { if(a.success&&!b.success)return -1; if(!a.success&&b.success)return 1; return(b.score||0)-(a.score||0); });
+           const successful = bulkResults.filter(r => r.success);
+           const statsDiv = document.getElementById('bulkStats');
+           if (statsDiv) {
+             const ec=successful.filter(r=>r.score>=95).length, exc=successful.filter(r=>r.score>=90&&r.score<95).length;
+             const st=successful.filter(r=>r.score>=85&&r.score<90).length, go=successful.filter(r=>r.score>=80&&r.score<85).length;
+             const so=successful.filter(r=>r.score>=75&&r.score<80).length, qu=successful.filter(r=>r.score>=70&&r.score<75).length;
+             const nw=successful.filter(r=>r.score<70).length, err=bulkResults.length-successful.length;
+             statsDiv.innerHTML = `
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${ec}</div><div style="font-size:0.65rem;color:#9ca3af;">🏅 Elite 95+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">${exc}</div><div style="font-size:0.65rem;color:#9ca3af;">✨ Excellent 90+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${st}</div><div style="font-size:0.65rem;color:#9ca3af;">💪 Strong 85+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a3e635;">${go}</div><div style="font-size:0.65rem;color:#9ca3af;">👍 Good 80+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${so}</div><div style="font-size:0.65rem;color:#9ca3af;">📈 Solid 75+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qu}</div><div style="font-size:0.65rem;color:#9ca3af;">✅ Qualified 70+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${nw}</div><div style="font-size:0.65rem;color:#9ca3af;">🔴 Needs Work</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${err>0?'<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">'+err+' errors</div>':''}</div>`;
+           }
+           if (container) container.innerHTML = bulkResults.map((result, index) => {
+             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">✕</div><div><div style="font-weight:700;">${result.url.substring(0,50)}${result.url.length>50?'...':''}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">❌ Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button></div></div></div>`;
+             const sc = result.score>=95?'#a78bfa':result.score>=85?'#4ade80':result.score>=70?'#a3e635':'#f87171';
+             const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
+             return `<div class="bulk-result-item" id="bulk-result-${index}"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0,60)}${result.url.length>60?'...':''}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">🏅</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>`;
+           }).join('');
+           if (resultsDiv) resultsDiv.classList.remove('hidden');
+           if (exportButtons && successful.length > 0) {
+             exportButtons.style.display = 'flex';
+             const domainBadgeBtn = document.getElementById('domainBadgeBtn');
+             if (domainBadgeBtn) { const doms=[...new Set(successful.map(r=>r.url.replace(/https?:\/\//,'').split('/')[0]))]; domainBadgeBtn.style.display=doms.length===1?'inline-flex':'none'; }
+           }
+           updateRealActivityBanner();
+         }
+
          async function startBulkScan() {
          if (isScanning) { alert('Scan already in progress. Please wait.'); return; }
          if (currentBulkMode === 'sitemap') {
-           if (sitemapFetchedUrls.length === 0) { showToast('\u274c Fetch sitemap URLs first', '#ef4444'); return; }
+           if (sitemapFetchedUrls.length === 0) { showToast('❌ Fetch sitemap URLs first', '#ef4444'); return; }
            document.getElementById('bulkUrlInput').value = sitemapFetchedUrls.join('\n');
          }
          const urlInput   = document.getElementById('bulkUrlInput');
@@ -1600,7 +1718,7 @@
          const container  = document.getElementById('bulkResultsContainer');
          const exportButtons = document.getElementById('bulkExportButtons');
          const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-         if (allUrls.length === 0) { alert('\u274c Enter at least one URL'); return; }
+         if (allUrls.length === 0) { alert('❌ Enter at least one URL'); return; }
          const urls = allUrls.map(u => u.startsWith('http') ? u : 'https://' + u);
          isScanning = true;
          button.disabled = true;
@@ -1610,12 +1728,10 @@
          bulkResults = [];
          if (container) container.innerHTML = '';
          if (exportButtons) exportButtons.style.display = 'none';
-         // Remove previous sitemap banner
          const oldBanner = document.getElementById('sitemapSubmitBanner');
          if (oldBanner) oldBanner.remove();
 
          try {
-           // Start server-side job
            const startRes = await fetch('/api/scan/bulk-job', {
              method: 'POST',
              headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
@@ -1624,11 +1740,12 @@
            const startData = await startRes.json();
            if (!startData.success) throw new Error(startData.error || 'Failed to start job');
            activeBulkJobId = startData.jobId;
-           // Warn if URLs were capped at 500
+           // Save to localStorage so tab close/reload can resume
+           localStorage.setItem('cs_activeJobId', activeBulkJobId);
            if (startData.capped) showToast('⚠️ Capped at 500 URLs. Remaining skipped.', '#f59e0b', 6000);
-           const queuedMsg = startData.queued ? ' ⏳ In queue — server busy, starts soon...' : '';
            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server' + (startData.queued ? ' (queued)' : '') + '... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
-           if (startData.queued) progressText.textContent = '⏳ Waiting for scan slot — another job is running. Your job starts automatically.';
+           if (startData.queued) progressText.textContent = '⏳ Waiting for scan slot — your job starts automatically.';
+
 
            // Poll for results
            let lastDone = 0;
@@ -1666,10 +1783,11 @@
                  if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
                    clearInterval(bulkPollInterval);
                    bulkPollInterval = null;
+                   localStorage.removeItem('cs_activeJobId');
                    resolve(job);
                  }
                } catch(e) { clearInterval(bulkPollInterval); reject(e); }
-             }, 3000); // poll every 3 seconds
+             }, 4000); // poll every 4 seconds
            });
 
            progressBar.style.width = '100%';
@@ -2443,14 +2561,18 @@
          const m = MEDAL[i];
          const name = e.company_name || (() => { try { return new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname; } catch(err) { return e.url; } })();
          const tags = [e.niche, e.business_type, e.country].filter(Boolean);
+         // Always link to homepage, not sitemap URL
+         const homepage = (() => { try { const u = new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url); return u.protocol + '//' + u.hostname; } catch(err) { return e.url; } })();
+         const pageCount = e.page_count || null;
          return `<div style="background:${m.bg};border:2px solid ${m.border};border-radius:16px;padding:28px 20px 24px;text-align:center;position:relative;box-shadow:0 0 28px ${m.glow},inset 0 1px 0 rgba(255,255,255,0.07);transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
          <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:${m.badgeBg};color:${m.badgeText}!important;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:99px;">${m.label}</div>
          <div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
          <h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
-         <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
-         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
+         <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:2px;">${e.score}</div>
+         <div style="font-size:0.72rem;color:rgba(255,255,255,0.45)!important;margin-bottom:${pageCount ? '6px' : '12px'};">avg score / 100</div>
+         ${pageCount ? `<div style="font-size:0.72rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;background:rgba(255,255,255,0.07);border-radius:99px;padding:3px 10px;display:inline-block;">📄 ${pageCount} pages scanned</div>` : ''}
          ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}</div>` : ''}
-         <a href="${e.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔍 Visit Scanned Site</a>
+         <a href="${homepage}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🌐 Visit Website</a>
          </div>`;
          }).join('');
          const rest = entries.slice(3);
@@ -2474,12 +2596,15 @@
          <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:24px;flex-shrink:0;text-align:right;">${rank}</span>
          <div style="min-width:0;flex:1;">
          <div class="lb-rank-name" style="font-weight:600;color:#f3f4f6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${name}</div>
-         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}</div>` : ''}
+         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}${e.page_count ? ' · 📄 ' + e.page_count + ' pages' : ''}</div>` : (e.page_count ? `<div style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;">📄 ${e.page_count} pages</div>` : '')}
          </div>
          </div>
          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-         <span class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
-         <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">Visit →</a>
+         <div style="text-align:right;">
+           <div class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></div>
+           <div style="font-size:0.62rem;color:#6b7280!important;">avg score</div>
+         </div>
+         <a href="${(() => { try { const u = new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url); return u.protocol+'//'+u.hostname; } catch(err) { return e.url; }})()" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">🌐 Visit →</a>
          </div>
          </div>`;
          }).join('');
