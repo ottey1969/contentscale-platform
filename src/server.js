@@ -2098,7 +2098,7 @@ console.error('Server Error:', err.message);
 res.status(500).json({ success: false, error: 'Internal Server Error' });
 });
 async function startServer() {
-console.log('\n🚀 =====================================');
+console.log('🚀 =====================================');
 console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
 console.log('🚀  FIX: deactivate endpoint added');
@@ -2109,6 +2109,7 @@ console.log('🚀  DOCX: template type column');
 console.log('🚀  Bulk Delete Routes');
 console.log('🚀  34 Recommendation Checks');
 console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
+console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
 app.listen(PORT, () => {
@@ -2560,7 +2561,7 @@ async function createShareUrl(domain, results, req) {
     } catch(e2) {}
   }
   // Build base URL from env or default
-  const base = process.env.BASE_URL || 'https://contentscale.site';
+  const base = process.env.BASE_URL || 'https://app.contentscale.site';
   return base + '/share/' + token;
 }
 
@@ -2808,6 +2809,16 @@ app.get('/api/campaign', verifyAdmin, async (req, res) => {
   }
   list.sort((a,b) => b.createdAt - a.createdAt);
   res.json({ success: true, campaigns: list.slice(0, 30) });
+});
+
+
+app.delete('/api/campaign/:campaignId', verifyAdmin, async (req, res) => {
+  const id = req.params.campaignId;
+  campaigns.delete(id);
+  if (pool) {
+    try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) {}
+  }
+  res.json({ success: true });
 });
 
 
