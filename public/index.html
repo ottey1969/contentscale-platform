@@ -434,8 +434,7 @@
                                  <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
                                  <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export Combined PDF</button>
                                  <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
-                                 <!-- NEW BUTTON FOR SELECTIVE LEADERBOARD SUBMISSION -->
-                                 <button onclick="submitSelectedToLeaderboard()" class="btn" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-trophy mr-2"></i> Submit Selected</button>
+                                 <button id="submitSelectedBtn" onclick="submitSelectedToLeaderboard()" class="btn" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-trophy mr-2"></i> Submit Selected</button>
                               </div>
                               <div id="bulkResultsContainer"></div>
                            </div>
@@ -1783,11 +1782,11 @@
          <div class="bulk-result-item" id="bulk-result-${index}">
          <div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
          <div style="display:flex;align-items:center;gap:16px;">
-         <!-- CHECKBOX -->
-         <input type="checkbox" ${result.score >= 70 ? '' : 'disabled'} ${result.selected ? 'checked' : ''} 
-         onclick="event.stopPropagation(); toggleLeaderboardSelection(${index}, this.checked)" 
-         style="accent-color:#7e22ce; width:18px; height:18px; cursor:${result.score >= 70 ? 'pointer' : 'not-allowed'}" 
-         title="${result.score >= 70 ? 'Select for Leaderboard' : 'Score < 70 (Not eligible)'}">
+         <!-- CHECKBOX — hidden in sitemap mode -->
+         ${currentBulkMode !== 'sitemap' ? `<input type="checkbox" ${result.score >= 70 ? '' : 'disabled'} ${result.selected ? 'checked' : ''}
+         onclick="event.stopPropagation(); toggleLeaderboardSelection(${index}, this.checked)"
+         style="accent-color:#7e22ce; width:18px; height:18px; cursor:${result.score >= 70 ? 'pointer' : 'not-allowed'}"
+         title="${result.score >= 70 ? 'Select for Leaderboard' : 'Score < 70 (Not eligible)'}">` : ''}
          <div class="bulk-score-badge" style="color:${scoreColor}!important;">${result.score}</div>
          <div>
          <div style="font-weight:700;">${domain}</div>
@@ -1805,9 +1804,11 @@
          </div>`;
          }).join('');
          resultsDiv.classList.remove('hidden');
-         // Show export buttons
+         // Show export buttons — hide Submit Selected in sitemap mode
          if (exportButtons && successful.length > 0) {
          exportButtons.style.display = 'flex';
+         const submitBtn = document.getElementById('submitSelectedBtn');
+         if (submitBtn) submitBtn.style.display = currentBulkMode === 'sitemap' ? 'none' : '';
          }
          }
          } catch (error) {
