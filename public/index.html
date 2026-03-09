@@ -403,20 +403,9 @@
                                     <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
                                  </div>
                               </label>
-                              <label id="leaderboardInfoRow" class="flex items-start gap-3 mb-3 cursor-default" style="display:none!important;">
-                                 <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-                                    <i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>
-                                 </div>
-                                 <div>
-                                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">🏆 Submit 70+ scores to leaderboard</span>
-                                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — top performers get free exposure on the public leaderboard</p>
-                                 </div>
-                              </label>
+
                            </div>
-                           <div id="sitemapResultsInfo" class="hidden mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #4c1d95;">
-                              <p class="text-sm font-semibold mb-2" style="color:#a78bfa!important;">🗺️ Sitemap Scan resultaten</p>
-                              <p class="text-xs" style="color:#9ca3af!important;">Per-page scores visible after scan · Average domain score auto-submitted to admin · Admin manually approves for the leaderboard</p>
-                           </div>
+
 
                            <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
                            <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
@@ -435,7 +424,7 @@
                                  <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
                                  <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export Combined PDF</button>
                                  <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
-                                 <button id="submitSelectedBtn" onclick="submitSelectedToLeaderboard()" class="btn" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-trophy mr-2"></i> Submit Selected</button>
+
                               </div>
                               <div id="bulkResultsContainer"></div>
                            </div>
@@ -526,17 +515,24 @@
                </div>
                <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
                <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
+                  <!-- SEARCH BAR -->
+                  <div class="mb-3">
+                     <div class="relative">
+                        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:0.85rem;"></i>
+                        <input id="lbSearch" type="text" placeholder="Search by company name, domain or niche…" oninput="applyLeaderboardFilters()" class="w-full pl-9 pr-4 p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                     </div>
+                  </div>
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                      <div>
                         <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
                         <select id="filterNiche" aria-label="Filter by niche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
                            <option value="">All Niches</option>
                            <optgroup label="── Agencies & Services">
-                              <option value="seoagency">SEO Agency</option>
-                              <option value="contentmarketing">Content Marketing Agency</option>
-                              <option value="digitalmarketing">Digital Marketing Agency</option>
-                              <option value="webdesign">Web Design & Dev Agency</option>
-                              <option value="prагентство">PR Agency</option>
+                              <option value="seo agency">SEO Agency</option>
+                              <option value="content marketing">Content Marketing Agency</option>
+                              <option value="digital marketing">Digital Marketing Agency</option>
+                              <option value="web design">Web Design & Dev Agency</option>
+                              <option value="pr agency">PR Agency</option>
                            </optgroup>
                            <optgroup label="── YMYL (High Stakes)">
                               <option value="legal">Legal / Law Firm</option>
@@ -544,22 +540,21 @@
                               <option value="finance">Finance / Fintech</option>
                               <option value="insurance">Insurance</option>
                               <option value="tax">Accounting / Tax</option>
-                              <option value="mentalhealth">Mental Health / Therapy</option>
+                              <option value="mental health">Mental Health / Therapy</option>
                            </optgroup>
                            <optgroup label="── High Competition">
                               <option value="saas">SaaS / Software</option>
                               <option value="ecommerce">E-Commerce / Retail</option>
-                              <option value="realestate">Real Estate</option>
+                              <option value="real estate">Real Estate</option>
                               <option value="travel">Travel & Tourism</option>
                               <option value="recruitment">Recruitment / HR</option>
-                              <option value="insurance">Insurance</option>
                            </optgroup>
                            <optgroup label="── Service Businesses">
                               <option value="coaching">Coaching / Consulting</option>
                               <option value="local">Local Business</option>
-                              <option value="homeservices">Home Services (Plumber, Builder…)</option>
+                              <option value="home services">Home Services (Plumber, Builder…)</option>
                               <option value="restaurant">Restaurant / Food</option>
-                              <option value="beautywellness">Beauty & Wellness</option>
+                              <option value="beauty">Beauty & Wellness</option>
                               <option value="automotive">Automotive</option>
                            </optgroup>
                            <optgroup label="── Content-Driven">
@@ -1061,18 +1056,13 @@
            currentBulkMode = mode;
            const manualSec  = document.getElementById('manualModeSection');
            const sitemapSec = document.getElementById('sitemapModeSection');
-           const manualInfo = document.getElementById('manualResultsInfo');
-           const sitemapInfo= document.getElementById('sitemapResultsInfo');
            const manualBtn  = document.getElementById('modeManualBtn');
            const sitemapBtn = document.getElementById('modeSitemapBtn');
            const btnLabel   = document.getElementById('bulkBtnLabel');
-           const lbRow      = document.getElementById('leaderboardInfoRow');
+
            if (mode === 'manual') {
              manualSec.classList.remove('hidden');
              sitemapSec.classList.add('hidden');
-             manualInfo.classList.remove('hidden');
-             sitemapInfo.classList.add('hidden');
-             if (lbRow) lbRow.style.display = 'none';
              manualBtn.style.background  = 'linear-gradient(135deg,#4f46e5,#7e22ce)';
              manualBtn.style.color       = 'white';
              sitemapBtn.style.background = 'transparent';
@@ -1081,9 +1071,6 @@
            } else {
              manualSec.classList.add('hidden');
              sitemapSec.classList.remove('hidden');
-             manualInfo.classList.remove('hidden');
-             sitemapInfo.classList.add('hidden');
-             if (lbRow) lbRow.style.display = 'flex';
              sitemapBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)';
              sitemapBtn.style.color      = 'white';
              manualBtn.style.background  = 'transparent';
@@ -1149,35 +1136,36 @@
            if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
          }
 
-         async function submitSitemapAggregate(results, sitemapUrl) {
-           const successful = results.filter(r => r.success && r.score > 0);
-           if (successful.length === 0) return;
+         async function submitSitemapWithMeta(domain, avgScore, pageCount, sitemapUrl) {
+           const company_name  = document.getElementById('sbCompanyName')?.value.trim() || domain;
+           const country       = document.getElementById('sbCountry')?.value || '';
+           const niche         = document.getElementById('sbNiche')?.value || '';
+           const business_type = document.getElementById('sbBizType')?.value || '';
+           const successful = bulkResults.filter(r => r.success && r.score > 0);
            const avg = arr => arr.reduce((a,b) => a+b, 0) / arr.length;
-           const domain = 'https://' + sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
            const payload = {
-             domain,
-             company_name: null,
+             domain: 'https://' + domain,
+             company_name,
              avg_score:     avg(successful.map(r => r.score)),
              avg_graaf:     avg(successful.map(r => r.metrics?.graaf || 0)),
              avg_craft:     avg(successful.map(r => r.metrics?.craft || 0)),
              avg_technical: avg(successful.map(r => r.metrics?.technical || 0)),
              page_count: successful.length,
-             page_scores: successful.map(r => ({
-               url: r.url,
-               score: r.score,
-               graaf: r.metrics?.graaf || 0,
-               craft: r.metrics?.craft || 0,
-               technical: r.metrics?.technical || 0
-             })),
-             country: 'NL'
+             page_scores: successful.map(r => ({ url: r.url, score: r.score, graaf: r.metrics?.graaf||0, craft: r.metrics?.craft||0, technical: r.metrics?.technical||0 })),
+             country, niche, business_type
            };
            try {
-             await fetch('/api/sitemap/submit', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify(payload)
-             });
-           } catch(e) { console.warn('Sitemap submit failed:', e); }
+             const res = await fetch('/api/sitemap/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+             const data = await res.json();
+             const banner = document.getElementById('sitemapSubmitBanner');
+             if (banner) {
+               if (data.success) {
+                 banner.querySelector('button').outerHTML = `<div style="text-align:center;padding:10px;background:rgba(74,222,128,0.1);border:1px solid #166534;border-radius:8px;color:#4ade80;font-weight:700;">✅ Submitted — pending admin approval</div>`;
+               } else {
+                 showToast('❌ Submit mislukt: ' + (data.error || 'unknown'), '#ef4444');
+               }
+             }
+           } catch(e) { showToast('❌ Submit mislukt', '#ef4444'); }
          }
          // ========== END SITEMAP MODE ==========
 
@@ -1673,11 +1661,9 @@
          progressText.textContent = 'Scan complete!';
          progressBar.style.width = '100%';
 
-         // SITEMAP MODE: auto-submit aggregate to admin pending
+         // SITEMAP MODE: show score banner + metadata form before submit
          if (currentBulkMode === 'sitemap') {
            const sitemapUrl = document.getElementById('sitemapUrlInput').value.trim();
-           await submitSitemapAggregate(bulkResults, sitemapUrl);
-           // Show domain score summary banner
            const succ = bulkResults.filter(r => r.success && r.score > 0);
            if (succ.length > 0) {
              const avgScore = Math.round(succ.reduce((a,r) => a+r.score, 0) / succ.length);
@@ -1685,14 +1671,76 @@
              const avgLabel = avgScore >= 85 ? 'Elite' : avgScore >= 70 ? 'Good' : avgScore >= 50 ? 'Needs Work' : 'Critical';
              const domain = sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
              const banner = document.createElement('div');
-             banner.style.cssText = 'background:linear-gradient(135deg,#0f0c29,#302b63);border:1px solid #4c1d95;border-radius:14px;padding:20px 24px;margin-bottom:16px;text-align:center;';
+             banner.id = 'sitemapSubmitBanner';
+             banner.style.cssText = 'background:linear-gradient(135deg,#0f0c29,#302b63);border:1px solid #4c1d95;border-radius:14px;padding:24px;margin-bottom:16px;';
              banner.innerHTML = `
-               <div style="font-size:0.75rem;color:#6b7280;margin-bottom:6px;">${domain} — ${succ.length} pages scanned</div>
-               <div style="font-size:3.5rem;font-weight:900;color:${avgColor};line-height:1;">${avgScore}</div>
-               <div style="font-size:0.9rem;color:${avgColor};font-weight:700;margin:4px 0 8px;">${avgLabel} · Average domain score</div>
-               <div style="font-size:0.78rem;background:rgba(74,222,128,0.1);border:1px solid #166534;color:#4ade80;border-radius:8px;padding:8px 14px;display:inline-block;">
-                 ✅ Submitted to admin for leaderboard approval
+               <div style="text-align:center;margin-bottom:20px;">
+                 <div style="font-size:0.75rem;color:#6b7280;margin-bottom:6px;">${domain} — ${succ.length} pages scanned</div>
+                 <div style="font-size:3.5rem;font-weight:900;color:${avgColor};line-height:1;">${avgScore}</div>
+                 <div style="font-size:0.9rem;color:${avgColor};font-weight:700;margin:4px 0;">${avgLabel} · Average domain score</div>
                </div>
+               <div style="background:rgba(0,0,0,0.3);border-radius:10px;padding:16px;margin-bottom:16px;">
+                 <p style="font-size:0.8rem;color:#a78bfa;font-weight:700;margin-bottom:12px;">📋 Add details before submitting to leaderboard</p>
+                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                   <div>
+                     <label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Company Name</label>
+                     <input id="sbCompanyName" type="text" placeholder="e.g. Acme SEO Agency" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;">
+                   </div>
+                   <div>
+                     <label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Country</label>
+                     <select id="sbCountry" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;">
+                       <option value="">Select country…</option>
+                       <option value="Netherlands">🇳🇱 Netherlands</option>
+                       <option value="Belgium">🇧🇪 Belgium</option>
+                       <option value="Germany">🇩🇪 Germany</option>
+                       <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                       <option value="France">🇫🇷 France</option>
+                       <option value="Spain">🇪🇸 Spain</option>
+                       <option value="United States">🇺🇸 United States</option>
+                       <option value="Canada">🇨🇦 Canada</option>
+                       <option value="Australia">🇦🇺 Australia</option>
+                       <option value="Other">🌐 Other</option>
+                     </select>
+                   </div>
+                 </div>
+                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                   <div>
+                     <label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Niche</label>
+                     <select id="sbNiche" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;">
+                       <option value="">Select niche…</option>
+                       <option value="SEO Agency">SEO Agency</option>
+                       <option value="Content Marketing Agency">Content Marketing Agency</option>
+                       <option value="Digital Marketing Agency">Digital Marketing Agency</option>
+                       <option value="Web Design Agency">Web Design Agency</option>
+                       <option value="PR Agency">PR Agency</option>
+                       <option value="SaaS">SaaS / Software</option>
+                       <option value="Legal">Legal / Law Firm</option>
+                       <option value="Healthcare">Healthcare / Medical</option>
+                       <option value="Finance">Finance / Fintech</option>
+                       <option value="Real Estate">Real Estate</option>
+                       <option value="E-Commerce">E-Commerce / Retail</option>
+                       <option value="Coaching">Coaching / Consulting</option>
+                       <option value="Education">Education / eLearning</option>
+                       <option value="Local Business">Local Business</option>
+                       <option value="Other">Other</option>
+                     </select>
+                   </div>
+                   <div>
+                     <label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Business Type</label>
+                     <select id="sbBizType" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;">
+                       <option value="">Select type…</option>
+                       <option value="B2B">B2B</option>
+                       <option value="B2C">B2C</option>
+                       <option value="Local">Local</option>
+                       <option value="Enterprise">Enterprise</option>
+                       <option value="Startup">Startup</option>
+                     </select>
+                   </div>
+                 </div>
+               </div>
+               <button onclick="submitSitemapWithMeta('${domain}', ${avgScore}, ${succ.length}, '${sitemapUrl}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;">
+                 🏆 Submit to Leaderboard (pending admin approval)
+               </button>
              `;
              const container2 = document.getElementById('bulkResultsContainer');
              if (container2) container2.parentNode.insertBefore(banner, container2);
@@ -1781,16 +1829,10 @@
          }
          const scoreColor = result.score >= 85 ? '#16a34a' : result.score >= 70 ? '#b45309' : '#dc2626';
          const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
-         // ADDED CHECKBOX FOR LEADERBOARD SELECTION
          return `
          <div class="bulk-result-item" id="bulk-result-${index}">
          <div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
          <div style="display:flex;align-items:center;gap:16px;">
-         <!-- CHECKBOX — hidden in sitemap mode -->
-         ${currentBulkMode !== 'sitemap' ? `<input type="checkbox" ${result.score >= 70 ? '' : 'disabled'} ${result.selected ? 'checked' : ''}
-         onclick="event.stopPropagation(); toggleLeaderboardSelection(${index}, this.checked)"
-         style="accent-color:#7e22ce; width:18px; height:18px; cursor:${result.score >= 70 ? 'pointer' : 'not-allowed'}"
-         title="${result.score >= 70 ? 'Select for Leaderboard' : 'Score < 70 (Not eligible)'}">` : ''}
          <div class="bulk-score-badge" style="color:${scoreColor}!important;">${result.score}</div>
          <div>
          <div style="font-weight:700;">${domain}</div>
@@ -1808,11 +1850,8 @@
          </div>`;
          }).join('');
          resultsDiv.classList.remove('hidden');
-         // Show export buttons — hide Submit Selected in sitemap mode
          if (exportButtons && successful.length > 0) {
          exportButtons.style.display = 'flex';
-         const submitBtn = document.getElementById('submitSelectedBtn');
-         if (submitBtn) submitBtn.style.display = currentBulkMode === 'sitemap' ? 'none' : '';
          }
          }
          } catch (error) {
@@ -1843,52 +1882,7 @@
          }
          }
          // ✅ NEW FUNCTION: TOGGLE LEADERBOARD SELECTION
-         function toggleLeaderboardSelection(index, isChecked) {
-         if (bulkResults[index]) {
-         bulkResults[index].selected = isChecked;
-         }
-         }
-         // ✅ NEW FUNCTION: SUBMIT SELECTED TO LEADERBOARD
-         async function submitSelectedToLeaderboard() {
-         if (!userId) {
-         alert('❌ Please register or log in to submit to the leaderboard.');
-         return;
-         }
-         const selected = bulkResults.filter(r => r.success && r.selected && r.score >= 70);
-         if (selected.length === 0) {
-         alert('⚠️ No valid scans selected. Please select successful scans with a score of 70 or higher.');
-         return;
-         }
-         if (!confirm(`Submit ${selected.length} selected scan${selected.length !== 1 ? 's' : ''} to the Leaderboard?`)) return;
-         
-         const btn = event && event.target;
-         if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
-         
-         let successCount = 0;
-         let failCount = 0;
-         
-         for (const result of selected) {
-         try {
-         const name = result.title || result.url.replace(/https?:\/\//, '').split('/')[0];
-         const res = await fetch('/api/leaderboard/submit', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-         body: JSON.stringify({ url: result.url, score: result.score, company_name: name, admin_verified: false })
-         });
-         const data = await res.json();
-         if (data.success) {
-         successCount++;
-         } else {
-         failCount++;
-         }
-         } catch(e) {
-         failCount++;
-         }
-         }
-         
-         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trophy mr-2"></i> Submit Selected'; }
-         showToast(`✅ Submitted ${successCount} to Leaderboard. ${failCount > 0 ? failCount + ' failed.' : ''}`, successCount > 0 ? '#0f7b3a' : '#ef4444');
-         }
+
          
          function generateBulkResultDetails(data) {
          if (!data.success) return '<p>No data available</p>';
@@ -2487,23 +2481,43 @@
          }
          }
          function applyLeaderboardFilters() {
-         const niche = document.getElementById('filterNiche').value.toLowerCase();
+         const search  = (document.getElementById('lbSearch')?.value || '').toLowerCase().trim();
+         const niche   = document.getElementById('filterNiche').value.toLowerCase().replace(/[\s_-]/g, '');
          const country = document.getElementById('filterCountry').value;
          const bizType = document.getElementById('filterBizType').value.toLowerCase();
-         const scoreMin = document.getElementById('filterScore').value;
+         const scoreMin= document.getElementById('filterScore').value;
          let filtered = allLeaderboardEntries.filter(e => {
-         if (niche && (e.niche || '').toLowerCase() !== niche) return false;
-         if (country && (e.country || '') !== country) return false;
-         if (bizType && (e.business_type || '').toLowerCase() !== bizType) return false;
-         if (scoreMin && e.score < parseInt(scoreMin)) return false;
-         return true;
+           // Search: match on company name, domain, or niche
+           if (search) {
+             const name   = (e.company_name || '').toLowerCase();
+             const domain = (e.url || '').toLowerCase();
+             const en     = (e.niche || '').toLowerCase();
+             if (!name.includes(search) && !domain.includes(search) && !en.includes(search)) return false;
+           }
+           // Niche: fuzzy — strip spaces/underscores/dashes before comparing
+           if (niche) {
+             const en = (e.niche || '').toLowerCase().replace(/[\s_-]/g, '');
+             if (!en.includes(niche) && !niche.includes(en)) return false;
+           }
+           // Country: exact
+           if (country && (e.country || '') !== country) return false;
+           // Business type: fuzzy
+           if (bizType) {
+             const bt = (e.business_type || '').toLowerCase();
+             if (!bt.includes(bizType) && !bizType.includes(bt)) return false;
+           }
+           // Score min
+           if (scoreMin && e.score < parseInt(scoreMin)) return false;
+           return true;
          });
-         const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
+         const active = [search, niche, country, bizType, scoreMin].filter(Boolean).length;
          document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
          renderLeaderboard(filtered);
          }
          function resetLeaderboardFilters() {
          ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => { document.getElementById(id).value = ''; });
+         const lbSearch = document.getElementById('lbSearch');
+         if (lbSearch) lbSearch.value = '';
          document.getElementById('filterCount').textContent = '';
          renderLeaderboard(allLeaderboardEntries);
          }
