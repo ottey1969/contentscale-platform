@@ -6,38 +6,38 @@
       <title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
       <meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
       <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
-  <script>
-  // Blinking tab: alternates title and favicon when tab is not active
-  (function() {
-    const titles = ['ContentScale ⚡', '🎯 SEO Scanner'];
-    const favicons = [
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"
-    ];
-    let blinkInterval = null;
-    let idx = 0;
-    const originalTitle = 'ContentScale - Elite SEO Content Quality Scanner 2026';
-    function startBlink() {
-      if (blinkInterval) return;
-      blinkInterval = setInterval(function() {
-        idx = idx === 0 ? 1 : 0;
-        document.title = titles[idx];
-        var el = document.getElementById('dynamicFavicon');
-        if (el) el.href = favicons[idx];
-      }, 800);
-    }
-    function stopBlink() {
-      if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
-      idx = 0;
-      document.title = originalTitle;
-      var el = document.getElementById('dynamicFavicon');
-      if (el) el.href = favicons[0];
-    }
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) { startBlink(); } else { stopBlink(); }
-    });
-  })();
-  </script>
+      <script>
+         // Blinking tab: alternates title and favicon when tab is not active
+         (function() {
+           const titles = ['ContentScale ⚡', '🎯 SEO Scanner'];
+           const favicons = [
+             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"
+           ];
+           let blinkInterval = null;
+           let idx = 0;
+           const originalTitle = 'ContentScale - Elite SEO Content Quality Scanner 2026';
+           function startBlink() {
+             if (blinkInterval) return;
+             blinkInterval = setInterval(function() {
+               idx = idx === 0 ? 1 : 0;
+               document.title = titles[idx];
+               var el = document.getElementById('dynamicFavicon');
+               if (el) el.href = favicons[idx];
+             }, 800);
+           }
+           function stopBlink() {
+             if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
+             idx = 0;
+             document.title = originalTitle;
+             var el = document.getElementById('dynamicFavicon');
+             if (el) el.href = favicons[0];
+           }
+           document.addEventListener('visibilitychange', function() {
+             if (document.hidden) { startBlink(); } else { stopBlink(); }
+           });
+         })();
+      </script>
       <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
       <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
       <script>
@@ -352,13 +352,46 @@
                            </div>
                         </div>
                         <div id="bulkScannerForm">
-                           <div class="mb-5">
-                              <!-- UPDATED LABEL TEXT -->
+                           <!-- MODE TOGGLE -->
+                           <div class="flex gap-2 mb-4" style="background:#0f172a;border-radius:10px;padding:4px;border:1px solid #1e293b;">
+                             <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;cursor:pointer;">
+                               📋 Manual URLs
+                             </button>
+                             <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;">
+                               🗺️ Sitemap Scan
+                             </button>
+                           </div>
+
+                           <!-- MANUAL MODE -->
+                           <div id="manualModeSection" class="mb-5">
                               <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(Unlimited · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
                               <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0 URLs</span></div>
                            </div>
-                           <div class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
+
+                           <!-- SITEMAP MODE -->
+                           <div id="sitemapModeSection" class="hidden mb-5">
+                             <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml of sitemap_index.xml)</span></label>
+                             <div class="flex gap-2 mb-3">
+                               <input id="sitemapUrlInput" type="url" placeholder="https://example.com/sitemap.xml" class="flex-1 p-3 rounded text-sm" style="background:#1e293b;border:1px solid #374151;color:#e5e7eb;">
+                               <button onclick="fetchSitemapUrls()" id="fetchSitemapBtn" class="btn btn-primary px-4 text-sm" style="white-space:nowrap;">
+                                 <i class="fas fa-download mr-1"></i> Fetch URLs
+                               </button>
+                             </div>
+                             <div id="sitemapFetchStatus" class="hidden rounded-lg p-3 text-sm mb-3" style="background:#0f2d1a;border:1px solid #166534;color:#4ade80;"></div>
+                             <div id="sitemapUrlPreview" class="hidden">
+                               <label class="block text-xs font-semibold mb-1" style="color:#6b7280;">Found URLs:</label>
+                               <div id="sitemapUrlList" class="rounded-lg p-3 max-h-48 overflow-y-auto text-xs" style="background:#111827;border:1px solid #1e293b;color:#9ca3af;line-height:2;font-family:monospace;"></div>
+                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af;"><span id="sitemapUrlCount">0 URLs</span><button onclick="clearSitemapUrls()" style="color:#f87171;background:none;border:none;cursor:pointer;">✕ Clear</button></div>
+                             </div>
+                             <div class="rounded-xl p-4 mt-3" style="background:#0f172a;border:1px solid #4c1d95;">
+                               <p class="text-xs font-semibold mb-1" style="color:#a78bfa!important;">🗺️ Sitemap Scan works automatically</p>
+                               <p class="text-xs" style="color:#6b7280!important;">All pages are scanned → average domain score calculated → automatically submitted to admin for approval on the leaderboard.</p>
+                             </div>
+                           </div>
+
+                           <!-- WHAT HAPPENS WITH RESULTS (manual mode only) -->
+                           <div id="manualResultsInfo" class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
                               <p class="text-sm font-semibold mb-3" style="color:#e5e7eb!important;">What do you want to do with the results?</p>
                               <label class="flex items-start gap-3 mb-3 cursor-default">
                                  <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
@@ -379,6 +412,11 @@
                                  </div>
                               </label>
                            </div>
+                           <div id="sitemapResultsInfo" class="hidden mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #4c1d95;">
+                              <p class="text-sm font-semibold mb-2" style="color:#a78bfa!important;">🗺️ Sitemap Scan resultaten</p>
+                              <p class="text-xs" style="color:#9ca3af!important;">Per-page scores visible after scan · Average domain score auto-submitted to admin · Admin manually approves for the leaderboard</p>
+                           </div>
+
                            <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
                            <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
                            </button>
@@ -1014,6 +1052,132 @@
          btnLabel.textContent = `Scan All URLs (${lines.length})`;
          }
          }
+
+         // ========== SITEMAP MODE ==========
+         let currentBulkMode = 'manual';
+         let sitemapFetchedUrls = [];
+
+         function setBulkMode(mode) {
+           currentBulkMode = mode;
+           const manualSec  = document.getElementById('manualModeSection');
+           const sitemapSec = document.getElementById('sitemapModeSection');
+           const manualInfo = document.getElementById('manualResultsInfo');
+           const sitemapInfo= document.getElementById('sitemapResultsInfo');
+           const manualBtn  = document.getElementById('modeManualBtn');
+           const sitemapBtn = document.getElementById('modeSitemapBtn');
+           const btnLabel   = document.getElementById('bulkBtnLabel');
+           if (mode === 'manual') {
+             manualSec.classList.remove('hidden');
+             sitemapSec.classList.add('hidden');
+             manualInfo.classList.remove('hidden');
+             sitemapInfo.classList.add('hidden');
+             manualBtn.style.background  = 'linear-gradient(135deg,#4f46e5,#7e22ce)';
+             manualBtn.style.color       = 'white';
+             sitemapBtn.style.background = 'transparent';
+             sitemapBtn.style.color      = '#9ca3af';
+             if (btnLabel) btnLabel.textContent = 'Scan All URLs';
+           } else {
+             manualSec.classList.add('hidden');
+             sitemapSec.classList.remove('hidden');
+             manualInfo.classList.add('hidden');
+             sitemapInfo.classList.remove('hidden');
+             sitemapBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)';
+             sitemapBtn.style.color      = 'white';
+             manualBtn.style.background  = 'transparent';
+             manualBtn.style.color       = '#9ca3af';
+             const count = sitemapFetchedUrls.length;
+             if (btnLabel) btnLabel.textContent = count > 0 ? `Scan Sitemap (${count} pages)` : 'Fetch URLs First';
+           }
+         }
+
+         async function fetchSitemapUrls() {
+           const input = document.getElementById('sitemapUrlInput');
+           const btn   = document.getElementById('fetchSitemapBtn');
+           const status= document.getElementById('sitemapFetchStatus');
+           const preview= document.getElementById('sitemapUrlPreview');
+           const listDiv= document.getElementById('sitemapUrlList');
+           const countEl= document.getElementById('sitemapUrlCount');
+           const url = input.value.trim();
+           if (!url) { showToast('❌ Enter a sitemap URL', '#ef4444'); return; }
+           btn.disabled = true;
+           btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Fetching...';
+           status.classList.remove('hidden');
+           status.style.background = '#1e293b';
+           status.style.borderColor = '#374151';
+           status.style.color = '#9ca3af';
+           status.textContent = 'Sitemap ophalen...';
+           try {
+             const res = await fetch('/api/sitemap/urls', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ url })
+             });
+             const data = await res.json();
+             if (!data.success) throw new Error(data.error || 'Fetch mislukt');
+             sitemapFetchedUrls = data.urls;
+             status.style.background  = '#0f2d1a';
+             status.style.borderColor = '#166534';
+             status.style.color       = '#4ade80';
+             status.textContent       = `✅ ${data.total} URL's gevonden in sitemap`;
+             listDiv.innerHTML = sitemapFetchedUrls.map(u =>
+               `<div style="padding:2px 0;border-bottom:1px solid #1e293b;">${u}</div>`
+             ).join('');
+             countEl.textContent = `${sitemapFetchedUrls.length} URL's`;
+             preview.classList.remove('hidden');
+             const btnLabel = document.getElementById('bulkBtnLabel');
+             if (btnLabel) btnLabel.textContent = `Scan Sitemap (${sitemapFetchedUrls.length} pages)`;
+           } catch(e) {
+             status.style.background  = '#1a0a0a';
+             status.style.borderColor = '#7f1d1d';
+             status.style.color       = '#f87171';
+             status.textContent       = '❌ ' + e.message;
+           } finally {
+             btn.disabled = false;
+             btn.innerHTML = '<i class="fas fa-download mr-1"></i> Fetch URLs';
+           }
+         }
+
+         function clearSitemapUrls() {
+           sitemapFetchedUrls = [];
+           document.getElementById('sitemapUrlPreview').classList.add('hidden');
+           document.getElementById('sitemapFetchStatus').classList.add('hidden');
+           document.getElementById('sitemapUrlInput').value = '';
+           const btnLabel = document.getElementById('bulkBtnLabel');
+           if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
+         }
+
+         async function submitSitemapAggregate(results, sitemapUrl) {
+           const successful = results.filter(r => r.success && r.score > 0);
+           if (successful.length === 0) return;
+           const avg = arr => arr.reduce((a,b) => a+b, 0) / arr.length;
+           const domain = 'https://' + sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
+           const payload = {
+             domain,
+             company_name: null,
+             avg_score:     avg(successful.map(r => r.score)),
+             avg_graaf:     avg(successful.map(r => r.metrics?.graaf || 0)),
+             avg_craft:     avg(successful.map(r => r.metrics?.craft || 0)),
+             avg_technical: avg(successful.map(r => r.metrics?.technical || 0)),
+             page_count: successful.length,
+             page_scores: successful.map(r => ({
+               url: r.url,
+               score: r.score,
+               graaf: r.metrics?.graaf || 0,
+               craft: r.metrics?.craft || 0,
+               technical: r.metrics?.technical || 0
+             })),
+             country: 'NL'
+           };
+           try {
+             await fetch('/api/sitemap/submit', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify(payload)
+             });
+           } catch(e) { console.warn('Sitemap submit failed:', e); }
+         }
+         // ========== END SITEMAP MODE ==========
+
          async function registerUser() {
          try {
          let storedUserId = localStorage.getItem('user_id');
@@ -1419,6 +1583,15 @@
          alert('Scan already in progress. Please wait.');
          return;
          }
+         // SITEMAP MODE: use fetched URLs
+         if (currentBulkMode === 'sitemap') {
+           if (sitemapFetchedUrls.length === 0) {
+             showToast('❌ Fetch sitemap URLs first', '#ef4444');
+             return;
+           }
+           // Populate hidden textarea so the rest of the function works unchanged
+           document.getElementById('bulkUrlInput').value = sitemapFetchedUrls.join('\n');
+         }
          const urlInput = document.getElementById('bulkUrlInput');
          const button = document.getElementById('bulkScanBtn');
          const progress = document.getElementById('bulkProgress');
@@ -1496,6 +1669,33 @@
          }
          progressText.textContent = 'Scan complete!';
          progressBar.style.width = '100%';
+
+         // SITEMAP MODE: auto-submit aggregate to admin pending
+         if (currentBulkMode === 'sitemap') {
+           const sitemapUrl = document.getElementById('sitemapUrlInput').value.trim();
+           await submitSitemapAggregate(bulkResults, sitemapUrl);
+           // Show domain score summary banner
+           const succ = bulkResults.filter(r => r.success && r.score > 0);
+           if (succ.length > 0) {
+             const avgScore = Math.round(succ.reduce((a,r) => a+r.score, 0) / succ.length);
+             const avgColor = avgScore >= 85 ? '#4ade80' : avgScore >= 70 ? '#a3e635' : avgScore >= 50 ? '#fbbf24' : '#f87171';
+             const avgLabel = avgScore >= 85 ? 'Elite' : avgScore >= 70 ? 'Good' : avgScore >= 50 ? 'Needs Work' : 'Critical';
+             const domain = sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
+             const banner = document.createElement('div');
+             banner.style.cssText = 'background:linear-gradient(135deg,#0f0c29,#302b63);border:1px solid #4c1d95;border-radius:14px;padding:20px 24px;margin-bottom:16px;text-align:center;';
+             banner.innerHTML = `
+               <div style="font-size:0.75rem;color:#6b7280;margin-bottom:6px;">${domain} — ${succ.length} pages scanned</div>
+               <div style="font-size:3.5rem;font-weight:900;color:${avgColor};line-height:1;">${avgScore}</div>
+               <div style="font-size:0.9rem;color:${avgColor};font-weight:700;margin:4px 0 8px;">${avgLabel} · Average domain score</div>
+               <div style="font-size:0.78rem;background:rgba(74,222,128,0.1);border:1px solid #166534;color:#4ade80;border-radius:8px;padding:8px 14px;display:inline-block;">
+                 ✅ Submitted to admin for leaderboard approval
+               </div>
+             `;
+             const container2 = document.getElementById('bulkResultsContainer');
+             if (container2) container2.parentNode.insertBefore(banner, container2);
+           }
+         }
+
          // Sort results: successful scans first (by score), then errors
          bulkResults.sort((a, b) => {
          if (a.success && !b.success) return -1;
@@ -1832,7 +2032,7 @@
          const solidCount     = successful.filter(r => r.score >= 75 && r.score < 80).length;
          const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
          const needsWorkCount = successful.filter(r => r.score < 70).length;
-
+         
          // Shared header HTML (matches single-scan PDF exactly)
          const pdfHeader = `
          <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
@@ -1847,7 +2047,7 @@
              </div>
            </div>
          </div>`;
-
+         
          // Shared footer HTML (matches single-scan PDF exactly)
          const pdfFooter = `
          <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
@@ -1860,7 +2060,7 @@
              <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
            </div>
          </div>`;
-
+         
          // Build one page per site
          const sitePages = successful.map((data, idx) => {
          const score = data.score || 0;
@@ -1891,7 +2091,7 @@
          ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
          </div>`;
          }).join('');
-
+         
          return `
          <div style="page-break-before:${idx===0?'avoid':'always'};">
            <!-- Per-site header: same gradient as single scan -->
@@ -1945,7 +2145,7 @@
            </div>
          </div>`;
          }).join('');
-
+         
          const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
          <title>ContentScale Bulk Scan Report — ${today}</title>
          <style>
@@ -1957,7 +2157,7 @@
          }
          </style>
          </head><body>
-
+         
          <!-- ═══ COVER PAGE ═══ -->
          <div style="min-height:100vh;display:flex;flex-direction:column;page-break-after:always;">
            <!-- Cover header -->
@@ -2029,10 +2229,10 @@
              </div>
            </div>
          </div>
-
+         
          <!-- ═══ INDIVIDUAL SITE PAGES ═══ -->
          ${sitePages}
-
+         
          <!-- ═══ BACK COVER ═══ -->
          <div style="page-break-before:always;display:flex;flex-direction:column;min-height:50vh;">
            <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
@@ -2062,12 +2262,12 @@
              </div>
            </div>
          </div>
-
+         
          <div class="no-print" style="position:fixed;bottom:24px;right:24px;z-index:999;">
            <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(126,34,206,0.5);">🖨️ Print / Save as PDF</button>
          </div>
          </body></html>`;
-
+         
          const win = window.open('', '_blank');
          if (!win) { alert('Please allow popups to export the combined PDF report.'); return; }
          win.document.write(html);
@@ -2075,7 +2275,7 @@
          window._lastBulkReportHTML = html;
          setTimeout(() => { win.focus(); showToast('✅ Combined PDF ready — use Print → Save as PDF', '#0f7b3a'); }, 500);
          }
-
+         
          // ✅ SHARE ALL — copies individual hosted report URLs to clipboard
          function shareAllResults() {
          if (!bulkResults || bulkResults.length === 0) {
@@ -2087,7 +2287,7 @@
            alert('⚠️ No successful results to share.');
            return;
          }
-
+         
          // If API returned real hosted URLs — copy those as plain text (best case)
          const hostedReports = successful.filter(r => r.report_url).map(r => {
            const url = r.report_url.startsWith('http') ? r.report_url : 'https://app.contentscale.site' + r.report_url;
@@ -2100,7 +2300,7 @@
            navigator.clipboard ? navigator.clipboard.writeText(shareText).then(() => showToast(`🔗 ${hostedReports.length} report link${hostedReports.length!==1?'s':''} copied!`, '#0ea5e9')).catch(() => { fallbackCopy(shareText); showToast('🔗 Links copied!', '#0ea5e9'); }) : (fallbackCopy(shareText), showToast('🔗 Links copied!', '#0ea5e9'));
            return;
          }
-
+         
          // No hosted URLs — open a fully-styled share page in a new tab (no blob URLs)
          const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
          const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
@@ -2113,7 +2313,7 @@
          const solidCount  = successful.filter(r => r.score >= 75 && r.score < 80).length;
          const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
          const needsWorkCount = successful.filter(r => r.score < 70).length;
-
+         
          const siteRows = successful.map((r, i) => {
            const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
            const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':r.score>=60?'#ea580c':'#dc2626';
@@ -2127,7 +2327,7 @@
              <td style="padding:10px 14px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
            </tr>`;
          }).join('');
-
+         
          const shareHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
          <title>ContentScale — Bulk Scan Results · ${today}</title>
          <style>
@@ -2141,7 +2341,7 @@
            }
          </style>
          </head><body style="max-width:860px;margin:0 auto;padding:0;">
-
+         
            <!-- ══ HEADER (identical to single-scan PDF) ══ -->
            <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
@@ -2157,7 +2357,7 @@
              <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;color:white;">Bulk Scan Results</h1>
              <p style="font-size:14px;opacity:0.85;">GRAAF + CRAFT + Technical analysis across ${successful.length} site${successful.length!==1?'s':''} · ${eliteCount + excellentCount + strongCount} scoring 85+</p>
            </div>
-
+         
            <!-- ══ SCORE SUMMARY BAND ══ -->
            <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
              <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
@@ -2179,7 +2379,7 @@
                </div>
              </div>
            </div>
-
+         
            <!-- ══ RESULTS TABLE ══ -->
            <div style="padding:28px 40px;">
              <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;">📋 All ${successful.length} Scanned Sites — Sorted Best to Lowest</div>
@@ -2197,7 +2397,7 @@
                </table>
              </div>
            </div>
-
+         
            <!-- ══ FOOTER (identical to single-scan PDF) ══ -->
            <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
              <div>
@@ -2209,15 +2409,15 @@
                <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
              </div>
            </div>
-
+         
            <!-- ══ PRINT BUTTON ══ -->
            <div class="no-print" style="text-align:center;padding:24px;">
              <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button>
              <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
            </div>
-
+         
          </body></html>`;
-
+         
          const win = window.open('', '_blank');
          if (!win) {
            // Popup blocked — fall back to copying plain-text summary
@@ -2230,7 +2430,7 @@
          win.document.close();
          showToast('✅ Share page opened in new tab', '#0ea5e9');
          }
-
+         
          function doRescan() {
          const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
          const input = document.getElementById('singleUrlInput');
@@ -2462,10 +2662,10 @@
          try {
          const res = await fetch('/api/freelancers/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, title, bio, hourly_rate: rate }) });
          const data = await res.json();
-  if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
-  else { alert('❌ ' + (data.error || 'Failed')); }
-  } catch (e) { alert('❌ Error: ' + e.message); }
-  }
-  </script>
-  </body>
-  </html>
+         if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
+         else { alert('❌ ' + (data.error || 'Failed')); }
+         } catch (e) { alert('❌ Error: ' + e.message); }
+         }
+      </script>
+   </body>
+</html>
