@@ -710,9 +710,13 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div>
             <label style="font-size:0.72rem;color:#93c5fd;display:block;margin-bottom:4px;">API Key</label>
-            <input id="campInstantlyKey" type="password" placeholder="ee803174-c07e..."
-              style="width:100%;padding:8px 10px;background:#111827;border:1px solid #1e40af;border-radius:7px;color:#e5e7eb;font-size:0.82rem;"
-              oninput="localStorage.setItem('instantlyApiKey', this.value)">
+            <div style="display:flex;gap:6px;">
+              <input id="campInstantlyKey" type="password" placeholder="ee803174-c07e..."
+                style="flex:1;padding:8px 10px;background:#111827;border:1px solid #1e40af;border-radius:7px;color:#e5e7eb;font-size:0.82rem;"
+                oninput="localStorage.setItem('instantlyApiKey', this.value)">
+              <button onclick="testInstantlyConnection(this)" style="padding:8px 12px;background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:7px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">🔌 Test</button>
+            </div>
+            <div id="instantlyTestResult" style="font-size:0.72rem;margin-top:4px;"></div>
           </div>
           <div>
             <label style="font-size:0.72rem;color:#93c5fd;display:block;margin-bottom:4px;">Campaign</label>
@@ -2794,6 +2798,32 @@ async function pushDomainToInstantly(domain, email, score, shareUrl, apiKey, cam
     localStorage.setItem('instantlyApiKey', defaultKey);
   }
 })();
+
+async function testInstantlyConnection(btn) {
+  const key = document.getElementById('campInstantlyKey').value.trim() || localStorage.getItem('instantlyApiKey') || '';
+  const result = document.getElementById('instantlyTestResult');
+  if (!key) { result.style.color = '#f87171'; result.textContent = '❌ Enter your API key first'; return; }
+  btn.disabled = true; btn.textContent = '⏳';
+  result.style.color = '#6b7280'; result.textContent = 'Testing...';
+  try {
+    const r = await fetch('/api/instantly/campaigns', { headers: { 'x-admin-key': currentAdminId, 'x-instantly-key': key } });
+    const data = await r.json();
+    if (r.ok && (data.items || Array.isArray(data))) {
+      const count = (data.items || data).length;
+      result.style.color = '#4ade80';
+      result.textContent = `✅ Connected — ${count} campaign(s) found`;
+      // Also load into dropdown
+      loadCampInstantlyCampaigns();
+    } else {
+      result.style.color = '#f87171';
+      result.textContent = '❌ ' + (data.error || 'Invalid API key');
+    }
+  } catch(e) {
+    result.style.color = '#f87171';
+    result.textContent = '❌ ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '🔌 Test';
+}
 
 function resumeNextBatch() {
   const remaining = localStorage.getItem('cs_remainingDomains');
