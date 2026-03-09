@@ -1133,6 +1133,11 @@
          function clearSitemapUrls() {
            sitemapFetchedUrls = [];
            document.getElementById('sitemapUrlPreview').classList.add('hidden');
+           document.getElementById('sitemapFetchStatus').classList.add('hidden');
+           document.getElementById('sitemapUrlInput').value = '';
+           const btnLabel = document.getElementById('bulkBtnLabel');
+           if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
+         }
 
          function renderSitemapUrlList() {
            const listDiv  = document.getElementById('sitemapUrlList');
@@ -1153,11 +1158,6 @@
          function removeSitemapUrl(index) {
            sitemapFetchedUrls.splice(index, 1);
            renderSitemapUrlList();
-         }
-           document.getElementById('sitemapFetchStatus').classList.add('hidden');
-           document.getElementById('sitemapUrlInput').value = '';
-           const btnLabel = document.getElementById('bulkBtnLabel');
-           if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
          }
 
          async function submitSitemapWithMeta(domain, avgScore, pageCount, sitemapUrl) {
