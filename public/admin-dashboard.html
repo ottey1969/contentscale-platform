@@ -548,10 +548,10 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
           </div>
           <div id="adminBatchComboCount" style="font-size:0.82rem;color:#a78bfa;margin-bottom:16px;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
-            <button onclick="adminRunBatch()" id="adminBatchBtn" style="background:linear-gradient(135deg,#7e22ce,#4c1d95);color:white;border:none;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">▶️ Run In Browser</button>
-            <button onclick="adminStartServerJob()" id="adminServerJobBtn" style="background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">⚡ Run On Server (PC-off)</button>
+            <button onclick="adminStartServerJob()" id="adminServerJobBtn" style="background:linear-gradient(135deg,#166534,#16a34a);color:white;border:none;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">⚡ Run On Server</button>
+            <button onclick="adminRunBatch()" id="adminBatchBtn" style="background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">🖥️ Run In Browser</button>
           </div>
-          <p style="font-size:0.72rem;color:#6b7280;text-align:center;margin-bottom:12px;"><strong style="color:#f59e0b;">Run On Server</strong> = Railway doet het werk, je PC mag uit ✅</p>
+          <p style="font-size:0.72rem;color:#6b7280;text-align:center;margin-bottom:12px;"><strong style="color:#4ade80;">Run On Server</strong> = Railway doet het werk, je PC mag uit ✅ &nbsp;·&nbsp; <span style="color:#6b7280;">Run In Browser = alleen als Railway niet werkt</span></p>
           <div id="adminBatchProgress" style="display:none;margin-top:20px;">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
               <div style="width:18px;height:18px;border:3px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
@@ -2067,7 +2067,7 @@ async function loadJobsList() {
   try {
     const res = await apiCall('/api/admin/batch-jobs');
     const jobs = res.jobs || [];
-    if (!jobs.length) { container.innerHTML = '<p style="color:#6b7280;font-size:0.85rem;text-align:center;padding:20px;">Geen jobs. Start een "Run On Server" job.</p>'; return; }
+    if (!jobs.length) { container.innerHTML = '<p style="color:#6b7280;font-size:0.85rem;text-align:center;padding:20px;">No jobs yet. Start a "Run On Server" job.</p>'; return; }
     container.innerHTML = jobs.map(job => renderJobCard(job)).join('');
   } catch(e) { container.innerHTML = '<p style="color:#f87171;">Fout bij laden jobs.</p>'; }
 }
@@ -2095,6 +2095,7 @@ function renderJobCard(job) {
       ${isRunning ? `<button onclick="cancelJob('${job.id}')" style="background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🚫 Cancel</button>` : ''}
       ${job.status === 'completed' ? `<button onclick="loadScanLogWithFilter()" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">📊 Scan Log →</button>` : ''}
       ${isRunning ? `<button onclick="pollJobStatus('${job.id}')" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>` : ''}
+      ${!isRunning ? `<button onclick="deleteServerJob('${job.id}', this)" style="background:#1c0a0a;border:1px solid #7f1d1d;color:#f87171;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🗑 Delete</button>` : ''}
     </div>
   </div>`;
 }
@@ -2114,9 +2115,18 @@ async function pollJobStatus(jobId) {
 }
 
 async function cancelJob(jobId) {
-  if (!confirm('Job cancellen?')) return;
+  if (!confirm('Cancel this job?')) return;
   try { await apiCall(`/api/admin/batch-job/${jobId}`, 'DELETE'); loadJobsList(); }
   catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteServerJob(jobId, btn) {
+  if (!confirm('Delete this job? Cannot be undone.')) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    await apiCall(`/api/admin/batch-job/${jobId}`, 'DELETE');
+    loadJobsList();
+  } catch(e) { alert('Delete failed: ' + e.message); btn.disabled = false; btn.textContent = '🗑 Delete'; }
 }
 
 function loadScanLogWithFilter() {
