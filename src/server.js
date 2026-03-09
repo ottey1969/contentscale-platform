@@ -2412,9 +2412,12 @@ async function ensureCampaignsTable() {
       done_domains INTEGER DEFAULT 0,
       domains JSONB DEFAULT '[]',
       instantly_campaign_id TEXT,
+      instantly_api_key TEXT,
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )`);
+    // Migration: add instantly_api_key column if missing
+    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS instantly_api_key TEXT`).catch(()=>{});
   } catch(e) { console.error('campaigns table error:', e.message); }
 }
 ensureCampaignsTable();
@@ -2427,11 +2430,11 @@ function persistCampaign(c) {
     error: d.error, pageCount: d.pageCount
   }))};
   pool.query(
-    `INSERT INTO campaigns(id,name,status,total_domains,done_domains,domains,instantly_campaign_id,updated_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7,NOW())
+    `INSERT INTO campaigns(id,name,status,total_domains,done_domains,domains,instantly_campaign_id,instantly_api_key,updated_at)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW())
      ON CONFLICT(id) DO UPDATE SET status=$3,done_domains=$5,domains=$6,updated_at=NOW()`,
     [slim.id, slim.name||'Campaign', slim.status, slim.totalDomains, slim.doneDomains,
-     JSON.stringify(slim.domains), slim.instantlyCampaignId||null]
+     JSON.stringify(slim.domains), slim.instantlyCampaignId||null, slim.instantlyApiKey||null]
   ).catch(e => console.error('persistCampaign:', e.message));
 }
 
@@ -2568,7 +2571,8 @@ async function runCampaign(campaign) {
 
   for (const domainObj of campaign.domains) {
     if (campaign.status === 'cancelled') break;
-    domainObj.status = 'fetching_sitemap';
+    // Skip already completed domains (resume support)
+    if (domainObj.status === 'done') { continue; }
     persistCampaign(campaign);
 
     try {
@@ -2752,13 +2756,92 @@ app.get('/api/campaign/:campaignId', async (req, res) => {
       if (row.rows[0]) {
         c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
               totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
-              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime() };
+              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+              instantlyApiKey: row.rows[0].instantly_api_key || null,
+              instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
         campaigns.set(c.id, c);
       }
     } catch(e) {}
   }
   if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
   res.json({ success: true, ...c });
+});
+
+// Resume interrupted campaign — skips done domains, continues from first non-done
+app.post('/api/campaign/:campaignId/resume', verifyAdmin, async (req, res) => {
+  let c = campaigns.get(req.params.campaignId);
+  if (!c && pool) {
+    try {
+      const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+      if (row.rows[0]) {
+        c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+              totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+              instantlyApiKey: row.rows[0].instantly_api_key || null,
+              instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+        campaigns.set(c.id, c);
+      }
+    } catch(e) {}
+  }
+  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+  if (c.status === 'running') return res.status(400).json({ success: false, error: 'Campaign already running' });
+  const pending = (c.domains || []).filter(d => d.status !== 'done' && d.status !== 'cancelled').length;
+  if (!pending) return res.status(400).json({ success: false, error: 'All domains already done' });
+  // Allow override of Instantly credentials
+  if (req.body.instantly_api_key) c.instantlyApiKey = req.body.instantly_api_key;
+  if (req.body.instantly_campaign_id) c.instantlyCampaignId = req.body.instantly_campaign_id;
+  // Reset stuck domains
+  (c.domains || []).forEach(d => {
+    if (d.status !== 'done' && d.status !== 'error') d.status = 'queued';
+  });
+  c.status = 'running';
+  campaigns.set(c.id, c);
+  persistCampaign(c);
+  res.json({ success: true, pending, campaignId: c.id });
+  runCampaign(c);
+});
+
+// Retry push only — for done domains where instantlyStatus is not 'pushed'
+app.post('/api/campaign/:campaignId/retry-push', verifyAdmin, async (req, res) => {
+  let c = campaigns.get(req.params.campaignId);
+  if (!c && pool) {
+    try {
+      const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+      if (row.rows[0]) {
+        c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+              totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+              instantlyApiKey: row.rows[0].instantly_api_key || null,
+              instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+        campaigns.set(c.id, c);
+      }
+    } catch(e) {}
+  }
+  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+  const apiKey = req.body.instantly_api_key || c.instantlyApiKey;
+  const campId = req.body.instantly_campaign_id || c.instantlyCampaignId;
+  if (!apiKey || !campId) return res.status(400).json({ success: false, error: 'Instantly API key and campaign ID required' });
+  const toRetry = (c.domains || []).filter(d => d.status === 'done' && d.email && d.instantlyStatus !== 'pushed');
+  if (!toRetry.length) return res.json({ success: true, pushed: 0, message: 'Nothing to retry' });
+  let pushed = 0, failed = 0;
+  for (const d of toRetry) {
+    try {
+      const topIssues = [];
+      await pushLeadToInstantly(apiKey, campId, {
+        email: d.email,
+        company_name: d.domain.replace(/^www\./, ''),
+        website: 'https://' + d.domain,
+        custom_variables: { score: String(d.score||0), share_url: d.shareUrl||'', top_issue_1: '', top_issue_2: '', top_issue_3: '', page_count: String(d.pageCount||0) }
+      });
+      d.instantlyStatus = 'pushed';
+      pushed++;
+    } catch(e) {
+      d.instantlyStatus = 'error: ' + e.message.substring(0, 40);
+      failed++;
+    }
+  }
+  persistCampaign(c);
+  res.json({ success: true, pushed, failed });
 });
 
 app.post('/api/campaign/:campaignId/cancel', verifyAdmin, (req, res) => {
