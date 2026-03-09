@@ -1286,17 +1286,71 @@
          [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
          [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
          if (mode === 'single') {
-         if (singleMode) singleMode.classList.remove('hidden');
-         if (singleBtn) singleBtn.classList.add('active');
+           if (singleMode) singleMode.classList.remove('hidden');
+           if (singleBtn) singleBtn.classList.add('active');
          } else if (mode === 'bulk') {
-         if (bulkMode) bulkMode.classList.remove('hidden');
-         if (bulkBtn) bulkBtn.classList.add('active');
-         updateBulkCount();
+           if (bulkMode) bulkMode.classList.remove('hidden');
+           if (bulkBtn) bulkBtn.classList.add('active');
+           updateBulkCount();
+           // Re-render results if we have them (user switched away and came back)
+           if (bulkResults.length > 0) renderBulkResults();
+           // Restore progress bar if scan still running
+           if (isScanning && activeBulkJobId) restoreBulkProgressUI();
          } else if (mode === 'discover') {
-         if (discoverMode) discoverMode.classList.remove('hidden');
-         if (discoverBtn) discoverBtn.classList.add('active');
+           if (discoverMode) discoverMode.classList.remove('hidden');
+           if (discoverBtn) discoverBtn.classList.add('active');
          }
          }
+
+         // Restore progress bar + button state when returning to bulk tab mid-scan
+         function restoreBulkProgressUI() {
+           const progress = document.getElementById('bulkProgress');
+           const button   = document.getElementById('bulkScanBtn');
+           const progressText = document.getElementById('bulkProgressText');
+           if (progress) progress.classList.remove('hidden');
+           if (button && button.disabled === false) {
+             button.disabled = true;
+             button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+           }
+           if (progressText && window._lastProgressText) progressText.textContent = window._lastProgressText;
+         }
+
+         // When browser tab becomes visible again → immediately re-poll instead of waiting for next interval tick
+         document.addEventListener('visibilitychange', async () => {
+           if (document.visibilityState === 'visible' && isScanning && activeBulkJobId) {
+             try {
+               const pollRes = await fetch('/api/scan/bulk-job/' + activeBulkJobId);
+               const job = await pollRes.json();
+               if (!job.success) return;
+               // Catch up on any results missed while tab was hidden
+               const newResults = job.results.slice(bulkResults.length);
+               newResults.forEach(r => bulkResults.push({ ...r, selected: false }));
+               // Update progress text
+               const progressText = document.getElementById('bulkProgressText');
+               const progressBar  = document.getElementById('bulkProgressBar');
+               const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+               if (progressBar) progressBar.style.width = pct + '%';
+               const txt = job.status === 'done'
+                 ? '✅ Scan complete! ' + job.done + '/' + job.total + ' pages'
+                 : 'Scanning ' + job.done + ' / ' + job.total + ' · server-side · safe to close tab';
+               if (progressText) progressText.textContent = txt;
+               window._lastProgressText = txt;
+               // Re-render results — always show what we have when coming back to tab
+               if (bulkResults.length > 0) renderBulkResults();
+               // If done, clean up
+               if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+                 clearInterval(bulkPollInterval); bulkPollInterval = null;
+                 localStorage.removeItem('cs_activeJobId');
+                 isScanning = false;
+                 const button = document.getElementById('bulkScanBtn');
+                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>'; }
+                 const progress = document.getElementById('bulkProgress');
+                 if (progress) progress.classList.add('hidden');
+                 renderBulkResults();
+               }
+             } catch(e) {}
+           }
+         });
          async function scanSingleURL() {
          const input = document.getElementById('singleUrlInput');
          const button = document.getElementById('singleScanBtn');
@@ -1593,27 +1647,44 @@
            try {
              const r = await fetch('/api/scan/bulk-job/' + savedJobId);
              const job = await r.json();
-             if (!job.success || job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+             if (!job.success) { localStorage.removeItem('cs_activeJobId'); return; }
+
+             // Always load results into memory first
+             bulkResults = (job.results || []).map(r => ({ ...r, selected: false }));
+
+             if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
                localStorage.removeItem('cs_activeJobId');
+               // Job finished while away — switch to bulk tab and show results
+               if (bulkResults.length > 0) {
+                 switchMode('bulk');
+                 renderBulkResults();
+                 showToast('✅ Scan klaar! ' + job.done + '/' + job.total + ' paginas gescand.', '#4ade80', 6000);
+               }
                return;
              }
-             // Job still running — show resume banner
+
+             // Job still running — reconnect
              activeBulkJobId = savedJobId;
+             isScanning = true;
+             switchMode('bulk');
              const progress = document.getElementById('bulkProgress');
              const progressBar = document.getElementById('bulkProgressBar');
              const progressText = document.getElementById('bulkProgressText');
              const button = document.getElementById('bulkScanBtn');
              if (progress) progress.classList.remove('hidden');
+             const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+             if (progressBar) progressBar.style.width = pct + '%';
+             const txt = 'Scanning ' + job.done + ' / ' + job.total + ' · server-side · safe to close tab';
+             if (progressText) progressText.textContent = txt;
+             window._lastProgressText = txt;
              if (button) {
                button.disabled = true;
-               button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scan running on server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+               button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scan loopt op server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
              }
-             showToast('🔄 Scan still running on server — reconnecting...', '#7e22ce', 5000);
-             isScanning = true;
-             // Switch to bulk tab
-             if (typeof setBulkMode === 'function') setBulkMode('manual');
+             // Show results so far
+             if (bulkResults.length > 0) renderBulkResults();
+             showToast('🔄 Scan loopt nog — resultaten tot nu toe geladen.', '#7e22ce', 5000);
              // Resume polling
-             bulkResults = job.results || [];
              resumePollJob(savedJobId, job.results.length);
            } catch(e) {
              localStorage.removeItem('cs_activeJobId');
@@ -1780,6 +1851,7 @@
                  } else {
                    progressText.textContent = 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' — ' + shortUrl : '') + ' · server-side · safe to close tab';
                  }
+                 window._lastProgressText = progressText.textContent;
                  if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
                    clearInterval(bulkPollInterval);
                    bulkPollInterval = null;
