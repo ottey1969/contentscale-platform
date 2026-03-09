@@ -910,13 +910,14 @@ catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
 try {
-const { company_name, url, score, country, niche } = req.body;
+const { company_name, url, score, country, niche, page_count } = req.body;
 const updates = []; const vals = []; let i = 1;
 if (company_name) { updates.push(`company_name=$${i++}`); vals.push(company_name); }
 if (url) { updates.push(`url=$${i++}`); vals.push(url); }
 if (score) { updates.push(`score=$${i++}`); vals.push(parseInt(score)); }
 if (country) { updates.push(`country=$${i++}`); vals.push(country); }
 if (niche) { updates.push(`niche=$${i++}`); vals.push(niche); }
+if (page_count) { updates.push(`page_count=$${i++}`); vals.push(parseInt(page_count)); }
 if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields' });
 vals.push(req.params.id);
 await pool.query(`UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${i}`, vals);
@@ -1002,8 +1003,15 @@ res.status(500).json({ success: false, error: e.message });
 app.get('/api/leaderboard', async (req, res) => {
 if (!pool) return res.json({ success: true, entries: [], stats: {} });
 try {
-const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
-const entries = r.rows;
+const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, business_type, page_count, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
+// Strip sitemap paths — only expose homepage URL publicly to prevent fraud
+const rows = r.rows.map(row => {
+  try {
+    const u = new URL(row.url.startsWith('http') ? row.url : 'https://' + row.url);
+    return { ...row, url: u.protocol + '//' + u.hostname };
+  } catch(e) { return row; }
+});
+const entries = rows;
 const total = entries.length;
 const avg = total > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / total) : 0;
 const countries = [...new Set(entries.map(e => e.country))].length;
@@ -1108,13 +1116,16 @@ app.post('/api/sitemap/urls', async (req, res) => {
 });
 
 // Submit aggregate sitemap scan result as pending leaderboard entry
+const AUTO_APPROVE_DOMAINS = ['contentscale.site', 'app.contentscale.site'];
 app.post('/api/sitemap/submit', async (req, res) => {
   const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country, niche, business_type } = req.body;
   if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
+  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+  const autoApprove = AUTO_APPROVE_DOMAINS.includes(cleanDomain);
   try {
     const r = await pool.query(
       `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', FALSE, FALSE)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', $12, $12)
        ON CONFLICT (url) DO UPDATE SET
          score = EXCLUDED.score,
          graaf_score = EXCLUDED.graaf_score,
@@ -1127,11 +1138,12 @@ app.post('/api/sitemap/submit', async (req, res) => {
          page_count = EXCLUDED.page_count,
          page_scores = EXCLUDED.page_scores,
          scan_source = 'sitemap',
-         admin_verified = FALSE
+         admin_verified = $12,
+         is_verified = $12
        RETURNING id`,
-      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || [])]
+      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || []), autoApprove]
     );
-    res.json({ success: true, id: r.rows[0].id });
+    res.json({ success: true, id: r.rows[0].id, auto_approved: autoApprove });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
