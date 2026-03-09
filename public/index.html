@@ -1622,7 +1622,11 @@
            const startData = await startRes.json();
            if (!startData.success) throw new Error(startData.error || 'Failed to start job');
            activeBulkJobId = startData.jobId;
-           button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">\u274c Cancel</button>';
+           // Warn if URLs were capped at 500
+           if (startData.capped) showToast('⚠️ Capped at 500 URLs. Remaining skipped.', '#f59e0b', 6000);
+           const queuedMsg = startData.queued ? ' ⏳ In queue — server busy, starts soon...' : '';
+           button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server' + (startData.queued ? ' (queued)' : '') + '... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+           if (startData.queued) progressText.textContent = '⏳ Waiting for scan slot — another job is running. Your job starts automatically.';
 
            // Poll for results
            let lastDone = 0;
@@ -1644,14 +1648,20 @@
                  });
                  lastDone = job.results.length;
                  // Update progress bar
-                 const pct = Math.round((job.done / job.total) * 100);
+                 const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
                  progressBar.style.width = pct + '%';
                  const currentUrl = job.results[job.done - 1]?.url || '';
                  const shortUrl = currentUrl.replace(/https?:\/\//, '').substring(0, 50);
-                 progressText.textContent = job.status === 'done'
-                   ? '\u2705 Scan complete! ' + job.done + '/' + job.total + ' pages'
-                   : 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' \u2014 ' + shortUrl : '') + ' (server-side \u2014 safe to close tab)';
-                 if (job.status === 'done' || job.status === 'cancelled') {
+                 if (job.status === 'queued') {
+                   progressText.textContent = '⏳ Waiting for scan slot — your job starts automatically when ready.';
+                 } else if (job.status === 'done') {
+                   progressText.textContent = '✅ Scan complete! ' + job.done + '/' + job.total + ' pages — tab was safe to close';
+                 } else if (job.status === 'error') {
+                   progressText.textContent = '❌ Job error: ' + (job.error || 'unknown');
+                 } else {
+                   progressText.textContent = 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' — ' + shortUrl : '') + ' · server-side · safe to close tab';
+                 }
+                 if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
                    clearInterval(bulkPollInterval);
                    bulkPollInterval = null;
                    resolve(job);
