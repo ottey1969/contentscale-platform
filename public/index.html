@@ -150,6 +150,12 @@
          max-width: none;
          }
          }
+         /* ── BADGE MODAL ── */
+         #badgeModal { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:99999;padding:16px; }
+         #badgeModal.open { display:flex; }
+         #badgeModalBox { background:#0f172a;border:1px solid #4c1d95;border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto; }
+         #badgePreviewWrap { background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;margin:16px 0;display:flex;justify-content:center; }
+         #badgeEmbedCode { width:100%;background:#0a0a14;border:1px solid #2d1b69;border-radius:8px;padding:12px;color:#c084fc;font-family:monospace;font-size:0.72rem;resize:vertical;min-height:80px;max-height:140px; }
       </style>
    </head>
    <body class="bg-gray-900">
@@ -424,6 +430,7 @@
                                  <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
                                  <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export Combined PDF</button>
                                  <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
+                                 <button id="domainBadgeBtn" onclick="showBulkDomainBadge()" style="display:none;" class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><span style="margin-right:6px;">🏅</span> Domain Badge</button>
 
                               </div>
                               <div id="bulkResultsContainer"></div>
@@ -1472,6 +1479,10 @@
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
          ⬇ Export PDF
          </button>
+         <button onclick="(function(){const d=window._lastScanData;if(!d)return;showPageBadge(d.url,d.score||0,d.metrics?.graaf||0,d.metrics?.craft||0,d.metrics?.technical||0);})()"
+         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+         🏅 Get Badge
+         </button>
          <button onclick="document.getElementById('singleResult').classList.add('hidden')"
          style="padding:12px 14px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
          ✕ Close
@@ -1738,9 +1749,14 @@
                    </div>
                  </div>
                </div>
-               <button onclick="submitSitemapWithMeta('${domain}', ${avgScore}, ${succ.length}, '${sitemapUrl}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;">
-                 🏆 Submit to Leaderboard (pending admin approval)
-               </button>
+               <div style="display:flex;gap:10px;">
+                 <button onclick="submitSitemapWithMeta('${domain}', ${avgScore}, ${succ.length}, '${sitemapUrl}')" style="flex:1;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;">
+                   🏆 Submit to Leaderboard
+                 </button>
+                 <button onclick="showDomainBadge('${domain}', ${avgScore}, ${succ.length}, bulkResults.filter(r=>r.success&&r.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(r=>({url:r.url,score:r.score})))" style="padding:12px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;white-space:nowrap;">
+                   🏅 Badge
+                 </button>
+               </div>
              `;
              const container2 = document.getElementById('bulkResultsContainer');
              if (container2) container2.parentNode.insertBefore(banner, container2);
@@ -1839,8 +1855,9 @@
          <div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0, 60)}${result.url.length > 60 ? '...' : ''}</div>
          </div>
          </div>
-         <div style="display:flex;align-items:center;gap:12px;">
+         <div style="display:flex;align-items:center;gap:8px;">
          <span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf || 0}/50</span>
+         <button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" title="Get Badge" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🏅</button>
          <span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span>
          </div>
          </div>
@@ -1852,6 +1869,12 @@
          resultsDiv.classList.remove('hidden');
          if (exportButtons && successful.length > 0) {
          exportButtons.style.display = 'flex';
+         // Show domain badge button only if all results are from same domain
+         const domainBadgeBtn = document.getElementById('domainBadgeBtn');
+         if (domainBadgeBtn) {
+           const domains = [...new Set(successful.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+           domainBadgeBtn.style.display = domains.length === 1 ? 'inline-flex' : 'none';
+         }
          }
          }
          } catch (error) {
@@ -2685,6 +2708,157 @@
          else { alert('❌ ' + (data.error || 'Failed')); }
          } catch (e) { alert('❌ Error: ' + e.message); }
          }
+
+         // ============================================================
+         // BADGE SYSTEM
+         // ============================================================
+         function buildPageBadgeHTML(url, score, graaf, craft, technical) {
+           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
+           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+           const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
+           const pct = (v,max) => Math.round(v/max*100);
+           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+    <div>
+      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
+      <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
+    </div>
+    <div style="text-align:center;min-width:52px;">
+      <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+      <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+    </div>
+  </div>
+  <div style="margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
+    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
+    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
+    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
+  </div>
+  <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+    <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+  </div>
+</div>`;
+         }
+
+         function buildDomainBadgeHTML(domain, score, pageCount, topPages) {
+           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
+           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+           const rows = (topPages||[]).slice(0,3).map(p => {
+             const c = p.score>=95?'#a78bfa':p.score>=90?'#60a5fa':p.score>=85?'#4ade80':p.score>=80?'#a3e635':p.score>=75?'#fde68a':p.score>=70?'#fb923c':'#f87171';
+             const short = p.url.replace(/https?:\/\//,'').replace(/\/$/,'');
+             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1e293b;">
+    <a href="${p.url}" target="_blank" style="font-size:0.65rem;color:#818cf8;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${short}</a>
+    <span style="font-size:0.7rem;font-weight:800;color:${c};min-width:28px;text-align:right;">${p.score}</span>
+  </div>`;
+           }).join('');
+           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:320px;box-sizing:border-box;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div>
+      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Domain ContentScore</div>
+      <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">${domain}</div>
+      <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${pageCount} pages scanned</div>
+    </div>
+    <div style="text-align:center;min-width:60px;">
+      <div style="font-size:2.4rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+      <div style="font-size:0.62rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+    </div>
+  </div>
+  ${rows ? `<div style="margin-bottom:10px;">${rows}</div>` : ''}
+  <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+    <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+  </div>
+</div>`;
+         }
+
+         function showPageBadge(url, score, graaf, craft, technical) {
+           const html = buildPageBadgeHTML(url, score, graaf, craft, technical);
+           document.getElementById('badgePreview').innerHTML = html;
+           document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
+           document.getElementById('badgeModal').classList.add('open');
+         }
+
+         function showDomainBadge(domain, score, pageCount, topPages) {
+           const html = buildDomainBadgeHTML(domain, score, pageCount, topPages);
+           document.getElementById('badgePreview').innerHTML = html;
+           document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
+           document.getElementById('badgeModal').classList.add('open');
+         }
+
+         function showBulkDomainBadge() {
+           const successful = bulkResults.filter(r => r.success && r.score > 0);
+           if (!successful.length) return;
+           // Detect if all same domain
+           const domains = [...new Set(successful.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+           const domain = domains[0];
+           const isSameDomain = domains.length === 1;
+           if (!isSameDomain) { showToast('\u26a0\ufe0f Multiple domains — use the \xf0\x9f\x8f\x85 per row for individual badges', '#f59e0b'); return; }
+           const avgScore = Math.round(successful.reduce((a,r) => a+r.score, 0) / successful.length);
+           const topPages = successful.sort((a,b) => b.score-a.score).slice(0,3).map(r => ({url:r.url, score:r.score}));
+           showDomainBadge(domain, avgScore, successful.length, topPages);
+         }
+
+         function closeBadgeModal() {
+           document.getElementById('badgeModal').classList.remove('open');
+         }
+
+         function copyBadgeCode() {
+           const ta = document.getElementById('badgeEmbedCode');
+           ta.select();
+           if (navigator.clipboard) {
+             navigator.clipboard.writeText(ta.value).then(() => showToast('\u2705 Badge code copied!', '#7e22ce'));
+           } else {
+             document.execCommand('copy');
+             showToast('\u2705 Copied!', '#7e22ce');
+           }
+         }
+
+         // ============================================================
+         // SHARE ALL AS URL
+         // ============================================================
+         async function shareAllResults() {
+           if (!bulkResults || bulkResults.length === 0) { showToast('\u274c No results to share', '#ef4444'); return; }
+           const successful = bulkResults.filter(r => r.success);
+           if (!successful.length) { showToast('\u26a0\ufe0f No successful results', '#f59e0b'); return; }
+           const btn = event?.target?.closest('button');
+           if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Creating link...'; }
+           try {
+             const res = await fetch('/api/share/bulk', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ results: successful })
+             });
+             const data = await res.json();
+             if (data.success && data.token) {
+               const url = window.location.origin + '/share/' + data.token;
+               if (navigator.clipboard) {
+                 await navigator.clipboard.writeText(url);
+                 showToast('\ud83d\udd17 Share link copied!', '#0ea5e9');
+               } else {
+                 prompt('Copy this link:', url);
+               }
+             } else { showToast('\u274c Could not create share link', '#ef4444'); }
+           } catch(e) { showToast('\u274c Error: ' + e.message, '#ef4444'); }
+           finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; } }
+         }
+
       </script>
-   </body>
+   <!-- BADGE MODAL -->
+<div id="badgeModal" onclick="if(event.target===this)closeBadgeModal()">
+  <div id="badgeModalBox">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <h3 style="font-size:1rem;font-weight:800;color:#e9d5ff!important;">🏅 Get Your Badge</h3>
+      <button onclick="closeBadgeModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <p style="font-size:0.75rem;color:#9ca3af!important;margin-bottom:2px;">Copy & paste this on your website. The link back to ContentScale is a dofollow backlink.</p>
+    <div id="badgePreviewWrap"><div id="badgePreview"></div></div>
+    <label style="font-size:0.72rem;color:#a78bfa!important;font-weight:700;display:block;margin-bottom:6px;">✂️ Embed Code</label>
+    <textarea id="badgeEmbedCode" readonly onclick="this.select()"></textarea>
+    <button onclick="copyBadgeCode()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">📋 Copy Embed Code</button>
+  </div>
+</div>
+</body>
 </html>
