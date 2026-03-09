@@ -1063,35 +1063,36 @@ app.post('/api/sitemap/urls', async (req, res) => {
   if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
   try {
     const axios = require('axios');
-    const { parseStringPromise } = require('xml2js');
 
-    const fetchAndParse = async (sitemapUrl) => {
-      const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' } });
-      return parseStringPromise(resp.data, { explicitArray: false });
+    // No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
+    const extractLocs = (xml) => {
+      const locs = [];
+      const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
+      let m;
+      while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
+      return locs;
     };
 
-    const parsed = await fetchAndParse(url);
+    const fetchXml = async (sitemapUrl) => {
+      const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+      return resp.data;
+    };
+
+    const xml = await fetchXml(url);
     let urls = [];
 
-    // Sitemap index — contains sub-sitemaps
-    if (parsed.sitemapindex) {
-      const sitemaps = Array.isArray(parsed.sitemapindex.sitemap)
-        ? parsed.sitemapindex.sitemap
-        : [parsed.sitemapindex.sitemap];
-      for (const sm of sitemaps.slice(0, 10)) { // max 10 sub-sitemaps
+    // Sitemap index — contains sub-sitemap URLs
+    if (xml.includes('<sitemapindex')) {
+      const subSitemapUrls = extractLocs(xml);
+      for (const smUrl of subSitemapUrls.slice(0, 10)) {
         try {
-          const sub = await fetchAndParse(sm.loc);
-          if (sub.urlset && sub.urlset.url) {
-            const subUrls = Array.isArray(sub.urlset.url) ? sub.urlset.url : [sub.urlset.url];
-            urls.push(...subUrls.map(u => u.loc).filter(Boolean));
-          }
+          const subXml = await fetchXml(smUrl);
+          urls.push(...extractLocs(subXml));
         } catch(e) { /* skip broken sub-sitemap */ }
       }
-    }
-    // Regular urlset
-    else if (parsed.urlset && parsed.urlset.url) {
-      const rawUrls = Array.isArray(parsed.urlset.url) ? parsed.urlset.url : [parsed.urlset.url];
-      urls = rawUrls.map(u => u.loc).filter(Boolean);
+    } else {
+      // Regular urlset
+      urls = extractLocs(xml);
     }
 
     // Deduplicate + filter out non-page URLs
