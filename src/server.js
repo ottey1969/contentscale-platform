@@ -852,6 +852,17 @@ FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
 res.json({ success: true, scans: r.rows });
 } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
+// Public endpoint — total scans today across all sources (single, bulk, campaign)
+app.get('/api/stats/scans-today', async (req, res) => {
+  if (!pool) return res.json({ success: true, count: 0 });
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*) FROM scan_log WHERE created_at >= NOW() - INTERVAL '24 hours'`
+    );
+    res.json({ success: true, count: parseInt(r.rows[0].count) || 0 });
+  } catch (e) { res.json({ success: true, count: 0 }); }
+});
+
 app.get('/api/admin/email-log', verifyAdmin, async (req, res) => {
 if (!pool) return res.json({ success: false, error: 'No DB' });
 const limit = parseInt(req.query.limit) || 200;
