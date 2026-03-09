@@ -2485,7 +2485,7 @@ async function fetchSitemapUrls(domain) {
       const subMatches = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
       if (subMatches.length > 0) {
         let allUrls = [];
-        for (const sub of subMatches.slice(0, 8)) {
+        for (const sub of subMatches.slice(0, 20)) {
           try {
             const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
             if (!sr.ok) continue;
