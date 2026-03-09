@@ -1137,8 +1137,131 @@ app.post('/api/sitemap/submit', async (req, res) => {
   }
 });
 
-// ============================================
-// 🏆 ELITE SCANNER — GRAAF + CRAFT + TECHNICAL
+// ============================================================
+// 🔗 SHARE BULK RESULTS AS URL
+// ============================================================
+const shareStore = new Map(); // in-memory, survives restarts via DB below
+
+app.post('/api/share/bulk', async (req, res) => {
+  const { results } = req.body;
+  if (!results || !results.length) return res.status(400).json({ success: false, error: 'No results' });
+  const token = crypto.randomBytes(8).toString('hex');
+  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+  try {
+    await pool.query(
+      `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))
+       ON CONFLICT DO NOTHING`,
+      [token, JSON.stringify(results), expires]
+    );
+  } catch(e) {
+    // Table may not exist yet — try create
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS share_results (
+        id SERIAL PRIMARY KEY,
+        token VARCHAR(20) UNIQUE NOT NULL,
+        results_json JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        expires_at TIMESTAMPTZ
+      )`);
+      await pool.query(
+        `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`,
+        [token, JSON.stringify(results), expires]
+      );
+    } catch(e2) {
+      // Fallback: memory only
+      shareStore.set(token, { results, expires });
+    }
+  }
+  shareStore.set(token, { results, expires });
+  res.json({ success: true, token });
+});
+
+app.get('/share/:token', async (req, res) => {
+  const { token } = req.params;
+  let results = null;
+  // Try memory first
+  const mem = shareStore.get(token);
+  if (mem && mem.expires > Date.now()) results = mem.results;
+  // Try DB
+  if (!results) {
+    try {
+      const r = await pool.query(`SELECT results_json FROM share_results WHERE token=$1 AND expires_at > NOW()`, [token]);
+      if (r.rows.length) results = r.rows[0].results_json;
+    } catch(e) {}
+  }
+  if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
+
+  const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
+  const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
+  const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+  const sameDomain = domains.length === 1;
+
+  const rows = results.map((r,i) => {
+    const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
+    const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
+    const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
+    const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
+    return `<tr style="border-bottom:1px solid #e5e7eb;">
+      <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td>
+      <td style="padding:12px 16px;">
+        <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
+        <div style="font-size:12px;color:#6b7280;">${path}</div>
+      </td>
+      <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#7e22ce;">${r.metrics?.graaf||0}/50</td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#1d4ed8;">${r.metrics?.craft||0}/30</td>
+      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#b45309;">${r.metrics?.technical||0}/20</td>
+      <td style="padding:12px 16px;"><span style="background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">${lbl}</span></td>
+      <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title>
+    <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>
+  </head><body style="max-width:900px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+        <div>
+          <div style="font-size:20px;font-weight:900;">ContentScale</div>
+          <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+        </div>
+        <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div>
+      </div>
+      <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
+      <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p>
+    </div>
+    ${sameDomain?`<div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;">
+      <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
+      <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${avgScore}</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div>
+    </div>`:''}
+    <div style="padding:32px 40px;overflow-x:auto;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <thead><tr style="background:#f5f3ff;">
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">URL</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#6b7280;">Score</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#7e22ce;">GRAAF</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#1d4ed8;">CRAFT</th>
+          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#b45309;">Technical</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Tier</th>
+          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div><div style="color:white;font-weight:700;font-size:14px;">ContentScale</div><div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div></div>
+      <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a>
+    </div>
+    <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
+  </body></html>`;
+  res.send(html);
+});
+
 // ============================================
 app.post('/api/scan', async (req, res) => {
 const { url } = req.body;
