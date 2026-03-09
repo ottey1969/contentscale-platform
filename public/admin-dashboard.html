@@ -595,6 +595,7 @@ input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 
     <div><label class="block text-sm font-bold mb-1 text-gray-700">Score (0-100)</label><input type="number" id="lb-score" class="w-full p-2 mb-2 border text-black"></div>
     <div><label class="block text-sm font-bold mb-1 text-gray-700">Country</label><select id="lb-country" class="w-full p-2 mb-2 border text-black"><option value="">Select Country...</option></select></div>
     <div><label class="block text-sm font-bold mb-1 text-gray-700">Industry / Niche</label><input type="text" id="lb-niche" placeholder="e.g. SEO Agency, Dental..." class="w-full p-2 mb-2 border text-black"></div>
+    <div><label class="block text-sm font-bold mb-1 text-gray-700">Pages Scanned <span style="font-weight:400;color:#6b7280;">(sitemap page count)</span></label><input type="number" id="lb-page-count" placeholder="e.g. 49" min="1" class="w-full p-2 mb-2 border text-black"></div>
     <div class="flex gap-2 mb-4"><a id="lb-visit-link" href="#" target="_blank" class="flex-1 btn btn-info text-center"><i class="fas fa-external-link-alt mr-2"></i> Visit Website</a></div>
     <button onclick="saveLeaderboardEntry()" class="btn btn-success w-full">Save Changes</button>
     <button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
@@ -1118,6 +1119,7 @@ function editLeaderboard(id) {
   document.getElementById('lb-score').value = entry.score;
   document.getElementById('lb-country').value = normalizeCountry(entry.country);
   document.getElementById('lb-niche').value = entry.niche || '';
+  document.getElementById('lb-page-count').value = entry.page_count || '';
   const visitLink = document.getElementById('lb-visit-link');
   visitLink.href = entry.url; visitLink.style.display = 'inline-block';
   document.getElementById('addLeaderboardModal').classList.add('active');
@@ -1125,7 +1127,7 @@ function editLeaderboard(id) {
 
 function showAddLeaderboardModal() {
   document.getElementById('lbModalTitle').textContent = 'Add New Entry';
-  ['edit-lb-id','lb-company','lb-url','lb-score','lb-country','lb-niche'].forEach(id => document.getElementById(id).value = '');
+  ['edit-lb-id','lb-company','lb-url','lb-score','lb-country','lb-niche','lb-page-count'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('lb-visit-link').style.display = 'none';
   document.getElementById('addLeaderboardModal').classList.add('active');
 }
@@ -1137,10 +1139,12 @@ async function saveLeaderboardEntry() {
   const score = parseInt(document.getElementById('lb-score').value);
   const country = document.getElementById('lb-country').value;
   const niche = document.getElementById('lb-niche').value;
+  const pageCount = parseInt(document.getElementById('lb-page-count').value) || null;
   if (!company || !url || !score) return alert('Company, URL and Score are required');
   try {
     const payload = { company_name: company, url, score, country };
     if (niche) payload.niche = niche;
+    if (pageCount) payload.page_count = pageCount;
     if (id) { await apiCall(`/api/admin/leaderboard/${id}`, 'PUT', payload); alert('Entry updated!'); }
     else { await apiCall('/api/admin/leaderboard/manual-add', 'POST', payload); alert('Entry added!'); }
     closeModal('addLeaderboardModal'); loadLeaderboard();
