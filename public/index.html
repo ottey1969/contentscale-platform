@@ -3057,5 +3057,27 @@
 /* Restore ada widget colors overridden by global color:white !important */
 body > *:not(nav):not(main):not(footer):not(section):not(#loading-screen):not(#badgeModal):not(#realActivityBanner) { color: unset !important; }
 </style>
+
+<script>
+// Fix: ada widget is invisible due to global color:white !important — reset on inject
+(function(){
+  var fix = document.createElement('style');
+  fix.textContent = 'body > div[style*="position: fixed"] *, body > div[style*="position:fixed"] *, #ada-button, #ada-button *, [id^="ada"] *, [class^="ada"] * { color: unset !important; background-color: unset !important; fill: unset !important; }';
+  document.head.appendChild(fix);
+  var obs = new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      m.addedNodes.forEach(function(n){
+        if(n.nodeType===1){
+          var s = n.getAttribute && n.getAttribute('style');
+          if(s && (s.includes('position: fixed') || s.includes('position:fixed'))){
+            n.querySelectorAll('*').forEach(function(el){ el.style.setProperty('color','','important'); el.style.setProperty('background-color','','important'); });
+          }
+        }
+      });
+    });
+  });
+  obs.observe(document.body, {childList: true, subtree: false});
+})();
+</script>
 </body>
 </html>
