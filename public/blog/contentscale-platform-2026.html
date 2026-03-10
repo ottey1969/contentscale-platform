@@ -2,6 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
+  <script>
+    (function() {
+      var favicons = [
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f59e0b'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"
+      ];
+      var blinkTitles = ["ContentScale", "Blog", "ContentScale"];
+      var blinkInterval = null, idx = 0;
+      var originalTitle = document.title;
+      function startBlink() {
+        if (blinkInterval) return;
+        blinkInterval = setInterval(function() {
+          idx = (idx + 1) % favicons.length;
+          document.title = blinkTitles[idx];
+          var el = document.getElementById("dynamicFavicon");
+          if (el) el.href = favicons[idx];
+        }, 800);
+      }
+      function stopBlink() {
+        if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
+        idx = 0;
+        document.title = originalTitle;
+        var el = document.getElementById("dynamicFavicon");
+        if (el) el.href = favicons[0];
+      }
+      document.addEventListener("visibilitychange", function() {
+        if (document.hidden) { startBlink(); } else { stopBlink(); }
+      });
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ContentScale Platform 2026: Free SEO ContentScore — GRAAF</title>
   <meta name="description" content="ContentScale Platform 2026 gives any webpage a free 100-point ContentScore via the GRAAF Framework. Sitemap scan: 78/100 across 52 pages. No login. No card.">
