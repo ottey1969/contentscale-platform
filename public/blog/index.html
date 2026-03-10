@@ -3,189 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ContentScale Blog - AI SEO & Content Optimization Tips</title>
-  <meta name="description" content="Learn how to optimize your content for AI-era SEO. Case studies, guides, and tips from ContentScale experts. GRAAF Framework, CRAFT methodology, and more.">
-  <meta name="keywords" content="SEO blog, content optimization, AI SEO, GRAAF framework, content marketing, SEO case studies">
+  <title>ContentScale Blog — SEO Recovery, GRAAF Framework & ContentScore Guides</title>
+  <meta name="description" content="ContentScale Blog: expert guides on SEO recovery, the GRAAF Framework, ContentScore methodology, and content quality improvement. Free resources by Ottmar Francisca, Amsterdam.">
+  <meta name="keywords" content="ContentScale blog, GRAAF Framework, SEO recovery, ContentScore, content quality, SEO guides">
+  <meta name="author" content="Ottmar J.G. Francisca">
   <link rel="canonical" href="https://app.contentscale.site/blog/">
+  <meta property="og:title" content="ContentScale Blog — SEO Recovery & GRAAF Framework Guides">
+  <meta property="og:description" content="Expert guides on SEO recovery, the GRAAF Framework, and content quality improvement from ContentScale founder Ottmar Francisca.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://app.contentscale.site/blog/">
+  <meta property="og:site_name" content="ContentScale">
+  <meta name="twitter:card" content="summary_large_image">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* ── Navigation ── */
-    .nav-bar {
-      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-      border-bottom: 2px solid #374151;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-    .nav-link {
-      color: #9ca3af;
-      padding: 12px 20px;
-      font-weight: 600;
-      transition: all 0.3s;
-      border-bottom: 3px solid transparent;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-    }
-    .nav-link:hover { color: white; border-bottom-color: #8b5cf6; }
-    .nav-link.active { color: white; border-bottom-color: #8b5cf6; }
-
-    /* ── Blog cards ── */
-    .blog-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid #334155;
-      border-radius: 16px;
-      padding: 24px;
-      transition: all 0.3s;
-      cursor: pointer;
-      position: relative; /* FIX: needed for ::before pseudo on featured */
-    }
-    .blog-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3);
-      border-color: #8b5cf6;
-    }
-    .blog-card.featured {
-      border-color: #f59e0b;
-      background: linear-gradient(135deg, #1e293b 0%, #2d1f08 100%);
-    }
-    /* FIX: position:absolute works because blog-card now has position:relative */
-    .blog-card.featured::before {
-      content: '⭐ FEATURED';
-      position: absolute;
-      top: -13px;
-      right: 24px;
-      background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
-      color: #1e293b;
-      padding: 5px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-
-    /* ── Category badges ── */
-    .category-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-right: 6px;
-      margin-bottom: 4px;
-    }
-    .cat-guide      { background: #8b5cf6; color: white; }
-    .cat-case-study { background: #10b981; color: white; }
-    .cat-tips       { background: #3b82f6; color: white; }
-    .cat-news       { background: #f59e0b; color: #1e293b; }
-    .cat-agency     { background: #ec4899; color: white; }
-
-    /* ── Search & filter ── */
-    .search-box {
-      background: #1f2937;
-      border: 2px solid #374151;
-      border-radius: 12px;
-      padding: 12px 20px;
-      color: white;
-      width: 100%;
-      font-size: 15px;
-    }
-    .search-box::placeholder { color: #6b7280; }
-    .search-box:focus { outline: none; border-color: #8b5cf6; }
-
-    .filter-btn {
-      background: #374151;
-      color: #9ca3af;
-      padding: 8px 16px;
-      border-radius: 8px;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 14px;
-      font-weight: 600;
-      margin: 4px;
-    }
-    .filter-btn:hover  { background: #4b5563; color: white; }
-    .filter-btn.active { background: #8b5cf6; color: white; border-color: #a78bfa; }
-
-    /* ── Share toast ── */
-    #share-toast {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: #8b5cf6;
-      color: white;
-      padding: 10px 28px;
-      border-radius: 99px;
-      font-weight: 700;
-      font-size: 14px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s, transform 0.3s;
-      z-index: 9999;
-      white-space: nowrap;
-    }
-    #share-toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* ── Read more button ── */
-    .read-more-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 14px;
-      background: rgba(139,92,246,0.15);
-      color: #a78bfa;
-      border: 1px solid #4c1d95;
-      border-radius: 8px;
-      padding: 7px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      transition: background 0.2s;
-    }
-    .read-more-btn:hover { background: rgba(139,92,246,0.3); }
-
-    /* ── Share button on card ── */
-    .share-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid #374151;
-      color: #9ca3af;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .share-btn:hover { background: rgba(139,92,246,0.2); color: #c4b5fd; border-color: #6d28d9; }
-
-    @media (max-width: 640px) {
-      .nav-link { padding: 10px 10px; font-size: 0.8rem; }
-    }
+    .nav-bar { background:linear-gradient(135deg,#1f2937,#111827); border-bottom:2px solid #374151; position:sticky; top:0; z-index:1000; }
+    .nav-link { color:#9ca3af; padding:12px 20px; font-weight:600; transition:all .3s; border-bottom:3px solid transparent; text-decoration:none; display:inline-block; }
+    .nav-link:hover,.nav-link.active { color:white; border-bottom-color:#8b5cf6; }
+    .blog-card { background:linear-gradient(135deg,#1e293b,#0f172a); border:2px solid #334155; border-radius:16px; padding:24px; transition:all .3s; cursor:pointer; position:relative; }
+    .blog-card:hover { transform:translateY(-4px); box-shadow:0 12px 30px rgba(139,92,246,.3); border-color:#8b5cf6; }
+    .blog-card.featured { border-color:#f59e0b; background:linear-gradient(135deg,#1e293b,#2d1f08); }
+    .blog-card.featured::before { content:'⭐ FEATURED'; position:absolute; top:-13px; right:24px; background:linear-gradient(135deg,#f59e0b,#eab308); color:#1e293b; padding:5px 16px; border-radius:20px; font-size:11px; font-weight:800; }
+    .category-badge { display:inline-block; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:600; text-transform:uppercase; margin-right:6px; margin-bottom:4px; }
+    .cat-guide      { background:#8b5cf6; color:white; }
+    .cat-case-study { background:#10b981; color:white; }
+    .cat-tips       { background:#3b82f6; color:white; }
+    .cat-news       { background:#f59e0b; color:#1e293b; }
+    .cat-agency     { background:#ec4899; color:white; }
+    .search-box { background:#1f2937; border:2px solid #374151; border-radius:12px; padding:12px 20px; color:white; width:100%; font-size:15px; }
+    .search-box::placeholder { color:#6b7280; }
+    .search-box:focus { outline:none; border-color:#8b5cf6; }
+    .filter-btn { background:#374151; color:#9ca3af; padding:8px 16px; border-radius:8px; border:2px solid transparent; cursor:pointer; transition:all .2s; font-size:14px; font-weight:600; margin:4px; }
+    .filter-btn:hover { background:#4b5563; color:white; }
+    .filter-btn.active { background:#8b5cf6; color:white; border-color:#a78bfa; }
+    #share-toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:#8b5cf6; color:white; padding:10px 28px; border-radius:99px; font-weight:700; font-size:14px; opacity:0; pointer-events:none; transition:opacity .3s,transform .3s; z-index:9999; white-space:nowrap; }
+    #share-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .read-more-btn { display:inline-flex; align-items:center; gap:6px; margin-top:14px; background:rgba(139,92,246,.15); color:#a78bfa; border:1px solid #4c1d95; border-radius:8px; padding:7px 16px; font-size:13px; font-weight:700; transition:background .2s; text-decoration:none; }
+    .read-more-btn:hover { background:rgba(139,92,246,.3); }
+    .share-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; background:rgba(255,255,255,.05); border:1px solid #374151; color:#9ca3af; cursor:pointer; transition:all .2s; }
+    .share-btn:hover { background:rgba(139,92,246,.2); color:#c4b5fd; border-color:#6d28d9; }
+    .skeleton { background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    @media(max-width:640px) { .nav-link { padding:10px; font-size:.8rem; } }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
-
-  <!-- Share toast notification -->
   <div id="share-toast">🔗 Link copied to clipboard!</div>
 
-  <!-- NAVIGATION -->
   <nav class="nav-bar">
     <div class="max-w-6xl mx-auto px-6">
       <div class="flex items-center justify-between flex-wrap gap-2 py-2">
-        <div class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">ContentScale</div>
+        <a href="/" style="font-size:1.4rem;font-weight:800;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none">ContentScale</a>
         <div class="flex flex-wrap items-center gap-1">
-          <a href="/"                  class="nav-link">🏠 Home</a>
-          <a href="/#scanner"          class="nav-link">🔍 Scanner</a>
-          <a href="/#leaderboard"      class="nav-link">🏆 Leaderboard</a>
-          <a href="/blog/index.html"   class="nav-link active">📝 Blog</a>
-          <a href="/contact-form"      class="nav-link">📞 Contact</a>
+          <a href="/"             class="nav-link">🏠 Home</a>
+          <a href="/#scanner"     class="nav-link">🔍 Scanner</a>
+          <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
+          <a href="/blog"         class="nav-link active">📝 Blog</a>
+          <a href="https://wa.me/31628073996?text=Hi%20Ottmar!" target="_blank" rel="noopener" style="margin-left:4px;background:linear-gradient(90deg,#15803d,#16a34a);color:white;padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none">💬 WhatsApp</a>
+          <a href="https://app.contentscale.site" style="margin-left:8px;background:linear-gradient(90deg,#c8440a,#f97316);color:white;padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none">🚀 Free Scan</a>
         </div>
       </div>
     </div>
@@ -193,373 +67,270 @@
 
   <div class="max-w-6xl mx-auto px-6 py-12">
 
-    <!-- HEADER -->
     <div class="text-center mb-12">
-      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-        ContentScale Blog
-      </h1>
-      <p class="text-xl text-gray-400 mb-6">
-        AI-Era SEO Strategies, Case Studies &amp; Expert Tips
-      </p>
+      <div style="font-family:monospace;font-size:.72rem;color:#6b7280;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px">ContentScale · Knowledge Base</div>
+      <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent" style="font-family:Georgia,serif">SEO Recovery &amp; GRAAF<br>Framework Guides</h1>
+      <p class="text-xl text-gray-400 mb-6 max-w-2xl mx-auto">Expert articles on content quality scoring, algorithm recovery, and the GRAAF Framework — by Ottmar Francisca, founder of ContentScale.</p>
       <div class="max-w-xl mx-auto">
-        <input
-          type="text"
-          id="searchBox"
-          class="search-box"
-          placeholder="🔍 Search articles…"
-          oninput="filterBlogs()">
+        <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search articles…" oninput="filterBlogs()" aria-label="Search blog articles">
+      </div>
+      <div class="flex justify-center gap-10 mt-6">
+        <div class="text-center">
+          <div id="post-count" style="font-family:Georgia,serif;font-size:1.6rem;font-weight:900;color:#a78bfa">—</div>
+          <div style="font-family:monospace;font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.08em">Articles</div>
+        </div>
+        <div class="text-center">
+          <div style="font-family:Georgia,serif;font-size:1.6rem;font-weight:900;color:#4ade80">Free</div>
+          <div style="font-family:monospace;font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.08em">Always</div>
+        </div>
+        <div class="text-center">
+          <div style="font-family:Georgia,serif;font-size:1.6rem;font-weight:900;color:#f97316">GRAAF</div>
+          <div style="font-family:monospace;font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.08em">Framework</div>
+        </div>
       </div>
     </div>
 
-    <!-- CATEGORIES FILTER -->
     <div class="mb-8 text-center">
-      <div class="mb-3">
-        <span class="text-sm text-gray-500 uppercase font-bold tracking-widest">Filter by Category</span>
-      </div>
-      <!-- FIX: data-cat attribute used for precise matching, no substring false-positives -->
+      <div class="mb-3"><span class="text-sm text-gray-500 uppercase font-bold tracking-widest">Filter by Category</span></div>
       <div class="flex flex-wrap justify-center">
         <button class="filter-btn active" data-cat="all"        onclick="filterCategory(this)">All Posts</button>
         <button class="filter-btn"        data-cat="guide"      onclick="filterCategory(this)">📚 Guides</button>
         <button class="filter-btn"        data-cat="case-study" onclick="filterCategory(this)">📊 Case Studies</button>
-        <button class="filter-btn"        data-cat="agency"     onclick="filterCategory(this)">🏢 Agency Spotlights</button>
-        <button class="filter-btn"        data-cat="tips"       onclick="filterCategory(this)">💡 Tips &amp; Tricks</button>
-        <button class="filter-btn"        data-cat="news"       onclick="filterCategory(this)">📰 News &amp; Updates</button>
+        <button class="filter-btn"        data-cat="agency"     onclick="filterCategory(this)">🏢 Agency</button>
+        <button class="filter-btn"        data-cat="news"       onclick="filterCategory(this)">📰 News</button>
       </div>
     </div>
 
-    <!-- FEATURED POST -->
     <div id="featured-section" class="mb-12">
       <h2 class="text-2xl font-bold mb-6 text-yellow-400">⭐ Featured Article</h2>
-      <div id="featured-post-container"></div>
+      <div id="featured-post-container">
+        <div class="blog-card" style="pointer-events:none">
+          <div class="skeleton" style="height:16px;width:35%;margin-bottom:14px"></div>
+          <div class="skeleton" style="height:36px;width:80%;margin-bottom:10px"></div>
+          <div class="skeleton" style="height:36px;width:60%;margin-bottom:16px"></div>
+          <div class="skeleton" style="height:80px;margin-bottom:16px"></div>
+          <div class="skeleton" style="height:40px;width:160px"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- BLOG POSTS GRID -->
     <div id="blog-grid">
-      <h2 class="text-2xl font-bold mb-6">Latest Articles</h2>
-      <div class="grid md:grid-cols-2 gap-6" id="posts-container"></div>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">Latest Articles</h2>
+        <span id="results-count" style="font-family:monospace;font-size:.8rem;color:#6b7280"></span>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6" id="posts-container">
+        <div class="blog-card" style="pointer-events:none">
+          <div class="skeleton" style="height:14px;width:40%;margin-bottom:12px"></div>
+          <div class="skeleton" style="height:24px;width:85%;margin-bottom:8px"></div>
+          <div class="skeleton" style="height:24px;width:65%;margin-bottom:12px"></div>
+          <div class="skeleton" style="height:56px;margin-bottom:12px"></div>
+          <div class="skeleton" style="height:32px;width:130px"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- NO RESULTS -->
     <div id="no-results" class="hidden text-center py-12">
       <div class="text-6xl mb-4">🔍</div>
       <h3 class="text-2xl font-bold mb-2">No Articles Found</h3>
       <p class="text-gray-400 mb-6">Try different keywords or browse all posts</p>
-      <button
-        onclick="resetAll()"
-        class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">
-        Show All Posts
-      </button>
+      <button onclick="resetAll()" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition">Show All Posts</button>
     </div>
 
-    <!-- CTA SECTION -->
     <div class="mt-16 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-8 text-center border border-purple-700">
-      <h3 class="text-3xl font-bold mb-3">Want to Improve Your Content Score?</h3>
-      <p class="text-lg text-gray-300 mb-6">
-        Get your free AI-powered content analysis in 30 seconds, or talk to Ot directly for expert guidance.
-      </p>
+      <div style="font-family:monospace;font-size:.7rem;color:#a78bfa;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">Free · Instant · No Account</div>
+      <h3 class="text-3xl font-bold mb-3">Ready to Score Your Content?</h3>
+      <p class="text-lg text-gray-300 mb-6 max-w-lg mx-auto">Get your free 100-point ContentScore in 30 seconds. No login, no credit card — just the truth about your content quality.</p>
       <div class="flex flex-col md:flex-row gap-4 justify-center">
-        <a href="https://app.contentscale.site"
-           class="inline-block bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-4 rounded-lg font-bold text-lg transition">
-          🚀 Scan Your Website Free
-        </a>
-        <a href="https://wa.me/31628073996?text=Hi%20Ot!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content%20score.%20Can%20we%20talk?"
-           target="_blank" rel="noopener"
-           class="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-lg font-bold text-lg transition">
-          💬 WhatsApp Ot
-        </a>
+        <a href="https://app.contentscale.site" style="display:inline-block;background:linear-gradient(90deg,#c8440a,#f97316);color:white;padding:13px 26px;border-radius:10px;font-weight:700;font-size:1rem;text-decoration:none">🚀 Scan Your Website — Free</a>
+        <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20read%20your%20blog%20and%20want%20to%20improve%20my%20content." target="_blank" rel="noopener" style="display:inline-block;background:linear-gradient(90deg,#1a6b3c,#10b981);color:white;padding:13px 26px;border-radius:10px;font-weight:700;font-size:1rem;text-decoration:none">💬 WhatsApp Ottmar</a>
       </div>
     </div>
 
-    <!-- FOOTER -->
     <div class="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-800">
-      <p class="mb-2">ContentScale Blog &copy; 2026 &bull; AI-Powered SEO Recovery</p>
-      <p>
-        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">Scanner</a> &bull;
-        <a href="https://wa.me/31628073996"      class="text-green-400  hover:text-green-300">WhatsApp</a> &bull;
-        <a href="mailto:info@contentscale.site"  class="text-blue-400   hover:text-blue-300">Email</a>
+      <p class="mb-3 font-semibold text-gray-400">ContentScale Blog © 2026 · GRAAF Framework · Amsterdam, NL</p>
+      <div class="flex justify-center gap-6 flex-wrap mb-4">
+        <a href="https://app.contentscale.site" class="text-purple-400 hover:text-purple-300">🔍 Free Scanner</a>
+        <a href="https://app.contentscale.site/#leaderboard" class="text-yellow-400 hover:text-yellow-300">🏆 Leaderboard</a>
+        <a href="https://wa.me/31628073996" class="text-green-400 hover:text-green-300">💬 WhatsApp</a>
+        <a href="mailto:info@contentscale.site" class="text-blue-400 hover:text-blue-300">📧 Email</a>
+      </div>
+      <p class="text-xs text-gray-600">
+        <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-family:monospace">🔒 No login required</span>
+        &nbsp;
+        <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-family:monospace">🇳🇱 Made in Amsterdam</span>
       </p>
     </div>
 
-  </div><!-- end .max-w-6xl -->
+  </div>
 
   <script>
-  // ============================================================
-  // EMBEDDED DATA — no external fetch, no decode errors
-  // ============================================================
-  const BLOG_DATA = {
-    posts: [
-      {
-        slug: "graaf-framework-ai-content-optimization",
-        title: "GRAAF Framework: The Blueprint for AI Content Optimization",
-        description: "Discover the 5-step GRAAF framework that helped 127 sites recover 90% of AI-driven traffic loss. Goal, Relevance, Authority, Accuracy, Format.",
-        date: "2025-05-10",
-        readTime: "8 min read",
-        author: "Ottmar Francisca",
-        featured: true,
-        category: ["guide","case-study"],
-        metrics: { score: "91% avg", traffic: "+214%", sites: "127" }
-      },
-      {
-        slug: "seo-recovery-after-helpful-content-update",
-        title: "From -67% to +189%: Ecommerce SEO Recovery After HCU",
-        description: "Full case study: How a Dutch fashion retailer bounced back from the September 2024 Helpful Content Update using CRAFT and GRAAF.",
-        date: "2025-04-28",
-        readTime: "12 min read",
-        author: "Ottmar Francisca",
-        featured: false,
-        category: ["case-study","tips"],
-        metrics: { traffic: "+189%", revenue: "€2.1M", months: "4" }
-      },
-      {
-        slug: "craft-methodology-content-optimization",
-        title: "CRAFT: The 5-Step Content Optimization Routine We Use Daily",
-        description: "Internal methodology: Context, Relevance, Authority, Format, Trust. Actionable checklist for editors and content managers.",
-        date: "2025-04-15",
-        readTime: "10 min read",
-        author: "Ottmar Francisca",
-        featured: false,
-        category: ["guide","agency"],
-        metrics: { points: "5 pillars", examples: "14 fixes" }
-      },
-      {
-        slug: "agency-spotlight-seo-recovery-specialists",
-        title: "Agency Spotlight: How Recovery Specialists Use ContentScale",
-        description: "Interview with 3 agencies that scaled content optimization using the GRAAF framework. Workflow tips and client reporting.",
-        date: "2025-04-02",
-        readTime: "9 min read",
-        author: "Ottmar Francisca",
-        featured: false,
-        category: ["agency","case-study"],
-        metrics: { businesses: "3 agencies", clients: "87" }
-      },
-      {
-        slug: "news-google-march-2025-core-update",
-        title: "March 2025 Core Update: What We Observed (Live Data)",
-        description: "Real-time analysis of volatility, winners vs losers, and why E-E-A-T signals matter more than ever. Exclusive insights.",
-        date: "2025-03-20",
-        readTime: "7 min read",
-        author: "Ottmar Francisca",
-        featured: false,
-        category: ["news","tips"],
-        metrics: { type: "Breaking News", visitors: "10M+", framework: "GRAAF" }
-      },
-      {
-        slug: "quick-wins-ai-content-audit",
-        title: "7 Quick Wins From an AI Content Audit (Under 30 Minutes)",
-        description: "Practical fixes: thin content, entity optimization, internal linking, outdated stats. Screenshots and before/after.",
-        date: "2025-03-05",
-        readTime: "6 min read",
-        author: "Ottmar Francisca",
-        featured: false,
-        category: ["tips","guide"],
-        metrics: { type: "Quick Wins", score: "+22 pts" }
-      }
-    ]
-  };
+  // ════════════════════════════════════════════════════════════════
+  //  HOW TO ADD A NEW BLOG POST (takes 2 steps):
+  //  1. Create  /blog/your-post-slug.html
+  //  2. Add entry to /blog/blog-posts.json
+  //  Push to GitHub → post appears here automatically. No code change needed.
+  // ════════════════════════════════════════════════════════════════
 
-  // ============================================================
-  // STATE
-  // ============================================================
-  let currentCategory = 'all';
-  let allPosts        = [];
-
-  // ============================================================
-  // HELPERS
-  // ============================================================
-  function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-  }
-
-  // FIX: exact matching using data-cat, not substring of textContent
-  function filterCategory(btn) {
-    currentCategory = btn.dataset.cat;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    filterBlogs();
-  }
-
-  function resetAll() {
-    document.getElementById('searchBox').value = '';
-    const allBtn = document.querySelector('[data-cat="all"]');
-    if (allBtn) filterCategory(allBtn);
-  }
-
-  function filterBlogs() {
-    const q = document.getElementById('searchBox').value.toLowerCase();
-    const cards = document.querySelectorAll('#posts-container .blog-card');
-    let visible = 0;
-
-    cards.forEach(card => {
-      const cats   = card.dataset.category || '';
-      const title  = (card.querySelector('h3')?.textContent || '').toLowerCase();
-      const desc   = (card.querySelector('.card-desc')?.textContent || '').toLowerCase();
-      const catOk  = currentCategory === 'all' || cats.split(' ').includes(currentCategory);
-      const termOk = !q || title.includes(q) || desc.includes(q);
-      card.style.display = (catOk && termOk) ? '' : 'none';
-      if (catOk && termOk) visible++;
-    });
-
-    document.getElementById('no-results').classList.toggle('hidden', visible > 0);
-    document.getElementById('blog-grid').classList.toggle('hidden', visible === 0);
-  }
-
-  // ============================================================
-  // SHARE LINK  (FIX: was completely missing)
-  // ============================================================
-  function sharePost(slug, event) {
-    event.stopPropagation(); // prevent card navigation
-    const url = 'https://app.contentscale.site/blog/' + slug;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(showShareToast).catch(() => fallbackCopy(url));
-    } else {
-      fallbackCopy(url);
+  // Fallback: used when blog-posts.json can't be fetched (local preview, etc.)
+  const FALLBACK_POSTS = [
+    {
+      slug: "contentscale-platform-2026",
+      title: "ContentScale Platform 2026: Free SEO ContentScore — GRAAF Framework",
+      description: "ContentScale Platform 2026 gives any webpage a free 100-point ContentScore via the GRAAF Framework. Sitemap scan of 52 pages scored 78/100. Covers GRAAF, CRAFT, Technical SEO, case studies, and the Public Leaderboard. No login. No card.",
+      date: "2026-03-10", readTime: "18 min read", author: "Ottmar J.G. Francisca",
+      featured: true, category: ["guide","news"],
+      metrics: { score:"78/100", pages:"52 pages", framework:"GRAAF+CRAFT+Tech" }
+    },
+    {
+      slug: "top-seo-agency-success-story",
+      title: "Top SEO Agency Success Story: How GRAAF Transformed Client Results",
+      description: "A deep-dive into how a top SEO agency used the ContentScale GRAAF Framework to deliver measurable, verifiable results — with before/after scores, leaderboard proof, and a replicable workflow.",
+      date: "2026-02-18", readTime: "12 min read", author: "Ottmar J.G. Francisca",
+      featured: false, category: ["case-study","agency"],
+      metrics: { traffic:"+189%", score:"52 → 87/100", timeline:"90 days" }
     }
-  }
+  ];
 
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand('copy'); showShareToast(); } catch(e) {}
-    document.body.removeChild(ta);
-  }
+  const AVATAR_SRC = 'https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png';
+  const AVATAR_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='22' fill='%238b5cf6'/%3E%3Ctext x='22' y='28' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EOF%3C/text%3E%3C/svg%3E";
 
-  function showShareToast() {
-    const t = document.getElementById('share-toast');
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
-  }
+  let allPosts = [], currentCategory = 'all';
 
-  // ============================================================
-  // CATEGORY BADGE HTML
-  // ============================================================
+  function formatDate(d) { return new Date(d).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
+
   function makeBadges(cats) {
-    const MAP = { guide:'cat-guide', 'case-study':'cat-case-study', tips:'cat-tips', news:'cat-news', agency:'cat-agency' };
-    return cats.map(c => {
-      const cls   = MAP[c] || 'cat-guide';
-      const label = c.replace('-',' ').toUpperCase();
-      return `<span class="category-badge ${cls}">${label}</span>`;
-    }).join('');
+    const M = { guide:'cat-guide','case-study':'cat-case-study',tips:'cat-tips',news:'cat-news',agency:'cat-agency' };
+    return (cats||[]).map(c=>`<span class="category-badge ${M[c]||'cat-guide'}">${c.replace('-',' ').toUpperCase()}</span>`).join('');
   }
 
-  // ============================================================
-  // METRICS HTML
-  // ============================================================
-  function makeMetrics(metrics) {
-    const ICON = { score:'✅', traffic:'📈', revenue:'💰', days:'⏱️', points:'📚',
-                   examples:'💡', visitors:'📈', months:'⏱️', sites:'📊',
-                   businesses:'🏢', framework:'🎯', type:'⚡', clients:'👥' };
-    return Object.entries(metrics || {}).map(([k,v]) => {
-      const icon  = ICON[k] || '🎯';
-      const color = k==='score' ? 'text-green-400' :
-                    ['traffic','revenue','visitors'].includes(k) ? 'text-blue-400' :
-                    k==='type' ? 'text-red-400' : 'text-purple-400';
-      return `<span class="${color} text-sm">${icon} ${v}</span>`;
+  function makeMetrics(m) {
+    const I = { score:'⭐',traffic:'📈',revenue:'💰',timeline:'⏱️',pages:'📄',framework:'🎯',type:'⚡',clients:'👥',months:'⏱️' };
+    return Object.entries(m||{}).map(([k,v])=>{
+      const c = ['traffic','revenue'].includes(k)?'text-green-400':k==='score'?'text-yellow-400':'text-purple-400';
+      return `<span class="${c} text-sm font-mono">${I[k]||'🎯'} ${v}</span>`;
     }).join(' ');
   }
 
-  // ============================================================
-  // HEADSHOT — stored as safe JS var, no escaping issues in templates
-  // ============================================================
-  const AVATAR_SRC = 'https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png';
-  const AVATAR_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%238b5cf6'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E";
+  function filterCategory(btn) {
+    currentCategory = btn.dataset.cat;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
 
-  // ============================================================
-  // RENDER FEATURED
-  // ============================================================
-  function renderFeaturedPost(post) {
-    const el = document.getElementById('featured-post-container');
-    const img = new Image();
-    img.src = AVATAR_SRC;
-    img.className = 'w-10 h-10 rounded-full object-cover border-2 border-purple-400 flex-shrink-0';
-    img.alt = 'Ottmar Francisca';
-    img.onerror = function() { this.src = AVATAR_FALLBACK; };
+  function filterBlogs() { render(); }
 
-    const card = document.createElement('div');
-    card.className = 'blog-card featured relative';
-    card.innerHTML = `
-      <div class="mb-4">
-        ${makeBadges(post.category)}
+  function resetAll() {
+    document.getElementById('searchBox').value='';
+    filterCategory(document.querySelector('[data-cat="all"]'));
+  }
+
+  function sharePost(slug,e) {
+    e.stopPropagation();
+    const url='https://app.contentscale.site/blog/'+slug;
+    (navigator.clipboard?.writeText(url)||Promise.reject()).then(showToast).catch(()=>{
+      const ta=Object.assign(document.createElement('textarea'),{value:url,style:'position:fixed;opacity:0'});
+      document.body.appendChild(ta); ta.select();
+      try{document.execCommand('copy');showToast();}catch(e){}
+      document.body.removeChild(ta);
+    });
+  }
+
+  function showToast() {
+    const t=document.getElementById('share-toast');
+    t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
+  }
+
+  function renderFeatured(post) {
+    const wrap=document.getElementById('featured-post-container');
+    const card=document.createElement('div');
+    card.className='blog-card featured';
+    card.innerHTML=`
+      <div class="mb-4">${makeBadges(post.category)}
         <span class="text-sm text-gray-500 ml-1">📅 ${formatDate(post.date)} &bull; ⏱️ ${post.readTime}</span>
       </div>
-      <h3 class="text-3xl font-bold mb-3">${post.title}</h3>
-      <p class="text-gray-400 mb-5 leading-relaxed card-desc">${post.description}</p>
-
-      <div class="flex items-center justify-between flex-wrap gap-3">
+      <h3 class="text-3xl font-bold mb-3" style="font-family:Georgia,serif;line-height:1.3">${post.title}</h3>
+      <p class="text-gray-400 mb-5 leading-relaxed" style="font-size:1.02rem">${post.description}</p>
+      <div class="flex gap-3 flex-wrap mb-4">${makeMetrics(post.metrics)}</div>
+      <div class="flex items-center justify-between flex-wrap gap-3 pt-4 border-t border-gray-700">
         <div class="flex items-center gap-3">
-          <div id="featured-avatar-wrap" class="flex-shrink-0"></div>
+          <div id="feat-avatar" style="flex-shrink:0"></div>
           <div>
             <div class="font-bold text-sm">${post.author}</div>
-            <div class="text-xs text-gray-500">Founder &amp; SEO Recovery Expert</div>
+            <div class="text-xs text-gray-500">Founder · ContentScale · GRAAF Framework Creator · Amsterdam</div>
           </div>
         </div>
-        <div class="flex gap-2">
-          <button class="share-btn" onclick="sharePost('${post.slug}', event)">
-            🔗 Share
-          </button>
-          <a href="/blog/${post.slug}"
-             class="read-more-btn"
-             onclick="event.stopPropagation()">
-            Read Article →
-          </a>
+        <div class="flex gap-2 items-center">
+          <button class="share-btn" onclick="sharePost('${post.slug}',event)">🔗 Share</button>
+          <a href="/blog/${post.slug}" class="read-more-btn" onclick="event.stopPropagation()">Read Article →</a>
         </div>
-      </div>
-    `;
-    card.addEventListener('click', () => { window.location.href = '/blog/' + post.slug; });
-    el.innerHTML = '';
-    el.appendChild(card);
-
-    // Inject headshot after DOM is ready (avoids template literal escaping issues)
-    const avatarWrap = card.querySelector('#featured-avatar-wrap');
-    if (avatarWrap) avatarWrap.appendChild(img);
+      </div>`;
+    card.addEventListener('click',()=>window.location.href='/blog/'+post.slug);
+    wrap.innerHTML=''; wrap.appendChild(card);
+    const img=Object.assign(new Image(),{src:AVATAR_SRC,alt:post.author,width:44,height:44});
+    img.className='rounded-full object-cover border-2 border-purple-500';
+    img.style.cssText='width:44px;height:44px;flex-shrink:0';
+    img.onerror=function(){this.src=AVATAR_FALLBACK;};
+    card.querySelector('#feat-avatar').appendChild(img);
   }
 
-  // ============================================================
-  // RENDER OTHER POSTS
-  // ============================================================
-  function renderOtherPosts(posts) {
-    const container = document.getElementById('posts-container');
-    container.innerHTML = posts.map(post => `
-      <div class="blog-card"
-           data-category="${post.category.join(' ')}"
-           onclick="window.location.href='/blog/${post.slug}'">
-        <div class="mb-3">
-          ${makeBadges(post.category)}
+  function render() {
+    const q=(document.getElementById('searchBox').value||'').toLowerCase().trim();
+    const featured=allPosts.find(p=>p.featured);
+    const others=allPosts.filter(p=>!p.featured);
+    const filtered=others.filter(p=>{
+      const catOk=currentCategory==='all'||(p.category||[]).includes(currentCategory);
+      const termOk=!q||p.title.toLowerCase().includes(q)||p.description.toLowerCase().includes(q);
+      return catOk&&termOk;
+    });
+    const featSec=document.getElementById('featured-section');
+    if(featured){
+      const catOk=currentCategory==='all'||(featured.category||[]).includes(currentCategory);
+      const termOk=!q||featured.title.toLowerCase().includes(q)||featured.description.toLowerCase().includes(q);
+      featSec.style.display=(catOk&&termOk)?'':'none';
+    }
+    const grid=document.getElementById('blog-grid');
+    const noRes=document.getElementById('no-results');
+    const featHidden=featSec.style.display==='none';
+    if(filtered.length===0&&featHidden){
+      grid.classList.add('hidden'); noRes.classList.remove('hidden');
+    } else {
+      noRes.classList.add('hidden'); grid.classList.remove('hidden');
+      document.getElementById('results-count').textContent=filtered.length+' article'+(filtered.length!==1?'s':'');
+    }
+    document.getElementById('posts-container').innerHTML=filtered.map(post=>`
+      <div class="blog-card" data-category="${(post.category||[]).join(' ')}" onclick="window.location.href='/blog/${post.slug}'">
+        <div class="mb-3">${makeBadges(post.category)}
           <div class="text-sm text-gray-500 mt-2">📅 ${formatDate(post.date)} &bull; ⏱️ ${post.readTime}</div>
         </div>
-        <h3 class="text-2xl font-bold mb-3">${post.title}</h3>
-        <p class="text-gray-400 mb-3 card-desc">${post.description}</p>
-        <div class="flex items-center gap-2 text-sm flex-wrap mb-3">
-          ${makeMetrics(post.metrics)}
-        </div>
+        <h3 class="text-xl font-bold mb-3" style="line-height:1.4">${post.title}</h3>
+        <p class="text-gray-400 mb-3" style="font-size:.93rem;line-height:1.7">${post.description}</p>
+        <div class="flex gap-3 flex-wrap mb-3">${makeMetrics(post.metrics)}</div>
         <div class="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-gray-700">
-          <a href="/blog/${post.slug}"
-             class="read-more-btn"
-             onclick="event.stopPropagation()">
-            Read Article →
-          </a>
-          <button class="share-btn" onclick="sharePost('${post.slug}', event)">
-            🔗 Share
-          </button>
+          <a href="/blog/${post.slug}" class="read-more-btn" onclick="event.stopPropagation()">Read Article →</a>
+          <button class="share-btn" onclick="sharePost('${post.slug}',event)">🔗 Share</button>
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
   }
 
-  // ============================================================
-  // INIT — uses embedded BLOG_DATA, no fetch, no 404 risk
-  // ============================================================
-  function loadBlogPosts() {
-    allPosts = [...BLOG_DATA.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
-    const featured = allPosts.find(p => p.featured);
-    if (featured) renderFeaturedPost(featured);
-    renderOtherPosts(allPosts.filter(p => !p.featured));
+  async function init() {
+    try {
+      const res=await fetch('/blog/blog-posts.json?v='+Date.now());
+      if(!res.ok) throw new Error();
+      allPosts=await res.json();
+    } catch {
+      allPosts=FALLBACK_POSTS;
+    }
+    allPosts.sort((a,b)=>new Date(b.date)-new Date(a.date));
+    document.getElementById('post-count').textContent=allPosts.length;
+    const featured=allPosts.find(p=>p.featured);
+    if(featured) renderFeatured(featured);
+    else document.getElementById('featured-section').style.display='none';
+    render();
   }
 
-  document.addEventListener('DOMContentLoaded', loadBlogPosts);
+  document.addEventListener('DOMContentLoaded',init);
   </script>
-
 </body>
 </html>
