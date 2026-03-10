@@ -118,7 +118,7 @@ res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
-app.use(express.static('public', { maxAge: '1y', etag: true }));
+app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
 res.setHeader('Content-Type', 'application/manifest+json');
@@ -1601,9 +1601,12 @@ async function scanOneUrlWithBrowser(rawUrl, browser) {
       else req.continue();
     });
     try {
-      await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await new Promise(r => setTimeout(r, 1500)); // let JS render
-    } catch(e) { throw new Error('Unreachable: ' + e.message.substring(0,80)); }
+      await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
+      await new Promise(r => setTimeout(r, 800)); // let JS render
+    } catch(e) {
+      // Site unreachable/blocked — skip gracefully, don't waste retry time
+      throw new Error('skip:' + e.message.substring(0,60));
+    }
     return await internalScanPage(page, scanUrl);
   } finally { try { await page.close(); } catch(e) {} }
 }
@@ -1625,8 +1628,9 @@ async function runBulkJob(job) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try { result = await scanOneUrlWithBrowser(url, browser); break; }
         catch(e) {
-          if (attempt === 1) result = { success: false, url, error: e.message, score: 0 };
-          else await new Promise(r => setTimeout(r, 4000));
+          const isSkip = e.message.startsWith('skip:');
+          if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
+          else await new Promise(r => setTimeout(r, 2000));
         }
       }
       // Trim result to save memory: keep only essentials for bulk view
@@ -1733,7 +1737,7 @@ if (!browser) return res.status(500).json({ success: false, error: 'Browser unav
 const page = await browser.newPage();
 await page.setViewport({ width: 1920, height: 1080 });
 await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
 const analysis = await page.evaluate((scanUrlParam) => {
 const text = document.body ? document.body.innerText : '';
 const cleanText = text.replace(/\s+/g, ' ').trim();
@@ -2611,8 +2615,9 @@ async function runCampaign(campaign) {
           for (let attempt = 0; attempt < 2; attempt++) {
             try { result = await scanOneUrlWithBrowser(url, jobBrowser); break; }
             catch(e) {
-              if (attempt === 1) result = { success: false, url, error: e.message, score: 0 };
-              else await new Promise(r => setTimeout(r, 3000));
+              const isSkip = e.message.startsWith('skip:');
+              if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
+              else await new Promise(r => setTimeout(r, 2000));
             }
           }
           const slim = result && result.success ? {
