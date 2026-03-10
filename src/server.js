@@ -118,6 +118,49 @@ res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
+// ── Inject: Adabundle + Scan Counter on all HTML pages ──────────────────────
+app.use((req, res, next) => {
+  const orig = res.send.bind(res);
+  res.send = function(body) {
+    if (typeof body === 'string' && body.includes('</body>')) {
+      const inject = `
+<style>
+#cs-scan-counter{position:fixed;bottom:1.2rem;right:1.2rem;z-index:99999;display:none;text-decoration:none;}
+#cs-scan-counter:hover .cs-counter-inner{border-color:rgba(168,85,247,0.9);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(168,85,247,0.5);}
+.cs-counter-inner{background:rgba(17,24,39,0.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(126,34,206,0.6);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(126,34,206,0.3);max-width:220px;transition:all 0.2s;}
+.cs-dot{width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,0.7);animation:cs-pulse 2s infinite;flex-shrink:0;}
+.cs-text{font-size:0.8rem;color:#e5e7eb;line-height:1.3;font-family:system-ui,sans-serif;}
+.cs-count{font-weight:700;color:#a78bfa;}
+@keyframes cs-pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7);}70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}
+</style>
+<a id="cs-scan-counter" href="https://app.contentscale.site" title="Scan your website free">
+  <div class="cs-counter-inner">
+    <div class="cs-dot"></div>
+    <div class="cs-text"><span class="cs-count" id="cs-count-num">0</span> <span id="cs-count-lbl">scans today</span></div>
+  </div>
+</a>
+<script>
+(function(){
+  fetch('/api/stats/scans-today')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var n = d.count || 0;
+      var el = document.getElementById('cs-count-num');
+      var lb = document.getElementById('cs-count-lbl');
+      var banner = document.getElementById('cs-scan-counter');
+      if(el) el.textContent = n;
+      if(lb) lb.textContent = n === 1 ? 'scan today' : 'scans today';
+      if(banner) banner.style.display = 'block';
+    }).catch(function(){});
+})();
+</script>
+<script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}"complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)}();</script>`;
+      body = body.replace('</body>', inject + '</body>');
+    }
+    return orig(body);
+  };
+  next();
+});
 app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
 // ── Page routes ──────────────────────────────────────────────────────────────
 app.get('/seo-contentscore', (req, res) => {
