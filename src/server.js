@@ -119,6 +119,45 @@ if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
 
+// ── Global inject: favicon + scan counter on ALL HTML pages ─────────────────
+app.use((req, res, next) => {
+  const origSend = res.send.bind(res);
+  res.send = function(body) {
+    if (typeof body === 'string') {
+      // 1. Inject favicon into <head> if not already present
+      if (body.includes('<head>') && !body.includes('dynamicFavicon')) {
+        const faviconInject = `
+<link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
+<script>(function(){var favicons=["data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E","data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E","data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f59e0b'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"];var idx=0,t=null;function start(){if(t)return;t=setInterval(function(){idx=(idx+1)%favicons.length;var e=document.getElementById('dynamicFavicon');if(e)e.href=favicons[idx];},800);}function stop(){if(t){clearInterval(t);t=null;}idx=0;var e=document.getElementById('dynamicFavicon');if(e)e.href=favicons[0];}document.addEventListener('visibilitychange',function(){if(document.hidden)start();else stop();});})();<\/script>`;
+        body = body.replace('<head>', '<head>' + faviconInject);
+      }
+      // 2. Inject scan counter before </body> if not already present
+      if (body.includes('</body>') && !body.includes('cs-scan-counter')) {
+        const counterInject = `
+<style>#cs-scan-counter{position:fixed;bottom:1.2rem;left:1.2rem;z-index:99999;display:none;text-decoration:none;}.cs-counter-inner{background:rgba(17,24,39,0.96);backdrop-filter:blur(12px);border:1px solid rgba(126,34,206,0.6);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:220px;transition:all 0.2s;}.cs-counter-inner:hover{border-color:rgba(168,85,247,0.9);}.cs-dot{width:10px;height:10px;border-radius:50%;background:#10b981;animation:cs-pulse 2s infinite;flex-shrink:0;}.cs-text{font-size:0.8rem;color:#e5e7eb;font-family:system-ui,sans-serif;}.cs-count{font-weight:700;color:#a78bfa;}@keyframes cs-pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7);}70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}</style>
+<a id="cs-scan-counter" href="https://app.contentscale.site" title="Free SEO scan">
+  <div class="cs-counter-inner"><div class="cs-dot"></div><div class="cs-text"><span class="cs-count" id="cs-count-num">0</span> <span id="cs-count-lbl">scans today</span></div></div>
+</a>
+<script>(function(){fetch('/api/stats/scans-today').then(function(r){return r.json();}).then(function(d){var n=d.count||0;var el=document.getElementById('cs-count-num');var lb=document.getElementById('cs-count-lbl');var b=document.getElementById('cs-scan-counter');if(el)el.textContent=n;if(lb)lb.textContent=n===1?'scan today':'scans today';if(b)b.style.display='block';}).catch(function(){});})();<\/script>`;
+        body = body.replace('</body>', counterInject + '</body>');
+      }
+    }
+    return origSend(body);
+  };
+  next();
+});
+// ── Adabundle inject on all HTML pages ───────────────────────────────────────
+app.use((req, res, next) => {
+  const orig = res.send.bind(res);
+  res.send = function(body) {
+    if (typeof body === 'string' && body.includes('</body>') && !body.includes('embed-id')) {
+      const ada = `<script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}"complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)}(); <\/script>`;
+      body = body.replace('</body>', ada + '</body>');
+    }
+    return orig(body);
+  };
+  next();
+});
 app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
 // ── /app — Under Construction page ──────────────────────────────────────────
 app.get('/app', (req, res) => {
