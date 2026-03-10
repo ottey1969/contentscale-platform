@@ -119,6 +119,17 @@ if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
 app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
+// ── Sitemap ──────────────────────────────────────────────────────────────────
+app.get('/sitemap.xml', (req, res) => {
+  res.setHeader('Content-Type', 'application/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://app.contentscale.site/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://app.contentscale.site/blog</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://app.contentscale.site/blog/contentscale-platform-2026</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://app.contentscale.site/blog/top-seo-agency-success-story</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+</urlset>`);
+});
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
 res.setHeader('Content-Type', 'application/manifest+json');
@@ -854,15 +865,14 @@ res.json({ success: true, scans: r.rows });
 });
 // Public endpoint — total scans today across all sources (single, bulk, campaign)
 app.get('/api/stats/scans-today', async (req, res) => {
-  if (!pool) return res.json({ success: true, count: 0 });
-  try {
-    const r = await pool.query(
-      `SELECT COUNT(*) FROM scan_log WHERE created_at >= NOW() - INTERVAL '24 hours'`
-    );
-    res.json({ success: true, count: parseInt(r.rows[0].count) || 0 });
-  } catch (e) { res.json({ success: true, count: 0 }); }
+if (!pool) return res.json({ success: true, count: 0 });
+try {
+const r = await pool.query(
+`SELECT COUNT(*) FROM scan_log WHERE created_at >= NOW() - INTERVAL '24 hours'`
+);
+res.json({ success: true, count: parseInt(r.rows[0].count) || 0 });
+} catch (e) { res.json({ success: true, count: 0 }); }
 });
-
 app.get('/api/admin/email-log', verifyAdmin, async (req, res) => {
 if (!pool) return res.json({ success: false, error: 'No DB' });
 const limit = parseInt(req.query.limit) || 200;
@@ -1027,10 +1037,10 @@ try {
 const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, business_type, page_count, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
 // Strip sitemap paths — only expose homepage URL publicly to prevent fraud
 const rows = r.rows.map(row => {
-  try {
-    const u = new URL(row.url.startsWith('http') ? row.url : 'https://' + row.url);
-    return { ...row, url: u.protocol + '//' + u.hostname };
-  } catch(e) { return row; }
+try {
+const u = new URL(row.url.startsWith('http') ? row.url : 'https://' + row.url);
+return { ...row, url: u.protocol + '//' + u.hostname };
+} catch(e) { return row; }
 });
 const entries = rows;
 const total = entries.length;
@@ -1085,218 +1095,224 @@ res.json({ success: true, id: r.rows[0].id });
 // ============================================
 // 🗺️ SITEMAP SCANNER ENDPOINTS
 // ============================================
-
 // Fetch and parse sitemap → return URL list
 app.post('/api/sitemap/urls', async (req, res) => {
-  const { url } = req.body;
-  if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
-  try {
-    const axios = require('axios');
-
-    // No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
-    const extractLocs = (xml) => {
-      const locs = [];
-      const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
-      let m;
-      while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
-      return locs;
-    };
-
-    const fetchXml = async (sitemapUrl) => {
-      const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
-      return resp.data;
-    };
-
-    const xml = await fetchXml(url);
-    let urls = [];
-
-    // Sitemap index — contains sub-sitemap URLs
-    if (xml.includes('<sitemapindex')) {
-      const subSitemapUrls = extractLocs(xml);
-      for (const smUrl of subSitemapUrls.slice(0, 10)) {
-        try {
-          const subXml = await fetchXml(smUrl);
-          urls.push(...extractLocs(subXml));
-        } catch(e) { /* skip broken sub-sitemap */ }
-      }
-    } else {
-      // Regular urlset
-      urls = extractLocs(xml);
-    }
-
-    // Deduplicate + filter out non-page URLs
-    const filtered = [...new Set(urls)].filter(u => {
-      const skip = ['/tag/', '/category/', '/author/', '/feed/', '?', '#', '.xml', '.pdf', '.jpg', '.png'];
-      return !skip.some(s => u.includes(s));
-    });
-
-    res.json({ success: true, urls: filtered, total: filtered.length });
-  } catch (e) {
-    res.status(500).json({ success: false, error: 'Could not fetch sitemap: ' + e.message });
-  }
+const { url } = req.body;
+if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
+try {
+const axios = require('axios');
+// No xml2js needed — parse 
+<loc>
+tags with regex (works for all standard sitemaps)
+const extractLocs = (xml) => {
+const locs = [];
+const re = /
+<loc>
+\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
+let m;
+while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
+return locs;
+};
+const fetchXml = async (sitemapUrl) => {
+const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+return resp.data;
+};
+const xml = await fetchXml(url);
+let urls = [];
+// Sitemap index — contains sub-sitemap URLs
+if (xml.includes('<sitemapindex')) {
+const subSitemapUrls = extractLocs(xml);
+for (const smUrl of subSitemapUrls.slice(0, 10)) {
+try {
+const subXml = await fetchXml(smUrl);
+urls.push(...extractLocs(subXml));
+} catch(e) { /* skip broken sub-sitemap */ }
+}
+} else {
+// Regular urlset
+urls = extractLocs(xml);
+}
+// Deduplicate + filter out non-page URLs
+const filtered = [...new Set(urls)].filter(u => {
+const skip = ['/tag/', '/category/', '/author/', '/feed/', '?', '#', '.xml', '.pdf', '.jpg', '.png'];
+return !skip.some(s => u.includes(s));
 });
-
+res.json({ success: true, urls: filtered, total: filtered.length });
+} catch (e) {
+res.status(500).json({ success: false, error: 'Could not fetch sitemap: ' + e.message });
+}
+});
 // Submit aggregate sitemap scan result as pending leaderboard entry
 const AUTO_APPROVE_DOMAINS = ['contentscale.site', 'app.contentscale.site'];
 app.post('/api/sitemap/submit', async (req, res) => {
-  const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country, niche, business_type } = req.body;
-  if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
-  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
-  const autoApprove = AUTO_APPROVE_DOMAINS.includes(cleanDomain);
-  try {
-    const r = await pool.query(
-      `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', $12, $12)
-       ON CONFLICT (url) DO UPDATE SET
-         score = EXCLUDED.score,
-         graaf_score = EXCLUDED.graaf_score,
-         craft_score = EXCLUDED.craft_score,
-         technical_score = EXCLUDED.technical_score,
-         country = EXCLUDED.country,
-         niche = EXCLUDED.niche,
-         business_type = EXCLUDED.business_type,
-         company_name = EXCLUDED.company_name,
-         page_count = EXCLUDED.page_count,
-         page_scores = EXCLUDED.page_scores,
-         scan_source = 'sitemap',
-         admin_verified = $12,
-         is_verified = $12
-       RETURNING id`,
-      [domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || []), autoApprove]
-    );
-    res.json({ success: true, id: r.rows[0].id, auto_approved: autoApprove });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country, niche, business_type } = req.body;
+if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
+const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+const autoApprove = AUTO_APPROVE_DOMAINS.includes(cleanDomain);
+try {
+const r = await pool.query(
+`INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', $12, $12)
+ON CONFLICT (url) DO UPDATE SET
+score = EXCLUDED.score,
+graaf_score = EXCLUDED.graaf_score,
+craft_score = EXCLUDED.craft_score,
+technical_score = EXCLUDED.technical_score,
+country = EXCLUDED.country,
+niche = EXCLUDED.niche,
+business_type = EXCLUDED.business_type,
+company_name = EXCLUDED.company_name,
+page_count = EXCLUDED.page_count,
+page_scores = EXCLUDED.page_scores,
+scan_source = 'sitemap',
+admin_verified = $12,
+is_verified = $12
+RETURNING id`,
+[domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || []), autoApprove]
+);
+res.json({ success: true, id: r.rows[0].id, auto_approved: autoApprove });
+} catch (e) {
+res.status(500).json({ success: false, error: e.message });
+}
 });
-
 // ============================================================
 // 🔗 SHARE BULK RESULTS AS URL
 // ============================================================
 const shareStore = new Map(); // in-memory, survives restarts via DB below
-
 app.post('/api/share/bulk', async (req, res) => {
-  const { results } = req.body;
-  if (!results || !results.length) return res.status(400).json({ success: false, error: 'No results' });
-  const token = crypto.randomBytes(8).toString('hex');
-  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
-  try {
-    await pool.query(
-      `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))
-       ON CONFLICT DO NOTHING`,
-      [token, JSON.stringify(results), expires]
-    );
-  } catch(e) {
-    // Table may not exist yet — try create
-    try {
-      await pool.query(`CREATE TABLE IF NOT EXISTS share_results (
-        id SERIAL PRIMARY KEY,
-        token VARCHAR(20) UNIQUE NOT NULL,
-        results_json JSONB NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        expires_at TIMESTAMPTZ
-      )`);
-      await pool.query(
-        `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`,
-        [token, JSON.stringify(results), expires]
-      );
-    } catch(e2) {
-      // Fallback: memory only
-      shareStore.set(token, { results, expires });
-    }
-  }
-  shareStore.set(token, { results, expires });
-  res.json({ success: true, token });
+const { results } = req.body;
+if (!results || !results.length) return res.status(400).json({ success: false, error: 'No results' });
+const token = crypto.randomBytes(8).toString('hex');
+const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+try {
+await pool.query(
+`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))
+ON CONFLICT DO NOTHING`,
+[token, JSON.stringify(results), expires]
+);
+} catch(e) {
+// Table may not exist yet — try create
+try {
+await pool.query(`CREATE TABLE IF NOT EXISTS share_results (
+id SERIAL PRIMARY KEY,
+token VARCHAR(20) UNIQUE NOT NULL,
+results_json JSONB NOT NULL,
+created_at TIMESTAMPTZ DEFAULT NOW(),
+expires_at TIMESTAMPTZ
+)`);
+await pool.query(
+`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`,
+[token, JSON.stringify(results), expires]
+);
+} catch(e2) {
+// Fallback: memory only
+shareStore.set(token, { results, expires });
+}
+}
+shareStore.set(token, { results, expires });
+res.json({ success: true, token });
 });
-
 app.get('/share/:token', async (req, res) => {
-  const { token } = req.params;
-  let results = null;
-  // Try memory first
-  const mem = shareStore.get(token);
-  if (mem && mem.expires > Date.now()) results = mem.results;
-  // Try DB
-  if (!results) {
-    try {
-      const r = await pool.query(`SELECT results_json FROM share_results WHERE token=$1 AND expires_at > NOW()`, [token]);
-      if (r.rows.length) results = r.rows[0].results_json;
-    } catch(e) {}
-  }
-  if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
-
-  const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-  const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
-  const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
-  const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
-  const sameDomain = domains.length === 1;
-
-  const rows = results.map((r,i) => {
-    const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
-    const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
-    const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
-    const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
-    return `<tr style="border-bottom:1px solid #e5e7eb;">
-      <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td>
-      <td style="padding:12px 16px;">
-        <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
-        <div style="font-size:12px;color:#6b7280;">${path}</div>
-      </td>
-      <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
-      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#7e22ce;">${r.metrics?.graaf||0}/50</td>
-      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#1d4ed8;">${r.metrics?.craft||0}/30</td>
-      <td style="padding:12px 16px;text-align:center;font-size:13px;color:#b45309;">${r.metrics?.technical||0}/20</td>
-      <td style="padding:12px 16px;"><span style="background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">${lbl}</span></td>
-      <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
-    </tr>`;
-  }).join('');
-
-  const html = `<!DOCTYPE html><html lang="en"><head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title>
-    <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>
-  </head><body style="max-width:900px;margin:0 auto;">
-    <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
-        <div>
-          <div style="font-size:20px;font-weight:900;">ContentScale</div>
-          <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
-        </div>
-        <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div>
+const { token } = req.params;
+let results = null;
+// Try memory first
+const mem = shareStore.get(token);
+if (mem && mem.expires > Date.now()) results = mem.results;
+// Try DB
+if (!results) {
+try {
+const r = await pool.query(`SELECT results_json FROM share_results WHERE token=$1 AND expires_at > NOW()`, [token]);
+if (r.rows.length) results = r.rows[0].results_json;
+} catch(e) {}
+}
+if (!results) return res.status(404).send('
+<h1>Link expired or not found</h1>
+');
+const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
+const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
+const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+const sameDomain = domains.length === 1;
+const rows = results.map((r,i) => {
+const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
+const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
+const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
+const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
+return `
+<tr style="border-bottom:1px solid #e5e7eb;">
+   <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td>
+   <td style="padding:12px 16px;">
+      <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
+      <div style="font-size:12px;color:#6b7280;">${path}</div>
+   </td>
+   <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
+   <td style="padding:12px 16px;text-align:center;font-size:13px;color:#7e22ce;">${r.metrics?.graaf||0}/50</td>
+   <td style="padding:12px 16px;text-align:center;font-size:13px;color:#1d4ed8;">${r.metrics?.craft||0}/30</td>
+   <td style="padding:12px 16px;text-align:center;font-size:13px;color:#b45309;">${r.metrics?.technical||0}/20</td>
+   <td style="padding:12px 16px;"><span style="background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">${lbl}</span></td>
+   <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
+</tr>
+`;
+}).join('');
+const html = `<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0">
+      <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title>
+      <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>
+   </head>
+   <body style="max-width:900px;margin:0 auto;">
+      <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+            <div>
+               <div style="font-size:20px;font-weight:900;">ContentScale</div>
+               <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+            </div>
+            <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div>
+         </div>
+         <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
+         <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p>
       </div>
-      <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
-      <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p>
-    </div>
-    ${sameDomain?`<div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;">
-      <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
-      <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${avgScore}</div>
-      <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div>
-    </div>`:''}
-    <div style="padding:32px 40px;overflow-x:auto;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
-        <thead><tr style="background:#f5f3ff;">
-          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
-          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">URL</th>
-          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#6b7280;">Score</th>
-          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#7e22ce;">GRAAF</th>
-          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#1d4ed8;">CRAFT</th>
-          <th style="padding:12px 16px;text-align:center;font-size:12px;color:#b45309;">Technical</th>
-          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Tier</th>
-          <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-      <div><div style="color:white;font-weight:700;font-size:14px;">ContentScale</div><div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div></div>
-      <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a>
-    </div>
-    <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
-  </body></html>`;
-  res.send(html);
+      ${sameDomain?`
+      <div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;">
+         <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
+         <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${avgScore}</div>
+         <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div>
+      </div>
+      `:''}
+      <div style="padding:32px 40px;overflow-x:auto;">
+         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+            <thead>
+               <tr style="background:#f5f3ff;">
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">URL</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#6b7280;">Score</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#7e22ce;">GRAAF</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#1d4ed8;">CRAFT</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#b45309;">Technical</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Tier</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th>
+               </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+         </table>
+      </div>
+      <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+         <div>
+            <div style="color:white;font-weight:700;font-size:14px;">ContentScale</div>
+            <div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div>
+         </div>
+         <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a>
+      </div>
+      <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
+   </body>
+</html>
+`;
+res.send(html);
 });
-
 function computeScore(scanUrl, analysis, extractedEmails) {
-  extractedEmails = extractedEmails || [];
+extractedEmails = extractedEmails || [];
 // ── SCORING ──
 let graafScore = 0;
 if (analysis.wordCount >= 2500)      graafScore += 10;
@@ -1408,7 +1424,9 @@ if (!analysis.hasAuthorBio) {
 recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
 }
 if (!analysis.hasArticleSchema) {
-recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
+recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your 
+<head>
+   with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
    }
    if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
    recommendations.push({ title: '🛠️ Add FAQPage Schema to Your FAQ Section', description: 'FAQ content detected but no FAQPage schema found.', priority: 'high', action: "Generate FAQPage JSON-LD for all your FAQ questions.", learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.", target: 'FAQPage JSON-LD with all Q&A pairs marked up' });
@@ -1416,17 +1434,27 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
    recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
    }
    if (!analysis.hasCanonical) {
-   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
+   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add 
+   <link rel="canonical" href="...">
+   to your 
+   <head>
+      .`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in 
+      <head>
+         ' });
          }
          if (analysis.metaTitleLength === 0) {
-         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
+         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a 
+         <title>
+            tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
             } else if (analysis.metaTitleLength < 40) {
             recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
             } else if (analysis.metaTitleLength > 65) {
             recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
             }
             if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a 
+            <meta name=\"description\">
+            with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
             } else if (analysis.metaDescriptionLength < 100) {
             recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
             } else if (analysis.metaDescriptionLength > 165) {
@@ -1446,7 +1474,9 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
             recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
             }
             if (!analysis.hasOpenGraph) {
-            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your 
+            <head>
+               .", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
                }
                const finalRecommendations = recommendations.length > 0 ? recommendations : [{
                title: '🏆 Elite Content — Outstanding Work!',
@@ -1485,407 +1515,390 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                timestamp: new Date().toISOString()
                };
                console.log(`✅ computeScore: ${scanUrl} → ${totalScore}/100`);
-  return result;
-}
-
-
-// ============================================================
-// ============================================================
-// SERVER-SIDE BULK JOB QUEUE — ROBUST VERSION
-// Fixes: concurrency limit, own browser per job, DB persistence,
-//        500 URL cap, 1 active job per user, auto-cleanup, jitter
-// ============================================================
-const bulkJobs = new Map();          // in-memory mirror for fast polling
-const JOB_MAX_URLS   = 500;          // hard cap per job
-const JOB_CONCUR     = 2;            // max parallel jobs
-const JOB_TTL_MS     = 24*60*60*1000;// clean up after 24h
-let   activeJobCount = 0;
-const jobQueue       = [];           // waiting jobs when at concur limit
-
-// ── DB table for job persistence ─────────────────────────────
-async function ensureBulkJobsTable() {
-  if (!pool) return;
-  try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS bulk_jobs (
-      id TEXT PRIMARY KEY,
-      user_id TEXT,
-      status TEXT DEFAULT 'queued',
-      total INTEGER DEFAULT 0,
-      done INTEGER DEFAULT 0,
-      failed INTEGER DEFAULT 0,
-      results JSONB DEFAULT '[]',
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    )`);
-  } catch(e) { console.error('bulk_jobs table error:', e.message); }
-}
-ensureBulkJobsTable();
-
-// Persist job snapshot to DB (fire-and-forget, don't await in hot path)
-function persistJob(job) {
-  if (!pool) return;
-  pool.query(
-    'INSERT INTO bulk_jobs(id,user_id,status,total,done,failed,results,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,NOW()) ON CONFLICT(id) DO UPDATE SET status=$3,done=$5,failed=$6,results=$7,updated_at=NOW()',
-    [job.id, job.userId||'anon', job.status, job.total, job.done, job.failed, JSON.stringify(job.results)]
-  ).catch(e => console.error('persistJob error:', e.message));
-}
-
-// Clean up old jobs from memory
-function cleanOldJobs() {
-  const cutoff = Date.now() - JOB_TTL_MS;
-  for (const [id, job] of bulkJobs) {
-    if (job.createdAt < cutoff) bulkJobs.delete(id);
-  }
-}
-setInterval(cleanOldJobs, 60*60*1000); // hourly
-
-// ── Own browser per job — no shared state ────────────────────
-async function launchJobBrowser() {
-  return puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--memory-pressure-off']
-  }).catch(err => { console.error('Job browser launch failed:', err.message); return null; });
-}
-
-// ── Core page analysis — shared by bulk jobs and campaign ────
-async function internalScanPage(page, scanUrl) {
-  const analysis = await page.evaluate((su) => {
-    const text = document.body ? document.body.innerText : '';
-    const cleanText = text.replace(/\s+/g, ' ').trim();
-    const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-    const rawHtml = document.documentElement.outerHTML;
-    const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
-    h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
-    const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
-    const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
-    const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
-    const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
-    const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length;
-    const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
-    const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
-    const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
-    const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
-    const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
-    const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOrganizationSchema=flatSchemas.some(s=>['Organization','LocalBusiness','WebSite'].includes(s['@type']));
-    const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
-    const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
-    const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
-    const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
-    const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
-    const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema;
-    const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
-    let host=''; try{host=new URL(su).hostname;}catch(e){}
-    const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
-    const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
-    const expertQuoteCount=(rawHtml.match(/<blockquote/gi)||[]).length;
-    const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after/g)||[]).length;
-    const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
-    const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-    const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
-    return {wordCount,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
-  }, scanUrl);
-  return computeScore(scanUrl, analysis);
-}
-
-async function scanOneUrlWithBrowser(rawUrl, browser) {
-  const scanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
-  const page = await browser.newPage();
-  try {
-    await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
-    await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
-    // Block images/fonts/media to save memory and speed up
-    await page.setRequestInterception(true);
-    page.on('request', req => {
-      const rt = req.resourceType();
-      if (['image','media','font','stylesheet'].includes(rt)) req.abort();
-      else req.continue();
-    });
-    try {
-      await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
-      await new Promise(r => setTimeout(r, 800)); // let JS render
-    } catch(e) {
-      // Site unreachable/blocked — skip gracefully, don't waste retry time
-      throw new Error('skip:' + e.message.substring(0,60));
-    }
-    return await internalScanPage(page, scanUrl);
-  } finally { try { await page.close(); } catch(e) {} }
-}
-
-// ── Run a job (called when slot opens) ───────────────────────
-async function runBulkJob(job) {
-  activeJobCount++;
-  job.status = 'running';
-  persistJob(job);
-  let browser = null;
-  try {
-    browser = await launchJobBrowser();
-    if (!browser) throw new Error('Could not launch browser');
-    // Delay: 2s base + 0-1s jitter — gentler on target site
-    const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
-    for (const url of job.urls) {
-      if (job.status === 'cancelled') break;
-      let result = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try { result = await scanOneUrlWithBrowser(url, browser); break; }
-        catch(e) {
-          const isSkip = e.message.startsWith('skip:');
-          if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
-          else await new Promise(r => setTimeout(r, 2000));
-        }
-      }
-      // Trim result to save memory: keep only essentials for bulk view
-      const slim = result.success ? {
-        success: true, url: result.url, score: result.score, quality: result.quality,
-        metrics: result.metrics,
-        content_stats: { wordCount: result.content_stats?.wordCount, h1Text: result.content_stats?.h1Text }
-      } : { success: false, url, error: result.error, score: 0 };
-      job.results.push(slim);
-      job.done++;
-      if (!result || !result.success) job.failed++;
-      // Persist every 25 pages
-      if (job.done % 25 === 0) persistJob(job);
-      await delay();
-    }
-    job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
-  } catch(e) {
-    job.status = 'error';
-    job.error = e.message;
-    console.error('Job ' + job.id + ' fatal:', e.message);
-  } finally {
-    if (browser) try { await browser.close(); } catch(e) {}
-    activeJobCount--;
-    persistJob(job);
-    console.log(`✅ Job ${job.id}: ${job.done}/${job.total} done, ${job.failed} failed`);
-    // Drain queue
-    if (jobQueue.length > 0) {
-      const next = jobQueue.shift();
-      runBulkJob(next);
-    }
-  }
-}
-
-// Start bulk job endpoint
-app.post('/api/scan/bulk-job', async (req, res) => {
-  const { urls } = req.body;
-  const userId = req.headers['x-user-id'] || 'anon';
-  if (!Array.isArray(urls) || !urls.length)
-    return res.status(400).json({ success: false, error: 'urls array required' });
-
-  // Check user already has active job
-  for (const [, j] of bulkJobs) {
-    if (j.userId === userId && (j.status === 'running' || j.status === 'queued'))
-      return res.status(429).json({ success: false, error: 'You already have an active scan job. Wait for it to finish or cancel it first.' });
-  }
-
-  // Cap at 500
-  const capped = urls.slice(0, JOB_MAX_URLS);
-  const jobId = crypto.randomBytes(8).toString('hex');
-  const job = {
-    id: jobId, userId,
-    status: activeJobCount < JOB_CONCUR ? 'running' : 'queued',
-    total: capped.length, done: 0, failed: 0, results: [],
-    urls: capped, createdAt: Date.now()
-  };
-  bulkJobs.set(jobId, job);
-  persistJob(job);
-  res.json({ success: true, jobId, total: capped.length, capped: capped.length < urls.length, queued: activeJobCount >= JOB_CONCUR });
-
-  if (activeJobCount < JOB_CONCUR) runBulkJob(job);
-  else jobQueue.push(job);
-});
-
-// Poll job
-app.get('/api/scan/bulk-job/:jobId', async (req, res) => {
-  let job = bulkJobs.get(req.params.jobId);
-  // Fallback: load from DB if not in memory (after restart)
-  if (!job && pool) {
-    try {
-      const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=', [req.params.jobId]);
-      if (row.rows[0]) {
-        const r = row.rows[0];
-        job = { id: r.id, userId: r.user_id, status: r.status, total: r.total, done: r.done, failed: r.failed, results: r.results, createdAt: new Date(r.created_at).getTime() };
-        bulkJobs.set(job.id, job); // re-cache
-      }
-    } catch(e) {}
-  }
-  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
-  res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results, error: job.error||null });
-});
-
-// Cancel job
-app.post('/api/scan/bulk-job/:jobId/cancel', (req, res) => {
-  const job = bulkJobs.get(req.params.jobId);
-  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
-  job.status = 'cancelled';
-  // Also remove from queue if waiting
-  const qi = jobQueue.findIndex(j => j.id === job.id);
-  if (qi !== -1) jobQueue.splice(qi, 1);
-  persistJob(job);
-  res.json({ success: true });
-});
-
-
-// ============================================
-app.post('/api/scan', async (req, res) => {
-const { url } = req.body;
-if (!url) return res.status(400).json({ success: false, error: 'URL required' });
-let scanUrl = url.startsWith('http') ? url : 'https://' + url;
-try {
-console.log(`🔍 Elite Scanning: ${scanUrl}`);
-const browser = await getBrowser();
-if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
-const page = await browser.newPage();
-await page.setViewport({ width: 1920, height: 1080 });
-await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
-const analysis = await page.evaluate((scanUrlParam) => {
-const text = document.body ? document.body.innerText : '';
-const cleanText = text.replace(/\s+/g, ' ').trim();
-const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-const rawHtml = document.documentElement.outerHTML;
-const h1Els = document.querySelectorAll('h1');
-const h1Count = h1Els.length;
-let h1Text = '';
-let h1IsHidden = false;
-let h1VisibleCount = 0;
-h1Els.forEach(el => {
-const style = window.getComputedStyle(el);
-const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
-if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
-else { h1IsHidden = true; }
-});
-const h1Length = h1Text.length;
-const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
-const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
-const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
-const h1IsTooLong  = h1Text.length > 70;
-const h2Count = document.querySelectorAll('h2').length;
-const h3Count = document.querySelectorAll('h3').length;
-const listItemCount = document.querySelectorAll('li').length;
-const paragraphs = Array.from(document.querySelectorAll('p'));
-const avgParagraphLength = paragraphs.length > 0
-? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
-: 0;
-const metaTitle = (document.querySelector('title') || {}).textContent || '';
-const metaTitleLength = metaTitle.length;
-const metaDescEl = document.querySelector('meta[name="description"]');
-const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
-const metaDescriptionLength = metaDescription.length;
-const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
-const hasCanonical = !!document.querySelector('link[rel="canonical"]');
-const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
-const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
-const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-let hasArticleSchema = false;
-let hasFAQPageSchema = false;
-let hasOrganizationSchema = false;
-const checkSchemaType = (typeVal) => {
-if (!typeVal) return;
-const types = Array.isArray(typeVal) ? typeVal : [typeVal];
-if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
-if (types.includes('FAQPage')) hasFAQPageSchema = true;
-if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
-};
-schemaScripts.forEach(script => {
-try {
-const data = JSON.parse(script.textContent);
-if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
-else {
-checkSchemaType(data['@type']);
-if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
-}
-} catch (e) {}
-});
-const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
-h.textContent.toLowerCase().includes('faq') ||
-h.textContent.toLowerCase().includes('frequently asked') ||
-h.textContent.toLowerCase().includes('common question')
-);
-const images = document.querySelectorAll('img');
-const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
-let baseHostname = '';
-try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
-const allLinks = Array.from(document.querySelectorAll('a[href]'));
-const internalLinks = allLinks.filter(a => {
-try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
-}).length;
-const externalLinks = allLinks.filter(a => {
-try {
-const h = new URL(a.href).hostname.replace('www.', '');
-return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
-} catch (e) { return false; }
-}).length;
-let expertQuoteCount = 0;
-document.querySelectorAll('blockquote').forEach(bq => {
-const cite = bq.querySelector('cite');
-if (bq.textContent.trim().length > 30 && cite && cite.textContent.trim().length > 3) expertQuoteCount++;
-});
-const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
-testimonialSelectors.forEach(sel => {
-try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
-});
-let caseStudyCount = 0;
-const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
-const seen = new Set();
-document.querySelectorAll('section, article').forEach(el => {
-if (seen.has(el)) return;
-const txt = el.textContent.toLowerCase();
-const len = txt.length;
-if (len > 300 && len < 6000) {
-const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
-const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
-if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
-}
-});
-const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
-const statsFound = (cleanText.match(statsPattern) || []).length;
-const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
-const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
-const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
-(() => {
-const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
-for (const list of earlyLists) {
-const items = list.querySelectorAll('li');
-if (items.length >= 3) {
-const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
-const listText = list.innerText || '';
-const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
-if (listPos < bodyLen * 0.5) return true;
-}
-}
-return false;
-})();
-const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
-!!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
-const hasAuthorBio = (
-!!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
-/about the author|written by/i.test(rawHtml)
-) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
-return {
-wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
-metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
-hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
-hasFAQContent, images: images.length, imagesWithAlt,
-internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
-statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
-};
-}, scanUrl);
-let extractedEmails = [];
-try {
-const pageHtml = await page.content();
-const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
-const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
-const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
-!e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
-!e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
-);
-extractedEmails = allEmails.slice(0, 3);
-} catch (e) {}
-await page.close();
-// ── SCORING ──
-const result = computeScore(scanUrl, analysis, extractedEmails);
-console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
-res.json(result);
+               return result;
+               }
+               // ============================================================
+               // ============================================================
+               // SERVER-SIDE BULK JOB QUEUE — ROBUST VERSION
+               // Fixes: concurrency limit, own browser per job, DB persistence,
+               //        500 URL cap, 1 active job per user, auto-cleanup, jitter
+               // ============================================================
+               const bulkJobs = new Map();          // in-memory mirror for fast polling
+               const JOB_MAX_URLS   = 500;          // hard cap per job
+               const JOB_CONCUR     = 2;            // max parallel jobs
+               const JOB_TTL_MS     = 24*60*60*1000;// clean up after 24h
+               let   activeJobCount = 0;
+               const jobQueue       = [];           // waiting jobs when at concur limit
+               // ── DB table for job persistence ─────────────────────────────
+               async function ensureBulkJobsTable() {
+               if (!pool) return;
+               try {
+               await pool.query(`CREATE TABLE IF NOT EXISTS bulk_jobs (
+               id TEXT PRIMARY KEY,
+               user_id TEXT,
+               status TEXT DEFAULT 'queued',
+               total INTEGER DEFAULT 0,
+               done INTEGER DEFAULT 0,
+               failed INTEGER DEFAULT 0,
+               results JSONB DEFAULT '[]',
+               created_at TIMESTAMP DEFAULT NOW(),
+               updated_at TIMESTAMP DEFAULT NOW()
+               )`);
+               } catch(e) { console.error('bulk_jobs table error:', e.message); }
+               }
+               ensureBulkJobsTable();
+               // Persist job snapshot to DB (fire-and-forget, don't await in hot path)
+               function persistJob(job) {
+               if (!pool) return;
+               pool.query(
+               'INSERT INTO bulk_jobs(id,user_id,status,total,done,failed,results,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,NOW()) ON CONFLICT(id) DO UPDATE SET status=$3,done=$5,failed=$6,results=$7,updated_at=NOW()',
+               [job.id, job.userId||'anon', job.status, job.total, job.done, job.failed, JSON.stringify(job.results)]
+               ).catch(e => console.error('persistJob error:', e.message));
+               }
+               // Clean up old jobs from memory
+               function cleanOldJobs() {
+               const cutoff = Date.now() - JOB_TTL_MS;
+               for (const [id, job] of bulkJobs) {
+               if (job.createdAt < cutoff) bulkJobs.delete(id);
+               }
+               }
+               setInterval(cleanOldJobs, 60*60*1000); // hourly
+               // ── Own browser per job — no shared state ────────────────────
+               async function launchJobBrowser() {
+               return puppeteer.launch({
+               headless: 'new',
+               args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--memory-pressure-off']
+               }).catch(err => { console.error('Job browser launch failed:', err.message); return null; });
+               }
+               // ── Core page analysis — shared by bulk jobs and campaign ────
+               async function internalScanPage(page, scanUrl) {
+               const analysis = await page.evaluate((su) => {
+               const text = document.body ? document.body.innerText : '';
+               const cleanText = text.replace(/\s+/g, ' ').trim();
+               const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               const rawHtml = document.documentElement.outerHTML;
+               const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
+               h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
+               const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
+               const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
+               const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
+               const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
+               const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length;
+               const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
+               const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
+               const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
+               const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
+               const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
+               const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOrganizationSchema=flatSchemas.some(s=>['Organization','LocalBusiness','WebSite'].includes(s['@type']));
+               const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
+               const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
+               const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
+               const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
+               const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
+               const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema;
+               const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
+               let host=''; try{host=new URL(su).hostname;}catch(e){}
+               const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
+               const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
+               const expertQuoteCount=(rawHtml.match(/<blockquote/gi)||[]).length;
+               const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after/g)||[]).length;
+               const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
+               const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+               const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
+               return {wordCount,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
+               }, scanUrl);
+               return computeScore(scanUrl, analysis);
+               }
+               async function scanOneUrlWithBrowser(rawUrl, browser) {
+               const scanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
+               const page = await browser.newPage();
+               try {
+               await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
+               await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+               // Block images/fonts/media to save memory and speed up
+               await page.setRequestInterception(true);
+               page.on('request', req => {
+               const rt = req.resourceType();
+               if (['image','media','font','stylesheet'].includes(rt)) req.abort();
+               else req.continue();
+               });
+               try {
+               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
+               await new Promise(r => setTimeout(r, 800)); // let JS render
+               } catch(e) {
+               // Site unreachable/blocked — skip gracefully, don't waste retry time
+               throw new Error('skip:' + e.message.substring(0,60));
+               }
+               return await internalScanPage(page, scanUrl);
+               } finally { try { await page.close(); } catch(e) {} }
+               }
+               // ── Run a job (called when slot opens) ───────────────────────
+               async function runBulkJob(job) {
+               activeJobCount++;
+               job.status = 'running';
+               persistJob(job);
+               let browser = null;
+               try {
+               browser = await launchJobBrowser();
+               if (!browser) throw new Error('Could not launch browser');
+               // Delay: 2s base + 0-1s jitter — gentler on target site
+               const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+               for (const url of job.urls) {
+               if (job.status === 'cancelled') break;
+               let result = null;
+               for (let attempt = 0; attempt < 2; attempt++) {
+               try { result = await scanOneUrlWithBrowser(url, browser); break; }
+               catch(e) {
+               const isSkip = e.message.startsWith('skip:');
+               if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
+               else await new Promise(r => setTimeout(r, 2000));
+               }
+               }
+               // Trim result to save memory: keep only essentials for bulk view
+               const slim = result.success ? {
+               success: true, url: result.url, score: result.score, quality: result.quality,
+               metrics: result.metrics,
+               content_stats: { wordCount: result.content_stats?.wordCount, h1Text: result.content_stats?.h1Text }
+               } : { success: false, url, error: result.error, score: 0 };
+               job.results.push(slim);
+               job.done++;
+               if (!result || !result.success) job.failed++;
+               // Persist every 25 pages
+               if (job.done % 25 === 0) persistJob(job);
+               await delay();
+               }
+               job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
+               } catch(e) {
+               job.status = 'error';
+               job.error = e.message;
+               console.error('Job ' + job.id + ' fatal:', e.message);
+               } finally {
+               if (browser) try { await browser.close(); } catch(e) {}
+               activeJobCount--;
+               persistJob(job);
+               console.log(`✅ Job ${job.id}: ${job.done}/${job.total} done, ${job.failed} failed`);
+               // Drain queue
+               if (jobQueue.length > 0) {
+               const next = jobQueue.shift();
+               runBulkJob(next);
+               }
+               }
+               }
+               // Start bulk job endpoint
+               app.post('/api/scan/bulk-job', async (req, res) => {
+               const { urls } = req.body;
+               const userId = req.headers['x-user-id'] || 'anon';
+               if (!Array.isArray(urls) || !urls.length)
+               return res.status(400).json({ success: false, error: 'urls array required' });
+               // Check user already has active job
+               for (const [, j] of bulkJobs) {
+               if (j.userId === userId && (j.status === 'running' || j.status === 'queued'))
+               return res.status(429).json({ success: false, error: 'You already have an active scan job. Wait for it to finish or cancel it first.' });
+               }
+               // Cap at 500
+               const capped = urls.slice(0, JOB_MAX_URLS);
+               const jobId = crypto.randomBytes(8).toString('hex');
+               const job = {
+               id: jobId, userId,
+               status: activeJobCount < JOB_CONCUR ? 'running' : 'queued',
+               total: capped.length, done: 0, failed: 0, results: [],
+               urls: capped, createdAt: Date.now()
+               };
+               bulkJobs.set(jobId, job);
+               persistJob(job);
+               res.json({ success: true, jobId, total: capped.length, capped: capped.length < urls.length, queued: activeJobCount >= JOB_CONCUR });
+               if (activeJobCount < JOB_CONCUR) runBulkJob(job);
+               else jobQueue.push(job);
+               });
+               // Poll job
+               app.get('/api/scan/bulk-job/:jobId', async (req, res) => {
+               let job = bulkJobs.get(req.params.jobId);
+               // Fallback: load from DB if not in memory (after restart)
+               if (!job && pool) {
+               try {
+               const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=', [req.params.jobId]);
+               if (row.rows[0]) {
+               const r = row.rows[0];
+               job = { id: r.id, userId: r.user_id, status: r.status, total: r.total, done: r.done, failed: r.failed, results: r.results, createdAt: new Date(r.created_at).getTime() };
+               bulkJobs.set(job.id, job); // re-cache
+               }
+               } catch(e) {}
+               }
+               if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+               res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results, error: job.error||null });
+               });
+               // Cancel job
+               app.post('/api/scan/bulk-job/:jobId/cancel', (req, res) => {
+               const job = bulkJobs.get(req.params.jobId);
+               if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+               job.status = 'cancelled';
+               // Also remove from queue if waiting
+               const qi = jobQueue.findIndex(j => j.id === job.id);
+               if (qi !== -1) jobQueue.splice(qi, 1);
+               persistJob(job);
+               res.json({ success: true });
+               });
+               // ============================================
+               app.post('/api/scan', async (req, res) => {
+               const { url } = req.body;
+               if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+               let scanUrl = url.startsWith('http') ? url : 'https://' + url;
+               try {
+               console.log(`🔍 Elite Scanning: ${scanUrl}`);
+               const browser = await getBrowser();
+               if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
+               const page = await browser.newPage();
+               await page.setViewport({ width: 1920, height: 1080 });
+               await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               const analysis = await page.evaluate((scanUrlParam) => {
+               const text = document.body ? document.body.innerText : '';
+               const cleanText = text.replace(/\s+/g, ' ').trim();
+               const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               const rawHtml = document.documentElement.outerHTML;
+               const h1Els = document.querySelectorAll('h1');
+               const h1Count = h1Els.length;
+               let h1Text = '';
+               let h1IsHidden = false;
+               let h1VisibleCount = 0;
+               h1Els.forEach(el => {
+               const style = window.getComputedStyle(el);
+               const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+               if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
+               else { h1IsHidden = true; }
+               });
+               const h1Length = h1Text.length;
+               const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
+               const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
+               const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+               const h1IsTooLong  = h1Text.length > 70;
+               const h2Count = document.querySelectorAll('h2').length;
+               const h3Count = document.querySelectorAll('h3').length;
+               const listItemCount = document.querySelectorAll('li').length;
+               const paragraphs = Array.from(document.querySelectorAll('p'));
+               const avgParagraphLength = paragraphs.length > 0
+               ? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
+               : 0;
+               const metaTitle = (document.querySelector('title') || {}).textContent || '';
+               const metaTitleLength = metaTitle.length;
+               const metaDescEl = document.querySelector('meta[name="description"]');
+               const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
+               const metaDescriptionLength = metaDescription.length;
+               const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
+               const hasCanonical = !!document.querySelector('link[rel="canonical"]');
+               const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
+               const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
+               const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+               let hasArticleSchema = false;
+               let hasFAQPageSchema = false;
+               let hasOrganizationSchema = false;
+               const checkSchemaType = (typeVal) => {
+               if (!typeVal) return;
+               const types = Array.isArray(typeVal) ? typeVal : [typeVal];
+               if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
+               if (types.includes('FAQPage')) hasFAQPageSchema = true;
+               if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
+               };
+               schemaScripts.forEach(script => {
+               try {
+               const data = JSON.parse(script.textContent);
+               if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
+               else {
+               checkSchemaType(data['@type']);
+               if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
+               }
+               } catch (e) {}
+               });
+               const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
+               h.textContent.toLowerCase().includes('faq') ||
+               h.textContent.toLowerCase().includes('frequently asked') ||
+               h.textContent.toLowerCase().includes('common question')
+               );
+               const images = document.querySelectorAll('img');
+               const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
+               let baseHostname = '';
+               try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
+               const allLinks = Array.from(document.querySelectorAll('a[href]'));
+               const internalLinks = allLinks.filter(a => {
+               try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
+               }).length;
+               const externalLinks = allLinks.filter(a => {
+               try {
+               const h = new URL(a.href).hostname.replace('www.', '');
+               return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
+               } catch (e) { return false; }
+               }).length;
+               let expertQuoteCount = 0;
+               document.querySelectorAll('blockquote').forEach(bq => {
+               const cite = bq.querySelector('cite');
+               if (bq.textContent.trim().length > 30 && cite && cite.textContent.trim().length > 3) expertQuoteCount++;
+               });
+               const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
+               testimonialSelectors.forEach(sel => {
+               try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
+               });
+               let caseStudyCount = 0;
+               const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
+               const seen = new Set();
+               document.querySelectorAll('section, article').forEach(el => {
+               if (seen.has(el)) return;
+               const txt = el.textContent.toLowerCase();
+               const len = txt.length;
+               if (len > 300 && len < 6000) {
+               const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
+               const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
+               if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
+               }
+               });
+               const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
+               const statsFound = (cleanText.match(statsPattern) || []).length;
+               const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+               const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
+               const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
+               (() => {
+               const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
+               for (const list of earlyLists) {
+               const items = list.querySelectorAll('li');
+               if (items.length >= 3) {
+               const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
+               const listText = list.innerText || '';
+               const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
+               if (listPos < bodyLen * 0.5) return true;
+               }
+               }
+               return false;
+               })();
+               const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
+               !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
+               const hasAuthorBio = (
+               !!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
+               /about the author|written by/i.test(rawHtml)
+               ) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
+               return {
+               wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
+               metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
+               hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+               hasFAQContent, images: images.length, imagesWithAlt,
+               internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
+               statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
+               };
+               }, scanUrl);
+               let extractedEmails = [];
+               try {
+               const pageHtml = await page.content();
+               const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
+               const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
+               const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
+               !e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+               !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
+               );
+               extractedEmails = allEmails.slice(0, 3);
+               } catch (e) {}
+               await page.close();
+               // ── SCORING ──
+               const result = computeScore(scanUrl, analysis, extractedEmails);
+               console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+               res.json(result);
                } catch (error) {
                console.error('❌ Scan error:', error.message);
                res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
@@ -1949,10 +1962,14 @@ res.json(result);
                } catch (e) { res.status(500).json({ success: false, error: e.message }); }
                });
                app.get('/report/:id', async (req, res) => {
-               if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
+               if (!pool) return res.status(503).send('
+               <h1>Service unavailable</h1>
+               ');
                try {
                const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
-               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
+               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html>
+               <html>
+<body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
 const report = r.rows[0];
 let recs = [];
 try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
@@ -2396,497 +2413,467 @@ console.error('Instantly push error:', e.message);
 res.status(500).json({ success: false, error: e.message });
 }
 });
-
 // ============================================================
 // 🎯 CAMPAIGN ENGINE — Weekend Bulk Domain Scanner
 // Flow: domains → fetch sitemaps → queue jobs → extract email
 //       → create share URL → push to Instantly
 // ============================================================
-
 const campaigns = new Map(); // campaignId → campaign state
-
 async function ensureCampaignsTable() {
-  if (!pool) return;
-  try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS campaigns (
-      id TEXT PRIMARY KEY,
-      name TEXT,
-      status TEXT DEFAULT 'running',
-      total_domains INTEGER DEFAULT 0,
-      done_domains INTEGER DEFAULT 0,
-      domains JSONB DEFAULT '[]',
-      instantly_campaign_id TEXT,
-      instantly_api_key TEXT,
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    )`);
-    // Migration: add instantly_api_key column if missing
-    await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS instantly_api_key TEXT`).catch(()=>{});
-  } catch(e) { console.error('campaigns table error:', e.message); }
+if (!pool) return;
+try {
+await pool.query(`CREATE TABLE IF NOT EXISTS campaigns (
+id TEXT PRIMARY KEY,
+name TEXT,
+status TEXT DEFAULT 'running',
+total_domains INTEGER DEFAULT 0,
+done_domains INTEGER DEFAULT 0,
+domains JSONB DEFAULT '[]',
+instantly_campaign_id TEXT,
+instantly_api_key TEXT,
+created_at TIMESTAMP DEFAULT NOW(),
+updated_at TIMESTAMP DEFAULT NOW()
+)`);
+// Migration: add instantly_api_key column if missing
+await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS instantly_api_key TEXT`).catch(()=>{});
+} catch(e) { console.error('campaigns table error:', e.message); }
 }
 ensureCampaignsTable();
-
 function persistCampaign(c) {
-  if (!pool) return;
-  const slim = { ...c, domains: c.domains.map(d => ({
-    domain: d.domain, status: d.status, score: d.score,
-    email: d.email, shareUrl: d.shareUrl, instantlyStatus: d.instantlyStatus,
-    error: d.error, pageCount: d.pageCount
-  }))};
-  pool.query(
-    `INSERT INTO campaigns(id,name,status,total_domains,done_domains,domains,instantly_campaign_id,instantly_api_key,updated_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW())
-     ON CONFLICT(id) DO UPDATE SET status=$3,done_domains=$5,domains=$6,updated_at=NOW()`,
-    [slim.id, slim.name||'Campaign', slim.status, slim.totalDomains, slim.doneDomains,
-     JSON.stringify(slim.domains), slim.instantlyCampaignId||null, slim.instantlyApiKey||null]
-  ).catch(e => console.error('persistCampaign:', e.message));
+if (!pool) return;
+const slim = { ...c, domains: c.domains.map(d => ({
+domain: d.domain, status: d.status, score: d.score,
+email: d.email, shareUrl: d.shareUrl, instantlyStatus: d.instantlyStatus,
+error: d.error, pageCount: d.pageCount
+}))};
+pool.query(
+`INSERT INTO campaigns(id,name,status,total_domains,done_domains,domains,instantly_campaign_id,instantly_api_key,updated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+ON CONFLICT(id) DO UPDATE SET status=$3,done_domains=$5,domains=$6,updated_at=NOW()`,
+[slim.id, slim.name||'Campaign', slim.status, slim.totalDomains, slim.doneDomains,
+JSON.stringify(slim.domains), slim.instantlyCampaignId||null, slim.instantlyApiKey||null]
+).catch(e => console.error('persistCampaign:', e.message));
 }
-
 // Fetch sitemap URLs for a domain
 async function fetchSitemapUrls(domain) {
-  const base = domain.startsWith('http') ? domain : 'https://' + domain;
-  const host = new URL(base).hostname;
-  const candidates = [
-    base + '/sitemap.xml',
-    base + '/sitemap_index.xml',
-    base + '/sitemap-index.xml',
-    base + '/wp-sitemap.xml',
-  ];
-  // Also check robots.txt
-  try {
-    const rb = await fetch(base + '/robots.txt', { signal: AbortSignal.timeout(8000) });
-    if (rb.ok) {
-      const txt = await rb.text();
-      const matches = txt.match(/Sitemap:\s*(\S+)/gi) || [];
-      matches.forEach(m => { const u = m.replace(/Sitemap:\s*/i,'').trim(); if (!candidates.includes(u)) candidates.unshift(u); });
-    }
-  } catch(e) {}
-
-  for (const url of candidates) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
-      if (!r.ok) continue;
-      const xml = await r.text();
-      // Sub-sitemap index?
-      const subMatches = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
-      if (subMatches.length > 0) {
-        let allUrls = [];
-        for (const sub of subMatches.slice(0, 20)) {
-          try {
-            const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
-            if (!sr.ok) continue;
-            const sx = await sr.text();
-            const us = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
-            allUrls = allUrls.concat(us);
-          } catch(e) {}
-        }
-        if (allUrls.length > 0) return { urls: allUrls, sitemapUrl: url };
-      }
-      // Direct URLs
-      const urls = [...xml.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)]
-        .map(m => m[1]).filter(u => !u.endsWith('.xml'));
-      if (urls.length > 0) return { urls, sitemapUrl: url };
-    } catch(e) {}
-  }
-  return { urls: [], sitemapUrl: null };
+const base = domain.startsWith('http') ? domain : 'https://' + domain;
+const host = new URL(base).hostname;
+const candidates = [
+base + '/sitemap.xml',
+base + '/sitemap_index.xml',
+base + '/sitemap-index.xml',
+base + '/wp-sitemap.xml',
+];
+// Also check robots.txt
+try {
+const rb = await fetch(base + '/robots.txt', { signal: AbortSignal.timeout(8000) });
+if (rb.ok) {
+const txt = await rb.text();
+const matches = txt.match(/Sitemap:\s*(\S+)/gi) || [];
+matches.forEach(m => { const u = m.replace(/Sitemap:\s*/i,'').trim(); if (!candidates.includes(u)) candidates.unshift(u); });
 }
-
+} catch(e) {}
+for (const url of candidates) {
+try {
+const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+if (!r.ok) continue;
+const xml = await r.text();
+// Sub-sitemap index?
+const subMatches = [...xml.matchAll(/
+<loc>
+(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
+if (subMatches.length > 0) {
+let allUrls = [];
+for (const sub of subMatches.slice(0, 20)) {
+try {
+const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
+if (!sr.ok) continue;
+const sx = await sr.text();
+const us = [...sx.matchAll(/
+<loc>
+(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+allUrls = allUrls.concat(us);
+} catch(e) {}
+}
+if (allUrls.length > 0) return { urls: allUrls, sitemapUrl: url };
+}
+// Direct URLs
+const urls = [...xml.matchAll(/
+<loc>
+(https?:\/\/[^<]+)<\/loc>/gi)]
+.map(m => m[1]).filter(u => !u.endsWith('.xml'));
+if (urls.length > 0) return { urls, sitemapUrl: url };
+} catch(e) {}
+}
+return { urls: [], sitemapUrl: null };
+}
 // Extract best email for a domain — scans contact/about pages
 async function extractDomainEmail(domain, scannedResults) {
-  // 1. From already-scanned pages
-  for (const r of scannedResults) {
-    const em = r.content_stats?.emails_found?.[0] || r.content_stats?.extractedEmail;
-    if (em && em.includes('@') && !em.includes('example') && !em.includes('sentry')) return em;
-  }
-  // 2. Scrape contact/about/impressum pages specifically
-  const base = domain.startsWith('http') ? domain : 'https://' + domain;
-  const contactPages = ['/contact', '/contact-us', '/about', '/about-us', '/over-ons', '/impressum', '/team'];
-  const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-  for (const path of contactPages) {
-    try {
-      const r = await fetch(base + path, { signal: AbortSignal.timeout(8000) });
-      if (!r.ok) continue;
-      const html = await r.text();
-      const found = [...new Set(html.match(emailRegex)||[])].filter(e =>
-        !e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
-        !e.endsWith('.png') && !e.endsWith('.jpg'));
-      // Prefer info@, contact@, hello@ over noreply
-      const preferred = found.find(e => /^(info|contact|hello|hallo|mail|support)@/.test(e));
-      if (preferred) return preferred;
-      if (found.length > 0) return found[0];
-    } catch(e) {}
-  }
-  // 3. Common pattern guess — check if MX exists
-  const guesses = ['info', 'contact', 'hello', 'mail'];
-  const domainHost = domain.replace(/https?:\/\//, '').split('/')[0];
-  for (const prefix of guesses) {
-    const guess = prefix + '@' + domainHost;
-    try {
-      const dns = require('dns').promises;
-      const mx = await dns.resolveMx(domainHost).catch(() => []);
-      if (mx.length > 0) return guess; // MX exists, guess is plausible
-    } catch(e) {}
-    break; // only try dns once
-  }
-  return null;
+// 1. From already-scanned pages
+for (const r of scannedResults) {
+const em = r.content_stats?.emails_found?.[0] || r.content_stats?.extractedEmail;
+if (em && em.includes('@') && !em.includes('example') && !em.includes('sentry')) return em;
 }
-
+// 2. Scrape contact/about/impressum pages specifically
+const base = domain.startsWith('http') ? domain : 'https://' + domain;
+const contactPages = ['/contact', '/contact-us', '/about', '/about-us', '/over-ons', '/impressum', '/team'];
+const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+for (const path of contactPages) {
+try {
+const r = await fetch(base + path, { signal: AbortSignal.timeout(8000) });
+if (!r.ok) continue;
+const html = await r.text();
+const found = [...new Set(html.match(emailRegex)||[])].filter(e =>
+!e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+!e.endsWith('.png') && !e.endsWith('.jpg'));
+// Prefer info@, contact@, hello@ over noreply
+const preferred = found.find(e => /^(info|contact|hello|hallo|mail|support)@/.test(e));
+if (preferred) return preferred;
+if (found.length > 0) return found[0];
+} catch(e) {}
+}
+// 3. Common pattern guess — check if MX exists
+const guesses = ['info', 'contact', 'hello', 'mail'];
+const domainHost = domain.replace(/https?:\/\//, '').split('/')[0];
+for (const prefix of guesses) {
+const guess = prefix + '@' + domainHost;
+try {
+const dns = require('dns').promises;
+const mx = await dns.resolveMx(domainHost).catch(() => []);
+if (mx.length > 0) return guess; // MX exists, guess is plausible
+} catch(e) {}
+break; // only try dns once
+}
+return null;
+}
 // Create a share URL for domain results
 async function createShareUrl(domain, results, req) {
-  const token = crypto.randomBytes(8).toString('hex');
-  const expires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days for campaign
-  try {
-    await pool.query(
-      `INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT DO NOTHING`,
-      [token, JSON.stringify(results), expires]
-    );
-  } catch(e) {
-    try {
-      await pool.query(`CREATE TABLE IF NOT EXISTS share_results (id SERIAL PRIMARY KEY, token VARCHAR(20) UNIQUE NOT NULL, results_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), expires_at TIMESTAMPTZ)`);
-      await pool.query(`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`, [token, JSON.stringify(results), expires]);
-    } catch(e2) {}
-  }
-  // Build base URL from env or default
-  const base = process.env.BASE_URL || 'https://app.contentscale.site';
-  return base + '/share/' + token;
+const token = crypto.randomBytes(8).toString('hex');
+const expires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days for campaign
+try {
+await pool.query(
+`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT DO NOTHING`,
+[token, JSON.stringify(results), expires]
+);
+} catch(e) {
+try {
+await pool.query(`CREATE TABLE IF NOT EXISTS share_results (id SERIAL PRIMARY KEY, token VARCHAR(20) UNIQUE NOT NULL, results_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), expires_at TIMESTAMPTZ)`);
+await pool.query(`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`, [token, JSON.stringify(results), expires]);
+} catch(e2) {}
 }
-
+// Build base URL from env or default
+const base = process.env.BASE_URL || 'https://app.contentscale.site';
+return base + '/share/' + token;
+}
 // Push one lead to Instantly
 async function pushLeadToInstantly(apiKey, campaignId, lead) {
-  const r = await fetch('https://api.instantly.ai/api/v2/leads', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + apiKey.trim(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      campaign_id: campaignId,
-      leads: [lead],
-      skip_if_in_workspace: true,
-      skip_if_in_campaign: false
-    })
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || data.message || 'HTTP ' + r.status);
-  return data;
+const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + apiKey.trim(), 'Content-Type': 'application/json' },
+body: JSON.stringify({
+campaign_id: campaignId,
+leads: [lead],
+skip_if_in_workspace: true,
+skip_if_in_campaign: false
+})
+});
+const data = await r.json();
+if (!r.ok) throw new Error(data.error || data.message || 'HTTP ' + r.status);
+return data;
 }
-
 // ── Main campaign runner ──────────────────────────────────────
 async function runCampaign(campaign) {
-  campaign.status = 'running';
-  persistCampaign(campaign);
-
-  for (const domainObj of campaign.domains) {
-    if (campaign.status === 'cancelled') break;
-    // Skip already completed domains (resume support)
-    if (domainObj.status === 'done') { continue; }
-    persistCampaign(campaign);
-
-    try {
-      // Step 1: fetch sitemap
-      const { urls, sitemapUrl } = await fetchSitemapUrls(domainObj.domain);
-      if (!urls.length) {
-        domainObj.status = 'no_sitemap';
-        domainObj.error = 'No sitemap found';
-        campaign.doneDomains++;
-        persistCampaign(campaign);
-        continue;
-      }
-      const capped = urls.slice(0, 500); // cap at 500 per domain in campaign mode
-      domainObj.pageCount = capped.length;
-      domainObj.status = 'scanning';
-      persistCampaign(campaign);
-
-      // Step 2: scan pages using job queue
-      const jobId = crypto.randomBytes(8).toString('hex');
-      const job = {
-        id: jobId, userId: 'campaign_' + campaign.id,
-        status: 'running', total: capped.length, done: 0, failed: 0,
-        results: [], urls: capped, createdAt: Date.now()
-      };
-      bulkJobs.set(jobId, job);
-
-      // Run inline (campaign manages concurrency at domain level)
-      let jobBrowser = null;
-      try {
-        jobBrowser = await launchJobBrowser();
-        if (!jobBrowser) throw new Error('Browser unavailable');
-        const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
-        for (const url of capped) {
-          if (campaign.status === 'cancelled' || job.status === 'cancelled') break;
-          let result = null;
-          for (let attempt = 0; attempt < 2; attempt++) {
-            try { result = await scanOneUrlWithBrowser(url, jobBrowser); break; }
-            catch(e) {
-              const isSkip = e.message.startsWith('skip:');
-              if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
-              else await new Promise(r => setTimeout(r, 2000));
-            }
-          }
-          const slim = result && result.success ? {
-            success: true, url: result.url, score: result.score, quality: result.quality,
-            metrics: result.metrics,
-            content_stats: {
-              wordCount: result.content_stats?.wordCount,
-              h1Text: result.content_stats?.h1Text,
-              emails_found: result.content_stats?.emails_found,
-              extractedEmail: result.content_stats?.extractedEmail
-            }
-          } : { success: false, url, error: result?.error || 'failed', score: 0 };
-          job.results.push(slim);
-          job.done++;
-          await delay();
-        }
-      } finally {
-        if (jobBrowser) try { await jobBrowser.close(); } catch(e) {}
-        job.status = 'done';
-      }
-
-      // Step 3: compute domain avg score
-      const successful = job.results.filter(r => r.success && r.score > 0);
-      if (!successful.length) {
-        domainObj.status = 'no_results';
-        campaign.doneDomains++;
-        persistCampaign(campaign);
-        continue;
-      }
-      const avg = arr => Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
-      domainObj.score = avg(successful.map(r => r.score));
-      domainObj.graaf = avg(successful.map(r => r.metrics?.graaf || 0));
-      domainObj.craft = avg(successful.map(r => r.metrics?.craft || 0));
-      domainObj.technical = avg(successful.map(r => r.metrics?.technical || 0));
-      domainObj.pageCount = successful.length;
-
-      // Step 4: extract email (skip if already known from CSV)
-      domainObj.status = 'extracting_email';
-      const email = domainObj.email || await extractDomainEmail(domainObj.domain, successful);
-      domainObj.email = email;
-
-      // Step 5: create share URL
-      domainObj.status = 'creating_share';
-      domainObj.shareUrl = await createShareUrl(domainObj.domain, successful);
-
-      // Step 6: top 3 issues from first successful scan
-      const topIssues = (successful[0]?.recommendations?.all || [])
-        .filter(r => r.priority === 'high').slice(0, 3).map(r => r.title.replace(/^[^\w]+/, ''));
-
-      // Step 7: push to Instantly if configured and email found
-      domainObj.instantlyStatus = 'skipped';
-      if (campaign.instantlyApiKey && campaign.instantlyCampaignId && email) {
-        try {
-          domainObj.status = 'pushing_to_instantly';
-          const lead = {
-            email,
-            first_name: '',
-            last_name: '',
-            company_name: domainObj.domain.replace(/https?:\/\//, '').replace(/^www\./, ''),
-            website: 'https://' + domainObj.domain.replace(/https?:\/\//, ''),
-            custom_variables: {
-              score: String(domainObj.score),
-              share_url: domainObj.shareUrl,
-              top_issue_1: topIssues[0] || '',
-              top_issue_2: topIssues[1] || '',
-              top_issue_3: topIssues[2] || '',
-              graaf_score: String(domainObj.graaf),
-              page_count: String(domainObj.pageCount)
-            }
-          };
-          await pushLeadToInstantly(campaign.instantlyApiKey, campaign.instantlyCampaignId, lead);
-          domainObj.instantlyStatus = 'pushed';
-        } catch(e) {
-          domainObj.instantlyStatus = 'error: ' + e.message.substring(0, 60);
-        }
-      } else if (!email) {
-        domainObj.instantlyStatus = 'no_email';
-      }
-
-      domainObj.status = 'done';
-      campaign.doneDomains++;
-      persistCampaign(campaign);
-
-      // Delay between domains to be polite
-      await new Promise(r => setTimeout(r, 3000));
-
-    } catch(e) {
-      domainObj.status = 'error';
-      domainObj.error = e.message.substring(0, 120);
-      campaign.doneDomains++;
-      console.error('Campaign domain error:', domainObj.domain, e.message);
-      persistCampaign(campaign);
-    }
-  }
-
-  campaign.status = campaign.status === 'cancelled' ? 'cancelled' : 'done';
-  persistCampaign(campaign);
-  console.log(`✅ Campaign ${campaign.id} done: ${campaign.doneDomains}/${campaign.totalDomains} domains`);
+campaign.status = 'running';
+persistCampaign(campaign);
+for (const domainObj of campaign.domains) {
+if (campaign.status === 'cancelled') break;
+// Skip already completed domains (resume support)
+if (domainObj.status === 'done') { continue; }
+persistCampaign(campaign);
+try {
+// Step 1: fetch sitemap
+const { urls, sitemapUrl } = await fetchSitemapUrls(domainObj.domain);
+if (!urls.length) {
+domainObj.status = 'no_sitemap';
+domainObj.error = 'No sitemap found';
+campaign.doneDomains++;
+persistCampaign(campaign);
+continue;
 }
-
+const capped = urls.slice(0, 500); // cap at 500 per domain in campaign mode
+domainObj.pageCount = capped.length;
+domainObj.status = 'scanning';
+persistCampaign(campaign);
+// Step 2: scan pages using job queue
+const jobId = crypto.randomBytes(8).toString('hex');
+const job = {
+id: jobId, userId: 'campaign_' + campaign.id,
+status: 'running', total: capped.length, done: 0, failed: 0,
+results: [], urls: capped, createdAt: Date.now()
+};
+bulkJobs.set(jobId, job);
+// Run inline (campaign manages concurrency at domain level)
+let jobBrowser = null;
+try {
+jobBrowser = await launchJobBrowser();
+if (!jobBrowser) throw new Error('Browser unavailable');
+const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+for (const url of capped) {
+if (campaign.status === 'cancelled' || job.status === 'cancelled') break;
+let result = null;
+for (let attempt = 0; attempt < 2; attempt++) {
+try { result = await scanOneUrlWithBrowser(url, jobBrowser); break; }
+catch(e) {
+const isSkip = e.message.startsWith('skip:');
+if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
+else await new Promise(r => setTimeout(r, 2000));
+}
+}
+const slim = result && result.success ? {
+success: true, url: result.url, score: result.score, quality: result.quality,
+metrics: result.metrics,
+content_stats: {
+wordCount: result.content_stats?.wordCount,
+h1Text: result.content_stats?.h1Text,
+emails_found: result.content_stats?.emails_found,
+extractedEmail: result.content_stats?.extractedEmail
+}
+} : { success: false, url, error: result?.error || 'failed', score: 0 };
+job.results.push(slim);
+job.done++;
+await delay();
+}
+} finally {
+if (jobBrowser) try { await jobBrowser.close(); } catch(e) {}
+job.status = 'done';
+}
+// Step 3: compute domain avg score
+const successful = job.results.filter(r => r.success && r.score > 0);
+if (!successful.length) {
+domainObj.status = 'no_results';
+campaign.doneDomains++;
+persistCampaign(campaign);
+continue;
+}
+const avg = arr => Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
+domainObj.score = avg(successful.map(r => r.score));
+domainObj.graaf = avg(successful.map(r => r.metrics?.graaf || 0));
+domainObj.craft = avg(successful.map(r => r.metrics?.craft || 0));
+domainObj.technical = avg(successful.map(r => r.metrics?.technical || 0));
+domainObj.pageCount = successful.length;
+// Step 4: extract email (skip if already known from CSV)
+domainObj.status = 'extracting_email';
+const email = domainObj.email || await extractDomainEmail(domainObj.domain, successful);
+domainObj.email = email;
+// Step 5: create share URL
+domainObj.status = 'creating_share';
+domainObj.shareUrl = await createShareUrl(domainObj.domain, successful);
+// Step 6: top 3 issues from first successful scan
+const topIssues = (successful[0]?.recommendations?.all || [])
+.filter(r => r.priority === 'high').slice(0, 3).map(r => r.title.replace(/^[^\w]+/, ''));
+// Step 7: push to Instantly if configured and email found
+domainObj.instantlyStatus = 'skipped';
+if (campaign.instantlyApiKey && campaign.instantlyCampaignId && email) {
+try {
+domainObj.status = 'pushing_to_instantly';
+const lead = {
+email,
+first_name: '',
+last_name: '',
+company_name: domainObj.domain.replace(/https?:\/\//, '').replace(/^www\./, ''),
+website: 'https://' + domainObj.domain.replace(/https?:\/\//, ''),
+custom_variables: {
+score: String(domainObj.score),
+share_url: domainObj.shareUrl,
+top_issue_1: topIssues[0] || '',
+top_issue_2: topIssues[1] || '',
+top_issue_3: topIssues[2] || '',
+graaf_score: String(domainObj.graaf),
+page_count: String(domainObj.pageCount)
+}
+};
+await pushLeadToInstantly(campaign.instantlyApiKey, campaign.instantlyCampaignId, lead);
+domainObj.instantlyStatus = 'pushed';
+} catch(e) {
+domainObj.instantlyStatus = 'error: ' + e.message.substring(0, 60);
+}
+} else if (!email) {
+domainObj.instantlyStatus = 'no_email';
+}
+domainObj.status = 'done';
+campaign.doneDomains++;
+persistCampaign(campaign);
+// Delay between domains to be polite
+await new Promise(r => setTimeout(r, 3000));
+} catch(e) {
+domainObj.status = 'error';
+domainObj.error = e.message.substring(0, 120);
+campaign.doneDomains++;
+console.error('Campaign domain error:', domainObj.domain, e.message);
+persistCampaign(campaign);
+}
+}
+campaign.status = campaign.status === 'cancelled' ? 'cancelled' : 'done';
+persistCampaign(campaign);
+console.log(`✅ Campaign ${campaign.id} done: ${campaign.doneDomains}/${campaign.totalDomains} domains`);
+}
 // ── Campaign endpoints ────────────────────────────────────────
-
 app.post('/api/campaign/start', verifyAdmin, async (req, res) => {
-  const { domains, name, instantly_api_key, instantly_campaign_id, preset_emails } = req.body;
-  if (!Array.isArray(domains) || !domains.length)
-    return res.status(400).json({ success: false, error: 'domains array required' });
-
-  const cleanDomains = [...new Set(domains.map(d => d.trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0]).filter(d => d.includes('.')))];
-  if (!cleanDomains.length) return res.status(400).json({ success: false, error: 'No valid domains' });
-
-  const presetEmails = preset_emails || {};
-  const campaignId = crypto.randomBytes(8).toString('hex');
-  const campaign = {
-    id: campaignId,
-    name: name || 'Campaign ' + new Date().toLocaleDateString('nl-NL'),
-    status: 'running',
-    totalDomains: cleanDomains.length,
-    doneDomains: 0,
-    instantlyApiKey: instantly_api_key || null,
-    instantlyCampaignId: instantly_campaign_id || null,
-    createdAt: Date.now(),
-    domains: cleanDomains.map(d => ({
-      domain: d, status: 'queued', score: null,
-      email: presetEmails[d] || null, // pre-fill from CSV
-      shareUrl: null, instantlyStatus: null,
-      error: null, pageCount: 0
-    }))
-  };
-  campaigns.set(campaignId, campaign);
-  persistCampaign(campaign);
-  res.json({ success: true, campaignId, totalDomains: cleanDomains.length });
-  // Run in background - domains processed sequentially (one browser at a time)
-  runCampaign(campaign);
+const { domains, name, instantly_api_key, instantly_campaign_id, preset_emails } = req.body;
+if (!Array.isArray(domains) || !domains.length)
+return res.status(400).json({ success: false, error: 'domains array required' });
+const cleanDomains = [...new Set(domains.map(d => d.trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0]).filter(d => d.includes('.')))];
+if (!cleanDomains.length) return res.status(400).json({ success: false, error: 'No valid domains' });
+const presetEmails = preset_emails || {};
+const campaignId = crypto.randomBytes(8).toString('hex');
+const campaign = {
+id: campaignId,
+name: name || 'Campaign ' + new Date().toLocaleDateString('nl-NL'),
+status: 'running',
+totalDomains: cleanDomains.length,
+doneDomains: 0,
+instantlyApiKey: instantly_api_key || null,
+instantlyCampaignId: instantly_campaign_id || null,
+createdAt: Date.now(),
+domains: cleanDomains.map(d => ({
+domain: d, status: 'queued', score: null,
+email: presetEmails[d] || null, // pre-fill from CSV
+shareUrl: null, instantlyStatus: null,
+error: null, pageCount: 0
+}))
+};
+campaigns.set(campaignId, campaign);
+persistCampaign(campaign);
+res.json({ success: true, campaignId, totalDomains: cleanDomains.length });
+// Run in background - domains processed sequentially (one browser at a time)
+runCampaign(campaign);
 });
-
 app.get('/api/campaign/:campaignId', async (req, res) => {
-  let c = campaigns.get(req.params.campaignId);
-  if (!c && pool) {
-    try {
-      const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
-      if (row.rows[0]) {
-        c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
-              totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
-              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
-              instantlyApiKey: row.rows[0].instantly_api_key || null,
-              instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
-        campaigns.set(c.id, c);
-      }
-    } catch(e) {}
-  }
-  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
-  res.json({ success: true, ...c });
+let c = campaigns.get(req.params.campaignId);
+if (!c && pool) {
+try {
+const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+if (row.rows[0]) {
+c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+instantlyApiKey: row.rows[0].instantly_api_key || null,
+instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+campaigns.set(c.id, c);
+}
+} catch(e) {}
+}
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+res.json({ success: true, ...c });
 });
-
 // Resume interrupted campaign — skips done domains, continues from first non-done
 app.post('/api/campaign/:campaignId/resume', verifyAdmin, async (req, res) => {
-  let c = campaigns.get(req.params.campaignId);
-  if (!c && pool) {
-    try {
-      const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
-      if (row.rows[0]) {
-        c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
-              totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
-              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
-              instantlyApiKey: row.rows[0].instantly_api_key || null,
-              instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
-        campaigns.set(c.id, c);
-      }
-    } catch(e) {}
-  }
-  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
-  if (c.status === 'running') return res.status(400).json({ success: false, error: 'Campaign already running' });
-  const pending = (c.domains || []).filter(d => d.status !== 'done' && d.status !== 'cancelled').length;
-  if (!pending) return res.status(400).json({ success: false, error: 'All domains already done' });
-  // Allow override of Instantly credentials
-  if (req.body.instantly_api_key) c.instantlyApiKey = req.body.instantly_api_key;
-  if (req.body.instantly_campaign_id) c.instantlyCampaignId = req.body.instantly_campaign_id;
-  // Reset stuck domains
-  (c.domains || []).forEach(d => {
-    if (d.status !== 'done' && d.status !== 'error') d.status = 'queued';
-  });
-  c.status = 'running';
-  campaigns.set(c.id, c);
-  persistCampaign(c);
-  res.json({ success: true, pending, campaignId: c.id });
-  runCampaign(c);
+let c = campaigns.get(req.params.campaignId);
+if (!c && pool) {
+try {
+const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+if (row.rows[0]) {
+c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+instantlyApiKey: row.rows[0].instantly_api_key || null,
+instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+campaigns.set(c.id, c);
+}
+} catch(e) {}
+}
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+if (c.status === 'running') return res.status(400).json({ success: false, error: 'Campaign already running' });
+const pending = (c.domains || []).filter(d => d.status !== 'done' && d.status !== 'cancelled').length;
+if (!pending) return res.status(400).json({ success: false, error: 'All domains already done' });
+// Allow override of Instantly credentials
+if (req.body.instantly_api_key) c.instantlyApiKey = req.body.instantly_api_key;
+if (req.body.instantly_campaign_id) c.instantlyCampaignId = req.body.instantly_campaign_id;
+// Reset stuck domains
+(c.domains || []).forEach(d => {
+if (d.status !== 'done' && d.status !== 'error') d.status = 'queued';
 });
-
+c.status = 'running';
+campaigns.set(c.id, c);
+persistCampaign(c);
+res.json({ success: true, pending, campaignId: c.id });
+runCampaign(c);
+});
 // Retry push only — for done domains where instantlyStatus is not 'pushed'
 app.post('/api/campaign/:campaignId/retry-push', verifyAdmin, async (req, res) => {
-  let c = campaigns.get(req.params.campaignId);
-  if (!c && pool) {
-    try {
-      const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
-      if (row.rows[0]) {
-        c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
-              totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
-              domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
-              instantlyApiKey: row.rows[0].instantly_api_key || null,
-              instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
-        campaigns.set(c.id, c);
-      }
-    } catch(e) {}
-  }
-  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
-  const apiKey = req.body.instantly_api_key || c.instantlyApiKey;
-  const campId = req.body.instantly_campaign_id || c.instantlyCampaignId;
-  if (!apiKey || !campId) return res.status(400).json({ success: false, error: 'Instantly API key and campaign ID required' });
-  const toRetry = (c.domains || []).filter(d => d.status === 'done' && d.email && d.instantlyStatus !== 'pushed');
-  if (!toRetry.length) return res.json({ success: true, pushed: 0, message: 'Nothing to retry' });
-  let pushed = 0, failed = 0;
-  for (const d of toRetry) {
-    try {
-      const topIssues = [];
-      await pushLeadToInstantly(apiKey, campId, {
-        email: d.email,
-        company_name: d.domain.replace(/^www\./, ''),
-        website: 'https://' + d.domain,
-        custom_variables: { score: String(d.score||0), share_url: d.shareUrl||'', top_issue_1: '', top_issue_2: '', top_issue_3: '', page_count: String(d.pageCount||0) }
-      });
-      d.instantlyStatus = 'pushed';
-      pushed++;
-    } catch(e) {
-      d.instantlyStatus = 'error: ' + e.message.substring(0, 40);
-      failed++;
-    }
-  }
-  persistCampaign(c);
-  res.json({ success: true, pushed, failed });
+let c = campaigns.get(req.params.campaignId);
+if (!c && pool) {
+try {
+const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+if (row.rows[0]) {
+c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+instantlyApiKey: row.rows[0].instantly_api_key || null,
+instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+campaigns.set(c.id, c);
+}
+} catch(e) {}
+}
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+const apiKey = req.body.instantly_api_key || c.instantlyApiKey;
+const campId = req.body.instantly_campaign_id || c.instantlyCampaignId;
+if (!apiKey || !campId) return res.status(400).json({ success: false, error: 'Instantly API key and campaign ID required' });
+const toRetry = (c.domains || []).filter(d => d.status === 'done' && d.email && d.instantlyStatus !== 'pushed');
+if (!toRetry.length) return res.json({ success: true, pushed: 0, message: 'Nothing to retry' });
+let pushed = 0, failed = 0;
+for (const d of toRetry) {
+try {
+const topIssues = [];
+await pushLeadToInstantly(apiKey, campId, {
+email: d.email,
+company_name: d.domain.replace(/^www\./, ''),
+website: 'https://' + d.domain,
+custom_variables: { score: String(d.score||0), share_url: d.shareUrl||'', top_issue_1: '', top_issue_2: '', top_issue_3: '', page_count: String(d.pageCount||0) }
 });
-
+d.instantlyStatus = 'pushed';
+pushed++;
+} catch(e) {
+d.instantlyStatus = 'error: ' + e.message.substring(0, 40);
+failed++;
+}
+}
+persistCampaign(c);
+res.json({ success: true, pushed, failed });
+});
 app.post('/api/campaign/:campaignId/cancel', verifyAdmin, (req, res) => {
-  const c = campaigns.get(req.params.campaignId);
-  if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
-  c.status = 'cancelled';
-  persistCampaign(c);
-  res.json({ success: true });
+const c = campaigns.get(req.params.campaignId);
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+c.status = 'cancelled';
+persistCampaign(c);
+res.json({ success: true });
 });
-
 app.get('/api/campaign', verifyAdmin, async (req, res) => {
-  const list = [];
-  for (const [, c] of campaigns) {
-    list.push({ id: c.id, name: c.name, status: c.status, totalDomains: c.totalDomains,
-                doneDomains: c.doneDomains, createdAt: c.createdAt });
-  }
-  // Also load from DB
-  if (pool) {
-    try {
-      const rows = await pool.query('SELECT id,name,status,total_domains,done_domains,created_at FROM campaigns ORDER BY created_at DESC LIMIT 20');
-      rows.rows.forEach(r => {
-        if (!list.find(l => l.id === r.id))
-          list.push({ id: r.id, name: r.name, status: r.status, totalDomains: r.total_domains,
-                      doneDomains: r.done_domains, createdAt: new Date(r.created_at).getTime() });
-      });
-    } catch(e) {}
-  }
-  list.sort((a,b) => b.createdAt - a.createdAt);
-  res.json({ success: true, campaigns: list.slice(0, 30) });
+const list = [];
+for (const [, c] of campaigns) {
+list.push({ id: c.id, name: c.name, status: c.status, totalDomains: c.totalDomains,
+doneDomains: c.doneDomains, createdAt: c.createdAt });
+}
+// Also load from DB
+if (pool) {
+try {
+const rows = await pool.query('SELECT id,name,status,total_domains,done_domains,created_at FROM campaigns ORDER BY created_at DESC LIMIT 20');
+rows.rows.forEach(r => {
+if (!list.find(l => l.id === r.id))
+list.push({ id: r.id, name: r.name, status: r.status, totalDomains: r.total_domains,
+doneDomains: r.done_domains, createdAt: new Date(r.created_at).getTime() });
 });
-
-
+} catch(e) {}
+}
+list.sort((a,b) => b.createdAt - a.createdAt);
+res.json({ success: true, campaigns: list.slice(0, 30) });
+});
 app.delete('/api/campaign/:campaignId', verifyAdmin, async (req, res) => {
-  const id = req.params.campaignId;
-  campaigns.delete(id);
-  if (pool) {
-    try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) {}
-  }
-  res.json({ success: true });
+const id = req.params.campaignId;
+campaigns.delete(id);
+if (pool) {
+try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) {}
+}
+res.json({ success: true });
 });
-
-
 startServer();
