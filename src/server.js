@@ -119,6 +119,10 @@ if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
 app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
+// ── Page routes ──────────────────────────────────────────────────────────────
+app.get('/seo-contentscore', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'unified-scan-page.html'));
+});
 // ── Sitemap ──────────────────────────────────────────────────────────────────
 app.get('/sitemap.xml', (req, res) => {
   res.setHeader('Content-Type', 'application/xml');
