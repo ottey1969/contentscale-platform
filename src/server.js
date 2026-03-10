@@ -158,7 +158,29 @@ app.use((req, res, next) => {
   };
   next();
 });
-app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
+// Serve non-HTML static assets normally (images, css, js, fonts, etc.)
+app.use(express.static('public', { maxAge: '1y', etag: true, index: false }));
+
+// Serve HTML files via res.send so middleware injections (favicon, ada, counter) work
+app.use((req, res, next) => {
+  const fs = require('fs');
+  const path = require('path');
+  let urlPath = req.path;
+  // Try exact match, then with .html extension, then /index.html
+  const candidates = [
+    path.join(__dirname, 'public', urlPath),
+    path.join(__dirname, 'public', urlPath + '.html'),
+    path.join(__dirname, 'public', urlPath, 'index.html'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile() && candidate.endsWith('.html')) {
+      const html = fs.readFileSync(candidate, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(html);
+    }
+  }
+  next();
+});
 // ── /app — Under Construction page ──────────────────────────────────────────
 app.get('/app', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
