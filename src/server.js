@@ -120,6 +120,38 @@ next();
 });
 
 app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
+// ── /app — Under Construction page ──────────────────────────────────────────
+app.get('/app', (req, res) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pro Dashboard — Coming Soon · ContentScale</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#0a0010;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;padding:24px;}
+    .back{position:fixed;top:20px;left:20px;color:#a78bfa;text-decoration:none;font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:6px;opacity:.8;}
+    .back:hover{opacity:1;}
+    .card{background:#120820;border:2px solid #4c1d95;border-radius:20px;padding:40px 32px;max-width:680px;width:100%;text-align:center;box-shadow:0 0 60px rgba(126,34,206,0.3);}
+    .card img{width:100%;max-width:620px;border-radius:14px;margin-bottom:32px;border:1px solid #2d1b69;}
+    .btn{display:inline-block;background:linear-gradient(135deg,#f97316,#ea580c);color:white;font-weight:700;font-size:1rem;padding:14px 32px;border-radius:12px;text-decoration:none;margin-top:8px;transition:transform .15s;}
+    .btn:hover{transform:scale(1.03);}
+    .sub{color:#6b7280;font-size:.85rem;margin-top:14px;}
+    .sub a{color:#a78bfa;text-decoration:none;}
+  </style>
+</head>
+<body>
+  <a class="back" href="https://app.contentscale.site">← Back to Scanner</a>
+  <div class="card">
+    <img src="/blog/images/under_construction.jpg" alt="ContentScale Pro Dashboard — under construction">
+    <p class="sub">Requires activation · <a href="https://wa.me/31628073996">Contact Ottmar on WhatsApp</a></p>
+  </div>
+</body>
+</html>`);
+});
 // ── Page routes ──────────────────────────────────────────────────────────────
 app.get('/seo-contentscore', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
