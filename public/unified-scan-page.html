@@ -5,7 +5,40 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>ContentScale - Elite SEO Content Quality Scanner 2026</title>
       <meta name="description" content="Scan any website with the GRAAF + CRAFT framework and get a ContentScore from 0–100. Free SEO content quality scanner used in 47+ countries. See where you rank on the Elite Leaderboard.">
-      <link rel="icon" type="image/svg+xml" href="image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%237e22ce'/%3E%3Crect x='20' y='25' width='60' height='40' rx='10' fill='%231f2937'/%3E%3Ccircle cx='40' cy='45' r='5' fill='%23a855f7'/%3E%3Ccircle cx='60' cy='45' r='5' fill='%23a855f7'/%3E%3Cpath d='M 30 60 Q 50 70 70 60' stroke='%23a855f7' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%231f2937'/%3E%3Crect x='45' y='15' width='10' height='15' fill='%237e22ce' opacity='0.5'/%3E%3C/svg%3E">
+      <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
+      <script>
+         // Blinking tab: alternates title and favicon when tab is not active
+         (function() {
+           const titles = ['ContentScale ⚡', '🎯 SEO Scanner', '⭐ ContentScale'];
+           const favicons = [
+             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f59e0b'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"
+           ];
+           let blinkInterval = null;
+           let idx = 0;
+           const originalTitle = 'ContentScale - Elite SEO Content Quality Scanner 2026';
+           function startBlink() {
+             if (blinkInterval) return;
+             blinkInterval = setInterval(function() {
+               idx = (idx + 1) % favicons.length;
+               document.title = titles[idx];
+               var el = document.getElementById('dynamicFavicon');
+               if (el) el.href = favicons[idx];
+             }, 800);
+           }
+           function stopBlink() {
+             if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
+             idx = 0;
+             document.title = originalTitle;
+             var el = document.getElementById('dynamicFavicon');
+             if (el) el.href = favicons[0];
+           }
+           document.addEventListener('visibilitychange', function() {
+             if (document.hidden) { startBlink(); } else { stopBlink(); }
+           });
+         })();
+      </script>
       <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
       <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
       <script>
@@ -117,6 +150,12 @@
          max-width: none;
          }
          }
+         /* ── BADGE MODAL ── */
+         #badgeModal { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:99999;padding:16px; }
+         #badgeModal.open { display:flex; }
+         #badgeModalBox { background:#0f172a;border:1px solid #4c1d95;border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto; }
+         #badgePreviewWrap { background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;margin:16px 0;display:flex;justify-content:center; }
+         #badgeEmbedCode { width:100%;background:#0a0a14;border:1px solid #2d1b69;border-radius:8px;padding:12px;color:#c084fc;font-family:monospace;font-size:0.72rem;resize:vertical;min-height:80px;max-height:140px; }
       </style>
    </head>
    <body class="bg-gray-900">
@@ -166,6 +205,7 @@
                <a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a>
                <a href="javascript:void(0)" onclick="switchPageSection('experts')">Experts</a>
                <a href="javascript:void(0)" onclick="switchPageSection('templates')">Templates</a>
+               <a href="/blog" style="color:#4ade80!important;font-weight:700">📝 Blog</a>
             </div>
             <div class="flex items-center gap-3">
                <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
@@ -176,7 +216,8 @@
             <a href="javascript:void(0)" onclick="switchPageSection('scanner');toggleMobileMenu();" class="py-2 border-b border-gray-800">Scanner</a>
             <a href="javascript:void(0)" onclick="switchPageSection('leaderboard');toggleMobileMenu();" class="py-2 border-b border-gray-800">Leaderboard</a>
             <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Experts</a>
-            <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2">Templates</a>
+            <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2 border-b border-gray-800">Templates</a>
+            <a href="/blog" class="py-2" style="color:#4ade80!important;font-weight:700">📝 Blog</a>
          </div>
       </nav>
       <div style="background:linear-gradient(90deg,#1e1b4b 0%,#0f172a 50%,#1e1b4b 100%);border-bottom:1px solid #312e81;padding:6px 24px;text-align:center;">
@@ -320,13 +361,43 @@
                            </div>
                         </div>
                         <div id="bulkScannerForm">
-                           <div class="mb-5">
-                              <!-- UPDATED LABEL TEXT -->
+                           <!-- MODE TOGGLE -->
+                           <div class="flex gap-2 mb-4" style="background:#0f172a;border-radius:10px;padding:4px;border:1px solid #1e293b;">
+                              <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;cursor:pointer;">
+                              📋 Manual URLs
+                              </button>
+                              <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;">
+                              🗺️ Sitemap Scan
+                              </button>
+                           </div>
+                           <!-- MANUAL MODE -->
+                           <div id="manualModeSection" class="mb-5">
                               <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(Unlimited · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
                               <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0 URLs</span></div>
                            </div>
-                           <div class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
+                           <!-- SITEMAP MODE -->
+                           <div id="sitemapModeSection" class="hidden mb-5">
+                              <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml of sitemap_index.xml)</span></label>
+                              <div class="flex gap-2 mb-3">
+                                 <input id="sitemapUrlInput" type="url" placeholder="https://example.com/sitemap.xml" class="flex-1 p-3 rounded text-sm" style="background:#1e293b;border:1px solid #374151;color:#e5e7eb;">
+                                 <button onclick="fetchSitemapUrls()" id="fetchSitemapBtn" class="btn btn-primary px-4 text-sm" style="white-space:nowrap;">
+                                 <i class="fas fa-download mr-1"></i> Fetch URLs
+                                 </button>
+                              </div>
+                              <div id="sitemapFetchStatus" class="hidden rounded-lg p-3 text-sm mb-3" style="background:#0f2d1a;border:1px solid #166534;color:#4ade80;"></div>
+                              <div id="sitemapUrlPreview" class="hidden">
+                                 <label class="block text-xs font-semibold mb-1" style="color:#6b7280;">Found URLs:</label>
+                                 <div id="sitemapUrlList" class="rounded-lg p-3 max-h-48 overflow-y-auto text-xs" style="background:#111827;border:1px solid #1e293b;color:#9ca3af;line-height:2;font-family:monospace;"></div>
+                                 <div class="flex justify-between text-xs mt-1" style="color:#9ca3af;"><span id="sitemapUrlCount">0 URLs</span><button onclick="clearSitemapUrls()" style="color:#f87171;background:none;border:none;cursor:pointer;">✕ Clear</button></div>
+                              </div>
+                              <div class="rounded-xl p-4 mt-3" style="background:#0f172a;border:1px solid #4c1d95;">
+                                 <p class="text-xs font-semibold mb-1" style="color:#a78bfa!important;">🗺️ Sitemap Scan works automatically</p>
+                                 <p class="text-xs" style="color:#6b7280!important;">All pages are scanned → average domain score calculated → automatically submitted to admin for approval on the leaderboard.</p>
+                              </div>
+                           </div>
+                           <!-- WHAT HAPPENS WITH RESULTS (manual mode only) -->
+                           <div id="manualResultsInfo" class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
                               <p class="text-sm font-semibold mb-3" style="color:#e5e7eb!important;">What do you want to do with the results?</p>
                               <label class="flex items-start gap-3 mb-3 cursor-default">
                                  <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
@@ -335,15 +406,6 @@
                                  <div>
                                     <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📊 Scan &amp; score every URL</span>
                                     <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
-                                 </div>
-                              </label>
-                              <label class="flex items-start gap-3 mb-3 cursor-default">
-                                 <div style="width:20px;height:20px;background:#4ade80;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
-                                    <i class="fas fa-check" style="font-size:10px;color:#052e16!important;"></i>
-                                 </div>
-                                 <div>
-                                    <span class="text-sm font-semibold" style="color:#e5e7eb!important;">🏆 Submit 70+ scores to leaderboard</span>
-                                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — top performers get free exposure on the public leaderboard</p>
                                  </div>
                               </label>
                            </div>
@@ -362,10 +424,9 @@
                               <!-- ✅ BULK EXPORT BUTTONS (NEW) -->
                               <div class="flex gap-3 mb-4 justify-end flex-wrap" id="bulkExportButtons" style="display:none;">
                                  <button onclick="exportBulkCSV()" class="btn" style="background:#1e293b; border:1px solid #4b5563;"><i class="fas fa-file-csv mr-2"></i> Export CSV</button>
-                                 <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export All PDFs</button>
+                                 <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export Combined PDF</button>
                                  <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
-                                 <!-- NEW BUTTON FOR SELECTIVE LEADERBOARD SUBMISSION -->
-                                 <button onclick="submitSelectedToLeaderboard()" class="btn" style="background:linear-gradient(135deg,#f59e0b,#b45309);"><i class="fas fa-trophy mr-2"></i> Submit Selected</button>
+                                 <button id="domainBadgeBtn" onclick="showBulkDomainBadge()" style="display:none;" class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><span style="margin-right:6px;">🏅</span> Domain Badge</button>
                               </div>
                               <div id="bulkResultsContainer"></div>
                            </div>
@@ -456,17 +517,24 @@
                </div>
                <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
                <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
+                  <!-- SEARCH BAR -->
+                  <div class="mb-3">
+                     <div class="relative">
+                        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:0.85rem;"></i>
+                        <input id="lbSearch" type="text" placeholder="Search by company name, domain or niche…" oninput="applyLeaderboardFilters()" class="w-full pl-9 pr-4 p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
+                     </div>
+                  </div>
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                      <div>
                         <label class="block text-xs font-semibold mb-1" style="color:#a78bfa!important;">🏷️ Niche</label>
                         <select id="filterNiche" aria-label="Filter by niche" onchange="applyLeaderboardFilters()" class="w-full p-2 rounded text-sm" style="background:#1e1b4b!important;color:#e5e7eb!important;border:1px solid #4c1d95!important;">
                            <option value="">All Niches</option>
                            <optgroup label="── Agencies & Services">
-                              <option value="seoagency">SEO Agency</option>
-                              <option value="contentmarketing">Content Marketing Agency</option>
-                              <option value="digitalmarketing">Digital Marketing Agency</option>
-                              <option value="webdesign">Web Design & Dev Agency</option>
-                              <option value="prагентство">PR Agency</option>
+                              <option value="seo agency">SEO Agency</option>
+                              <option value="content marketing">Content Marketing Agency</option>
+                              <option value="digital marketing">Digital Marketing Agency</option>
+                              <option value="web design">Web Design & Dev Agency</option>
+                              <option value="pr agency">PR Agency</option>
                            </optgroup>
                            <optgroup label="── YMYL (High Stakes)">
                               <option value="legal">Legal / Law Firm</option>
@@ -474,22 +542,21 @@
                               <option value="finance">Finance / Fintech</option>
                               <option value="insurance">Insurance</option>
                               <option value="tax">Accounting / Tax</option>
-                              <option value="mentalhealth">Mental Health / Therapy</option>
+                              <option value="mental health">Mental Health / Therapy</option>
                            </optgroup>
                            <optgroup label="── High Competition">
                               <option value="saas">SaaS / Software</option>
                               <option value="ecommerce">E-Commerce / Retail</option>
-                              <option value="realestate">Real Estate</option>
+                              <option value="real estate">Real Estate</option>
                               <option value="travel">Travel & Tourism</option>
                               <option value="recruitment">Recruitment / HR</option>
-                              <option value="insurance">Insurance</option>
                            </optgroup>
                            <optgroup label="── Service Businesses">
                               <option value="coaching">Coaching / Consulting</option>
                               <option value="local">Local Business</option>
-                              <option value="homeservices">Home Services (Plumber, Builder…)</option>
+                              <option value="home services">Home Services (Plumber, Builder…)</option>
                               <option value="restaurant">Restaurant / Food</option>
-                              <option value="beautywellness">Beauty & Wellness</option>
+                              <option value="beauty">Beauty & Wellness</option>
                               <option value="automotive">Automotive</option>
                            </optgroup>
                            <optgroup label="── Content-Driven">
@@ -887,7 +954,15 @@
             </div>
          </div>
       </div>
-      <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+      <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+      <script>
+         // Global stubs — defined early so onclick attributes work even if rest of script is slow
+         window.switchMode = function(m) { document._switchMode && document._switchMode(m); };
+         window.setBulkMode = function(m) { document._setBulkMode && document._setBulkMode(m); };
+         window.switchPageSection = function(s) { document._switchPageSection && document._switchPageSection(s); };
+         window.cancelBulkJob = function() { document._cancelBulkJob && document._cancelBulkJob(); };
+      </script>
+      <script>
          let userId = null;
          let sendgridConfigured = false;
          let userTemplates = {};
@@ -911,26 +986,29 @@
          body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
          }
          };
-         // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from localStorage (100% HONEST)
+         // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from server (all sources: single, bulk, campaign)
          function initRealActivityBanner() {
          const banner = document.getElementById('realActivityBanner');
          const countEl = document.getElementById('realScansCount');
          const labelEl = document.getElementById('realScansLabel');
          if (!banner || !countEl || !labelEl) return;
-         // Get today's scan count from localStorage (REAL DATA)
-         const today = new Date().toDateString();
-         const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         const todayScans = scanHistory.filter(scan => {
-         const scanDate = new Date(scan.date).toDateString();
-         return scanDate === today;
-         }).length;
-         // Show banner with REAL count (0 if no scans, real number if scans exist)
-         countEl.textContent = todayScans;
-         labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
-         // Only show banner if there are scans OR always show (your choice)
-         if (todayScans >= 0) { // Always show, even if 0
-         banner.style.display = 'block';
-         }
+         fetch('/api/stats/scans-today')
+           .then(r => r.json())
+           .then(data => {
+             const count = data.count || 0;
+             countEl.textContent = count;
+             labelEl.textContent = count === 1 ? 'scan today' : 'scans today';
+             banner.style.display = 'block';
+           })
+           .catch(() => {
+             // Fallback to localStorage if server unreachable
+             const today = new Date().toDateString();
+             const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+             const todayScans = scanHistory.filter(scan => new Date(scan.date).toDateString() === today).length;
+             countEl.textContent = todayScans;
+             labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
+             banner.style.display = 'block';
+           });
          }
          // Update banner after scan completes
          function updateRealActivityBanner() {
@@ -960,6 +1038,7 @@
          }
          document.addEventListener('DOMContentLoaded', function () {
          registerUser();
+         setTimeout(resumeActiveJob, 1500); // check for active job after page loads
          loadLeaderboardData();
          loadFreelancers();
          checkRescanReminder();
@@ -982,6 +1061,151 @@
          btnLabel.textContent = `Scan All URLs (${lines.length})`;
          }
          }
+         
+         // ========== SITEMAP MODE ==========
+         let currentBulkMode = 'manual';
+         let sitemapFetchedUrls = [];
+         
+         function setBulkMode(mode) {
+         window.setBulkMode = setBulkMode; document._setBulkMode = setBulkMode;
+           currentBulkMode = mode;
+           const manualSec  = document.getElementById('manualModeSection');
+           const sitemapSec = document.getElementById('sitemapModeSection');
+           const manualBtn  = document.getElementById('modeManualBtn');
+           const sitemapBtn = document.getElementById('modeSitemapBtn');
+           const btnLabel   = document.getElementById('bulkBtnLabel');
+         
+           if (mode === 'manual') {
+             manualSec.classList.remove('hidden');
+             sitemapSec.classList.add('hidden');
+             manualBtn.style.background  = 'linear-gradient(135deg,#4f46e5,#7e22ce)';
+             manualBtn.style.color       = 'white';
+             sitemapBtn.style.background = 'transparent';
+             sitemapBtn.style.color      = '#9ca3af';
+             if (btnLabel) btnLabel.textContent = 'Scan All URLs';
+           } else {
+             manualSec.classList.add('hidden');
+             sitemapSec.classList.remove('hidden');
+             sitemapBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)';
+             sitemapBtn.style.color      = 'white';
+             manualBtn.style.background  = 'transparent';
+             manualBtn.style.color       = '#9ca3af';
+             const count = sitemapFetchedUrls.length;
+             if (btnLabel) btnLabel.textContent = count > 0 ? `Scan Sitemap (${count} pages)` : 'Fetch URLs First';
+           }
+         }
+         
+         async function fetchSitemapUrls() {
+           const input = document.getElementById('sitemapUrlInput');
+           const btn   = document.getElementById('fetchSitemapBtn');
+           const status= document.getElementById('sitemapFetchStatus');
+           const preview= document.getElementById('sitemapUrlPreview');
+           const listDiv= document.getElementById('sitemapUrlList');
+           const countEl= document.getElementById('sitemapUrlCount');
+           const url = input.value.trim();
+           if (!url) { showToast('❌ Enter a sitemap URL', '#ef4444'); return; }
+           btn.disabled = true;
+           btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Fetching...';
+           status.classList.remove('hidden');
+           status.style.background = '#1e293b';
+           status.style.borderColor = '#374151';
+           status.style.color = '#9ca3af';
+           status.textContent = 'Sitemap ophalen...';
+           try {
+             const res = await fetch('/api/sitemap/urls', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ url })
+             });
+             const data = await res.json();
+             if (!data.success) throw new Error(data.error || 'Fetch mislukt');
+             sitemapFetchedUrls = data.urls;
+             status.style.background  = '#0f2d1a';
+             status.style.borderColor = '#166534';
+             status.style.color       = '#4ade80';
+             status.textContent       = "✅ " + data.total + " URLs found in sitemap";
+             renderSitemapUrlList();
+             preview.classList.remove('hidden');
+           } catch(e) {
+             status.style.background  = '#1a0a0a';
+             status.style.borderColor = '#7f1d1d';
+             status.style.color       = '#f87171';
+             status.textContent       = '❌ ' + e.message;
+           } finally {
+             btn.disabled = false;
+             btn.innerHTML = '<i class="fas fa-download mr-1"></i> Fetch URLs';
+           }
+         }
+         
+         function clearSitemapUrls() {
+           sitemapFetchedUrls = [];
+           document.getElementById('sitemapUrlPreview').classList.add('hidden');
+           document.getElementById('sitemapFetchStatus').classList.add('hidden');
+           document.getElementById('sitemapUrlInput').value = '';
+           const btnLabel = document.getElementById('bulkBtnLabel');
+           if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
+         }
+         
+         function renderSitemapUrlList() {
+           const listDiv  = document.getElementById('sitemapUrlList');
+           const countEl  = document.getElementById('sitemapUrlCount');
+           const btnLabel = document.getElementById('bulkBtnLabel');
+           if (!listDiv) return;
+           listDiv.innerHTML = sitemapFetchedUrls.map((u, i) => {
+             const path = u.replace(/https?:\/\/[^/]+/, '') || '/';
+             const safeU = u.replace(/'/g, '%27');
+             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 4px;border-bottom:1px solid #1e293b;gap:8px;">'
+               + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:0.75rem;" title="' + safeU + '">' + path + '</span>'
+               + '<button onclick="removeSitemapUrl(' + i + ')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.8rem;flex-shrink:0;padding:0 2px;line-height:1;" title="Remove">\u2715</button>'
+               + '</div>';
+           }).join('');
+           if (countEl) countEl.textContent = sitemapFetchedUrls.length + " URL's";
+           if (btnLabel) btnLabel.textContent = sitemapFetchedUrls.length > 0 ? `Scan Sitemap (${sitemapFetchedUrls.length} pages)` : 'Fetch URLs First';
+         }
+         
+         function removeSitemapUrl(index) {
+           sitemapFetchedUrls.splice(index, 1);
+           renderSitemapUrlList();
+         }
+         
+         async function submitSitemapWithMeta(domain, avgScore, pageCount, sitemapUrl) {
+           const company_name  = document.getElementById('sbCompanyName')?.value.trim() || domain;
+           const country       = document.getElementById('sbCountry')?.value || '';
+           const niche         = document.getElementById('sbNiche')?.value || '';
+           const business_type = document.getElementById('sbBizType')?.value || '';
+           // Filter ONLY results from this specific domain to avoid cross-scan contamination
+           const successful = bulkResults.filter(r => r.success && r.score > 0 && r.url && r.url.replace(/https?:\/\//,'').split('/')[0] === domain);
+           const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a,b) => a+b, 0) / arr.length) : 0;
+           // Use passed-in avgScore as authoritative (it was computed at render time from correct results)
+           const payload = {
+             domain: 'https://' + domain,
+             company_name,
+             avg_score:     avgScore,
+             avg_graaf:     avg(successful.map(r => r.metrics?.graaf || 0)),
+             avg_craft:     avg(successful.map(r => r.metrics?.craft || 0)),
+             avg_technical: avg(successful.map(r => r.metrics?.technical || 0)),
+             page_count: pageCount || successful.length,
+             page_scores: successful.map(r => ({ url: r.url, score: r.score, graaf: r.metrics?.graaf||0, craft: r.metrics?.craft||0, technical: r.metrics?.technical||0 })),
+             country, niche, business_type
+           };
+           try {
+             const res = await fetch('/api/sitemap/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+             const data = await res.json();
+             const banner = document.getElementById('sitemapSubmitBanner');
+             if (banner) {
+               if (data.success) {
+                 const msg = data.auto_approved
+                   ? '🏆 Live on leaderboard!'
+                   : '✅ Submitted — pending admin approval';
+                 banner.querySelector('button').outerHTML = `<div style="text-align:center;padding:10px;background:rgba(74,222,128,0.1);border:1px solid #166534;border-radius:8px;color:#4ade80;font-weight:700;">${msg}</div>`;
+               } else {
+                 showToast('❌ Submit mislukt: ' + (data.error || 'unknown'), '#ef4444');
+               }
+             }
+           } catch(e) { showToast('❌ Submit mislukt', '#ef4444'); }
+         }
+         // ========== END SITEMAP MODE ==========
+         
          async function registerUser() {
          try {
          let storedUserId = localStorage.getItem('user_id');
@@ -1080,6 +1304,7 @@
          } catch (error) { alert('❌ Error: ' + error.message); }
          }
          function switchMode(mode) {
+         window.switchMode = switchMode; document._switchMode = switchMode;
          const singleMode = document.getElementById('singleMode');
          const bulkMode = document.getElementById('bulkMode');
          const discoverMode = document.getElementById('discoverMode');
@@ -1089,17 +1314,71 @@
          [singleMode, bulkMode, discoverMode].forEach(el => el && el.classList.add('hidden'));
          [singleBtn, bulkBtn, discoverBtn].forEach(el => el && el.classList.remove('active'));
          if (mode === 'single') {
-         if (singleMode) singleMode.classList.remove('hidden');
-         if (singleBtn) singleBtn.classList.add('active');
+           if (singleMode) singleMode.classList.remove('hidden');
+           if (singleBtn) singleBtn.classList.add('active');
          } else if (mode === 'bulk') {
-         if (bulkMode) bulkMode.classList.remove('hidden');
-         if (bulkBtn) bulkBtn.classList.add('active');
-         updateBulkCount();
+           if (bulkMode) bulkMode.classList.remove('hidden');
+           if (bulkBtn) bulkBtn.classList.add('active');
+           updateBulkCount();
+           // Re-render results if we have them (user switched away and came back)
+           if (bulkResults.length > 0) renderBulkResults();
+           // Restore progress bar if scan still running
+           if (isScanning && activeBulkJobId) restoreBulkProgressUI();
          } else if (mode === 'discover') {
-         if (discoverMode) discoverMode.classList.remove('hidden');
-         if (discoverBtn) discoverBtn.classList.add('active');
+           if (discoverMode) discoverMode.classList.remove('hidden');
+           if (discoverBtn) discoverBtn.classList.add('active');
          }
          }
+         
+         // Restore progress bar + button state when returning to bulk tab mid-scan
+         function restoreBulkProgressUI() {
+           const progress = document.getElementById('bulkProgress');
+           const button   = document.getElementById('bulkScanBtn');
+           const progressText = document.getElementById('bulkProgressText');
+           if (progress) progress.classList.remove('hidden');
+           if (button && button.disabled === false) {
+             button.disabled = true;
+             button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+           }
+           if (progressText && window._lastProgressText) progressText.textContent = window._lastProgressText;
+         }
+         
+         // When browser tab becomes visible again → immediately re-poll instead of waiting for next interval tick
+         document.addEventListener('visibilitychange', async () => {
+           if (document.visibilityState === 'visible' && isScanning && activeBulkJobId) {
+             try {
+               const pollRes = await fetch('/api/scan/bulk-job/' + activeBulkJobId);
+               const job = await pollRes.json();
+               if (!job.success) return;
+               // Catch up on any results missed while tab was hidden
+               const newResults = job.results.slice(bulkResults.length);
+               newResults.forEach(r => bulkResults.push({ ...r, selected: false }));
+               // Update progress text
+               const progressText = document.getElementById('bulkProgressText');
+               const progressBar  = document.getElementById('bulkProgressBar');
+               const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+               if (progressBar) progressBar.style.width = pct + '%';
+               const txt = job.status === 'done'
+                 ? '✅ Scan complete! ' + job.done + '/' + job.total + ' pages'
+                 : 'Scanning ' + job.done + ' / ' + job.total + ' · server-side · safe to close tab';
+               if (progressText) progressText.textContent = txt;
+               window._lastProgressText = txt;
+               // Re-render results — always show what we have when coming back to tab
+               if (bulkResults.length > 0) renderBulkResults();
+               // If done, clean up
+               if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+                 clearInterval(bulkPollInterval); bulkPollInterval = null;
+                 localStorage.removeItem('cs_activeJobId');
+                 isScanning = false;
+                 const button = document.getElementById('bulkScanBtn');
+                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>'; }
+                 const progress = document.getElementById('bulkProgress');
+                 if (progress) progress.classList.add('hidden');
+                 renderBulkResults();
+               }
+             } catch(e) {}
+           }
+         });
          async function scanSingleURL() {
          const input = document.getElementById('singleUrlInput');
          const button = document.getElementById('singleScanBtn');
@@ -1184,7 +1463,7 @@
          const metrics = data.metrics || {};
          const stats = data.content_stats || {};
          const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+         const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
          const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
          const priorityConfig = {
          high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
@@ -1285,6 +1564,10 @@
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
          ⬇ Export PDF
          </button>
+         <button onclick="(function(){const d=window._lastScanData;if(!d)return;showPageBadge(d.url,d.score||0,d.metrics?.graaf||0,d.metrics?.craft||0,d.metrics?.technical||0);})()"
+         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+         🏅 Get Badge
+         </button>
          <button onclick="document.getElementById('singleResult').classList.add('hidden')"
          style="padding:12px 14px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
          ✕ Close
@@ -1382,194 +1665,349 @@
          setTimeout(() => { win.focus(); win.print(); }, 600);
          if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; }
          }
-         async function startBulkScan() {
-         if (isScanning) {
-         alert('Scan already in progress. Please wait.');
-         return;
+         let activeBulkJobId = null;
+         let bulkPollInterval = null;
+         
+         // Resume any active job on page load
+         async function resumeActiveJob() {
+           const savedJobId = localStorage.getItem('cs_activeJobId');
+           if (!savedJobId) return;
+           try {
+             const r = await fetch('/api/scan/bulk-job/' + savedJobId);
+             const job = await r.json();
+             if (!job.success) { localStorage.removeItem('cs_activeJobId'); return; }
+         
+             // Always load results into memory first
+             bulkResults = (job.results || []).map(r => ({ ...r, selected: false }));
+         
+             if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+               localStorage.removeItem('cs_activeJobId');
+               // Job finished while away — switch to bulk tab and show results
+               if (bulkResults.length > 0) {
+                 switchMode('bulk');
+                 renderBulkResults();
+                 showToast('✅ Scan complete! ' + job.done + '/' + job.total + ' pages scanned.', '#4ade80', 6000);
+               }
+               return;
+             }
+         
+             // Job still running — reconnect
+             activeBulkJobId = savedJobId;
+             isScanning = true;
+             switchMode('bulk');
+             const progress = document.getElementById('bulkProgress');
+             const progressBar = document.getElementById('bulkProgressBar');
+             const progressText = document.getElementById('bulkProgressText');
+             const button = document.getElementById('bulkScanBtn');
+             if (progress) progress.classList.remove('hidden');
+             const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+             if (progressBar) progressBar.style.width = pct + '%';
+             const txt = 'Scanning ' + job.done + ' / ' + job.total + ' · server-side · safe to close tab';
+             if (progressText) progressText.textContent = txt;
+             window._lastProgressText = txt;
+             if (button) {
+               button.disabled = true;
+               button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scan running on server... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+             }
+             // Show results so far
+             if (bulkResults.length > 0) renderBulkResults();
+             showToast('🔄 Scan still running — results loaded so far.', '#7e22ce', 5000);
+             // Resume polling
+             resumePollJob(savedJobId, job.results.length);
+           } catch(e) {
+             localStorage.removeItem('cs_activeJobId');
+           }
          }
-         const urlInput = document.getElementById('bulkUrlInput');
-         const button = document.getElementById('bulkScanBtn');
-         const progress = document.getElementById('bulkProgress');
-         const progressBar = document.getElementById('bulkProgressBar');
-         const progressText = document.getElementById('bulkProgressText');
+         
+         function resumePollJob(jobId, startFrom) {
+           let lastDone = startFrom || 0;
+           const progress = document.getElementById('bulkProgress');
+           const progressBar = document.getElementById('bulkProgressBar');
+           const progressText = document.getElementById('bulkProgressText');
+           const button = document.getElementById('bulkScanBtn');
+         
+           bulkPollInterval = setInterval(async () => {
+             try {
+               const pollRes = await fetch('/api/scan/bulk-job/' + jobId);
+               const job = await pollRes.json();
+               if (!job.success) { clearInterval(bulkPollInterval); localStorage.removeItem('cs_activeJobId'); return; }
+               const newResults = job.results.slice(lastDone);
+               newResults.forEach(r => {
+                 bulkResults.push({ ...r, selected: false });
+                 try {
+                   const h = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+                   h.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
+                   localStorage.setItem('cs_scanHistory', JSON.stringify(h.slice(0, 100)));
+                 } catch(e) {}
+               });
+               lastDone = job.results.length;
+               const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+               if (progressBar) progressBar.style.width = pct + '%';
+               const currentUrl = job.results[job.done - 1]?.url || '';
+               const shortUrl = currentUrl.replace(/https?:\/\//, '').substring(0, 50);
+               if (progressText) {
+                 if (job.status === 'queued') progressText.textContent = '⏳ Waiting for scan slot...';
+                 else if (job.status === 'done') progressText.textContent = '✅ Scan complete! ' + job.done + '/' + job.total + ' pages';
+                 else progressText.textContent = 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' — ' + shortUrl : '') + ' · server-side · safe to close tab';
+               }
+               if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+                 clearInterval(bulkPollInterval);
+                 bulkPollInterval = null;
+                 localStorage.removeItem('cs_activeJobId');
+                 isScanning = false;
+                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>'; }
+                 if (progress) progress.classList.add('hidden');
+                 updateBulkCount();
+                 renderBulkResults();
+               }
+             } catch(e) {}
+           }, 4000);
+         }
+         
+         function renderBulkResults() {
+           const resultsDiv = document.getElementById('bulkResults');
+           const container = document.getElementById('bulkResultsContainer');
+           const exportButtons = document.getElementById('bulkExportButtons');
+           if (!bulkResults.length) return;
+           bulkResults.sort((a,b) => { if(a.success&&!b.success)return -1; if(!a.success&&b.success)return 1; return(b.score||0)-(a.score||0); });
+           const successful = bulkResults.filter(r => r.success);
+           const statsDiv = document.getElementById('bulkStats');
+           if (statsDiv) {
+             const ec=successful.filter(r=>r.score>=95).length, exc=successful.filter(r=>r.score>=90&&r.score<95).length;
+             const st=successful.filter(r=>r.score>=85&&r.score<90).length, go=successful.filter(r=>r.score>=80&&r.score<85).length;
+             const so=successful.filter(r=>r.score>=75&&r.score<80).length, qu=successful.filter(r=>r.score>=70&&r.score<75).length;
+             const nw=successful.filter(r=>r.score<70).length, err=bulkResults.length-successful.length;
+             statsDiv.innerHTML = `
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${ec}</div><div style="font-size:0.65rem;color:#9ca3af;">🏅 Elite 95+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">${exc}</div><div style="font-size:0.65rem;color:#9ca3af;">✨ Excellent 90+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${st}</div><div style="font-size:0.65rem;color:#9ca3af;">💪 Strong 85+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a3e635;">${go}</div><div style="font-size:0.65rem;color:#9ca3af;">👍 Good 80+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${so}</div><div style="font-size:0.65rem;color:#9ca3af;">📈 Solid 75+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qu}</div><div style="font-size:0.65rem;color:#9ca3af;">✅ Qualified 70+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${nw}</div><div style="font-size:0.65rem;color:#9ca3af;">🔴 Needs Work</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${err>0?'<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">'+err+' errors</div>':''}</div>`;
+           }
+           if (container) container.innerHTML = bulkResults.map((result, index) => {
+             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" ${result.selected?'checked':''} onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">✕</div><div><div style="font-weight:700;">${result.url.replace(/https?:\/\//,'').split('/')[0]}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">❌ Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button></div></div></div>
+             </div>`;
+             const sc = result.score>=95?'#a78bfa':result.score>=85?'#4ade80':result.score>=70?'#a3e635':'#f87171';
+             const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
+             return `<div class="bulk-result-item" id="bulk-result-${index}" style="display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" ${result.selected?'checked':''} onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#a78bfa;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${(()=>{const p=result.url.replace(/https?:\/\//,'').split('/').slice(1).join('/');return p?('/'+p).substring(0,45)+((p.length>45)?'..':''):'homepage'})()}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">🏅</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>
+             </div>`;
+           }).join('');
+           updateDeleteBar();
+           if (resultsDiv) resultsDiv.classList.remove('hidden');
+           if (exportButtons && successful.length > 0) {
+             exportButtons.style.display = 'flex';
+             const domainBadgeBtn = document.getElementById('domainBadgeBtn');
+             if (domainBadgeBtn) { const doms=[...new Set(successful.map(r=>r.url.replace(/https?:\/\//,'').split('/')[0]))]; domainBadgeBtn.style.display=doms.length===1?'inline-flex':'none'; }
+           }
+           updateRealActivityBanner();
+         }
+         
+         async function startBulkScan() {
+         if (isScanning) { alert('Scan already in progress. Please wait.'); return; }
+         if (currentBulkMode === 'sitemap') {
+           if (sitemapFetchedUrls.length === 0) { showToast('❌ Fetch sitemap URLs first', '#ef4444'); return; }
+           document.getElementById('bulkUrlInput').value = sitemapFetchedUrls.join('\n');
+         }
+         const urlInput   = document.getElementById('bulkUrlInput');
+         const button     = document.getElementById('bulkScanBtn');
+         const progress   = document.getElementById('bulkProgress');
+         const progressBar= document.getElementById('bulkProgressBar');
+         const progressText=document.getElementById('bulkProgressText');
          const resultsDiv = document.getElementById('bulkResults');
-         const statsDiv = document.getElementById('bulkStats');
-         const container = document.getElementById('bulkResultsContainer');
+         const container  = document.getElementById('bulkResultsContainer');
          const exportButtons = document.getElementById('bulkExportButtons');
          const allUrls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
          if (allUrls.length === 0) { alert('❌ Enter at least one URL'); return; }
-         // REMOVED LIMIT CHECK FOR UNLIMITED SCANS
-         /*
-         if (allUrls.length > 5) {
-         alert('❌ Free plan: max 5 URLs.
-         Need more? Contact us for Pro access.');
-         return;
-         }
-         */
          const urls = allUrls.map(u => u.startsWith('http') ? u : 'https://' + u);
          isScanning = true;
          button.disabled = true;
-         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
+         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Starting...';
          progress.classList.remove('hidden');
          resultsDiv.classList.add('hidden');
          bulkResults = [];
+         if (container) container.innerHTML = '';
+         if (exportButtons) exportButtons.style.display = 'none';
+         const oldBanner = document.getElementById('sitemapSubmitBanner');
+         if (oldBanner) oldBanner.remove();
+         
          try {
-         for (let i = 0; i < urls.length; i++) {
-         const url = urls[i];
-         progressText.textContent = `Scanning ${i + 1} of ${urls.length} — ${url}`;
-         progressBar.style.width = `${((i) / urls.length) * 100}%`;
-         try {
-         const response = await fetch('/api/scan', {
-         method: 'POST',
-         headers: {
-         'Content-Type': 'application/json',
-         'x-user-id': userId || 'anonymous'
-         },
-         body: JSON.stringify({ url })
-         });
-         const data = await response.json();
-         if (data.success) {
-         // ADDED selected PROPERTY
-         bulkResults.push({ ...data, selected: false });
-         // Save to history
-         try {
-         const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         scanHistory.unshift({ url: data.url || url, score: data.score, date: new Date().toISOString() });
-         localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory));
-         } catch(e) {}
-         } else {
-         // Add error result
-         // ADDED selected PROPERTY
-         bulkResults.push({
-         url: url,
-         error: data.error || 'Scan failed',
-         score: 0,
-         success: false,
-         selected: false
-         });
-         }
-         } catch (error) {
-         // Add error result
-         // ADDED selected PROPERTY
-         bulkResults.push({
-         url: url,
-         error: error.message || 'Network error',
-         score: 0,
-         success: false,
-         selected: false
-         });
-         }
-         // Update progress
-         progressBar.style.width = `${((i + 1) / urls.length) * 100}%`;
-         }
-         progressText.textContent = 'Scan complete!';
-         progressBar.style.width = '100%';
-         // Sort results: successful scans first (by score), then errors
-         bulkResults.sort((a, b) => {
-         if (a.success && !b.success) return -1;
-         if (!a.success && b.success) return 1;
-         if (a.success && b.success) return (b.score || 0) - (a.score || 0);
-         return 0;
-         });
-         // Display stats
-         const successful = bulkResults.filter(r => r.success);
-         const eliteCount = successful.filter(r => r.score >= 70).length;
-         const goodCount = successful.filter(r => r.score >= 50 && r.score < 70).length;
-         const poorCount = successful.filter(r => r.score < 50).length;
-         const errorCount = bulkResults.length - successful.length;
-         if (statsDiv) {
-         statsDiv.innerHTML = `
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#4ade80;">${eliteCount}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Elite (70+)</div>
-         </div>
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#fbbf24;">${goodCount}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Good (50-69)</div>
-         </div>
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#f87171;">${poorCount}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Needs Work (<50)</div>
-         </div>
-         <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
-         <div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div>
-         <div style="font-size:0.7rem;color:#9ca3af;">Total</div>
-         ${errorCount > 0 ? `<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">${errorCount} errors</div>` : ''}
-         </div>
-         `;
-         }
-         // Display results
-         if (container) {
-         container.innerHTML = bulkResults.map((result, index) => {
-         if (!result.success) {
-         return `
-         <div class="bulk-result-item" style="border-color:#ef4444;">
-         <div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
-         <div style="display:flex;align-items:center;gap:16px;">
-         <div class="bulk-score-badge" style="color:#f87171!important;">❌</div>
-         <div>
-         <div style="font-weight:700;">${result.url.substring(0, 50)}${result.url.length > 50 ? '...' : ''}</div>
-         <div style="font-size:0.75rem;color:#f87171;">Error: ${result.error || 'Scan failed'}</div>
-         </div>
-         </div>
-         <div style="display:flex;align-items:center;gap:12px;">
-         <span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span>
-         </div>
-         </div>
-         <div id="bulk-details-${index}" class="bulk-result-details hidden">
-         <div style="padding:16px;background:#1a0a0a;border-radius:8px;">
-         <p style="color:#f87171;">❌ Scan failed for this URL. Please try again or check if the website is accessible.</p>
-         <button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button>
-         </div>
-         </div>
-         </div>`;
-         }
-         const scoreColor = result.score >= 70 ? '#4ade80' : result.score >= 50 ? '#fbbf24' : '#f87171';
-         const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
-         // ADDED CHECKBOX FOR LEADERBOARD SELECTION
-         return `
-         <div class="bulk-result-item" id="bulk-result-${index}">
-         <div class="bulk-result-summary" onclick="toggleBulkResult(${index})">
-         <div style="display:flex;align-items:center;gap:16px;">
-         <!-- CHECKBOX -->
-         <input type="checkbox" ${result.score >= 70 ? '' : 'disabled'} ${result.selected ? 'checked' : ''} 
-         onclick="event.stopPropagation(); toggleLeaderboardSelection(${index}, this.checked)" 
-         style="accent-color:#7e22ce; width:18px; height:18px; cursor:${result.score >= 70 ? 'pointer' : 'not-allowed'}" 
-         title="${result.score >= 70 ? 'Select for Leaderboard' : 'Score < 70 (Not eligible)'}">
-         <div class="bulk-score-badge" style="color:${scoreColor}!important;">${result.score}</div>
-         <div>
-         <div style="font-weight:700;">${domain}</div>
-         <div style="font-size:0.75rem;color:#9ca3af;">${result.url.substring(0, 60)}${result.url.length > 60 ? '...' : ''}</div>
-         </div>
-         </div>
-         <div style="display:flex;align-items:center;gap:12px;">
-         <span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf || 0}/50</span>
-         <span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span>
-         </div>
-         </div>
-         <div id="bulk-details-${index}" class="bulk-result-details hidden">
-         <div style="padding:16px 0;">${generateBulkResultDetails(result)}</div>
-         </div>
-         </div>`;
-         }).join('');
-         resultsDiv.classList.remove('hidden');
-         // Show export buttons
-         if (exportButtons && successful.length > 0) {
-         exportButtons.style.display = 'flex';
-         }
-         }
-         } catch (error) {
-         console.error('Bulk scan error:', error);
-         showToast('❌ Error during bulk scan: ' + error.message, '#ef4444');
+           const startRes = await fetch('/api/scan/bulk-job', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', 'x-user-id': userId || 'anonymous' },
+             body: JSON.stringify({ urls })
+           });
+           const startData = await startRes.json();
+           if (!startData.success) throw new Error(startData.error || 'Failed to start job');
+           activeBulkJobId = startData.jobId;
+           // Save to localStorage so tab close/reload can resume
+           localStorage.setItem('cs_activeJobId', activeBulkJobId);
+           if (startData.capped) showToast('⚠️ Capped at 500 URLs. Remaining skipped.', '#f59e0b', 6000);
+           button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server' + (startData.queued ? ' (queued)' : '') + '... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
+           if (startData.queued) progressText.textContent = '⏳ Waiting for scan slot — your job starts automatically.';
+         
+         
+           // Poll for results
+           let lastDone = 0;
+           await new Promise((resolve, reject) => {
+             bulkPollInterval = setInterval(async () => {
+               try {
+                 const pollRes = await fetch('/api/scan/bulk-job/' + activeBulkJobId);
+                 const job = await pollRes.json();
+                 if (!job.success) { clearInterval(bulkPollInterval); reject(new Error('Job not found')); return; }
+                 // Show new results as they come in
+                 const newResults = job.results.slice(lastDone);
+                 newResults.forEach(r => {
+                   bulkResults.push({ ...r, selected: false });
+                   try {
+                     const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+                     scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
+                     localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
+                   } catch(e) {}
+                 });
+                 lastDone = job.results.length;
+                 // Update progress bar
+                 const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+                 progressBar.style.width = pct + '%';
+                 const currentUrl = job.results[job.done - 1]?.url || '';
+                 const shortUrl = currentUrl.replace(/https?:\/\//, '').substring(0, 50);
+                 if (job.status === 'queued') {
+                   progressText.textContent = '⏳ Waiting for scan slot — your job starts automatically when ready.';
+                 } else if (job.status === 'done') {
+                   progressText.textContent = '✅ Scan complete! ' + job.done + '/' + job.total + ' pages — tab was safe to close';
+                 } else if (job.status === 'error') {
+                   progressText.textContent = '❌ Job error: ' + (job.error || 'unknown');
+                 } else {
+                   progressText.textContent = 'Scanning ' + job.done + ' / ' + job.total + (shortUrl ? ' — ' + shortUrl : '') + ' · server-side · safe to close tab';
+                 }
+                 window._lastProgressText = progressText.textContent;
+                 if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
+                   clearInterval(bulkPollInterval);
+                   bulkPollInterval = null;
+                   localStorage.removeItem('cs_activeJobId');
+                   resolve(job);
+                 }
+               } catch(e) { clearInterval(bulkPollInterval); reject(e); }
+             }, 4000); // poll every 4 seconds
+           });
+         
+           progressBar.style.width = '100%';
+         
+           // SITEMAP MODE: show banner
+           if (currentBulkMode === 'sitemap') {
+             const sitemapUrl = document.getElementById('sitemapUrlInput').value.trim();
+             const succ = bulkResults.filter(r => r.success && r.score > 0);
+             if (succ.length > 0) {
+               const avgScore = Math.round(succ.reduce((a,r) => a+r.score, 0) / succ.length);
+               const avgColor = avgScore>=95?'#a78bfa':avgScore>=85?'#4ade80':avgScore>=70?'#a3e635':avgScore>=50?'#fbbf24':'#f87171';
+               const avgLabel = avgScore>=95?'Elite':avgScore>=90?'Excellent':avgScore>=85?'Strong':avgScore>=80?'Good':avgScore>=75?'Solid':avgScore>=70?'Qualified':'Needs Work';
+               const domain = sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
+               const banner = document.createElement('div');
+               banner.id = 'sitemapSubmitBanner';
+               banner.style.cssText = 'background:linear-gradient(135deg,#0f0c29,#302b63);border:1px solid #4c1d95;border-radius:14px;padding:24px;margin-bottom:16px;';
+               banner.innerHTML = `
+                 <div style="text-align:center;margin-bottom:20px;">
+                   <div style="font-size:0.75rem;color:#6b7280;margin-bottom:6px;">${domain} \u2014 ${succ.length} pages scanned</div>
+                   <div style="font-size:3.5rem;font-weight:900;color:${avgColor};line-height:1;">${avgScore}</div>
+                   <div style="font-size:0.9rem;color:${avgColor};font-weight:700;margin:4px 0;">${avgLabel} \u00b7 Average domain score</div>
+                 </div>
+                 ${avgScore >= 70 ? `
+                 <div style="background:rgba(0,0,0,0.3);border-radius:10px;padding:16px;margin-bottom:16px;">
+                   <p style="font-size:0.8rem;color:#a78bfa;font-weight:700;margin-bottom:12px;">\ud83d\udccb Add details before submitting to leaderboard</p>
+                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Company Name</label><input id="sbCompanyName" type="text" placeholder="e.g. Acme SEO Agency" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"></div>
+                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Country</label><select id="sbCountry" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"><option value="">Select country\u2026</option><option value="Netherlands">\ud83c\uddf3\ud83c\uddf1 Netherlands</option><option value="Belgium">\ud83c\udde7\ud83c\uddea Belgium</option><option value="Germany">\ud83c\udde9\ud83c\uddea Germany</option><option value="United Kingdom">\ud83c\uddec\ud83c\udde7 United Kingdom</option><option value="France">\ud83c\uddeb\ud83c\uddf7 France</option><option value="Spain">\ud83c\uddea\ud83c\uddf8 Spain</option><option value="United States">\ud83c\uddfa\ud83c\uddf8 United States</option><option value="Canada">\ud83c\udde8\ud83c\udde6 Canada</option><option value="Australia">\ud83c\udde6\ud83c\uddfa Australia</option><option value="Other">\ud83c\udf10 Other</option></select></div>
+                   </div>
+                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Niche</label><select id="sbNiche" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"><option value="">Select niche\u2026</option><option value="SEO Agency">SEO Agency</option><option value="Content Marketing Agency">Content Marketing Agency</option><option value="Digital Marketing Agency">Digital Marketing Agency</option><option value="Web Design Agency">Web Design Agency</option><option value="SaaS">SaaS / Software</option><option value="Legal">Legal / Law Firm</option><option value="Healthcare">Healthcare / Medical</option><option value="Finance">Finance / Fintech</option><option value="Real Estate">Real Estate</option><option value="E-Commerce">E-Commerce</option><option value="Coaching">Coaching / Consulting</option><option value="Education">Education</option><option value="Local Business">Local Business</option><option value="Other">Other</option></select></div>
+                     <div><label style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:4px;">Business Type</label><select id="sbBizType" style="width:100%;padding:7px 10px;background:#1e1b4b;border:1px solid #4c1d95;border-radius:6px;color:#e5e7eb;font-size:0.82rem;"><option value="">Select type\u2026</option><option value="B2B">B2B</option><option value="B2C">B2C</option><option value="Local">Local</option><option value="Enterprise">Enterprise</option><option value="Startup">Startup</option></select></div>
+                   </div>
+                 </div>
+                 <div style="display:flex;gap:10px;">
+                   <button onclick="submitSitemapWithMeta('${domain}', ${avgScore}, ${sitemapFetchedUrls.length || succ.length}, '${sitemapUrl}')" style="flex:1;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;">🏆 Submit to Leaderboard</button>
+                   <button onclick="showDomainBadge('${domain}', ${avgScore}, ${succ.length}, bulkResults.filter(r=>r.success&&r.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(r=>({url:r.url,score:r.score})))" style="padding:12px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;white-space:nowrap;">\ud83c\udfc5 Badge</button>
+                 </div>` : `
+                 <div style="display:flex;gap:10px;align-items:center;">
+                   <div style="flex:1;padding:12px;background:rgba(239,68,68,0.1);border:1px solid #7f1d1d;border-radius:8px;text-align:center;font-size:0.82rem;color:#f87171;">\u26a0\ufe0f Score ${avgScore}/100 \u2014 minimum 70 required for leaderboard</div>
+                   <button onclick="showDomainBadge('${domain}', ${avgScore}, ${succ.length}, bulkResults.filter(r=>r.success&&r.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(r=>({url:r.url,score:r.score})))" style="padding:12px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.9rem;cursor:pointer;white-space:nowrap;">\ud83c\udfc5 Badge</button>
+                 </div>`}
+               `;
+               if (container) container.parentNode.insertBefore(banner, container);
+             }
+           }
+         
+           // Sort + render results
+           bulkResults.sort((a,b) => { if(a.success&&!b.success)return -1; if(!a.success&&b.success)return 1; if(a.success&&b.success)return(b.score||0)-(a.score||0); return 0; });
+           const successful = bulkResults.filter(r => r.success);
+           const eliteCount=successful.filter(r=>r.score>=95).length; const excellentCount=successful.filter(r=>r.score>=90&&r.score<95).length;
+           const strongCount=successful.filter(r=>r.score>=85&&r.score<90).length; const goodCount=successful.filter(r=>r.score>=80&&r.score<85).length;
+           const solidCount=successful.filter(r=>r.score>=75&&r.score<80).length; const qualifiedCount=successful.filter(r=>r.score>=70&&r.score<75).length;
+           const needsWorkCount=successful.filter(r=>r.score<70).length; const errorCount=bulkResults.length-successful.length;
+           const statsDiv = document.getElementById('bulkStats');
+           if (statsDiv) statsDiv.innerHTML = `
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${eliteCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83c\udfc5 Elite 95+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">${excellentCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\u2728 Excellent 90+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${strongCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcaa Strong 85+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a3e635;">${goodCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udc4d Good 80+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${solidCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcc8 Solid 75+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qualifiedCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\u2705 Qualified 70+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${needsWorkCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udd34 Needs Work</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${errorCount>0?'<div style=\"font-size:0.65rem;color:#ef4444;margin-top:4px;\">'+errorCount+' errors</div>':''}</div>`;
+           if (container) container.innerHTML = bulkResults.map((result, index) => {
+             if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#ef4444;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:#f87171!important;">✕</div><div><div style="font-weight:700;">${result.url.replace(/https?:\/\//,'').split('/')[0]}</div><div style="font-size:0.75rem;color:#f87171;">Error: ${result.error||'Scan failed'}</div></div></div><div style="display:flex;align-items:center;gap:12px;"><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px;background:#1a0a0a;border-radius:8px;"><p style="color:#f87171;">❌ Scan failed.</p><button onclick="retryBulkUrl('${result.url}')" style="background:#7f1d1d;color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:10px;cursor:pointer;">🔄 Retry</button></div></div></div>
+             </div>`;
+             const sc = result.score>=95?'#a78bfa':result.score>=85?'#4ade80':result.score>=70?'#a3e635':'#f87171';
+             const domain = result.url.replace(/https?:\/\//, '').split('/')[0];
+             return `<div class="bulk-result-item" id="bulk-result-${index}" style="display:flex;align-items:flex-start;gap:10px;padding:0;">
+               <div style="padding:14px 0 14px 14px;flex-shrink:0;" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleBulkSelect(${index},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#a78bfa;margin-top:2px;"></div>
+               <div style="flex:1;min-width:0;"><div class="bulk-result-summary" onclick="toggleBulkResult(${index})"><div style="display:flex;align-items:center;gap:16px;"><div class="bulk-score-badge" style="color:${sc}!important;">${result.score}</div><div><div style="font-weight:700;">${domain}</div><div style="font-size:0.75rem;color:#9ca3af;">${(()=>{const p=result.url.replace(/https?:\/\//,'').split('/').slice(1).join('/');return p?('/'+p).substring(0,45)+((p.length>45)?'..':''):'homepage'})()}</div></div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;background:#1e293b;padding:4px 10px;border-radius:99px;">GRAAF: ${result.metrics?.graaf||0}/50</span><button onclick="event.stopPropagation();showPageBadge('${result.url}',${result.score},${result.metrics?.graaf||0},${result.metrics?.craft||0},${result.metrics?.technical||0})" title="Get Badge" style="background:rgba(245,158,11,0.15);border:1px solid #78350f;color:#fbbf24!important;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🏅</button><span style="color:#9ca3af;"><i class="fas fa-chevron-down"></i></span></div></div><div id="bulk-details-${index}" class="bulk-result-details hidden"><div style="padding:16px 0;">${generateBulkResultDetails(result)}</div></div></div>
+             </div>`;
+           }).join('');
+           updateDeleteBar();
+           resultsDiv.classList.remove('hidden');
+           if (exportButtons && successful.length > 0) {
+             exportButtons.style.display = 'flex';
+             const domainBadgeBtn = document.getElementById('domainBadgeBtn');
+             if (domainBadgeBtn) { const doms=[...new Set(successful.map(r=>r.url.replace(/https?:\/\//,'').split('/')[0]))]; domainBadgeBtn.style.display=doms.length===1?'inline-flex':'none'; }
+           }
+           updateRealActivityBanner();
+         } catch(error) {
+           console.error('Bulk scan error:', error);
+           showToast('\u274c Error: ' + error.message, '#ef4444');
          } finally {
-         progress.classList.add('hidden');
-         button.disabled = false;
-         button.innerHTML = '<i class="fas fa-rocket mr-2"></i> Scan All URLs';
-         updateBulkCount();
-         isScanning = false;
-         updateRealActivityBanner(); // Update real activity banner after bulk scan
+           if (bulkPollInterval) { clearInterval(bulkPollInterval); bulkPollInterval = null; }
+           progress.classList.add('hidden');
+           button.disabled = false;
+           button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>';
+           updateBulkCount();
+           isScanning = false;
          }
          }
+         
+         function cancelBulkJob() {
+           window.cancelBulkJob = cancelBulkJob;
+           document._cancelBulkJob = cancelBulkJob;
+           if (!activeBulkJobId) return;
+           fetch('/api/scan/bulk-job/' + activeBulkJobId + '/cancel', { method: 'POST' });
+           if (bulkPollInterval) { clearInterval(bulkPollInterval); bulkPollInterval = null; }
+           localStorage.removeItem('cs_activeJobId');
+           isScanning = false;
+           activeBulkJobId = null;
+           const button = document.getElementById('bulkScanBtn');
+           if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>'; }
+           const progress = document.getElementById('bulkProgress');
+           if (progress) progress.classList.add('hidden');
+           showToast('⏹ Scan cancelled', '#6b7280');
+         }
+         
          function retryBulkUrl(url) {
          // Add URL to input and trigger scan
          const textarea = document.getElementById('bulkUrlInput');
@@ -1585,53 +2023,51 @@
          item.classList.toggle('expanded', !details.classList.contains('hidden'));
          }
          }
+         
+         function toggleBulkSelect(index, checked) {
+           if (bulkResults[index]) bulkResults[index].selected = checked;
+           updateDeleteBar();
+         }
+         
+         function selectAllBulk(checked) {
+           bulkResults.forEach(r => r.selected = checked);
+           renderBulkResults();
+         }
+         
+         function updateDeleteBar() {
+           const selectedCount = bulkResults.filter(r => r.selected).length;
+           let bar = document.getElementById('bulkDeleteBar');
+           if (!bar) {
+             const resultsDiv = document.getElementById('bulkResults');
+             if (!resultsDiv) return;
+             bar = document.createElement('div');
+             bar.id = 'bulkDeleteBar';
+             bar.style.cssText = 'position:sticky;top:0;z-index:20;background:#1a0a2e;border:1px solid #7e22ce;border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+             resultsDiv.prepend(bar);
+           }
+           bar.innerHTML = `
+             <div style="display:flex;align-items:center;gap:12px;">
+               <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;color:#c4b5fd;">
+                 <input type="checkbox" onchange="selectAllBulk(this.checked)" ${selectedCount===bulkResults.length&&bulkResults.length>0?'checked':''} style="width:15px;height:15px;accent-color:#a78bfa;cursor:pointer;">
+                 Select all
+               </label>
+               <span style="font-size:0.78rem;color:#9ca3af;">${selectedCount > 0 ? selectedCount + ' selected' : 'Select to remove'}</span>
+             </div>
+             ${selectedCount > 0 ? `<button onclick="deleteSelectedBulk()" style="background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;padding:6px 16px;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;">🗑 Remove ${selectedCount}</button>` : ''}
+           `;
+         }
+         
+         function deleteSelectedBulk() {
+           const count = bulkResults.filter(r => r.selected).length;
+           bulkResults = bulkResults.filter(r => !r.selected);
+           const selectAll = document.getElementById('bulkSelectAll');
+           if (selectAll) selectAll.checked = false;
+           renderBulkResults();
+           updateDeleteBar();
+           showToast('🗑 ' + count + ' result' + (count === 1 ? '' : 's') + ' removed', '#6b7280', 2500);
+         }
          // ✅ NEW FUNCTION: TOGGLE LEADERBOARD SELECTION
-         function toggleLeaderboardSelection(index, isChecked) {
-         if (bulkResults[index]) {
-         bulkResults[index].selected = isChecked;
-         }
-         }
-         // ✅ NEW FUNCTION: SUBMIT SELECTED TO LEADERBOARD
-         async function submitSelectedToLeaderboard() {
-         if (!userId) {
-         alert('❌ Please register or log in to submit to the leaderboard.');
-         return;
-         }
-         const selected = bulkResults.filter(r => r.success && r.selected && r.score >= 70);
-         if (selected.length === 0) {
-         alert('⚠️ No valid scans selected. Please select successful scans with a score of 70 or higher.');
-         return;
-         }
-         if (!confirm(`Submit ${selected.length} selected scan${selected.length !== 1 ? 's' : ''} to the Leaderboard?`)) return;
          
-         const btn = event && event.target;
-         if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
-         
-         let successCount = 0;
-         let failCount = 0;
-         
-         for (const result of selected) {
-         try {
-         const name = result.title || result.url.replace(/https?:\/\//, '').split('/')[0];
-         const res = await fetch('/api/leaderboard/submit', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-         body: JSON.stringify({ url: result.url, score: result.score, company_name: name, admin_verified: false })
-         });
-         const data = await res.json();
-         if (data.success) {
-         successCount++;
-         } else {
-         failCount++;
-         }
-         } catch(e) {
-         failCount++;
-         }
-         }
-         
-         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trophy mr-2"></i> Submit Selected'; }
-         showToast(`✅ Submitted ${successCount} to Leaderboard. ${failCount > 0 ? failCount + ' failed.' : ''}`, successCount > 0 ? '#0f7b3a' : '#ef4444');
-         }
          
          function generateBulkResultDetails(data) {
          if (!data.success) return '<p>No data available</p>';
@@ -1717,29 +2153,47 @@
          alert('⚠️ No successful scans to export. All URLs failed to scan.');
          return;
          }
-         let csv = 'URL,Domain,Score,Label,GRAAF,CRAFT,Technical,Word Count,H1,H2,Images,Links,Schema,Canonical,Status,Top Issue\n';
+         // Find max number of recommendations across all results (cap at 10 for clean CSV)
+         const maxRecs = Math.min(10, Math.max(...successful.map(r => (r.recommendations?.all || r.recommendations || []).length)));
+         // Build dynamic recommendation headers
+         let recHeaders = '';
+         for (let i = 1; i <= maxRecs; i++) {
+         recHeaders += `,Rec ${i} Priority,Rec ${i} Title,Rec ${i} Action`;
+         }
+         let csv = `URL,Domain,Score,Label,GRAAF,CRAFT,Technical,Word Count,H1,H2,Images,Links,Schema,Canonical,Status${recHeaders}\n`;
          successful.forEach(r => {
          const domain = r.url.replace(/https?:\/\//, '').split('/')[0];
          const label = r.score >= 95 ? 'Elite' : r.score >= 90 ? 'Excellent' : r.score >= 85 ? 'Strong' : r.score >= 80 ? 'Good' : r.score >= 75 ? 'Solid' : r.score >= 70 ? 'Qualified' : 'Needs Work';
          const stats = r.content_stats || {};
-         const topIssue = r.recommendations?.[0]?.title || 'None';
-         csv += `"${r.url}","${domain}",${r.score},"${label}",${r.metrics?.graaf||0},${r.metrics?.craft||0},${r.metrics?.technical||0},${stats.wordCount||0},${stats.h1Count||0},${stats.h2Count||0},${stats.images||0},${stats.internalLinks||0},${stats.hasArticleSchema?'Yes':'No'},${stats.hasCanonical?'Yes':'No'},Success,"${topIssue.replace(/"/g,'""')}"\n`;
+         const recs = (r.recommendations?.all || r.recommendations || []);
+         const esc = s => '"' + (s || '').replace(/"/g, '""') + '"';
+         let recCols = '';
+         for (let i = 0; i < maxRecs; i++) {
+         const rec = recs[i];
+         recCols += rec
+         ? `,${esc(rec.priority)},${esc(rec.title)},${esc(rec.action)}`
+         : `,,,`;
+         }
+         csv += `${esc(r.url)},${esc(domain)},${r.score},${esc(label)},${r.metrics?.graaf||0},${r.metrics?.craft||0},${r.metrics?.technical||0},${stats.wordCount||0},${stats.h1Count||0},${stats.h2Count||0},${stats.images||0},${stats.internalLinks||0},${stats.hasArticleSchema?'Yes':'No'},${stats.hasCanonical?'Yes':'No'},Success${recCols}\n`;
          });
          // Add failed URLs at the end
          const failed = bulkResults.filter(r => !r.success);
          failed.forEach(r => {
-         csv += `"${r.url}","${r.url.replace(/https?:\/\//, '').split('/')[0]}",0,"Failed",0,0,0,0,0,0,0,0,No,No,Error,"${(r.error||'Unknown').replace(/"/g,'""')}"\n`;
+         const esc = s => '"' + (s || '').replace(/"/g, '""') + '"';
+         let emptyCols = '';
+         for (let i = 0; i < maxRecs; i++) emptyCols += ',,,';
+         csv += `${esc(r.url)},${esc(r.url.replace(/https?:\/\//, '').split('/')[0])},0,"Failed",0,0,0,0,0,0,0,0,No,No,Error${emptyCols}\n`;
          });
-         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel UTF-8
          const url = URL.createObjectURL(blob);
          const a = document.createElement('a');
          a.href = url;
          a.download = `ContentScale_BulkExport_${new Date().toISOString().split('T')[0]}.csv`;
          a.click();
          URL.revokeObjectURL(url);
-         showToast(`✅ Exported ${successful.length} successful scan${successful.length!==1?'s':''} to CSV`, '#0f7b3a');
+         showToast(`✅ Exported ${successful.length} scan${successful.length!==1?'s':''} with up to ${maxRecs} recommendations each`, '#0f7b3a');
          }
-         // ✅ EXPORT ALL RESULTS AS INDIVIDUAL PDFS (one file per URL)
+         // ✅ EXPORT ALL RESULTS AS ONE COMBINED PDF
          function exportBulkPDF() {
          if (!bulkResults || bulkResults.length === 0) {
          alert('❌ No scan results to export. Run a bulk scan first.');
@@ -1750,51 +2204,417 @@
          alert('⚠️ No successful scans to export. All URLs failed to scan.');
          return;
          }
-         if (successful.length > 10) {
-         if (!confirm(`📄 Exporting ${successful.length} PDFs may take a moment. Continue?`)) return;
+         showToast(`🔄 Building combined PDF for ${successful.length} site${successful.length!==1?'s':''}...`, '#7e22ce');
+         const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+         const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
+         const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
+         const avgScore = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
+         const eliteCount     = successful.filter(r => r.score >= 95).length;
+         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
+         const strongCount    = successful.filter(r => r.score >= 85 && r.score < 90).length;
+         const goodCount      = successful.filter(r => r.score >= 80 && r.score < 85).length;
+         const solidCount     = successful.filter(r => r.score >= 75 && r.score < 80).length;
+         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
+         const needsWorkCount = successful.filter(r => r.score < 70).length;
+         
+         // Shared header HTML (matches single-scan PDF exactly)
+         const pdfHeader = `
+         <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
+           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+             <div>
+               <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+               <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="font-size:12px;opacity:0.75;">Generated</div>
+               <div style="font-size:13px;font-weight:700;">${today}</div>
+             </div>
+           </div>
+         </div>`;
+         
+         // Shared footer HTML (matches single-scan PDF exactly)
+         const pdfFooter = `
+         <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+           <div>
+             <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+             <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+           </div>
+           <div style="text-align:right;">
+             <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+             <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+           </div>
+         </div>`;
+         
+         // Build one page per site
+         const sitePages = successful.map((data, idx) => {
+         const score = data.score || 0;
+         const url = data.url || '';
+         const metrics = data.metrics || {};
+         const stats = data.content_stats || {};
+         const recs = (data.recommendations?.all || data.recommendations || []);
+         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+         const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+         const scoreColorLight = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
+         const recRows = recs.map((r, i) => {
+         const pc = priorityColor[r.priority] || '#6b7280';
+         const pl = priorityLabel[r.priority] || 'Info';
+         return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:10px;page-break-inside:avoid;">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+         <div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${r.title}</div>
+         <span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
+         </div>
+         <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description}</p>
+         <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;${r.learning?'margin-bottom:8px;':''}">
+         <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
+         <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action}</p>
+         </div>
+         ${r.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
+         <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+         <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p>
+         </div>` : ''}
+         ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
+         </div>`;
+         }).join('');
+         
+         return `
+         <div style="page-break-before:${idx===0?'avoid':'always'};">
+           <!-- Per-site header: same gradient as single scan -->
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:11px;opacity:0.65;">Site ${idx+1} of ${successful.length}</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+             <div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div>
+             <h2 style="font-size:24px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h2>
+             <p style="font-size:13px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendation${recs.length!==1?'s':''}</p>
+           </div>
+           <!-- Score band -->
+           <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+             <div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;">
+               <div style="text-align:center;">
+                 <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+                 <div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div>
+                 <div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div>
+               </div>
+               <div style="flex:1;min-width:200px;">
+                 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;">
+                   <tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr>
+                   <tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr>
+                   <tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr>
+                 </table>
+               </div>
+             </div>
+           </div>
+           <!-- Recommendations -->
+           <div style="padding:28px 40px;">
+             <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
+             ${recRows || '<p style="color:#6b7280;font-size:13px;">No specific recommendations — site is performing well.</p>'}
+           </div>
+           <!-- Per-site footer: same dark footer as single scan -->
+           <div style="background:#111827;padding:20px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
+             <div>
+               <div style="color:white;font-weight:700;font-size:13px;">ContentScale SEO Platform</div>
+               <div style="color:#9ca3af;font-size:11px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="color:#9ca3af;font-size:11px;">app.contentscale.site</div>
+               <div style="color:#9ca3af;font-size:11px;">+31 6 2807 3996</div>
+             </div>
+           </div>
+         </div>`;
+         }).join('');
+         
+         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+         <title>ContentScale Bulk Scan Report — ${today}</title>
+         <style>
+         * { box-sizing:border-box; margin:0; padding:0; }
+         body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }
+         @media print {
+           .no-print { display:none !important; }
+           body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
          }
-         showToast(`🔄 Generating ${successful.length} PDF${successful.length!==1?'s':''}...`, '#7e22ce');
-         successful.forEach((result, index) => {
-         setTimeout(() => {
-         exportScanPDF(result);
-         if (index === successful.length - 1) {
-         setTimeout(() => showToast('✅ All PDFs ready! Check your downloads.', '#0f7b3a'), 2000);
+         </style>
+         </head><body>
+         
+         <!-- ═══ COVER PAGE ═══ -->
+         <div style="min-height:100vh;display:flex;flex-direction:column;page-break-after:always;">
+           <!-- Cover header -->
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:12px;opacity:0.75;">Generated</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+           </div>
+           <!-- Cover body -->
+           <div style="flex:1;background:linear-gradient(160deg,#030712,#1e1b4b);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;">
+             <div style="font-size:52px;font-weight:900;color:white;margin-bottom:10px;line-height:1.1;">Bulk SEO Report</div>
+             <div style="font-size:16px;color:#a5b4fc;margin-bottom:52px;">GRAAF + CRAFT + Technical Analysis</div>
+             <div style="display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-bottom:52px;">
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
+                 <div style="font-size:44px;font-weight:900;color:#c084fc;">${successful.length}</div>
+                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Sites Scanned</div>
+               </div>
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px 36px;text-align:center;">
+                 <div style="font-size:44px;font-weight:900;color:#4ade80;">${avgScore}</div>
+                 <div style="font-size:12px;color:#a78bfa;margin-top:6px;">Avg Score</div>
+               </div>
+               <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:16px 24px;text-align:center;min-width:160px;">
+                 <div style="font-size:11px;color:#a78bfa;margin-bottom:8px;font-weight:700;letter-spacing:.5px;">SCORE BREAKDOWN</div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">🏅 95+</span><span style="font-size:13px;font-weight:900;color:#c084fc;">${eliteCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">✨ 90+</span><span style="font-size:13px;font-weight:900;color:#4ade80;">${excellentCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">💪 85+</span><span style="font-size:13px;font-weight:900;color:#86efac;">${strongCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">👍 80+</span><span style="font-size:13px;font-weight:900;color:#fbbf24;">${goodCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">📈 75+</span><span style="font-size:13px;font-weight:900;color:#fde68a;">${solidCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:3px;"><span style="font-size:11px;color:#d1d5db;">✅ 70+</span><span style="font-size:13px;font-weight:900;color:#fb923c;">${qualifiedCount}</span></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><span style="font-size:11px;color:#d1d5db;">🔴 &lt;70</span><span style="font-size:13px;font-weight:900;color:#f87171;">${needsWorkCount}</span></div>
+               </div>
+             </div>
+             <!-- Summary table -->
+             <table style="border-collapse:collapse;min-width:500px;max-width:680px;background:rgba(255,255,255,0.05);border-radius:12px;overflow:hidden;width:100%;">
+               <thead><tr style="background:rgba(126,34,206,0.5);">
+                 <th style="padding:11px 16px;text-align:left;color:white;font-size:12px;">#</th>
+                 <th style="padding:11px 16px;text-align:left;color:white;font-size:12px;">Domain</th>
+                 <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Score</th>
+                 <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Label</th>
+               </tr></thead>
+               <tbody>${successful.map((r,i) => {
+               const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
+               const sc = r.score>=85?'#4ade80':r.score>=70?'#fbbf24':r.score>=60?'#fb923c':'#f87171';
+               return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
+               <td style="padding:9px 16px;color:#a5b4fc;font-size:12px;">${i+1}</td>
+               <td style="padding:9px 16px;color:#f1f5f9;font-size:12px;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
+               <td style="padding:9px 16px;text-align:right;font-weight:700;font-size:13px;color:${sc};">${r.score}</td>
+               <td style="padding:9px 16px;text-align:right;font-size:11px;color:${sc};">${lbl}</td>
+               </tr>`;
+               }).join('')}</tbody>
+             </table>
+           </div>
+           <!-- Cover footer -->
+           <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+             <div>
+               <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+               <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+               <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+             </div>
+           </div>
+         </div>
+         
+         <!-- ═══ INDIVIDUAL SITE PAGES ═══ -->
+         ${sitePages}
+         
+         <!-- ═══ BACK COVER ═══ -->
+         <div style="page-break-before:always;display:flex;flex-direction:column;min-height:50vh;">
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 40px 28px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:12px;opacity:0.75;">End of Report</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+           </div>
+           <div style="flex:1;background:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;text-align:center;">
+             <div style="font-size:28px;font-weight:900;color:white;margin-bottom:6px;">ContentScale SEO Platform</div>
+             <div style="font-size:14px;color:#9ca3af;margin-bottom:32px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:40px;">
+               <span>app.contentscale.site</span><span style="color:#374151;">·</span><span>+31 6 2807 3996</span><span style="color:#374151;">·</span><span>info@contentscale.site</span>
+             </div>
+             <div style="background:rgba(255,255,255,0.04);border:1px solid #374151;border-radius:14px;padding:24px 40px;max-width:500px;">
+               <div style="font-size:13px;color:#9ca3af;line-height:1.8;">
+                 <div style="font-weight:700;color:#a78bfa;margin-bottom:8px;">Report Summary</div>
+                 <div>${successful.length} sites scanned · Avg score: ${avgScore}/100</div>
+                 <div style="margin-top:6px;line-height:2;">🏅 ${eliteCount} Elite &nbsp;·&nbsp; ✨ ${excellentCount} Excellent &nbsp;·&nbsp; 💪 ${strongCount} Strong &nbsp;·&nbsp; 👍 ${goodCount} Good &nbsp;·&nbsp; 📈 ${solidCount} Solid &nbsp;·&nbsp; ✅ ${qualifiedCount} Qualified &nbsp;·&nbsp; 🔴 ${needsWorkCount} Needs Work</div>
+               </div>
+             </div>
+           </div>
+         </div>
+         
+         <div class="no-print" style="position:fixed;bottom:24px;right:24px;z-index:999;">
+           <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(126,34,206,0.5);">🖨️ Print / Save as PDF</button>
+         </div>
+         </body></html>`;
+         
+         const win = window.open('', '_blank');
+         if (!win) { alert('Please allow popups to export the combined PDF report.'); return; }
+         win.document.write(html);
+         win.document.close();
+         window._lastBulkReportHTML = html;
+         setTimeout(() => { win.focus(); showToast('✅ Combined PDF ready — use Print → Save as PDF', '#0f7b3a'); }, 500);
          }
-         }, index * 600); // Stagger to avoid popup blocker
-         });
-         }
-         // ✅ SHARE SUMMARY OF ALL RESULTS (copy to clipboard)
+         
+         // ✅ SHARE ALL — copies individual hosted report URLs to clipboard
          function shareAllResults() {
          if (!bulkResults || bulkResults.length === 0) {
-         alert('❌ No scan results to share. Run a bulk scan first.');
-         return;
+           alert('❌ No scan results to share. Run a bulk scan first.');
+           return;
          }
          const successful = bulkResults.filter(r => r.success);
          if (successful.length === 0) {
-         alert('⚠️ No successful results to share.');
-         return;
+           alert('⚠️ No successful results to share.');
+           return;
          }
-         const summary = `📊 ContentScale Bulk Scan Summary
-         🗓️ ${new Date().toLocaleDateString()}
-         ─────────────────────
-         ✅ ${successful.length} URLs scanned
-         🏆 ${successful.filter(r=>r.score>=70).length} Elite (70+)
-         ⭐ ${successful.filter(r=>r.score>=50&&r.score<70).length} Good (50-69)
-         ⚠️ ${successful.filter(r=>r.score<50).length} Needs Work (<50)
-         Top Performers:
-         ${successful.slice(0,5).map((r,i)=>`${i+1}. ${r.url.replace(/https?:\/\//,'').split('/')[0]} — ${r.score}/100`).join('\n')}
-         ─────────────────────
-         Generated with ContentScale · app.contentscale.site`;
-         if (navigator.share) {
-         navigator.share({
-         title: 'ContentScale Bulk Scan Results',
-         text: summary,
-         url: 'https://app.contentscale.site'
-         }).catch(() => fallbackCopy(summary));
-         } else {
-         fallbackCopy(summary);
+         
+         // If API returned real hosted URLs — copy those as plain text (best case)
+         const hostedReports = successful.filter(r => r.report_url).map(r => {
+           const url = r.report_url.startsWith('http') ? r.report_url : 'https://app.contentscale.site' + r.report_url;
+           const domain = r.url.replace(/https?:\/\//, '').split('/')[0];
+           return `${domain} — Score ${r.score}/100\n${url}`;
+         });
+         if (hostedReports.length > 0) {
+           const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+           const shareText = `📊 ContentScale Bulk Scan Results — ${today}\n${'─'.repeat(40)}\n${hostedReports.join('\n\n')}\n${'─'.repeat(40)}\nGenerated by ContentScale · app.contentscale.site`;
+           navigator.clipboard ? navigator.clipboard.writeText(shareText).then(() => showToast(`🔗 ${hostedReports.length} report link${hostedReports.length!==1?'s':''} copied!`, '#0ea5e9')).catch(() => { fallbackCopy(shareText); showToast('🔗 Links copied!', '#0ea5e9'); }) : (fallbackCopy(shareText), showToast('🔗 Links copied!', '#0ea5e9'));
+           return;
          }
+         
+         // No hosted URLs — open a fully-styled share page in a new tab (no blob URLs)
+         const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+         const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
+         const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
+         const avgScore    = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
+         const eliteCount  = successful.filter(r => r.score >= 95).length;
+         const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
+         const strongCount = successful.filter(r => r.score >= 85 && r.score < 90).length;
+         const goodCount   = successful.filter(r => r.score >= 80 && r.score < 85).length;
+         const solidCount  = successful.filter(r => r.score >= 75 && r.score < 80).length;
+         const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
+         const needsWorkCount = successful.filter(r => r.score < 70).length;
+         
+         const siteRows = successful.map((r, i) => {
+           const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
+           const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':r.score>=60?'#ea580c':'#dc2626';
+           const recs = (r.recommendations?.all || r.recommendations || []);
+           return `<tr style="border-bottom:1px solid #e5e7eb;">
+             <td style="padding:10px 14px;font-size:13px;color:#6b7280;">${i+1}</td>
+             <td style="padding:10px 14px;font-size:13px;color:#111827;font-weight:600;">${r.url.replace(/https?:\/\//,'').split('/')[0]}</td>
+             <td style="padding:10px 14px;font-weight:900;font-size:15px;color:${sc};">${r.score}</td>
+             <td style="padding:10px 14px;font-size:12px;color:${sc};">${lbl}</td>
+             <td style="padding:10px 14px;font-size:12px;color:#6b7280;">${recs.length} recs</td>
+             <td style="padding:10px 14px;"><a href="${r.url}" target="_blank" rel="noopener nofollow ugc" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
+           </tr>`;
+         }).join('');
+         
+         const shareHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+         <title>ContentScale — Bulk Scan Results · ${today}</title>
+         <style>
+           * { box-sizing:border-box; margin:0; padding:0; }
+           body { font-family:Arial,Helvetica,sans-serif; background:#f9fafb; color:#111827; }
+           table { width:100%; border-collapse:collapse; }
+           tr:hover td { background:#f5f3ff; }
+           @media print {
+             .no-print { display:none !important; }
+             body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+           }
+         </style>
+         </head><body style="max-width:860px;margin:0 auto;padding:0;">
+         
+           <!-- ══ HEADER (identical to single-scan PDF) ══ -->
+           <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
+             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+               <div>
+                 <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                 <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+               </div>
+               <div style="text-align:right;">
+                 <div style="font-size:12px;opacity:0.75;">Generated</div>
+                 <div style="font-size:13px;font-weight:700;">${today}</div>
+               </div>
+             </div>
+             <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;color:white;">Bulk Scan Results</h1>
+             <p style="font-size:14px;opacity:0.85;">GRAAF + CRAFT + Technical analysis across ${successful.length} site${successful.length!==1?'s':''} · ${eliteCount + excellentCount + strongCount} scoring 85+</p>
+           </div>
+         
+           <!-- ══ SCORE SUMMARY BAND ══ -->
+           <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+             <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+               <div style="text-align:center;">
+                 <div style="font-size:64px;font-weight:900;color:#7e22ce;line-height:1;">${avgScore}</div>
+                 <div style="font-size:13px;color:#6b7280;margin-top:2px;">avg score</div>
+                 <div style="display:inline-block;background:#7e22ce;color:white;font-size:11px;font-weight:700;padding:3px 14px;border-radius:99px;margin-top:6px;">out of 100</div>
+               </div>
+               <div style="flex:1;min-width:240px;">
+                 <table cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 5px;width:100%;">
+                   <tr><td style="background:#f5f3ff;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🏅 Elite <span style="font-weight:400;color:#9ca3af;font-size:11px;">95–100</span></td><td style="background:#f5f3ff;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#7e22ce;text-align:right;">${eliteCount}</td></tr>
+                   <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✨ Excellent <span style="font-weight:400;color:#9ca3af;font-size:11px;">90–94</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${excellentCount}</td></tr>
+                   <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">💪 Strong <span style="font-weight:400;color:#9ca3af;font-size:11px;">85–89</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${strongCount}</td></tr>
+                   <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">👍 Good <span style="font-weight:400;color:#9ca3af;font-size:11px;">80–84</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${goodCount}</td></tr>
+                   <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">📈 Solid <span style="font-weight:400;color:#9ca3af;font-size:11px;">75–79</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${solidCount}</td></tr>
+                   <tr><td style="background:#fff7ed;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✅ Qualified <span style="font-weight:400;color:#9ca3af;font-size:11px;">70–74</span></td><td style="background:#fff7ed;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#ea580c;text-align:right;">${qualifiedCount}</td></tr>
+                   <tr><td style="background:#fff1f2;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🔴 Needs Work <span style="font-weight:400;color:#9ca3af;font-size:11px;">&lt;70</span></td><td style="background:#fff1f2;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#dc2626;text-align:right;">${needsWorkCount}</td></tr>
+                 </table>
+               </div>
+             </div>
+           </div>
+         
+           <!-- ══ RESULTS TABLE ══ -->
+           <div style="padding:28px 40px;">
+             <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;">📋 All ${successful.length} Scanned Sites — Sorted Best to Lowest</div>
+             <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+               <table>
+                 <thead><tr style="background:#f3f4f6;">
+                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">#</th>
+                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">DOMAIN</th>
+                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">SCORE</th>
+                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">LABEL</th>
+                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">RECS</th>
+                   <th style="padding:11px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:700;">LINK</th>
+                 </tr></thead>
+                 <tbody>${siteRows}</tbody>
+               </table>
+             </div>
+           </div>
+         
+           <!-- ══ FOOTER (identical to single-scan PDF) ══ -->
+           <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
+             <div>
+               <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+               <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+               <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+             </div>
+           </div>
+         
+           <!-- ══ PRINT BUTTON ══ -->
+           <div class="no-print" style="text-align:center;padding:24px;">
+             <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button>
+             <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
+           </div>
+         
+         </body></html>`;
+         
+         const win = window.open('', '_blank');
+         if (!win) {
+           // Popup blocked — fall back to copying plain-text summary
+           const summary = `📊 ContentScale Bulk Scan Results — ${today}\n${'─'.repeat(40)}\n${successful.map((r,i)=>`${i+1}. ${r.url.replace(/https?:\/\//,'').split('/')[0]} — ${r.score}/100`).join('\n')}\n${'─'.repeat(40)}\napp.contentscale.site`;
+           fallbackCopy(summary);
+           showToast('📋 Summary copied — allow popups for full share page', '#f59e0b');
+           return;
          }
+         win.document.write(shareHTML);
+         win.document.close();
+         showToast('✅ Share page opened in new tab', '#0ea5e9');
+         }
+         
          function doRescan() {
          const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
          const input = document.getElementById('singleUrlInput');
@@ -1846,23 +2666,43 @@
          }
          }
          function applyLeaderboardFilters() {
-         const niche = document.getElementById('filterNiche').value.toLowerCase();
+         const search  = (document.getElementById('lbSearch')?.value || '').toLowerCase().trim();
+         const niche   = document.getElementById('filterNiche').value.toLowerCase().replace(/[\s_-]/g, '');
          const country = document.getElementById('filterCountry').value;
          const bizType = document.getElementById('filterBizType').value.toLowerCase();
-         const scoreMin = document.getElementById('filterScore').value;
+         const scoreMin= document.getElementById('filterScore').value;
          let filtered = allLeaderboardEntries.filter(e => {
-         if (niche && (e.niche || '').toLowerCase() !== niche) return false;
-         if (country && (e.country || '') !== country) return false;
-         if (bizType && (e.business_type || '').toLowerCase() !== bizType) return false;
-         if (scoreMin && e.score < parseInt(scoreMin)) return false;
-         return true;
+           // Search: match on company name, domain, or niche
+           if (search) {
+             const name   = (e.company_name || '').toLowerCase();
+             const domain = (e.url || '').toLowerCase();
+             const en     = (e.niche || '').toLowerCase();
+             if (!name.includes(search) && !domain.includes(search) && !en.includes(search)) return false;
+           }
+           // Niche: fuzzy — strip spaces/underscores/dashes before comparing
+           if (niche) {
+             const en = (e.niche || '').toLowerCase().replace(/[\s_-]/g, '');
+             if (!en.includes(niche) && !niche.includes(en)) return false;
+           }
+           // Country: exact
+           if (country && (e.country || '') !== country) return false;
+           // Business type: fuzzy
+           if (bizType) {
+             const bt = (e.business_type || '').toLowerCase();
+             if (!bt.includes(bizType) && !bizType.includes(bt)) return false;
+           }
+           // Score min
+           if (scoreMin && e.score < parseInt(scoreMin)) return false;
+           return true;
          });
-         const active = [niche, country, bizType, scoreMin].filter(Boolean).length;
+         const active = [search, niche, country, bizType, scoreMin].filter(Boolean).length;
          document.getElementById('filterCount').textContent = active > 0 ? `${active} filter${active>1?'s':''} active — ${filtered.length} result${filtered.length!==1?'s':''}` : '';
          renderLeaderboard(filtered);
          }
          function resetLeaderboardFilters() {
          ['filterNiche','filterCountry','filterBizType','filterScore'].forEach(id => { document.getElementById(id).value = ''; });
+         const lbSearch = document.getElementById('lbSearch');
+         if (lbSearch) lbSearch.value = '';
          document.getElementById('filterCount').textContent = '';
          renderLeaderboard(allLeaderboardEntries);
          }
@@ -1887,14 +2727,18 @@
          const m = MEDAL[i];
          const name = e.company_name || (() => { try { return new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url).hostname; } catch(err) { return e.url; } })();
          const tags = [e.niche, e.business_type, e.country].filter(Boolean);
+         // Always link to homepage, not sitemap URL
+         const homepage = (() => { try { const u = new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url); return u.protocol + '//' + u.hostname; } catch(err) { return e.url; } })();
+         const pageCount = e.page_count || null;
          return `<div style="background:${m.bg};border:2px solid ${m.border};border-radius:16px;padding:28px 20px 24px;text-align:center;position:relative;box-shadow:0 0 28px ${m.glow},inset 0 1px 0 rgba(255,255,255,0.07);transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
          <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:${m.badgeBg};color:${m.badgeText}!important;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;padding:3px 12px;border-radius:99px;">${m.label}</div>
          <div style="font-size:3rem;margin-bottom:6px;line-height:1;">${m.emoji}</div>
          <h3 style="font-weight:800;font-size:1.05rem;margin-bottom:6px;color:#f9fafb!important;line-height:1.3;">${name}</h3>
-         <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:4px;">${e.score}</div>
-         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)!important;margin-bottom:12px;">/ 100</div>
+         <div style="font-size:2.5rem;font-weight:900;color:${m.scoreColor}!important;line-height:1;margin-bottom:2px;">${e.score}</div>
+         <div style="font-size:0.72rem;color:rgba(255,255,255,0.45)!important;margin-bottom:6px;">Average content score / 100</div>
+         <div style="display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;color:rgba(255,255,255,0.55)!important;margin-bottom:10px;background:rgba(255,255,255,0.07);border-radius:99px;padding:3px 10px;">${pageCount ? '🗺️ ' + pageCount + ' pages scanned via sitemap' : '📄 Single page scan'} · GRAAF+CRAFT+Technical</div>
          ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:14px;">${tags.map(t => `<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75)!important;font-size:0.68rem;padding:2px 8px;border-radius:99px;">${t}</span>`).join('')}</div>` : ''}
-         <a href="${e.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔍 Visit Scanned Site</a>
+         <a href="${homepage}" target="_blank" rel="noopener nofollow ugc" style="display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:800;letter-spacing:0.02em;background:${m.badgeBg};color:${m.badgeText}!important;padding:8px 18px;border-radius:10px;border:none;text-decoration:none;box-shadow:0 2px 10px ${m.glow};transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🌐 Visit Website</a>
          </div>`;
          }).join('');
          const rest = entries.slice(3);
@@ -1913,17 +2757,22 @@
          const rankColor = rank <= 10 ? '#c084fc' : rank <= 25 ? '#818cf8' : '#6b7280';
          const rowBg = rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
          const tags = [e.niche, e.business_type, e.country].filter(Boolean).join(' · ');
+         let homepage = e.url;
+         try { const u = new URL(e.url.startsWith('http') ? e.url : 'https://'+e.url); homepage = u.protocol+'//'+u.hostname; } catch(err) {}
          return `<div class="lb-rank-row" style="display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:${rowBg};border-bottom:1px solid #1f2937;transition:background 0.15s;gap:8px;" onmouseover="this.style.background='rgba(126,34,206,0.1)'" onmouseout="this.style.background='${rowBg}'">
          <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
          <span style="font-size:0.85rem;font-weight:800;color:${rankColor}!important;width:24px;flex-shrink:0;text-align:right;">${rank}</span>
          <div style="min-width:0;flex:1;">
          <div class="lb-rank-name" style="font-weight:600;color:#f3f4f6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${name}</div>
-         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}</div>` : ''}
+         ${tags ? `<div class="lb-rank-tags" style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tags}${e.page_count ? ' · \u{1F4C4} ' + e.page_count + ' pages' : ''}</div>` : (e.page_count ? `<div style="font-size:0.68rem;color:#9ca3af!important;margin-top:1px;">\u{1F4C4} ${e.page_count} pages</div>` : '')}
          </div>
          </div>
          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-         <span class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></span>
-         <a href="${e.url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">Visit →</a>
+         <div style="text-align:right;">
+           <div class="lb-rank-score" style="font-weight:800;font-size:1rem;color:#4ade80!important;">${e.score}<span style="font-size:0.68rem;font-weight:400;color:#9ca3af!important;">/100</span></div>
+           <div style="font-size:0.62rem;color:#6b7280!important;">${e.page_count ? 'avg · ' + e.page_count + ' pages' : 'combined score'}</div>
+         </div>
+         <a href="${homepage}" target="_blank" rel="noopener nofollow ugc" style="font-size:0.75rem;color:#818cf8!important;text-decoration:none;font-weight:600;white-space:nowrap;">\uD83C\uDF10 Visit \u2192</a>
          </div>
          </div>`;
          }).join('');
@@ -1993,6 +2842,7 @@
          function closeModal() { document.getElementById('freelancerModal').classList.remove('active'); }
          function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
          function switchPageSection(section) {
+         window.switchPageSection = switchPageSection; document._switchPageSection = switchPageSection;
          document.querySelectorAll('.main-section').forEach(el => el.classList.remove('section-visible'));
          const target = document.querySelector(`[data-section="${section}"]`);
          if (target) target.classList.add('section-visible');
@@ -2026,10 +2876,164 @@
          try {
          const res = await fetch('/api/freelancers/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, title, bio, hourly_rate: rate }) });
          const data = await res.json();
-  if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
-  else { alert('❌ ' + (data.error || 'Failed')); }
-  } catch (e) { alert('❌ Error: ' + e.message); }
-  }
-  </script>
-  </body>
-  </html>
+         if (data.success) { alert('✅ Application submitted! We will review within 24h.'); closeModal(); loadFreelancers(); }
+         else { alert('❌ ' + (data.error || 'Failed')); }
+         } catch (e) { alert('❌ Error: ' + e.message); }
+         }
+         
+         // ============================================================
+         // BADGE SYSTEM
+         // ============================================================
+         function buildPageBadgeHTML(url, score, graaf, craft, technical) {
+           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
+           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+           const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
+           const pct = (v,max) => Math.round(v/max*100);
+           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+         <div>
+         <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
+         <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
+         </div>
+         <div style="text-align:center;min-width:52px;">
+         <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+         <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+         </div>
+         </div>
+         <div style="margin-bottom:10px;">
+         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
+         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
+         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
+         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
+         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
+         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
+         </div>
+         <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+         <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+         <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+         </div>
+         </div>`;
+         }
+         
+         function buildDomainBadgeHTML(domain, score, pageCount, topPages) {
+           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
+           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+           const rows = (topPages||[]).slice(0,3).map(p => {
+             const c = p.score>=95?'#a78bfa':p.score>=90?'#60a5fa':p.score>=85?'#4ade80':p.score>=80?'#a3e635':p.score>=75?'#fde68a':p.score>=70?'#fb923c':'#f87171';
+             const short = p.url.replace(/https?:\/\//,'').replace(/\/$/,'');
+             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1e293b;">
+         <a href="${p.url}" target="_blank" style="font-size:0.65rem;color:#818cf8;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${short}</a>
+         <span style="font-size:0.7rem;font-weight:800;color:${c};min-width:28px;text-align:right;">${p.score}</span>
+         </div>`;
+           }).join('');
+           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:320px;box-sizing:border-box;">
+         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+         <div>
+         <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Domain ContentScore</div>
+         <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">${domain}</div>
+         <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${pageCount} pages scanned</div>
+         </div>
+         <div style="text-align:center;min-width:60px;">
+         <div style="font-size:2.4rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+         <div style="font-size:0.62rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+         </div>
+         </div>
+         ${rows ? `<div style="margin-bottom:10px;">${rows}</div>` : ''}
+         <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+         <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+         <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+         </div>
+         </div>`;
+         }
+         
+         function showPageBadge(url, score, graaf, craft, technical) {
+           const html = buildPageBadgeHTML(url, score, graaf, craft, technical);
+           document.getElementById('badgePreview').innerHTML = html;
+           document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
+           document.getElementById('badgeModal').classList.add('open');
+         }
+         
+         function showDomainBadge(domain, score, pageCount, topPages) {
+           const html = buildDomainBadgeHTML(domain, score, pageCount, topPages);
+           document.getElementById('badgePreview').innerHTML = html;
+           document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
+           document.getElementById('badgeModal').classList.add('open');
+         }
+         
+         function showBulkDomainBadge() {
+           const successful = bulkResults.filter(r => r.success && r.score > 0);
+           if (!successful.length) return;
+           // Detect if all same domain
+           const domains = [...new Set(successful.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+           const domain = domains[0];
+           const isSameDomain = domains.length === 1;
+           if (!isSameDomain) { showToast('\u26a0\ufe0f Multiple domains — use the \xf0\x9f\x8f\x85 per row for individual badges', '#f59e0b'); return; }
+           const avgScore = Math.round(successful.reduce((a,r) => a+r.score, 0) / successful.length);
+           const topPages = successful.sort((a,b) => b.score-a.score).slice(0,3).map(r => ({url:r.url, score:r.score}));
+           showDomainBadge(domain, avgScore, successful.length, topPages);
+         }
+         
+         function closeBadgeModal() {
+           document.getElementById('badgeModal').classList.remove('open');
+         }
+         
+         function copyBadgeCode() {
+           const ta = document.getElementById('badgeEmbedCode');
+           ta.select();
+           if (navigator.clipboard) {
+             navigator.clipboard.writeText(ta.value).then(() => showToast('\u2705 Badge code copied!', '#7e22ce'));
+           } else {
+             document.execCommand('copy');
+             showToast('\u2705 Copied!', '#7e22ce');
+           }
+         }
+         
+         // ============================================================
+         // SHARE ALL AS URL
+         // ============================================================
+         async function shareAllResults() {
+           if (!bulkResults || bulkResults.length === 0) { showToast('\u274c No results to share', '#ef4444'); return; }
+           const successful = bulkResults.filter(r => r.success);
+           if (!successful.length) { showToast('\u26a0\ufe0f No successful results', '#f59e0b'); return; }
+           const btn = event?.target?.closest('button');
+           if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Creating link...'; }
+           try {
+             const res = await fetch('/api/share/bulk', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ results: successful })
+             });
+             const data = await res.json();
+             if (data.success && data.token) {
+               const url = window.location.origin + '/share/' + data.token;
+               if (navigator.clipboard) {
+                 await navigator.clipboard.writeText(url);
+                 showToast('\ud83d\udd17 Share link copied!', '#0ea5e9');
+               } else {
+                 prompt('Copy this link:', url);
+               }
+             } else { showToast('\u274c Could not create share link', '#ef4444'); }
+           } catch(e) { showToast('\u274c Error: ' + e.message, '#ef4444'); }
+           finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; } }
+         }
+         
+      </script>
+      <!-- BADGE MODAL -->
+      <div id="badgeModal" onclick="if(event.target===this)closeBadgeModal()">
+         <div id="badgeModalBox">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+               <h3 style="font-size:1rem;font-weight:800;color:#e9d5ff!important;">🏅 Get Your Badge</h3>
+               <button onclick="closeBadgeModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+            </div>
+            <p style="font-size:0.75rem;color:#9ca3af!important;margin-bottom:2px;">Copy & paste this on your website. The link back to ContentScale is a dofollow backlink.</p>
+            <div id="badgePreviewWrap">
+               <div id="badgePreview"></div>
+            </div>
+            <label style="font-size:0.72rem;color:#a78bfa!important;font-weight:700;display:block;margin-bottom:6px;">✂️ Embed Code</label>
+            <textarea id="badgeEmbedCode" readonly onclick="this.select()"></textarea>
+            <button onclick="copyBadgeCode()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">📋 Copy Embed Code</button>
+         </div>
+      </div>
+      <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}"complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)}();</script>
+   </body>
+</html>
