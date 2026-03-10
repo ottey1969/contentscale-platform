@@ -52,6 +52,11 @@
       <style>
          body { visibility: visible; opacity: 1; font-family: system-ui, -apple-system, sans-serif; background: #030712; color: white; }
          h1, h2, h3, h4, h5, h6, p, a, span, div, label, li { color: white !important; }
+         /* ADA widget — restore all colors so widget renders correctly */
+         [class*="ada"], [id*="ada"], [class*="a11y"], [id*="a11y"],
+         [class*="ada"] *, [id*="ada"] *, [class*="a11y"] *, [id*="a11y"] *,
+         [class*="accessibility"], [class*="accessibility"] *,
+         [class*="adabundle"], [class*="adabundle"] * { color: unset !important; background: unset !important; background-color: unset !important; }
          input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
          input::placeholder, textarea::placeholder { color: #6b7280 !important; }
          .template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
@@ -3048,5 +3053,9 @@
 </div>
 
 <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
+<style id="ada-fix">
+/* Restore ada widget colors overridden by global color:white !important */
+body > *:not(nav):not(main):not(footer):not(section):not(#loading-screen):not(#badgeModal):not(#realActivityBanner) { color: unset !important; }
+</style>
 </body>
 </html>
