@@ -121,6 +121,7 @@ next();
 app.use(express.static('public', { maxAge: '1y', etag: true, extensions: ['html'] }));
 // ── Page routes ──────────────────────────────────────────────────────────────
 app.get('/seo-contentscore', (req, res) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.sendFile(path.join(__dirname, 'public', 'unified-scan-page.html'));
 });
 // ── Sitemap ──────────────────────────────────────────────────────────────────
