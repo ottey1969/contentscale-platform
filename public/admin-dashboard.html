@@ -452,6 +452,13 @@
                   <!-- Filters -->
                   <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
                      <input type="text" id="scanLogSearch" placeholder="Search name, URL or email..." style="flex:1;min-width:200px;max-width:300px;padding:8px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;" oninput="filterScanLog()">
+                     <select id="scanSourceFilter" onchange="filterScanLog()" style="padding:8px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.82rem;cursor:pointer;">
+                       <option value="all">🔍 All sources</option>
+                       <option value="manual">🔗 Manual</option>
+                       <option value="bulk">📋 Bulk / Sitemap</option>
+                       <option value="campaign">🚀 Campaign</option>
+                       <option value="discover">🗺 Apify</option>
+                     </select>
                      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;color:#e5e7eb;">
                      <input type="checkbox" id="filterHasEmail" checked onchange="filterScanLog()" style="width:16px;height:16px;"> ✉ Email found
                      </label>
@@ -1557,10 +1564,21 @@
          
          function filterScanLog() {
            const q = (document.getElementById('scanLogSearch').value || '').toLowerCase();
+          const srcFilter = document.getElementById('scanSourceFilter')?.value || 'all';
            const tier = document.getElementById('activeTier').value;
            const emailOnly = document.getElementById('filterHasEmail').checked;
            const nameOnly = document.getElementById('filterHasName').checked;
            let rows = allScanLogs;
+          if (srcFilter !== 'all') {
+            rows = rows.filter(s => {
+              const src = s.source || 'single';
+              if (srcFilter === 'manual') return src === 'manual' || src === 'single';
+              if (srcFilter === 'bulk') return src === 'bulk';
+              if (srcFilter === 'campaign') return src === 'campaign';
+              if (srcFilter === 'discover') return src === 'discover' || (s.user_id || '').startsWith('batch_job_');
+              return true;
+            });
+          }
            if (q) rows = rows.filter(s => (s.business_name||'').toLowerCase().includes(q) || (s.business_url||'').toLowerCase().includes(q) || (s.email_found||'').toLowerCase().includes(q));
            if (tier === '85plus') rows = rows.filter(s => s.score !== null && s.score >= 85);
            if (tier === '70to84') rows = rows.filter(s => s.score !== null && s.score >= 70 && s.score < 85);
@@ -1609,7 +1627,9 @@
                  ? '<span style="background:#1c0a00;color:#f59e0b;border:1px solid #92400e;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">🚀 Apify</span>'
                  : src === 'bulk'
                    ? '<span style="background:#0f172a;color:#60a5fa;border:1px solid #1e40af;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">📋 Bulk</span>'
-                   : '<span style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">🔗 Manual</span>';
+                   : src === 'campaign'
+                   ? '<span style="background:#0f172a;color:#22d3ee;border:1px solid #164e63;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">⚙ Campaign</span>'
+                 : '<span style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:1px 6px;font-size:0.65rem;font-weight:700;white-space:nowrap;">🔗 Manual</span>';
              return '<tr style="border-bottom:1px solid #1f2937;" onmouseover="this.style.background=\'#111827\'" onmouseout="this.style.background=\'transparent\'">'
                + `<td class="py-2 pr-2"><input type="checkbox" class="scan-row-check" data-id="${s.id}" ${isChecked?'checked':''} onchange="toggleScanRow(${s.id},this.checked)" style="width:16px;height:16px;cursor:pointer;"></td>`
                + `<td class="py-2 pr-3" style="color:#9ca3af;white-space:nowrap;font-size:0.72rem;">${dateStr}</td>`
@@ -1619,7 +1639,7 @@
                + `<td class="py-2 pr-3" style="color:#d1d5db;font-size:0.78rem;">${s.city || '—'}</td>`
                + `<td class="py-2 pr-3" style="color:#60a5fa;font-size:0.75rem;">${s.email_found || '—'}</td>`
                + `<td class="py-2 pr-3">${statusBadge}</td>`
-               + `<td class="py-2">${reportBtn}</td>`
+               + `<td class="py-2" style="white-space:nowrap;display:flex;gap:5px;align-items:center;">${reportBtn}<button onclick="deleteSingleScan(${s.id},this)" title="Delete this scan" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;">🗑</button></td>`
                + '</tr>';
            }).join('');
          }
@@ -1681,6 +1701,17 @@
            } catch(e) { alert('❌ ' + e.message); }
          }
          
+         async function deleteSingleScan(id, btn) {
+           if (!confirm('Delete this scan?')) return;
+           if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+           try {
+             const r = await fetch('/api/admin/scan-log/bulk-delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId }, body: JSON.stringify({ ids: [id] }) });
+             const d = await r.json();
+             if (d.success) { selectedScanIds.delete(String(id)); allScanLogs = allScanLogs.filter(s => s.id !== id); filterScanLog(); }
+             else { alert('Delete failed: ' + d.error); if (btn) { btn.disabled = false; btn.textContent = '🗑'; } }
+           } catch(e) { alert('Error: ' + e.message); if (btn) { btn.disabled = false; btn.textContent = '🗑'; } }
+         }
+
          async function deleteAllScans() {
            const countEl = document.getElementById('scanLogCount');
            const count = countEl ? countEl.textContent.replace(/\D/g,'') : '?';
@@ -1757,139 +1788,109 @@
          }
          
          function adminRenderScanResults(data) {
+           const url = data.url || '';
            const score = data.score || 0;
-           const scoreColor = score >= 85 ? '#4ade80' : score >= 70 ? '#a3e635' : score >= 50 ? '#fbbf24' : '#f87171';
-           const scoreLabel = score >= 85 ? 'Elite' : score >= 70 ? 'Good' : score >= 50 ? 'Needs Work' : 'Critical';
-           const scoreLabelUpper = scoreLabel.toUpperCase();
-           const recs = data.recommendations?.all || [];
-           const cs = data.content_stats || {};
-           const m = data.metrics || {};
-           const email = cs.extractedEmail || (cs.emails_found && cs.emails_found[0]) || null;
-         
-           const highC = recs.filter(r => r.priority === 'high').length;
-           const medC  = recs.filter(r => r.priority === 'medium').length;
-           const lowC  = recs.filter(r => r.priority === 'low').length;
-         
-           const pCfg = {
-             high:   { color: '#f87171', border: '#7f1d1d', bg: 'rgba(239,68,68,0.08)',   label: '🔴 High Priority' },
-             medium: { color: '#fbbf24', border: '#78350f', bg: 'rgba(251,191,36,0.08)',  label: '🟡 Medium Priority' },
-             low:    { color: '#60a5fa', border: '#1e3a5f', bg: 'rgba(96,165,250,0.08)',  label: '🔵 Quick Win' },
-             none:   { color: '#4ade80', border: '#14532d', bg: 'rgba(74,222,128,0.08)', label: '✅ All Good' }
+           const quality = data.quality || 'unknown';
+           const metrics = data.metrics || {};
+           const stats = data.content_stats || {};
+           const recs = (data.recommendations?.all || data.recommendations || []);
+           const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+           const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+           const priorityConfig = {
+             high:   { color: '#f87171', bg: 'rgba(239,68,68,0.08)',  border: '#7f1d1d', label: '🔴 High Priority' },
+             medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
+             low:    { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' },
+             none:   { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: '#14532d', label: '✅ All Good' }
            };
-         
-           // Framework card with progress bar — matches index.html exactly
-           const frameworkCard = (label, val, max, color, borderColor, bgColor) => {
-             const pct = max > 0 ? Math.round((val / max) * 100) : 0;
-             return `<div style="flex:1;min-width:130px;background:${bgColor};border:1px solid ${borderColor};border-radius:14px;padding:20px 18px 14px;display:flex;flex-direction:column;gap:4px;">
-               <div style="font-size:0.7rem;font-weight:700;color:${color};letter-spacing:1.5px;text-transform:uppercase;">${label}</div>
-               <div style="font-size:2.4rem;font-weight:900;color:${color};line-height:1.1;">${val ?? '—'}</div>
-               <div style="font-size:0.75rem;color:#6b7280;">/ ${max}</div>
-               <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:99px;margin-top:8px;">
-                 <div style="height:100%;width:${pct}%;background:${color};border-radius:99px;"></div>
-               </div>
-             </div>`;
-           };
-         
-           // Stat chip — matches index.html style
-           const statChip = (val, label, status) => {
-             // status: 'ok' = green check, 'warn' = amber warning, 'bad' = red, null = plain
-             const valColor = status === 'bad' ? '#f87171' : status === 'warn' ? '#fbbf24' : '#f1f5f9';
-             const icon = status === 'ok' ? '<span style="color:#4ade80;margin-left:4px;">✅</span>' : status === 'warn' ? '<span style="color:#fbbf24;margin-left:4px;">⚠️</span>' : status === 'bad' ? '<span style="color:#f87171;margin-left:4px;">✗</span>' : '';
-             return `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;background:#1e1b4b;border-radius:12px;border:1px solid #2d2b5e;">
-               <div style="font-size:1.4rem;font-weight:800;color:${valColor};display:flex;align-items:center;">${val ?? '—'}${icon}</div>
-               <div style="font-size:0.72rem;color:#6b7280;">${label}</div>
-             </div>`;
-           };
-         
-           // Boolean chip (schema, canonical)
-           const boolChip = (label, val) => {
-             const ok = !!val;
-             return `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;background:#1e1b4b;border-radius:12px;border:1px solid ${ok?'#166534':'#7f1d1d'};">
-               <div style="font-size:1.4rem;font-weight:800;color:${ok?'#4ade80':'#f87171'};">${ok?'✅':'✗'}</div>
-               <div style="font-size:0.72rem;color:#6b7280;">${label}</div>
-             </div>`;
-           };
-         
+           const highCount = recs.filter(r => r.priority === 'high').length;
+           const medCount  = recs.filter(r => r.priority === 'medium').length;
+           const lowCount  = recs.filter(r => r.priority === 'low').length;
            const recCards = recs.map(rec => {
-             const p = pCfg[rec.priority] || pCfg.low;
-             return `<div style="background:${p.bg};border:1px solid ${p.border};border-radius:12px;padding:16px;margin-bottom:10px;">
+             const p = priorityConfig[rec.priority] || priorityConfig.low;
+             return `
+             <div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
-                 <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9;line-height:1.3;">${rec.title}</div>
-                 <span style="font-size:0.7rem;color:${p.color};white-space:nowrap;font-weight:600;flex-shrink:0;">${p.label}</span>
+                 <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
+                 <span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
                </div>
-               <p style="font-size:0.82rem;color:#94a3b8;margin:0 0 10px;line-height:1.5;">${rec.description || ''}</p>
-               ${rec.action ? `<div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
-                 <div style="font-size:0.7rem;font-weight:800;color:#a78bfa;margin-bottom:4px;">⚡ ACTION</div>
-                 <p style="font-size:0.82rem;color:#e2e8f0;margin:0;line-height:1.5;">${rec.action}</p>
+               <p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;line-height:1.5;">${rec.description}</p>
+               <div style="background:rgba(0,0,0,0.25);border-radius:7px;padding:10px;margin-bottom:8px;">
+                 <div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;margin-bottom:4px;">⚡ ACTION</div>
+                 <p style="font-size:0.82rem;color:#e2e8f0!important;line-height:1.5;margin:0;">${rec.action}</p>
+               </div>
+               ${rec.learning ? `
+               <div style="background:rgba(0,0,0,0.15);border-radius:7px;padding:10px;margin-bottom:8px;">
+                 <div style="font-size:0.72rem;font-weight:700;color:#60a5fa!important;margin-bottom:4px;">📚 WHY IT MATTERS</div>
+                 <p style="font-size:0.8rem;color:#94a3b8!important;line-height:1.5;margin:0;">${rec.learning}</p>
                </div>` : ''}
-               ${rec.learning ? `<div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
-                 <div style="font-size:0.7rem;font-weight:800;color:#60a5fa;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-                 <p style="font-size:0.8rem;color:#94a3b8;margin:0;line-height:1.5;">${rec.learning}</p>
-               </div>` : ''}
-               ${rec.target ? `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-                 <span style="font-size:0.7rem;font-weight:700;color:#4ade80;">🎯 TARGET:</span>
-                 <span style="font-size:0.78rem;color:#86efac;">${rec.target}</span>
+               ${rec.target ? `
+               <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+                 <span style="font-size:0.7rem;font-weight:700;color:#4ade80!important;">🎯 TARGET:</span>
+                 <span style="font-size:0.78rem;color:#86efac!important;">${rec.target}</span>
                </div>` : ''}
              </div>`;
            }).join('');
-         
+
            document.getElementById('adminScanResults').innerHTML = `
-             <!-- Control buttons -->
-             <div style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid #4f46e5;border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-               <div style="font-size:0.75rem;color:#60a5fa;word-break:break-all;margin-bottom:6px;">${data.url}</div>
-               ${data.business_name ? `<div style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:10px;">${data.business_name}</div>` : ''}
-               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                 <button onclick="adminLogScan()" id="adminLogBtn" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;">📋 Log</button>
-                 <button onclick="adminGenerateReport()" id="adminReportBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;">📄 Generate Report</button>
-                 <button onclick="adminExportPDF()" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;">⬇ Export PDF</button>
-                 <div id="adminReportLink" style="display:none;align-items:center;gap:8px;">
-                   <a id="adminReportHref" href="#" target="_blank" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;text-decoration:none;">🔗 Open Report</a>
-                   <button onclick="adminCopyReportLink()" id="adminCopyBtn" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:8px;padding:7px 12px;font-size:0.8rem;cursor:pointer;">📋 Copy</button>
+           <div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;overflow:hidden;margin-top:16px;">
+             <div style="background:linear-gradient(135deg,#1e1b4b,#2d1b69,#1e1b4b);padding:28px 24px;text-align:center;">
+               <p style="color:#6b7280!important;font-size:0.8rem;margin-bottom:12px;word-break:break-all;">${url}</p>
+               <div style="font-size:5rem;font-weight:900;color:${scoreColor}!important;line-height:1;margin-bottom:6px;">${score}</div>
+               <div style="font-size:0.9rem;margin-bottom:4px;"><span style="color:${scoreColor}!important;font-weight:700;">${scoreLabel}</span> <span style="color:#6b7280!important;">· out of 100</span></div>
+               <div style="font-size:0.8rem;color:#6b7280!important;">${quality.replace(/_/g,' ').toUpperCase()}</div>
+             </div>
+             <div style="padding:20px 20px 24px;">
+               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+                 <div style="background:#1e1b4b;padding:14px;border-radius:10px;text-align:center;border:1px solid #3730a3;">
+                   <div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.05em;margin-bottom:4px;">GRAAF</div>
+                   <div style="font-size:1.8rem;font-weight:900;color:#c084fc!important;">${metrics.graaf||0}</div>
+                   <div style="font-size:0.68rem;color:#6b7280!important;">/ 50</div>
+                   <div style="background:#1a1042;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#a78bfa;height:4px;border-radius:4px;width:${Math.round(((metrics.graaf||0)/50)*100)}%;"></div></div>
+                 </div>
+                 <div style="background:#1e2a35;padding:14px;border-radius:10px;text-align:center;border:1px solid #1d4ed8;">
+                   <div style="font-size:0.68rem;font-weight:700;color:#60a5fa!important;letter-spacing:0.05em;margin-bottom:4px;">CRAFT</div>
+                   <div style="font-size:1.8rem;font-weight:900;color:#60a5fa!important;">${metrics.craft||0}</div>
+                   <div style="font-size:0.68rem;color:#6b7280!important;">/ 30</div>
+                   <div style="background:#0c1520;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#60a5fa;height:4px;border-radius:4px;width:${Math.round(((metrics.craft||0)/30)*100)}%;"></div></div>
+                 </div>
+                 <div style="background:#1c1a0e;padding:14px;border-radius:10px;text-align:center;border:1px solid #92400e;">
+                   <div style="font-size:0.68rem;font-weight:700;color:#fbbf24!important;letter-spacing:0.05em;margin-bottom:4px;">TECHNICAL</div>
+                   <div style="font-size:1.8rem;font-weight:900;color:#fbbf24!important;">${metrics.technical||0}</div>
+                   <div style="font-size:0.68rem;color:#6b7280!important;">/ 20</div>
+                   <div style="background:#0c0a02;border-radius:4px;height:4px;margin-top:8px;"><div style="background:#fbbf24;height:4px;border-radius:4px;width:${Math.round(((metrics.technical||0)/20)*100)}%;"></div></div>
+                 </div>
+               </div>
+               ${stats.wordCount ? `
+               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:20px;padding:12px;background:#111827;border-radius:10px;border:1px solid #1f2937;">
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.wordCount?.toLocaleString()}</div><div style="font-size:0.68rem;color:#6b7280!important;">words</div></div>
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.h1Count||0)===1?'#4ade80':'#f87171'}!important;">${stats.h1Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H1 ${(stats.h1Count||0)===1?'✅':'⚠️'}</div></div>
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.h2Count||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">H2 headings</div></div>
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${(stats.images||0)>30?'#fbbf24':'#e2e8f0'}!important;">${stats.images||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">images${(stats.images||0)>30?' ⚠️':''}</div></div>
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#e2e8f0!important;">${stats.internalLinks||0}</div><div style="font-size:0.68rem;color:#6b7280!important;">internal links</div></div>
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasArticleSchema?'#4ade80':'#f87171'}!important;">${stats.hasArticleSchema?'✅':'❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">schema</div></div>
+                 <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasCanonical?'#4ade80':'#f87171'}!important;">${stats.hasCanonical?'✅':'❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">canonical</div></div>
+               </div>` : ''}
+               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+                 <div style="font-weight:800;font-size:1rem;color:#f1f5f9!important;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
+                 <div style="display:flex;gap:8px;font-size:0.75rem;">
+                   ${highCount>0?`<span style="background:rgba(239,68,68,0.15);color:#f87171!important;padding:2px 8px;border-radius:99px;border:1px solid #7f1d1d;">${highCount} high</span>`:''}
+                   ${medCount>0?`<span style="background:rgba(251,191,36,0.15);color:#fbbf24!important;padding:2px 8px;border-radius:99px;border:1px solid #78350f;">${medCount} medium</span>`:''}
+                   ${lowCount>0?`<span style="background:rgba(96,165,250,0.15);color:#60a5fa!important;padding:2px 8px;border-radius:99px;border:1px solid #1e3a5f;">${lowCount} quick win${lowCount!==1?'s':''}</span>`:''}
+                 </div>
+               </div>
+               ${recCards}
+               <!-- Admin action buttons -->
+               <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+                 <button onclick="adminLogScan()" id="adminLogBtn" style="flex:1;min-width:130px;padding:12px 14px;background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;">📋 Log to DB</button>
+                 <button onclick="adminGenerateReport()" id="adminReportBtn" style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;">📄 Generate Report</button>
+                 <button onclick="adminExportPDF()" style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;">⬇ Export PDF</button>
+                 <div id="adminReportLink" style="display:none;align-items:center;gap:8px;flex:1;min-width:130px;">
+                   <a id="adminReportHref" href="#" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:10px;padding:12px 14px;font-size:0.85rem;font-weight:600;text-decoration:none;">🔗 Open Report</a>
+                   <button onclick="adminCopyReportLink()" id="adminCopyBtn" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:10px;padding:12px;font-size:0.85rem;cursor:pointer;">📋</button>
                  </div>
                </div>
              </div>
-         
-             <!-- Score display — matches index.html -->
-             <div style="background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);border-radius:16px;padding:36px 24px 28px;text-align:center;margin-bottom:12px;">
-               <div style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">${data.url}</div>
-               <div style="font-size:5.5rem;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
-               <div style="margin:8px 0 4px;font-size:1rem;color:${scoreColor};font-weight:700;">${scoreLabel} &nbsp;·&nbsp; <span style="color:#9ca3af;font-weight:400;font-size:0.9rem;">out of 100</span></div>
-               <div style="font-size:0.7rem;font-weight:800;color:#6b7280;letter-spacing:2px;text-transform:uppercase;margin-bottom:28px;">${scoreLabelUpper}</div>
-         
-               <!-- Framework cards with progress bars -->
-               <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
-                 ${frameworkCard('GRAAF',    m.graaf    ?? 0, 50, '#a78bfa', '#4c1d95', 'rgba(109,40,217,0.15)')}
-                 ${frameworkCard('CRAFT',    m.craft    ?? 0, 30, '#60a5fa', '#1e40af', 'rgba(29,78,216,0.15)')}
-                 ${frameworkCard('TECHNICAL',m.technical?? 0, 20, '#fbbf24', '#92400e', 'rgba(146,64,14,0.15)')}
-               </div>
-             </div>
-         
-             <!-- Stats row — matches index.html -->
-             <div style="background:#1e1b4b;border:1px solid #2d2b5e;border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-               <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;">
-                 ${statChip(cs.wordCount ?? '—', 'words', cs.wordCount >= 300 ? null : 'warn')}
-                 ${statChip(cs.h1VisibleCount ?? 0, 'H1', cs.h1VisibleCount ? 'ok' : 'bad')}
-                 ${statChip(cs.h2Count ?? '—', 'H2 headings', null)}
-                 ${statChip(cs.images ?? '—', 'images', cs.images > 0 ? null : 'warn')}
-                 ${statChip(cs.internalLinks ?? '—', 'internal links', null)}
-                 ${boolChip('schema', cs.hasArticleSchema || cs.hasFAQPageSchema)}
-                 ${boolChip('canonical', cs.hasCanonical)}
-                 ${email ? `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 16px;background:#0f2d1a;border-radius:12px;border:1px solid #166534;">
-                   <div style="font-size:0.9rem;font-weight:700;color:#4ade80;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">✉ ${email}</div>
-                   <div style="font-size:0.72rem;color:#6b7280;">email found</div>
-                 </div>` : ''}
-               </div>
-             </div>
-         
-             <!-- Recommendations -->
-             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-               <div style="font-size:1rem;font-weight:800;color:#f1f5f9;">📋 ${recs.length} Recommendations</div>
-               ${highC > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;padding:3px 12px;border-radius:99px;border:1px solid #7f1d1d;font-size:0.75rem;font-weight:700;">${highC} high</span>` : ''}
-               ${medC  > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:3px 12px;border-radius:99px;border:1px solid #78350f;font-size:0.75rem;font-weight:700;">${medC} medium</span>` : ''}
-               ${lowC  > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa;padding:3px 12px;border-radius:99px;border:1px solid #1e3a5f;font-size:0.75rem;font-weight:700;">${lowC} quick win${lowC!==1?'s':''}</span>` : ''}
-             </div>
-             ${recCards}
-           `;
+           </div>`;
            document.getElementById('adminScanResults').style.display = 'block';
          }
          
