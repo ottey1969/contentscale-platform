@@ -139,14 +139,6 @@
          .mode-toggle.active::after, [style*="verifiedBlink"], #realActivityBanner > div > div { will-change: opacity; transform: translateZ(0); }
          h1, h2, h3, h4, h5, h6, a, label { color: white !important; }
          body { color: white; }
-         /* ADA BUNDLE FIX — dark text on white widget background */
-         [id^="ada"] *, [class*="ada"] *, #ada-button, #ada-button * {
-           color: #333333 !important;
-           fill: #333333 !important;
-           background-color: transparent !important;
-           -webkit-text-fill-color: #333333 !important;
-         }
-         div[id^="ada"], div[class*="ada"] { background-color: #ffffff !important; }
          input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
          input::placeholder, textarea::placeholder { color: #6b7280 !important; }
          .template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
@@ -262,7 +254,7 @@
       </div>
       <script>setTimeout(function(){var l=document.getElementById('loading-screen');if(l){l.style.opacity='0';l.style.transition='opacity 0.3s';setTimeout(function(){l.style.display='none';},300);}},2000);</script>
       <!-- ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage (100% HONEST) -->
-      <div id="realActivityBanner" class="fixed bottom-4 right-4 z-50" style="display:none;">
+      <div id="realActivityBanner" class="fixed bottom-4 left-4 z-50" style="display:none;">
          <div style="
             background: rgba(17, 24, 39, 0.95);
             backdrop-filter: blur(12px);
@@ -3478,6 +3470,20 @@
             <button onclick="copyBadgeCode()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">📋 Copy Embed Code</button>
          </div>
       </div>
+
+      <!-- Start of Tawk.to Script -->
+      <script type="text/javascript">
+      var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+      (function(){
+        var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+        s1.async=true;
+        s1.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';
+        s1.charset='UTF-8';
+        s1.setAttribute('crossorigin','*');
+        s0.parentNode.insertBefore(s1,s0);
+      })();
+      </script>
+      <!-- End of Tawk.to Script -->
 
       <!-- AdaBundle Chatbot Widget -->
       <script>
