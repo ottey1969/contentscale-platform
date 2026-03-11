@@ -181,29 +181,29 @@ app.get('/seo-contentscore', (req, res) => {
 
 // ── Blog routes ───────────────────────────────────────────────────────────────
 app.get('/blog', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'blog', 'index.html'));
+  res.sendFile(path.join(__dirname, '../public/blog/index.html'));
 });
 app.get('/blog/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'blog', 'index.html'));
+  res.sendFile(path.join(__dirname, '../public/blog/index.html'));
 });
 app.get('/blog/:slug', (req, res) => {
-  const file = path.join(__dirname, 'public', 'blog', `${req.params.slug}.html`);
+  const file = path.join(__dirname, '../public/blog', `${req.params.slug}.html`);
   if (fs.existsSync(file)) {
     res.sendFile(file);
   } else {
-    res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.status(404).sendFile(path.join(__dirname, '../public/index.html'));
   }
 });
 
 // ── Static pages ──────────────────────────────────────────────────────────────
 app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'about.html'));
+  res.sendFile(path.join(__dirname, '../public/about.html'));
 });
 app.get('/services', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'services.html'));
+  res.sendFile(path.join(__dirname, '../public/services.html'));
 });
 app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+  res.sendFile(path.join(__dirname, '../public/contact.html'));
 });
 
 // ── Sitemap ──────────────────────────────────────────────────────────────────
@@ -215,11 +215,6 @@ app.get('/sitemap.xml', (req, res) => {
   <url><loc>https://app.contentscale.site/blog/contentscale-platform-2026</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://app.contentscale.site/blog/top-seo-agency-success-story</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>`);
-});
-// ── Favicon & manifest ──────────────────────────────────────────────────────
-app.get('/site.webmanifest', (req, res) => {
-res.setHeader('Content-Type', 'application/manifest+json');
-res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
 });
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
