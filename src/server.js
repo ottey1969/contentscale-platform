@@ -1766,21 +1766,29 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                job.results.push(slim);
                job.done++;
                if (!result || !result.success) job.failed++;
-               // ✅ Save full result to scan_log (admin scan tab)
-               if (result && result.success && pool) {
-                 const _domain = url.replace(/https?:\/\//,'').split('/')[0];
-                 const _recsJson = JSON.stringify(result.recommendations?.all || result.recommendations || []);
-                 pool.query(
-                   `INSERT INTO scan_log (user_id, business_url, business_name, score, source, recommendations, report_url, created_at)
-                    VALUES ($1,$2,$3,$4,'bulk',$5,$6,NOW())`,
-                   [job.userId || 'anon', url, _domain, result.score, _recsJson, result.report_url || null]
-                 ).catch(e => console.error('scan_log bulk insert error:', e.message));
-               }
                // Persist every 25 pages
                if (job.done % 25 === 0) persistJob(job);
                await delay();
                }
                job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
+               // ✅ After job done: insert ONE row per domain into scan_log (best-scoring page)
+               if (pool && job.status === 'done') {
+                 const domainMap = new Map();
+                 for (const r of job.results) {
+                   if (!r.success || !r.score) continue;
+                   const dom = (r.url||'').replace(/https?:\/\//,'').split('/')[0];
+                   if (!domainMap.has(dom) || r.score > domainMap.get(dom).score) domainMap.set(dom, r);
+                 }
+                 for (const [dom, best] of domainMap) {
+                   const _recsJson = JSON.stringify(best.recommendations?.all || best.recommendations || []);
+                   pool.query(
+                     `INSERT INTO scan_log (user_id, business_url, business_name, score, source, recommendations, report_url, created_at)
+                      VALUES ($1,$2,$3,$4,'bulk',$5,$6,NOW())`,
+                     [job.userId||'anon', best.url||('https://'+dom), dom, best.score, _recsJson, best.report_url||null]
+                   ).catch(e => console.error('scan_log domain insert error:', e.message));
+                 }
+                 console.log(`✅ scan_log: ${domainMap.size} domains saved for job ${job.id}`);
+               }
                } catch(e) {
                job.status = 'error';
                job.error = e.message;
