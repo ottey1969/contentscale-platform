@@ -142,6 +142,7 @@
                <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> Scan Log</button>
                <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle"><i class="fas fa-search mr-2"></i> Scanner</button>
                <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="mode-toggle" style="background:linear-gradient(135deg,#0f4c8a,#be185d);border-color:#be185d;"><i class="fas fa-rocket mr-2"></i> Campaigns</button>
+               <button onclick="switchTab('niches')" id="tabNichesBtn" class="mode-toggle" style="background:linear-gradient(135deg,#065f46,#0f766e);border-color:#0f766e;"><i class="fas fa-bullseye mr-2"></i> Niches</button>
             </div>
             <!-- ══ LEADERBOARD TAB ══ -->
             <div id="tab-leaderboard" class="tab-content">
@@ -933,6 +934,7 @@
            if (tab === 'messages') loadMessages();
            if (tab === 'pending') loadPendingData();
            if (tab === 'emaillog') loadEmailLog();
+           if (tab === 'niches') renderNiches();
            if (tab === 'scanlog') {
              loadScanLog();
              const panel = document.getElementById('instantlyPanel');
@@ -2973,6 +2975,153 @@
            document.body.appendChild(el);
            setTimeout(() => el.remove(), 3000);
          }
+
+         // ============================================================
+         // NICHES TAB
+         // ============================================================
+         let currentNicheLang = 'nl';
+         let selectedNiches = new Set();
+
+         const NICHES_DATA = [
+           { category_nl: '⚖️ Juridisch & Finance', category_en: '⚖️ Legal & Finance', niches: [
+               { nl: 'Advocatenkantoor', en: 'Law firm', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Hoge concurrentie op Google, hoge CPC, altijd SEO-budget', why_en: 'Extremely competitive on Google, high CPC, always has SEO budget', apify: 'advocatenkantoor' },
+               { nl: 'Accountant / Boekhouder', en: 'Accountant', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Zoeken actief klanten, lokale SEO cruciaal', why_en: 'Actively seeking clients, local SEO is critical', apify: 'accountant' },
+               { nl: 'Financieel adviseur', en: 'Financial advisor', volume: '🟡', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Hoge klantwaarde, investeren snel in marketing', why_en: 'High client value, invest quickly in marketing', apify: 'financieel adviseur' },
+               { nl: 'Notaris', en: 'Notary', volume: '🟡', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Vaste lokale doelgroep, website vaak verouderd', why_en: 'Fixed local audience, website often outdated', apify: 'notaris' },
+               { nl: 'Hypotheekadviseur', en: 'Mortgage advisor', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Markt onder druk, zoeken nieuwe leads online', why_en: 'Market under pressure, searching for new online leads', apify: 'hypotheekadviseur' },
+           ]},
+           { category_nl: '🏥 Zorg & Gezondheid', category_en: '🏥 Health & Medical', niches: [
+               { nl: 'Fysiotherapeut', en: 'Physiotherapist', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡', why_nl: 'Lokale concurrentie groot, website is primaire instroom', why_en: 'High local competition, website is primary inflow', apify: 'fysiotherapeut' },
+               { nl: 'Tandarts', en: 'Dentist', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Hoge marge per patiënt, investeren in zichtbaarheid', why_en: 'High margin per patient, invests in visibility', apify: 'tandarts' },
+               { nl: 'Psycholoog / Therapeut', en: 'Psychologist / Therapist', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡', why_nl: 'Groeiende markt, website vaak slecht SEO-geoptimaliseerd', why_en: 'Growing market, websites often poorly SEO-optimized', apify: 'psycholoog' },
+               { nl: 'Kliniek / Schoonheidsspecialist', en: 'Cosmetic clinic', volume: '🟡', value: '💰💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Heel hoge klantwaarde, content marketing essentieel', why_en: 'Very high client value, content marketing essential', apify: 'schoonheidskliniek' },
+               { nl: 'Diëtist / Voedingscoach', en: 'Dietitian / Nutrition coach', volume: '🟡', value: '💰', email: '📧', speed: '⚡', why_nl: 'Groeiend segment, zelfstandigen met slechte websites', why_en: 'Growing segment, freelancers with poor websites', apify: 'diëtist' },
+           ]},
+           { category_nl: '🏗️ Bouw & Vastgoed', category_en: '🏗️ Construction & Real Estate', niches: [
+               { nl: 'Aannemer / Bouwbedrijf', en: 'General contractor', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Hoge projectwaarde, lokale vindbaarheid = directe omzet', why_en: 'High project value, local visibility = direct revenue', apify: 'aannemer' },
+               { nl: 'Makelaar', en: 'Real estate agent', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Website is visitekaartje, hoge concurrentie', why_en: 'Website is their business card, high competition', apify: 'makelaar' },
+               { nl: 'Dakdekker', en: 'Roofing company', volume: '🟡', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Weinig digitaal, grote winst met basis SEO', why_en: 'Low digital maturity, big gains from basic SEO', apify: 'dakdekker' },
+               { nl: 'Interieurdesigner', en: 'Interior designer', volume: '🟡', value: '💰💰', email: '📧', speed: '⚡', why_nl: 'Portfolio sites mooi maar slecht geïndexeerd', why_en: 'Portfolio sites beautiful but poorly indexed', apify: 'interieurdesigner' },
+               { nl: 'Installatiebedrijf', en: 'Installation / HVAC', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡', why_nl: 'Grote vraag, meeste bedrijven geen SEO-strategie', why_en: 'High demand, most companies have no SEO strategy', apify: 'installatiebedrijf' },
+           ]},
+           { category_nl: '💼 Zakelijke Dienstverlening', category_en: '💼 B2B Services', niches: [
+               { nl: 'Recruitmentbureau', en: 'Recruitment agency', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Content is hun product, hoge SEO-noodzaak', why_en: 'Content is their product, high SEO need', apify: 'recruitmentbureau' },
+               { nl: 'IT-consultancy', en: 'IT consultancy', volume: '🟢', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Begrijpen techniek, makkelijk te overtuigen met data', why_en: 'Understand tech, easy to convince with data', apify: 'IT consultancy' },
+               { nl: 'Marketingbureau', en: 'Marketing agency', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡', why_nl: 'Zien direct de waarde, kunnen ook partner worden', why_en: 'Immediately see value, can also become partners', apify: 'marketingbureau' },
+               { nl: 'Managementconsultant', en: 'Management consultant', volume: '🟡', value: '💰💰💰', email: '📧', speed: '⚡', why_nl: 'Hoge uurtarieven, ROI-bewust, investeren snel', why_en: 'High hourly rates, ROI-aware, invest quickly', apify: 'management consultant' },
+               { nl: 'Business coach', en: 'Business coach / Trainer', volume: '🟡', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Veel ZZP-ers, website = enige marketingkanaal', why_en: 'Many freelancers, website = only marketing channel', apify: 'business coach' },
+               { nl: 'SEO / Webbureau', en: 'SEO / Web agency', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Willen eigen score zien — ego = trigger', why_en: 'Want to see their own score — ego = trigger', apify: 'webbureau' },
+           ]},
+           { category_nl: '🔧 Ambacht & Lokale Diensten', category_en: '🔧 Trades & Local Services', niches: [
+               { nl: 'Schoonmaakbedrijf', en: 'Cleaning company', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Hoge lokale concurrentie, makkelijk scoreverschil tonen', why_en: 'High local competition, easy to show score difference', apify: 'schoonmaakbedrijf' },
+               { nl: 'Loodgieter', en: 'Plumber', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Afhankelijk van Google voor spoedopdrachten', why_en: 'Dependent on Google for emergency jobs', apify: 'loodgieter' },
+               { nl: 'Schilder', en: 'Painting company', volume: '🟡', value: '💰', email: '📧', speed: '⚡', why_nl: 'Veel lokale bedrijven, websites bijna altijd verouderd', why_en: 'Many local companies, websites almost always outdated', apify: 'schildersbedrijf' },
+               { nl: 'Hoveniersbedrijf', en: 'Landscaper / Garden company', volume: '🟡', value: '💰', email: '📧', speed: '⚡', why_nl: 'Seizoensgebonden, vinden SEO moeilijk', why_en: 'Seasonal, find SEO difficult', apify: 'hoveniersbedrijf' },
+           ]},
+           { category_nl: '🎓 Opleiding & Coaching', category_en: '🎓 Education & Coaching', niches: [
+               { nl: 'Rijschool', en: 'Driving school', volume: '🟢', value: '💰💰', email: '📧', speed: '⚡⚡', why_nl: 'Pure lokale zoekintentie, winnaar is wie rankt', why_en: 'Pure local search intent, winner is whoever ranks', apify: 'rijschool' },
+               { nl: 'Taalschool / Taaldocent', en: 'Language school / tutor', volume: '🟡', value: '💰', email: '📧', speed: '⚡', why_nl: 'Online groei na COVID, SEO nog onderbenut', why_en: 'Online growth post-COVID, SEO still underutilized', apify: 'taalschool' },
+               { nl: 'Online cursusaanbieder', en: 'Online course provider', volume: '🟡', value: '💰💰', email: '📧', speed: '⚡', why_nl: 'Content is product, GRAAF-score direct relevant', why_en: 'Content is product, GRAAF score directly relevant', apify: 'online cursus' },
+           ]},
+         ];
+
+         function setNicheLang(lang) {
+           currentNicheLang = lang;
+           ['nl','en'].forEach(l => {
+             const btn = document.getElementById('nicheLang' + l.charAt(0).toUpperCase() + l.slice(1));
+             if (!btn) return;
+             btn.style.background = l === lang ? '#065f46' : '#111827';
+             btn.style.color = l === lang ? '#6ee7b7' : '#6b7280';
+             btn.style.borderColor = l === lang ? '#047857' : '#374151';
+           });
+           renderNiches();
+         }
+
+         function renderNiches() {
+           const grid = document.getElementById('nicheGrid');
+           if (!grid) return;
+           const lang = currentNicheLang;
+           grid.innerHTML = NICHES_DATA.map(cat => {
+             const label = lang === 'nl' ? cat.category_nl : cat.category_en;
+             const rows = cat.niches.map(n => {
+               const name = lang === 'nl' ? n.nl : n.en;
+               const why = lang === 'nl' ? n.why_nl : n.why_en;
+               const isSelected = selectedNiches.has(n.apify);
+               const rid = 'nr-' + n.apify.replace(/[^a-z0-9]/gi,'-');
+               return '<div onclick="toggleNiche(\''+n.apify+'\',\''+name.replace(/'/g,'')+'\')" id="'+rid+'" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;background:'+(isSelected?'#052e16':'#0d1f14')+';border:1px solid '+(isSelected?'#16a34a':'#064e3b')+';margin-bottom:6px;">'
+                 + '<div style="width:18px;height:18px;border-radius:4px;background:'+(isSelected?'#16a34a':'transparent')+';border:2px solid '+(isSelected?'#16a34a':'#065f46')+';flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;">'
+                 + (isSelected?'<span style="color:white;font-size:11px;font-weight:900;">✓</span>':'')
+                 + '</div><div style="flex:1;">'
+                 + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">'
+                 + '<span style="font-weight:700;color:#e5e7eb;font-size:0.88rem;">'+name+'</span>'
+                 + '<span>'+n.volume+'</span><span>'+n.value+'</span><span>'+n.email+'</span><span>'+n.speed+'</span>'
+                 + '</div><div style="font-size:0.72rem;color:#6b7280;line-height:1.4;">'+why+'</div>'
+                 + '</div></div>';
+             }).join('');
+             return '<div style="background:#0d1f14;border:1px solid #065f46;border-radius:12px;padding:16px;">'
+               + '<div style="font-weight:800;color:#6ee7b7;font-size:0.88rem;margin-bottom:12px;">'+label+'</div>'
+               + rows + '</div>';
+           }).join('');
+           const status = document.getElementById('nicheLoadStatus');
+           if (status) status.textContent = selectedNiches.size > 0 ? selectedNiches.size + ' niche(s) geselecteerd' : '';
+         }
+
+         function toggleNiche(apify) {
+           if (selectedNiches.has(apify)) selectedNiches.delete(apify);
+           else selectedNiches.add(apify);
+           renderNiches();
+         }
+
+         function loadNicheToScanner() {
+           if (!selectedNiches.size) { alert('Selecteer eerst een of meer niches.'); return; }
+           switchTab('scanner');
+           const ta = document.getElementById('adminBatchNiches');
+           if (ta) { ta.value = [...selectedNiches].join('\n'); if (typeof adminUpdateBatchCombos === 'function') adminUpdateBatchCombos(); }
+           const st = document.getElementById('nicheLoadStatus');
+           if (st) st.textContent = '✅ ' + selectedNiches.size + ' niches geladen in Scanner';
+         }
+
+         function loadNicheToCampaign() {
+           if (!selectedNiches.size) { alert('Selecteer eerst een of meer niches.'); return; }
+           switchTab('campaigns');
+         }
+
       </script>
+
+      <!-- ══ NICHES TAB ══ -->
+      <div id="tab-niches" class="tab-content hidden">
+         <div style="background:#0a1a12;border:1px solid #065f46;border-radius:16px;padding:28px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:12px;">
+               <div>
+                  <h3 style="font-size:1.4rem;font-weight:800;color:white;margin:0;">🎯 Beste Niches voor ContentScale</h3>
+                  <p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0;">Bedrijven met hoge SEO-spend, beslissingsbevoegdheid en e-mailadres op de site</p>
+               </div>
+               <div style="display:flex;gap:8px;">
+                  <button onclick="setNicheLang('nl')" id="nicheLangNl" style="padding:6px 16px;border-radius:99px;font-size:0.8rem;font-weight:700;background:#065f46;color:#6ee7b7;border:1px solid #047857;cursor:pointer;">🇳🇱 NL</button>
+                  <button onclick="setNicheLang('en')" id="nicheLangEn" style="padding:6px 16px;border-radius:99px;font-size:0.8rem;font-weight:700;background:#111827;color:#6b7280;border:1px solid #374151;cursor:pointer;">🇬🇧 EN</button>
+               </div>
+            </div>
+
+            <!-- Legend -->
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;font-size:0.72rem;color:#6b7280;">
+               <span>🟢 Hoog volume</span><span>🟡 Middel volume</span><span>🔴 Laag volume</span>
+               <span>💰 Hoge SEO-waarde</span><span>📧 Email makkelijk vindbaar</span><span>⚡ Snel beslissen</span>
+            </div>
+
+            <!-- Categories -->
+            <div id="nicheGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">
+            </div>
+
+            <!-- Load to Scanner -->
+            <div style="margin-top:24px;background:#0d1f14;border:1px solid #065f46;border-radius:12px;padding:16px 20px;">
+               <p style="font-size:0.85rem;font-weight:700;color:#6ee7b7;margin:0 0 10px;">⚡ Direct laden in Scanner of Campaign</p>
+               <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button onclick="loadNicheToScanner()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;">📡 Load in Scanner tab</button>
+                  <button onclick="loadNicheToCampaign()" style="background:#0f4c8a;color:#93c5fd;border:1px solid #1e40af;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;">🚀 Load in Campaign tab</button>
+                  <span id="nicheLoadStatus" style="font-size:0.78rem;color:#4ade80;align-self:center;"></span>
+               </div>
+            </div>
+         </div>
+      </div>
    </body>
 </html>
