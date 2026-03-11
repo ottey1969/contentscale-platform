@@ -111,6 +111,7 @@
       </script>
       <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
       <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+      <link rel="preconnect" href="https://contentscale.site" crossorigin>
       <script>
          tailwind = { config: { theme: { extend: {} } } };
       </script>
@@ -124,6 +125,7 @@
       <style>
         @font-face { font-family: 'Font Awesome 6 Free'; font-display: swap; }
         @font-face { font-family: 'Font Awesome 6 Brands'; font-display: swap; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       </style>
       <style>
          body { visibility: visible; opacity: 1; font-family: system-ui, -apple-system, sans-serif; background: #030712; color: white; }
@@ -133,8 +135,8 @@
          /* Prevent horizontal overflow on mobile */
          img { max-width: 100%; height: auto; }
          pre, code, table { max-width: 100%; overflow-x: auto; }
-         /* will-change for composited animations only */
-         [style*="animation"] { will-change: opacity; }
+         /* Promote animated elements to own compositor layer — reduces CLS/jank */
+         .mode-toggle.active::after, [style*="verifiedBlink"], #realActivityBanner > div > div { will-change: opacity; transform: translateZ(0); }
          h1, h2, h3, h4, h5, h6, p, a, span, div, label, li { color: white !important; }
          input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
          input::placeholder, textarea::placeholder { color: #6b7280 !important; }
@@ -399,7 +401,7 @@
                         <div id="bulkAccessGate" class="hidden">
                            <div class="rounded-xl p-8 text-center" style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;">
                               <div style="font-size:3rem;margin-bottom:12px;">🔒</div>
-                              <h3 class="text-xl font-bold mb-3">Bulk Scanning is Available on Request</h3>
+                              <h2 class="text-xl font-bold mb-3">Bulk Scanning is Available on Request</h2>
                               <p class="text-sm mb-2" style="color:#9ca3af!important;">
                                  Bulk scanning and lead generation are available for businesses and freelancers who want to use ContentScale as a lead generation tool.
                               </p>
@@ -577,7 +579,7 @@
                </div>
                <div class="mt-8 max-w-3xl mx-auto rounded-xl p-6 text-center border border-purple-400" style="background:linear-gradient(135deg,#5b21b6,#9d174d,#5b21b6);">
                   <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
-                  <h3 class="text-2xl font-bold mb-2">Work With Us + Find Leads Together</h3>
+                  <h2 class="text-2xl font-bold mb-2">Work With Us + Find Leads Together</h2>
                   <p class="text-lg mb-2" style="color:#e9d5ff!important;">
                      Are you in SEO, sales, or outreach? Are you an SEO Specialist in Modern SEO? Partner with ContentScale to serve, find and convert leads — we provide the tools, you bring the hustle.
                   </p>
@@ -1093,7 +1095,7 @@
             <!-- Case Study -->
             <div style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:2px solid #4c1d95;border-radius:16px;padding:32px;margin:48px 0;">
                <p style="color:#a78bfa;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">📋 Real Example</p>
-               <h4 style="font-size:1.2rem;font-weight:700;color:#e5e7eb;margin-bottom:20px;">ContentScale.site — Sitemap Scan, March 2026</h4>
+               <h3 style="font-size:1.2rem;font-weight:700;color:#e5e7eb;margin-bottom:20px;">ContentScale.site — Sitemap Scan, March 2026</h3>
                <p style="color:#94a3b8;margin-bottom:16px;line-height:1.7;"><strong style="color:#e5e7eb;">The challenge:</strong> ContentScale benchmarked its own content quality using the same scanner it offers clients. The goal: identify pages below 75 and prioritise rewrites.</p>
                <p style="color:#94a3b8;margin-bottom:20px;line-height:1.7;"><strong style="color:#e5e7eb;">The result:</strong> Average sitemap score 78/100. Pages above 85 were the detailed framework guides. Pages below 65 were older service pages with thin content and missing schema. The rewrite plan is now in place.</p>
                <div style="border-top:1px solid #1f2937;padding-top:16px;">
@@ -1107,7 +1109,7 @@
             <!-- Case Study 2 -->
             <div style="background:linear-gradient(135deg,#0c1a2e,#0f1a0e);border:2px solid #10b981;border-radius:16px;padding:32px;margin:32px 0;">
                <p style="color:#10b981;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">📋 Real Example #2</p>
-               <h4 style="font-size:1.2rem;font-weight:700;color:#e5e7eb;margin-bottom:20px;">E-commerce Service Page — Before &amp; After GRAAF Rewrite, 2025</h4>
+               <h3 style="font-size:1.2rem;font-weight:700;color:#e5e7eb;margin-bottom:20px;">E-commerce Service Page — Before &amp; After GRAAF Rewrite, 2025</h3>
                <p style="color:#94a3b8;margin-bottom:16px;line-height:1.7;"><strong style="color:#e5e7eb;">The situation:</strong> A Netherlands-based e-commerce business had 18 service pages written by a freelancer. All looked professional. Initial ContentScale scan: average score 54/100. The pages ranked on page 3–5 for their main keywords despite 14 months of publishing.</p>
                <p style="color:#94a3b8;margin-bottom:20px;line-height:1.7;"><strong style="color:#e5e7eb;">The fix:</strong> Each page was rewritten using the GRAAF Framework — adding author attribution, cited statistics, structured FAQ sections, and proper schema markup. Rescan after rewrite: average score 88/100.</p>
                <div style="border-top:1px solid #052e16;padding-top:16px;">
@@ -1222,7 +1224,7 @@
             </div>
             <div style="flex:1;min-width:260px;">
                <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Built by</div>
-               <h2 style="font-size:1.6rem;font-weight:900;color:#f9fafb;margin-bottom:4px;line-height:1.2;">Ottmar JG Francisca</h2>
+               <h3 style="font-size:1.6rem;font-weight:900;color:#f9fafb;margin-bottom:4px;line-height:1.2;">Ottmar JG Francisca</h3>
                <p style="color:#a78bfa;font-size:0.9rem;font-weight:600;margin-bottom:14px;">Creator of the GRAAF Framework · SEO Recovery Specialist</p>
                <p style="color:#d1d5db;font-size:0.88rem;line-height:1.7;margin-bottom:20px;">
                   24 years of crisis management across Dutch Police and municipal leadership — where every decision had to be right under pressure.
@@ -1445,11 +1447,15 @@
          }
          document.addEventListener('DOMContentLoaded', function () {
          registerUser();
-         setTimeout(resumeActiveJob, 1500); // check for active job after page loads
-         loadLeaderboardData();
-         loadFreelancers();
+         // Defer non-critical API loads to after first paint — reduces TBT
+         const deferLoad = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+         deferLoad(() => {
+           loadLeaderboardData();
+           loadFreelancers();
+         });
+         setTimeout(resumeActiveJob, 2000); // after page interactive
          checkRescanReminder();
-         initRealActivityBanner(); // Initialize real activity banner
+         initRealActivityBanner();
          setTimeout(() => {
          const l = document.getElementById('loading-screen');
          if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
