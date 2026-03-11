@@ -1766,6 +1766,16 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                job.results.push(slim);
                job.done++;
                if (!result || !result.success) job.failed++;
+               // ✅ Save full result to scan_log (admin scan tab)
+               if (result && result.success && pool) {
+                 const _domain = url.replace(/https?:\/\//,'').split('/')[0];
+                 const _recsJson = JSON.stringify(result.recommendations?.all || result.recommendations || []);
+                 pool.query(
+                   `INSERT INTO scan_log (user_id, business_url, business_name, score, source, recommendations, report_url, created_at)
+                    VALUES ($1,$2,$3,$4,'bulk',$5,$6,NOW())`,
+                   [job.userId || 'anon', url, _domain, result.score, _recsJson, result.report_url || null]
+                 ).catch(e => console.error('scan_log bulk insert error:', e.message));
+               }
                // Persist every 25 pages
                if (job.done % 25 === 0) persistJob(job);
                await delay();
@@ -1863,13 +1873,15 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const result = await internalScanPage(page, scanUrl);
                await page.close();
                console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
-               // Log to scan_log for counter
+               // ✅ Full scan_log insert (all fields for admin scan tab + Instantly push)
                if (pool) {
                  const domain = scanUrl.replace(/https?:\/\//,'').split('/')[0];
+                 const recsJson = JSON.stringify(result.recommendations?.all || result.recommendations || []);
+                 const emailFound = result.content_stats?.extractedEmail || result.content_stats?.emails_found?.[0] || null;
                  pool.query(
-                   `INSERT INTO scan_log (user_id, business_url, business_name, score, source, created_at)
-                    VALUES ($1,$2,$3,$4,'manual',NOW())`,
-                   ['anon', scanUrl, domain, result.score]
+                   `INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
+                    VALUES ($1,$2,$3,$4,$5,$6,'manual',$7,$8,NOW())`,
+                   ['anon', scanUrl, domain, result.score, emailFound, emailFound ? 'has_email' : 'no_email', recsJson, result.report_url || null]
                  ).catch(e => console.error('scan_log insert error:', e.message));
                }
                res.json(result);
@@ -2601,20 +2613,29 @@ domainObj.instantlyStatus = 'skipped';
 if (campaign.instantlyApiKey && campaign.instantlyCampaignId && email) {
 try {
 domainObj.status = 'pushing_to_instantly';
+const _cname = domainObj.domain.replace(/https?:\/\//, '').replace(/^www\./, '');
+const _website = 'https://' + domainObj.domain.replace(/https?:\/\//, '');
 const lead = {
 email,
-first_name: '',
+first_name: _cname.split('.')[0].replace(/-/g,' ').replace(/^(\w)/,c=>c.toUpperCase()),
 last_name: '',
-company_name: domainObj.domain.replace(/https?:\/\//, '').replace(/^www\./, ''),
-website: 'https://' + domainObj.domain.replace(/https?:\/\//, ''),
+company_name: _cname,
+website: _website,
 custom_variables: {
 score: String(domainObj.score),
-share_url: domainObj.shareUrl,
+company_name: _cname,
+website: _website,
+domain: _cname,
+share_url: domainObj.shareUrl || '',
 top_issue_1: topIssues[0] || '',
 top_issue_2: topIssues[1] || '',
 top_issue_3: topIssues[2] || '',
 graaf_score: String(domainObj.graaf),
-page_count: String(domainObj.pageCount)
+craft_score: String(domainObj.craft || 0),
+tech_score: String(domainObj.technical || 0),
+page_count: String(domainObj.pageCount),
+email: email,
+scan_date: new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
 }
 };
 await pushLeadToInstantly(campaign.instantlyApiKey, campaign.instantlyCampaignId, lead);
@@ -2624,6 +2645,25 @@ domainObj.instantlyStatus = 'error: ' + e.message.substring(0, 60);
 }
 } else if (!email) {
 domainObj.instantlyStatus = 'no_email';
+}
+// ✅ Save campaign result to scan_log so admin scan tab shows it
+if (pool) {
+  const _recsAll = successful[0]?.recommendations?.all || [];
+  const _recsJson = JSON.stringify(_recsAll.slice(0,10));
+  pool.query(
+    `INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,'campaign',$7,$8,NOW())`,
+    [
+      'campaign_' + campaign.id,
+      'https://' + domainObj.domain,
+      domainObj.domain.replace(/^www\./, ''),
+      domainObj.score,
+      domainObj.email || null,
+      domainObj.email ? 'has_email' : 'no_email',
+      _recsJson,
+      domainObj.shareUrl || null
+    ]
+  ).catch(e => console.error('scan_log campaign insert error:', e.message));
 }
 domainObj.status = 'done';
 campaign.doneDomains++;
