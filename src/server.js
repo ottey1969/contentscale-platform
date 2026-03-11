@@ -1265,6 +1265,7 @@ if (r.rows.length) results = r.rows[0].results_json;
 } catch(e) {}
 }
 if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
+const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 // ── SINGLE URL: full PDF-style report with recommendations ──
 if (results.length === 1) {
   const d = results[0];
@@ -1284,7 +1285,6 @@ if (results.length === 1) {
   return res.send(singleHtml);
 }
 
-const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
 const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
 const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
