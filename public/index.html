@@ -137,7 +137,16 @@
          pre, code, table { max-width: 100%; overflow-x: auto; }
          /* Promote animated elements to own compositor layer — reduces CLS/jank */
          .mode-toggle.active::after, [style*="verifiedBlink"], #realActivityBanner > div > div { will-change: opacity; transform: translateZ(0); }
-         h1, h2, h3, h4, h5, h6, p, a, span, div, label, li { color: white !important; }
+         h1, h2, h3, h4, h5, h6, a, label { color: white !important; }
+         body { color: white; }
+         /* ADA BUNDLE FIX — dark text on white widget background */
+         [id^="ada"] *, [class*="ada"] *, #ada-button, #ada-button * {
+           color: #333333 !important;
+           fill: #333333 !important;
+           background-color: transparent !important;
+           -webkit-text-fill-color: #333333 !important;
+         }
+         div[id^="ada"], div[class*="ada"] { background-color: #ffffff !important; }
          input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
          input::placeholder, textarea::placeholder { color: #6b7280 !important; }
          .template-editor textarea { color: #f3f4f6 !important; background-color: #1f2937 !important; border: 1px solid #4b5563 !important; }
@@ -581,7 +590,7 @@
                   <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
                   <h2 class="text-2xl font-bold mb-2">Work With Us + Find Leads Together</h2>
                   <p class="text-lg mb-2" style="color:#e9d5ff!important;">
-                     Are you in SEO, sales, or outreach? Are you a Modern SEO Specialist? (traditional SEO is the basis). Partner with ContentScale to serve, find and convert leads — we provide the tools, you bring the hustle.
+                     Are you in SEO, sales, or outreach? Are you an SEO Specialist in Modern SEO? Partner with ContentScale to serve, find and convert leads — we provide the tools, you bring the hustle.
                   </p>
                   <p class="text-sm mb-5" style="color:#c4b5fd!important;">
                      Use our scanner · Share results with clients · Earn per closed deal
@@ -3471,36 +3480,16 @@
       </div>
 
       <!-- AdaBundle Chatbot Widget -->
-      <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript";e.async=!0;e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb");e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb";window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();</script>
-
-      <style id="ada-fix">
-      /* Restore ada widget colors overridden by global color:white !important */
-      body > *:not(nav):not(main):not(footer):not(section):not(#loading-screen):not(#badgeModal):not(#realActivityBanner) { color: unset !important; }
-      </style>
-
       <script>
-      // Fix: ada widget invisible due to global color:white !important — reset on inject
       (function(){
-        var fix = document.createElement('style');
-        fix.textContent = 'body > div[style*="position: fixed"] *, body > div[style*="position:fixed"] *, #ada-button, #ada-button *, [id^="ada"] *, [class^="ada"] * { color: unset !important; background-color: unset !important; fill: unset !important; }';
-        document.head.appendChild(fix);
-        var obs = new MutationObserver(function(muts){
-          muts.forEach(function(m){
-            m.addedNodes.forEach(function(n){
-              if(n.nodeType===1){
-                var s = n.getAttribute && n.getAttribute('style');
-                if(s && (s.includes('position: fixed') || s.includes('position:fixed'))){
-                  n.querySelectorAll('*').forEach(function(el){ el.style.setProperty('color','','important'); el.style.setProperty('background-color','','important'); });
-                }
-              }
-            });
-          });
-        });
-        obs.observe(document.body, {childList: true, subtree: false});
+        var e = document.createElement("script");
+        e.type = "text/javascript";
+        e.async = true;
+        e.setAttribute("embed-id", "b127ec6d-4baa-4d2e-ab77-a77289634ffb");
+        e.src = "https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb";
+        document.getElementsByTagName("body")[0].appendChild(e);
       })();
       </script>
 
-<script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}"complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)}(); </script>
-  
    </body>
 </html>
