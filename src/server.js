@@ -178,6 +178,34 @@ app.get('/seo-contentscore', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.sendFile(path.join(__dirname, 'public', 'unified-scan-page.html'));
 });
+
+// ── Blog routes ───────────────────────────────────────────────────────────────
+app.get('/blog', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'blog', 'index.html'));
+});
+app.get('/blog/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'blog', 'index.html'));
+});
+app.get('/blog/:slug', (req, res) => {
+  const file = path.join(__dirname, 'public', 'blog', `${req.params.slug}.html`);
+  if (require('fs').existsSync(file)) {
+    res.sendFile(file);
+  } else {
+    res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+});
+
+// ── Static pages ──────────────────────────────────────────────────────────────
+app.get('/about', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'about.html'));
+});
+app.get('/services', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'services.html'));
+});
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+});
+
 // ── Sitemap ──────────────────────────────────────────────────────────────────
 app.get('/sitemap.xml', (req, res) => {
   res.setHeader('Content-Type', 'application/xml');
