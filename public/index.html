@@ -293,6 +293,7 @@
                <a href="#leaderboard" onclick="switchPageSection('leaderboard');return false;">Leaderboard</a>
                <a href="#experts" onclick="switchPageSection('experts');return false;">Experts</a>
                <a href="#templates" onclick="switchPageSection('templates');return false;">Templates</a>
+               <a href="/blog">Blog</a>
             </div>
             <div class="flex items-center gap-3">
                <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
@@ -303,7 +304,8 @@
             <a href="#scanner" onclick="switchPageSection('scanner');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Scanner</a>
             <a href="#leaderboard" onclick="switchPageSection('leaderboard');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Leaderboard</a>
             <a href="#experts" onclick="switchPageSection('experts');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Experts</a>
-            <a href="#templates" onclick="switchPageSection('templates');toggleMobileMenu();return false;" class="py-2">Templates</a>
+            <a href="#templates" onclick="switchPageSection('templates');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Templates</a>
+            <a href="/blog" class="py-2">Blog</a>
          </div>
       </nav>
       <div style="background:linear-gradient(90deg,#1e1b4b 0%,#0f172a 50%,#1e1b4b 100%);border-bottom:1px solid #312e81;padding:6px 24px;text-align:center;">
@@ -3485,16 +3487,16 @@
       </script>
       <!-- End of Tawk.to Script -->
 
-<!-- AdaBundle Chatbot Widget -->
-<style>
-/* ADA Widget visibility fix for dark themes */
-[id^="ada"] *, [class*="ada"] *, #ada-button, #ada-button * {
-  color: #1f2937 !important;
-  fill: #1f2937 !important;
-  background-color: #ffffff !important;
-}
-</style>
-  
+      <!-- Floating Headshot -->
+      <div style="position:fixed;bottom:90px;right:20px;z-index:9997;">
+        <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg"
+             alt="Ottmar Francisca — ContentScale"
+             width="52" height="52"
+             style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;box-shadow:0 4px 16px rgba(0,0,0,0.5);"
+             onerror="this.style.display='none'">
+      </div>
+
+      <!-- AdaBundle Accessibility Widget -->
       <script>
       (function(){
         var e = document.createElement("script");
