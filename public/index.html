@@ -449,24 +449,35 @@
                            </div>
                         </div>
                         <div id="bulkScannerForm">
-                           <!-- MODE TOGGLE -->
-                           <div class="flex gap-2 mb-4" style="background:#0f172a;border-radius:10px;padding:4px;border:1px solid #1e293b;">
-                              <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;cursor:pointer;">
-                              📋 Manual URLs
-                              </button>
-                              <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;">
-                              🗺️ Sitemap Scan
-                              </button>
+                           <!-- MODE TOGGLE — descriptive cards -->
+                           <div class="flex gap-3 mb-5">
+                             <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 rounded-xl text-left" style="padding:14px 16px;background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:2px solid #7e22ce;cursor:pointer;transition:all 0.2s;">
+                               <div style="font-size:1.3rem;margin-bottom:5px;">📋</div>
+                               <div style="font-weight:800;font-size:0.92rem;margin-bottom:3px;">Manual URLs</div>
+                               <div style="font-size:0.73rem;opacity:0.85;line-height:1.4;">Paste a list of URLs<br>you already have</div>
+                             </button>
+                             <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 rounded-xl text-left" style="padding:14px 16px;background:#111827;color:#9ca3af;border:2px solid #1e293b;cursor:pointer;transition:all 0.2s;">
+                               <div style="font-size:1.3rem;margin-bottom:5px;">🗺️</div>
+                               <div style="font-weight:800;font-size:0.92rem;margin-bottom:3px;color:#e5e7eb;">Sitemap Scan</div>
+                               <div style="font-size:0.73rem;line-height:1.4;">Auto-discover all pages<br>from sitemap.xml</div>
+                             </button>
                            </div>
                            <!-- MANUAL MODE -->
                            <div id="manualModeSection" class="mb-5">
-                              <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(Unlimited · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
-                              <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
+                              <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+                                <div style="font-weight:700;color:#e5e7eb;font-size:0.85rem;margin-bottom:4px;">📋 Paste your URLs below — one per line</div>
+                                <div style="font-size:0.75rem;color:#6b7280;line-height:1.5;">Use this when you already have a list of websites to scan.<br>Each URL gets its own GRAAF + CRAFT + Technical score.</div>
+                              </div>
+                              <textarea id="bulkUrlInput" rows="7" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0 URLs</span></div>
                            </div>
                            <!-- SITEMAP MODE -->
                            <div id="sitemapModeSection" class="hidden mb-5">
-                              <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml of sitemap_index.xml)</span></label>
+                              <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+                                <div style="font-weight:700;color:#e5e7eb;font-size:0.85rem;margin-bottom:4px;">🗺️ Scan your entire website automatically</div>
+                                <div style="font-size:0.75rem;color:#6b7280;line-height:1.5;">Enter your sitemap URL — we fetch all pages and score each one.<br>Your sitemap is usually at <span style="color:#a78bfa;font-family:monospace;">yourdomain.com/sitemap.xml</span></div>
+                              </div>
+                              <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml or sitemap_index.xml)</span></label>
                               <div class="flex gap-2 mb-3">
                                  <input id="sitemapUrlInput" type="url" placeholder="https://example.com/sitemap.xml" class="flex-1 p-3 rounded text-sm" style="background:#1e293b;border:1px solid #374151;color:#e5e7eb;">
                                  <button onclick="fetchSitemapUrls()" id="fetchSitemapBtn" class="btn btn-primary px-4 text-sm" style="white-space:nowrap;">
@@ -481,7 +492,7 @@
                               </div>
                               <div class="rounded-xl p-4 mt-3" style="background:#0f172a;border:1px solid #4c1d95;">
                                  <p class="text-xs font-semibold mb-1" style="color:#a78bfa!important;">🗺️ Sitemap Scan works automatically</p>
-                                 <p class="text-xs" style="color:#6b7280!important;">All pages are scanned → average domain score calculated → automatically submitted to admin for approval on the leaderboard.</p>
+                                 <p class="text-xs" style="color:#6b7280!important;line-height:1.6;">All pages from your sitemap are fetched and individually scored — up to 500 pages per domain. The <strong style="color:#a78bfa;">homepage gets the most weight</strong>; supporting pages (blog, service, about) contribute to the overall domain average.<br><span style="color:#4ade80;font-weight:600;">Score 70+</span> → automatically submitted to admin for leaderboard approval.</p>
                               </div>
                            </div>
                            <!-- WHAT HAPPENS WITH RESULTS (manual mode only) -->
@@ -493,7 +504,7 @@
                                  </div>
                                  <div>
                                     <span class="text-sm font-semibold" style="color:#e5e7eb!important;">📊 Scan &amp; score every URL</span>
-                                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
+                                    <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site <span style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:99px;padding:1px 7px;font-size:0.68rem;font-weight:700;white-space:nowrap;">E-E-A-T approved</span></p>
                                  </div>
                               </label>
                            </div>
@@ -1494,18 +1505,14 @@
            if (mode === 'manual') {
              manualSec.classList.remove('hidden');
              sitemapSec.classList.add('hidden');
-             manualBtn.style.background  = 'linear-gradient(135deg,#4f46e5,#7e22ce)';
-             manualBtn.style.color       = 'white';
-             sitemapBtn.style.background = 'transparent';
-             sitemapBtn.style.color      = '#9ca3af';
+             manualBtn.style.cssText = 'padding:14px 16px;background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:2px solid #7e22ce;cursor:pointer;transition:all 0.2s;flex:1;border-radius:12px;text-align:left;';
+             sitemapBtn.style.cssText = 'padding:14px 16px;background:#111827;color:#9ca3af;border:2px solid #1e293b;cursor:pointer;transition:all 0.2s;flex:1;border-radius:12px;text-align:left;';
              if (btnLabel) btnLabel.textContent = 'Scan All URLs';
            } else {
              manualSec.classList.add('hidden');
              sitemapSec.classList.remove('hidden');
-             sitemapBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)';
-             sitemapBtn.style.color      = 'white';
-             manualBtn.style.background  = 'transparent';
-             manualBtn.style.color       = '#9ca3af';
+             sitemapBtn.style.cssText = 'padding:14px 16px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:2px solid #be185d;cursor:pointer;transition:all 0.2s;flex:1;border-radius:12px;text-align:left;';
+             manualBtn.style.cssText = 'padding:14px 16px;background:#111827;color:#9ca3af;border:2px solid #1e293b;cursor:pointer;transition:all 0.2s;flex:1;border-radius:12px;text-align:left;';
              const count = sitemapFetchedUrls.length;
              if (btnLabel) btnLabel.textContent = count > 0 ? `Scan Sitemap (${count} pages)` : 'Fetch URLs First';
            }
