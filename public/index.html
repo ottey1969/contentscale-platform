@@ -65,7 +65,8 @@
          .btn-specialist i, .btn-specialist span { color: #5b21b6 !important; }
          .mode-toggle { position: relative; padding: 0.8rem 1.25rem; border-radius: 0.75rem; font-weight: 600; background: #374151; color: white !important; border: 2px solid transparent; cursor: pointer; flex: 1; min-width: 130px; max-width: 220px; text-align: center; font-size:0.88rem; }
          .mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255,255,255,0.3); }
-         .mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; }
+         .mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; animation: checkBlink 1.4s ease-in-out infinite; }
+         @keyframes checkBlink { 0%,100%{opacity:1;box-shadow:0 0 8px rgba(74,222,128,0.7);}50%{opacity:0.3;box-shadow:none;} }
          .card { background: #111827; border: 1px solid #374151; border-radius: 1rem; padding: 1.5rem; }
          .progress-bar { height: 0.75rem; background: #374151; border-radius: 9999px; overflow: hidden; }
          .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s; }
@@ -1076,7 +1077,8 @@
                   style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #a855f7;box-shadow:0 0 32px rgba(168,85,247,0.4);display:block;margin:0 auto 12px;"
                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                <div style="width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#7e22ce,#be185d);display:none;align-items:center;justify-content:center;font-size:2.5rem;font-weight:900;color:white;border:3px solid #a855f7;box-shadow:0 0 32px rgba(168,85,247,0.4);margin:0 auto 12px;">O</div>
-               <div style="display:inline-flex;align-items:center;gap:6px;background:#065f46;color:#4ade80;padding:4px 12px;border-radius:99px;font-size:0.72rem;font-weight:700;">✅ Verified Founder</div>
+               <div style="display:inline-flex;align-items:center;gap:6px;background:#065f46;color:#4ade80;padding:4px 12px;border-radius:99px;font-size:0.72rem;font-weight:700;animation:verifiedBlink 1.4s ease-in-out infinite;">✅ Verified Founder</div>
+               <style>@keyframes verifiedBlink{0%,100%{opacity:1;box-shadow:0 0 8px rgba(74,222,128,0.6);}50%{opacity:0.35;box-shadow:none;}}</style>
             </div>
             <div style="flex:1;min-width:260px;">
                <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Built by</div>
