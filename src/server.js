@@ -188,7 +188,7 @@ app.get('/blog/', (req, res) => {
 });
 app.get('/blog/:slug', (req, res) => {
   const file = path.join(__dirname, 'public', 'blog', `${req.params.slug}.html`);
-  if (require('fs').existsSync(file)) {
+  if (fs.existsSync(file)) {
     res.sendFile(file);
   } else {
     res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -709,8 +709,6 @@ const { scans } = req.body;
 if (!scans || !Array.isArray(scans)) return res.status(400).json({ error: 'No scan data' });
 const { spawn } = require('child_process');
 const os = require('os');
-const path = require('path');
-const fs = require('fs');
 const tmpJson = path.join(os.tmpdir(), 'scandata_' + Date.now() + '.json');
 const tmpDocx = path.join(os.tmpdir(), 'scanreport_' + Date.now() + '.docx');
 fs.writeFileSync(tmpJson, JSON.stringify(scans));
