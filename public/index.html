@@ -166,7 +166,7 @@
       </div>
       <script>setTimeout(function(){var l=document.getElementById('loading-screen');if(l){l.style.opacity='0';l.style.transition='opacity 0.3s';setTimeout(function(){l.style.display='none';},300);}},2000);</script>
       <!-- ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage (100% HONEST) -->
-      <a href="https://app.contentscale.site" id="realActivityBanner" class="fixed bottom-4 left-4 z-50" style="display:none;text-decoration:none;">
+      <div id="realActivityBanner" class="fixed bottom-4 right-4 z-50" style="display:none;">
          <div style="
             background: rgba(17, 24, 39, 0.95);
             backdrop-filter: blur(12px);
@@ -193,7 +193,7 @@
                <span id="realScansLabel">scans today</span>
             </div>
          </div>
-      </a>
+      </div>
       <nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.97)">
          <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -205,7 +205,6 @@
                <a href="javascript:void(0)" onclick="switchPageSection('leaderboard')">Leaderboard</a>
                <a href="javascript:void(0)" onclick="switchPageSection('experts')">Experts</a>
                <a href="javascript:void(0)" onclick="switchPageSection('templates')">Templates</a>
-               <a href="https://app.contentscale.site/blog" target="_blank" rel="noopener">📝 Blog</a>
             </div>
             <div class="flex items-center gap-3">
                <a href="https://wa.me/31628073996" target="_blank" rel="noopener" class="btn btn-success" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i> Chat</a>
@@ -216,8 +215,7 @@
             <a href="javascript:void(0)" onclick="switchPageSection('scanner');toggleMobileMenu();" class="py-2 border-b border-gray-800">Scanner</a>
             <a href="javascript:void(0)" onclick="switchPageSection('leaderboard');toggleMobileMenu();" class="py-2 border-b border-gray-800">Leaderboard</a>
             <a href="javascript:void(0)" onclick="switchPageSection('experts');toggleMobileMenu();" class="py-2 border-b border-gray-800">Experts</a>
-            <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2 border-b border-gray-800">Templates</a>
-            <a href="https://app.contentscale.site/blog" target="_blank" rel="noopener" class="py-2">📝 Blog</a>
+            <a href="javascript:void(0)" onclick="switchPageSection('templates');toggleMobileMenu();" class="py-2">Templates</a>
          </div>
       </nav>
       <div style="background:linear-gradient(90deg,#1e1b4b 0%,#0f172a 50%,#1e1b4b 100%);border-bottom:1px solid #312e81;padding:6px 24px;text-align:center;">
@@ -363,42 +361,39 @@
                         <div id="bulkScannerForm">
                            <!-- MODE TOGGLE -->
                            <div class="flex gap-2 mb-4" style="background:#0f172a;border-radius:10px;padding:4px;border:1px solid #1e293b;">
-                             <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;cursor:pointer;">
-                               📋 Manual URLs
-                             </button>
-                             <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;">
-                               🗺️ Sitemap Scan
-                             </button>
+                              <button onclick="setBulkMode('manual')" id="modeManualBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:linear-gradient(135deg,#4f46e5,#7e22ce);color:white;border:none;cursor:pointer;">
+                              📋 Manual URLs
+                              </button>
+                              <button onclick="setBulkMode('sitemap')" id="modeSitemapBtn" class="flex-1 text-sm font-semibold py-2 rounded-lg" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;">
+                              🗺️ Sitemap Scan
+                              </button>
                            </div>
-
                            <!-- MANUAL MODE -->
                            <div id="manualModeSection" class="mb-5">
                               <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Enter URLs — one per line <span style="color:#6b7280;font-weight:400;">(Unlimited · <a href="/app" style="color:#a78bfa;">Pro dashboard</a> for unlimited)</span></label>
                               <textarea id="bulkUrlInput" rows="8" placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com" class="w-full p-3 rounded" oninput="updateBulkCount()"></textarea>
                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af!important;"><span>One URL per line</span><span id="bulkCountDisplay">0 URLs</span></div>
                            </div>
-
                            <!-- SITEMAP MODE -->
                            <div id="sitemapModeSection" class="hidden mb-5">
-                             <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml of sitemap_index.xml)</span></label>
-                             <div class="flex gap-2 mb-3">
-                               <input id="sitemapUrlInput" type="url" placeholder="https://example.com/sitemap.xml" class="flex-1 p-3 rounded text-sm" style="background:#1e293b;border:1px solid #374151;color:#e5e7eb;">
-                               <button onclick="fetchSitemapUrls()" id="fetchSitemapBtn" class="btn btn-primary px-4 text-sm" style="white-space:nowrap;">
+                              <label class="block text-sm font-semibold mb-2" style="color:#e5e7eb!important;">Sitemap URL <span style="color:#6b7280;font-weight:400;">(sitemap.xml of sitemap_index.xml)</span></label>
+                              <div class="flex gap-2 mb-3">
+                                 <input id="sitemapUrlInput" type="url" placeholder="https://example.com/sitemap.xml" class="flex-1 p-3 rounded text-sm" style="background:#1e293b;border:1px solid #374151;color:#e5e7eb;">
+                                 <button onclick="fetchSitemapUrls()" id="fetchSitemapBtn" class="btn btn-primary px-4 text-sm" style="white-space:nowrap;">
                                  <i class="fas fa-download mr-1"></i> Fetch URLs
-                               </button>
-                             </div>
-                             <div id="sitemapFetchStatus" class="hidden rounded-lg p-3 text-sm mb-3" style="background:#0f2d1a;border:1px solid #166534;color:#4ade80;"></div>
-                             <div id="sitemapUrlPreview" class="hidden">
-                               <label class="block text-xs font-semibold mb-1" style="color:#6b7280;">Found URLs:</label>
-                               <div id="sitemapUrlList" class="rounded-lg p-3 max-h-48 overflow-y-auto text-xs" style="background:#111827;border:1px solid #1e293b;color:#9ca3af;line-height:2;font-family:monospace;"></div>
-                               <div class="flex justify-between text-xs mt-1" style="color:#9ca3af;"><span id="sitemapUrlCount">0 URLs</span><button onclick="clearSitemapUrls()" style="color:#f87171;background:none;border:none;cursor:pointer;">✕ Clear</button></div>
-                             </div>
-                             <div class="rounded-xl p-4 mt-3" style="background:#0f172a;border:1px solid #4c1d95;">
-                               <p class="text-xs font-semibold mb-1" style="color:#a78bfa!important;">🗺️ Sitemap Scan works automatically</p>
-                               <p class="text-xs" style="color:#6b7280!important;">All pages are scanned → average domain score calculated → automatically submitted to admin for approval on the leaderboard.</p>
-                             </div>
+                                 </button>
+                              </div>
+                              <div id="sitemapFetchStatus" class="hidden rounded-lg p-3 text-sm mb-3" style="background:#0f2d1a;border:1px solid #166534;color:#4ade80;"></div>
+                              <div id="sitemapUrlPreview" class="hidden">
+                                 <label class="block text-xs font-semibold mb-1" style="color:#6b7280;">Found URLs:</label>
+                                 <div id="sitemapUrlList" class="rounded-lg p-3 max-h-48 overflow-y-auto text-xs" style="background:#111827;border:1px solid #1e293b;color:#9ca3af;line-height:2;font-family:monospace;"></div>
+                                 <div class="flex justify-between text-xs mt-1" style="color:#9ca3af;"><span id="sitemapUrlCount">0 URLs</span><button onclick="clearSitemapUrls()" style="color:#f87171;background:none;border:none;cursor:pointer;">✕ Clear</button></div>
+                              </div>
+                              <div class="rounded-xl p-4 mt-3" style="background:#0f172a;border:1px solid #4c1d95;">
+                                 <p class="text-xs font-semibold mb-1" style="color:#a78bfa!important;">🗺️ Sitemap Scan works automatically</p>
+                                 <p class="text-xs" style="color:#6b7280!important;">All pages are scanned → average domain score calculated → automatically submitted to admin for approval on the leaderboard.</p>
+                              </div>
                            </div>
-
                            <!-- WHAT HAPPENS WITH RESULTS (manual mode only) -->
                            <div id="manualResultsInfo" class="mb-5 rounded-xl p-4" style="background:#0f172a;border:1px solid #1e293b;">
                               <p class="text-sm font-semibold mb-3" style="color:#e5e7eb!important;">What do you want to do with the results?</p>
@@ -411,10 +406,7 @@
                                     <p class="text-xs mt-0.5" style="color:#e5e7eb!important;">Always on — shows GRAAF / CRAFT / Technical breakdown for each site</p>
                                  </div>
                               </label>
-
                            </div>
-
-
                            <button onclick="startBulkScan()" id="bulkScanBtn" class="btn btn-primary w-full" style="font-size:1rem;padding:0.9rem;">
                            <i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>
                            </button>
@@ -433,7 +425,6 @@
                                  <button onclick="exportBulkPDF()" class="btn btn-primary"><i class="fas fa-file-pdf mr-2"></i> Export Combined PDF</button>
                                  <button onclick="shareAllResults()" class="btn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"><i class="fas fa-share-alt mr-2"></i> Share All</button>
                                  <button id="domainBadgeBtn" onclick="showBulkDomainBadge()" style="display:none;" class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><span style="margin-right:6px;">🏅</span> Domain Badge</button>
-
                               </div>
                               <div id="bulkResultsContainer"></div>
                            </div>
@@ -978,23 +969,19 @@
          const DEFAULT_TEMPLATES = {
          congrats: {
          subject: `🏆 {{company_name}} — You scored {{score}}/100. You made the Elite Leaderboard.`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>You Made the Elite Leaderboard</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🏆</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">You Made the Elite Leaderboard.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">ContentScore: {{score}} / 100 · {{score_label}}</p></div><div style="background:#fdf4ff;padding:32px;text-align:center;"><p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:700;">Your ContentScore</p><div style="font-size:72px;font-weight:900;color:#7e22ce;line-height:1;margin-bottom:8px;">{{score}}</div><div style="font-size:14px;color:#6b7280;margin-bottom:16px;">out of 100</div>{{score_bar}}</div><div style="padding:36px 32px 28px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>. I scanned your site today. Your score is impressive.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Talk — WhatsApp</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p></div></div><script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`
+         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>You Made the Elite Leaderboard</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#5b21b6 0%,#7e22ce 50%,#be185d 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🏆</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">You Made the Elite Leaderboard.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">ContentScore: {{score}} / 100 · {{score_label}}</p></div><div style="background:#fdf4ff;padding:32px;text-align:center;"><p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:700;">Your ContentScore</p><div style="font-size:72px;font-weight:900;color:#7e22ce;line-height:1;margin-bottom:8px;">{{score}}</div><div style="font-size:14px;color:#6b7280;margin-bottom:16px;">out of 100</div>{{score_bar}}</div><div style="padding:36px 32px 28px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I work at <strong>{{sender_company}}</strong>. I scanned your site today. Your score is impressive.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Talk — WhatsApp</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#7e22ce;">Unsubscribe</a></p></div></div></body></html>`
          },
          improvement: {
          subject: `{{company_name}}: Your website scored {{score}}/100. Here is what is holding you back.`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Free SEO Scan Result</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#0284c7 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:56px;line-height:1;margin-bottom:16px;">📊</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Free Website Scan</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:15px;">{{domain}} · Scanned on {{date}}</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I ran a free scan of your website. Your score is <strong>{{score}} out of 100</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Yes — Show Me How to Improve</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#1d4ed8;">Unsubscribe</a></p></div></div><script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`
+         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Free SEO Scan Result</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#0284c7 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:56px;line-height:1;margin-bottom:16px;">📊</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Free Website Scan</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:15px;">{{domain}} · Scanned on {{date}}</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">My name is <strong>{{sender_name}}</strong>. I ran a free scan of your website. Your score is <strong>{{score}} out of 100</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Yes — Show Me How to Improve</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#1d4ed8;">Unsubscribe</a></p></div></div></body></html>`
          },
          almostMade: {
          subject: `{{company_name}} — {{gap}} points from the Elite Leaderboard (score {{score}}/100)`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>So Close — Just {{gap}} Points Away</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🎯</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">So Close.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">Just {{gap}} points from the Elite Leaderboard.</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">Your site almost made our Elite Leaderboard. You are <strong>{{gap}} points away</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Get You on the Leaderboard</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#b45309;">Unsubscribe</a></p></div></div><script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`
+         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>So Close — Just {{gap}} Points Away</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#78350f 0%,#b45309 50%,#d97706 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🎯</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:900;">So Close.</h1><p style="color:rgba(255,255,255,0.9);margin:0;font-size:16px;">Just {{gap}} points from the Elite Leaderboard.</p></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">Your site almost made our Elite Leaderboard. You are <strong>{{gap}} points away</strong>.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 Let's Get You on the Leaderboard</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#b45309;">Unsubscribe</a></p></div></div></body></html>`
          },
          website: {
          subject: `{{company_name}} — your competitors in {{country}} are getting online customers. Are you?`,
-         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div><script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`
+         body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
          }
          };
          // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from server (all sources: single, bulk, campaign)
@@ -1072,11 +1059,11 @@
          btnLabel.textContent = `Scan All URLs (${lines.length})`;
          }
          }
-
+         
          // ========== SITEMAP MODE ==========
          let currentBulkMode = 'manual';
          let sitemapFetchedUrls = [];
-
+         
          function setBulkMode(mode) {
          window.setBulkMode = setBulkMode; document._setBulkMode = setBulkMode;
            currentBulkMode = mode;
@@ -1085,7 +1072,7 @@
            const manualBtn  = document.getElementById('modeManualBtn');
            const sitemapBtn = document.getElementById('modeSitemapBtn');
            const btnLabel   = document.getElementById('bulkBtnLabel');
-
+         
            if (mode === 'manual') {
              manualSec.classList.remove('hidden');
              sitemapSec.classList.add('hidden');
@@ -1105,7 +1092,7 @@
              if (btnLabel) btnLabel.textContent = count > 0 ? `Scan Sitemap (${count} pages)` : 'Fetch URLs First';
            }
          }
-
+         
          async function fetchSitemapUrls() {
            const input = document.getElementById('sitemapUrlInput');
            const btn   = document.getElementById('fetchSitemapBtn');
@@ -1147,7 +1134,7 @@
              btn.innerHTML = '<i class="fas fa-download mr-1"></i> Fetch URLs';
            }
          }
-
+         
          function clearSitemapUrls() {
            sitemapFetchedUrls = [];
            document.getElementById('sitemapUrlPreview').classList.add('hidden');
@@ -1156,7 +1143,7 @@
            const btnLabel = document.getElementById('bulkBtnLabel');
            if (btnLabel) btnLabel.textContent = 'Fetch URLs First';
          }
-
+         
          function renderSitemapUrlList() {
            const listDiv  = document.getElementById('sitemapUrlList');
            const countEl  = document.getElementById('sitemapUrlCount');
@@ -1173,12 +1160,12 @@
            if (countEl) countEl.textContent = sitemapFetchedUrls.length + " URL's";
            if (btnLabel) btnLabel.textContent = sitemapFetchedUrls.length > 0 ? `Scan Sitemap (${sitemapFetchedUrls.length} pages)` : 'Fetch URLs First';
          }
-
+         
          function removeSitemapUrl(index) {
            sitemapFetchedUrls.splice(index, 1);
            renderSitemapUrlList();
          }
-
+         
          async function submitSitemapWithMeta(domain, avgScore, pageCount, sitemapUrl) {
            const company_name  = document.getElementById('sbCompanyName')?.value.trim() || domain;
            const country       = document.getElementById('sbCountry')?.value || '';
@@ -1216,7 +1203,7 @@
            } catch(e) { showToast('❌ Submit mislukt', '#ef4444'); }
          }
          // ========== END SITEMAP MODE ==========
-
+         
          async function registerUser() {
          try {
          let storedUserId = localStorage.getItem('user_id');
@@ -1340,7 +1327,7 @@
            if (discoverBtn) discoverBtn.classList.add('active');
          }
          }
-
+         
          // Restore progress bar + button state when returning to bulk tab mid-scan
          function restoreBulkProgressUI() {
            const progress = document.getElementById('bulkProgress');
@@ -1353,7 +1340,7 @@
            }
            if (progressText && window._lastProgressText) progressText.textContent = window._lastProgressText;
          }
-
+         
          // When browser tab becomes visible again → immediately re-poll instead of waiting for next interval tick
          document.addEventListener('visibilitychange', async () => {
            if (document.visibilityState === 'visible' && isScanning && activeBulkJobId) {
@@ -1668,8 +1655,7 @@
          ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
          </div>`;
          }).join('');
-         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Report — ${url}</title><style>* { box-sizing:border-box; margin:0; padding:0; }body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }@media print {.no-print { display:none !important; }body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }.page-break { page-break-before:always; }}</style></head><body style="max-width:800px;margin:0 auto;padding:0;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h1><p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr></table></div></div></div>${recRows}<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button><p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p></div><script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`;
+         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Report — ${url}</title><style>* { box-sizing:border-box; margin:0; padding:0; }body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }@media print {.no-print { display:none !important; }body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }.page-break { page-break-before:always; }}</style></head><body style="max-width:800px;margin:0 auto;padding:0;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h1><p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr></table></div></div></div>${recRows}<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button><p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p></div></body></html>`;
          const win = window.open('', '_blank');
          if (!win) { alert('Please allow popups to export the PDF report.'); if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; } return; }
          win.document.write(html);
@@ -1679,7 +1665,7 @@
          }
          let activeBulkJobId = null;
          let bulkPollInterval = null;
-
+         
          // Resume any active job on page load
          async function resumeActiveJob() {
            const savedJobId = localStorage.getItem('cs_activeJobId');
@@ -1688,10 +1674,10 @@
              const r = await fetch('/api/scan/bulk-job/' + savedJobId);
              const job = await r.json();
              if (!job.success) { localStorage.removeItem('cs_activeJobId'); return; }
-
+         
              // Always load results into memory first
              bulkResults = (job.results || []).map(r => ({ ...r, selected: false }));
-
+         
              if (job.status === 'done' || job.status === 'cancelled' || job.status === 'error') {
                localStorage.removeItem('cs_activeJobId');
                // Job finished while away — switch to bulk tab and show results
@@ -1702,7 +1688,7 @@
                }
                return;
              }
-
+         
              // Job still running — reconnect
              activeBulkJobId = savedJobId;
              isScanning = true;
@@ -1730,14 +1716,14 @@
              localStorage.removeItem('cs_activeJobId');
            }
          }
-
+         
          function resumePollJob(jobId, startFrom) {
            let lastDone = startFrom || 0;
            const progress = document.getElementById('bulkProgress');
            const progressBar = document.getElementById('bulkProgressBar');
            const progressText = document.getElementById('bulkProgressText');
            const button = document.getElementById('bulkScanBtn');
-
+         
            bulkPollInterval = setInterval(async () => {
              try {
                const pollRes = await fetch('/api/scan/bulk-job/' + jobId);
@@ -1775,7 +1761,7 @@
              } catch(e) {}
            }, 4000);
          }
-
+         
          function renderBulkResults() {
            const resultsDiv = document.getElementById('bulkResults');
            const container = document.getElementById('bulkResultsContainer');
@@ -1820,7 +1806,7 @@
            }
            updateRealActivityBanner();
          }
-
+         
          async function startBulkScan() {
          if (isScanning) { alert('Scan already in progress. Please wait.'); return; }
          if (currentBulkMode === 'sitemap') {
@@ -1848,7 +1834,7 @@
          if (exportButtons) exportButtons.style.display = 'none';
          const oldBanner = document.getElementById('sitemapSubmitBanner');
          if (oldBanner) oldBanner.remove();
-
+         
          try {
            const startRes = await fetch('/api/scan/bulk-job', {
              method: 'POST',
@@ -1863,8 +1849,8 @@
            if (startData.capped) showToast('⚠️ Capped at 500 URLs. Remaining skipped.', '#f59e0b', 6000);
            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning on server' + (startData.queued ? ' (queued)' : '') + '... <button onclick="cancelBulkJob()" style="margin-left:8px;background:#7f1d1d;border:none;color:white;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.75rem;">✕ Cancel</button>';
            if (startData.queued) progressText.textContent = '⏳ Waiting for scan slot — your job starts automatically.';
-
-
+         
+         
            // Poll for results
            let lastDone = 0;
            await new Promise((resolve, reject) => {
@@ -1908,9 +1894,9 @@
                } catch(e) { clearInterval(bulkPollInterval); reject(e); }
              }, 4000); // poll every 4 seconds
            });
-
+         
            progressBar.style.width = '100%';
-
+         
            // SITEMAP MODE: show banner
            if (currentBulkMode === 'sitemap') {
              const sitemapUrl = document.getElementById('sitemapUrlInput').value.trim();
@@ -1953,7 +1939,7 @@
                if (container) container.parentNode.insertBefore(banner, container);
              }
            }
-
+         
            // Sort + render results
            bulkResults.sort((a,b) => { if(a.success&&!b.success)return -1; if(!a.success&&b.success)return 1; if(a.success&&b.success)return(b.score||0)-(a.score||0); return 0; });
            const successful = bulkResults.filter(r => r.success);
@@ -2003,7 +1989,7 @@
            isScanning = false;
          }
          }
-
+         
          function cancelBulkJob() {
            window.cancelBulkJob = cancelBulkJob;
            document._cancelBulkJob = cancelBulkJob;
@@ -2019,7 +2005,7 @@
            if (progress) progress.classList.add('hidden');
            showToast('⏹ Scan cancelled', '#6b7280');
          }
-
+         
          function retryBulkUrl(url) {
          // Add URL to input and trigger scan
          const textarea = document.getElementById('bulkUrlInput');
@@ -2035,17 +2021,17 @@
          item.classList.toggle('expanded', !details.classList.contains('hidden'));
          }
          }
-
+         
          function toggleBulkSelect(index, checked) {
            if (bulkResults[index]) bulkResults[index].selected = checked;
            updateDeleteBar();
          }
-
+         
          function selectAllBulk(checked) {
            bulkResults.forEach(r => r.selected = checked);
            renderBulkResults();
          }
-
+         
          function updateDeleteBar() {
            const selectedCount = bulkResults.filter(r => r.selected).length;
            let bar = document.getElementById('bulkDeleteBar');
@@ -2068,7 +2054,7 @@
              ${selectedCount > 0 ? `<button onclick="deleteSelectedBulk()" style="background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;padding:6px 16px;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;">🗑 Remove ${selectedCount}</button>` : ''}
            `;
          }
-
+         
          function deleteSelectedBulk() {
            const count = bulkResults.filter(r => r.selected).length;
            bulkResults = bulkResults.filter(r => !r.selected);
@@ -2079,7 +2065,7 @@
            showToast('🗑 ' + count + ' result' + (count === 1 ? '' : 's') + ' removed', '#6b7280', 2500);
          }
          // ✅ NEW FUNCTION: TOGGLE LEADERBOARD SELECTION
-
+         
          
          function generateBulkResultDetails(data) {
          if (!data.success) return '<p>No data available</p>';
@@ -2462,8 +2448,7 @@
          <div class="no-print" style="position:fixed;bottom:24px;right:24px;z-index:999;">
            <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(126,34,206,0.5);">🖨️ Print / Save as PDF</button>
          </div>
-         <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`;
+         </body></html>`;
          
          const win = window.open('', '_blank');
          if (!win) { alert('Please allow popups to export the combined PDF report.'); return; }
@@ -2613,8 +2598,7 @@
              <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
            </div>
          
-         <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body></html>`;
+         </body></html>`;
          
          const win = window.open('', '_blank');
          if (!win) {
@@ -2894,7 +2878,7 @@
          else { alert('❌ ' + (data.error || 'Failed')); }
          } catch (e) { alert('❌ Error: ' + e.message); }
          }
-
+         
          // ============================================================
          // BADGE SYSTEM
          // ============================================================
@@ -2904,31 +2888,31 @@
            const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
            const pct = (v,max) => Math.round(v/max*100);
            return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-    <div>
-      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
-      <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
-    </div>
-    <div style="text-align:center;min-width:52px;">
-      <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
-      <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
-    </div>
-  </div>
-  <div style="margin-bottom:10px;">
-    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
-    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
-    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
-    <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
-  </div>
-  <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
-    <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
-  </div>
-</div>`;
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+         <div>
+         <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
+         <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
+         </div>
+         <div style="text-align:center;min-width:52px;">
+         <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+         <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+         </div>
+         </div>
+         <div style="margin-bottom:10px;">
+         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
+         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
+         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
+         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
+         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
+         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
+         </div>
+         <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+         <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+         <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+         </div>
+         </div>`;
          }
-
+         
          function buildDomainBadgeHTML(domain, score, pageCount, topPages) {
            const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
            const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
@@ -2936,44 +2920,44 @@
              const c = p.score>=95?'#a78bfa':p.score>=90?'#60a5fa':p.score>=85?'#4ade80':p.score>=80?'#a3e635':p.score>=75?'#fde68a':p.score>=70?'#fb923c':'#f87171';
              const short = p.url.replace(/https?:\/\//,'').replace(/\/$/,'');
              return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1e293b;">
-    <a href="${p.url}" target="_blank" style="font-size:0.65rem;color:#818cf8;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${short}</a>
-    <span style="font-size:0.7rem;font-weight:800;color:${c};min-width:28px;text-align:right;">${p.score}</span>
-  </div>`;
+         <a href="${p.url}" target="_blank" style="font-size:0.65rem;color:#818cf8;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${short}</a>
+         <span style="font-size:0.7rem;font-weight:800;color:${c};min-width:28px;text-align:right;">${p.score}</span>
+         </div>`;
            }).join('');
            return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:320px;box-sizing:border-box;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <div>
-      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Domain ContentScore</div>
-      <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">${domain}</div>
-      <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${pageCount} pages scanned</div>
-    </div>
-    <div style="text-align:center;min-width:60px;">
-      <div style="font-size:2.4rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
-      <div style="font-size:0.62rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
-    </div>
-  </div>
-  ${rows ? `<div style="margin-bottom:10px;">${rows}</div>` : ''}
-  <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
-    <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
-  </div>
-</div>`;
+         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+         <div>
+         <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Domain ContentScore</div>
+         <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">${domain}</div>
+         <div style="font-size:0.62rem;color:#6b7280;margin-top:1px;">${pageCount} pages scanned</div>
+         </div>
+         <div style="text-align:center;min-width:60px;">
+         <div style="font-size:2.4rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+         <div style="font-size:0.62rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+         </div>
+         </div>
+         ${rows ? `<div style="margin-bottom:10px;">${rows}</div>` : ''}
+         <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+         <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+         <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+         </div>
+         </div>`;
          }
-
+         
          function showPageBadge(url, score, graaf, craft, technical) {
            const html = buildPageBadgeHTML(url, score, graaf, craft, technical);
            document.getElementById('badgePreview').innerHTML = html;
            document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
            document.getElementById('badgeModal').classList.add('open');
          }
-
+         
          function showDomainBadge(domain, score, pageCount, topPages) {
            const html = buildDomainBadgeHTML(domain, score, pageCount, topPages);
            document.getElementById('badgePreview').innerHTML = html;
            document.getElementById('badgeEmbedCode').value = html.replace(/\n/g,' ').replace(/\s{2,}/g,' ');
            document.getElementById('badgeModal').classList.add('open');
          }
-
+         
          function showBulkDomainBadge() {
            const successful = bulkResults.filter(r => r.success && r.score > 0);
            if (!successful.length) return;
@@ -2986,11 +2970,11 @@
            const topPages = successful.sort((a,b) => b.score-a.score).slice(0,3).map(r => ({url:r.url, score:r.score}));
            showDomainBadge(domain, avgScore, successful.length, topPages);
          }
-
+         
          function closeBadgeModal() {
            document.getElementById('badgeModal').classList.remove('open');
          }
-
+         
          function copyBadgeCode() {
            const ta = document.getElementById('badgeEmbedCode');
            ta.select();
@@ -3001,7 +2985,7 @@
              showToast('\u2705 Copied!', '#7e22ce');
            }
          }
-
+         
          // ============================================================
          // SHARE ALL AS URL
          // ============================================================
@@ -3030,23 +3014,24 @@
            } catch(e) { showToast('\u274c Error: ' + e.message, '#ef4444'); }
            finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; } }
          }
-
+         
       </script>
-   <!-- BADGE MODAL -->
-<div id="badgeModal" onclick="if(event.target===this)closeBadgeModal()">
-  <div id="badgeModalBox">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <h3 style="font-size:1rem;font-weight:800;color:#e9d5ff!important;">🏅 Get Your Badge</h3>
-      <button onclick="closeBadgeModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
-    </div>
-    <p style="font-size:0.75rem;color:#9ca3af!important;margin-bottom:2px;">Copy & paste this on your website. The link back to ContentScale is a dofollow backlink.</p>
-    <div id="badgePreviewWrap"><div id="badgePreview"></div></div>
-    <label style="font-size:0.72rem;color:#a78bfa!important;font-weight:700;display:block;margin-bottom:6px;">✂️ Embed Code</label>
-    <textarea id="badgeEmbedCode" readonly onclick="this.select()"></textarea>
-    <button onclick="copyBadgeCode()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">📋 Copy Embed Code</button>
-  </div>
-</div>
-
-<script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();<\/script>
-</body>
+      <!-- BADGE MODAL -->
+      <div id="badgeModal" onclick="if(event.target===this)closeBadgeModal()">
+         <div id="badgeModalBox">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+               <h3 style="font-size:1rem;font-weight:800;color:#e9d5ff!important;">🏅 Get Your Badge</h3>
+               <button onclick="closeBadgeModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+            </div>
+            <p style="font-size:0.75rem;color:#9ca3af!important;margin-bottom:2px;">Copy & paste this on your website. The link back to ContentScale is a dofollow backlink.</p>
+            <div id="badgePreviewWrap">
+               <div id="badgePreview"></div>
+            </div>
+            <label style="font-size:0.72rem;color:#a78bfa!important;font-weight:700;display:block;margin-bottom:6px;">✂️ Embed Code</label>
+            <textarea id="badgeEmbedCode" readonly onclick="this.select()"></textarea>
+            <button onclick="copyBadgeCode()" style="margin-top:12px;width:100%;padding:10px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">📋 Copy Embed Code</button>
+         </div>
+      </div>
+      <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}"complete"===document.readyState||"interactive"===document.readyState?e():document.addEventListener("DOMContentLoaded",e)}();</script>
+   </body>
 </html>
