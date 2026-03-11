@@ -1558,6 +1558,10 @@
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
          🔗 Share Link
          </button>
+         <button onclick="shareSingleAll();return false;"
+         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+         <i class="fas fa-share-alt"></i> Share All
+         </button>
          <button onclick="exportScanPDF(window._lastScanData)"
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
          ⬇ Export PDF
@@ -1601,6 +1605,30 @@
          }
          exportScanPDF(data);
          showToast('📄 Report opened — share via Print → Save as PDF', '#7e22ce');
+         }
+         async function shareSingleAll() {
+           const data = window._lastScanData;
+           if (!data) { showToast('❌ Run a scan first', '#ef4444'); return; }
+           const btn = event.currentTarget;
+           btn.disabled = true; btn.innerHTML = '⏳ Sharing...';
+           try {
+             const res = await fetch('/api/share/bulk', {
+               method: 'POST',
+               headers: {'Content-Type':'application/json'},
+               body: JSON.stringify({ results: [data] })
+             });
+             const json = await res.json();
+             if (json.token) {
+               const url = window.location.origin + '/share/' + json.token;
+               navigator.clipboard ? navigator.clipboard.writeText(url).then(() => showToast('🔗 Share link copied!', '#0ea5e9')) : fallbackCopy(url);
+             } else {
+               copyScanShareLink();
+             }
+           } catch(e) {
+             copyScanShareLink();
+           } finally {
+             btn.disabled = false; btn.innerHTML = '<i class="fas fa-share-alt"></i> Share All';
+           }
          }
          function fallbackCopy(text) {
          const ta = document.createElement('textarea');
@@ -2133,6 +2161,7 @@
          style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#0f7b3a;color:white!important;padding:8px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.8rem;">
          <i class="fab fa-whatsapp"></i> Get Help
          </a>
+         ${data.report_url ? `<button onclick="(function(){const u='${(data.report_url||'').startsWith('http')?data.report_url:'https://app.contentscale.site'+(data.report_url||'')}';navigator.clipboard?navigator.clipboard.writeText(u).then(()=>showToast('🔗 Report link copied!','#0ea5e9')).catch(()=>fallbackCopy(u)):fallbackCopy(u);})()" style="flex:1;padding:8px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:8px;font-weight:600;font-size:0.8rem;cursor:pointer;">🔗 Share Link</button>` : ''}
          <button onclick="exportScanPDF(${JSON.stringify(data).replace(/"/g, '&quot;')})"
          style="flex:1;padding:8px;background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white!important;border:none;border-radius:8px;font-weight:600;font-size:0.8rem;cursor:pointer;">
          ⬇ Export PDF
