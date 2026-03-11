@@ -1554,10 +1554,6 @@
          style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#25d366,#128c7e);color:white!important;padding:12px 14px;border-radius:10px;font-weight:700;text-decoration:none;font-size:0.85rem;">
          <i class="fab fa-whatsapp"></i> Get Help
          </a>
-         <button onclick="copyScanShareLink();return false;"
-         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-         🔗 Share Link
-         </button>
          <button onclick="shareSingleAll();return false;"
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
          <i class="fas fa-share-alt"></i> Share All
@@ -1568,7 +1564,11 @@
          </button>
          <button onclick="(function(){const d=window._lastScanData;if(!d)return;showPageBadge(d.url,d.score||0,d.metrics?.graaf||0,d.metrics?.craft||0,d.metrics?.technical||0);})()"
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-         🏅 Get Badge
+         🏅 Page Badge
+         </button>
+         <button onclick="(function(){const d=window._lastScanData;if(!d)return;const domain=d.url.replace(/https?:\/\//,'').split('/')[0];showDomainBadge(domain,d.score||0,1,[{url:d.url,score:d.score||0}]);})()"
+         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+         🏆 Domain Badge
          </button>
          <button onclick="document.getElementById('singleResult').classList.add('hidden')"
          style="padding:12px 14px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
