@@ -1841,6 +1841,15 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const result = await internalScanPage(page, scanUrl);
                await page.close();
                console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+               // Log to scan_log for counter
+               if (pool) {
+                 const domain = scanUrl.replace(/https?:\/\//,'').split('/')[0];
+                 pool.query(
+                   `INSERT INTO scan_log (user_id, business_url, business_name, score, source, created_at)
+                    VALUES ($1,$2,$3,$4,'manual',NOW())`,
+                   ['anon', scanUrl, domain, result.score]
+                 ).catch(e => console.error('scan_log insert error:', e.message));
+               }
                res.json(result);
                } catch (error) {
                console.error('❌ Scan error:', error.message);
