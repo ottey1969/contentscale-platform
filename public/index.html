@@ -2239,6 +2239,27 @@
              if (domainBadgeBtn) { const doms=[...new Set(successful.map(r=>r.url.replace(/https?:\/\//,'').split('/')[0]))]; domainBadgeBtn.style.display=doms.length===1?'inline-flex':'none'; }
            }
            updateRealActivityBanner();
+           // Add all successful bulk scans to scan history
+           updateBulkScanHistory(successful);
+         }
+         
+         // Update scan history with all successful bulk/sitemap scans
+         function updateBulkScanHistory(successful) {
+           if (!successful || successful.length === 0) return;
+           try {
+             const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+             const newScans = successful.map(r => ({
+               url: r.url,
+               score: r.score,
+               date: new Date().toISOString()
+             }));
+             // Add all new scans to the front of history
+             const updatedHistory = [...newScans, ...scanHistory];
+             // Keep only latest 500 scans to avoid localStorage bloat
+             localStorage.setItem('cs_scanHistory', JSON.stringify(updatedHistory.slice(0, 500)));
+           } catch(e) {
+             console.error('Failed to update scan history:', e);
+           }
          }
          
          async function startBulkScan() {
@@ -2586,8 +2607,8 @@
          alert('⚠️ No successful scans to export. All URLs failed to scan.');
          return;
          }
-         // Find max number of recommendations across all results (cap at 10 for clean CSV)
-         const maxRecs = Math.min(10, Math.max(...successful.map(r => (r.recommendations?.all || r.recommendations || []).length)));
+         // Find max number of recommendations across all results (no limit - export all)
+         const maxRecs = Math.max(...successful.map(r => (r.recommendations?.all || r.recommendations || []).length));
          // Build dynamic recommendation headers
          let recHeaders = '';
          for (let i = 1; i <= maxRecs; i++) {
@@ -3271,11 +3292,11 @@
          // SHARE ALL AS URL
          // ============================================================
          async function shareAllResults() {
-           if (!bulkResults || bulkResults.length === 0) { showToast('\u274c No results to share', '#ef4444'); return; }
+           if (!bulkResults || bulkResults.length === 0) { showToast('❌ No results to share', '#ef4444'); return; }
            const successful = bulkResults.filter(r => r.success);
-           if (!successful.length) { showToast('\u26a0\ufe0f No successful results', '#f59e0b'); return; }
+           if (!successful.length) { showToast('⚠️ No successful results', '#f59e0b'); return; }
            const btn = event?.target?.closest('button');
-           if (btn) { btn.disabled = true; btn.innerHTML = '\u23f3 Creating link...'; }
+           if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Creating link...'; }
            
            // Try API share first
            try {
@@ -3289,21 +3310,19 @@
                const url = window.location.origin + '/share/' + data.token;
                if (navigator.clipboard) {
                  await navigator.clipboard.writeText(url);
-                 showToast('\ud83d\udd17 Share link copied!', '#0ea5e9');
+                 showToast('🔗 Share link copied!', '#0ea5e9');
                } else {
                  prompt('Copy this link:', url);
                }
-               if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; }
+               if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share-alt mr-2"></i> Share All'; }
                return;
              }
            } catch(e) {
-             console.log('API share failed, falling back to local HTML:', e.message);
+             console.log('API share failed, creating local share page:', e.message);
            }
            
-           // Fallback: Generate local HTML with full recommendations
+           // Fallback: Generate compact multi-site share page
            const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-           const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
-           const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
            const avgScore = Math.round(successful.reduce((s,r) => s + r.score, 0) / successful.length);
            const eliteCount = successful.filter(r => r.score >= 95).length;
            const excellentCount = successful.filter(r => r.score >= 90 && r.score < 95).length;
@@ -3313,158 +3332,203 @@
            const qualifiedCount = successful.filter(r => r.score >= 70 && r.score < 75).length;
            const needsWorkCount = successful.filter(r => r.score < 70).length;
            
-           // Generate detailed site sections with recommendations
-           const siteDetailsHTML = successful.map((r, idx) => {
+           // Determine domain and score label
+           const firstDomain = successful[0].url.replace(/https?:\/\//,'').split('/')[0];
+           const scoreLabel = avgScore >= 90 ? 'Elite' : avgScore >= 80 ? 'Strong' : avgScore >= 70 ? 'Qualified' : avgScore >= 50 ? 'Opportunity' : 'Critical';
+           const scoreColor = avgScore >= 85 ? '#16a34a' : avgScore >= 70 ? '#b45309' : avgScore >= 60 ? '#ea580c' : '#dc2626';
+           
+           // Generate expandable site rows
+           const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
+           const priorityColor = { high: '#dc2626', medium: '#b45309', low: '#2563eb' };
+           
+           const siteRows = successful.map((r, i) => {
              const lbl = r.score>=90?'🏅 Elite':r.score>=80?'💪 Strong':r.score>=70?'✅ Qualified':r.score>=50?'🟡 Opportunity':'🔴 Critical';
              const sc = r.score>=85?'#16a34a':r.score>=70?'#b45309':r.score>=60?'#ea580c':'#dc2626';
              const recs = (r.recommendations?.all || r.recommendations || []);
              const metrics = r.metrics || {};
+             const domain = r.url.replace(/https?:\/\//,'');
+             const uid = 'site_' + i;
              
-             // Build recommendations HTML (same format as single PDF)
-             const recRows = recs.map((rec, i) => {
+             const recRows = recs.map((rec, idx) => {
                const pc = priorityColor[rec.priority] || '#6b7280';
                const pl = priorityLabel[rec.priority] || 'Info';
                return `
-                 <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid;">
-                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
-                     <div style="font-weight:700;font-size:14px;color:#111827;line-height:1.4;flex:1;">${i+1}. ${rec.title}</div>
-                     <span style="font-size:11px;color:${pc};font-weight:700;white-space:nowrap;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span>
+                 <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;">
+                     <div style="font-weight:700;font-size:13px;color:#111827;line-height:1.4;flex:1;">${idx+1}. ${rec.title}</div>
+                     <span style="font-size:10px;color:${pc};font-weight:700;white-space:nowrap;padding:2px 8px;border:1px solid ${pc};border-radius:99px;">${pl}</span>
                    </div>
-                   <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${rec.description}</p>
-                   <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:${rec.learning?'8':'0'}px;">
-                     <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">⚡ ACTION</div>
-                     <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${rec.action}</p>
+                   <p style="font-size:12px;color:#374151;margin:0 0 8px;line-height:1.5;">${rec.description || ''}</p>
+                   <div style="background:#f8fafc;border-radius:6px;padding:8px 12px;margin-bottom:${rec.learning?'6px':'0'};">
+                     <div style="font-size:10px;font-weight:700;color:#7e22ce;margin-bottom:3px;">⚡ ACTION</div>
+                     <p style="font-size:12px;color:#1e293b;margin:0;line-height:1.4;">${rec.action}</p>
                    </div>
-                   ${rec.learning ? `<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;">
-                     <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">📚 WHY IT MATTERS</div>
-                     <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${rec.learning}</p>
+                   ${rec.learning ? `<div style="background:#f0f9ff;border-radius:6px;padding:8px 12px;margin-bottom:${rec.target?'6px':'0'};">
+                     <div style="font-size:10px;font-weight:700;color:#0369a1;margin-bottom:3px;">📚 WHY IT MATTERS</div>
+                     <p style="font-size:11px;color:#374151;margin:0;line-height:1.4;">${rec.learning}</p>
                    </div>` : ''}
-                   ${rec.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${rec.target}</p>` : ''}
+                   ${rec.target ? `<p style="font-size:11px;color:#16a34a;margin:0;font-weight:600;">🎯 ${rec.target}</p>` : ''}
                  </div>
                `;
              }).join('');
              
              return `
-               <div style="page-break-before:${idx>0?'always':'auto'};padding:28px 40px;border-bottom:2px solid #e5e7eb;">
-                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                   <div>
-                     <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:4px;">SITE ${idx+1} OF ${successful.length}</div>
-                     <h2 style="font-size:18px;font-weight:800;color:#111827;margin:0;">${r.url.replace(/https?:\/\//,'')}</h2>
+               <tr style="border-bottom:1px solid #e5e7eb;cursor:pointer;" onclick="var el=document.getElementById('${uid}');var arrow=document.getElementById('${uid}_arrow');if(el.style.display==='none'){el.style.display='table-row';arrow.innerHTML='▲';}else{el.style.display='none';arrow.innerHTML='▼';}">
+                 <td style="padding:14px 16px;font-size:13px;color:#6b7280;font-weight:600;">${i+1}</td>
+                 <td style="padding:14px 16px;font-size:13px;color:#111827;font-weight:600;max-width:400px;word-break:break-all;">${domain}</td>
+                 <td style="padding:14px 16px;font-weight:900;font-size:18px;color:${sc};">${r.score}</td>
+                 <td style="padding:14px 16px;font-size:12px;color:${sc};font-weight:600;">${lbl}</td>
+                 <td style="padding:14px 16px;font-size:12px;color:#6b7280;">${recs.length}</td>
+                 <td style="padding:14px 16px;text-align:center;">
+                   <span id="${uid}_arrow" style="font-size:14px;color:#7e22ce;font-weight:900;">▼</span>
+                 </td>
+               </tr>
+               <tr id="${uid}" style="display:none;background:#fafafa;">
+                 <td colspan="6" style="padding:20px 24px;">
+                   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:${recs.length>0?'20px':'0'};">
+                     <div style="text-align:center;padding:14px 20px;background:white;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);min-width:100px;">
+                       <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;">GRAAF</div>
+                       <div style="font-size:24px;font-weight:900;color:#7e22ce;">${metrics.graaf||0}<span style="font-size:13px;color:#9ca3af;font-weight:600;">/50</span></div>
+                     </div>
+                     <div style="text-align:center;padding:14px 20px;background:white;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);min-width:100px;">
+                       <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;">CRAFT</div>
+                       <div style="font-size:24px;font-weight:900;color:#1d4ed8;">${metrics.craft||0}<span style="font-size:13px;color:#9ca3af;font-weight:600;">/30</span></div>
+                     </div>
+                     <div style="text-align:center;padding:14px 20px;background:white;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);min-width:100px;">
+                       <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;">Technical</div>
+                       <div style="font-size:24px;font-weight:900;color:#b45309;">${metrics.technical||0}<span style="font-size:13px;color:#9ca3af;font-weight:600;">/20</span></div>
+                     </div>
+                     <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:150px;">
+                       <a href="${r.url}" target="_blank" rel="noopener nofollow ugc" style="display:inline-block;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;box-shadow:0 2px 6px rgba(126,34,206,0.3);">Visit Page →</a>
+                     </div>
                    </div>
-                   <a href="${r.url}" target="_blank" rel="noopener nofollow ugc" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a>
-                 </div>
-                 
-                 <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin-bottom:24px;">
-                   <div style="text-align:center;">
-                     <div style="font-size:64px;font-weight:900;color:${sc};line-height:1;">${r.score}</div>
-                     <div style="font-size:13px;color:#6b7280;margin-top:2px;">out of 100</div>
-                     <div style="display:inline-block;background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 14px;border-radius:99px;margin-top:6px;">${lbl}</div>
-                   </div>
-                   <div style="flex:1;min-width:240px;">
-                     <table cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 5px;width:100%;">
-                       <tr><td style="background:#f5f3ff;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:11px;">Credibility</span></td><td style="background:#f5f3ff;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#7e22ce;text-align:right;">${metrics.graaf||0} / 50</td></tr>
-                       <tr><td style="background:#eff6ff;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:11px;">Quality</span></td><td style="background:#eff6ff;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#1d4ed8;text-align:right;">${metrics.craft||0} / 30</td></tr>
-                       <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:11px;">SEO</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${metrics.technical||0} / 20</td></tr>
-                     </table>
-                   </div>
-                 </div>
-                 
-                 ${recs.length > 0 ? `
-                   <div style="margin-top:24px;">
-                     <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:12px;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
-                     ${recRows}
-                   </div>
-                 ` : '<p style="color:#16a34a;font-size:14px;font-weight:600;margin-top:16px;">✅ No issues found — this page is performing well!</p>'}
-               </div>
+                   ${recs.length > 0 ? `
+                     <div style="margin-top:20px;">
+                       <div style="font-size:14px;font-weight:800;color:#111827;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">📋 ${recs.length} Recommendation${recs.length!==1?'s':''}</div>
+                       ${recRows}
+                     </div>
+                   ` : '<p style="color:#16a34a;font-size:14px;font-weight:700;margin:0;">✅ No issues found — page is performing well!</p>'}
+                 </td>
+               </tr>
              `;
            }).join('');
            
            const shareHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-           <title>ContentScale — Bulk Scan Results · ${today}</title>
+           <title>ContentScale — ${firstDomain} Scan Results</title>
+           <meta name="viewport" content="width=device-width, initial-scale=1.0">
            <style>
              * { box-sizing:border-box; margin:0; padding:0; }
-             body { font-family:Arial,Helvetica,sans-serif; background:#f9fafb; color:#111827; }
-             @media print {
-               .no-print { display:none !important; }
-               body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-               .page-break { page-break-before:always; }
+             body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; background:#f9fafb; color:#111827; line-height:1.5; }
+             table { width:100%; border-collapse:collapse; }
+             @media print { .no-print { display:none !important; } }
+             @media (max-width: 768px) {
+               .stats-grid { flex-direction:column; }
+               table { font-size:12px; }
              }
            </style>
-           </head><body style="max-width:860px;margin:0 auto;padding:0;">
+           </head><body style="max-width:1000px;margin:0 auto;padding:0;">
            
              <!-- HEADER -->
-             <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;">
-               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+             <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:32px 32px 28px;color:white;">
+               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
                  <div>
-                   <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
-                   <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+                   <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div>
+                   <div style="font-size:11px;opacity:0.8;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
                  </div>
                  <div style="text-align:right;">
-                   <div style="font-size:12px;opacity:0.75;">Generated</div>
-                   <div style="font-size:13px;font-weight:700;">${today}</div>
+                   <div style="font-size:11px;opacity:0.75;">Generated</div>
+                   <div style="font-size:12px;font-weight:700;">${today}</div>
                  </div>
                </div>
-               <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;color:white;">Bulk Scan Results</h1>
-               <p style="font-size:14px;opacity:0.85;">GRAAF + CRAFT + Technical analysis across ${successful.length} site${successful.length!==1?'s':''} · ${eliteCount + excellentCount + strongCount} scoring 85+</p>
+               <h1 style="font-size:24px;font-weight:900;margin-bottom:4px;line-height:1.2;">${firstDomain}</h1>
+               <p style="font-size:13px;opacity:0.9;">${successful.length} page${successful.length!==1?'s':''} scanned</p>
              </div>
            
-             <!-- SCORE SUMMARY -->
-             <div style="padding:28px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
-               <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
-                 <div style="text-align:center;">
-                   <div style="font-size:64px;font-weight:900;color:#7e22ce;line-height:1;">${avgScore}</div>
-                   <div style="font-size:13px;color:#6b7280;margin-top:2px;">avg score</div>
-                   <div style="display:inline-block;background:#7e22ce;color:white;font-size:11px;font-weight:700;padding:3px 14px;border-radius:99px;margin-top:6px;">out of 100</div>
+             <!-- DOMAIN SCORE OVERVIEW -->
+             <div style="background:#1e293b;padding:32px;text-align:center;border-bottom:3px solid #7e22ce;">
+               <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;margin-bottom:8px;">${avgScore}</div>
+               <div style="font-size:16px;font-weight:700;color:${scoreColor};margin-bottom:4px;">${scoreLabel}</div>
+               <div style="font-size:13px;color:#9ca3af;">Average domain score</div>
+             </div>
+             
+             <!-- SCORE DISTRIBUTION -->
+             <div style="padding:24px 32px;background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;max-width:900px;margin:0 auto;">
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${eliteCount>0?'#7e22ce':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#a78bfa;line-height:1;">${eliteCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">🏅 Elite 90+</div>
                  </div>
-                 <div style="flex:1;min-width:240px;">
-                   <table cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 5px;width:100%;">
-                     <tr><td style="background:#f5f3ff;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🏅 Elite <span style="font-weight:400;color:#9ca3af;font-size:11px;">95–100</span></td><td style="background:#f5f3ff;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#7e22ce;text-align:right;">${eliteCount}</td></tr>
-                     <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✨ Excellent <span style="font-weight:400;color:#9ca3af;font-size:11px;">90–94</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${excellentCount}</td></tr>
-                     <tr><td style="background:#f0fdf4;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">💪 Strong <span style="font-weight:400;color:#9ca3af;font-size:11px;">85–89</span></td><td style="background:#f0fdf4;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#16a34a;text-align:right;">${strongCount}</td></tr>
-                     <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">👍 Good <span style="font-weight:400;color:#9ca3af;font-size:11px;">80–84</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${goodCount}</td></tr>
-                     <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">📈 Solid <span style="font-weight:400;color:#9ca3af;font-size:11px;">75–79</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${solidCount}</td></tr>
-                     <tr><td style="background:#fff7ed;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✅ Qualified <span style="font-weight:400;color:#9ca3af;font-size:11px;">70–74</span></td><td style="background:#fff7ed;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#ea580c;text-align:right;">${qualifiedCount}</td></tr>
-                     <tr><td style="background:#fff1f2;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🔴 Opportunity <span style="font-weight:400;color:#9ca3af;font-size:11px;">&lt;70</span></td><td style="background:#fff1f2;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#dc2626;text-align:right;">${needsWorkCount}</td></tr>
-                   </table>
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${excellentCount>0?'#3b82f6':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#60a5fa;line-height:1;">${excellentCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">✨ Excellent 90+</div>
+                 </div>
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${strongCount>0?'#10b981':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#34d399;line-height:1;">${strongCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">💪 Strong 80+</div>
+                 </div>
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${goodCount>0?'#f59e0b':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#fbbf24;line-height:1;">${goodCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">👍 Good 80+</div>
+                 </div>
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${solidCount>0?'#f59e0b':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#fb923c;line-height:1;">${solidCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">📈 Solid 75+</div>
+                 </div>
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${qualifiedCount>0?'#fb923c':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#fb923c;line-height:1;">${qualifiedCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">✅ Qualified 70+</div>
+                 </div>
+                 <div style="background:#1e293b;padding:16px;border-radius:10px;text-align:center;border:2px solid ${needsWorkCount>0?'#ef4444':'transparent'};">
+                   <div style="font-size:28px;font-weight:900;color:#f87171;line-height:1;">${needsWorkCount}</div>
+                   <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-weight:600;">🔴 Opportunity</div>
                  </div>
                </div>
              </div>
            
-             <!-- DETAILED SITE SECTIONS -->
-             ${siteDetailsHTML}
+             <!-- ALL PAGES TABLE -->
+             <div style="padding:28px 32px;">
+               <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:14px;">📄 All Scanned Pages — Click to Expand</div>
+               <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:white;">
+                 <table>
+                   <thead><tr style="background:#f3f4f6;">
+                     <th style="padding:12px 16px;text-align:left;font-size:11px;color:#6b7280;font-weight:800;">#</th>
+                     <th style="padding:12px 16px;text-align:left;font-size:11px;color:#6b7280;font-weight:800;">PAGE</th>
+                     <th style="padding:12px 16px;text-align:left;font-size:11px;color:#6b7280;font-weight:800;">SCORE</th>
+                     <th style="padding:12px 16px;text-align:left;font-size:11px;color:#6b7280;font-weight:800;">RATING</th>
+                     <th style="padding:12px 16px;text-align:left;font-size:11px;color:#6b7280;font-weight:800;">RECS</th>
+                     <th style="padding:12px 16px;text-align:center;font-size:11px;color:#6b7280;font-weight:800;">EXPAND</th>
+                   </tr></thead>
+                   <tbody>${siteRows}</tbody>
+                 </table>
+               </div>
+             </div>
            
              <!-- FOOTER -->
-             <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:8px;">
+             <div style="background:#111827;padding:20px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;">
                <div>
-                 <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
-                 <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
+                 <div style="color:white;font-weight:700;font-size:13px;">ContentScale SEO Platform</div>
+                 <div style="color:#9ca3af;font-size:11px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div>
                </div>
                <div style="text-align:right;">
-                 <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
-                 <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div>
+                 <div style="color:#9ca3af;font-size:11px;">app.contentscale.site</div>
+                 <div style="color:#9ca3af;font-size:11px;">+31 6 2807 3996</div>
                </div>
-             </div>
-           
-             <!-- PRINT BUTTON -->
-             <div class="no-print" style="text-align:center;padding:24px;">
-               <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button>
-               <p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p>
              </div>
            
            </body></html>`;
            
            const win = window.open('', '_blank');
            if (!win) {
-             const summary = `📊 ContentScale Bulk Scan Results — ${today}\n${'─'.repeat(40)}\n${successful.map((r,i)=>`${i+1}. ${r.url.replace(/https?:\/\//,'').split('/')[0]} — ${r.score}/100`).join('\n')}\n${'─'.repeat(40)}\napp.contentscale.site`;
+             const summary = `📊 ${firstDomain} — ${successful.length} pages scanned\nAvg Score: ${avgScore}/100 (${scoreLabel})\n${'─'.repeat(40)}\n${successful.map((r,i)=>`${i+1}. ${r.url.replace(/https?:\/\//,'')} — ${r.score}/100`).join('\n')}\n${'─'.repeat(40)}\napp.contentscale.site`;
              navigator.clipboard?.writeText(summary);
              showToast('📋 Summary copied — allow popups for full report', '#f59e0b');
-             if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; }
+             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share-alt mr-2"></i> Share All'; }
              return;
            }
            win.document.write(shareHTML);
            win.document.close();
-           showToast('✅ Share page opened with full recommendations', '#0ea5e9');
-           if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-share-alt mr-2\"></i> Share All'; }
+           showToast('✅ Share page opened — click rows to see recommendations', '#0ea5e9');
+           if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share-alt mr-2"></i> Share All'; }
          }
          
       </script>
