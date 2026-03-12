@@ -2131,6 +2131,7 @@
                  <p style="font-size:0.78rem;color:#6b7280;margin-bottom:12px;">Scanning + email finding will happen inside Campaign — no double work.</p>
                  <div style="display:flex;gap:10px;flex-wrap:wrap;">
                    <button onclick="copyDomainsToCampaigns()" style="flex:1;min-width:180px;background:linear-gradient(135deg,#0f4c8a,#7e22ce);color:white;border:none;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">🗺️ Send ${highDomains.length} domains → Sitemap Scanner</button>
+                   <button onclick="exportBatchCSV()" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">⬇ Export CSV</button>
                    <button onclick="navigator.clipboard.writeText(window._batchDomains.join('\\n')).then(()=>{this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy domain list',2000)})" style="background:#1e293b;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">📋 Copy domain list</button>
                  </div>
                </div>`;
@@ -3119,6 +3120,21 @@
              'recruitment agency','management consultant','business coach'
            ].join('\n');
            adminUpdateBatchCombos();
+         }
+         
+         function exportBatchCSV() {
+           const places = window._batchPlaces || [];
+           if (!places.length) { alert('No data to export.'); return; }
+           const headers = ['domain','name','email','phone','address','niche','city','country'];
+           const rows = places.map(p => {
+             const domain = (p.url || '').replace(/^https?:\/\//,'').split('/')[0];
+             return [domain, p.name||'', p.email||'', p.phone||'', p.address||'', p.niche||'', p.city||'', p.country||''];
+           });
+           const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+           const a = document.createElement('a');
+           a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+           a.download = 'scanner-leads-' + new Date().toISOString().split('T')[0] + '.csv';
+           a.click();
          }
          
          function copyDomainsToCampaigns() {
