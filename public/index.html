@@ -54,7 +54,7 @@
           { "@type": "Question", "name": "How do I check if my agency is delivering quality content?", "acceptedAnswer": { "@type": "Answer", "text": "Paste any page they deliver into the ContentScale scanner and check the score before you accept or pay. If the score is below 70, send the report back with a request to address the specific recommendations. Set a minimum acceptance threshold of 75 and require it in your content contract." } },
           { "@type": "Question", "name": "Why is traditional SEO content not working anymore?", "acceptedAnswer": { "@type": "Answer", "text": "Google's systems in 2026 evaluate author credibility, source citations, content depth, and E-E-A-T signals — not just keywords and backlinks. The old playbook — keyword density, thin content, generic articles — stopped working as Google rolled out its Helpful Content system. The shift is permanent." } },
           { "@type": "Question", "name": "Can I scan my entire website at once?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — use the sitemap scanner to scan every page in one go. Your sitemap is typically at yourdomain.com/sitemap.xml. Add it via the I Have a List tab and every URL gets individually scored." } },
-          { "@type": "Question", "name": "What score should I aim for?", "acceptedAnswer": { "@type": "Answer", "text": "Aim for 75+ as a minimum, 85+ for competitive keywords, and 95+ if you want to appear in AI Overviews and featured snippets. ContentScale uses three tiers: Qualified (70-79), Strong (80-89), and Elite (90-100)." } },
+          { "@type": "Question", "name": "What score should I aim for?", "acceptedAnswer": { "@type": "Answer", "text": "Aim for 75+ as a minimum, 85+ for competitive keywords, and 95+ if you want to appear in AI Overviews and featured snippets. ContentScale uses five tiers: Critical (<50), Opportunity (50–69), Qualified (70–79), Strong (80–89), and Elite (90–100)." } },
           { "@type": "Question", "name": "What is the GRAAF Framework?", "acceptedAnswer": { "@type": "Answer", "text": "GRAAF stands for Genuinely Credible, Relevant, Actionable, Accurate, Fresh — a five-pillar system for scoring content quality against modern SEO standards. Combined with CRAFT (30 points) and Technical SEO (20 points), it produces a 100-point ContentScore for any page." } }
         ]
       }
@@ -860,7 +860,7 @@
                      <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#64748b!important;">📊 Score &amp; Analysis</p>
                      <div class="var-grid">
                         <div class="var-row"><code style="color:#38bdf8!important;">{{score}}</code><span>Total ContentScore (0–100)</span></div>
-                        <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Excellent / Good / Needs Work</span></div>
+                        <div class="var-row"><code style="color:#38bdf8!important;">{{score_label}}</code><span>Elite / Strong / Qualified / Opportunity / Critical</span></div>
                         <div class="var-row"><code style="color:#38bdf8!important;">{{score_bar}}</code><span>Visual HTML progress bar</span></div>
                         <div class="var-row"><code style="color:#38bdf8!important;">{{graaf_score}}</code><span>GRAAF sub-score (/50)</span></div>
                         <div class="var-row"><code style="color:#38bdf8!important;">{{craft_score}}</code><span>CRAFT sub-score (/30)</span></div>
@@ -1174,7 +1174,7 @@
             </div>
             <div style="border:1px solid #374151;border-radius:12px;margin-bottom:14px;overflow:hidden;">
                <div style="background:#1f2937;padding:15px 20px;font-weight:700;color:#c4b5fd;font-size:0.97rem;">What score should I aim for?</div>
-               <div style="padding:18px 20px;background:#111827;color:#d1d5db;font-size:0.94rem;line-height:1.8;">Aim for 75+ as a minimum, 85+ for competitive keywords, and 95+ if you want to appear in AI Overviews and featured snippets. ContentScale uses three tiers: Qualified (70–79), Strong (80–89), and Elite (90–100). ContentScale.site itself scored 78/100 on its own sitemap scan in March 2026 — honest, solid, and with a clear rewrite roadmap for pages below 75.</div>
+               <div style="padding:18px 20px;background:#111827;color:#d1d5db;font-size:0.94rem;line-height:1.8;">Aim for 75+ as a minimum, 85+ for competitive keywords, and 95+ if you want to appear in AI Overviews and featured snippets. ContentScale uses five tiers: Critical (<50), Opportunity (50–69), Qualified (70–79), Strong (80–89), and Elite (90–100). ContentScale.site itself scored 78/100 on its own sitemap scan in March 2026 — honest, solid, and with a clear rewrite roadmap for pages below 75.</div>
             </div>
             <div style="border:1px solid #374151;border-radius:12px;margin-bottom:14px;overflow:hidden;">
                <div style="background:#1f2937;padding:15px 20px;font-weight:700;color:#c4b5fd;font-size:0.97rem;">What is the GRAAF Framework?</div>
@@ -1887,7 +1887,7 @@
          const stats = data.content_stats || {};
          const recs = (data.recommendations?.all || data.recommendations || []);
          const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+         const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
          const priorityConfig = {
          high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
          medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
@@ -2075,7 +2075,7 @@
          const metrics = data.metrics || {};
          const stats = data.content_stats || {};
          const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+         const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
          const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
          const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
          const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
@@ -2222,13 +2222,13 @@
              const so=successful.filter(r=>r.score>=75&&r.score<80).length, qu=successful.filter(r=>r.score>=70&&r.score<75).length;
              const nw=successful.filter(r=>r.score<70).length, err=bulkResults.length-successful.length;
              statsDiv.innerHTML = `
-               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${ec}</div><div style="font-size:0.65rem;color:#9ca3af;">🏅 Elite 95+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${ec}</div><div style="font-size:0.65rem;color:#9ca3af;">🏅 Elite 90+</div></div>
                <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">${exc}</div><div style="font-size:0.65rem;color:#9ca3af;">✨ Excellent 90+</div></div>
-               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${st}</div><div style="font-size:0.65rem;color:#9ca3af;">💪 Strong 85+</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${st}</div><div style="font-size:0.65rem;color:#9ca3af;">💪 Strong 80+</div></div>
                <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a3e635;">${go}</div><div style="font-size:0.65rem;color:#9ca3af;">👍 Good 80+</div></div>
                <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${so}</div><div style="font-size:0.65rem;color:#9ca3af;">📈 Solid 75+</div></div>
                <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qu}</div><div style="font-size:0.65rem;color:#9ca3af;">✅ Qualified 70+</div></div>
-               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${nw}</div><div style="font-size:0.65rem;color:#9ca3af;">🔴 Needs Work</div></div>
+               <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${nw}</div><div style="font-size:0.65rem;color:#9ca3af;">🔴 Opportunity</div></div>
                <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${err>0?'<div style="font-size:0.65rem;color:#ef4444;margin-top:4px;">'+err+' errors</div>':''}</div>`;
            }
            if (container) container.innerHTML = bulkResults.map((result, index) => {
@@ -2350,7 +2350,7 @@
              if (succ.length > 0) {
                const avgScore = Math.round(succ.reduce((a,r) => a+r.score, 0) / succ.length);
                const avgColor = avgScore>=95?'#a78bfa':avgScore>=85?'#4ade80':avgScore>=70?'#a3e635':avgScore>=50?'#fbbf24':'#f87171';
-               const avgLabel = avgScore>=95?'Elite':avgScore>=90?'Excellent':avgScore>=85?'Strong':avgScore>=80?'Good':avgScore>=75?'Solid':avgScore>=70?'Qualified':'Needs Work';
+               const avgLabel = avgScore>=90?'Elite':avgScore>=80?'Strong':avgScore>=70?'Qualified':avgScore>=50?'Opportunity':'Critical';
                const domain = sitemapUrl.replace(/https?:\/\//, '').split('/')[0];
                const banner = document.createElement('div');
                banner.id = 'sitemapSubmitBanner';
@@ -2395,13 +2395,13 @@
            const needsWorkCount=successful.filter(r=>r.score<70).length; const errorCount=bulkResults.length-successful.length;
            const statsDiv = document.getElementById('bulkStats');
            if (statsDiv) statsDiv.innerHTML = `
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${eliteCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83c\udfc5 Elite 95+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a78bfa;">${eliteCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83c\udfc5 Elite 90+</div></div>
              <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;">${excellentCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\u2728 Excellent 90+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${strongCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcaa Strong 85+</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#4ade80;">${strongCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcaa Strong 80+</div></div>
              <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#a3e635;">${goodCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udc4d Good 80+</div></div>
              <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fde68a;">${solidCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udcc8 Solid 75+</div></div>
              <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#fb923c;">${qualifiedCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\u2705 Qualified 70+</div></div>
-             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${needsWorkCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udd34 Needs Work</div></div>
+             <div style="background:#1e293b;border-radius:8px;padding:10px 12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f87171;">${needsWorkCount}</div><div style="font-size:0.65rem;color:#9ca3af;">\ud83d\udd34 Opportunity</div></div>
              <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#60a5fa;">${bulkResults.length}</div><div style="font-size:0.7rem;color:#9ca3af;">Total</div>${errorCount>0?'<div style=\"font-size:0.65rem;color:#ef4444;margin-top:4px;\">'+errorCount+' errors</div>':''}</div>`;
            if (container) container.innerHTML = bulkResults.map((result, index) => {
              if (!result.success) return `<div class="bulk-result-item" style="border-color:#ef4444;display:flex;align-items:flex-start;gap:10px;padding:0;">
@@ -2519,7 +2519,7 @@
          const metrics = data.metrics || { graaf: 0, craft: 0, technical: 0 };
          const stats = data.content_stats || {};
          const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+         const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
          const priorityConfig = {
          high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
          medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
@@ -2608,7 +2608,7 @@
          let csv = `URL,Domain,Score,Label,GRAAF,CRAFT,Technical,Word Count,H1,H2,Images,Links,Schema,Canonical,Status${recHeaders}\n`;
          successful.forEach(r => {
          const domain = r.url.replace(/https?:\/\//, '').split('/')[0];
-         const label = r.score >= 95 ? 'Elite' : r.score >= 90 ? 'Excellent' : r.score >= 85 ? 'Strong' : r.score >= 80 ? 'Good' : r.score >= 75 ? 'Solid' : r.score >= 70 ? 'Qualified' : 'Needs Work';
+         const label = r.score >= 90 ? 'Elite' : r.score >= 80 ? 'Strong' : r.score >= 70 ? 'Qualified' : r.score >= 50 ? 'Opportunity' : 'Critical';
          const stats = r.content_stats || {};
          const recs = (r.recommendations?.all || r.recommendations || []);
          const esc = s => '"' + (s || '').replace(/"/g, '""') + '"';
@@ -2697,7 +2697,7 @@
          const metrics = data.metrics || {};
          const stats = data.content_stats || {};
          const recs = (data.recommendations?.all || data.recommendations || []);
-         const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+         const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
          const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
          const scoreColorLight = score >= 85 ? '#4ade80' : score >= 70 ? '#fbbf24' : '#f87171';
          const recRows = recs.map((r, i) => {
@@ -2835,7 +2835,7 @@
                  <th style="padding:11px 16px;text-align:right;color:white;font-size:12px;">Label</th>
                </tr></thead>
                <tbody>${successful.map((r,i) => {
-               const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
+               const lbl = r.score>=90?'🏅 Elite':r.score>=80?'💪 Strong':r.score>=70?'✅ Qualified':r.score>=50?'🟡 Opportunity':'🔴 Critical';
                const sc = r.score>=85?'#4ade80':r.score>=70?'#fbbf24':r.score>=60?'#fb923c':'#f87171';
                return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
                <td style="padding:9px 16px;color:#a5b4fc;font-size:12px;">${i+1}</td>
@@ -2886,7 +2886,7 @@
                <div style="font-size:13px;color:#9ca3af;line-height:1.8;">
                  <div style="font-weight:700;color:#a78bfa;margin-bottom:8px;">Report Summary</div>
                  <div>${successful.length} sites scanned · Avg score: ${avgScore}/100</div>
-                 <div style="margin-top:6px;line-height:2;">🏅 ${eliteCount} Elite &nbsp;·&nbsp; ✨ ${excellentCount} Excellent &nbsp;·&nbsp; 💪 ${strongCount} Strong &nbsp;·&nbsp; 👍 ${goodCount} Good &nbsp;·&nbsp; 📈 ${solidCount} Solid &nbsp;·&nbsp; ✅ ${qualifiedCount} Qualified &nbsp;·&nbsp; 🔴 ${needsWorkCount} Needs Work</div>
+                 <div style="margin-top:6px;line-height:2;">🏅 ${eliteCount} Elite &nbsp;·&nbsp; ✨ ${excellentCount} Excellent &nbsp;·&nbsp; 💪 ${strongCount} Strong &nbsp;·&nbsp; 👍 ${goodCount} Good &nbsp;·&nbsp; 📈 ${solidCount} Solid &nbsp;·&nbsp; ✅ ${qualifiedCount} Qualified &nbsp;·&nbsp; 🔴 ${needsWorkCount} Opportunity</div>
                </div>
              </div>
            </div>
@@ -2944,7 +2944,7 @@
          const needsWorkCount = successful.filter(r => r.score < 70).length;
          
          const siteRows = successful.map((r, i) => {
-           const lbl = r.score>=95?'🏅 Elite':r.score>=90?'✨ Excellent':r.score>=85?'💪 Strong':r.score>=80?'👍 Good':r.score>=75?'📈 Solid':r.score>=70?'✅ Qualified':'🔴 Needs Work';
+           const lbl = r.score>=90?'🏅 Elite':r.score>=80?'💪 Strong':r.score>=70?'✅ Qualified':r.score>=50?'🟡 Opportunity':'🔴 Critical';
            const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':r.score>=60?'#ea580c':'#dc2626';
            const recs = (r.recommendations?.all || r.recommendations || []);
            return `<tr style="border-bottom:1px solid #e5e7eb;">
@@ -3003,7 +3003,7 @@
                    <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">👍 Good <span style="font-weight:400;color:#9ca3af;font-size:11px;">80–84</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${goodCount}</td></tr>
                    <tr><td style="background:#fefce8;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">📈 Solid <span style="font-weight:400;color:#9ca3af;font-size:11px;">75–79</span></td><td style="background:#fefce8;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#b45309;text-align:right;">${solidCount}</td></tr>
                    <tr><td style="background:#fff7ed;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">✅ Qualified <span style="font-weight:400;color:#9ca3af;font-size:11px;">70–74</span></td><td style="background:#fff7ed;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#ea580c;text-align:right;">${qualifiedCount}</td></tr>
-                   <tr><td style="background:#fff1f2;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🔴 Needs Work <span style="font-weight:400;color:#9ca3af;font-size:11px;">&lt;70</span></td><td style="background:#fff1f2;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#dc2626;text-align:right;">${needsWorkCount}</td></tr>
+                   <tr><td style="background:#fff1f2;padding:9px 14px;border-radius:8px 0 0 8px;font-size:12px;font-weight:600;color:#374151;">🔴 Opportunity <span style="font-weight:400;color:#9ca3af;font-size:11px;">&lt;70</span></td><td style="background:#fff1f2;padding:9px 14px;border-radius:0 8px 8px 0;font-size:15px;font-weight:900;color:#dc2626;text-align:right;">${needsWorkCount}</td></tr>
                  </table>
                </div>
              </div>
@@ -3331,7 +3331,7 @@
          // ============================================================
          function buildPageBadgeHTML(url, score, graaf, craft, technical) {
            const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
-           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+           const tierLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
            const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
            const pct = (v,max) => Math.round(v/max*100);
            return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;">
@@ -3362,7 +3362,7 @@
          
          function buildDomainBadgeHTML(domain, score, pageCount, topPages) {
            const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
-           const tierLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+           const tierLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
            const rows = (topPages||[]).slice(0,3).map(p => {
              const c = p.score>=95?'#a78bfa':p.score>=90?'#60a5fa':p.score>=85?'#4ade80':p.score>=80?'#a3e635':p.score>=75?'#fde68a':p.score>=70?'#fb923c':'#f87171';
              const short = p.url.replace(/https?:\/\//,'').replace(/\/$/,'');
