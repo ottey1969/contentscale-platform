@@ -1424,10 +1424,20 @@
            });
          }
          
-         // Update banner after scan completes - with animation
+         // Update banner after scan completes - with instant increment and animation
          function updateRealActivityBanner() {
          const countEl = document.getElementById('realScansCount');
+         const labelEl = document.getElementById('realScansLabel');
          if (countEl) {
+           // Get current count from localStorage (instant, no API wait)
+           const today = new Date().toDateString();
+           const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+           const todayScans = scanHistory.filter(scan => new Date(scan.date).toDateString() === today).length;
+           
+           // Update count instantly
+           countEl.textContent = todayScans;
+           if (labelEl) labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
+           
            // Add pulse animation to show update
            countEl.style.transform = 'scale(1.3)';
            countEl.style.color = '#4ade80';
@@ -1436,7 +1446,6 @@
              countEl.style.color = '#a78bfa';
            }, 300);
          }
-         initRealActivityBanner();
          }
          function checkRescanReminder() {
          try {
@@ -1776,7 +1785,19 @@
                if (!job.success) return;
                // Catch up on any results missed while tab was hidden
                const newResults = job.results.slice(bulkResults.length);
-               newResults.forEach(r => bulkResults.push({ ...r, selected: false }));
+               newResults.forEach(r => {
+                 bulkResults.push({ ...r, selected: false });
+                 // Add to history and update counter for each new result
+                 if (r.success) {
+                   try {
+                     const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+                     scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
+                     localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
+                     // Update live counter real-time
+                     updateRealActivityBanner();
+                   } catch(e) {}
+                 }
+               });
                // Update progress text
                const progressText = document.getElementById('bulkProgressText');
                const progressBar  = document.getElementById('bulkProgressBar');
@@ -2179,13 +2200,16 @@
                const newResults = job.results.slice(lastDone);
                newResults.forEach(r => {
                  bulkResults.push({ ...r, selected: false });
-                 try {
-                   const h = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-                   h.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
-                   localStorage.setItem('cs_scanHistory', JSON.stringify(h.slice(0, 100)));
-                   // Update live counter real-time for each completed scan
-                   updateRealActivityBanner();
-                 } catch(e) {}
+                 // Only add successful scans to history
+                 if (r.success) {
+                   try {
+                     const h = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+                     h.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
+                     localStorage.setItem('cs_scanHistory', JSON.stringify(h.slice(0, 100)));
+                     // Update live counter real-time for each completed scan
+                     updateRealActivityBanner();
+                   } catch(e) {}
+                 }
                });
                lastDone = job.results.length;
                const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
@@ -2333,13 +2357,16 @@
                  const newResults = job.results.slice(lastDone);
                  newResults.forEach(r => {
                    bulkResults.push({ ...r, selected: false });
-                   try {
-                     const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-                     scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
-                     localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
-                     // Update live counter real-time for each completed scan
-                     updateRealActivityBanner();
-                   } catch(e) {}
+                   // Only add successful scans to history
+                   if (r.success) {
+                     try {
+                       const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
+                       scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
+                       localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
+                       // Update live counter real-time for each completed scan
+                       updateRealActivityBanner();
+                     } catch(e) {}
+                   }
                  });
                  lastDone = job.results.length;
                  // Update progress bar
@@ -3315,6 +3342,9 @@
            const btn = event?.target?.closest('button');
            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Creating link...'; }
            
+           // Debug: Check if recommendations are present
+           console.log('Sharing results, sample recs:', successful[0]?.recommendations?.all?.length || successful[0]?.recommendations?.length || 0);
+           
            // Try API share first
            try {
              const res = await fetch('/api/share/bulk', {
@@ -3327,7 +3357,7 @@
                const url = window.location.origin + '/share/' + data.token;
                if (navigator.clipboard) {
                  await navigator.clipboard.writeText(url);
-                 showToast('🔗 Share link copied!', '#0ea5e9');
+                 showToast('🔗 Share link copied! Recommendations included.', '#0ea5e9');
                } else {
                  prompt('Copy this link:', url);
                }
@@ -3335,7 +3365,8 @@
                return;
              }
            } catch(e) {
-             console.log('API share failed, creating local share page:', e.message);
+             console.log('API share failed, using local share page with full recommendations:', e.message);
+             // Continue to fallback below
            }
            
            // Fallback: Generate compact multi-site share page
