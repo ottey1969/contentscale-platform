@@ -2338,6 +2338,34 @@ console.error('Instantly ALL attempts failed. lastStatus=' + lastStatus + ' body
 let errMsg = 'Unauthorized'; try { errMsg = JSON.parse(lastBody).message || errMsg; } catch {}
 res.status(500).json({ success: false, error: errMsg });
 });
+// ── Instantly push debug endpoint ──────────────────────────
+app.post('/api/admin/instantly-test', verifyAdmin, async (req, res) => {
+  const apiKey = (req.headers['x-instantly-key'] || '').trim();
+  const { campaign_id, email } = req.body;
+  if (!apiKey || !campaign_id || !email) return res.status(400).json({ error: 'Need x-instantly-key header + campaign_id + email in body' });
+  // Try progressively richer payloads
+  const tests = [
+    { label: 'email only', lead: { email } },
+    { label: 'email + names', lead: { email, first_name: 'Test', last_name: '', company_name: 'Test BV', website: 'https://test.nl' } },
+    { label: 'email + custom_variables', lead: { email, first_name: 'Test', company_name: 'Test BV', website: 'https://test.nl', custom_variables: { score: '75', top_issue_1: 'Thin content' } } },
+  ];
+  const results = [];
+  for (const t of tests) {
+    try {
+      const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id, leads: [t.lead], skip_if_in_workspace: false })
+      });
+      const raw = await r.text();
+      let parsed; try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+      results.push({ test: t.label, status: r.status, ok: r.ok, response: parsed });
+      if (!r.ok) break; // stop at first failure
+    } catch(e) { results.push({ test: t.label, error: e.message }); break; }
+  }
+  res.json({ results });
+});
+
 // ── IP Geo lookup proxy (server-side, cached, no CORS) ──────
 const ipGeoServerCache = new Map();
 app.get('/api/admin/ip-geo', verifyAdmin, async (req, res) => {
