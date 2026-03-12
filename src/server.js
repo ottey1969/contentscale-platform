@@ -2338,6 +2338,30 @@ console.error('Instantly ALL attempts failed. lastStatus=' + lastStatus + ' body
 let errMsg = 'Unauthorized'; try { errMsg = JSON.parse(lastBody).message || errMsg; } catch {}
 res.status(500).json({ success: false, error: errMsg });
 });
+// ── IP Geo lookup proxy (server-side, cached, no CORS) ──────
+const ipGeoServerCache = new Map();
+app.get('/api/admin/ip-geo', verifyAdmin, async (req, res) => {
+  const ip = req.query.ip;
+  if (!ip) return res.json({ countryCode: null });
+  if (ipGeoServerCache.has(ip)) return res.json(ipGeoServerCache.get(ip));
+  try {
+    const r = await fetch(`https://ipapi.co/${ip}/json/`, {
+      headers: { 'User-Agent': 'ContentScaleAdmin/1.0' },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!r.ok) return res.json({ countryCode: null });
+    const d = await r.json();
+    if (d.error || !d.country_code) return res.json({ countryCode: null });
+    const geo = { countryCode: d.country_code, country: d.country_name, city: d.city, isp: d.org };
+    ipGeoServerCache.set(ip, geo);
+    // Evict cache after 1000 entries
+    if (ipGeoServerCache.size > 1000) ipGeoServerCache.delete(ipGeoServerCache.keys().next().value);
+    res.json(geo);
+  } catch (e) {
+    res.json({ countryCode: null });
+  }
+});
+
 app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
 const apiKey = req.headers['x-instantly-key'];
 if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
