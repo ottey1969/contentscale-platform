@@ -1293,7 +1293,7 @@ if (results.length === 1) {
   const score = d.score || 0;
   const metrics = d.metrics || {};
   const recs = (d.recommendations?.all || d.recommendations || []);
-  const scoreLabel = score>=95?'Elite':score>=90?'Excellent':score>=85?'Strong':score>=80?'Good':score>=75?'Solid':score>=70?'Qualified':'Needs Work';
+  const scoreLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
   const scoreColor = score>=85?'#16a34a':score>=70?'#b45309':'#dc2626';
   const priorityColor = { high:'#dc2626', medium:'#b45309', low:'#2563eb' };
   const priorityLabel = { high:'🔴 High Priority', medium:'🟡 Medium', low:'🔵 Quick Win' };
@@ -1311,7 +1311,7 @@ const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
 const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
 const sameDomain = domains.length === 1;
 const rows = results.map((r,i) => {
-const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
+const lbl = r.score>=90?'Elite':r.score>=80?'Strong':r.score>=70?'Qualified':r.score>=50?'Opportunity':'Critical';
 const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
 const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
 const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
@@ -1422,7 +1422,7 @@ recommendations.push({ title: '🚨 Critical: Content Is Too Thin', description:
 } else if (analysis.wordCount < 1500) {
 recommendations.push({ title: '📝 Increase Content Depth', description: `${analysis.wordCount} words found — decent start, but below the threshold for competitive rankings.`, priority: 'medium', action: "Add a FAQ section (5–8 questions), a 'How it works' breakdown, or real client examples.", learning: "Pages ranking on page 1 average 1,890 words. Google's QRG rewards 'comprehensive, accurate, clearly written' content.", target: '1,500+ words minimum; 2,500+ for competitive terms' });
 } else if (analysis.wordCount < 2500) {
-recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
+recommendations.push({ title: '📊 Content Length: Solid But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Qualified to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
 }
 if (analysis.statsFound < 3) {
 recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "Add 8+ statistics from 2023–2026 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2026 sources' });
@@ -1965,7 +1965,7 @@ let recs = [];
 try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
 const score = report.score || 0;
 const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
 const graafScore = Math.round(score * 0.50);
 const craftScore = Math.round(score * 0.30);
 const techScore  = Math.round(score * 0.20);
