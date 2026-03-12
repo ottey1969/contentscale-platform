@@ -966,12 +966,7 @@
            } else {
              clearInterval(window._campListRefresh); window._campListRefresh = null;
            }
-           if (tab === 'scanner') {
-             loadBatchJobs();
-             if (!window._scannerAutoRefresh) window._scannerAutoRefresh = setInterval(() => {
-               if (!document.getElementById('tab-scanner')?.classList.contains('hidden')) loadBatchJobs();
-             }, 8000);
-           } else {
+           if (tab !== 'scanner') {
              clearInterval(window._scannerAutoRefresh); window._scannerAutoRefresh = null;
            }
          }
