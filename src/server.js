@@ -2347,19 +2347,47 @@ if (!campaign_id || !leads || !leads.length) {
 return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
 }
 try {
-const r = await fetch('https://api.instantly.ai/api/v2/leads', {
-method: 'POST',
-headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
-body: JSON.stringify({
-campaign_id, leads,
-skip_if_in_workspace: skip_if_in_workspace !== false,
-skip_if_in_campaign: false,
-verify_leads: verify_leads || false
-})
+// Strip leads to only valid Instantly v2 fields
+const cleanLeads = leads.map(l => {
+  const clean = {
+    email: l.email,
+    first_name: l.first_name || '',
+    last_name: l.last_name || '',
+    company_name: l.company_name || '',
+    website: l.website || '',
+  };
+  if (l.personalization) clean.personalization = l.personalization;
+  // custom_variables: all values must be strings
+  if (l.custom_variables && typeof l.custom_variables === 'object') {
+    clean.custom_variables = {};
+    for (const [k,v] of Object.entries(l.custom_variables)) {
+      clean.custom_variables[k] = v === null || v === undefined ? '' : String(v);
+    }
+  }
+  return clean;
 });
-const data = await r.json();
-if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
-res.json({ success: true, added: data.added || leads.length, duplicates: data.duplicates || 0 });
+const payload = {
+  campaign_id,
+  leads: cleanLeads,
+  skip_if_in_workspace: skip_if_in_workspace !== false,
+  skip_if_in_campaign: false,
+  verify_leads: verify_leads || false
+};
+console.log('Instantly push payload sample:', JSON.stringify(payload.leads[0]));
+const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
+const rawText = await r.text();
+let data;
+try { data = JSON.parse(rawText); } catch { data = { message: rawText }; }
+console.log('Instantly response', r.status, JSON.stringify(data).substring(0, 300));
+if (!r.ok) {
+  const errDetail = data?.error || data?.message || data?.detail || ('HTTP ' + r.status + ': ' + rawText.substring(0,200));
+  throw new Error(errDetail);
+}
+res.json({ success: true, added: data.added || cleanLeads.length, duplicates: data.duplicates || 0 });
 } catch (e) {
 console.error('Instantly push error:', e.message);
 res.status(500).json({ success: false, error: e.message });
