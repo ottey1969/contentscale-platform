@@ -2418,12 +2418,10 @@ const cleanLeads = leads.map(l => {
 const payload = {
   campaign_id,
   leads: cleanLeads,
-  skip_if_in_workspace: skip_if_in_workspace !== false,
-  skip_if_in_campaign: false,
-  verify_leads: verify_leads || false
+  skip_if_in_workspace: skip_if_in_workspace !== false
 };
 console.log('Instantly push payload sample:', JSON.stringify(payload.leads[0]));
-const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+const r = await fetch('https://api.instantly.ai/api/v2/leads/add', {
   method: 'POST',
   headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
   body: JSON.stringify(payload)
@@ -2436,7 +2434,7 @@ if (!r.ok) {
   const errDetail = data?.error || data?.message || data?.detail || ('HTTP ' + r.status + ': ' + rawText.substring(0,200));
   throw new Error(errDetail);
 }
-res.json({ success: true, added: data.added || cleanLeads.length, duplicates: data.duplicates || 0 });
+res.json({ success: true, added: data.leads_uploaded || data.added || cleanLeads.length, duplicates: data.duplicated_leads || data.duplicates || 0 });
 } catch (e) {
 console.error('Instantly push error:', e.message);
 res.status(500).json({ success: false, error: e.message });
@@ -2589,7 +2587,7 @@ return base + '/share/' + token;
 }
 // Push one lead to Instantly
 async function pushLeadToInstantly(apiKey, campaignId, lead) {
-const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+const r = await fetch('https://api.instantly.ai/api/v2/leads/add', {
 method: 'POST',
 headers: { 'Authorization': 'Bearer ' + apiKey.trim(), 'Content-Type': 'application/json' },
 body: JSON.stringify({
