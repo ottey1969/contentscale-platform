@@ -1634,9 +1634,9 @@
              const statusBadge = s.email_status === 'has_email' ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✉ Found</span>' : '<span style="background:#1c1917;color:#9ca3af;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✗ No email</span>';
              const urlDisplay = s.business_url ? `<a href="${s.business_url}" target="_blank" style="color:#60a5fa;font-size:0.75rem;word-break:break-all;">${s.business_url}</a>` : '—';
              const isChecked = selectedScanIds.has(String(s.id));
-                          const reportBtn = s.report_url
-               ? `<button onclick='openOrCopyReport("${s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url}",this)' style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">🔗 Report</button>`
-               : `<button onclick='generateReport(window._scanLogMap[${s.id}])' style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Generate</button>`;
+                                       const reportBtn = s.report_url
+               ? `<button onclick="openScanReport(${s.id})" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">🔗 Report</button>`
+               : `<button onclick="generateReport(window._scanLogMap[${s.id}])" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Generate</button>`;
              const src = s.source || 'single';
              const isWarmLead = src === 'single' && s.user_id && s.user_id !== currentAdminId && !s.user_id?.startsWith('batch_job_');
              const sourceBadge = isWarmLead
@@ -1679,6 +1679,13 @@
            a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
            a.download = 'mailgo-export-' + new Date().toISOString().split('T')[0] + '.csv';
            a.click();
+         }
+         
+         function openScanReport(scanId) {
+           const s = window._scanLogMap && window._scanLogMap[scanId];
+           if (!s || !s.report_url) return;
+           const url = s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url;
+           window.open(url, '_blank');
          }
          
          async function generateReport(scan) {
