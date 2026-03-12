@@ -597,11 +597,11 @@
                         </div>
                      </div>
                      <div id="adminBatchComboCount" style="font-size:0.82rem;color:#a78bfa;margin-bottom:16px;"></div>
-                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
-                        <button onclick="adminStartServerJob()" id="adminServerJobBtn" style="background:linear-gradient(135deg,#166534,#16a34a);color:white;border:none;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">⚡ Run On Server</button>
-                        <button onclick="adminRunBatch()" id="adminBatchBtn" style="background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:10px;padding:12px 16px;font-size:0.88rem;font-weight:700;cursor:pointer;">🖥️ Run In Browser</button>
+                     <button onclick="adminStartServerJob()" id="adminServerJobBtn" style="width:100%;background:linear-gradient(135deg,#166534,#16a34a);color:white;border:none;border-radius:10px;padding:15px 24px;font-size:1rem;font-weight:800;cursor:pointer;margin-bottom:8px;letter-spacing:0.01em;">⚡ Run On Server <span style="font-size:0.78rem;font-weight:500;opacity:0.85;">— PC mag uit, Railway doet het werk</span></button>
+                     <div style="text-align:center;margin-bottom:12px;">
+                       <span style="font-size:0.72rem;color:#4b5563;">Werkt Railway niet? </span>
+                       <button onclick="adminRunBatch()" id="adminBatchBtn" style="background:transparent;color:#6b7280;border:none;font-size:0.72rem;cursor:pointer;text-decoration:underline;padding:0;">Run In Browser</button>
                      </div>
-                     <p style="font-size:0.72rem;color:#6b7280;text-align:center;margin-bottom:12px;"><strong style="color:#4ade80;">Run On Server</strong> = Railway doet het werk, je PC mag uit ✅ &nbsp;·&nbsp; <span style="color:#6b7280;">Run In Browser = alleen als Railway niet werkt</span></p>
                      <div id="adminBatchProgress" style="display:none;margin-top:20px;">
                         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
                            <div style="width:18px;height:18px;border:3px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
@@ -620,7 +620,7 @@
                         <button onclick="loadJobsList()" style="background:#111827;color:#9ca3af;border:1px solid #374151;border-radius:7px;padding:5px 12px;font-size:0.75rem;cursor:pointer;">🔄 Refresh</button>
                      </div>
                      <div id="jobsListContainer">
-                        <p style="color:#6b7280;font-size:0.85rem;text-align:center;padding:20px;">Klik Refresh om jobs te laden.</p>
+                        <p style="color:#6b7280;font-size:0.85rem;text-align:center;padding:20px;">Laden...</p>
                      </div>
                   </div>
                </div>
@@ -966,7 +966,12 @@
            } else {
              clearInterval(window._campListRefresh); window._campListRefresh = null;
            }
-           if (tab !== 'scanner') {
+           if (tab === 'scanner') {
+             loadJobsList();
+             if (!window._scannerAutoRefresh) window._scannerAutoRefresh = setInterval(() => {
+               if (!document.getElementById('tab-scanner')?.classList.contains('hidden')) loadJobsList();
+             }, 12000);
+           } else {
              clearInterval(window._scannerAutoRefresh); window._scannerAutoRefresh = null;
            }
          }
@@ -2155,14 +2160,21 @@
            if (!niches) { alert('❌ Voer minimaal één niche in.'); return; }
            if (!cities) { alert('❌ Voer minimaal één stad in.'); return; }
            const btn = document.getElementById('adminServerJobBtn');
-           btn.disabled = true; btn.textContent = '⏳ Submitting...';
+           btn.disabled = true; btn.textContent = '⏳ Job wordt gestart op Railway...';
            try {
              const res = await apiCall('/api/admin/batch-job/start', 'POST', { niches, cities, country, max_results: maxResults, website_only: websiteOnly, apify_token: apifyToken });
              if (!res.success) throw new Error(res.error || 'Failed');
-             alert(`✅ Job gestart op Railway!\nJob ID: ${res.job_id.substring(0,8)}...\nPC mag uit. Kijk in ⚙️ Background Jobs.`);
-             showJobsMonitor(); pollJobStatus(res.job_id);
+             // No alert — just show in jobs list
+             const toast = document.createElement('div');
+             toast.innerHTML = `<strong>⚡ Job gestart!</strong> ID: ${res.job_id.substring(0,8)}... · PC mag uit`;
+             toast.style.cssText = 'position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #16a34a;color:#4ade80;padding:14px 22px;border-radius:12px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+             document.body.appendChild(toast);
+             setTimeout(() => { toast.style.transition='opacity 0.5s'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),500); }, 5000);
+             loadJobsList();
+             document.getElementById('jobsListContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+             pollJobStatus(res.job_id);
            } catch(e) { alert('❌ ' + e.message); }
-           finally { btn.disabled = false; btn.textContent = '⚡ Run On Server (PC-off)'; }
+           finally { btn.disabled = false; btn.innerHTML = '⚡ Run On Server <span style="font-size:0.78rem;font-weight:500;opacity:0.85;">— PC mag uit, Railway doet het werk</span>'; }
          }
          
          let jobPollTimers = {};
@@ -2201,6 +2213,8 @@
              <div style="display:flex;gap:8px;flex-wrap:wrap;">
                ${isRunning ? `<button onclick="cancelJob('${job.id}')" style="background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🚫 Cancel</button>` : ''}
                ${job.status === 'completed' ? `<button onclick="loadScanLogWithFilter()" style="background:#0f2d1a;color:#4ade80;border:1px solid #166534;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">📊 Scan Log →</button>` : ''}
+               ${job.status === 'completed' ? `<button onclick="exportServerJobCSV('${job.id}', this)" style="background:#0a1f2e;color:#38bdf8;border:1px solid #0369a1;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">⬇ Export CSV</button>` : ''}
+               ${job.status === 'completed' ? `<button onclick="sendJobToSitemapScanner('${job.id}', this)" style="background:#1a0f3a;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🗺️ → Sitemap Scanner</button>` : ''}
                ${isRunning ? `<button onclick="pollJobStatus('${job.id}')" style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>` : ''}
                ${!isRunning ? `<button onclick="deleteServerJob('${job.id}', this)" style="background:#1c0a0a;border:1px solid #7f1d1d;color:#f87171;border-radius:6px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🗑 Delete</button>` : ''}
              </div>
@@ -3120,6 +3134,53 @@
              'recruitment agency','management consultant','business coach'
            ].join('\n');
            adminUpdateBatchCombos();
+         }
+         
+         async function exportServerJobCSV(jobId, btn) {
+           btn.disabled = true; btn.textContent = '⏳ Fetching...';
+           try {
+             const res = await apiCall(`/api/admin/batch-job/${jobId}`);
+             const results = res.job?.results || [];
+             if (!results.length) { alert('No results found for this job.'); btn.disabled = false; btn.textContent = '⬇ Export CSV'; return; }
+             const headers = ['domain','name','email','phone','address','niche','city','country'];
+             const rows = results.map(p => {
+               const domain = (p.url||p.website||'').replace(/^https?:\/\//,'').split('/')[0];
+               return [domain, p.name||p.title||'', p.email||'', p.phone||'', p.address||'', p.niche||'', p.city||'', p.country||''];
+             });
+             const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+             const a = document.createElement('a');
+             a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+             a.download = 'scanner-leads-' + jobId.substring(0,8) + '-' + new Date().toISOString().split('T')[0] + '.csv';
+             a.click();
+             btn.textContent = '✅ Downloaded!';
+             setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ Export CSV'; }, 3000);
+           } catch(e) { alert('Export failed: ' + e.message); btn.disabled = false; btn.textContent = '⬇ Export CSV'; }
+         }
+         
+         async function sendJobToSitemapScanner(jobId, btn) {
+           btn.disabled = true; btn.textContent = '⏳ Loading...';
+           try {
+             const res = await apiCall(`/api/admin/batch-job/${jobId}`);
+             const results = res.job?.results || [];
+             if (!results.length) { alert('No results found.'); btn.disabled = false; btn.textContent = '🗺️ → Sitemap Scanner'; return; }
+             const domains = results.map(p => {
+               const domain = (p.url||p.website||'').replace(/^https?:\/\//,'').split('/')[0];
+               const email = p.email || '';
+               return email ? `${domain},${email}` : domain;
+             }).filter(Boolean);
+             window._batchDomains = domains.map(d => d.split(',')[0]);
+             window._batchPlaces = results;
+             switchTab('campaigns');
+             const ta = document.getElementById('campDomains');
+             if (ta) { ta.value = domains.join('\n'); ta.dispatchEvent(new Event('input')); }
+             const toast = document.createElement('div');
+             toast.innerHTML = `<strong>🗺️ ${domains.length} domains</strong> geladen in Sitemap Scanner`;
+             toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #16a34a;color:#4ade80;padding:12px 20px;border-radius:10px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+             document.body.appendChild(toast);
+             setTimeout(() => toast.remove(), 3500);
+             btn.textContent = '✅ Loaded!';
+             setTimeout(() => { btn.disabled = false; btn.textContent = '🗺️ → Sitemap Scanner'; }, 3000);
+           } catch(e) { alert('Error: ' + e.message); btn.disabled = false; btn.textContent = '🗺️ → Sitemap Scanner'; }
          }
          
          function exportBatchCSV() {
