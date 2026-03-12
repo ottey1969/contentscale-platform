@@ -272,7 +272,7 @@
                flex-shrink: 0;
                "></div>
             <div style="font-size: 0.8rem; color: #e5e7eb !important; line-height: 1.3;">
-               <span style="font-weight: 700; color: #a78bfa !important;" id="realScansCount">0</span>
+               <span style="font-weight: 700; color: #a78bfa !important; transition: all 0.3s ease;" id="realScansCount">0</span>
                <span id="realScansLabel">scans today</span>
             </div>
          </div>
@@ -1403,6 +1403,8 @@
          const countEl = document.getElementById('realScansCount');
          const labelEl = document.getElementById('realScansLabel');
          if (!banner || !countEl || !labelEl) return;
+         
+         // Always fetch from server first for global count
          fetch('/api/stats/scans-today')
            .then(r => r.json())
            .then(data => {
@@ -1412,7 +1414,7 @@
              banner.style.display = 'block';
            })
            .catch(() => {
-             // Fallback to localStorage if server unreachable
+             // Fallback to localStorage if server unreachable - count ALL scans from today
              const today = new Date().toDateString();
              const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
              const todayScans = scanHistory.filter(scan => new Date(scan.date).toDateString() === today).length;
@@ -1421,8 +1423,19 @@
              banner.style.display = 'block';
            });
          }
-         // Update banner after scan completes
+         
+         // Update banner after scan completes - with animation
          function updateRealActivityBanner() {
+         const countEl = document.getElementById('realScansCount');
+         if (countEl) {
+           // Add pulse animation to show update
+           countEl.style.transform = 'scale(1.3)';
+           countEl.style.color = '#4ade80';
+           setTimeout(() => {
+             countEl.style.transform = 'scale(1)';
+             countEl.style.color = '#a78bfa';
+           }, 300);
+         }
          initRealActivityBanner();
          }
          function checkRescanReminder() {
