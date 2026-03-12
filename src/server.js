@@ -2344,24 +2344,21 @@ app.post('/api/admin/instantly-test', verifyAdmin, async (req, res) => {
   const { campaign_id, email } = req.body;
   if (!apiKey || !campaign_id || !email) return res.status(400).json({ error: 'Need x-instantly-key header + campaign_id + email in body' });
   // Try progressively richer payloads
+  // Try 4 different Instantly v2 payload structures
   const tests = [
-    { label: 'email only', lead: { email } },
-    { label: 'email + names', lead: { email, first_name: 'Test', last_name: '', company_name: 'Test BV', website: 'https://test.nl' } },
-    { label: 'email + custom_variables', lead: { email, first_name: 'Test', company_name: 'Test BV', website: 'https://test.nl', custom_variables: { score: '75', top_issue_1: 'Thin content' } } },
+    { label: 'v2 array (leads:[])', url: 'https://api.instantly.ai/api/v2/leads', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }], skip_if_in_workspace: false } },
+    { label: 'v2 flat (no array)', url: 'https://api.instantly.ai/api/v2/leads', body: { campaign_id, email, first_name: 'Test', company_name: 'Test BV' } },
+    { label: 'v1 /api/v1/lead/add', url: 'https://api.instantly.ai/api/v1/lead/add', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }], skip_if_in_workspace: false } },
+    { label: 'v2 /leads/add', url: 'https://api.instantly.ai/api/v2/leads/add', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }] } },
   ];
   const results = [];
   for (const t of tests) {
     try {
-      const r = await fetch('https://api.instantly.ai/api/v2/leads', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id, leads: [t.lead], skip_if_in_workspace: false })
-      });
+      const r = await fetch(t.url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) });
       const raw = await r.text();
       let parsed; try { parsed = JSON.parse(raw); } catch { parsed = raw; }
-      results.push({ test: t.label, status: r.status, ok: r.ok, response: parsed });
-      if (!r.ok) break; // stop at first failure
-    } catch(e) { results.push({ test: t.label, error: e.message }); break; }
+      results.push({ test: t.label, url: t.url, status: r.status, ok: r.ok, response: parsed });
+    } catch(e) { results.push({ test: t.label, error: e.message }); }
   }
   res.json({ results });
 });
@@ -2401,15 +2398,15 @@ return res.status(400).json({ success: false, error: 'Missing campaign_id or lea
 try {
 // Strip leads to only valid Instantly v2 fields
 const cleanLeads = leads.map(l => {
+  // Instantly v2 confirmed fields only
   const clean = {
-    email: l.email,
+    email: (l.email || '').trim(),
     first_name: l.first_name || '',
     last_name: l.last_name || '',
     company_name: l.company_name || '',
     website: l.website || '',
   };
-  if (l.personalization) clean.personalization = l.personalization;
-  // custom_variables: all values must be strings
+  // custom_variables: flat object, all string values
   if (l.custom_variables && typeof l.custom_variables === 'object') {
     clean.custom_variables = {};
     for (const [k,v] of Object.entries(l.custom_variables)) {
