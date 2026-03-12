@@ -132,17 +132,25 @@
          </nav>
          <div class="max-w-7xl mx-auto px-6 py-8">
             <!-- TABS NAV -->
-            <div class="flex justify-center gap-4 mb-8 flex-wrap">
-               <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
-               <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
-               <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
-               <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
-               <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
-               <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
-               <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> Scan Log</button>
-               <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle"><i class="fas fa-search mr-2"></i> Scanner</button>
-               <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="mode-toggle" style="background:linear-gradient(135deg,#0f4c8a,#be185d);border-color:#be185d;"><i class="fas fa-rocket mr-2"></i> Campaigns</button>
-               <button onclick="switchTab('niches')" id="tabNichesBtn" class="mode-toggle" style="background:linear-gradient(135deg,#065f46,#0f766e);border-color:#0f766e;"><i class="fas fa-bullseye mr-2"></i> Niches</button>
+            <div style="margin-bottom:8px;">
+               <!-- PRIMARY: Lead generation flow -->
+               <div class="flex justify-center gap-2 mb-2 flex-wrap">
+                  <span style="font-size:0.68rem;color:#4b5563;align-self:center;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-right:4px;">Lead Flow →</span>
+                  <button onclick="switchTab('niches')" id="tabNichesBtn" class="mode-toggle" style="background:linear-gradient(135deg,#065f46,#0f766e);border-color:#0f766e;"><i class="fas fa-bullseye mr-2"></i> 1. Niches</button>
+                  <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle"><i class="fas fa-search mr-2"></i> 2. Scanner</button>
+                  <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> 3. Scan Log</button>
+                  <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="mode-toggle" style="background:linear-gradient(135deg,#0f4c8a,#7e22ce);border-color:#7e22ce;"><i class="fas fa-sitemap mr-2"></i> 4. Sitemap Scanner</button>
+               </div>
+               <!-- SECONDARY: Management -->
+               <div class="flex justify-center gap-2 flex-wrap">
+                  <span style="font-size:0.68rem;color:#4b5563;align-self:center;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-right:4px;">Admin →</span>
+                  <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
+                  <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
+                  <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
+                  <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
+                  <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
+                  <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
+               </div>
             </div>
             <!-- ══ LEADERBOARD TAB ══ -->
             <div id="tab-leaderboard" class="tab-content">
@@ -724,8 +732,8 @@
             <!-- Header -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
                <div>
-                  <h3 style="font-size:1.4rem;font-weight:800;color:white;margin:0;">🎯 Campaign Scanner</h3>
-                  <p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0;">Paste domains → auto-fetch sitemaps → scan → extract emails → push to Instantly</p>
+                  <h3 style="font-size:1.4rem;font-weight:800;color:white;margin:0;">🗺️ Sitemap Scanner</h3>
+                  <p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0;">Paste domains → auto-fetch sitemaps → scan all pages → extract emails → push to Instantly</p>
                </div>
                <button onclick="loadCampaignsList()" style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>
             </div>
@@ -837,6 +845,27 @@
                </div>
                <!-- Stats bar -->
                <div id="campStatsBar" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"></div>
+               <!-- Instantly push — shows when campaign done with emails -->
+               <div id="campInstantlyBox" style="display:none;margin-top:16px;border-top:1px solid #21262d;padding-top:16px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                     <div>
+                        <div style="font-weight:700;color:#e5e7eb;font-size:0.95rem;">⚡ Push leads to Instantly</div>
+                        <div id="campInstantlyBoxCount" style="font-size:0.78rem;color:#6b7280;margin-top:2px;"></div>
+                     </div>
+                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <div>
+                           <select id="campInstantlyBoxCampaign" style="padding:8px 12px;background:#111827;border:1px solid #1e40af;border-radius:8px;color:#e5e7eb;font-size:0.82rem;min-width:200px;">
+                              <option value="">— select campaign —</option>
+                           </select>
+                        </div>
+                        <button onclick="pushSitemapLeadsToInstantly()" id="campInstantlyPushBtn"
+                           style="background:linear-gradient(135deg,#0f4c8a,#1d6cc8);color:white;border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:0.9rem;cursor:pointer;white-space:nowrap;">
+                           ⚡ Push to Instantly
+                        </button>
+                     </div>
+                  </div>
+                  <div id="campInstantlyPushResult" style="margin-top:10px;"></div>
+               </div>
             </div>
             <!-- Past Campaigns List -->
             <div>
@@ -2126,7 +2155,7 @@
                  </div>
                  <p style="font-size:0.78rem;color:#6b7280;margin-bottom:12px;">Scanning + email finding will happen inside Campaign — no double work.</p>
                  <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                   <button onclick="copyDomainsToCampaigns()" style="flex:1;min-width:180px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">🚀 Load ${highDomains.length} domains into Campaigns</button>
+                   <button onclick="copyDomainsToCampaigns()" style="flex:1;min-width:180px;background:linear-gradient(135deg,#0f4c8a,#7e22ce);color:white;border:none;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">🗺️ Send ${highDomains.length} domains → Sitemap Scanner</button>
                    <button onclick="navigator.clipboard.writeText(window._batchDomains.join('\\n')).then(()=>{this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy domain list',2000)})" style="background:#1e293b;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:12px 20px;font-weight:700;font-size:0.9rem;cursor:pointer;">📋 Copy domain list</button>
                  </div>
                </div>`;
@@ -2422,7 +2451,27 @@
              const gap = scoreNum < 85 ? String(85 - scoreNum) : '0';
              const scoreLabel = scoreNum >= 85 ? 'Elite' : scoreNum >= 70 ? 'Good' : scoreNum >= 50 ? 'Needs Work' : 'Critical';
              const domain = s.business_url ? s.business_url.replace(/https?:\/\//,'').replace(/\/.*$/,'').replace('www.','') : '';
-             return { email: s.email_found, first_name: firstName, company_name: s.business_name || '', website: s.business_url || '', personalization: topIssue ? `I noticed your biggest SEO issue is: ${topIssue}` : '', custom_variables: { score: String(scoreNum), domain, city: s.city||'', gap, top_issue: topIssue, report_url: fullReportUrl, year: String(new Date().getFullYear()) } };
+             return {
+               email: s.email_found,
+               first_name: firstName,
+               last_name: '',
+               company_name: s.business_name || domain,
+               website: s.business_url || '',
+               custom_variables: {
+                 score: String(scoreNum),
+                 company_name: s.business_name || domain,
+                 website: s.business_url || '',
+                 domain: domain,
+                 city: s.city || '',
+                 share_url: fullReportUrl,
+                 top_issue_1: topIssue,
+                 top_issue_2: '',
+                 top_issue_3: '',
+                 graaf_score: '',
+                 page_count: '',
+                 scan_date: new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
+               }
+             };
            });
            try {
              const chunkSize = 100;
@@ -2448,6 +2497,27 @@
              <p style="font-size:0.82rem;color:#4ade80;font-weight:700;">⚡ ${pushed} leads → <span style="color:#93c5fd;">${campName}</span></p>
              <p style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Custom vars: {{score}}, {{top_issue}}, {{city}}, {{country}}, {{report_url}}, {{scan_date}}</p>`;
              setInstantlyStatus(`✅ ${pushed} pushed`, '#4ade80');
+             // ✅ Flash button green with checkmark
+             if (btn) {
+               btn.style.background = 'linear-gradient(135deg,#065f46,#16a34a)';
+               btn.textContent = `✅ ${pushed} pushed to Instantly`;
+               btn.disabled = false;
+               // Also show toast
+               const toast = document.createElement('div');
+               toast.innerHTML = `<span style="font-size:1.2rem;">⚡</span> <strong>${pushed} leads</strong> verzonden naar <span style="color:#93c5fd;">${campName}</span>${duplicates > 0 ? ` · <span style="color:#9ca3af;">${duplicates} duplicates</span>` : ''}`;
+               toast.style.cssText = 'position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #16a34a;color:#4ade80;padding:14px 22px;border-radius:12px;font-weight:700;font-size:0.9rem;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+               document.body.appendChild(toast);
+               setTimeout(() => {
+                 toast.style.transition = 'opacity 0.5s';
+                 toast.style.opacity = '0';
+                 setTimeout(() => toast.remove(), 500);
+               }, 4000);
+               // Reset button after 5s
+               setTimeout(() => {
+                 btn.style.background = 'linear-gradient(135deg,#0f4c8a,#1d6cc8)';
+                 btn.textContent = '⚡ Push to Instantly';
+               }, 5000);
+             }
            } catch (e) {
              const errHints = {
                'auth': '🔑 API key ongeldig — check Instantly → Settings → API Keys',
@@ -2466,7 +2536,12 @@
                <p style="color:#fbbf24;font-size:0.78rem;margin-top:8px;">💡 ${hint}</p>
              </div>`;
              console.error('Instantly push error:', e);
-           } finally { if (btn) { btn.disabled = false; btn.textContent = '⚡ Push to Instantly'; } }
+           } finally {
+             if (btn) {
+               btn.disabled = false;
+               btn.textContent = '⚡ Push to Instantly';
+             }
+           }
          }
          
          
@@ -2524,9 +2599,53 @@
              const data = await r.json();
              const sel = document.getElementById('campInstantlyCampaign');
              const campaigns = data.campaigns || data.data || [];
-             sel.innerHTML = '<option value="">— Select campaign —</option>' +
+             const opts = '<option value="">— Select campaign —</option>' +
                campaigns.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+             sel.innerHTML = opts;
+             // Sync to box dropdown too
+             const boxSel = document.getElementById('campInstantlyBoxCampaign');
+             if (boxSel) boxSel.innerHTML = opts;
            } catch(e) { alert('Failed to load campaigns: ' + e.message); }
+         }
+         
+         async function pushSitemapLeadsToInstantly() {
+           const btn = document.getElementById('campInstantlyPushBtn');
+           const resultEl = document.getElementById('campInstantlyPushResult');
+           const apiKey = document.getElementById('campInstantlyKey').value.trim() || localStorage.getItem('instantlyApiKey') || '';
+           const campaignId = document.getElementById('campInstantlyBoxCampaign').value || document.getElementById('campInstantlyCampaign').value;
+           if (!apiKey) { alert('Voer eerst je Instantly API key in (formulier hierboven).'); return; }
+           if (!campaignId) { alert('Selecteer een Instantly campaign.'); return; }
+           if (!activeCampaignId) { alert('Geen actieve campaign gevonden.'); return; }
+           btn.disabled = true; btn.textContent = '⏳ Pushing...';
+           resultEl.innerHTML = '';
+           try {
+             const r = await fetch('/api/campaign/' + activeCampaignId + '/retry-push', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+               body: JSON.stringify({ instantly_api_key: apiKey, instantly_campaign_id: campaignId })
+             });
+             const data = await r.json();
+             if (!data.success) throw new Error(data.error);
+             // Green button flash
+             btn.style.background = 'linear-gradient(135deg,#065f46,#16a34a)';
+             btn.textContent = '✅ ' + data.pushed + ' gepushed';
+             resultEl.innerHTML = `<div style="background:#0f2d1a;border:1px solid #166534;border-radius:8px;padding:12px 16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+               <span style="color:#4ade80;font-weight:800;font-size:1.1rem;">${data.pushed}</span><span style="color:#6b7280;font-size:0.82rem;">leads gepushed</span>
+               ${data.failed>0 ? '<span style="color:#f87171;font-weight:700;">'+data.failed+' mislukt</span>' : ''}
+               ${data.duplicates>0 ? '<span style="color:#9ca3af;font-size:0.82rem;">'+data.duplicates+' duplicates overgeslagen</span>' : ''}
+             </div>`;
+             // Toast
+             const toast = document.createElement('div');
+             toast.innerHTML = `<strong>⚡ ${data.pushed} leads</strong> gepushed vanuit Sitemap Scanner`;
+             toast.style.cssText = 'position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #16a34a;color:#4ade80;padding:14px 22px;border-radius:12px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+             document.body.appendChild(toast);
+             setTimeout(() => { toast.style.transition='opacity 0.5s'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),500); }, 4000);
+             setTimeout(() => { btn.style.background='linear-gradient(135deg,#0f4c8a,#1d6cc8)'; btn.textContent='⚡ Push to Instantly'; btn.disabled=false; }, 5000);
+           } catch(e) {
+             resultEl.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:12px;"><p style="color:#f87171;font-weight:700;">❌ ${e.message}</p></div>`;
+             btn.disabled = false; btn.textContent = '⚡ Push to Instantly';
+             btn.style.background = 'linear-gradient(135deg,#0f4c8a,#1d6cc8)';
+           }
          }
          
          async function startCampaign() {
@@ -2742,6 +2861,24 @@
                <div style="font-size:1.1rem;font-weight:900;color:#fbbf24;">${Math.round(withEmail.length/Math.max(done.length,1)*100)}%</div>
                <div style="font-size:0.65rem;color:#6b7280;">Email rate</div>
              </div>` : ''}`;
+         
+           // Show Instantly push box when done and has emails
+           const instBox = document.getElementById('campInstantlyBox');
+           if (instBox) {
+             if ((c.status === 'done' || c.status === 'cancelled') && withEmail.length > 0) {
+               instBox.style.display = 'block';
+               document.getElementById('campInstantlyBoxCount').textContent =
+                 withEmail.length + ' leads met email klaar · ' + pushed.length + ' al gepushed';
+               // Sync dropdown from main form if not yet loaded
+               const mainSel = document.getElementById('campInstantlyCampaign');
+               const boxSel = document.getElementById('campInstantlyBoxCampaign');
+               if (mainSel && boxSel && boxSel.options.length <= 1 && mainSel.options.length > 1) {
+                 boxSel.innerHTML = mainSel.innerHTML;
+               }
+             } else {
+               instBox.style.display = 'none';
+             }
+           }
          }
          
          async function cancelActiveCampaign() {
@@ -3016,10 +3153,12 @@
            const ta = document.getElementById('campDomains');
            if (ta) { ta.value = domains.join('\n'); ta.dispatchEvent(new Event('input')); }
            const el = document.createElement('div');
-           el.textContent = '✅ ' + domains.length + ' domains loaded into Campaigns';
-           el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#166534;color:#4ade80;padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.9rem;z-index:9999;';
+           el.innerHTML = '<strong>🗺️ ' + domains.length + ' domains</strong> geladen in Sitemap Scanner';
+           el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #16a34a;color:#4ade80;padding:12px 20px;border-radius:10px;font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
            document.body.appendChild(el);
-           setTimeout(() => el.remove(), 3000);
+           setTimeout(() => el.remove(), 3500);
+           // Scroll to domain textarea
+           setTimeout(() => { if (ta) ta.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 400);
          }
 
          // ============================================================
