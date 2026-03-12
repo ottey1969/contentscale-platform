@@ -1621,6 +1621,9 @@
          function renderScanLog(scans) {
            const tbody = document.getElementById('scanLogBody');
            if (!scans.length) { tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center" style="color:#6b7280;">No scans match filters.</td></tr>'; return; }
+           // Store scans in global map so generate buttons can access safely
+           window._scanLogMap = {};
+           scans.forEach(s => { window._scanLogMap[s.id] = s; });
            tbody.innerHTML = scans.map(s => {
              const dt = new Date(s.created_at);
              const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
@@ -1631,9 +1634,9 @@
              const statusBadge = s.email_status === 'has_email' ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✉ Found</span>' : '<span style="background:#1c1917;color:#9ca3af;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✗ No email</span>';
              const urlDisplay = s.business_url ? `<a href="${s.business_url}" target="_blank" style="color:#60a5fa;font-size:0.75rem;word-break:break-all;">${s.business_url}</a>` : '—';
              const isChecked = selectedScanIds.has(String(s.id));
-             const reportBtn = s.report_url
+                          const reportBtn = s.report_url
                ? `<button onclick='openOrCopyReport("${s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url}",this)' style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">🔗 Report</button>`
-               : `<button onclick='generateReport(${JSON.stringify(s).replace(/'/g,"\\'")})'  style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Generate</button>`;
+               : `<button onclick='generateReport(window._scanLogMap[${s.id}])' style="background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:6px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">📄 Generate</button>`;
              const src = s.source || 'single';
              const isWarmLead = src === 'single' && s.user_id && s.user_id !== currentAdminId && !s.user_id?.startsWith('batch_job_');
              const sourceBadge = isWarmLead
