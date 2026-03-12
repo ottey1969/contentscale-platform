@@ -972,16 +972,15 @@
            if (!ip || ip === 'Unknown IP') return null;
            if (ipGeoCache[ip]) return ipGeoCache[ip];
            try {
-             const controller = new AbortController();
-             const timeoutId = setTimeout(() => controller.abort(), 5000);
-             const r = await fetch(`https://ipapi.co/${ip}/json/`, { signal: controller.signal });
-             clearTimeout(timeoutId);
+             // ✅ Server-side proxy — no CORS, no rate limit issues
+             const r = await fetch(`/api/admin/ip-geo?ip=${encodeURIComponent(ip)}`, {
+               headers: { 'x-admin-key': currentAdminId }
+             });
              if (!r.ok) return null;
              const d = await r.json();
-             if (d.error || !d.country_code) return null;
-             const normalized = { countryCode: d.country_code, country: d.country_name, city: d.city, isp: d.org, query: ip };
-             ipGeoCache[ip] = normalized;
-             return normalized;
+             if (!d.countryCode) return null;
+             ipGeoCache[ip] = d;
+             return d;
            } catch (e) {}
            return null;
          }
@@ -1012,10 +1011,11 @@
              if (total === 0) { document.getElementById('usersContainer').innerHTML = '<p class="text-center text-gray-400">No users found.</p>'; return; }
              renderUsers(allUsers, {});
              const ipsToLookup = [...new Set(allUsers.map(u => u.ip_address).filter(ip => ip && !ipGeoCache[ip]))];
+             // Batch geo lookups with longer delay to avoid hammering
              let delay = 0;
-             for (const ip of ipsToLookup) {
+             for (const ip of ipsToLookup.slice(0, 20)) { // max 20 lookups per load
                setTimeout(async () => { await lookupIpGeo(ip); renderUsers(allUsers, ipGeoCache); }, delay);
-               delay += 200;
+               delay += 500;
              }
            } catch (e) { console.error('Failed to load users:', e); alert('Failed to load users: ' + e.message); }
          }
