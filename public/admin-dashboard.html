@@ -457,9 +457,11 @@
                   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
                      <span style="font-size:0.78rem;color:#9ca3af;align-self:center;">Score:</span>
                      <button id="tierBtn_" onclick="setScanTierFilter('')" class="scan-tier-btn active" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#374151;color:#e5e7eb;border:1px solid #4b5563;">All</button>
-                     <button id="tierBtn_85plus" onclick="setScanTierFilter('85plus')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#0f2d1a;color:#4ade80;border:1px solid #166534;">85+ Elite</button>
-                     <button id="tierBtn_70to84" onclick="setScanTierFilter('70to84')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#1a2e0f;color:#a3e635;border:1px solid #3f6212;">70–84 Good</button>
-                     <button id="tierBtn_under70" onclick="setScanTierFilter('under70')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#2d1515;color:#f87171;border:1px solid #7f1d1d;">&lt;70 Needs Work</button>
+                     <button id="tierBtn_90plus" onclick="setScanTierFilter('90plus')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#0f2d1a;color:#4ade80;border:1px solid #166534;">90+ Elite</button>
+                     <button id="tierBtn_80to89" onclick="setScanTierFilter('80to89')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#0a1f2e;color:#38bdf8;border:1px solid #0369a1;">80–89 Strong</button>
+                     <button id="tierBtn_70to79" onclick="setScanTierFilter('70to79')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#1a2e0f;color:#a3e635;border:1px solid #3f6212;">70–79 Qualified</button>
+                     <button id="tierBtn_50to69" onclick="setScanTierFilter('50to69')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#1c1400;color:#fbbf24;border:1px solid #92400e;">50–69 Opportunity</button>
+                     <button id="tierBtn_under50" onclick="setScanTierFilter('under50')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#2d1515;color:#f87171;border:1px solid #7f1d1d;">&lt;50 Critical</button>
                      <button id="tierBtn_nosite" onclick="setScanTierFilter('nosite')" class="scan-tier-btn" style="padding:5px 14px;border-radius:99px;font-size:0.78rem;font-weight:600;cursor:pointer;background:#1c1917;color:#9ca3af;border:1px solid #44403c;">No website</button>
                   </div>
                   <!-- Filters -->
@@ -541,31 +543,7 @@
                         <input type="text" id="adminApifyToken" placeholder="apify_api_xxxx..." style="width:100%;padding:8px 12px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;font-size:0.85rem;" oninput="localStorage.setItem('apifyToken', this.value)">
                         <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px;">Wordt opgeslagen in browser.</div>
                      </div>
-                     <!-- High-Score Niche Reference -->
-                     <details style="background:#0a0f1a;border:1px solid #1e3a5f;border-radius:10px;padding:12px 16px;margin-bottom:14px;">
-                        <summary style="font-size:0.82rem;font-weight:700;color:#93c5fd;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">⭐ High-Score Niches — click to add</summary>
-                        <div style="margin-top:12px;">
-                           <p style="font-size:0.72rem;color:#6b7280;margin-bottom:10px;">These niches produce content-heavy pages (blogs, articles, guides) that score 65–90+ on GRAAF+CRAFT+Technical. Click any chip to add it to the Niches field.</p>
-                           <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                              ${[
-                              'SEO agency','content marketing agency','digital marketing agency',
-                              'law firm','legal advice','notary',
-                              'financial advisor','accountant','mortgage broker',
-                              'medical clinic','health blog','physiotherapist',
-                              'B2B software','SaaS','HR software',
-                              'recruitment agency','staffing agency',
-                              'IT consultancy','cybersecurity',
-                              'architect','interior designer',
-                              'business coach','management consultant',
-                              'insurance broker','wealth management'
-                              ].map(n => `<span onclick="addNicheChip('${n}')" style="background:#0f2d4a;border:1px solid #1e40af;color:#93c5fd;padding:4px 10px;border-radius:99px;font-size:0.72rem;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0f2d4a'">${n}</span>`).join('')}
-                           </div>
-                           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-                              <button onclick="loadHighScoreNiches()" style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">📋 Load all content niches</button>
-                              <button onclick="document.getElementById('adminBatchNiches').value='';adminUpdateBatchCombos();" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">✕ Clear</button>
-                           </div>
-                        </div>
-                     </details>
+
                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                         <div>
                            <label style="display:block;font-size:0.82rem;font-weight:700;color:#e5e7eb;margin-bottom:6px;">🏷️ Niches <span style="color:#9ca3af;font-weight:400;">(one per line)</span></label>
@@ -1615,9 +1593,11 @@
             });
           }
            if (q) rows = rows.filter(s => (s.business_name||'').toLowerCase().includes(q) || (s.business_url||'').toLowerCase().includes(q) || (s.email_found||'').toLowerCase().includes(q));
-           if (tier === '85plus') rows = rows.filter(s => s.score !== null && s.score >= 85);
-           if (tier === '70to84') rows = rows.filter(s => s.score !== null && s.score >= 70 && s.score < 85);
-           if (tier === 'under70') rows = rows.filter(s => s.score !== null && s.score < 70);
+           if (tier === '90plus') rows = rows.filter(s => s.score !== null && s.score >= 90);
+           if (tier === '80to89') rows = rows.filter(s => s.score !== null && s.score >= 80 && s.score < 90);
+           if (tier === '70to79') rows = rows.filter(s => s.score !== null && s.score >= 70 && s.score < 80);
+           if (tier === '50to69') rows = rows.filter(s => s.score !== null && s.score >= 50 && s.score < 70);
+           if (tier === 'under50') rows = rows.filter(s => s.score !== null && s.score < 50);
            if (tier === 'nosite') rows = rows.filter(s => !s.business_url || !s.business_url.trim());
            if (emailOnly) rows = rows.filter(s => s.email_status === 'has_email');
            if (nameOnly) rows = rows.filter(s => s.business_name && s.business_name.trim());
@@ -1646,7 +1626,7 @@
              const dateStr = dt.toLocaleDateString('nl-NL', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
              const scoreVal = s.score !== null ? s.score : null;
              const scoreColor = scoreVal === null ? '#9ca3af' : scoreVal >= 85 ? '#4ade80' : scoreVal >= 70 ? '#a3e635' : scoreVal >= 50 ? '#fbbf24' : '#f87171';
-             const scoreTierBadge = scoreVal === null ? '' : scoreVal >= 85 ? '<span style="font-size:0.6rem;background:#0f2d1a;color:#4ade80;border-radius:99px;padding:1px 5px;margin-left:4px;">Elite</span>' : scoreVal >= 70 ? '<span style="font-size:0.6rem;background:#1a2e0f;color:#a3e635;border-radius:99px;padding:1px 5px;margin-left:4px;">Good</span>' : '';
+             const scoreTierBadge = scoreVal === null ? '' : scoreVal >= 90 ? '<span style="font-size:0.6rem;background:#0f2d1a;color:#4ade80;border-radius:99px;padding:1px 5px;margin-left:4px;">Elite</span>' : scoreVal >= 80 ? '<span style="font-size:0.6rem;background:#0a1f2e;color:#38bdf8;border-radius:99px;padding:1px 5px;margin-left:4px;">Strong</span>' : scoreVal >= 70 ? '<span style="font-size:0.6rem;background:#1a2e0f;color:#a3e635;border-radius:99px;padding:1px 5px;margin-left:4px;">Qualified</span>' : scoreVal >= 50 ? '<span style="font-size:0.6rem;background:#1c1400;color:#fbbf24;border-radius:99px;padding:1px 5px;margin-left:4px;">Opportunity</span>' : '<span style="font-size:0.6rem;background:#2d1515;color:#f87171;border-radius:99px;padding:1px 5px;margin-left:4px;">Critical</span>' : '';
              const score = scoreVal !== null ? `<span style="color:${scoreColor};font-weight:700;">${scoreVal}</span>${scoreTierBadge}` : '—';
              const statusBadge = s.email_status === 'has_email' ? '<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✉ Found</span>' : '<span style="background:#1c1917;color:#9ca3af;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✗ No email</span>';
              const urlDisplay = s.business_url ? `<a href="${s.business_url}" target="_blank" style="color:#60a5fa;font-size:0.75rem;word-break:break-all;">${s.business_url}</a>` : '—';
@@ -1830,7 +1810,7 @@
            const stats = data.content_stats || {};
            const recs = (data.recommendations?.all || data.recommendations || []);
            const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
-           const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+           const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
            const priorityConfig = {
              high:   { color: '#f87171', bg: 'rgba(239,68,68,0.08)',  border: '#7f1d1d', label: '🔴 High Priority' },
              medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
@@ -2001,7 +1981,7 @@
            const metrics = data.metrics || {};
            const stats = data.content_stats || {};
            const recs = data.recommendations?.all || data.recommendations || [];
-           const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+           const scoreLabel = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
            const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
            const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
            const priorityLabel = { high: '🔴 High Priority', medium: '🟡 Medium', low: '🔵 Quick Win' };
@@ -2449,7 +2429,7 @@
              const fullReportUrl = s.report_url ? (s.report_url.startsWith('http') ? s.report_url : 'https://app.contentscale.site' + s.report_url) : '';
              const scoreNum = parseInt(s.score) || 0;
              const gap = scoreNum < 85 ? String(85 - scoreNum) : '0';
-             const scoreLabel = scoreNum >= 85 ? 'Elite' : scoreNum >= 70 ? 'Good' : scoreNum >= 50 ? 'Needs Work' : 'Critical';
+             const scoreLabel = scoreNum >= 85 ? 'Elite' : scoreNum >= 70 ? 'Qualified' : scoreNum >= 50 ? 'Opportunity' : 'Critical';
              const domain = s.business_url ? s.business_url.replace(/https?:\/\//,'').replace(/\/.*$/,'').replace('www.','') : '';
              return {
                email: s.email_found,
