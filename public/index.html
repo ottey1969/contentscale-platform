@@ -2183,6 +2183,8 @@
                    const h = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
                    h.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
                    localStorage.setItem('cs_scanHistory', JSON.stringify(h.slice(0, 100)));
+                   // Update live counter real-time for each completed scan
+                   updateRealActivityBanner();
                  } catch(e) {}
                });
                lastDone = job.results.length;
@@ -2335,6 +2337,8 @@
                      const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
                      scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
                      localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
+                     // Update live counter real-time for each completed scan
+                     updateRealActivityBanner();
                    } catch(e) {}
                  });
                  lastDone = job.results.length;
