@@ -248,35 +248,7 @@
          <p style="color:#a855f7;font-weight:700;margin-top:1rem;">Loading ContentScale...</p>
       </div>
       <script>setTimeout(function(){var l=document.getElementById('loading-screen');if(l){l.style.opacity='0';l.style.transition='opacity 0.3s';setTimeout(function(){l.style.display='none';},300);}},2000);</script>
-      <!-- ✅ REAL ACTIVITY BANNER - Shows actual scans from localStorage (100% HONEST) -->
-      <div id="realActivityBanner" class="fixed bottom-4 left-4 z-50" style="display:none;">
-         <div style="
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(126, 34, 206, 0.6);
-            border-radius: 12px;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(126, 34, 206, 0.3);
-            animation: slideIn 0.5s ease-out;
-            max-width: 280px;
-            ">
-            <div style="
-               width: 10px; height: 10px; border-radius: 50%;
-               background: #10b981;
-               box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-               animation: pulse 2s infinite;
-               flex-shrink: 0;
-               "></div>
-            <div style="font-size: 0.8rem; color: #e5e7eb !important; line-height: 1.3;">
-               <span style="font-weight: 700; color: #a78bfa !important; transition: all 0.3s ease;" id="realScansCount">0</span>
-               <span id="realScansLabel">scans today</span>
-            </div>
-         </div>
-      </div>
+      
       <nav class="sticky top-0 z-50 border-b-2 border-purple-600 backdrop-blur-sm" style="background:rgba(3,7,18,0.97)">
          <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -1446,94 +1418,11 @@
          body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Get Found Online — Free Advice</title></head><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#ffffff;"><div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 60%,#0891b2 100%);padding:48px 32px 40px;text-align:center;"><div style="font-size:60px;line-height:1;margin-bottom:16px;">🌐</div><h1 style="color:#ffffff;margin:0 0 8px;font-size:28px;font-weight:900;">Your Business Is Not Online Yet.</h1></div><div style="padding:32px;"><p style="font-size:17px;color:#111827;line-height:1.6;margin:0 0 12px;">Hi <strong>{{company_name}}</strong>,</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 20px;">I searched for <strong>{{company_name}}</strong> online today. I could not find a website for you.</p><div style="text-align:center;margin-bottom:32px;"><a href="{{sender_whatsapp}}" style="display:inline-block;background:linear-gradient(135deg,#25d366,#128c7e);color:#ffffff;font-size:16px;font-weight:700;padding:16px 44px;border-radius:10px;text-decoration:none;">💬 I Want More Customers — Let's Talk</a></div></div><div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;"><p style="font-size:11px;color:#9ca3af;margin:0;">{{sender_company}} · Amsterdam, Netherlands · {{year}}<br><a href="{{unsubscribe_url}}" style="color:#065f46;">Unsubscribe</a></p></div></div></body></html>`
          }
          };
-         // ✅ REAL ACTIVITY BANNER - Shows ACTUAL scans from server (all sources: single, bulk, campaign)
-         function initRealActivityBanner() {
-         const banner = document.getElementById('realActivityBanner');
-         const countEl = document.getElementById('realScansCount');
-         const labelEl = document.getElementById('realScansLabel');
-         if (!banner || !countEl || !labelEl) return;
+    
          
          // Always fetch from server first for global count
-         fetch('/api/stats/scans-today')
-           .then(r => r.json())
-           .then(data => {
-             const count = data.count || 0;
-             countEl.textContent = count;
-             labelEl.textContent = count === 1 ? 'scan today' : 'scans today';
-             banner.style.display = 'block';
-           })
-           .catch(() => {
-             // Fallback to localStorage if server unreachable - count ALL scans from today
-             const today = new Date().toDateString();
-             const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-             const todayScans = scanHistory.filter(scan => new Date(scan.date).toDateString() === today).length;
-             countEl.textContent = todayScans;
-             labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
-             banner.style.display = 'block';
-           });
-         }
          
-         // Update banner after scan completes - with instant increment and animation
-         function updateRealActivityBanner() {
-         const countEl = document.getElementById('realScansCount');
-         const labelEl = document.getElementById('realScansLabel');
-         if (countEl) {
-           // Get current count from localStorage (instant, no API wait)
-           const today = new Date().toDateString();
-           const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-           const todayScans = scanHistory.filter(scan => new Date(scan.date).toDateString() === today).length;
-           
-           // Update count instantly
-           countEl.textContent = todayScans;
-           if (labelEl) labelEl.textContent = todayScans === 1 ? 'scan today' : 'scans today';
-           
-           // Add pulse animation to show update
-           countEl.style.transform = 'scale(1.3)';
-           countEl.style.color = '#4ade80';
-           setTimeout(() => {
-             countEl.style.transform = 'scale(1)';
-             countEl.style.color = '#a78bfa';
-           }, 300);
-         }
-         }
-         function checkRescanReminder() {
-         try {
-         const history = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
-         if (!history.length) return;
-         const last = history[0];
-         const daysSince = Math.floor((Date.now() - new Date(last.date)) / 86400000);
-         if (daysSince >= 30) {
-         const banner = document.getElementById('rescanBanner');
-         const text = document.getElementById('rescanBannerText');
-         if (banner && text) {
-         const domain = last.url.replace(/https?:\/\//, '').replace(/\/.*$/, '');
-         text.textContent = 'Last scanned ' + domain + ' ' + daysSince + ' days ago — score was ' + last.score + '/100. Google has updated since then.';
-         document.getElementById('rescanBtn').onclick = () => {
-         document.getElementById('singleUrlInput').value = last.url;
-         banner.classList.add('hidden');
-         scanSingleURL();
-         };
-         banner.classList.remove('hidden');
-         }
-         }
-         } catch(e) {}
-         }
-         document.addEventListener('DOMContentLoaded', function () {
-         registerUser();
-         // Defer non-critical API loads to after first paint — reduces TBT
-         const deferLoad = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
-         deferLoad(() => {
-           loadLeaderboardData();
-           loadFreelancers();
-         });
-         setTimeout(resumeActiveJob, 2000); // after page interactive
-         checkRescanReminder();
-         initRealActivityBanner();
-         setTimeout(() => {
-         const l = document.getElementById('loading-screen');
-         if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(() => l.style.display = 'none', 400); }
-         }, 1200);
-         });
+         
          function updateBulkCount() {
          const lines = document.getElementById('bulkUrlInput').value.split('\n').filter(u => u.trim().length > 0);
          const el = document.getElementById('bulkCountDisplay');
@@ -1842,11 +1731,7 @@
                      const scanHistory = JSON.parse(localStorage.getItem('cs_scanHistory') || '[]');
                      scanHistory.unshift({ url: r.url, score: r.score, date: new Date().toISOString() });
                      localStorage.setItem('cs_scanHistory', JSON.stringify(scanHistory.slice(0, 100)));
-                     // Update live counter real-time
-                     updateRealActivityBanner();
-                   } catch(e) {}
-                 }
-               });
+                
                // Update progress text
                const progressText = document.getElementById('bulkProgressText');
                const progressBar  = document.getElementById('bulkProgressBar');
@@ -2524,19 +2409,7 @@
              const domainBadgeBtn = document.getElementById('domainBadgeBtn');
              if (domainBadgeBtn) { const doms=[...new Set(successful.map(r=>r.url.replace(/https?:\/\//,'').split('/')[0]))]; domainBadgeBtn.style.display=doms.length===1?'inline-flex':'none'; }
            }
-           updateRealActivityBanner();
-         } catch(error) {
-           console.error('Bulk scan error:', error);
-           showToast('\u274c Error: ' + error.message, '#ef4444');
-         } finally {
-           if (bulkPollInterval) { clearInterval(bulkPollInterval); bulkPollInterval = null; }
-           progress.classList.add('hidden');
-           button.disabled = false;
-           button.innerHTML = '<i class="fas fa-rocket mr-2"></i> <span id="bulkBtnLabel">Scan All URLs</span>';
-           updateBulkCount();
-           isScanning = false;
-         }
-         }
+         
          
          function cancelBulkJob() {
            window.cancelBulkJob = cancelBulkJob;
