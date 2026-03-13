@@ -3277,36 +3277,51 @@
          // ============================================================
          // BADGE SYSTEM
          // ============================================================
-         function buildPageBadgeHTML(url, score, graaf, craft, technical) {
-           const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
-           const tierLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
-           const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
-           const pct = (v,max) => Math.round(v/max*100);
-           return `<div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:1px solid #2d1b69;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-         <div>
-         <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
-         <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
-         </div>
-         <div style="text-align:center;min-width:52px;">
-         <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
-         <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
-         </div>
-         </div>
-         <div style="margin-bottom:10px;">
-         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
-         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
-         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
-         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
-         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
-         <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
-         </div>
-         <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-         <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
-         <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
-         </div>
-         </div>`;
-         }
+   function buildPageBadgeHTML(url, score, graaf, craft, technical) {
+const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
+const tierLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
+const shortUrl  = url.replace(/https?:\/\//,'').replace(/\/$/,'');
+const pct = (v,max) => Math.round(v/max*100);
+// ✅ CENTERED + GLOWING BADGE HTML
+return `<div style="display:flex;justify-content:center;width:100%;padding:24px 0;">
+  <div style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;border:2px solid #7e22ce;border-radius:12px;padding:16px 18px;width:300px;box-sizing:border-box;box-shadow:0 0 0 4px rgba(126,34,206,0.15),0 0 24px rgba(126,34,206,0.4);position:relative;overflow:hidden;">
+    <div style="position:absolute;inset:0;border-radius:12px;pointer-events:none;background:radial-gradient(600px circle at var(--mouse-x,50%) var(--mouse-y,50%),rgba(126,34,206,0.15),transparent 40%);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;position:relative;z-index:1;">
+      <div>
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;">Page ContentScore</div>
+        <a href="${url}" target="_blank" style="font-size:0.7rem;color:#818cf8;text-decoration:none;word-break:break-all;">${shortUrl}</a>
+      </div>
+      <div style="text-align:center;min-width:52px;">
+        <div style="font-size:2rem;font-weight:900;color:${tierColor};line-height:1;">${score}</div>
+        <div style="font-size:0.6rem;font-weight:700;color:${tierColor};text-transform:uppercase;">${tierLabel}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;position:relative;z-index:1;">
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin-bottom:3px;"><span>GRAAF</span><span>${graaf}/50</span></div>
+      <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#a855f7;height:5px;border-radius:99px;width:${pct(graaf,50)}%;"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>CRAFT</span><span>${craft}/30</span></div>
+      <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#3b82f6;height:5px;border-radius:99px;width:${pct(craft,30)}%;"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#9ca3af;margin:5px 0 3px;"><span>Technical</span><span>${technical}/20</span></div>
+      <div style="background:#1e293b;border-radius:99px;height:5px;"><div style="background:#f59e0b;height:5px;border-radius:99px;width:${pct(technical,20)}%;"></div></div>
+    </div>
+    <div style="border-top:1px solid #1e293b;padding-top:8px;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
+      <div style="font-size:0.6rem;color:#6b7280;">Verified by</div>
+      <a href="https://contentscale.site" target="_blank" style="font-size:0.7rem;font-weight:800;color:#a855f7;text-decoration:none;letter-spacing:-.01em;">ContentScale</a>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const badge = document.currentScript?.previousElementSibling;
+  if(!badge) return;
+  badge.addEventListener('mousemove', (e) => {
+    const rect = badge.getBoundingClientRect();
+    badge.style.setProperty('--mouse-x', (e.clientX - rect.left) + 'px');
+    badge.style.setProperty('--mouse-y', (e.clientY - rect.top) + 'px');
+  });
+})();
+<\/script>`;
+}
          
          function buildDomainBadgeHTML(domain, score, pageCount, topPages) {
            const tierColor = score>=95?'#a78bfa':score>=90?'#60a5fa':score>=85?'#4ade80':score>=80?'#a3e635':score>=75?'#fde68a':score>=70?'#fb923c':'#f87171';
