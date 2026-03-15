@@ -1879,6 +1879,10 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                VALUES ($1,$2,$3,$4,$5,$6,'manual',$7,$8,NOW())`,
                ['anon', scanUrl, domain, result.score, emailFound, emailFound ? 'has_email' : 'no_email', recsPayload, result.report_url || null]
                ).catch(e => console.error('scan_log insert error:', e.message));
+               // Clear badge cache so next badge load picks up the fresh sub-scores
+               scoreCache.delete(scanUrl);
+               scoreCache.delete(scanUrl.replace(/\/$/, ''));
+               scoreCache.delete(scanUrl.endsWith('/') ? scanUrl : scanUrl + '/');
                }
                res.json(result);
                } catch (error) {
