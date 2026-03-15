@@ -1871,12 +1871,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // ✅ Full scan_log insert (all fields for admin scan tab + Instantly push)
                if (pool) {
                const domain = scanUrl.replace(/https?:\/\//,'').split('/')[0];
-               const recsJson = JSON.stringify(result.recommendations?.all || result.recommendations || []);
+               // Store metrics + recommendations together so badge API can read sub-scores
+               const recsPayload = JSON.stringify({ metrics: result.metrics, all: result.recommendations?.all || result.recommendations || [] });
                const emailFound = result.content_stats?.extractedEmail || result.content_stats?.emails_found?.[0] || null;
                pool.query(
                `INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
                VALUES ($1,$2,$3,$4,$5,$6,'manual',$7,$8,NOW())`,
-               ['anon', scanUrl, domain, result.score, emailFound, emailFound ? 'has_email' : 'no_email', recsJson, result.report_url || null]
+               ['anon', scanUrl, domain, result.score, emailFound, emailFound ? 'has_email' : 'no_email', recsPayload, result.report_url || null]
                ).catch(e => console.error('scan_log insert error:', e.message));
                }
                res.json(result);
@@ -2125,19 +2126,36 @@ app.get('/api/score', async (req, res) => {
     const row = r.rows[0];
     const score = row.score || 0;
 
-    // Parse sub-scores from recommendations if stored
+    // Parse sub-scores — try multiple storage formats
     let graaf = 0, craft = 0, technical = 0;
     try {
       const recs = typeof row.recommendations === 'string'
         ? JSON.parse(row.recommendations)
         : row.recommendations;
-      // Try to extract from metrics if stored
+      // Format 1: { metrics: { graaf, craft, technical }, all: [...] }
       if (recs && recs.metrics) {
         graaf = recs.metrics.graaf || 0;
         craft = recs.metrics.craft || 0;
         technical = recs.metrics.technical || 0;
       }
+      // Format 2: { graaf, craft, technical } stored at top level
+      if (!graaf && recs && recs.graaf) {
+        graaf = recs.graaf || 0;
+        craft = recs.craft || 0;
+        technical = recs.technical || 0;
+      }
     } catch(e) {}
+
+    // Fallback: derive from total score using standard weights if sub-scores missing
+    if (!graaf && !craft && !technical && score > 0) {
+      graaf     = Math.round(score * 0.50);
+      craft     = Math.round(score * 0.30);
+      technical = Math.round(score * 0.20);
+      // Cap to max per pillar
+      graaf     = Math.min(graaf, 50);
+      craft     = Math.min(craft, 30);
+      technical = Math.min(technical, 20);
+    }
 
     // Derive label
     const label = score >= 95 ? 'Elite'
