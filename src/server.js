@@ -2067,6 +2067,222 @@ app.use((err, req, res, next) => {
 console.error('Server Error:', err.message);
 res.status(500).json({ success: false, error: 'Internal Server Error' });
 });
+
+// ============================================================
+// 🏅 DYNAMIC BADGE SYSTEM
+// GET /api/score?url=https://example.com/page
+//   → returns latest scan score from DB (cached 24h)
+//   → used by badge-loader.js for auto-updating badges
+// GET /badge-loader.js
+//   → serves the embeddable badge loader script
+// ============================================================
+
+// In-memory score cache: url → { score, graaf, craft, technical, ts }
+const scoreCache = new Map();
+const BADGE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+app.get('/api/score', async (req, res) => {
+  // CORS — allow any site to fetch badge data
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+
+  const rawUrl = (req.query.url || '').trim();
+  if (!rawUrl) return res.status(400).json({ error: 'url parameter required' });
+
+  // Normalise URL for lookup
+  let lookupUrl;
+  try {
+    const u = new URL(rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl);
+    lookupUrl = u.href.replace(/\/$/, ''); // strip trailing slash
+  } catch(e) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+
+  // Check memory cache first
+  const cached = scoreCache.get(lookupUrl);
+  if (cached && (Date.now() - cached.ts) < BADGE_CACHE_TTL) {
+    return res.json({ success: true, cached: true, ...cached.data });
+  }
+
+  if (!pool) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    // Look up most recent scan for this URL (exact or prefix match)
+    const r = await pool.query(`
+      SELECT score, recommendations, created_at
+      FROM scan_log
+      WHERE business_url = $1
+         OR business_url LIKE $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [lookupUrl, lookupUrl + '%']);
+
+    if (!r.rows.length) {
+      return res.json({ success: false, error: 'No scan found for this URL. Scan it first at app.contentscale.site' });
+    }
+
+    const row = r.rows[0];
+    const score = row.score || 0;
+
+    // Parse sub-scores from recommendations if stored
+    let graaf = 0, craft = 0, technical = 0;
+    try {
+      const recs = typeof row.recommendations === 'string'
+        ? JSON.parse(row.recommendations)
+        : row.recommendations;
+      // Try to extract from metrics if stored
+      if (recs && recs.metrics) {
+        graaf = recs.metrics.graaf || 0;
+        craft = recs.metrics.craft || 0;
+        technical = recs.metrics.technical || 0;
+      }
+    } catch(e) {}
+
+    // Derive label
+    const label = score >= 95 ? 'Elite'
+      : score >= 90 ? 'Excellent'
+      : score >= 80 ? 'Strong'
+      : score >= 70 ? 'Qualified'
+      : score >= 50 ? 'Opportunity'
+      : 'Needs Work';
+
+    const data = {
+      url: lookupUrl,
+      score,
+      label,
+      graaf,
+      craft,
+      technical,
+      scanned_at: row.created_at
+    };
+
+    // Cache it
+    scoreCache.set(lookupUrl, { data, ts: Date.now() });
+
+    return res.json({ success: true, cached: false, ...data });
+  } catch(e) {
+    console.error('Badge API error:', e.message);
+    return res.status(500).json({ error: 'Lookup failed' });
+  }
+});
+
+// Serve the badge loader script
+app.get('/badge-loader.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const script = `
+(function() {
+  'use strict';
+
+  var API = 'https://app.contentscale.site/api/score';
+
+  function scoreColor(s) {
+    return s >= 85 ? '#16a34a' : s >= 70 ? '#b45309' : '#dc2626';
+  }
+
+  function renderBadge(el, data) {
+    var s = data.score || 0;
+    var col = scoreColor(s);
+    var label = data.label || 'Scored';
+    var graaf = data.graaf || 0;
+    var craft = data.craft || 0;
+    var tech  = data.technical || 0;
+    var date  = data.scanned_at
+      ? new Date(data.scanned_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
+      : new Date().toLocaleDateString();
+    var pageUrl = el.getAttribute('data-url') || data.url || window.location.href;
+    var rescanUrl = 'https://app.contentscale.site?url=' + encodeURIComponent(pageUrl);
+
+    var html = [
+      '<div style="font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#0f172a,#1e1b4b);',
+        'border:1.5px solid ' + col + ';border-radius:14px;padding:14px 16px;width:200px;',
+        'box-shadow:0 0 24px ' + col + '33;position:relative;overflow:hidden;color:#fff;">',
+      '<div style="font-size:0.62rem;color:#a78bfa;font-weight:700;text-transform:uppercase;',
+        'letter-spacing:.1em;margin-bottom:6px;">ContentScore</div>',
+      '<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:2px;">',
+        '<span style="font-size:2.8rem;font-weight:900;color:' + col + ';line-height:1;">' + s + '</span>',
+        '<span style="font-size:1rem;color:#94a3b8;font-weight:600;">/100</span>',
+      '</div>',
+      '<div style="display:inline-block;background:' + col + ';color:#fff;font-size:0.62rem;',
+        'font-weight:800;padding:2px 10px;border-radius:99px;margin-bottom:8px;">' + label + '</div>',
+      '<div style="display:flex;gap:4px;margin-bottom:8px;">',
+        '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:6px;padding:4px 6px;text-align:center;">',
+          '<div style="font-size:0.5rem;color:#a78bfa;font-weight:700;">GRAAF</div>',
+          '<div style="font-size:0.75rem;font-weight:800;color:#c4b5fd;">' + graaf + '<span style="font-size:0.5rem;color:#6b7280;">/50</span></div>',
+        '</div>',
+        '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:6px;padding:4px 6px;text-align:center;">',
+          '<div style="font-size:0.5rem;color:#60a5fa;font-weight:700;">CRAFT</div>',
+          '<div style="font-size:0.75rem;font-weight:800;color:#93c5fd;">' + craft + '<span style="font-size:0.5rem;color:#6b7280;">/30</span></div>',
+        '</div>',
+        '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:6px;padding:4px 6px;text-align:center;">',
+          '<div style="font-size:0.5rem;color:#fbbf24;font-weight:700;">TECH</div>',
+          '<div style="font-size:0.75rem;font-weight:800;color:#fde68a;">' + tech + '<span style="font-size:0.5rem;color:#6b7280;">/20</span></div>',
+        '</div>',
+      '</div>',
+      '<div style="border-top:1px solid rgba(255,255,255,.1);padding-top:7px;',
+        'display:flex;justify-content:space-between;align-items:center;font-size:0.52rem;">',
+        '<span style="color:#6b7280;">Scanned: ' + date + '</span>',
+        '<a href="' + rescanUrl + '" target="_blank" rel="noopener" ',
+          'style="color:#60a5fa;text-decoration:none;font-weight:700;">🔄 Rescan</a>',
+      '</div>',
+      '<div style="text-align:center;margin-top:5px;font-size:0.52rem;">',
+        '<a href="https://contentscale.site" target="_blank" rel="noopener sponsored" ',
+          'style="color:#a78bfa;text-decoration:none;font-weight:800;letter-spacing:-.01em;">ContentScale</a>',
+        '<span style="color:#374151;"> · SEO Score</span>',
+      '</div>',
+      '</div>'
+    ].join('');
+
+    el.innerHTML = html;
+    el.setAttribute('data-cs-loaded', '1');
+  }
+
+  function renderError(el, msg) {
+    el.innerHTML = '<div style="font-family:Arial;font-size:0.7rem;color:#6b7280;border:1px solid #374151;' +
+      'border-radius:8px;padding:10px 14px;max-width:200px;">⚠️ ' + msg + '</div>';
+  }
+
+  function loadBadge(el) {
+    if (el.getAttribute('data-cs-loaded')) return;
+    var url = el.getAttribute('data-url') || window.location.href;
+    el.innerHTML = '<div style="width:200px;height:160px;background:#0f172a;border-radius:14px;' +
+      'display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.7rem;font-family:Arial;">Loading…</div>';
+
+    fetch(API + '?url=' + encodeURIComponent(url))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          renderBadge(el, data);
+        } else {
+          renderError(el, data.error || 'Not scanned yet');
+        }
+      })
+      .catch(function(e) {
+        renderError(el, 'Could not load score');
+      });
+  }
+
+  function init() {
+    var badges = document.querySelectorAll('[data-cs-badge]');
+    for (var i = 0; i < badges.length; i++) {
+      loadBadge(badges[i]);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+`;
+
+  res.send(script);
+});
+
 async function startServer() {
 console.log('🚀 =====================================');
 console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
