@@ -119,102 +119,84 @@ res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
-
 // Serve non-HTML static assets normally (images, css, js, fonts, etc.)
 app.use(express.static('public', { maxAge: '1y', etag: true, index: false }));
-
 // Serve HTML files via res.send so middleware injections (favicon, ada, counter) work
 app.use((req, res, next) => {
-  let urlPath = req.path;
-  // Try exact match, then with .html extension, then /index.html
-  const candidates = [
-    path.join(__dirname, 'public', urlPath),
-    path.join(__dirname, 'public', urlPath + '.html'),
-    path.join(__dirname, 'public', urlPath, 'index.html'),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile() && candidate.endsWith('.html')) {
-      const html = fs.readFileSync(candidate, 'utf8');
-      res.setHeader('Content-Type', 'text/html');
-      return res.send(html);
-    }
-  }
-  next();
+let urlPath = req.path;
+// Try exact match, then with .html extension, then /index.html
+const candidates = [
+path.join(__dirname, 'public', urlPath),
+path.join(__dirname, 'public', urlPath + '.html'),
+path.join(__dirname, 'public', urlPath, 'index.html'),
+];
+for (const candidate of candidates) {
+if (fs.existsSync(candidate) && fs.statSync(candidate).isFile() && candidate.endsWith('.html')) {
+const html = fs.readFileSync(candidate, 'utf8');
+res.setHeader('Content-Type', 'text/html');
+return res.send(html);
+}
+}
+next();
 });
 // ── /app — Under Construction page ──────────────────────────────────────────
 app.get('/app', (req, res) => {
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pro Dashboard — Coming Soon · ContentScale</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#0a0010;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;padding:24px;}
-    .back{position:fixed;top:20px;left:20px;color:#a78bfa;text-decoration:none;font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:6px;opacity:.8;}
-    .back:hover{opacity:1;}
-    .card{background:#120820;border:2px solid #4c1d95;border-radius:20px;padding:40px 32px;max-width:680px;width:100%;text-align:center;box-shadow:0 0 60px rgba(126,34,206,0.3);}
-    .card img{width:100%;max-width:620px;border-radius:14px;margin-bottom:32px;border:1px solid #2d1b69;}
-    .btn{display:inline-block;background:linear-gradient(135deg,#f97316,#ea580c);color:white;font-weight:700;font-size:1rem;padding:14px 32px;border-radius:12px;text-decoration:none;margin-top:8px;transition:transform .15s;}
-    .btn:hover{transform:scale(1.03);}
-    .sub{color:#6b7280;font-size:.85rem;margin-top:14px;}
-    .sub a{color:#a78bfa;text-decoration:none;}
-  </style>
-</head>
-<body>
-  <a class="back" href="https://app.contentscale.site">← Back to Scanner</a>
-  <div class="card">
-    <img src="/blog/images/under_construction.jpg" alt="ContentScale Pro Dashboard — under construction">
-    <p class="sub">Requires activation · <a href="https://wa.me/31628073996">Contact Ottmar on WhatsApp</a></p>
-  </div>
-</body>
-</html>`);
+res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+res.send(`<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Pro Dashboard — Coming Soon · ContentScale</title> <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"><style> *{box-sizing:border-box;margin:0;padding:0;}
+         body{background:#0a0010;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;padding:24px;}
+         .back{position:fixed;top:20px;left:20px;color:#a78bfa;text-decoration:none;font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:6px;opacity:.8;}
+         .back:hover{opacity:1;}
+         .card{background:#120820;border:2px solid #4c1d95;border-radius:20px;padding:40px 32px;max-width:680px;width:100%;text-align:center;box-shadow:0 0 60px rgba(126,34,206,0.3);}
+         .card img{width:100%;max-width:620px;border-radius:14px;margin-bottom:32px;border:1px solid #2d1b69;}
+         .btn{display:inline-block;background:linear-gradient(135deg,#f97316,#ea580c);color:white;font-weight:700;font-size:1rem;padding:14px 32px;border-radius:12px;text-decoration:none;margin-top:8px;transition:transform .15s;}
+         .btn:hover{transform:scale(1.03);}
+         .sub{color:#6b7280;font-size:.85rem;margin-top:14px;}
+         .sub a{color:#a78bfa;text-decoration:none;} </style> </head><body> <a class="back" href="https://app.contentscale.site">← Back to Scanner</a> <div class="card"><img src="/blog/images/under_construction.jpg" alt="ContentScale Pro Dashboard — under construction"> <p class="sub">Requires activation · <a href="https://wa.me/31628073996">Contact Ottmar on WhatsApp</a></p> </div> </body> </html>
+`);
 });
 // ── Page routes ──────────────────────────────────────────────────────────────
 app.get('/seo-contentscore', (req, res) => {
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-  res.sendFile(path.join(__dirname, 'public', 'unified-scan-page.html'));
+res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+res.sendFile(path.join(__dirname, 'public', 'unified-scan-page.html'));
 });
-
 // ── Blog routes ───────────────────────────────────────────────────────────────
 app.get('/blog', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/blog/index.html'));
+res.sendFile(path.join(__dirname, '../public/blog/index.html'));
 });
 app.get('/blog/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/blog/index.html'));
+res.sendFile(path.join(__dirname, '../public/blog/index.html'));
 });
 app.get('/blog/:slug', (req, res) => {
-  const file = path.join(__dirname, '../public/blog', `${req.params.slug}.html`);
-  if (fs.existsSync(file)) {
-    res.sendFile(file);
-  } else {
-    res.status(404).sendFile(path.join(__dirname, '../public/index.html'));
-  }
+const file = path.join(__dirname, '../public/blog', `${req.params.slug}.html`);
+if (fs.existsSync(file)) {
+res.sendFile(file);
+} else {
+res.status(404).sendFile(path.join(__dirname, '../public/index.html'));
+}
 });
-
 // ── Static pages ──────────────────────────────────────────────────────────────
 app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/about.html'));
+res.sendFile(path.join(__dirname, '../public/about.html'));
 });
 app.get('/services', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/services.html'));
+res.sendFile(path.join(__dirname, '../public/services.html'));
 });
 app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/contact.html'));
+res.sendFile(path.join(__dirname, '../public/contact.html'));
 });
-
 // ── Sitemap ──────────────────────────────────────────────────────────────────
 app.get('/sitemap.xml', (req, res) => {
-  res.setHeader('Content-Type', 'application/xml');
-  res.send(`<?xml version="1.0" encoding="UTF-8"?> <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://app.contentscale.site/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://app.contentscale.site/blog</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://app.contentscale.site/blog/contentscale-platform-2026</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://app.contentscale.site/blog/top-seo-agency-success-story</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-</urlset>`);
+res.setHeader('Content-Type', 'application/xml');
+res.send(`<?xml version="1.0" encoding="UTF-8"?>  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url> <loc>https://app.contentscale.site/</loc>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority> </url><url> <loc>https://app.contentscale.site/blog</loc>
+      <changefreq>weekly</changefreq>
+      <priority>0.9</priority> </url><url> <loc>https://app.contentscale.site/blog/contentscale-platform-2026</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.8</priority> </url><url> <loc>https://app.contentscale.site/blog/top-seo-agency-success-story</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.8</priority> </url> </urlset>
+`);
 });
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
@@ -477,25 +459,14 @@ res.json({ success: true });
 // ── Unsubscribe ────────────────────────────────────────────────────────────
 app.get('/unsubscribe', async (req, res) => {
 const { email } = req.query;
-if (!email) return res.send(`<!DOCTYPE html> <html>    <body style="font-family:Arial;text-align:center;padding:60px;background:#030712;color:#e5e7eb;">
-      <h2>⚠️ Invalid unsubscribe link.</h2>
-   </body> </html> `);
+if (!email) return res.send(`<!DOCTYPE html>  <html><body style="font-family:Arial;text-align:center;padding:60px;background:#030712;color:#e5e7eb;"> <h2>⚠️ Invalid unsubscribe link.</h2> </body> </html>
+`);
 try {
 if (pool) await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
-res.send(`<!DOCTYPE html> <html>    <head> <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1.0">
-      <title>Unsubscribed — ContentScale</title> <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"> <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-      <link rel="shortcut icon" href="/favicon.ico"> <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-      <link rel="manifest" href="/site.webmanifest"> <meta name="theme-color" content="#7e22ce">
-   </head> <body style="font-family:Arial,Helvetica,sans-serif;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
-      <div style="text-align:center;max-width:480px;padding:40px;">
-         <div style="font-size:56px;margin-bottom:16px;">✅</div>
+res.send(`<!DOCTYPE html>  <html> <head> <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"> <title>Unsubscribed — ContentScale</title> <link rel="icon" type="image/svg+xml" href="/favicon.svg"> <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"> <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"> <link rel="shortcut icon" href="/favicon.ico"> <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"> <link rel="manifest" href="/site.webmanifest"> <meta name="theme-color" content="#7e22ce"> </head> <body style="font-family:Arial,Helvetica,sans-serif;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;max-width:480px;padding:40px;"> <div style="font-size:56px;margin-bottom:16px;">✅</div>
          <h1 style="color:#4ade80;margin-bottom:8px;">You've been unsubscribed.</h1>
          <p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails.</p>
-         <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a> </div>
-      <script>
-         (function(){
+         <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a>  </div><script> (function(){
            var titles=['ContentScale ⚡','🎯 SEO Scanner'];
            var favs=['/favicon.svg','/favicon-pink.svg'];
            var t=0,iv=null;
@@ -509,8 +480,8 @@ res.send(`<!DOCTYPE html> <html>    <head> <meta charset="UTF-8">
                document.title=orig; if(fl) fl.href='/favicon.svg';
              }
            });
-         })(); </script>
-   </body> </html> `);
+         })();  </script> </body> </html>
+`);
 } catch (e) { res.send(`
 <p>Error: ${e.message}</p>
 `); }
@@ -1167,7 +1138,7 @@ const axios = require('axios');
 // No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
 const extractLocs = (xml) => {
 const locs = [];
-const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
+const re = /<loc> \s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
 let m;
 while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
 return locs;
@@ -1289,23 +1260,38 @@ if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
 const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 // ── SINGLE URL: full PDF-style report with recommendations ──
 if (results.length === 1) {
-  const d = results[0];
-  const score = d.score || 0;
-  const metrics = d.metrics || {};
-  const recs = (d.recommendations?.all || d.recommendations || []);
-  const scoreLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
-  const scoreColor = score>=85?'#16a34a':score>=70?'#b45309':'#dc2626';
-  const priorityColor = { high:'#dc2626', medium:'#b45309', low:'#2563eb' };
-  const priorityLabel = { high:'🔴 High Priority', medium:'🟡 Medium', low:'🔵 Quick Win' };
-  const recRows = recs.map((r,i) => {
-    const pc = priorityColor[r.priority]||'#6b7280';
-    const pl = priorityLabel[r.priority]||'Info';
-    return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;"><div style="font-weight:700;font-size:14px;color:#111827;flex:1;">${i+1}. ${r.title}</div><span style="font-size:11px;color:${pc};font-weight:700;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span></div><p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description||''}</p><div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:${r.learning?'8':'0'}px;"><div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">ACTION</div><p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action||''}</p></div>${r.learning?`<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;"><div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">WHY IT MATTERS</div><p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p></div>`:''}${r.target?`<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">Target: ${r.target}</p>`:''}</div>`;
-  }).join('');
-  const singleHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>ContentScale Report</title><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body style="max-width:800px;margin:0 auto;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform - Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${d.url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;">Website SEO Report</h1><p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF</td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT</td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical</td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;">${metrics.technical||0} / 20</td></tr></table></div></div></div><div style="padding:32px 40px;">${recRows}</div><div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca - Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">Print / Save as PDF</button></div></body></html>`;
-  return res.send(singleHtml);
+const d = results[0];
+const score = d.score || 0;
+const metrics = d.metrics || {};
+const recs = (d.recommendations?.all || d.recommendations || []);
+const scoreLabel = score>=90?'Elite':score>=80?'Strong':score>=70?'Qualified':score>=50?'Opportunity':'Critical';
+const scoreColor = score>=85?'#16a34a':score>=70?'#b45309':'#dc2626';
+const priorityColor = { high:'#dc2626', medium:'#b45309', low:'#2563eb' };
+const priorityLabel = { high:'🔴 High Priority', medium:'🟡 Medium', low:'🔵 Quick Win' };
+const recRows = recs.map((r,i) => {
+const pc = priorityColor[r.priority]||'#6b7280';
+const pl = priorityLabel[r.priority]||'Info';
+return ` <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;"> <div style="font-weight:700;font-size:14px;color:#111827;flex:1;">${i+1}. ${r.title}</div>
+      <span style="font-size:11px;color:${pc};font-weight:700;padding:3px 10px;border:1px solid ${pc};border-radius:99px;flex-shrink:0;">${pl}</span></div> <p style="font-size:13px;color:#374151;margin:0 0 10px;line-height:1.6;">${r.description||''}</p><div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:${r.learning?'8':'0'}px;"> <div style="font-size:11px;font-weight:700;color:#7e22ce;margin-bottom:4px;">ACTION</div>
+      <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.5;">${r.action||''}</p></div> ${r.learning?`<div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;"> <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px;">WHY IT MATTERS</div>
+      <p style="font-size:12px;color:#374151;margin:0;line-height:1.5;">${r.learning}</p></div> `:''}${r.target?`
+   <p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">Target: ${r.target}</p>
+   `:''}</div> `;
+}).join('');
+const singleHtml = `<!DOCTYPE html> <html> <head> <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"> <title>ContentScale Report</title><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"> <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style> </head> <body style="max-width:800px;margin:0 auto;"> <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"> <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div> <div style="font-size:22px;font-weight:900;">ContentScale</div>
+               <div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform - Amsterdam</div> </div><div style="text-align:right;"> <div style="font-size:12px;opacity:0.75;">Generated</div>
+               <div style="font-size:13px;font-weight:700;">${today}</div> </div></div> <div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${d.url}</div>
+         <h1 style="font-size:28px;font-weight:900;margin-bottom:6px;">Website SEO Report</h1>
+         <p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p> </div> <div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"> <div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"> <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+               <div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div>
+               <div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div> </div> <div style="flex:1;min-width:200px;"> <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr> <td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF</td>
+                     <td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;">${metrics.graaf||0} / 50</td> </tr><tr> <td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT</td>
+                     <td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;">${metrics.craft||0} / 30</td> </tr><tr> <td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical</td>
+                     <td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;">${metrics.technical||0} / 20</td> </tr> </table> </div> </div></div> <div style="padding:32px 40px;">${recRows}</div> <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div> <div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div>
+            <div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca - Amsterdam, Netherlands</div> </div><div style="text-align:right;"> <div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div>
+            <div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div> </div></div> <div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">Print / Save as PDF</button></div> </body></html> `;
+return res.send(singleHtml);
 }
-
 const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
 const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
 const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
@@ -1315,54 +1301,27 @@ const lbl = r.score>=90?'Elite':r.score>=80?'Strong':r.score>=70?'Qualified':r.s
 const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
 const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
 const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
-return ` <tr style="border-bottom:1px solid #e5e7eb;">
-   <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td> <td style="padding:12px 16px;">
-      <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
-      <div style="font-size:12px;color:#6b7280;">${path}</div> </td>
-   <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
+return ` <tr style="border-bottom:1px solid #e5e7eb;"> <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td><td style="padding:12px 16px;"> <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
+      <div style="font-size:12px;color:#6b7280;">${path}</div></td> <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
    <td style="padding:12px 16px;text-align:center;font-size:13px;color:#7e22ce;">${r.metrics?.graaf||0}/50</td>
    <td style="padding:12px 16px;text-align:center;font-size:13px;color:#1d4ed8;">${r.metrics?.craft||0}/30</td>
    <td style="padding:12px 16px;text-align:center;font-size:13px;color:#b45309;">${r.metrics?.technical||0}/20</td>
    <td style="padding:12px 16px;"><span style="background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">${lbl}</span></td>
-   <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td> </tr>
-`;
+   <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td></tr> `;
 }).join('');
-const html = `<!DOCTYPE html> <html lang="en">    <head> <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1.0">
-      <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title>
-      <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
-      <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style> </head>
-   <body style="max-width:900px;margin:0 auto;"> <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;">
-         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;"> <div>
-               <div style="font-size:20px;font-weight:900;">ContentScale</div>
-               <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div> </div>
-            <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div> </div>
-         <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
-         <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p> </div>
-      ${sameDomain?` <div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;">
-         <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
+const html = `<!DOCTYPE html>  <html lang="en"> <head> <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"> <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"> <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style> </head> <body style="max-width:900px;margin:0 auto;"> <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;"> <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;"><div> <div style="font-size:20px;font-weight:900;">ContentScale</div>
+               <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div> <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div></div> <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
+         <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p></div> ${sameDomain?` <div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;"> <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
          <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${avgScore}</div>
-         <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div> </div>
-      `:''} <div style="padding:32px 40px;overflow-x:auto;">
-         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);"> <thead>
-               <tr style="background:#f5f3ff;">
-                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
+         <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div></div> `:''}  <div style="padding:32px 40px;overflow-x:auto;"> <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);"> <thead><tr style="background:#f5f3ff;"> <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
                   <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">URL</th>
                   <th style="padding:12px 16px;text-align:center;font-size:12px;color:#6b7280;">Score</th>
                   <th style="padding:12px 16px;text-align:center;font-size:12px;color:#7e22ce;">GRAAF</th>
                   <th style="padding:12px 16px;text-align:center;font-size:12px;color:#1d4ed8;">CRAFT</th>
                   <th style="padding:12px 16px;text-align:center;font-size:12px;color:#b45309;">Technical</th>
                   <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Tier</th>
-                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th> </tr>
-            </thead>
-            <tbody>${rows}</tbody> </table>
-      </div> <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-         <div>
-            <div style="color:white;font-weight:700;font-size:14px;">ContentScale</div>
-            <div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div> </div>
-         <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a> </div>
-      <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
-   </body> </html> `;
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th> </tr></thead> <tbody>${rows}</tbody> </table> </div> <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div> <div style="color:white;font-weight:700;font-size:14px;">ContentScale</div>
+            <div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div></div> <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a> </div> <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div> </body></html> `;
 res.send(html);
 } catch(e) { console.error('share route error:', e.message); res.status(500).send('<h1>Error loading report</h1>'); }
 });
@@ -1487,8 +1446,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
    recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
    }
    if (!analysis.hasCanonical) {
-   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add 
-   <link rel=\"canonical\" href=\"...\" > to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
+   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel=\"canonical\" href=\"...\" > to your <head> .`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head> ' });
          }
          if (analysis.metaTitleLength === 0) {
          recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
@@ -1498,7 +1456,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
             recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
             }
             if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\">             with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
             } else if (analysis.metaDescriptionLength < 100) {
             recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
             } else if (analysis.metaDescriptionLength > 165) {
@@ -1677,13 +1635,42 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const testimonialSelectors = ['.review','.testimonial','[class*="review"]','[class*="testimonial"]','[class*="quote"]'];
                testimonialSelectors.forEach(sel => { try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch(e) {} });
                let caseStudyCount = 0;
-               const caseStudyKeywords = ['case study','challenge','solution','results','roi','recovered','recovery','success rate'];
+               const caseStudyKeywords = ['case study','challenge','solution','results','roi','recovered','recovery','success rate','before and after','before & after','traffic increase','traffic grew','revenue increase','conversions increased'];
+               const metricRx = /\d+\s*%|\d+x[\s,.]|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/;
                const seen = new Set();
+               // Strategy 1: <section> and <article> — raised ceiling to 10000
                document.querySelectorAll('section, article').forEach(el => {
                if (seen.has(el)) return;
                const txt = el.textContent.toLowerCase(); const len = txt.length;
-               if (len > 300 && len < 6000) { const hasKeyword = caseStudyKeywords.some(k => txt.includes(k)); const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt); if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); } }
+               if (len > 300 && len < 10000) { const hasKeyword = caseStudyKeywords.some(k => txt.includes(k)); const hasMetric = metricRx.test(txt); if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); } }
                });
+               // Strategy 2: div blocks with case-study class/id patterns
+               document.querySelectorAll('div[class*="case"],div[class*="study"],div[class*="result"],div[class*="metric"],div[class*="client"],div[class*="success"],div[id*="case"],div[id*="study"]').forEach(el => {
+               if (seen.has(el)) return;
+               const txt = el.textContent.toLowerCase(); const len = txt.length;
+               if (len > 300 && len < 10000) { const hasKeyword = caseStudyKeywords.some(k => txt.includes(k)); const hasMetric = metricRx.test(txt); if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); } }
+               });
+               // Strategy 3: h2/h3 headings signalling a case study + following sibling content
+               document.querySelectorAll('h2, h3').forEach(heading => {
+               if (seen.has(heading)) return;
+               const hTxt = heading.textContent.toLowerCase();
+               if (!/case study|client story|success story|how .* (grew|increased|recovered|boosted|scaled)|results?:/i.test(hTxt)) return;
+               let combined = hTxt; let next = heading.nextElementSibling; let s = 0;
+               while (next && s < 20) { if (/^h[1-3]$/.test(next.tagName.toLowerCase())) break; combined += ' ' + next.textContent.toLowerCase(); next = next.nextElementSibling; s++; }
+               if (combined.length > 150 && metricRx.test(combined)) { caseStudyCount++; seen.add(heading); }
+               });
+               // Strategy 4: any block containing challenge + (solution or results) + a metric
+               if (caseStudyCount < 2) {
+               document.querySelectorAll('div, section, article').forEach(el => {
+               if (seen.has(el)) return;
+               const txt = el.textContent.toLowerCase(); const len = txt.length;
+               if (len < 200 || len > 15000) return;
+               if (txt.includes('challenge') && (txt.includes('solution') || txt.includes('results')) && metricRx.test(txt)) {
+               const alreadyCounted = Array.from(seen).some(s => el.contains(s) || s.contains(el));
+               if (!alreadyCounted) { caseStudyCount++; seen.add(el); }
+               }
+               });
+               }
                const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
                const statsFound = (cleanText.match(statsPattern) || []).length;
                const first300Words = cleanText.split(/\s+/).slice(0,300).join(' ');
@@ -1773,21 +1760,21 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
                // ✅ After job done: insert ONE row per domain into scan_log (best-scoring page)
                if (pool && job.status === 'done') {
-                 const domainMap = new Map();
-                 for (const r of job.results) {
-                   if (!r.success || !r.score) continue;
-                   const dom = (r.url||'').replace(/https?:\/\//,'').split('/')[0];
-                   if (!domainMap.has(dom) || r.score > domainMap.get(dom).score) domainMap.set(dom, r);
-                 }
-                 for (const [dom, best] of domainMap) {
-                   const _recsJson = JSON.stringify(best.recommendations?.all || best.recommendations || []);
-                   pool.query(
-                     `INSERT INTO scan_log (user_id, business_url, business_name, score, source, recommendations, report_url, created_at)
-                      VALUES ($1,$2,$3,$4,'bulk',$5,$6,NOW())`,
-                     [job.userId||'anon', best.url||('https://'+dom), dom, best.score, _recsJson, best.report_url||null]
-                   ).catch(e => console.error('scan_log domain insert error:', e.message));
-                 }
-                 console.log(`✅ scan_log: ${domainMap.size} domains saved for job ${job.id}`);
+               const domainMap = new Map();
+               for (const r of job.results) {
+               if (!r.success || !r.score) continue;
+               const dom = (r.url||'').replace(/https?:\/\//,'').split('/')[0];
+               if (!domainMap.has(dom) || r.score > domainMap.get(dom).score) domainMap.set(dom, r);
+               }
+               for (const [dom, best] of domainMap) {
+               const _recsJson = JSON.stringify(best.recommendations?.all || best.recommendations || []);
+               pool.query(
+               `INSERT INTO scan_log (user_id, business_url, business_name, score, source, recommendations, report_url, created_at)
+               VALUES ($1,$2,$3,$4,'bulk',$5,$6,NOW())`,
+               [job.userId||'anon', best.url||('https://'+dom), dom, best.score, _recsJson, best.report_url||null]
+               ).catch(e => console.error('scan_log domain insert error:', e.message));
+               }
+               console.log(`✅ scan_log: ${domainMap.size} domains saved for job ${job.id}`);
                }
                } catch(e) {
                job.status = 'error';
@@ -1883,14 +1870,14 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
                // ✅ Full scan_log insert (all fields for admin scan tab + Instantly push)
                if (pool) {
-                 const domain = scanUrl.replace(/https?:\/\//,'').split('/')[0];
-                 const recsJson = JSON.stringify(result.recommendations?.all || result.recommendations || []);
-                 const emailFound = result.content_stats?.extractedEmail || result.content_stats?.emails_found?.[0] || null;
-                 pool.query(
-                   `INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
-                    VALUES ($1,$2,$3,$4,$5,$6,'manual',$7,$8,NOW())`,
-                   ['anon', scanUrl, domain, result.score, emailFound, emailFound ? 'has_email' : 'no_email', recsJson, result.report_url || null]
-                 ).catch(e => console.error('scan_log insert error:', e.message));
+               const domain = scanUrl.replace(/https?:\/\//,'').split('/')[0];
+               const recsJson = JSON.stringify(result.recommendations?.all || result.recommendations || []);
+               const emailFound = result.content_stats?.extractedEmail || result.content_stats?.emails_found?.[0] || null;
+               pool.query(
+               `INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
+               VALUES ($1,$2,$3,$4,$5,$6,'manual',$7,$8,NOW())`,
+               ['anon', scanUrl, domain, result.score, emailFound, emailFound ? 'has_email' : 'no_email', recsJson, result.report_url || null]
+               ).catch(e => console.error('scan_log insert error:', e.message));
                }
                res.json(result);
                } catch (error) {
@@ -1959,7 +1946,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
                try {
                const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
-               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
+               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html> <body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
 const report = r.rows[0];
 let recs = [];
 try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
@@ -2037,19 +2024,19 @@ ${report.email_found ? `<span class="chip">✉ ${report.email_found}</span>` : '
 <div class="section-title">📋 Recommendations <span class="rec-count">${recs.length} items</span></div>
 ${recsHtml}
 <div class="footer">Generated by ContentScale &nbsp;·&nbsp; app.contentscale.site &nbsp;·&nbsp; GRAAF + CRAFT Framework &nbsp;·&nbsp; By Ottmar Francisca</div> </div> <button class="pdf-btn" onclick="window.print()">⬇ Download PDF</button> <script>    (function(){
-     var titles=['ContentScale ⚡','🎯 SEO Scanner'];
-     var favs=['/favicon.svg','/favicon-pink.svg'];
-     var t=0,iv=null;
-     var orig=document.title;
-     var fl=document.querySelector('link[rel~=\"icon\"]');
-     document.addEventListener('visibilitychange',function(){
-       if(document.hidden){
-         iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
-       } else {
-         clearInterval(iv);iv=null;t=0;
-         document.title=orig; if(fl) fl.href='/favicon.svg';
-       }
-     });
+   var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+   var favs=['/favicon.svg','/favicon-pink.svg'];
+   var t=0,iv=null;
+   var orig=document.title;
+   var fl=document.querySelector('link[rel~=\"icon\"]');
+   document.addEventListener('visibilitychange',function(){
+     if(document.hidden){
+       iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+     } else {
+       clearInterval(iv);iv=null;t=0;
+       document.title=orig; if(fl) fl.href='/favicon.svg';
+     }
+   });
    })();
 </script> </body> </html>`;
 res.setHeader('Content-Type', 'text/html');
@@ -2340,53 +2327,51 @@ res.status(500).json({ success: false, error: errMsg });
 });
 // ── Instantly push debug endpoint ──────────────────────────
 app.post('/api/admin/instantly-test', verifyAdmin, async (req, res) => {
-  const apiKey = (req.headers['x-instantly-key'] || '').trim();
-  const { campaign_id, email } = req.body;
-  if (!apiKey || !campaign_id || !email) return res.status(400).json({ error: 'Need x-instantly-key header + campaign_id + email in body' });
-  // Try progressively richer payloads
-  // Try 4 different Instantly v2 payload structures
-  const tests = [
-    { label: 'v2 array (leads:[])', url: 'https://api.instantly.ai/api/v2/leads', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }], skip_if_in_workspace: false } },
-    { label: 'v2 flat (no array)', url: 'https://api.instantly.ai/api/v2/leads', body: { campaign_id, email, first_name: 'Test', company_name: 'Test BV' } },
-    { label: 'v1 /api/v1/lead/add', url: 'https://api.instantly.ai/api/v1/lead/add', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }], skip_if_in_workspace: false } },
-    { label: 'v2 /leads/add', url: 'https://api.instantly.ai/api/v2/leads/add', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }] } },
-  ];
-  const results = [];
-  for (const t of tests) {
-    try {
-      const r = await fetch(t.url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) });
-      const raw = await r.text();
-      let parsed; try { parsed = JSON.parse(raw); } catch { parsed = raw; }
-      results.push({ test: t.label, url: t.url, status: r.status, ok: r.ok, response: parsed });
-    } catch(e) { results.push({ test: t.label, error: e.message }); }
-  }
-  res.json({ results });
+const apiKey = (req.headers['x-instantly-key'] || '').trim();
+const { campaign_id, email } = req.body;
+if (!apiKey || !campaign_id || !email) return res.status(400).json({ error: 'Need x-instantly-key header + campaign_id + email in body' });
+// Try progressively richer payloads
+// Try 4 different Instantly v2 payload structures
+const tests = [
+{ label: 'v2 array (leads:[])', url: 'https://api.instantly.ai/api/v2/leads', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }], skip_if_in_workspace: false } },
+{ label: 'v2 flat (no array)', url: 'https://api.instantly.ai/api/v2/leads', body: { campaign_id, email, first_name: 'Test', company_name: 'Test BV' } },
+{ label: 'v1 /api/v1/lead/add', url: 'https://api.instantly.ai/api/v1/lead/add', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }], skip_if_in_workspace: false } },
+{ label: 'v2 /leads/add', url: 'https://api.instantly.ai/api/v2/leads/add', body: { campaign_id, leads: [{ email, first_name: 'Test', company_name: 'Test BV' }] } },
+];
+const results = [];
+for (const t of tests) {
+try {
+const r = await fetch(t.url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) });
+const raw = await r.text();
+let parsed; try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+results.push({ test: t.label, url: t.url, status: r.status, ok: r.ok, response: parsed });
+} catch(e) { results.push({ test: t.label, error: e.message }); }
+}
+res.json({ results });
 });
-
 // ── IP Geo lookup proxy (server-side, cached, no CORS) ──────
 const ipGeoServerCache = new Map();
 app.get('/api/admin/ip-geo', verifyAdmin, async (req, res) => {
-  const ip = req.query.ip;
-  if (!ip) return res.json({ countryCode: null });
-  if (ipGeoServerCache.has(ip)) return res.json(ipGeoServerCache.get(ip));
-  try {
-    const r = await fetch(`https://ipapi.co/${ip}/json/`, {
-      headers: { 'User-Agent': 'ContentScaleAdmin/1.0' },
-      signal: AbortSignal.timeout(4000)
-    });
-    if (!r.ok) return res.json({ countryCode: null });
-    const d = await r.json();
-    if (d.error || !d.country_code) return res.json({ countryCode: null });
-    const geo = { countryCode: d.country_code, country: d.country_name, city: d.city, isp: d.org };
-    ipGeoServerCache.set(ip, geo);
-    // Evict cache after 1000 entries
-    if (ipGeoServerCache.size > 1000) ipGeoServerCache.delete(ipGeoServerCache.keys().next().value);
-    res.json(geo);
-  } catch (e) {
-    res.json({ countryCode: null });
-  }
+const ip = req.query.ip;
+if (!ip) return res.json({ countryCode: null });
+if (ipGeoServerCache.has(ip)) return res.json(ipGeoServerCache.get(ip));
+try {
+const r = await fetch(`https://ipapi.co/${ip}/json/`, {
+headers: { 'User-Agent': 'ContentScaleAdmin/1.0' },
+signal: AbortSignal.timeout(4000)
 });
-
+if (!r.ok) return res.json({ countryCode: null });
+const d = await r.json();
+if (d.error || !d.country_code) return res.json({ countryCode: null });
+const geo = { countryCode: d.country_code, country: d.country_name, city: d.city, isp: d.org };
+ipGeoServerCache.set(ip, geo);
+// Evict cache after 1000 entries
+if (ipGeoServerCache.size > 1000) ipGeoServerCache.delete(ipGeoServerCache.keys().next().value);
+res.json(geo);
+} catch (e) {
+res.json({ countryCode: null });
+}
+});
 app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
 const apiKey = req.headers['x-instantly-key'];
 if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
@@ -2398,41 +2383,41 @@ return res.status(400).json({ success: false, error: 'Missing campaign_id or lea
 try {
 // Strip leads to only valid Instantly v2 fields
 const cleanLeads = leads.map(l => {
-  // Instantly v2 confirmed fields only
-  const clean = {
-    email: (l.email || '').trim(),
-    first_name: l.first_name || '',
-    last_name: l.last_name || '',
-    company_name: l.company_name || '',
-    website: l.website || '',
-  };
-  // custom_variables: flat object, all string values
-  if (l.custom_variables && typeof l.custom_variables === 'object') {
-    clean.custom_variables = {};
-    for (const [k,v] of Object.entries(l.custom_variables)) {
-      clean.custom_variables[k] = v === null || v === undefined ? '' : String(v);
-    }
-  }
-  return clean;
+// Instantly v2 confirmed fields only
+const clean = {
+email: (l.email || '').trim(),
+first_name: l.first_name || '',
+last_name: l.last_name || '',
+company_name: l.company_name || '',
+website: l.website || '',
+};
+// custom_variables: flat object, all string values
+if (l.custom_variables && typeof l.custom_variables === 'object') {
+clean.custom_variables = {};
+for (const [k,v] of Object.entries(l.custom_variables)) {
+clean.custom_variables[k] = v === null || v === undefined ? '' : String(v);
+}
+}
+return clean;
 });
 const payload = {
-  campaign_id,
-  leads: cleanLeads,
-  skip_if_in_workspace: skip_if_in_workspace !== false
+campaign_id,
+leads: cleanLeads,
+skip_if_in_workspace: skip_if_in_workspace !== false
 };
 console.log('Instantly push payload sample:', JSON.stringify(payload.leads[0]));
 const r = await fetch('https://api.instantly.ai/api/v2/leads/add', {
-  method: 'POST',
-  headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload)
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
+body: JSON.stringify(payload)
 });
 const rawText = await r.text();
 let data;
 try { data = JSON.parse(rawText); } catch { data = { message: rawText }; }
 console.log('Instantly response', r.status, JSON.stringify(data).substring(0, 300));
 if (!r.ok) {
-  const errDetail = data?.error || data?.message || data?.detail || ('HTTP ' + r.status + ': ' + rawText.substring(0,200));
-  throw new Error(errDetail);
+const errDetail = data?.error || data?.message || data?.detail || ('HTTP ' + r.status + ': ' + rawText.substring(0,200));
+throw new Error(errDetail);
 }
 res.json({ success: true, added: data.leads_uploaded || data.added || cleanLeads.length, duplicates: data.duplicated_leads || data.duplicates || 0 });
 } catch (e) {
@@ -2506,7 +2491,7 @@ const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
 if (!r.ok) continue;
 const xml = await r.text();
 // Sub-sitemap index?
-const subMatches = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
+const subMatches = [...xml.matchAll(/<loc> (https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
 if (subMatches.length > 0) {
 let allUrls = [];
 for (const sub of subMatches.slice(0, 20)) {
@@ -2514,14 +2499,14 @@ try {
 const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
 if (!sr.ok) continue;
 const sx = await sr.text();
-const us = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+const us = [...sx.matchAll(/<loc> (https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
 allUrls = allUrls.concat(us);
 } catch(e) {}
 }
 if (allUrls.length > 0) return { urls: allUrls, sitemapUrl: url };
 }
 // Direct URLs
-const urls = [...xml.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+const urls = [...xml.matchAll(/<loc> (https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
 if (urls.length > 0) return { urls, sitemapUrl: url };
 } catch(e) {}
 }
@@ -2731,22 +2716,22 @@ domainObj.instantlyStatus = 'no_email';
 }
 // ✅ Save campaign result to scan_log so admin scan tab shows it
 if (pool) {
-  const _recsAll = successful[0]?.recommendations?.all || [];
-  const _recsJson = JSON.stringify(_recsAll.slice(0,10));
-  pool.query(
-    `INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,'campaign',$7,$8,NOW())`,
-    [
-      'campaign_' + campaign.id,
-      'https://' + domainObj.domain,
-      domainObj.domain.replace(/^www\./, ''),
-      domainObj.score,
-      domainObj.email || null,
-      domainObj.email ? 'has_email' : 'no_email',
-      _recsJson,
-      domainObj.shareUrl || null
-    ]
-  ).catch(e => console.error('scan_log campaign insert error:', e.message));
+const _recsAll = successful[0]?.recommendations?.all || [];
+const _recsJson = JSON.stringify(_recsAll.slice(0,10));
+pool.query(
+`INSERT INTO scan_log (user_id, business_url, business_name, score, email_found, email_status, source, recommendations, report_url, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,'campaign',$7,$8,NOW())`,
+[
+'campaign_' + campaign.id,
+'https://' + domainObj.domain,
+domainObj.domain.replace(/^www\./, ''),
+domainObj.score,
+domainObj.email || null,
+domainObj.email ? 'has_email' : 'no_email',
+_recsJson,
+domainObj.shareUrl || null
+]
+).catch(e => console.error('scan_log campaign insert error:', e.message));
 }
 domainObj.status = 'done';
 campaign.doneDomains++;
