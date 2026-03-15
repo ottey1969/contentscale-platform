@@ -2104,6 +2104,16 @@ app.get('/api/score', async (req, res) => {
     return res.status(400).json({ error: 'Invalid URL' });
   }
 
+  // Build all URL variants to try
+  const urlVariants = [
+    lookupUrl,
+    lookupUrl + '/',
+    lookupUrl.replace('https://', 'http://'),
+    lookupUrl.replace('http://', 'https://'),
+    lookupUrl.replace('://www.', '://'),
+    lookupUrl.replace('://', '://www.'),
+  ].filter((v, i, a) => a.indexOf(v) === i); // dedupe
+
   // Check memory cache first
   const cached = scoreCache.get(lookupUrl);
   if (cached && (Date.now() - cached.ts) < BADGE_CACHE_TTL) {
@@ -2113,15 +2123,15 @@ app.get('/api/score', async (req, res) => {
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    // Look up most recent scan for this URL (exact or prefix match)
+    // Look up most recent scan — try all URL variants + prefix match
     const r = await pool.query(`
       SELECT score, recommendations, created_at
       FROM scan_log
-      WHERE business_url = $1
+      WHERE business_url = ANY($1)
          OR business_url LIKE $2
       ORDER BY created_at DESC
       LIMIT 1
-    `, [lookupUrl, lookupUrl + '%']);
+    `, [urlVariants, lookupUrl.replace(/\/$/, '') + '%']);
 
     if (!r.rows.length) {
       return res.json({ success: false, error: 'No scan found for this URL. Scan it first at app.contentscale.site' });
@@ -2192,7 +2202,7 @@ app.get('/api/score', async (req, res) => {
 // Serve the badge loader script
 app.get('/badge-loader.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const script = `
