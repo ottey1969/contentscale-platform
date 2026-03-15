@@ -17,329 +17,329 @@
    ║  After generating content, score your confidence 1-10 for each statistic    ║
    ║  and each expert quote. Anything below 7/10 must be flagged with:           ║
    ║  [CONFIDENCE: X/10 — FLAG FOR HUMAN REVIEW]                          ║
-║  Do not publish flagged items without human verification.                    ║
-║                                                                              ║
-║  RULE 3 — ALWAYS PROVIDE VERIFIED SOURCES                                   ║
-║  Every number, statistic, claim about a person, and direct quotation        ║
-║  must have a verified source. Format: (Source Name, Year)                   ║
-║  NEVER write "studies show", "research indicates", or "experts say"         ║
-║  without naming the exact source. No source = do not include the claim.     ║
-║                                                                              ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║           CONTENTSCALE ELITE BLOG TEMPLATE — TARGET SCORE: 95-100/100       ║
-║                                                                              ║
-║  HOW TO USE THIS TEMPLATE:                                                   ║
-║  1. Replace every [PLACEHOLDER] with your real content                       ║
-║  2. Follow the ELITE CHECKLIST at the bottom of this comment block           ║
-║  3. All favicon, nav, footer, author bio are pre-built — do not change them  ║
-║  4. Upload to /blog/your-slug.html on Railway                                ║
-║  5. Add entry to /blog/blog-posts.json to appear on the blog index           ║
-║                                                                              ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║                 CONTENTSCALE ELITE 100/100 SCORING RULES                    ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║                                                                              ║
-║  ── GRAAF FRAMEWORK (50 POINTS) ──────────────────────────────────────────  ║
-║                                                                              ║
-║  [G] GENUINELY CREDIBLE (10 pts)                                             ║
-║      • Minimum 4 expert quotes with FULL attribution:                        ║
-║        Name, Exact Job Title, Organisation, Source, Year                     ║
-║      • Minimum 2 case studies (200-300 words each) with real metrics         ║
-║      • Author bio 200-250 words with verifiable credentials                  ║
-║      • Every claim backed by a named, dated source                           ║
-║                                                                              ║
-║  [R] RELEVANT (10 pts)                                                       ║
-║      • Target keyword in H1, first sentence, first H2, conclusion            ║
-║      • Keyword density 0.8-1.2% (20-30 times in 2500 words)                 ║
-║      • LSI keywords used 15-20 times naturally                               ║
-║      • Content matches exact search intent of target keyword                 ║
-║                                                                              ║
-║  [A] ACTIONABLE (10 pts)                                                     ║
-║      • Every H2 section ends with a practical tip or next step               ║
-║      • Clear CTA hierarchy: scan → leaderboard → WhatsApp                   ║
-║      • Step-by-step instructions where applicable                            ║
-║      • "Next Steps" section in conclusion                                    ║
-║                                                                              ║
-║  [A] ACCURATE (10 pts)                                                       ║
-║      • All statistics from 2024-2026 ONLY — no data older than 2024         ║
-║      • Every statistic cites: Source Name, Year (2024 or 2025 or 2026)      ║
-║      • Minimum 8 statistics in dedicated stats section                       ║
-║      • No invented quotes — only real, attributable people                   ║
-║      • Expert quotes: cite year of publication/interview (2024-2026)         ║
-║                                                                              ║
-║  [F] FRESH (10 pts)                                                          ║
-║      • datePublished and dateModified in schema = current                    ║
-║      • Statistics and data from last 18 months                               ║
-║      • References to 2024/2025 events and updates                            ║
-║      • Content feels current, not evergreen-generic                          ║
-║                                                                              ║
-║  ── CRAFT METHODOLOGY (30 POINTS) ────────────────────────────────────────  ║
-║                                                                              ║
-║  • Minimum 2500 words total (count them!)                                    ║
-║  • Sentence length: 15-18 words average, max 20                              ║
-║  • Paragraphs: 3-4 sentences, max 100 words                                  ║
-║  • Active voice 80%+ of sentences                                            ║
-║  • Flesch Reading Ease: 60-70 (8th-9th grade)                                ║
-║  • Minimum 10 FAQ questions, each 100-150 words                              ║
-║  • Each FAQ: Quick Answer (1 sentence) + detail + 1 internal + 1 external   ║
-║  • At least 1 comparison table                                               ║
-║  • All 6+ images kept with keyword-rich alt text                             ║
-║                                                                              ║
-║  ── TECHNICAL SEO (20 POINTS) ─────────────────────────────────────────────║
-║                                                                              ║
-║  • Meta title: 50-60 characters, keyword first                               ║
-║  • Meta description: 155-160 characters, keyword + stat + CTA               ║
-║  • 4 JSON-LD schemas: Article, FAQPage, Organization, BreadcrumbList         ║
-║  • Internal links: 8-12 distributed throughout content                       ║
-║  • External links: 5-8 to .gov / major publishers / Google docs              ║
-║  • All images: descriptive alt text, loading="lazy"                          ║
-║  • H1 → H2 → H3 hierarchy never skipped                                     ║
-║  • Canonical URL set correctly                                               ║
-║                                                                              ║
-║  ── MANDATORY OUTPUT SECTIONS (in order) ──────────────────────────────────║
-║                                                                              ║
-║  1. DIRECT ANSWER BOX (40-60 words)                                          ║
-║     → Keyword in sentence 1, stat + source, green border box                ║
-║                                                                              ║
-║  2. TL;DR — 5 bullets                                                        ║
-║     → Each: specific stat + source in [brackets], keyword in 2 bullets      ║
-║                                                                              ║
-║  3. RESULTS AT A GLANCE (if case study)                                      ║
-║     → Green metric chips with key numbers                                    ║
-║                                                                              ║
-║  4. TABLE OF CONTENTS                                                        ║
-║     → Clickable anchors, emoji per section                                   ║
-║                                                                              ║
-║  5. MAIN CONTENT (5-7 H2 sections, 350-500 words each)                      ║
-║     → Each section: expert quote + statistic + practical tip                 ║
-║                                                                              ║
-║  6. STATISTICS SECTION (minimum 8 stats, 2024-2026 only)                    ║
-║     → Dark blue box, monospace numbers, full source attribution              ║
-║                                                                              ║
-║  7. CASE STUDIES (minimum 2, 200-300 words each)                             ║
-║     → Challenge / Solution / Results / Key Lesson / Quote                   ║
-║                                                                              ║
-║  8. FAQ SECTION (minimum 10 questions)                                       ║
-║     → Each: Quick Answer + 100-150 words + internal link + external link    ║
-║                                                                              ║
-║  9. CONCLUSION with Next Steps                                               ║
-║     → Summarise, link to scanner, WhatsApp CTA                               ║
-║                                                                              ║
-║  ── WHAT NOT TO DO ────────────────────────────────────────────────────────║
-║  ✗ No invented statistics — only real, sourced data                          ║
-║  ── IMAGE RULES ───────────────────────────────────────────────────────────║
-║  • Minimum 6-8 images total                                                  ║
-║  • 1 image per H2 section (hero at top + 1 per section)                      ║
-║  • Alt text: keyword in 2-3 images, describe what is in image, max 125 chars ║
-║  • All images: loading="lazy", width + height attributes set                 ║
-║  • Captions: italic, grey text, Figure N: [description]                      ║
-║                                                                              ║
-║  ── CONTENT STYLE — CHOOSE ONE BEFORE WRITING ─────────────────────────────║
-║                                                                              ║
-║  STYLE 1: ULTIMATE GUIDE (comprehensive topics, beginner-friendly)           ║
-║    Structure: Definition → Benefits → Process → Getting Started →            ║
-║    Advanced Strategies → Common Mistakes → Case Studies → Tools → FAQ        ║
-║    Tone: Educational, comprehensive, beginner-friendly                        ║
-║                                                                              ║
-║  STYLE 2: HOW-TO TUTORIAL (step-by-step process, implementation guides)      ║
-║    Structure: What You'll Learn → Prerequisites → Step 1-5 →                 ║
-║    Troubleshooting → Pro Tips → What to Do Next                              ║
-║    Tone: Instructional, clear, action-oriented                                ║
-║                                                                              ║
-║  STYLE 3: COMPARISON/REVIEW (X vs Y, Best X for Y, product reviews)         ║
-║    Structure: What We're Comparing → Criteria → Option A Deep Dive →         ║
-║    Option B Deep Dive → Side-by-Side Table → Recommendation → FAQ            ║
-║    Tone: Analytical, objective, data-driven                                   ║
-║                                                                              ║
-║  STYLE 4: LISTICLE (Top 10 X, Best X for Y, X strategies that work)         ║
-║    Structure: Why List Matters → Selection Criteria → #10 to #1             ║
-║    (150 words each, #1 = 200 words) → Honorable Mentions → FAQ              ║
-║    Tone: Engaging, scannable, value-focused                                   ║
-║                                                                              ║
-║  STYLE 5: THOUGHT LEADERSHIP (industry analysis, trends, predictions)        ║
-║    Structure: Current Landscape → What's Changing → Why It Matters →         ║
-║    Expert Perspectives → Data Deep Dive → Case Study → Action Items → FAQ   ║
-║    Tone: Authoritative, forward-thinking, strategic                           ║
-║                                                                              ║
-║  ✗ No keyword stuffing — 0.8-1.2% density only                              ║
-║  ✗ No unedited AI content — human review required                            ║
-║  ✗ Do NOT change the nav, favicon, footer, or author bio section             ║
-║  ✗ Do NOT remove schema markup                                               ║
-║  ✗ Do NOT use /cdn-cgi/ email links — use mailto:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cca5a2aaa38cafa3a2b8a9a2b8bfafada0a9e2bfa5b8a9">[email&#160;protected]</a>     ║
-║  ✗ Do NOT link to /app, /about, or unbuilt blog slugs                        ║
-║                                                                              ║
-║  ── ELITE CHECKLIST (verify before saving) ────────────────────────────────║
-║  [ ] Meta title 50-60 chars, keyword first                                   ║
-║  [ ] Meta description 155-160 chars, keyword + stat + CTA                   ║
-║  [ ] Direct Answer Box present (40-60 words)                                 ║
-║  [ ] TL;DR with 5 sourced bullets                                            ║
-║  [ ] 4+ expert blockquotes with full attribution                             ║
-║  [ ] 8+ statistics (2024-2026 only) in stats-box section                    ║
-║  [ ] 2+ case studies with quantified results                                 ║
-║  [ ] 10+ FAQ items, each 100-150 words + links                               ║
-║  [ ] 4 JSON-LD schemas (Article, FAQPage, Organization, BreadcrumbList)     ║
-║  [ ] 8-12 internal links, 5-8 external links                                 ║
-║  [ ] All images have descriptive alt text with keyword                       ║
-║  [ ] Word count 2500+ verified                                               ║
-║  [ ] Keyword density 0.8-1.2%                                                ║
-║  [ ] blog-posts.json updated with this post's entry                         ║
-║                                                                              ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║          MISSING FROM QUICK RULES — READ THIS BEFORE WRITING                ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║                                                                              ║
-║  ── KEYWORD COUNT TARGETS (not just density %) ────────────────────────────║
-║                                                                              ║
-║  PRIMARY KEYWORD exact phrase:                                               ║
-║    • Use 12-15 times total                                                   ║
-║    • Must appear in: H1, first H2, intro paragraph, conclusion               ║
-║    • 2-3 times per every 500 words                                           ║
-║                                                                              ║
-║  KEYWORD VARIATIONS (e.g. "best [keyword]", "how to [keyword]"):             ║
-║    • Use 10-12 times total                                                   ║
-║    • Spread across H2 titles and body text                                   ║
-║                                                                              ║
-║  LSI KEYWORDS (synonyms, related terms, industry jargon):                    ║
-║    • Use 15-20 times naturally throughout the article                        ║
-║    • Never force them — they must read naturally                             ║
-║                                                                              ║
-║  ── H2 SECTION STRUCTURE (use this for EVERY H2) ──────────────────────────║
-║                                                                              ║
-║  Each H2 section must follow this exact paragraph order:                     ║
-║                                                                              ║
-║  PARAGRAPH 1 — OPENING (100-150 words)                                       ║
-║    → Introduce the subtopic                                                  ║
-║    → Include keyword variation in first sentence                             ║
-║    → Hook reader with interesting fact or question                           ║
-║                                                                              ║
-║  PARAGRAPH 2 — DETAIL (100-150 words)                                        ║
-║    → In-depth explanation of the subtopic                                    ║
-║    → Use simple language, break complex ideas into digestible points         ║
-║    → Include 1 statistic with source + year (2024-2026 only)                ║
-║                                                                              ║
-║  PARAGRAPH 3 — APPLICATION (100-150 words)                                   ║
-║    → Show how to apply this information practically                          ║
-║    → Give concrete steps or real-world examples                              ║
-║    → End with a "Pro Tip:" in 1-2 sentences                                 ║
-║                                                                              ║
-║  EXPERT QUOTE (required in every H2)                                         ║
-║    → Format: "Quote 20-40 words."                                            ║
-║    → — Full Name, Exact Job Title, Organisation (Source, Year)              ║
-║    → NEVER invent quotes — only cite real people from real sources           ║
-║    → Only use quotes from 2022-2026 — older quotes not accepted             ║
-║                                                                              ║
-║  OPTIONAL: comparison table, numbered list, or image reference              ║
-║                                                                              ║
-║  ── CASE STUDY STRUCTURE (use this for EVERY case study) ──────────────────║
-║                                                                              ║
-║  HEADER: Company Name — One-Line Result                                      ║
-║  META CHIPS: Industry | Company size | Timeline | Date                      ║
-║                                                                              ║
-║  CHALLENGE (100 words):                                                      ║
-║    → Describe the specific problem with exact numbers                        ║
-║    → State which metrics were failing and by how much                        ║
-║    → State the revenue or business impact in euros/dollars                  ║
-║                                                                              ║
-║  SOLUTION (150 words, numbered steps):                                       ║
-║    → Step 1: Specific action with details                                    ║
-║    → Step 2: Specific action with details                                    ║
-║    → Step 3: Specific action with details                                    ║
-║                                                                              ║
-║  RESULTS (result-row table format):                                          ║
-║    → Metric | Before → After | Change (+X%)                                 ║
-║    → Minimum 4 metrics (traffic, ranking, leads, revenue)                   ║
-║    → All numbers must be specific — never ranges like "50-70%"              ║
-║                                                                              ║
-║  KEY LESSON: One sentence the reader can apply immediately                   ║
-║  CLIENT QUOTE: Real quote in blockquote with full attribution                ║
-║                                                                              ║
-║  ── FAQ QUESTION TYPES — COVER ALL 12 ─────────────────────────────────────║
-║                                                                              ║
-║  Each FAQ must use a DIFFERENT question type. Cover all of these:            ║
-║                                                                              ║
-║   1. What is [KEYWORD]?              → definition                            ║
-║   2. How does [KEYWORD] work?        → process/mechanism                     ║
-║   3. Why is [KEYWORD] important?     → value/benefits                        ║
-║   4. When should you use [KEYWORD]?  → timing/triggers                       ║
-║   5. Where can you find [KEYWORD]?   → sources/location                      ║
-║   6. Who needs [KEYWORD]?            → target audience                       ║
-║   7. [KEYWORD] vs [Alternative]?     → comparison                            ║
-║   8. Best [KEYWORD] for [use case]?  → recommendations                       ║
-║   9. Common [KEYWORD] mistakes?      → problems/solutions                    ║
-║  10. How much does [KEYWORD] cost?   → pricing/investment                    ║
-║  11. Is [KEYWORD] worth it?          → ROI/verdict                           ║
-║  12. Can beginners use [KEYWORD]?    → accessibility                         ║
-║                                                                              ║
-║  EACH FAQ answer must have this structure:                                   ║
-║    Line 1: Quick Answer — 1 sentence under 50 words with keyword             ║
-║    Body: 100-150 word detailed explanation                                   ║
-║    Body must include: context + example + stat (2024-2026) + data           ║
-║    End: 1 internal link (app.contentscale.site or /blog)                    ║
-║    End: 1 external link (Google docs / .gov / major publisher)              ║
-║                                                                              ║
-║  ── LINK PLACEMENT RULES ───────────────────────────────────────────────────║
-║                                                                              ║
-║  When citing a statistic     → link to the original source                  ║
-║  When mentioning an expert   → link to their website or LinkedIn            ║
-║  When referencing a study    → link to the study or abstract                ║
-║  When using industry data    → link to the original report                  ║
-║  Internal links open in same tab (no target="_blank")                        ║
-║  External links: target="_blank" rel="noopener noreferrer"                   ║
-║  Anchor text: descriptive (NOT "click here" or "read more")                 ║
-║                                                                              ║
-║  ── EXPERT QUOTE RULES ─────────────────────────────────────────────────────║
-║                                                                              ║
-║  ✗ NEVER invent a quote — if unsure, do not include it                      ║
-║  ✗ NEVER attribute a quote to someone without a verifiable source            ║
-║  ✓ Only use quotes from real interviews, published articles, or books        ║
-║  ✓ Quotes must be from 2022-2026 — no older                                 ║
-║  ✓ Full attribution: First + Last name, Exact title, Organisation, Source   ║
-║  ✓ Spread quotes throughout article — never group them all in one section   ║
-║  ✓ Format: blockquote with <cite> tag below                                 ║
-║                                                                              ║
-║  If you cannot verify a quote — write a paraphrase with source instead:     ║
-║  e.g. "According to [Name], [Title] at [Org] ([Source, Year]), [claim]."   ║
-║                                                                              ║
-║  ── IMAGE ALT TEXT — GOOD vs BAD EXAMPLES ─────────────────────────────────║
-║                                                                              ║
-║  ✓ GOOD: "GRAAF Framework scoring breakdown with 50-point scale"             ║
-║  ✓ GOOD: "Amsterdam SEO agency analytics dashboard showing 43% traffic drop"║
-║  ✓ GOOD: "ContentScore 97/100 result for Dutch SEO agency case study"        ║
-║                                                                              ║
-║  ✗ BAD:  "SEO SEO agency SEO tips Amsterdam SEO"  ← keyword stuffing        ║
-║  ✗ BAD:  "image1.jpg"  ← no description                                     ║
-║  ✗ BAD:  "A photo of a computer screen"  ← too generic                      ║
-║                                                                              ║
-║  RULE: Include keyword in alt text of 2-3 images only. After that,          ║
-║  describe what is literally visible in the image. Max 125 characters.        ║
-║                                                                              ║
-║  ── READABILITY TARGETS ────────────────────────────────────────────────────║
-║                                                                              ║
-║  Reading grade level: 8th-9th grade (Flesch-Kincaid)                        ║
-║  Flesch Reading Ease score: 60-70 target                                     ║
-║  Sentence length: 15-18 words average, NEVER over 20 words                  ║
-║  Paragraph length: 3-4 sentences, NEVER over 100 words                      ║
-║  Voice: 80%+ active voice ("We increased traffic" not "Traffic was          ║
-║    increased by us")                                                          ║
-║  Address the reader directly: use "you" and "your" throughout               ║
-║  Tone: conversational but professional — explain jargon on first use        ║
-║                                                                              ║
-║  ── TRUTH-TELLING RULES (apply to every sentence you write) ───────────────║
-║                                                                              ║
-║  1. If you are not confident in a statistic or claim, say so explicitly     ║
-║     or do not include it. Never guess. Never fabricate.                      ║
-║                                                                              ║
-║  2. After generating content, rate your confidence 1-10 for each            ║
-║     statistic and expert quote. Flag anything below 7/10 for human          ║
-║     review before publishing.                                                ║
-║                                                                              ║
-║  3. Always provide verifiable sources for all numbers, statistics,           ║
-║     claims about people, and direct quotations.                              ║
-║     Format: (Source Name, Year) — never just "studies show" or              ║
-║     "research indicates" without naming the actual source.                   ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
--->
+   ║  Do not publish flagged items without human verification.                    ║
+   ║                                                                              ║
+   ║  RULE 3 — ALWAYS PROVIDE VERIFIED SOURCES                                   ║
+   ║  Every number, statistic, claim about a person, and direct quotation        ║
+   ║  must have a verified source. Format: (Source Name, Year)                   ║
+   ║  NEVER write "studies show", "research indicates", or "experts say"         ║
+   ║  without naming the exact source. No source = do not include the claim.     ║
+   ║                                                                              ║
+   ╠══════════════════════════════════════════════════════════════════════════════╣
+   ║           CONTENTSCALE ELITE BLOG TEMPLATE — TARGET SCORE: 95-100/100       ║
+   ║                                                                              ║
+   ║  HOW TO USE THIS TEMPLATE:                                                   ║
+   ║  1. Replace every [PLACEHOLDER] with your real content                       ║
+   ║  2. Follow the ELITE CHECKLIST at the bottom of this comment block           ║
+   ║  3. All favicon, nav, footer, author bio are pre-built — do not change them  ║
+   ║  4. Upload to /blog/your-slug.html on Railway                                ║
+   ║  5. Add entry to /blog/blog-posts.json to appear on the blog index           ║
+   ║                                                                              ║
+   ╠══════════════════════════════════════════════════════════════════════════════╣
+   ║                 CONTENTSCALE ELITE 100/100 SCORING RULES                    ║
+   ╠══════════════════════════════════════════════════════════════════════════════╣
+   ║                                                                              ║
+   ║  ── GRAAF FRAMEWORK (50 POINTS) ──────────────────────────────────────────  ║
+   ║                                                                              ║
+   ║  [G] GENUINELY CREDIBLE (10 pts)                                             ║
+   ║      • Minimum 4 expert quotes with FULL attribution:                        ║
+   ║        Name, Exact Job Title, Organisation, Source, Year                     ║
+   ║      • Minimum 2 case studies (200-300 words each) with real metrics         ║
+   ║      • Author bio 200-250 words with verifiable credentials                  ║
+   ║      • Every claim backed by a named, dated source                           ║
+   ║                                                                              ║
+   ║  [R] RELEVANT (10 pts)                                                       ║
+   ║      • Target keyword in H1, first sentence, first H2, conclusion            ║
+   ║      • Keyword density 0.8-1.2% (20-30 times in 2500 words)                 ║
+   ║      • LSI keywords used 15-20 times naturally                               ║
+   ║      • Content matches exact search intent of target keyword                 ║
+   ║                                                                              ║
+   ║  [A] ACTIONABLE (10 pts)                                                     ║
+   ║      • Every H2 section ends with a practical tip or next step               ║
+   ║      • Clear CTA hierarchy: scan → leaderboard → WhatsApp                   ║
+   ║      • Step-by-step instructions where applicable                            ║
+   ║      • "Next Steps" section in conclusion                                    ║
+   ║                                                                              ║
+   ║  [A] ACCURATE (10 pts)                                                       ║
+   ║      • All statistics from 2024-2026 ONLY — no data older than 2024         ║
+   ║      • Every statistic cites: Source Name, Year (2024 or 2025 or 2026)      ║
+   ║      • Minimum 8 statistics in dedicated stats section                       ║
+   ║      • No invented quotes — only real, attributable people                   ║
+   ║      • Expert quotes: cite year of publication/interview (2024-2026)         ║
+   ║                                                                              ║
+   ║  [F] FRESH (10 pts)                                                          ║
+   ║      • datePublished and dateModified in schema = current                    ║
+   ║      • Statistics and data from last 18 months                               ║
+   ║      • References to 2024/2025 events and updates                            ║
+   ║      • Content feels current, not evergreen-generic                          ║
+   ║                                                                              ║
+   ║  ── CRAFT METHODOLOGY (30 POINTS) ────────────────────────────────────────  ║
+   ║                                                                              ║
+   ║  • Minimum 2500 words total (count them!)                                    ║
+   ║  • Sentence length: 15-18 words average, max 20                              ║
+   ║  • Paragraphs: 3-4 sentences, max 100 words                                  ║
+   ║  • Active voice 80%+ of sentences                                            ║
+   ║  • Flesch Reading Ease: 60-70 (8th-9th grade)                                ║
+   ║  • Minimum 10 FAQ questions, each 100-150 words                              ║
+   ║  • Each FAQ: Quick Answer (1 sentence) + detail + 1 internal + 1 external   ║
+   ║  • At least 1 comparison table                                               ║
+   ║  • All 6+ images kept with keyword-rich alt text                             ║
+   ║                                                                              ║
+   ║  ── TECHNICAL SEO (20 POINTS) ─────────────────────────────────────────────║
+   ║                                                                              ║
+   ║  • Meta title: 50-60 characters, keyword first                               ║
+   ║  • Meta description: 155-160 characters, keyword + stat + CTA               ║
+   ║  • 4 JSON-LD schemas: Article, FAQPage, Organization, BreadcrumbList         ║
+   ║  • Internal links: 8-12 distributed throughout content                       ║
+   ║  • External links: 5-8 to .gov / major publishers / Google docs              ║
+   ║  • All images: descriptive alt text, loading="lazy"                          ║
+   ║  • H1 → H2 → H3 hierarchy never skipped                                     ║
+   ║  • Canonical URL set correctly                                               ║
+   ║                                                                              ║
+   ║  ── MANDATORY OUTPUT SECTIONS (in order) ──────────────────────────────────║
+   ║                                                                              ║
+   ║  1. DIRECT ANSWER BOX (40-60 words)                                          ║
+   ║     → Keyword in sentence 1, stat + source, green border box                ║
+   ║                                                                              ║
+   ║  2. TL;DR — 5 bullets                                                        ║
+   ║     → Each: specific stat + source in [brackets], keyword in 2 bullets      ║
+   ║                                                                              ║
+   ║  3. RESULTS AT A GLANCE (if case study)                                      ║
+   ║     → Green metric chips with key numbers                                    ║
+   ║                                                                              ║
+   ║  4. TABLE OF CONTENTS                                                        ║
+   ║     → Clickable anchors, emoji per section                                   ║
+   ║                                                                              ║
+   ║  5. MAIN CONTENT (5-7 H2 sections, 350-500 words each)                      ║
+   ║     → Each section: expert quote + statistic + practical tip                 ║
+   ║                                                                              ║
+   ║  6. STATISTICS SECTION (minimum 8 stats, 2024-2026 only)                    ║
+   ║     → Dark blue box, monospace numbers, full source attribution              ║
+   ║                                                                              ║
+   ║  7. CASE STUDIES (minimum 2, 200-300 words each)                             ║
+   ║     → Challenge / Solution / Results / Key Lesson / Quote                   ║
+   ║                                                                              ║
+   ║  8. FAQ SECTION (minimum 10 questions)                                       ║
+   ║     → Each: Quick Answer + 100-150 words + internal link + external link    ║
+   ║                                                                              ║
+   ║  9. CONCLUSION with Next Steps                                               ║
+   ║     → Summarise, link to scanner, WhatsApp CTA                               ║
+   ║                                                                              ║
+   ║  ── WHAT NOT TO DO ────────────────────────────────────────────────────────║
+   ║  ✗ No invented statistics — only real, sourced data                          ║
+   ║  ── IMAGE RULES ───────────────────────────────────────────────────────────║
+   ║  • Minimum 6-8 images total                                                  ║
+   ║  • 1 image per H2 section (hero at top + 1 per section)                      ║
+   ║  • Alt text: keyword in 2-3 images, describe what is in image, max 125 chars ║
+   ║  • All images: loading="lazy", width + height attributes set                 ║
+   ║  • Captions: italic, grey text, Figure N: [description]                      ║
+   ║                                                                              ║
+   ║  ── CONTENT STYLE — CHOOSE ONE BEFORE WRITING ─────────────────────────────║
+   ║                                                                              ║
+   ║  STYLE 1: ULTIMATE GUIDE (comprehensive topics, beginner-friendly)           ║
+   ║    Structure: Definition → Benefits → Process → Getting Started →            ║
+   ║    Advanced Strategies → Common Mistakes → Case Studies → Tools → FAQ        ║
+   ║    Tone: Educational, comprehensive, beginner-friendly                        ║
+   ║                                                                              ║
+   ║  STYLE 2: HOW-TO TUTORIAL (step-by-step process, implementation guides)      ║
+   ║    Structure: What You'll Learn → Prerequisites → Step 1-5 →                 ║
+   ║    Troubleshooting → Pro Tips → What to Do Next                              ║
+   ║    Tone: Instructional, clear, action-oriented                                ║
+   ║                                                                              ║
+   ║  STYLE 3: COMPARISON/REVIEW (X vs Y, Best X for Y, product reviews)         ║
+   ║    Structure: What We're Comparing → Criteria → Option A Deep Dive →         ║
+   ║    Option B Deep Dive → Side-by-Side Table → Recommendation → FAQ            ║
+   ║    Tone: Analytical, objective, data-driven                                   ║
+   ║                                                                              ║
+   ║  STYLE 4: LISTICLE (Top 10 X, Best X for Y, X strategies that work)         ║
+   ║    Structure: Why List Matters → Selection Criteria → #10 to #1             ║
+   ║    (150 words each, #1 = 200 words) → Honorable Mentions → FAQ              ║
+   ║    Tone: Engaging, scannable, value-focused                                   ║
+   ║                                                                              ║
+   ║  STYLE 5: THOUGHT LEADERSHIP (industry analysis, trends, predictions)        ║
+   ║    Structure: Current Landscape → What's Changing → Why It Matters →         ║
+   ║    Expert Perspectives → Data Deep Dive → Case Study → Action Items → FAQ   ║
+   ║    Tone: Authoritative, forward-thinking, strategic                           ║
+   ║                                                                              ║
+   ║  ✗ No keyword stuffing — 0.8-1.2% density only                              ║
+   ║  ✗ No unedited AI content — human review required                            ║
+   ║  ✗ Do NOT change the nav, favicon, footer, or author bio section             ║
+   ║  ✗ Do NOT remove schema markup                                               ║
+   ║  ✗ Do NOT use /cdn-cgi/ email links — use mailto:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cca5a2aaa38cafa3a2b8a9a2b8bfafada0a9e2bfa5b8a9">[email&#160;protected]</a>     ║
+   ║  ✗ Do NOT link to /app, /about, or unbuilt blog slugs                        ║
+   ║                                                                              ║
+   ║  ── ELITE CHECKLIST (verify before saving) ────────────────────────────────║
+   ║  [ ] Meta title 50-60 chars, keyword first                                   ║
+   ║  [ ] Meta description 155-160 chars, keyword + stat + CTA                   ║
+   ║  [ ] Direct Answer Box present (40-60 words)                                 ║
+   ║  [ ] TL;DR with 5 sourced bullets                                            ║
+   ║  [ ] 4+ expert blockquotes with full attribution                             ║
+   ║  [ ] 8+ statistics (2024-2026 only) in stats-box section                    ║
+   ║  [ ] 2+ case studies with quantified results                                 ║
+   ║  [ ] 10+ FAQ items, each 100-150 words + links                               ║
+   ║  [ ] 4 JSON-LD schemas (Article, FAQPage, Organization, BreadcrumbList)     ║
+   ║  [ ] 8-12 internal links, 5-8 external links                                 ║
+   ║  [ ] All images have descriptive alt text with keyword                       ║
+   ║  [ ] Word count 2500+ verified                                               ║
+   ║  [ ] Keyword density 0.8-1.2%                                                ║
+   ║  [ ] blog-posts.json updated with this post's entry                         ║
+   ║                                                                              ║
+   ╠══════════════════════════════════════════════════════════════════════════════╣
+   ║          MISSING FROM QUICK RULES — READ THIS BEFORE WRITING                ║
+   ╠══════════════════════════════════════════════════════════════════════════════╣
+   ║                                                                              ║
+   ║  ── KEYWORD COUNT TARGETS (not just density %) ────────────────────────────║
+   ║                                                                              ║
+   ║  PRIMARY KEYWORD exact phrase:                                               ║
+   ║    • Use 12-15 times total                                                   ║
+   ║    • Must appear in: H1, first H2, intro paragraph, conclusion               ║
+   ║    • 2-3 times per every 500 words                                           ║
+   ║                                                                              ║
+   ║  KEYWORD VARIATIONS (e.g. "best [keyword]", "how to [keyword]"):             ║
+   ║    • Use 10-12 times total                                                   ║
+   ║    • Spread across H2 titles and body text                                   ║
+   ║                                                                              ║
+   ║  LSI KEYWORDS (synonyms, related terms, industry jargon):                    ║
+   ║    • Use 15-20 times naturally throughout the article                        ║
+   ║    • Never force them — they must read naturally                             ║
+   ║                                                                              ║
+   ║  ── H2 SECTION STRUCTURE (use this for EVERY H2) ──────────────────────────║
+   ║                                                                              ║
+   ║  Each H2 section must follow this exact paragraph order:                     ║
+   ║                                                                              ║
+   ║  PARAGRAPH 1 — OPENING (100-150 words)                                       ║
+   ║    → Introduce the subtopic                                                  ║
+   ║    → Include keyword variation in first sentence                             ║
+   ║    → Hook reader with interesting fact or question                           ║
+   ║                                                                              ║
+   ║  PARAGRAPH 2 — DETAIL (100-150 words)                                        ║
+   ║    → In-depth explanation of the subtopic                                    ║
+   ║    → Use simple language, break complex ideas into digestible points         ║
+   ║    → Include 1 statistic with source + year (2024-2026 only)                ║
+   ║                                                                              ║
+   ║  PARAGRAPH 3 — APPLICATION (100-150 words)                                   ║
+   ║    → Show how to apply this information practically                          ║
+   ║    → Give concrete steps or real-world examples                              ║
+   ║    → End with a "Pro Tip:" in 1-2 sentences                                 ║
+   ║                                                                              ║
+   ║  EXPERT QUOTE (required in every H2)                                         ║
+   ║    → Format: "Quote 20-40 words."                                            ║
+   ║    → — Full Name, Exact Job Title, Organisation (Source, Year)              ║
+   ║    → NEVER invent quotes — only cite real people from real sources           ║
+   ║    → Only use quotes from 2022-2026 — older quotes not accepted             ║
+   ║                                                                              ║
+   ║  OPTIONAL: comparison table, numbered list, or image reference              ║
+   ║                                                                              ║
+   ║  ── CASE STUDY STRUCTURE (use this for EVERY case study) ──────────────────║
+   ║                                                                              ║
+   ║  HEADER: Company Name — One-Line Result                                      ║
+   ║  META CHIPS: Industry | Company size | Timeline | Date                      ║
+   ║                                                                              ║
+   ║  CHALLENGE (100 words):                                                      ║
+   ║    → Describe the specific problem with exact numbers                        ║
+   ║    → State which metrics were failing and by how much                        ║
+   ║    → State the revenue or business impact in euros/dollars                  ║
+   ║                                                                              ║
+   ║  SOLUTION (150 words, numbered steps):                                       ║
+   ║    → Step 1: Specific action with details                                    ║
+   ║    → Step 2: Specific action with details                                    ║
+   ║    → Step 3: Specific action with details                                    ║
+   ║                                                                              ║
+   ║  RESULTS (result-row table format):                                          ║
+   ║    → Metric | Before → After | Change (+X%)                                 ║
+   ║    → Minimum 4 metrics (traffic, ranking, leads, revenue)                   ║
+   ║    → All numbers must be specific — never ranges like "50-70%"              ║
+   ║                                                                              ║
+   ║  KEY LESSON: One sentence the reader can apply immediately                   ║
+   ║  CLIENT QUOTE: Real quote in blockquote with full attribution                ║
+   ║                                                                              ║
+   ║  ── FAQ QUESTION TYPES — COVER ALL 12 ─────────────────────────────────────║
+   ║                                                                              ║
+   ║  Each FAQ must use a DIFFERENT question type. Cover all of these:            ║
+   ║                                                                              ║
+   ║   1. What is [KEYWORD]?              → definition                            ║
+   ║   2. How does [KEYWORD] work?        → process/mechanism                     ║
+   ║   3. Why is [KEYWORD] important?     → value/benefits                        ║
+   ║   4. When should you use [KEYWORD]?  → timing/triggers                       ║
+   ║   5. Where can you find [KEYWORD]?   → sources/location                      ║
+   ║   6. Who needs [KEYWORD]?            → target audience                       ║
+   ║   7. [KEYWORD] vs [Alternative]?     → comparison                            ║
+   ║   8. Best [KEYWORD] for [use case]?  → recommendations                       ║
+   ║   9. Common [KEYWORD] mistakes?      → problems/solutions                    ║
+   ║  10. How much does [KEYWORD] cost?   → pricing/investment                    ║
+   ║  11. Is [KEYWORD] worth it?          → ROI/verdict                           ║
+   ║  12. Can beginners use [KEYWORD]?    → accessibility                         ║
+   ║                                                                              ║
+   ║  EACH FAQ answer must have this structure:                                   ║
+   ║    Line 1: Quick Answer — 1 sentence under 50 words with keyword             ║
+   ║    Body: 100-150 word detailed explanation                                   ║
+   ║    Body must include: context + example + stat (2024-2026) + data           ║
+   ║    End: 1 internal link (app.contentscale.site or /blog)                    ║
+   ║    End: 1 external link (Google docs / .gov / major publisher)              ║
+   ║                                                                              ║
+   ║  ── LINK PLACEMENT RULES ───────────────────────────────────────────────────║
+   ║                                                                              ║
+   ║  When citing a statistic     → link to the original source                  ║
+   ║  When mentioning an expert   → link to their website or LinkedIn            ║
+   ║  When referencing a study    → link to the study or abstract                ║
+   ║  When using industry data    → link to the original report                  ║
+   ║  Internal links open in same tab (no target="_blank")                        ║
+   ║  External links: target="_blank" rel="noopener noreferrer"                   ║
+   ║  Anchor text: descriptive (NOT "click here" or "read more")                 ║
+   ║                                                                              ║
+   ║  ── EXPERT QUOTE RULES ─────────────────────────────────────────────────────║
+   ║                                                                              ║
+   ║  ✗ NEVER invent a quote — if unsure, do not include it                      ║
+   ║  ✗ NEVER attribute a quote to someone without a verifiable source            ║
+   ║  ✓ Only use quotes from real interviews, published articles, or books        ║
+   ║  ✓ Quotes must be from 2022-2026 — no older                                 ║
+   ║  ✓ Full attribution: First + Last name, Exact title, Organisation, Source   ║
+   ║  ✓ Spread quotes throughout article — never group them all in one section   ║
+   ║  ✓ Format: blockquote with <cite> tag below                                 ║
+   ║                                                                              ║
+   ║  If you cannot verify a quote — write a paraphrase with source instead:     ║
+   ║  e.g. "According to [Name], [Title] at [Org] ([Source, Year]), [claim]."   ║
+   ║                                                                              ║
+   ║  ── IMAGE ALT TEXT — GOOD vs BAD EXAMPLES ─────────────────────────────────║
+   ║                                                                              ║
+   ║  ✓ GOOD: "GRAAF Framework scoring breakdown with 50-point scale"             ║
+   ║  ✓ GOOD: "Amsterdam SEO agency analytics dashboard showing 43% traffic drop"║
+   ║  ✓ GOOD: "ContentScore 97/100 result for Dutch SEO agency case study"        ║
+   ║                                                                              ║
+   ║  ✗ BAD:  "SEO SEO agency SEO tips Amsterdam SEO"  ← keyword stuffing        ║
+   ║  ✗ BAD:  "image1.jpg"  ← no description                                     ║
+   ║  ✗ BAD:  "A photo of a computer screen"  ← too generic                      ║
+   ║                                                                              ║
+   ║  RULE: Include keyword in alt text of 2-3 images only. After that,          ║
+   ║  describe what is literally visible in the image. Max 125 characters.        ║
+   ║                                                                              ║
+   ║  ── READABILITY TARGETS ────────────────────────────────────────────────────║
+   ║                                                                              ║
+   ║  Reading grade level: 8th-9th grade (Flesch-Kincaid)                        ║
+   ║  Flesch Reading Ease score: 60-70 target                                     ║
+   ║  Sentence length: 15-18 words average, NEVER over 20 words                  ║
+   ║  Paragraph length: 3-4 sentences, NEVER over 100 words                      ║
+   ║  Voice: 80%+ active voice ("We increased traffic" not "Traffic was          ║
+   ║    increased by us")                                                          ║
+   ║  Address the reader directly: use "you" and "your" throughout               ║
+   ║  Tone: conversational but professional — explain jargon on first use        ║
+   ║                                                                              ║
+   ║  ── TRUTH-TELLING RULES (apply to every sentence you write) ───────────────║
+   ║                                                                              ║
+   ║  1. If you are not confident in a statistic or claim, say so explicitly     ║
+   ║     or do not include it. Never guess. Never fabricate.                      ║
+   ║                                                                              ║
+   ║  2. After generating content, rate your confidence 1-10 for each            ║
+   ║     statistic and expert quote. Flag anything below 7/10 for human          ║
+   ║     review before publishing.                                                ║
+   ║                                                                              ║
+   ║  3. Always provide verifiable sources for all numbers, statistics,           ║
+   ║     claims about people, and direct quotations.                              ║
+   ║     Format: (Source Name, Year) — never just "studies show" or              ║
+   ║     "research indicates" without naming the actual source.                   ║
+   ║                                                                              ║
+   ╚══════════════════════════════════════════════════════════════════════════════╝
+   -->
 <html lang="en">
    <head>
       <meta charset="UTF-8">
@@ -568,6 +568,9 @@
          .toc a:hover { color: #a78bfa; background: rgba(139,92,246,.1); text-decoration: none; }
          /* ── Case study ── */
          .case-study-card { background: linear-gradient(135deg, #0f172a, #1e1b4b); border: 2px solid #4c1d95; border-radius: 16px; padding: 2rem; margin: 2rem 0; }
+        .case-study-card h4 { background: transparent !important; border: none !important; box-shadow: none !important; margin: 1rem 0 .4rem; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+        .case-study-card p strong { color: #fde68a !important; }
+        .metric-label { color: #d1d5db !important; font-size: .97rem; font-weight: 500; }
          .result-row { display: flex; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid #1f2937; font-size: .95rem; }
          .result-row:last-child { border-bottom: none; }
          .result-val { color: #4ade80; font-weight: 700; font-family: monospace; }
@@ -588,6 +591,193 @@
       </style>
    </head>
    <body class="bg-gray-900 text-gray-100">
+
+      <!-- INSTRUCTIONS PANEL — visible in browser, hidden in production          -->
+      <!-- Delete this entire <div id="template-instructions"> block when done    -->
+      <!-- ═══════════════════════════════════════════════════════════════════════ -->
+      <div id="template-instructions" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);color:#e5e7eb;font-family:monospace;font-size:.82rem;line-height:1.9;padding:2rem 2.5rem;border-bottom:3px solid #7c3aed;max-width:100%">
+         <div style="max-width:900px;margin:0 auto">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+               <div style="background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.3rem;font-weight:900;letter-spacing:.02em">ContentScale</div>
+               <div style="background:#7c3aed;color:#fff;padding:3px 12px;border-radius:20px;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase">App Elite Blog Template</div>
+               <div style="background:#059669;color:#fff;padding:3px 12px;border-radius:20px;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Target: 95–100 / 100</div>
+               <div style="margin-left:auto;background:rgba(220,38,38,.2);border:1px solid #ef4444;color:#fca5a5;padding:3px 12px;border-radius:6px;font-size:.7rem;font-weight:700">⚠️ DELETE THIS PANEL BEFORE PUBLISHING</div>
+            </div>
+            <!-- Truth-telling rules -->
+            <div style="background:rgba(220,38,38,.12);border:1px solid #ef4444;border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.4rem">
+               <div style="color:#fca5a5;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.6rem">⚠️ Truth-Telling Rules — Mandatory</div>
+               <div style="color:#fecaca"><strong style="color:#ffffff">RULE 1 — NEVER GUESS:</strong> If not confident, do not include it. Write <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">&lt;!-- UNVERIFIED — NEEDS HUMAN CHECK --&gt;</code> instead.</div>
+               <div style="color:#fecaca;margin-top:.4rem"><strong style="color:#ffffff">RULE 2 — RATE CONFIDENCE:</strong> Score every stat &amp; quote 1–10. Below 7/10 → flag: <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">[CONFIDENCE: X/10 — FLAG FOR HUMAN REVIEW]</code></div>
+               <div style="color:#fecaca;margin-top:.4rem"><strong style="color:#ffffff">RULE 3 — VERIFIED SOURCES ONLY:</strong> Format: (Source Name, Year). NEVER "studies show" without naming the exact source. No source = do not include.</div>
+            </div>
+            <!-- Elite Prompt -->
+            <div style="background:rgba(124,58,237,.15);border:1px solid #7c3aed;border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.4rem">
+               <div style="color:#c4b5fd;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem">🤖 Elite Content Writing Prompt — Paste into Claude before writing</div>
+               <div style="color:#e9d5ff;background:rgba(0,0,0,.3);border-radius:8px;padding:.9rem 1.2rem;white-space:pre-wrap;font-size:.78rem;line-height:1.85">You are an expert SEO content writer for ContentScale (Amsterdam). Write an elite blog post targeting: <strong style="color:#fde68a">!!TARGET_KEYWORD!!</strong>
+                  KEYWORD TARGETS
+                  • Primary keyword exact phrase: 12–15 times total
+                  • Must appear in: H1, first H2, intro paragraph, conclusion
+                  • Keyword variations: 10–12 times | LSI/related terms: 15–20 times naturally
+                  GRAAF FRAMEWORK (50 pts)
+                  [G] Min 4 expert blockquotes — Name, Title, Org, Source, Year (2022–2026 only, never invented)
+                  [G] Min 2 case studies (200–300 words each) with real, sourced metrics
+                  [R] Keyword in H1, first sentence, first H2, conclusion | Density 0.8–1.2%
+                  [A] Every H2 ends with Pro Tip | Next Steps in conclusion | CTA: scan → leaderboard → WhatsApp
+                  [A] All stats 2024–2026 ONLY | Min 8 stats in dedicated stats section
+                  [F] References to 2024/2025 events | Content feels current, not generic
+                  CRAFT METHODOLOGY (30 pts)
+                  • Min 2500 words | Sentences 15–18 words avg, never over 20
+                  • Paragraphs 3–4 sentences, never over 100 words | Active voice 80%+
+                  • Flesch Reading Ease 60–70 (8th–9th grade)
+                  • Min 10 FAQ questions (100–150 words each) covering: What is / How does / Why important /
+                  When to use / Where to find / Who needs / vs Alternative / Best strategies /
+                  Common mistakes / How much / Is it worth it / Can beginners use it
+                  • Each FAQ: Quick Answer (1 sentence) + detail + 1 internal link + 1 external link
+                  • At least 1 comparison table
+                  TECHNICAL SEO (20 pts)
+                  • Meta title 50–60 chars, keyword first | Meta desc 155–160 chars, keyword + stat + CTA
+                  • 4 JSON-LD schemas: Article, FAQPage, Organization, BreadcrumbList
+                  • Internal links 8–12 | External links 5–8 (.gov / major publishers / Google docs)
+                  • H1 → H2 → H3 hierarchy never skipped
+                  MANDATORY SECTIONS (in this order):
+                  1. Direct Answer Box (40–60 words) — keyword in sentence 1
+                  2. TL;DR — exactly 5 bullets, each with stat + named source
+                  3. Results at a Glance chips (if case study)
+                  4. Table of Contents — clickable anchors, emoji per section
+                  5. Main Content — 5–7 H2 sections, 350–500 words each
+                  Each H2: opening para + detail para (with stat) + application para + blockquote + Pro Tip
+                  6. Statistics Section — min 8 stats, 2024–2026 only, dark blue box
+                  7. Case Studies — min 2: Challenge / Solution (numbered) / Results table / Key Lesson / Quote
+                  8. FAQ Section — min 10 questions (all types above)
+                  9. Conclusion with Next Steps — scan CTA + WhatsApp CTA
+               </div>
+            </div>
+            <!-- What not to do -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.4rem">
+               <div style="background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.4);border-radius:10px;padding:1rem 1.2rem">
+                  <div style="color:#fca5a5;font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">✗ What NOT to Do</div>
+                  <div style="color:#fecaca;font-size:.8rem">✗ No invented statistics — real, sourced data only<br>✗ No keyword stuffing (max 1.2% density)<br>✗ No unedited AI content — human review required<br>✗ Do NOT touch the CSS, footer, or author bio<br>✗ Do NOT use /cdn-cgi/ email links<br>✗ Do NOT link to /app, /about, or unbuilt slugs<br>✗ No stats older than 2024</div>
+               </div>
+               <div style="background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.4);border-radius:10px;padding:1rem 1.2rem">
+                  <div style="color:#6ee7b7;font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">✓ What to Always Do</div>
+                  <div style="color:#a7f3d0;font-size:.8rem">✓ Cite every stat: (Source Name, Year)<br>✓ Link stats to original source<br>✓ Internal links: same tab (no target="_blank")<br>✓ External links: target="_blank" rel="noopener noreferrer"<br>✓ Anchor text descriptive, never "click here"<br>✓ Expert quotes: real people, 2022–2026 only<br>✓ Native speaker validation for international content</div>
+               </div>
+            </div>
+            <!-- Sitemap / Internal Link Reference -->
+            <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.4rem">
+               <div style="color:#fcd34d;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem">🗺️ True Internal Links (contentscale.site → contentscale.site) — 8–12 per article</div>
+               <div style="color:#fef3c7;font-size:.79rem;line-height:2"><div style="color:#fef3c7;font-size:.79rem;line-height:2">
+                  <div style="background:rgba(0,0,0,.35);border:1px solid #f59e0b;border-radius:8px;padding:.9rem 1.2rem;margin-bottom:1rem">
+                     <strong style="color:#fde68a;font-size:.82rem">🤖 AI INSTRUCTION — DO THIS BEFORE WRITING:</strong><br>
+                     <span style="color:#fef3c7">Fetch both sitemaps below and identify the 8–12 most topically relevant URLs for <strong style="color:#ffffff">!!TARGET_KEYWORD!!</strong>. Do NOT use a static list — the sitemaps grow constantly and always contain the most current pages.</span>
+                  </div>
+                  <strong style="color:#ffffff">Step 1 — Fetch the main site sitemap index:</strong><br>
+                  <code style="background:rgba(0,0,0,.3);padding:2px 8px;border-radius:4px;color:#fcd34d">https://contentscale.site/sitemap_index.xml</code><br>
+                  ↳ This index links to all sub-sitemaps (posts, pages, services). Follow each sub-sitemap and extract all &lt;loc&gt; URLs.<br><br>
+                  <strong style="color:#ffffff">Step 2 — Fetch the app sitemap:</strong><br>
+                  <code style="background:rgba(0,0,0,.3);padding:2px 8px;border-radius:4px;color:#818cf8">https://app.contentscale.site/sitemap.xml</code><br>
+                  ↳ Extract all URLs. App blog posts and tool pages found here can be linked as CTAs (max 3–4, NOT internal links).<br><br>
+                  <strong style="color:#ffffff">Step 3 — Select links by topical relevance, not by list:</strong><br>
+                  <span style="color:#fef3c7">From all extracted URLs, pick the 8–12 most semantically relevant to your article topic. Ask: "Would a reader naturally want to visit this page next?" If yes → link it. Prefer deeper content pages over homepage/about/contact.</span><br><br>
+                  <strong style="color:#ffffff">Step 4 — Apply the correct link type:</strong><br>
+                  <span style="color:#6ee7b7">✅ contentscale.site → contentscale.site</span> = TRUE internal links (same tab, no target="_blank") — count toward 8–12 target<br>
+                  <span style="color:#f87171">⚠️ contentscale.site → app.contentscale.site</span> = Cross-subdomain CTAs only (max 3–4, CTAs only) — do NOT count toward 8–12 target<br><br>
+                  <span style="color:#fca5a5;font-size:.75rem">⚠️ Do not hardcode URLs from memory. Always fetch fresh from the sitemaps — pages are added, removed, and updated regularly. If a URL returns 404, skip it.</span>
+               </div></div>
+            </div>
+            <!-- Elite checklist -->
+            <div style="background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.4);border-radius:10px;padding:1rem 1.4rem">
+               <div style="color:#93c5fd;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem">✅ Elite Checklist — Verify Before Saving</div>
+               <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;font-size:.8rem;color:#bfdbfe">
+                  <div>[ ] Meta title 50–60 chars, keyword first</div>
+                  <div>[ ] Meta description 155–160 chars</div>
+                  <div>[ ] H1 present, keyword in first 3 words</div>
+                  <div>[ ] Direct Answer Box (40–60 words)</div>
+                  <div>[ ] TL;DR — exactly 5 sourced bullets</div>
+                  <div>[ ] 4+ expert blockquotes, 2022–2026 only</div>
+                  <div>[ ] 8+ statistics (2024–2026 only) in stats-box</div>
+                  <div>[ ] 2+ case studies with quantified results</div>
+                  <div>[ ] 10+ FAQ items, 100–150 words + links each</div>
+                  <div>[ ] 4 JSON-LD schemas (Article / FAQ / Org / BC)</div>
+                  <div>[ ] 8–12 internal links, 5–8 external links</div>
+                  <div>[ ] Word count 2500+ verified</div>
+                  <div>[ ] Keyword density 0.8–1.2%</div>
+                  <div>[ ] All !!PLACEHOLDER!! values replaced</div>
+                  <div>[ ] 8 images added (filename / alt / prompt filled)</div>
+                  <div>[ ] This instructions panel deleted</div>
+                  <div>[ ] blog-posts.json updated</div>
+               </div>
+            </div>
+            <!-- ── IMAGE REQUIREMENTS ── -->
+            <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.4rem">
+               <div style="color:#6ee7b7;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem">🖼️ 8 Image Requirements — AI Must Generate All of These</div>
+               <div style="color:#d1fae5;font-size:.79rem;line-height:1.9">
+                  <strong style="color:#ffffff">Rules for every image:</strong><br>
+                  • Filename format: <code style="background:rgba(0,0,0,.3);padding:1px 6px;border-radius:3px">word-word-word-word.jpg</code> (4 words, hyphens only, no spaces, .jpg)<br>
+                  • Alt text: 1 descriptive sentence (max 125 chars), keyword in 2–3 images only, describe what is literally visible<br>
+                  • Image prompt: detailed enough to generate with Midjourney/DALL-E/Adobe Firefly<br>
+                  • Size: 1200 × 630 px | loading="lazy" | width + height attributes always set<br>
+                  • Caption: italic, grey text, "Figure N: [description]"<br><br>
+                  <strong style="color:#ffffff">Required placement — 1 image per H2 section:</strong><br>
+                  <span style="color:#a7f3d0">① Hero</span> — Before Direct Answer box (wide overview image)<br>
+                  <span style="color:#a7f3d0">② Section 1</span> — After Section 1 Pro Tip<br>
+                  <span style="color:#a7f3d0">③ Section 2</span> — After Section 2 Pro Tip<br>
+                  <span style="color:#a7f3d0">④ Stats</span> — Before Stats H2 (data/chart visual)<br>
+                  <span style="color:#a7f3d0">⑤ Tools/Section 3</span> — Before Tools or Section 3 H2<br>
+                  <span style="color:#a7f3d0">⑥ Case Studies</span> — Before Case Studies H2 (results chart)<br>
+                  <span style="color:#a7f3d0">⑦ Best Practices</span> — After highlight-box, before Conclusion<br>
+                  <span style="color:#a7f3d0">⑧ FAQ</span> — Before FAQ H2 (tool/audit mockup)<br><br>
+                  <strong style="color:#ffffff">HTML block to copy for each image:</strong><br>
+                  <code style="background:rgba(0,0,0,.3);padding:6px 10px;border-radius:6px;display:block;margin-top:4px;white-space:pre-wrap;font-size:.75rem">&lt;!-- ══ IMAGE N ══════════════════════════════════════
+                  Filename : word-word-word-word.jpg
+                  Alt text : !!ALT TEXT — describe what is visible, max 125 chars!!
+                  Prompt   : !!DETAILED AI IMAGE GENERATION PROMPT!!
+                  Size     : 1200 × 630 px  |  loading="lazy"
+                  ══════════════════════════════════════════════════ --&gt;
+                  &lt;div class="blog-img-wrap"&gt;
+                  &lt;img src="images/word-word-word-word.jpg"
+                  alt="!!ALT TEXT!!"
+                  width="1200" height="630" loading="lazy"&gt;
+                  &lt;div class="blog-img-caption"&gt;Figure N: !!Caption text!!&lt;/div&gt;
+                  &lt;/div&gt;</code>
+               </div>
+            </div>
+            <!-- ── APP.CONTENTSCALE.SITE LINK BANK ── -->
+            <div style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.4);border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.4rem">
+               <div style="color:#a5b4fc;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem">🔗 App.ContentScale.site Links — Cross-Subdomain CTAs (NOT counted as internal links by Google)</div>
+               <div style="color:#e0e7ff;font-size:.79rem;line-height:2"><div style="color:#e0e7ff;font-size:.79rem;line-height:2">
+                  <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:.8rem 1rem;margin-bottom:.8rem">
+                     <span style="color:#f87171;font-weight:700">⚠️ CROSS-SUBDOMAIN — NOT internal links.</span> Google treats contentscale.site → app.contentscale.site as crossing a subdomain boundary. These do NOT count toward your 8–12 internal link target. Use max 3–4 per article, in CTAs only.
+                  </div>
+                  <strong style="color:#e0e7ff">Fetch app URLs live — do not hardcode from memory:</strong><br>
+                  <code style="background:rgba(0,0,0,.3);padding:2px 8px;border-radius:4px;color:#818cf8">https://app.contentscale.site/sitemap.xml</code><br>
+                  ↳ From this sitemap, pick only the most relevant pages as CTA links. Key sections: scanner, leaderboard, blog posts.<br><br>
+                  <strong style="color:#e0e7ff">Fixed CTA targets (always available):</strong><br>
+                  <code style="color:#818cf8">https://app.contentscale.site</code> — Free scanner CTA (Direct Answer, Conclusion, Pro Tips)<br>
+                  <code style="color:#818cf8">https://app.contentscale.site/#leaderboard</code> — Leaderboard (benchmarking scores)<br>
+                  <code style="color:#818cf8">https://app.contentscale.site/#scanner</code> — Scanner anchor (CTA buttons)<br><br>
+                  <span style="color:#818cf8;font-size:.75rem">Use same tab, no target="_blank" for app links too. Max 3–4 total per article.</span>
+               </div></div>
+            </div>
+            <!-- ── FINAL VALIDATION STEPS ── -->
+            <div style="background:rgba(15,23,42,.6);border:1px solid rgba(100,116,139,.4);border-radius:10px;padding:1rem 1.4rem">
+               <div style="color:#94a3b8;font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem">✅ Final Validation Steps Before Publishing</div>
+               <div style="color:#cbd5e1;font-size:.79rem;line-height:2">
+                  1. Replace all <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">!!PLACEHOLDER!!</code> values (Ctrl+F → search for <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">!!</code>)<br>
+                  2. Delete the entire <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">&lt;div id="template-instructions"&gt;</code> block<br>
+                  3. Test schemas → <a href="https://search.google.com/test/rich-results" target="_blank" style="color:#818cf8">Google Rich Results Test</a> — all 4 schemas should validate<br>
+                  4. Run Lighthouse (Chrome DevTools) → Accessibility score should be 95+<br>
+                  5. Verify mobile: test on iOS/Android — cards must not overflow viewport<br>
+                  6. Check H1 is under 70 chars (best: 55–65)<br>
+                  7. Confirm 8 images are uploaded to <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">/blog/images/</code> folder<br>
+                  8. Update <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">blog-posts.json</code> with new post entry
+               </div>
+            </div>
+         </div>
+      </div>
+      <!-- END INSTRUCTIONS PANEL -->
+
       <!-- ============================================================ -->
       <!-- NAVIGATION — DO NOT EDIT                                     -->
       <!-- ============================================================ -->
@@ -663,6 +853,9 @@
             <!-- ============================================================ -->
             <!-- SECTION C: TABLE OF CONTENTS — update for your sections      -->
             <!-- ============================================================ -->
+            <!-- CONTENTSCORE BADGE — auto-loads from app.contentscale.site/api/score -->
+            <center><div data-cs-badge></div></center>
+
             <div class="toc">
                <h3 class="font-bold text-lg mb-3">📋 Table of Contents</h3>
                <ol style="padding-left:1.2rem;margin:0">
@@ -826,6 +1019,14 @@
             <!-- SECTION E: CASE STUDIES — minimum 2, 200-300 words each      -->
             <!-- ============================================================ -->
             <h2 id="case-studies">📊 Case Studies: [Proof of concept for TARGET KEYWORD]</h2>
+            <!-- Scanner-readable case study summaries (required for ContentScore detection) -->
+            <section aria-label="Case Study 1">
+               <h3>[Case Study 1: Company — Result headline]</h3>
+               <p>Challenge: [Describe the specific business problem with metrics — e.g. traffic declining X% per quarter, revenue impact, what was failing].</p>
+               <p>Solution: [Describe the specific steps taken — keyword research, content rewrite, technical fixes, backlink strategy].</p>
+               <p>Results: Organic traffic increased X%. Conversions grew X%. Revenue impact: $X or X%. Rankings improved from position X to position X. Source: [Source, Year].</p>
+            </section>
+
             <!-- Case Study 1 -->
             <div class="case-study-card">
                <div style="background:linear-gradient(90deg,#4c1d95,#1e1b4b);border-radius:8px;padding:.5rem 1rem;display:inline-block;font-family:monospace;font-size:.78rem;color:#a78bfa;margin-bottom:1rem">📊 CASE STUDY 1</div>
@@ -844,10 +1045,10 @@
                </ol>
                <p><strong style="color:#fde68a">Results:</strong></p>
                <div style="background:#0a0f1a;border-radius:10px;padding:1rem 1.2rem;margin:.8rem 0">
-                  <div class="result-row"><span style="color:#9ca3af">[Metric 1]</span><span class="result-val">[Before] → [After] ([+X%])</span></div>
-                  <div class="result-row"><span style="color:#9ca3af">[Metric 2]</span><span class="result-val">[Before] → [After] ([+X%])</span></div>
-                  <div class="result-row"><span style="color:#9ca3af">[Metric 3]</span><span class="result-val">[Before] → [After] ([+X%])</span></div>
-                  <div class="result-row"><span style="color:#9ca3af">ROI / Revenue</span><span class="result-val">[Specific number]</span></div>
+                  <div class="result-row"><span class="metric-label">[Metric 1]</span><span class="result-val">[Before] → [After] ([+X%])</span></div>
+                  <div class="result-row"><span class="metric-label">[Metric 2]</span><span class="result-val">[Before] → [After] ([+X%])</span></div>
+                  <div class="result-row"><span class="metric-label">[Metric 3]</span><span class="result-val">[Before] → [After] ([+X%])</span></div>
+                  <div class="result-row"><span class="metric-label">ROI / Revenue</span><span class="result-val">[Specific number]</span></div>
                </div>
                <p><strong>Key Lesson:</strong> [One sentence takeaway readers can apply immediately.]</p>
                <blockquote style="margin:1.2rem 0">
@@ -855,6 +1056,13 @@
                   <cite>— [Name], [Title], [Company]</cite>
                </blockquote>
             </div>
+            <section aria-label="Case Study 2">
+               <h3>[Case Study 2: Company — Result headline]</h3>
+               <p>Challenge: [Specific problem with numbers. What metric was failing. Revenue/business impact that made this urgent].</p>
+               <p>Solution: [Step-by-step what was done — content audit, GRAAF rewrite, hreflang fix, schema markup, link building].</p>
+               <p>Results: Rankings improved X positions within X months. Organic traffic increased X%. Conversion rate improved X%. Revenue grew X%. Source: [Source, Year].</p>
+            </section>
+
             <!-- Case Study 2 -->
             <div class="case-study-card">
                <div style="background:linear-gradient(90deg,#064e3b,#052e16);border-radius:8px;padding:.5rem 1rem;display:inline-block;font-family:monospace;font-size:.78rem;color:#4ade80;margin-bottom:1rem">📊 CASE STUDY 2</div>
@@ -873,9 +1081,9 @@
                </ol>
                <p><strong style="color:#fde68a">Results:</strong></p>
                <div style="background:#0a0f1a;border-radius:10px;padding:1rem 1.2rem;margin:.8rem 0">
-                  <div class="result-row"><span style="color:#9ca3af">[Metric 1]</span><span class="result-val">[Result]</span></div>
-                  <div class="result-row"><span style="color:#9ca3af">[Metric 2]</span><span class="result-val">[Result]</span></div>
-                  <div class="result-row"><span style="color:#9ca3af">[Metric 3]</span><span class="result-val">[Result]</span></div>
+                  <div class="result-row"><span class="metric-label">[Metric 1]</span><span class="result-val">[Result]</span></div>
+                  <div class="result-row"><span class="metric-label">[Metric 2]</span><span class="result-val">[Result]</span></div>
+                  <div class="result-row"><span class="metric-label">[Metric 3]</span><span class="result-val">[Result]</span></div>
                </div>
                <p><strong>Key Lesson:</strong> [Takeaway.]</p>
             </div>
@@ -1018,6 +1226,7 @@
                </p>
                <div class="flex gap-4 flex-wrap" style="font-size:.85rem">
                   <a href="https://app.contentscale.site" style="color:#a78bfa;text-decoration:none">🔍 Platform</a>
+                  <a href="https://www.linkedin.com/in/ottmar-joseph-gregory-francisca/" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none">💼 LinkedIn</a>
                   <a href="https://wa.me/31628073996" style="color:#4ade80;text-decoration:none">💬 WhatsApp</a>
                   <a href="/cdn-cgi/l/email-protection#abc2c5cdc4ebc8c4c5dfcec5dfd8c8cac7ce85d8c2dfce" style="color:#60a5fa;text-decoration:none">✉️ Email</a>
                   <a href="/blog" style="color:#9ca3af;text-decoration:none">📝 More Articles</a>
@@ -1049,7 +1258,7 @@
                <a href="/blog" style="display:block;color:#6b7280;font-size:.85rem;text-decoration:none;margin-bottom:7px">📊 GRAAF Guide</a>
                <a href="/blog" style="display:block;color:#6b7280;font-size:.85rem;text-decoration:none;margin-bottom:7px">✍️ CRAFT Method</a>
                <a href="/blog" style="display:block;color:#6b7280;font-size:.85rem;text-decoration:none;margin-bottom:7px">🔄 SEO Recovery</a>-size:.85rem;text-decoration:none;margin-bottom:7px">💬 WhatsApp</a>
-               <a href="mailto:info@contentscale.site" style="display:block;color:#6b7280;font-size:.85rem;text-decoration:none;margin-bottom:7px">📧 Email</a>
+               <a href="/cdn-cgi/l/email-protection#224b4c444d62414d4c56474c565141434e470c514b5647" style="display:block;color:#6b7280;font-size:.85rem;text-decoration:none;margin-bottom:7px">📧 Email</a>
             </div>
          </div>
          <div style="max-width:1100px;margin:24px auto 0;padding-top:16px;border-top:1px solid #374151;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -1060,26 +1269,26 @@
             </div>
          </div>
       </footer>
-      <script>
-      // Smooth scroll for TOC links
-      document.querySelectorAll('.toc a').forEach(link => {
-      link.addEventListener('click', function(e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      });
-      // Auto reading time
-      document.addEventListener('DOMContentLoaded', function() {
-      const article = document.querySelector('.blog-content');
-      if (article) {
-      const words = article.textContent.trim().split(/\s+/).length;
-      const mins = Math.ceil(words / 200);
-      const el = document.getElementById('read-time');
-      if (el) el.textContent = mins + ' min read';
-      }
-      });
+      <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+         // Smooth scroll for TOC links
+         document.querySelectorAll('.toc a').forEach(link => {
+         link.addEventListener('click', function(e) {
+         e.preventDefault();
+         const target = document.querySelector(this.getAttribute('href'));
+         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+         });
+         });
+         // Auto reading time
+         document.addEventListener('DOMContentLoaded', function() {
+         const article = document.querySelector('.blog-content');
+         if (article) {
+         const words = article.textContent.trim().split(/\s+/).length;
+         const mins = Math.ceil(words / 200);
+         const el = document.getElementById('read-time');
+         if (el) el.textContent = mins + ' min read';
+         }
+         });
       </script>
-      <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readyState==="complete")e();else if(window.attachEvent)window.attachEvent("onload",e);else window.addEventListener("load",e,!1)}();</script>
+      <script>!function(){function e(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.setAttribute("embed-id","b127ec6d-4baa-4d2e-ab77-a77289634ffb"),e.src="https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb",window.top.document.getElementsByTagName("body")[0].appendChild(e)}var t=document.getElementsByTagName("script")[0];if(window.top===window.self)if(document.readySt
    </body>
 </html>
