@@ -163,9 +163,11 @@ app.get('/seo-contentscore', (req, res) => {
 
 // ── Blog routes ───────────────────────────────────────────────────────────────
 app.get('/blog', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(path.join(__dirname, '../public/blog/index.html'));
 });
 app.get('/blog/', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(path.join(__dirname, '../public/blog/index.html'));
 });
 
@@ -239,6 +241,7 @@ app.get('/blog/blog-posts.json', (req, res) => {
 app.get('/blog/:slug', (req, res) => {
   const file = path.join(__dirname, '../public/blog', `${req.params.slug}.html`);
   if (fs.existsSync(file)) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.sendFile(file);
   } else {
     res.status(404).sendFile(path.join(__dirname, '../public/index.html'));
