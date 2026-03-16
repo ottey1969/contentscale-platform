@@ -106,6 +106,13 @@ await new Promise(resolve => setTimeout(resolve, delay));
 return false;
 }
 app.set('trust proxy', 1);
+
+// Silently handle Cloudflare cdn-cgi requests — these don't exist on Railway
+app.get('/cdn-cgi/*', (req, res) => res.status(200).send(''));
+app.get('/cdn-cgi/scripts/*', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.status(200).send('/* cdn-cgi not available on this server */');
+});
 app.use(compression({ level: 9, threshold: 0 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -121,7 +128,18 @@ next();
 });
 
 // Serve non-HTML static assets normally (images, css, js, fonts, etc.)
-app.use(express.static('public', { maxAge: '1y', etag: true, index: false }));
+app.use(express.static('public', {
+  maxAge: '1y',
+  etag: true,
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'no-cache'); // Never cache HTML
+    }
+  }
+}));
 
 // ── /app — Under Construction page ──────────────────────────────────────────
 app.get('/app', (req, res) => {
