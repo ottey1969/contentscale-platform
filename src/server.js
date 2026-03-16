@@ -2479,17 +2479,13 @@ el.innerHTML = html;
 el.setAttribute('data-cs-loaded', '1');
 }
 function renderError(el, msg) {
-el.innerHTML = '
-<div style="font-family:Arial;font-size:0.7rem;color:#6b7280;border:1px solid #374151;' +
-   'border-radius:8px;padding:10px 14px;max-width:200px;">⚠️ ' + msg + '</div>
+el.innerHTML = '<div style="font-family:Arial;font-size:0.7rem;color:#6b7280;border:1px solid #374151;border-radius:8px;padding:10px 14px;max-width:200px;">⚠️ ' + msg + '</div>';
 ';
 }
 function loadBadge(el) {
 if (el.getAttribute('data-cs-loaded')) return;
 var url = el.getAttribute('data-url') || window.location.href;
-el.innerHTML = '
-<div style="width:200px;height:160px;background:#0f172a;border-radius:14px;' +
-   'display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.7rem;font-family:Arial;">Loading…</div>
+el.innerHTML = '<div style="width:200px;height:160px;background:#0f172a;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.7rem;font-family:Arial;">Loading…</div>';
 ';
 fetch(API + '?url=' + encodeURIComponent(url))
 .then(function(r) { return r.json(); })
