@@ -1,28 +1,63 @@
 [
   {
+    "slug": "eeat-ai-priority",
+    "title": "E-E-A-T for AI Priority: How to Get Cited in Google AI Overviews in 2026",
+    "description": "E-E-A-T for AI Priority determines whether Google cites your page in AI Overviews. Learn the 4-pillar framework, implementation steps, and real case studies showing 3.7\u00d7 citation rate improvements. Free audit included.",
+    "date": "2026-03-16",
+    "readTime": "12 min read",
+    "author": "Ottmar J.G. Francisca",
+    "featured": true,
+    "category": [
+      "guide",
+      "seo"
+    ],
+    "badge": "Guide",
+    "badgeColor": "#8b5cf6",
+    "image": "https://contentscale.site/wp-content/uploads/2026/03/eeat-ai-priority-google-ranking-signals-2026.jpg",
+    "metrics": {
+      "improvement": "3.7\u00d7 AI Citations",
+      "traffic": "+43% Organic",
+      "timeline": "90 days"
+    }
+  },
+  {
     "slug": "contentscale-platform-2026",
-    "title": "ContentScale Platform 2026: Free SEO ContentScore — GRAAF Framework",
+    "title": "ContentScale Platform 2026: Free SEO ContentScore \u2014 GRAAF Framework",
     "description": "ContentScale Platform 2026 gives any webpage a free 100-point ContentScore via the GRAAF Framework. Sitemap scan of 52 pages scored 78/100. Covers GRAAF, CRAFT, Technical SEO, case studies, and the Public Leaderboard. No login. No card.",
     "date": "2026-03-10",
     "readTime": "18 min read",
     "author": "Ottmar J.G. Francisca",
-    "featured": true,
-    "category": ["guide", "news"],
+    "featured": false,
+    "category": [
+      "guide",
+      "news"
+    ],
     "badge": "Platform Guide",
     "badgeColor": "#8b5cf6",
-    "metrics": { "score": "78/100", "pages": "52 pages", "framework": "GRAAF+CRAFT+Tech" }
+    "metrics": {
+      "score": "78/100",
+      "pages": "52 pages",
+      "framework": "GRAAF+CRAFT+Tech"
+    }
   },
   {
     "slug": "top-seo-agency-success-story",
     "title": "Top SEO Agency Success Story: How GRAAF Transformed Client Results",
-    "description": "A deep-dive into how a top SEO agency used the ContentScale GRAAF Framework to deliver measurable, verifiable results for clients — with before/after scores, leaderboard proof, and a replicable workflow any specialist can follow.",
+    "description": "A deep-dive into how a top SEO agency used the ContentScale GRAAF Framework to deliver measurable, verifiable results for clients \u2014 with before/after scores, leaderboard proof, and a replicable workflow any specialist can follow.",
     "date": "2026-02-18",
     "readTime": "12 min read",
     "author": "Ottmar J.G. Francisca",
     "featured": false,
-    "category": ["case-study", "agency"],
+    "category": [
+      "case-study",
+      "agency"
+    ],
     "badge": "Case Study",
     "badgeColor": "#10b981",
-    "metrics": { "traffic": "+189%", "score": "52 → 87/100", "timeline": "90 days" }
+    "metrics": {
+      "traffic": "+189%",
+      "score": "52 \u2192 87/100",
+      "timeline": "90 days"
+    }
   }
 ]
