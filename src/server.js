@@ -123,61 +123,6 @@ next();
 // Serve non-HTML static assets normally (images, css, js, fonts, etc.)
 app.use(express.static('public', { maxAge: '1y', etag: true, index: false }));
 
-// Global chat widget — injected into every HTML page
-const GLOBAL_CHAT_WIDGET = `
-<!-- ContentScale AI Chat Widget -->
-<style>
-#cs-chat-btn{position:fixed;bottom:32px;right:88px;z-index:9980;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid rgba(139,92,246,0.5);border-radius:50px;padding:10px 20px 10px 10px;cursor:pointer;box-shadow:0 8px 32px rgba(126,34,206,0.35);transition:all 0.25s cubic-bezier(.34,1.56,.64,1);}
-#cs-chat-btn:hover{transform:translateY(-2px) scale(1.03);border-color:rgba(139,92,246,0.9);box-shadow:0 12px 48px rgba(126,34,206,0.5);}
-#cs-chat-btn .cs-av{position:relative;width:36px;height:36px;flex-shrink:0;}
-#cs-chat-btn .cs-av img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;display:block;}
-#cs-chat-btn .cs-av .cs-dot{position:absolute;bottom:0;right:0;width:10px;height:10px;background:#4ade80;border-radius:50%;border:2px solid #0f172a;animation:cs-pulse 2s infinite;}
-@keyframes cs-pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.4);opacity:0.7;}}
-#cs-chat-btn .cs-txt{line-height:1.25;}
-#cs-chat-btn .cs-txt b{display:block;font-size:0.82rem;font-weight:700;color:#f9fafb;white-space:nowrap;}
-#cs-chat-btn .cs-txt span{display:block;font-size:0.67rem;color:#a78bfa;white-space:nowrap;}
-#cs-chat-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:9981;}
-#cs-chat-modal{display:none;position:fixed;bottom:100px;right:24px;width:min(420px,94vw);height:min(620px,85vh);z-index:9982;border-radius:22px;overflow:hidden;box-shadow:0 32px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(139,92,246,0.35);flex-direction:column;background:#07070f;}
-#cs-chat-modal.open,#cs-chat-overlay.open{display:flex;}
-#cs-chat-modal.open{animation:cs-pop-in 0.3s cubic-bezier(.34,1.56,.64,1);}
-@keyframes cs-pop-in{from{opacity:0;transform:translateY(20px) scale(0.95);}to{opacity:1;transform:translateY(0) scale(1);}}
-#cs-chat-head{background:linear-gradient(135deg,#1e1b4b 0%,#2e1065 100%);padding:16px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(139,92,246,0.2);flex-shrink:0;}
-#cs-chat-head img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;}
-#cs-chat-head .cs-hinfo{flex:1;}
-#cs-chat-head .cs-hinfo strong{display:block;font-size:0.9rem;font-weight:800;color:#f9fafb;}
-#cs-chat-head .cs-hinfo small{font-size:0.7rem;color:#4ade80;}
-#cs-chat-head button{background:rgba(255,255,255,0.08);border:none;color:#9ca3af;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
-#cs-chat-head button:hover{background:rgba(255,255,255,0.18);color:#f9fafb;}
-#cs-chat-modal iframe{flex:1;border:none;width:100%;height:100%;}
-</style>
-
-<button id="cs-chat-btn" onclick="csChatOpen()" aria-label="Ask Ottmar a question">
-  <div class="cs-av">
-    <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg" alt="Ottmar" onerror="this.style.display='none'">
-    <span class="cs-dot"></span>
-  </div>
-  <div class="cs-txt">
-    <b>I'll answer all your questions</b>
-    <span>Ask Ottmar · SEO Expert</span>
-  </div>
-</button>
-
-<div id="cs-chat-overlay" onclick="csChatClose()"></div>
-<div id="cs-chat-modal" role="dialog" aria-label="Chat with Ottmar">
-  <div id="cs-chat-head">
-    <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg" alt="Ottmar" onerror="this.style.display='none'">
-    <div class="cs-hinfo">
-      <strong>Ottmar Francisca</strong>
-      <small>● Online now · SEO Recovery Expert</small>
-    </div>
-    <button onclick="csChatClose()" aria-label="Close chat">✕</button>
-  </div>
-  <iframe id="cs-chat-iframe" src="" title="Chat with Ottmar" loading="lazy" allow="microphone"></iframe>
-</div>
-
-<script>
-(function(){
-  const CHAT_URL = 'https://app.agent23.ai/chatbot-iframe/f9ece
 // ── /app — Under Construction page ──────────────────────────────────────────
 app.get('/app', (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
