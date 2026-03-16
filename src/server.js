@@ -132,6 +132,30 @@ next();
 });
 
 // Serve non-HTML static assets normally (images, css, js, fonts, etc.)
+// Blog HTML interceptor — runs BEFORE express.static
+// Forces text/html for any blog post request, prevents downloads
+app.use('/blog', (req, res, next) => {
+  const slug = req.path.replace(/^\//, '').replace(/\.html$/, '');
+  if (!slug || slug === 'blog-posts.json' || req.path.includes('.json')) return next();
+  
+  // Try both with and without .html extension
+  const tryPaths = [
+    path.join(__dirname, '../public/blog', slug + '.html'),
+    path.join(__dirname, '../public/blog', slug),
+  ];
+  
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (filePath) {
+    const html = fs.readFileSync(filePath, 'utf8');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.status(200).send(html);
+  }
+  next();
+});
+
 app.use(express.static('public', {
   maxAge: '1y',
   etag: true,
@@ -140,7 +164,7 @@ app.use(express.static('public', {
     if (filePath.endsWith('.html')) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'no-cache'); // Never cache HTML
+      res.setHeader('Cache-Control', 'no-cache');
     }
   }
 }));
@@ -3003,4 +3027,95 @@ try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) 
 }
 res.json({ success: true });
 });
+// ── ContentScore Badge API ────────────────────────────────────────────────────
+// Returns score for a URL from the leaderboard or scan_log
+// Used by badge-loader.js on contentscale.site WordPress pages
+app.get('/api/score', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const { url } = req.query;
+  if (!url) return res.json({ success: false, error: 'url required' });
+
+  if (!pool) return res.json({ success: false, error: 'DB unavailable' });
+
+  try {
+    // Normalize URL — strip protocol, www, trailing slash for matching
+    const normalize = u => u.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').toLowerCase();
+    const normalizedQuery = normalize(url);
+
+    // 1. Try leaderboard first (highest quality data)
+    const lb = await pool.query(
+      `SELECT score, graaf_score, craft_score, technical_score, url
+       FROM leaderboard
+       WHERE admin_verified = TRUE
+       ORDER BY created_at DESC LIMIT 200`
+    );
+    const lbMatch = lb.rows.find(r => normalize(r.url) === normalizedQuery ||
+      normalize(r.url) === normalizedQuery.split('/')[0]);
+
+    if (lbMatch) {
+      return res.json({
+        success: true,
+        url: lbMatch.url,
+        score: lbMatch.score,
+        graaf: lbMatch.graaf_score,
+        craft: lbMatch.craft_score,
+        technical: lbMatch.technical_score,
+        source: 'leaderboard'
+      });
+    }
+
+    // 2. Try scan_log
+    const sl = await pool.query(
+      `SELECT score, business_url FROM scan_log
+       WHERE business_url ILIKE $1
+       ORDER BY created_at DESC LIMIT 1`,
+      ['%' + normalizedQuery.split('/')[0] + '%']
+    );
+
+    if (sl.rows.length && sl.rows[0].score) {
+      return res.json({
+        success: true,
+        url: sl.rows[0].business_url,
+        score: sl.rows[0].score,
+        source: 'scan_log'
+      });
+    }
+
+    res.json({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── Badge loader script — served as JS ──────────────────────────────────────
+app.get('/badge-loader.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.send(`
+(function() {
+  var badges = document.querySelectorAll('[data-cs-badge]');
+  if (!badges.length) return;
+  var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
+  var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
+  fetch(apiUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.score) return;
+      var score = data.score;
+      var color = score >= 90 ? '#16a34a' : score >= 80 ? '#2563eb' : score >= 70 ? '#b45309' : score >= 50 ? '#f59e0b' : '#dc2626';
+      var label = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
+      var html = '<a href="https://app.contentscale.site" target="_blank" rel="noopener" title="ContentScore by ContentScale" style="display:inline-flex;align-items:center;gap:8px;background:#0f172a;border:1px solid ' + color + ';border-radius:10px;padding:8px 16px;text-decoration:none;font-family:system-ui,sans-serif;">'
+        + '<span style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;">ContentScore</span>'
+        + '<span style="font-size:1.5rem;font-weight:900;color:' + color + ';line-height:1;">' + score + '</span>'
+        + '<span style="font-size:0.68rem;color:#6b7280;">/100</span>'
+        + '<span style="font-size:0.7rem;font-weight:700;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '40;border-radius:99px;padding:2px 8px;">' + label + '</span>'
+        + '</a>';
+      badges.forEach(function(el) { el.innerHTML = html; });
+    })
+    .catch(function() {});
+})();
+`);
+});
+
 startServer();
