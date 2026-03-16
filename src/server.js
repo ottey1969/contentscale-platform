@@ -124,6 +124,10 @@ if (allowedOrigins.includes(origin)) res.header('Access-Control-Allow-Origin', o
 res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key, x-user-id');
 res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 if (req.method === 'OPTIONS') return res.sendStatus(200);
+// Force correct content-type for HTML page requests
+if (req.method === 'GET' && req.headers.accept && req.headers.accept.includes('text/html') && !req.path.includes('.')) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+}
 next();
 });
 
@@ -259,8 +263,11 @@ app.get('/blog/blog-posts.json', (req, res) => {
 app.get('/blog/:slug', (req, res) => {
   const file = path.join(__dirname, '../public/blog', `${req.params.slug}.html`);
   if (fs.existsSync(file)) {
+    const html = fs.readFileSync(file, 'utf8');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.sendFile(file);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.status(200).send(html);
   } else {
     res.status(404).sendFile(path.join(__dirname, '../public/index.html'));
   }
