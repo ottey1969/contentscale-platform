@@ -3032,7 +3032,7 @@ var t = getTier(score);
 var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
 + '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
 + '<div style="display:flex;flex-direction:column;gap:1px;">'
-+ '<span style="font-size:10px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.08em;">ContentScore</span>'
++ '<span style="font-size:11px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.06em;">ContentScore</span>'
 + '<span style="font-size:9px;color:#9ca3af;">This page</span>'
 + '<div style="display:flex;align-items:baseline;gap:3px;">'
 + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
@@ -3047,8 +3047,8 @@ var html = '<div style="display:inline-flex;align-items:center;border-radius:10p
 + '</div>'
 + '</div>'
 + '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
-+ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;text-decoration:none;">'
-+ '<span style="font-size:13px;">&#x21bb;</span><span>Rescan</span>'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;">'
++ '<span style="font-size:12px;line-height:1;">&#x21bb;</span><span>Rescan</span>'
 + '</a>'
 + '</div>';
 badges.forEach(function(el) { el.innerHTML = html; });
