@@ -211,9 +211,7 @@ const files = fs.readdirSync(blogDir)
 .map(f => {
 const slug = f.replace('.html', '');
 const html = fs.readFileSync(path.join(blogDir, f), 'utf8');
-const title = (html.match(/
-<title>
-   ([^<]+)<\/title>/) || [])[1]?.replace(/ — ContentScale.*/, '').trim() || slug;
+const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — ContentScale.*/, '').trim() || slug;
    const desc = (html.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
    const image = (html.match(/<meta property="og:image" content="([^"]+)"/) || [])[1] || '';
    const dateMatch = html.match(/"datePublished":\s*"(\d{4}-\d{2}-\d{2})/);
@@ -233,9 +231,7 @@ const title = (html.match(/
    app.get('/blog/:slug', (req, res) => {
    try {
    const slug = req.params.slug;
-   if (!slug || slug.includes('.')) return res.status(404).send('
-   <h1>Not found</h1>
-   ');
+   if (!slug || slug.includes('.')) return res.status(404).send('<h1>Not found</h1>');
    const tryPaths = [
    path.join(__dirname, '../public/blog', slug + '.html'),
    path.join(__dirname, 'public/blog', slug + '.html'),
@@ -248,22 +244,10 @@ const title = (html.match(/
    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
    return res.status(200).send(html);
    }
-   res.status(404).send('<!DOCTYPE html>
-   <html>
-      <body style="background:#030712;color:#e5e7eb;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
-         <div style="text-align:center">
-            <h2>Blog post not found</h2>
-            <p style="color:#6b7280;margin-top:8px">The file <code>' + slug + '.html</code> does not exist in public/blog/</p>
-            <a href="/blog" style="color:#a78bfa">← Back to Blog</a>
-         </div>
-      </body>
-   </html>
-   ');
+   res.status(404).send('<!DOCTYPE html><html><body style="background:#030712;color:#e5e7eb;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h2>Blog post not found</h2><p style="color:#6b7280;margin-top:8px">The file <code>' + slug + '.html</code> does not exist in public/blog/</p><a href="/blog" style="color:#a78bfa">← Back to Blog</a></div></body></html>');
    } catch(e) {
    console.error('Blog route error:', e.message);
-   res.status(500).send('
-   <h1>Blog error: ' + e.message + '</h1>
-   ');
+   res.status(500).send('<h1>Blog error: ' + e.message + '</h1>');
    }
    });
    // Admin Auth Middleware
@@ -572,9 +556,7 @@ const title = (html.match(/
 </body>
 </html>
 `);
-} catch (e) { res.send(`
-<p>Error: ${e.message}</p>
-`); }
+} catch (e) { res.send(`<p>Error: ${e.message}</p>`); }
 });
 app.post('/api/unsubscribe', async (req, res) => {
 const { email } = req.body;
@@ -1226,14 +1208,10 @@ const { url } = req.body;
 if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
 try {
 const axios = require('axios');
-// No xml2js needed — parse 
-<loc>
-tags with regex (works for all standard sitemaps)
+// No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
 const extractLocs = (xml) => {
 const locs = [];
-const re = /
-<loc>
-\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
+const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
 let m;
 while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
 return locs;
@@ -1350,9 +1328,7 @@ const r = await pool.query(`SELECT results_json FROM share_results WHERE token=$
 if (r.rows.length) results = r.rows[0].results_json;
 } catch(e) {}
 }
-if (!results) return res.status(404).send('
-<h1>Link expired or not found</h1>
-');
+if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
 const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
 const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
@@ -1549,9 +1525,7 @@ if (!analysis.hasAuthorBio) {
 recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
 }
 if (!analysis.hasArticleSchema) {
-recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your 
-<head>
-   with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
+recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
    }
    if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
    recommendations.push({ title: '🛠️ Add FAQPage Schema to Your FAQ Section', description: 'FAQ content detected but no FAQPage schema found.', priority: 'high', action: "Generate FAQPage JSON-LD for all your FAQ questions.", learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.", target: 'FAQPage JSON-LD with all Q&A pairs marked up' });
@@ -1559,27 +1533,17 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
    recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
    }
    if (!analysis.hasCanonical) {
-   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add 
-   <link rel="canonical" href="...">
-   to your 
-   <head>
-      .`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in 
-      <head>
-         ' });
+   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
          }
          if (analysis.metaTitleLength === 0) {
-         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a 
-         <title>
-            tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
+         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
             } else if (analysis.metaTitleLength < 40) {
             recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
             } else if (analysis.metaTitleLength > 65) {
             recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
             }
             if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a 
-            <meta name=\"description\">
-            with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
             } else if (analysis.metaDescriptionLength < 100) {
             recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
             } else if (analysis.metaDescriptionLength > 165) {
@@ -1599,9 +1563,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
             recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
             }
             if (!analysis.hasOpenGraph) {
-            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your 
-            <head>
-               .", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200×630px), og:url' });
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200x630px), og:url' });
                }
                const finalRecommendations = recommendations.length > 0 ? recommendations : [{
                title: '🏆 Elite Content — Outstanding Work!',
@@ -2087,14 +2049,10 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                } catch (e) { res.status(500).json({ success: false, error: e.message }); }
                });
                app.get('/report/:id', async (req, res) => {
-               if (!pool) return res.status(503).send('
-               <h1>Service unavailable</h1>
-               ');
+               if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
                try {
                const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
-               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html>
-               <html>
-<body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
+               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
 const report = r.rows[0];
 let recs = [];
 try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
@@ -2604,9 +2562,7 @@ const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
 if (!r.ok) continue;
 const xml = await r.text();
 // Sub-sitemap index?
-const subMatches = [...xml.matchAll(/
-<loc>
-(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
+const subMatches = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
 if (subMatches.length > 0) {
 let allUrls = [];
 for (const sub of subMatches.slice(0, 20)) {
@@ -2614,19 +2570,14 @@ try {
 const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
 if (!sr.ok) continue;
 const sx = await sr.text();
-const us = [...sx.matchAll(/
-<loc>
-(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+const us = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
 allUrls = allUrls.concat(us);
 } catch(e) {}
 }
 if (allUrls.length > 0) return { urls: allUrls, sitemapUrl: url };
 }
 // Direct URLs
-const urls = [...xml.matchAll(/
-<loc>
-(https?:\/\/[^<]+)<\/loc>/gi)]
-.map(m => m[1]).filter(u => !u.endsWith('.xml'));
+const urls = [...xml.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
 if (urls.length > 0) return { urls, sitemapUrl: url };
 } catch(e) {}
 }
