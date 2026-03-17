@@ -135,6 +135,20 @@ res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 if (req.method === 'OPTIONS') return res.sendStatus(200);
 next();
 });
+// ── Explicit route for / so badge-loader middleware fires ─────────────────────
+app.get('/', (req, res) => {
+  const tryPaths = [
+    path.join(__dirname, '../public/index.html'),
+    path.join(__dirname, 'public/index.html'),
+  ];
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (!filePath) return res.status(404).send('Not found');
+  const html = fs.readFileSync(filePath, 'utf8');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  return res.send(html); // goes through middleware → badge-loader injected
+});
+
 app.use(express.static('public', { maxAge: '1y', etag: true }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
