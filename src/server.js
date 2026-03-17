@@ -129,6 +129,96 @@ app.get('/site.webmanifest', (req, res) => {
 res.setHeader('Content-Type', 'application/manifest+json');
 res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
 });
+
+// ── Blog HTML interceptor — BEFORE express.static ────────────────────────────
+app.use('/blog', (req, res, next) => {
+  const slug = req.path.replace(/^\//, '').replace(/\.html$/, '');
+  if (!slug || slug === 'blog-posts.json' || req.path.includes('.json') || req.path.includes('.')) return next();
+  const tryPaths = [
+    path.join(__dirname, '../public/blog', slug + '.html'),
+    path.join(__dirname, '../public/blog', slug),
+    path.join(__dirname, 'public/blog', slug + '.html'),
+    path.join(__dirname, 'public/blog', slug),
+  ];
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (filePath) {
+    const html = fs.readFileSync(filePath, 'utf8');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.status(200).send(html);
+  }
+  next();
+});
+
+// ── Blog routes ───────────────────────────────────────────────────────────────
+app.get('/blog', (req, res) => {
+  const tryPaths = [
+    path.join(__dirname, '../public/blog/index.html'),
+    path.join(__dirname, 'public/blog/index.html'),
+  ];
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (filePath) { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.sendFile(filePath); }
+  res.status(404).send('Blog not found');
+});
+
+app.get('/blog/', (req, res) => res.redirect('/blog'));
+
+// Auto-discover blog posts from HTML files
+app.get('/blog/blog-posts.json', (req, res) => {
+  const tryDirs = [
+    path.join(__dirname, '../public/blog'),
+    path.join(__dirname, 'public/blog'),
+  ];
+  const blogDir = tryDirs.find(d => fs.existsSync(d));
+  if (!blogDir) return res.json([]);
+  const SKIP = ['index.html'];
+  try {
+    const manualJson = path.join(blogDir, '_blog-posts.json');
+    if (fs.existsSync(manualJson)) return res.json(JSON.parse(fs.readFileSync(manualJson, 'utf8')));
+    const files = fs.readdirSync(blogDir)
+      .filter(f => f.endsWith('.html') && !SKIP.includes(f))
+      .map(f => {
+        const slug = f.replace('.html', '');
+        const html = fs.readFileSync(path.join(blogDir, f), 'utf8');
+        const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — ContentScale.*/, '').trim() || slug;
+        const desc = (html.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
+        const image = (html.match(/<meta property="og:image" content="([^"]+)"/) || [])[1] || '';
+        const dateMatch = html.match(/"datePublished":\s*"(\d{4}-\d{2}-\d{2})/);
+        let date = dateMatch ? dateMatch[1] : '2026-01-01';
+        let category = ['guide'];
+        if (html.includes('cat-case-study') || html.includes('Case Study')) category = ['case-study'];
+        const rtMatch = (html.match(/(\d+)\s*min read/) || [])[1];
+        const wordCount = html.replace(/<[^>]+>/g, ' ').split(/\s+/).length;
+        const readTime = rtMatch ? `${rtMatch} min read` : `${Math.max(5, Math.ceil(wordCount / 250))} min read`;
+        return { slug, title, description: desc, date, readTime, author: 'Ottmar J.G. Francisca', category, image };
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (files.length > 0) files[0].featured = true;
+    res.json(files);
+  } catch(e) { console.error('Blog auto-discover error:', e.message); res.json([]); }
+});
+
+app.get('/blog/:slug', (req, res) => {
+  const slug = req.params.slug;
+  const tryPaths = [
+    path.join(__dirname, '../public/blog', slug + '.html'),
+    path.join(__dirname, 'public/blog', slug + '.html'),
+  ];
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (filePath) {
+    const html = fs.readFileSync(filePath, 'utf8');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.status(200).send(html);
+  }
+  const indexPaths = [path.join(__dirname, '../public/index.html'), path.join(__dirname, 'public/index.html')];
+  const indexPath = indexPaths.find(p => fs.existsSync(p));
+  res.status(404).sendFile(indexPath || path.join(__dirname, 'public/index.html'));
+});
+
 // Admin Auth Middleware
 const verifyAdmin = async (req, res, next) => {
 const adminKey = req.headers['x-admin-key'];
