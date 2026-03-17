@@ -3090,7 +3090,7 @@ app.get('/api/score', async (req, res) => {
 // ── Badge loader script — served as JS ──────────────────────────────────────
 app.get('/badge-loader.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.send(`
 (function() {
@@ -3117,7 +3117,7 @@ app.get('/badge-loader.js', (req, res) => {
       if (!data.success || !data.score) return;
       var score = data.score;
       var t = getTier(score);
-      var rescanUrl = 'https://app.contentscale.site/?url=' + encodeURIComponent(pageUrl);
+      var rescanUrl = 'https://app.contentscale.site';
       var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;">'
         + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#111827;padding:10px 16px;text-decoration:none;border-right:1px solid #374151;">'
           + '<div style="display:flex;flex-direction:column;gap:1px;">'
