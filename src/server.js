@@ -3028,57 +3028,57 @@ try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) 
 res.json({ success: true });
 });
 // ── ContentScore Badge API ────────────────────────────────────────────────────
-// Returns score for a URL from the leaderboard or scan_log
-// Used by badge-loader.js on contentscale.site WordPress pages
 app.get('/api/score', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const { url } = req.query;
   if (!url) return res.json({ success: false, error: 'url required' });
-
   if (!pool) return res.json({ success: false, error: 'DB unavailable' });
 
   try {
-    // Normalize URL — strip protocol, www, trailing slash for matching
     const normalize = u => u.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').toLowerCase();
-    const normalizedQuery = normalize(url);
+    const norm = normalize(url);
+    const domain = norm.split('/')[0];
+    const isHomepage = norm === domain;
 
-    // 1. Try leaderboard first (highest quality data)
-    const lb = await pool.query(
-      `SELECT score, graaf_score, craft_score, technical_score, url
-       FROM leaderboard
-       WHERE admin_verified = TRUE
-       ORDER BY created_at DESC LIMIT 200`
+    // 1. Exact URL match in scan_log (most accurate — specific page score)
+    const exact = await pool.query(
+      `SELECT score, business_url FROM scan_log
+       WHERE LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) 
+             ILIKE $1 OR
+             LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', ''))
+             ILIKE $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [norm.replace(/\/$/, '') + '%']
     );
-    const lbMatch = lb.rows.find(r => normalize(r.url) === normalizedQuery ||
-      normalize(r.url) === normalizedQuery.split('/')[0]);
-
-    if (lbMatch) {
-      return res.json({
-        success: true,
-        url: lbMatch.url,
-        score: lbMatch.score,
-        graaf: lbMatch.graaf_score,
-        craft: lbMatch.craft_score,
-        technical: lbMatch.technical_score,
-        source: 'leaderboard'
-      });
+    if (exact.rows.length && exact.rows[0].score) {
+      return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, source: 'scan_log_exact' });
     }
 
-    // 2. Try scan_log
-    const sl = await pool.query(
+    // 2. Leaderboard — only use for homepage queries
+    if (isHomepage) {
+      const lb = await pool.query(
+        `SELECT score, graaf_score, craft_score, technical_score, url
+         FROM leaderboard WHERE admin_verified = TRUE
+         ORDER BY created_at DESC LIMIT 200`
+      );
+      const lbMatch = lb.rows.find(r => normalize(r.url) === domain);
+      if (lbMatch) {
+        return res.json({ success: true, url: lbMatch.url, score: lbMatch.score,
+          graaf: lbMatch.graaf_score, craft: lbMatch.craft_score,
+          technical: lbMatch.technical_score, source: 'leaderboard' });
+      }
+    }
+
+    // 3. Domain-level fallback in scan_log
+    const domainMatch = await pool.query(
       `SELECT score, business_url FROM scan_log
        WHERE business_url ILIKE $1
-       ORDER BY created_at DESC LIMIT 1`,
-      ['%' + normalizedQuery.split('/')[0] + '%']
+       ORDER BY score DESC, created_at DESC LIMIT 1`,
+      ['%' + domain + '%']
     );
-
-    if (sl.rows.length && sl.rows[0].score) {
-      return res.json({
-        success: true,
-        url: sl.rows[0].business_url,
-        score: sl.rows[0].score,
-        source: 'scan_log'
-      });
+    if (domainMatch.rows.length && domainMatch.rows[0].score) {
+      return res.json({ success: true, url: domainMatch.rows[0].business_url,
+        score: domainMatch.rows[0].score, source: 'scan_log_domain' });
     }
 
     res.json({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
