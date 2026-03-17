@@ -115,8 +115,13 @@ app.use((req, res, next) => {
   res.send = function(body) {
     if (typeof body === 'string' && body.includes('</body>') &&
         res.getHeader('Content-Type')?.includes('text/html')) {
-      body = body.replace('</body>',
-        '<script src="https://app.contentscale.site/badge-loader.js?v=3"></script></body>');
+      // Replace LAST </body> only — avoids hitting </body> inside JS template strings
+      const lastIdx = body.lastIndexOf('</body>');
+      if (lastIdx !== -1) {
+        body = body.slice(0, lastIdx) +
+          '<script src="https://app.contentscale.site/badge-loader.js?v=3"></script></body>' +
+          body.slice(lastIdx + 7);
+      }
     }
     return origSend(body);
   };
