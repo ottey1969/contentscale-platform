@@ -3033,7 +3033,7 @@ var html = '<div style="display:inline-flex;align-items:center;border-radius:10p
 + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#111827;padding:10px 16px;text-decoration:none;border-right:1px solid #374151;">'
 + '<div style="display:flex;flex-direction:column;gap:1px;">'
 + '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">ContentScore</span>'
-+ '<span style="font-size:9px;color:#4b5563;">This page</span>'
++ '<span style="font-size:9px;color:#9ca3af;">This page</span>'
 + '<div style="display:flex;align-items:baseline;gap:3px;">'
 + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
 + '<span style="font-size:11px;color:#4b5563;">/100</span>'
