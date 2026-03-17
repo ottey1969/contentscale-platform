@@ -3098,19 +3098,47 @@ app.get('/badge-loader.js', (req, res) => {
   if (!badges.length) return;
   var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
   var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
+
+  function getTier(s) {
+    if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
+    if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
+    if (s >= 70) return { label:'QUALIFIED',   color:'#84cc16', bg:'#365314', text:'#bef264', bars:2 };
+    if (s >= 50) return { label:'OPPORTUNITY', color:'#f59e0b', bg:'#78350f', text:'#fcd34d', bars:1 };
+    return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca5a5', bars:1 };
+  }
+
+  function bar(on, color) {
+    return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
+  }
+
   fetch(apiUrl)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (!data.success || !data.score) return;
       var score = data.score;
-      var color = score >= 90 ? '#16a34a' : score >= 80 ? '#2563eb' : score >= 70 ? '#b45309' : score >= 50 ? '#f59e0b' : '#dc2626';
-      var label = score >= 90 ? 'Elite' : score >= 80 ? 'Strong' : score >= 70 ? 'Qualified' : score >= 50 ? 'Opportunity' : 'Critical';
-      var html = '<a href="https://app.contentscale.site" target="_blank" rel="noopener" title="ContentScore by ContentScale" style="display:inline-flex;align-items:center;gap:8px;background:#0f172a;border:1px solid ' + color + ';border-radius:10px;padding:8px 16px;text-decoration:none;font-family:system-ui,sans-serif;">'
-        + '<span style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;">ContentScore</span>'
-        + '<span style="font-size:1.5rem;font-weight:900;color:' + color + ';line-height:1;">' + score + '</span>'
-        + '<span style="font-size:0.68rem;color:#6b7280;">/100</span>'
-        + '<span style="font-size:0.7rem;font-weight:700;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '40;border-radius:99px;padding:2px 8px;">' + label + '</span>'
-        + '</a>';
+      var t = getTier(score);
+      var rescanUrl = 'https://app.contentscale.site/?url=' + encodeURIComponent(pageUrl);
+      var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;">'
+        + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#111827;padding:10px 16px;text-decoration:none;border-right:1px solid #374151;">'
+          + '<div style="display:flex;flex-direction:column;gap:1px;">'
+            + '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">ContentScore</span>'
+            + '<div style="display:flex;align-items:baseline;gap:3px;">'
+              + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
+              + '<span style="font-size:11px;color:#4b5563;">/100</span>'
+            + '</div>'
+          + '</div>'
+          + '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
+            + '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
+            + '<div style="display:flex;gap:2px;">'
+              + bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
+            + '</div>'
+          + '</div>'
+        + '</a>'
+        + '<a href="' + rescanUrl + '" target="_blank" rel="noopener" style="background:#1f2937;padding:10px 12px;cursor:pointer;color:#9ca3af;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;">'
+          + '<span style="font-size:14px;">&#x21bb;</span>'
+          + '<span>Rescan</span>'
+        + '</a>'
+      + '</div>';
       badges.forEach(function(el) { el.innerHTML = html; });
     })
     .catch(function() {});
