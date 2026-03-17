@@ -3049,10 +3049,10 @@ app.get('/api/score', async (req, res) => {
       }
     }
     // 3. Domain-level fallback
-    const domainMatch = await pool.query(
-      `SELECT score, business_url FROM scan_log WHERE business_url ILIKE $1 ORDER BY score DESC, created_at DESC LIMIT 1`,
-      ['%' + domain + '%']
-    );
+ const domainMatch = await pool.query(
+  `SELECT score, business_url FROM scan_log WHERE business_url ILIKE $1 ORDER BY created_at DESC LIMIT 1`,
+  ['%' + domain + '%']
+);
     if (domainMatch.rows.length && domainMatch.rows[0].score) {
       return res.json({ success: true, url: domainMatch.rows[0].business_url, score: domainMatch.rows[0].score, source: 'scan_log_domain' });
     }
