@@ -3006,9 +3006,7 @@ if (s >= 50) return { label:'OPPORTUNITY', color:'#f59e0b', bg:'#78350f', text:'
 return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca5a5', bars:1 };
 }
 function bar(on, color) {
-return '
-<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>
-';
+return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
 }
 fetch(apiUrl)
 .then(function(r) { return r.json(); })
