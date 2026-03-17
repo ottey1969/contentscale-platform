@@ -3014,7 +3014,7 @@ fetch(apiUrl)
 if (!data.success || !data.score) {
 badges.forEach(function(el) {
 el.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;font-family:system-ui,sans-serif;">'
-+ '<span style="font-size:11px;color:#6b7280;">🔍 Not scanned yet —</span>'
++ '<span style="font-size:11px;color:#6b7280;">Not scanned yet &mdash;</span>'
 + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none;">Scan now</a>'
 + '</div>';
 });
@@ -3022,48 +3022,26 @@ return;
 }
 var score = data.score;
 var t = getTier(score);
-var html = '
-<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;">
-   '
-   + '
-   <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#111827;padding:10px 16px;text-decoration:none;border-right:1px solid #374151;">
-      '
-      + '
-      <div style="display:flex;flex-direction:column;gap:1px;">
-         '
-         + '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">ContentScore</span>'
-         + '
-         <div style="display:flex;align-items:baseline;gap:3px;">'
-            + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
-            + '<span style="font-size:11px;color:#4b5563;">/100</span>'
-            + '
-         </div>
-         '
-         + '
-      </div>
-      '
-      + '
-      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
-         '
-         + '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
-         + '
-         <div style="display:flex;gap:2px;">'
-            + bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
-            + '
-         </div>
-         '
-         + '
-      </div>
-      '
-      + '
-   </a>
-   '
-   + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="background:#1f2937;padding:10px 12px;cursor:pointer;color:#9ca3af;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;">'
-   + '<span style="font-size:14px;">&#x21bb;</span><span>Rescan</span>'
-   + '</a>'
-   + '
-</div>
-';
+var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;">'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#111827;padding:10px 16px;text-decoration:none;border-right:1px solid #374151;">'
++ '<div style="display:flex;flex-direction:column;gap:1px;">'
++ '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">ContentScore</span>'
++ '<div style="display:flex;align-items:baseline;gap:3px;">'
++ '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
++ '<span style="font-size:11px;color:#4b5563;">/100</span>'
++ '</div>'
++ '</div>'
++ '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
++ '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
++ '<div style="display:flex;gap:2px;">'
++ bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
++ '</div>'
++ '</div>'
++ '</a>'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="background:#1f2937;padding:10px 12px;cursor:pointer;color:#9ca3af;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;">'
++ '<span style="font-size:14px;">&#x21bb;</span><span>Rescan</span>'
++ '</a>'
++ '</div>';
 badges.forEach(function(el) { el.innerHTML = html; });
 })
 .catch(function() {});
