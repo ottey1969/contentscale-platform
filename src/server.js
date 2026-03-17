@@ -1984,8 +1984,17 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                await page.close();
                // ── SCORING ──
                const result = computeScore(scanUrl, analysis, extractedEmails);
-               console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
-               res.json(result);
+              console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+res.json(result);
+// Auto-save to scan_log so badge can find it
+if (pool) {
+  pool.query(
+    `INSERT INTO scan_log (business_url, score, source, created_at)
+     VALUES ($1, $2, 'single', NOW())
+     ON CONFLICT DO NOTHING`,
+    [scanUrl, result.score]
+  ).catch(() => {});
+}
                } catch (error) {
                console.error('❌ Scan error:', error.message);
                res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
