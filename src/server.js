@@ -3029,8 +3029,8 @@ return;
 }
 var score = data.score;
 var t = getTier(score);
-var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;">'
-+ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:#111827;padding:10px 16px;text-decoration:none;border-right:1px solid #374151;">'
+var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
++ '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
 + '<div style="display:flex;flex-direction:column;gap:1px;">'
 + '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">ContentScore</span>'
 + '<span style="font-size:9px;color:#9ca3af;">This page</span>'
@@ -3045,8 +3045,9 @@ var html = '<div style="display:inline-flex;align-items:center;border-radius:10p
 + bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
 + '</div>'
 + '</div>'
-+ '</a>'
-+ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:10px 14px;cursor:pointer;color:white;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;min-width:52px;">'
++ '</div>'
++ '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;text-decoration:none;">'
 + '<span style="font-size:13px;">&#x21bb;</span><span>Rescan</span>'
 + '</a>'
 + '</div>';
