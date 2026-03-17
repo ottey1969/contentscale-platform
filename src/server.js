@@ -3046,8 +3046,8 @@ var html = '<div style="display:inline-flex;align-items:center;border-radius:10p
 + '</div>'
 + '</div>'
 + '</a>'
-+ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="background:#1f2937;padding:10px 12px;cursor:pointer;color:#9ca3af;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;">'
-+ '<span style="font-size:14px;">&#x21bb;</span><span>Rescan</span>'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#7e22ce,#be185d);padding:10px 14px;cursor:pointer;color:white;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;min-width:52px;">'
++ '<span style="font-size:13px;">&#x21bb;</span><span>Rescan</span>'
 + '</a>'
 + '</div>';
 badges.forEach(function(el) { el.innerHTML = html; });
