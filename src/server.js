@@ -107,6 +107,22 @@ return false;
 }
 app.set('trust proxy', 1);
 app.use(compression({ level: 9, threshold: 0 }));
+
+// ── Global badge-loader injection ────────────────────────────────────────────
+// Injects badge-loader.js into every HTML page served by this server
+app.use((req, res, next) => {
+  const origSend = res.send.bind(res);
+  res.send = function(body) {
+    if (typeof body === 'string' && body.includes('</body>') &&
+        res.getHeader('Content-Type')?.includes('text/html')) {
+      body = body.replace('</body>',
+        '<script src="https://app.contentscale.site/badge-loader.js?v=3"></script></body>');
+    }
+    return origSend(body);
+  };
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // CORS
