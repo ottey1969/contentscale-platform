@@ -24,6 +24,7 @@
 // ============================================
 process.env.PGSSLMODE = 'verify-full';
 process.env.NODE_NO_WARNINGS = '1';
+const fs = require('fs');
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -201,22 +202,26 @@ app.get('/blog/blog-posts.json', (req, res) => {
 });
 
 app.get('/blog/:slug', (req, res) => {
-  const slug = req.params.slug;
-  const tryPaths = [
-    path.join(__dirname, '../public/blog', slug + '.html'),
-    path.join(__dirname, 'public/blog', slug + '.html'),
-  ];
-  const filePath = tryPaths.find(p => fs.existsSync(p));
-  if (filePath) {
-    const html = fs.readFileSync(filePath, 'utf8');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.status(200).send(html);
+  try {
+    const slug = req.params.slug;
+    if (!slug || slug.includes('.')) return res.status(404).send('<h1>Not found</h1>');
+    const tryPaths = [
+      path.join(__dirname, '../public/blog', slug + '.html'),
+      path.join(__dirname, 'public/blog', slug + '.html'),
+    ];
+    const filePath = tryPaths.find(p => { try { return fs.existsSync(p); } catch(e) { return false; } });
+    if (filePath) {
+      const html = fs.readFileSync(filePath, 'utf8');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.status(200).send(html);
+    }
+    res.status(404).send('<!DOCTYPE html><html><body style="background:#030712;color:#e5e7eb;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h2>Blog post not found</h2><p style="color:#6b7280;margin-top:8px">The file <code>' + slug + '.html</code> does not exist in public/blog/</p><a href="/blog" style="color:#a78bfa">← Back to Blog</a></div></body></html>');
+  } catch(e) {
+    console.error('Blog route error:', e.message);
+    res.status(500).send('<h1>Blog error: ' + e.message + '</h1>');
   }
-  const indexPaths = [path.join(__dirname, '../public/index.html'), path.join(__dirname, 'public/index.html')];
-  const indexPath = indexPaths.find(p => fs.existsSync(p));
-  res.status(404).sendFile(indexPath || path.join(__dirname, 'public/index.html'));
 });
 
 // Admin Auth Middleware
@@ -719,7 +724,6 @@ if (!scans || !Array.isArray(scans)) return res.status(400).json({ error: 'No sc
 const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 const tmpJson = path.join(os.tmpdir(), 'scandata_' + Date.now() + '.json');
 const tmpDocx = path.join(os.tmpdir(), 'scanreport_' + Date.now() + '.docx');
 fs.writeFileSync(tmpJson, JSON.stringify(scans));
