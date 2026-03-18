@@ -1688,7 +1688,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
                const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
                const expertQuoteCount=(rawHtml.match(/<blockquote/gi)||[]).length;
-               const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after/g)||[]).length;
+               const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
                const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
                const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
                const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
@@ -1927,7 +1927,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                let caseStudyCount = 0;
                const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
                const seen = new Set();
-               document.querySelectorAll('section, article').forEach(el => {
+               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"]').forEach(el => {
                if (seen.has(el)) return;
                const txt = el.textContent.toLowerCase();
                const len = txt.length;
