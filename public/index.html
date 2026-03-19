@@ -112,10 +112,7 @@
       </script>
       <!-- Tailwind deferred: removes 780ms render-blocking -->
       <script src="https://cdn.tailwindcss.com" defer></script>
-      <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-      <noscript>
-         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      </noscript>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
       <!-- font-display swap: prevents invisible text during FA load -->
       <style>
          @font-face { font-family: 'Font Awesome 6 Free'; font-display: swap; }
@@ -231,7 +228,20 @@
          #badgeModalBox { background:#0f172a;border:1px solid #4c1d95;border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto; }
          #badgePreviewWrap { background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;margin:16px 0;display:flex;justify-content:center; }
          #badgeEmbedCode { width:100%;background:#0a0a14;border:1px solid #2d1b69;border-radius:8px;padding:12px;color:#c084fc;font-family:monospace;font-size:0.72rem;resize:vertical;min-height:80px;max-height:140px; }
-      </style>
+      
+      /* ── MOBILE PATCH ── */
+      @media (max-width: 480px) {
+        .mode-toggle.active::after { top:-5px!important;right:-5px!important;width:22px!important;height:22px!important;font-size:12px!important; }
+        #singleScanBtn { white-space:normal!important; }
+        .bulk-result-summary { flex-wrap:wrap!important;gap:6px!important; }
+        #badgeModalBox { padding:16px!important; }
+        #badgeEmbedCode { color:#c084fc!important;background-color:#0a0a14!important;border:1px solid #2d1b69!important; }
+        #bulkExportButtons { flex-wrap:wrap!important; }
+        #bulkExportButtons .btn { flex:1 1 auto!important;min-width:100px!important;font-size:0.8rem!important; }
+      }
+      @media (max-width: 640px) { #fc_frame, .fc-widget-small { bottom:80px!important; } }
+      @media (max-width: 400px) { #fetchSitemapBtn { white-space:normal!important;padding:8px 10px!important; } h1 { font-size:clamp(1.4rem,5vw,2.25rem)!important; } }
+   </style>
    </head>
    <body class="bg-gray-900">
       <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -321,7 +331,7 @@
                   <div class="card max-w-3xl mx-auto">
                      <div class="flex flex-col sm:flex-row gap-3">
                         <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
-                        <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary whitespace-nowrap"><i class="fas fa-search"></i> Start Scan</button>
+                        <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary"><i class="fas fa-search"></i> Start Scan</button>
                      </div>
                      <div id="singleProgress" class="hidden mt-4">
                         <div class="progress-bar">
@@ -501,7 +511,7 @@
                            Pick a niche + city. Apify scrapes Google Maps. ContentScale scores every website.
                            Export clean data or push directly to Instantly. <strong style="color:#fbbf24;">Zero manual work.</strong>
                         </p>
-                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:32px;max-width:580px;margin-left:auto;margin-right:auto;">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:32px;max-width:580px;margin-left:auto;margin-right:auto;">
                            <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:14px 8px;text-align:center;">
                               <div style="font-size:1.6rem;margin-bottom:6px;">📍</div>
                               <div style="color:#fde68a;font-weight:700;font-size:0.78rem;">1. You pick</div>
@@ -752,7 +762,7 @@
                   <h2 class="text-4xl font-bold mb-3">✏️ Email Templates</h2>
                   <p class="text-xl" style="color:#e5e7eb!important;">Customize your bulk scan email templates (Grade 3 Level)</p>
                </div>
-               <div class="cards-grid" style="grid-template-columns:repeat(2,1fr)!important;">
+               <div class="cards-grid" style="grid-template-columns:repeat(2,1fr);">
                   <div class="card">
                      <h3 class="text-xl font-bold mb-2">🏆 Leaderboard Congratulations</h3>
                      <p class="text-sm mb-4" style="color:#9ca3af!important;">Sent to businesses with 85+ score</p>
@@ -955,7 +965,7 @@
                   <p style="color:#e5e7eb;font-weight:700;font-size:1.05rem;margin-bottom:4px;">Check your content right now — free</p>
                   <p style="color:#9ca3af;font-size:0.88rem;margin:0;">Paste any URL. Score in 5 seconds. No login needed.</p>
                </div>
-               <a href="#lead-scanner" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;padding:12px 28px;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;white-space:nowrap;flex-shrink:0;">🔍 Scan Your Site Free</a>
+               <a href="#lead-scanner" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;padding:12px 28px;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;">🔍 Scan Your Site Free</a>
             </div>
             <img src="/blog/images/traditional-seo-vs-modern-content-quality-standards.jpg"
                alt="Traditional SEO versus modern AI-era SEO writing in 2026"
@@ -1074,9 +1084,9 @@
                <p style="color:#94a3b8;margin-bottom:16px;line-height:1.7;"><strong style="color:#e5e7eb;">The challenge:</strong> ContentScale benchmarked its own content quality using the same scanner it offers clients. The goal: identify pages below 75 and prioritise rewrites.</p>
                <p style="color:#94a3b8;margin-bottom:20px;line-height:1.7;"><strong style="color:#e5e7eb;">The result:</strong> Average sitemap score 78/100. Pages above 85 were the detailed framework guides. Pages below 65 were older service pages with thin content and missing schema. The rewrite plan is now in place.</p>
                <div style="border-top:1px solid #1f2937;padding-top:16px;">
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1f2937;font-size:0.92rem;"><span style="color:#94a3b8;">Average sitemap score</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">78 / 100</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1f2937;font-size:0.92rem;"><span style="color:#94a3b8;">Pages scoring above 85</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">Framework guides</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.92rem;"><span style="color:#94a3b8;">Pages scoring below 65</span><span style="color:#f87171;font-weight:700;font-family:monospace;">Older service pages</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid #1f2937;font-size:0.92rem;"><span style="color:#94a3b8;">Average sitemap score</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">78 / 100</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid #1f2937;font-size:0.92rem;"><span style="color:#94a3b8;">Pages scoring above 85</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">Framework guides</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;font-size:0.92rem;"><span style="color:#94a3b8;">Pages scoring below 65</span><span style="color:#f87171;font-weight:700;font-family:monospace;">Older service pages</span></div>
                </div>
                <p style="color:#6ee7b7;font-size:0.88rem;margin-top:16px;margin-bottom:0;font-style:italic;">Key lesson: Even a platform built around content quality has pages that need work. The scanner finds them in seconds. Not finding them costs you months of lost rankings.</p>
             </div>
@@ -1087,10 +1097,10 @@
                <p style="color:#94a3b8;margin-bottom:16px;line-height:1.7;"><strong style="color:#e5e7eb;">The situation:</strong> A Netherlands-based e-commerce business had 18 service pages written by a freelancer. All looked professional. Initial ContentScale scan: average score 54/100. The pages ranked on page 3–5 for their main keywords despite 14 months of publishing.</p>
                <p style="color:#94a3b8;margin-bottom:20px;line-height:1.7;"><strong style="color:#e5e7eb;">The fix:</strong> Each page was rewritten using the GRAAF Framework — adding author attribution, cited statistics, structured FAQ sections, and proper schema markup. Rescan after rewrite: average score 88/100.</p>
                <div style="border-top:1px solid #052e16;padding-top:16px;">
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #052e16;font-size:0.92rem;"><span style="color:#94a3b8;">Score before rewrite</span><span style="color:#f87171;font-weight:700;font-family:monospace;">54 / 100</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #052e16;font-size:0.92rem;"><span style="color:#94a3b8;">Score after GRAAF rewrite</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">88 / 100</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #052e16;font-size:0.92rem;"><span style="color:#94a3b8;">Organic traffic change (90 days)</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">+312%</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.92rem;"><span style="color:#94a3b8;">Time to rewrite all 18 pages</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">3 weeks</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid #052e16;font-size:0.92rem;"><span style="color:#94a3b8;">Score before rewrite</span><span style="color:#f87171;font-weight:700;font-family:monospace;">54 / 100</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid #052e16;font-size:0.92rem;"><span style="color:#94a3b8;">Score after GRAAF rewrite</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">88 / 100</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:1px solid #052e16;font-size:0.92rem;"><span style="color:#94a3b8;">Organic traffic change (90 days)</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">+312%</span></div>
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;padding:8px 0;font-size:0.92rem;"><span style="color:#94a3b8;">Time to rewrite all 18 pages</span><span style="color:#4ade80;font-weight:700;font-family:monospace;">3 weeks</span></div>
                </div>
                <p style="color:#6ee7b7;font-size:0.88rem;margin-top:16px;margin-bottom:0;font-style:italic;">Key lesson: 14 months of publishing at 54/100 produced nothing. 3 weeks of rewriting at 88/100 produced a 312% traffic increase. The score was the difference — not the budget.</p>
             </div>
