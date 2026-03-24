@@ -2052,7 +2052,7 @@ app.get('/lead-crawler', (req, res) => {
                } catch (e) { res.status(500).json({ error: e.message }); }
                });
 
-                // ── Claude API proxy — users provide their own API key ─────────────────────
+           // ── Claude API proxy — users provide their own API key ─────────────────────
 app.post('/api/claude-proxy', async (req, res) => {
   // User must send their own Anthropic API key in header
   const apiKey = req.headers['x-anthropic-key'];
