@@ -2002,9 +2002,15 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')));
                app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 
-               // ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
+// ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
 app.get('/lead-crawler', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'lead-crawler.html'));
+  const tryPaths = [
+    path.join(__dirname, '../public', 'lead-crawler.html'),
+    path.join(__dirname, 'public', 'lead-crawler.html'),
+  ];
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (!filePath) return res.status(404).send('lead-crawler.html not found');
+  res.sendFile(filePath);
 });
                // ── Apify proxy routes ──────────────────────────────────────────────────────
                const APIFY_BASE = 'https://api.apify.com/v2';
