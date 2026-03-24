@@ -2052,13 +2052,19 @@ app.get('/lead-crawler', (req, res) => {
                } catch (e) { res.status(500).json({ error: e.message }); }
                });
 
-                  // ── Claude API proxy — keeps ANTHROPIC_API_KEY off the client ──────────────
+                // ── Claude API proxy — users provide their own API key ─────────────────────
 app.post('/api/claude-proxy', async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in environment' });
+  // User must send their own Anthropic API key in header
+  const apiKey = req.headers['x-anthropic-key'];
+  const userId = req.headers['x-user-id'] || 'anonymous';
+  
+  if (!apiKey || apiKey.length < 20) {
+    return res.status(401).json({ 
+      error: 'ANTHROPIC_API_KEY required', 
+      detail: 'Send your API key in the x-anthropic-key header' 
+    });
   }
-
+  
   try {
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -2070,10 +2076,8 @@ app.post('/api/claude-proxy', async (req, res) => {
       },
       body: JSON.stringify(req.body),
     });
-
     const data = await upstream.json();
     res.status(upstream.status).json(data);
-
   } catch (err) {
     console.error('[claude-proxy] Error:', err.message);
     res.status(502).json({ error: 'Proxy request failed', detail: err.message });
