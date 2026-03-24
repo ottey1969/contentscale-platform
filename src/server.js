@@ -2052,9 +2052,8 @@ app.get('/lead-crawler', (req, res) => {
                } catch (e) { res.status(500).json({ error: e.message }); }
                });
 
-           // ── Claude API proxy — users provide their own API key ─────────────────────
+      // ── Claude API proxy — users provide their own API key ─────────────────────
 app.post('/api/claude-proxy', async (req, res) => {
-  // User must send their own Anthropic API key in header
   const apiKey = req.headers['x-anthropic-key'];
   const userId = req.headers['x-user-id'] || 'anonymous';
   
@@ -2066,6 +2065,10 @@ app.post('/api/claude-proxy', async (req, res) => {
   }
   
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    
+    // ✅ Clean URL - NO trailing spaces
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -2075,16 +2078,30 @@ app.post('/api/claude-proxy', async (req, res) => {
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify(req.body),
+      signal: controller.signal,
     });
-    const data = await upstream.json();
+    
+    clearTimeout(timeout);
+    
+    const rawText = await upstream.text();
+    let data;
+    try { data = JSON.parse(rawText); } 
+    catch { data = { raw: rawText.slice(0, 500) }; }
+    
+    console.log(`[claude-proxy] ${userId} → ${upstream.status} (${rawText.length} bytes)`);
+    
     res.status(upstream.status).json(data);
   } catch (err) {
     console.error('[claude-proxy] Error:', err.message);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ error: 'Gateway timeout', detail: 'Anthropic API took too long' });
+    }
     res.status(502).json({ error: 'Proxy request failed', detail: err.message });
   }
 });
 
-               // ── Scan Reports ────────────────────────────────────────────────────────────
+
+// ── Scan Reports ────────────────────────────────────────────────────────────
                app.post('/api/report/generate', verifyAdmin, async (req, res) => {
                if (!pool) return res.json({ success: false, error: 'No DB' });
                const { scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations } = req.body;
