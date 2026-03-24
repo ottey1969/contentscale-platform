@@ -2001,6 +2001,11 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // Routes
                app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')));
                app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+
+               // ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
+app.get('/lead-crawler', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'lead-crawler.html'));
+});
                // ── Apify proxy routes ──────────────────────────────────────────────────────
                const APIFY_BASE = 'https://api.apify.com/v2';
                app.post('/api/apify/start-run', async (req, res) => {
@@ -2028,6 +2033,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                res.status(r.status).json(data);
                } catch (e) { res.status(500).json({ error: e.message }); }
                });
+
                app.get('/api/apify/dataset/:runId', async (req, res) => {
                const token = req.headers['x-apify-token'];
                if (!token) return res.status(401).json({ error: 'No Apify token' });
@@ -2035,6 +2041,34 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
                headers: { 'Authorization': `Bearer ${token}` }
                });
+
+                  // ── Claude API proxy — keeps ANTHROPIC_API_KEY off the client ──────────────
+app.post('/api/claude-proxy', async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in environment' });
+  }
+
+  try {
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await upstream.json();
+    res.status(upstream.status).json(data);
+
+  } catch (err) {
+    console.error('[claude-proxy] Error:', err.message);
+    res.status(502).json({ error: 'Proxy request failed', detail: err.message });
+  }
+});
                const data = await r.json();
                res.status(r.status).json(data);
                } catch (e) { res.status(500).json({ error: e.message }); }
