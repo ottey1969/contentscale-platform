@@ -1803,7 +1803,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // Fallback: load from DB if not in memory (after restart)
                if (!job && pool) {
                try {
-               const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=', [req.params.jobId]);
+               const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=$1', [req.params.jobId]);
                if (row.rows[0]) {
                const r = row.rows[0];
                job = { id: r.id, userId: r.user_id, status: r.status, total: r.total, done: r.done, failed: r.failed, results: r.results, createdAt: new Date(r.created_at).getTime() };
