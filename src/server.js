@@ -2041,6 +2041,10 @@ app.get('/lead-crawler', (req, res) => {
                const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
                headers: { 'Authorization': `Bearer ${token}` }
                });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
 
                   // ── Claude API proxy — keeps ANTHROPIC_API_KEY off the client ──────────────
 app.post('/api/claude-proxy', async (req, res) => {
@@ -2069,10 +2073,7 @@ app.post('/api/claude-proxy', async (req, res) => {
     res.status(502).json({ error: 'Proxy request failed', detail: err.message });
   }
 });
-               const data = await r.json();
-               res.status(r.status).json(data);
-               } catch (e) { res.status(500).json({ error: e.message }); }
-               });
+
                // ── Scan Reports ────────────────────────────────────────────────────────────
                app.post('/api/report/generate', verifyAdmin, async (req, res) => {
                if (!pool) return res.json({ success: false, error: 'No DB' });
