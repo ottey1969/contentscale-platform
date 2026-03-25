@@ -2075,7 +2075,8 @@ app.post('/api/claude-proxy', async (req, res) => {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        },
+        'anthropic-beta': 'web-search-2025-03-05',
+      },
       body: JSON.stringify(req.body),
       signal: controller.signal,
     });
@@ -3120,5 +3121,118 @@ badges.forEach(function(el) { el.innerHTML = html; });
 });
 
 
+
+// ══════════════════════════════════════════════════════════════════════
+// VAPI VOICEBOT ROUTES
+// ══════════════════════════════════════════════════════════════════════
+
+// POST /api/voicebot/call — trigger outbound call via Vapi
+app.post('/api/voicebot/call', async (req, res) => {
+  const { vapiKey, phoneId, customerPhone, customerName, assistant, leadId } = req.body;
+
+  if (!vapiKey || vapiKey.length < 10) {
+    return res.status(401).json({ error: 'Vapi API key required' });
+  }
+  if (!phoneId) {
+    return res.status(400).json({ error: 'phoneId (Vapi Phone Number ID) required' });
+  }
+  if (!customerPhone) {
+    return res.status(400).json({ error: 'customerPhone required' });
+  }
+
+  // Normalise phone: Vapi needs E.164 format (+31612345678)
+  let phone = customerPhone.replace(/[\s\-().]/g, '');
+  if (!phone.startsWith('+')) phone = '+' + phone;
+
+  try {
+    const upstream = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${vapiKey}`,
+      },
+      body: JSON.stringify({
+        phoneNumberId: phoneId,
+        customer: {
+          number: phone,
+          name: customerName || '',
+        },
+        assistant: assistant || {
+          firstMessage: `Hi, is this ${customerName || 'there'}? I have a quick question about your website — do you have 2 minutes?`,
+          model: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            systemPrompt: 'You are a friendly content writing specialist. Ask if they need help with their website content. Be brief and natural.',
+          },
+          voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' },
+          endCallMessage: 'Thanks for your time, have a great day!',
+          maxDurationSeconds: 240,
+        },
+      }),
+    });
+
+    const data = await upstream.json();
+    console.log(`[vapi] call initiated → ${phone} | status ${upstream.status} | id ${data.id||'?'}`);
+
+    if (!upstream.ok) {
+      const errMsg = data.message || data.error || JSON.stringify(data).slice(0, 200);
+      return res.status(upstream.status).json({ error: errMsg });
+    }
+
+    res.json({ callId: data.id, status: data.status, leadId });
+
+  } catch (err) {
+    console.error('[vapi] call error:', err.message);
+    res.status(502).json({ error: 'Vapi request failed: ' + err.message });
+  }
+});
+
+// GET /api/voicebot/status/:callId — poll call outcome
+app.get('/api/voicebot/status/:callId', async (req, res) => {
+  const vapiKey = req.headers['x-vapi-key'];
+  if (!vapiKey) return res.status(401).json({ error: 'x-vapi-key header required' });
+
+  try {
+    const upstream = await fetch(`https://api.vapi.ai/call/${req.params.callId}`, {
+      headers: { 'Authorization': `Bearer ${vapiKey}` },
+    });
+    const data = await upstream.json();
+    if (!upstream.ok) return res.status(upstream.status).json({ error: data.message || 'Vapi error' });
+
+    // Extract clean summary from analysis or messages
+    let summary = '';
+    if (data.analysis?.summary) summary = data.analysis.summary;
+    else if (data.summary) summary = data.summary;
+    else if (Array.isArray(data.messages)) {
+      // Build a short transcript snippet from last few messages
+      summary = data.messages
+        .filter(m => m.role === 'assistant' || m.role === 'user')
+        .slice(-4)
+        .map(m => `${m.role === 'assistant' ? 'Bot' : 'Customer'}: ${(m.message||'').slice(0,80)}`)
+        .join(' | ');
+    }
+
+    res.json({
+      callId:      data.id,
+      status:      data.status,        // queued | ringing | in-progress | forwarding | ended | failed
+      endedReason: data.endedReason,   // voicemail | customer-ended-call | assistant-said-end-call-phrase | no-answer | busy | failed
+      duration:    data.endedAt && data.startedAt
+        ? Math.round((new Date(data.endedAt) - new Date(data.startedAt)) / 1000)
+        : null,
+      summary,
+    });
+
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// POST /api/voicebot/webhook — Vapi sends outcome here (optional, for real-time push)
+app.post('/api/voicebot/webhook', (req, res) => {
+  const event = req.body;
+  console.log('[vapi webhook]', event?.message?.type, event?.message?.call?.id || '');
+  // Just acknowledge — frontend polls for status itself
+  res.json({ received: true });
+});
 
 startServer();
