@@ -106,17 +106,31 @@ h1 span{color:var(--gold);}
 .srch:focus{border-color:var(--gold);} .srch::placeholder{color:var(--muted);}
 .ml{margin-left:auto;}
 .bucket{margin-bottom:38px;}
-.bhead{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:13px;flex-wrap:wrap;}
-.bicon{font-size:16px;line-height:1;} .bname{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;}
-.brange{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:2px;border:1px solid;}
-.bhot{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:2px;}
+.bhead{padding:18px 20px;border-radius:6px;margin-bottom:14px;border:1px solid;}
+.bhead-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+.bicon{font-size:22px;line-height:1;flex-shrink:0;}
+.bname{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.03em;line-height:1;}
+.bsublabel{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin-top:2px;}
+.brange{font-family:'Bebas Neue',sans-serif;font-size:18px;padding:4px 12px;border-radius:3px;border:1px solid;white-space:nowrap;}
+.bhot{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:3px;}
+.bcnt{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto;}
+.bhead-bottom{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.baction{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:inherit;opacity:.75;}
+.baction::before{content:'→ ';}
+.bdesc{font-size:12px;color:var(--muted);line-height:1.5;margin-left:auto;max-width:420px;text-align:right;}
 .bcnt{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto;}
-.bk-ghost .bname,.bk-ghost .brange{color:var(--muted);} .bk-ghost .brange{border-color:var(--border);background:rgba(82,82,110,.06);} .bk-ghost .bhot{background:rgba(82,82,110,.1);color:var(--muted);}
-.bk-skeleton .bname,.bk-skeleton .brange{color:var(--blue);} .bk-skeleton .brange{border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.06);} .bk-skeleton .bhot{background:rgba(96,165,250,.12);color:var(--blue);}
-.bk-brochure .bname,.bk-brochure .brange{color:var(--gold);} .bk-brochure .brange{border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.06);} .bk-brochure .bhot{background:rgba(251,191,36,.15);color:var(--gold);}
-.bk-stale .bname,.bk-stale .brange{color:var(--orange);} .bk-stale .brange{border-color:rgba(251,146,60,.35);background:rgba(251,146,60,.06);} .bk-stale .bhot{background:rgba(251,146,60,.12);color:var(--orange);}
-.bk-active .bname,.bk-active .brange{color:var(--red);} .bk-active .brange{border-color:rgba(244,63,63,.35);background:rgba(244,63,63,.06);} .bk-active .bhot{background:rgba(244,63,63,.12);color:var(--red);}
-.bk-estab .bname,.bk-estab .brange{color:var(--purple);} .bk-estab .brange{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.06);} .bk-estab .bhot{background:rgba(167,139,250,.12);color:var(--purple);}
+.bk-ghost .bhead{background:rgba(82,82,110,.06);border-color:rgba(82,82,110,.2);}
+.bk-ghost .bname,.bk-ghost .brange,.bk-ghost .baction{color:var(--muted);} .bk-ghost .brange{border-color:rgba(82,82,110,.3);background:rgba(82,82,110,.08);} .bk-ghost .bhot{background:rgba(82,82,110,.1);color:var(--muted);}
+.bk-skeleton .bhead{background:rgba(96,165,250,.06);border-color:rgba(96,165,250,.25);}
+.bk-skeleton .bname,.bk-skeleton .brange,.bk-skeleton .baction{color:var(--blue);} .bk-skeleton .brange{border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.1);} .bk-skeleton .bhot{background:rgba(96,165,250,.15);color:var(--blue);}
+.bk-brochure .bhead{background:rgba(251,191,36,.05);border-color:rgba(251,191,36,.3);}
+.bk-brochure .bname,.bk-brochure .brange,.bk-brochure .baction{color:var(--gold);} .bk-brochure .brange{border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.1);} .bk-brochure .bhot{background:rgba(251,191,36,.18);color:var(--gold);}
+.bk-stale .bhead{background:rgba(251,146,60,.05);border-color:rgba(251,146,60,.25);}
+.bk-stale .bname,.bk-stale .brange,.bk-stale .baction{color:var(--orange);} .bk-stale .brange{border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.1);} .bk-stale .bhot{background:rgba(251,146,60,.14);color:var(--orange);}
+.bk-active .bhead{background:rgba(244,63,63,.05);border-color:rgba(244,63,63,.25);}
+.bk-active .bname,.bk-active .brange,.bk-active .baction{color:var(--red);} .bk-active .brange{border-color:rgba(244,63,63,.4);background:rgba(244,63,63,.1);} .bk-active .bhot{background:rgba(244,63,63,.14);color:var(--red);}
+.bk-estab .bhead{background:rgba(167,139,250,.05);border-color:rgba(167,139,250,.25);}
+.bk-estab .bname,.bk-estab .brange,.bk-estab .baction{color:var(--purple);} .bk-estab .brange{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.1);} .bk-estab .bhot{background:rgba(167,139,250,.14);color:var(--purple);}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:9px;}
 .lcard{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:15px;transition:border-color .15s,transform .15s;animation:fup .22s ease both;position:relative;cursor:pointer;}
 .lcard:hover{border-color:#333;transform:translateY(-1px);} .lcard.sel{border-color:var(--gold);background:rgba(251,191,36,.04);}
@@ -197,24 +211,81 @@ h1 span{color:var(--gold);}
 </div>
 <div class="search-panel">
 <!-- ══ API KEY INPUT (NEW) ══ -->
-<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:6px;padding:16px;margin-bottom:18px;">
-<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-<span style="font-size:16px;">🔑</span>
-<span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);font-weight:700;">Your Anthropic API Key</span>
+<!-- ══ API KEY PANEL ══ -->
+<div id="keyPanel">
+
+  <!-- STATE A: No key saved — shown by default, hidden when key exists -->
+  <div id="keyEntryBlock" style="background:rgba(244,63,63,0.06);border:1.5px solid rgba(244,63,63,0.35);border-radius:6px;padding:18px 20px;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);line-height:1;">🔑 ANTHROPIC API KEY REQUIRED</span>
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"
+         style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;
+                text-decoration:none;margin-left:auto;white-space:nowrap;">
+        Get your key → console.anthropic.com
+      </a>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
+      <input type="password" id="anthropicKey"
+             placeholder="sk-ant-api03-..."
+             autocomplete="off" spellcheck="false"
+             onkeydown="if(event.key==='Enter')saveAndTestKey()"
+             style="background:var(--bg);border:1.5px solid rgba(244,63,63,.4);border-radius:4px;
+                    padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+                    color:var(--ink);outline:none;width:100%;transition:border-color .2s;" />
+      <button onclick="saveAndTestKey()"
+              style="background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;
+                     font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;
+                     cursor:pointer;white-space:nowrap;height:46px;">
+        SAVE &amp; TEST
+      </button>
+      <button onclick="toggleKeyVisible()"
+              id="keyToggleBtn"
+              title="Toon/verberg key"
+              style="background:var(--surface);color:var(--muted);border:1px solid var(--border);
+                     font-size:16px;padding:12px 14px;border-radius:4px;cursor:pointer;height:46px;">
+        👁
+      </button>
+    </div>
+    <div id="keyTestStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:18px;"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
+      🔒 Stored in your browser (localStorage) · Never sent to ContentScale servers
+    </div>
+  </div>
+
+  <!-- STATE B: Key is saved — compact green bar -->
+  <div id="keySavedBar" style="display:none;background:rgba(74,222,128,0.07);border:1.5px solid rgba(74,222,128,0.35);
+       border-radius:6px;padding:12px 18px;margin-bottom:18px;
+       display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:8px;flex:1;">
+      <span style="font-size:16px;">✅</span>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">
+          API Key Active
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="keyMasked">
+          sk-ant-···
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div id="keyBadge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+           padding:4px 10px;border-radius:3px;background:rgba(74,222,128,.15);
+           color:var(--green);border:1px solid rgba(74,222,128,.3);">
+        ✓ TESTED &amp; WORKING
+      </div>
+      <button onclick="changeApiKey()"
+              style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                     background:var(--surface);border:1px solid var(--border);color:var(--muted);
+                     padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s;"
+              onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">
+        ✎ Change Key
+      </button>
+    </div>
+  </div>
+
 </div>
-<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
-<div class="field">
-<input type="password" id="anthropicKey" placeholder="sk-ant-..." style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);outline:none;width:100%;" />
-</div>
-<button onclick="saveApiKey()" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:11px 16px;border-radius:4px;cursor:pointer;height:46px;">💾 Save</button>
-</div>
-<div style="font-size:8px;color:var(--muted);margin-top:8px;line-height:1.5;">
-Key stored locally in your browser · Never sent to ContentScale servers ·
-<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--gold);">Get your key here →</a>
-</div>
-<div id="keyStatus" style="font-size:8px;color:var(--muted);margin-top:6px;"></div>
-</div>
-<!-- ══ END API KEY INPUT ══ -->
+<!-- ══ END API KEY PANEL ══ -->
 <div class="panel-title">Target Location — Fires 20 Industry Searches In Parallel</div>
 <input type="hidden" id="apiKey" value="">
 <div class="form-row">
@@ -334,45 +405,149 @@ active:   "You have content but the quality and SEO structure aren't converting.
 estab:    'With a site this size, a content audit would likely uncover dozens of pages hurting your rankings.',
 };
 const BUCKET_DEFS=[
-{key:'ghost',    label:'Ghost Sites',    range:'0 – 5 Pages',    cls:'bk-ghost',    icon:'👻',hot:'⚠ Risky'},
-{key:'skeleton', label:'Skeleton Sites', range:'5 – 15 Pages',   cls:'bk-skeleton', icon:'💀',hot:'🔥 GOLDMINE'},
-{key:'brochure', label:'Brochure Sites', range:'15 – 30 Pages',  cls:'bk-brochure', icon:'📄',hot:'🔥 GOLDMINE'},
-{key:'stale',    label:'Stale Sites',    range:'30 – 60 Pages',  cls:'bk-stale',    icon:'🕰', hot:'✓ Good'},
-{key:'active',   label:'Active Sites',   range:'60 – 150 Pages', cls:'bk-active',   icon:'⚡',hot:'✓ Good'},
-{key:'estab',    label:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢',hot:'↗ High Ticket'},
+{key:'ghost',    label:'NEARLY EMPTY',   sublabel:'Ghost Sites',    range:'0 – 5 Pages',    cls:'bk-ghost',    icon:'👻', hot:'⚠ Verify Budget',   action:'Build from scratch',          desc:'Homepage only — almost nothing indexed. Verify they have budget before pitching.'},
+{key:'skeleton', label:'BARE BONES',     sublabel:'Skeleton Sites', range:'5 – 15 Pages',   cls:'bk-skeleton', icon:'🔥', hot:'🔥 EASIEST SELL',   action:'Write all their missing pages', desc:'Real business making money — website says almost nothing. Lowest resistance pitch.'},
+{key:'brochure', label:'BUILT & FORGOT', sublabel:'Brochure Sites', range:'15 – 30 Pages',  cls:'bk-brochure', icon:'🔥', hot:'🔥 HIGH PRIORITY',  action:'Blog + SEO content strategy',  desc:'Has all the basic pages but zero blog, no case studies, thin copy. Built once, ignored since.'},
+{key:'stale',    label:'GONE QUIET',     sublabel:'Stale Sites',    range:'30 – 60 Pages',  cls:'bk-stale',    icon:'🕰', hot:'✓ Retainer Target', action:'Restart their content engine',  desc:'Started content marketing then stopped. Blog is months or years out of date.'},
+{key:'active',   label:'NEEDS QUALITY',  sublabel:'Active Sites',   range:'60 – 150 Pages', cls:'bk-active',   icon:'⚡', hot:'✓ Audit + Retainer', action:'Content audit + rewrite plan',  desc:'Publishing but inconsistently. Quality is low, SEO structure is a mess.'},
+{key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
 ];
 let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
 let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
 let completedIndustries=new Set();
 // ── API KEY MANAGEMENT ───────────────────────────────────────────────────
 const LS_KEY_ANTHROPIC = 'lc_anthropic_key';
-function saveApiKey() {
-const key = document.getElementById('anthropicKey').value.trim();
-if (!key || key.length < 20) {
-document.getElementById('keyStatus').innerHTML = '<span style="color:var(--red)">❌ Invalid key format</span>';
-return;
+
+// ── Mask the key: show first 10 + last 4 chars ──────────────────────────
+function maskKey(k) {
+  if (!k || k.length < 16) return 'sk-ant-···';
+  return k.slice(0, 14) + '···' + k.slice(-4);
 }
-localStorage.setItem(LS_KEY_ANTHROPIC, key);
-document.getElementById('keyStatus').innerHTML = '<span style="color:var(--green)">✅ Key saved locally</span>';
-document.getElementById('anthropicKey').value = '';
-setTimeout(() => { document.getElementById('keyStatus').innerHTML = ''; }, 3000);
+
+// ── Show/hide saved bar vs entry block ──────────────────────────────────
+function showSavedState(key, tested) {
+  document.getElementById('keyEntryBlock').style.display = 'none';
+  const bar = document.getElementById('keySavedBar');
+  bar.style.display = 'flex';
+  document.getElementById('keyMasked').textContent = maskKey(key);
+  const badge = document.getElementById('keyBadge');
+  if (tested) {
+    badge.textContent = '✓ TESTED & WORKING';
+    badge.style.background = 'rgba(74,222,128,.15)';
+    badge.style.color = 'var(--green)';
+    badge.style.borderColor = 'rgba(74,222,128,.3)';
+  } else {
+    badge.textContent = '✓ SAVED';
+    badge.style.background = 'rgba(251,191,36,.1)';
+    badge.style.color = 'var(--gold)';
+    badge.style.borderColor = 'rgba(251,191,36,.3)';
+  }
 }
-function loadApiKey() {
-const saved = localStorage.getItem(LS_KEY_ANTHROPIC);
-if (saved && saved.length >= 20) {
-document.getElementById('keyStatus').innerHTML = '<span style="color:var(--green)">✓ Key loaded from storage</span>';
-return saved;
+
+function showEntryState(msg) {
+  document.getElementById('keySavedBar').style.display = 'none';
+  document.getElementById('keyEntryBlock').style.display = 'block';
+  if (msg) {
+    document.getElementById('keyTestStatus').innerHTML = msg;
+  }
 }
-document.getElementById('keyStatus').innerHTML = '<span style="color:var(--orange)">⚠️ Enter your Anthropic API key to start</span>';
-return null;
+
+// ── Toggle password visibility ───────────────────────────────────────────
+function toggleKeyVisible() {
+  const inp = document.getElementById('anthropicKey');
+  const btn = document.getElementById('keyToggleBtn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+  }
 }
-function clearApiKey() {
-localStorage.removeItem(LS_KEY_ANTHROPIC);
-document.getElementById('keyStatus').innerHTML = '<span style="color:var(--muted)">Key cleared</span>';
+
+// ── Test key against Anthropic API ──────────────────────────────────────
+async function testKey(key) {
+  const statusEl = document.getElementById('keyTestStatus');
+  statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Testing...</span>';
+  try {
+    const resp = await fetch('/api/claude-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-anthropic-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Hi' }]
+      })
+    });
+    const data = await resp.json();
+    if (resp.ok && data.content) {
+      return { ok: true };
+    } else {
+      const msg = data.error?.message || ('HTTP ' + resp.status);
+      return { ok: false, msg };
+    }
+  } catch (e) {
+    return { ok: false, msg: e.message };
+  }
 }
-// Load key on page init
+
+// ── Save + Test ──────────────────────────────────────────────────────────
+async function saveAndTestKey() {
+  const key = document.getElementById('anthropicKey').value.trim();
+  const statusEl = document.getElementById('keyTestStatus');
+
+  if (!key || !key.startsWith('sk-ant-') || key.length < 30) {
+    statusEl.innerHTML = '<span style="color:var(--red)">❌ Invalid key — must start with sk-ant- and be at least 30 characters</span>';
+    return;
+  }
+
+  // Save immediately
+  localStorage.setItem(LS_KEY_ANTHROPIC, key);
+  localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '0');
+  statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Key saved — testing connection...</span>';
+
+  // Test against real API
+  const result = await testKey(key);
+
+  if (result.ok) {
+    localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '1');
+    document.getElementById('anthropicKey').value = '';
+    showSavedState(key, true);
+    toast('✅ API key works! You can now crawl leads.');
+  } else {
+    localStorage.removeItem(LS_KEY_ANTHROPIC);
+    localStorage.removeItem(LS_KEY_ANTHROPIC + '_tested');
+    statusEl.innerHTML =
+      '<span style="color:var(--red)">❌ Test failed: ' + result.msg + '</span>' +
+      '<br><span style="color:var(--muted);font-size:9px;">Check your key at console.anthropic.com — make sure billing is set up.</span>';
+  }
+}
+
+// ── Change key (back to entry) ───────────────────────────────────────────
+function changeApiKey() {
+  localStorage.removeItem(LS_KEY_ANTHROPIC);
+  localStorage.removeItem(LS_KEY_ANTHROPIC + '_tested');
+  showEntryState('<span style="color:var(--muted)">Enter your new API key</span>');
+}
+
+// ── Get key (used by callClaude) ─────────────────────────────────────────
+function getApiKey() {
+  return localStorage.getItem(LS_KEY_ANTHROPIC) || null;
+}
+
+// ── Init on page load ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-loadApiKey();
+  const saved = localStorage.getItem(LS_KEY_ANTHROPIC);
+  const tested = localStorage.getItem(LS_KEY_ANTHROPIC + '_tested') === '1';
+  if (saved && saved.length >= 20) {
+    showSavedState(saved, tested);
+  } else {
+    showEntryState(null);
+  }
 });
 // ── PERSISTENCE ───────────────────────────────────────────────────────────
 const LS_KEY='lc_session';
@@ -470,7 +645,7 @@ return 'estab';
 }
 // ── PHASE 1: FIND BUSINESSES (fast — no sitemap/contact lookup) ──────────────
 async function callClaude(city,country,ind){
-const apiKey = localStorage.getItem('lc_anthropic_key');
+const apiKey = getApiKey();
 if (!apiKey || apiKey.length < 20) {
 throw new Error('ANTHROPIC_API_KEY missing — enter your key in the panel above');
 }
@@ -694,7 +869,7 @@ updateResolveBtn(false, 0);
 toast('✓ Sitemaps resolved for ' + resolved + ' leads');
 }
 async function resolveBatch(leads){
-const apiKey = localStorage.getItem('lc_anthropic_key');
+const apiKey = getApiKey();
 if (!apiKey || apiKey.length < 20) {
 throw new Error('ANTHROPIC_API_KEY missing — enter your key in the panel above');
 }
@@ -878,11 +1053,20 @@ const sec=document.createElement('div');
 sec.className='bucket '+def.cls;
 sec.innerHTML=`
 <div class="bhead">
-<span class="bicon">${def.icon}</span>
-<span class="bname">${def.label}</span>
-<span class="brange">${def.range}</span>
-<span class="bhot">${def.hot}</span>
-<span class="bcnt">${items.length} leads</span>
+  <div class="bhead-top">
+    <span class="bicon">${def.icon}</span>
+    <div>
+      <div class="bname">${def.label}</div>
+      <div class="bsublabel">${def.sublabel}</div>
+    </div>
+    <span class="brange">${def.range}</span>
+    <span class="bhot">${def.hot}</span>
+    <span class="bcnt">${items.length} lead${items.length!==1?'s':''}</span>
+  </div>
+  <div class="bhead-bottom">
+    <span class="baction">${def.action}</span>
+    <span class="bdesc">${def.desc}</span>
+  </div>
 </div>
 <div class="cards">${items.map(l=>cardHTML(l)).join('')}</div>`;
 out.appendChild(sec);
