@@ -306,31 +306,36 @@ h1 span{color:var(--gold);}
     <h3>Voicebot Configuration — Vapi.ai</h3>
     <span id="vapiSavedBadge" class="vapi-saved" style="display:none;">✓ SAVED</span>
   </div>
+  <div style="background:rgba(244,63,63,.08);border:1px solid rgba(244,63,63,.3);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red);line-height:1.6;">
+    ⚠ Your previous API key was shared publicly — <strong>regenerate it</strong> at
+    <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener" style="color:var(--red);text-decoration:underline;">dashboard.vapi.ai → API Keys</a>
+    before entering it here. Phone Number ID, name, company and callback are already pre-filled.
+  </div>
   <div class="vapi-grid">
     <div class="vapi-field">
       <label>Vapi API Key</label>
-      <input type="password" id="vapiKey" placeholder="your-vapi-api-key" autocomplete="off" />
+      <input type="password" id="vapiKey" placeholder="⚠ Paste your NEW Vapi key here (regenerate the old one!)" autocomplete="off" />
     </div>
     <div class="vapi-field">
       <label>Vapi Phone Number ID</label>
-      <input type="text" id="vapiPhoneId" placeholder="uuid from vapi.ai dashboard → Phone Numbers" />
+      <input type="text" id="vapiPhoneId" value="4a3b17c5-24f0-4e65-b64d-29e8e3f446a3" />
     </div>
     <div class="vapi-field">
       <label>Your Name (bot introduces as)</label>
-      <input type="text" id="vapiCallerName" placeholder="e.g. Alex from ContentScale" />
+      <input type="text" id="vapiCallerName" value="Alex from ContentScale" />
     </div>
     <div class="vapi-field">
       <label>Your Company / Website</label>
-      <input type="text" id="vapiCompany" placeholder="e.g. ContentScale" />
+      <input type="text" id="vapiCompany" value="ContentScale" />
     </div>
     <div class="vapi-field" style="grid-column:1/-1">
       <label>Your Callback Number (mentioned in voicemail)</label>
-      <input type="text" id="vapiCallbackNumber" placeholder="e.g. +31 6 12 34 56 78" />
+      <input type="text" id="vapiCallbackNumber" value="+1 (279) 499 8736" />
     </div>
     <div class="vapi-field" style="grid-column:1/-1">
       <label>Opening Line — {name} {score} {pages} {city} are auto-filled per lead</label>
       <input type="text" id="vapiOpeningLine"
-        value="Hi, is this {name}? I just analysed your website and found something interesting — do you have 2 minutes?" />
+        value="Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?" />
     </div>
   </div>
   <button class="vapi-save-btn" onclick="saveVapiConfig()">SAVE VOICEBOT CONFIG</button>
@@ -1284,7 +1289,7 @@ function loadVapiConfig(){
     document.getElementById('vapiCallerName').value=cfg.callerName||'';
     document.getElementById('vapiCompany').value=cfg.company||'';
     document.getElementById('vapiCallbackNumber').value=cfg.callback||'';
-    document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? I just analysed your website and found something interesting — do you have 2 minutes?';
+    document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
     document.getElementById('vapiSavedBadge').style.display='inline-block';
     document.getElementById('vapiConfigBadge').style.display='inline-block';
     document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
@@ -1309,7 +1314,7 @@ function buildAssistant(lead, cfg){
   const type    = lead.type||'business';
   const pitch   = lead.pitch_angle||`Your website only has about ${pages} pages and could use more content to rank on Google.`;
 
-  const opening = (cfg.openingLine||'Hi, is this {name}? I just analysed your website and found something interesting — do you have 2 minutes?')
+  const opening = (cfg.openingLine||'Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?')
     .replace('{name}',name).replace('{score}',score).replace('{pages}',pages).replace('{city}',city);
 
   const systemPrompt=`You are ${cfg.callerName}, a content writing specialist from ${cfg.company||'a content agency'}.
@@ -1572,7 +1577,16 @@ function copyAllPhones(){
 
 // ── Init on load ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
-  loadVapiConfig();
+  // Pre-fill Vapi defaults if nothing saved yet
+  if(!localStorage.getItem(LS_VAPI)){
+    document.getElementById('vapiPhoneId').value       = '4a3b17c5-24f0-4e65-b64d-29e8e3f446a3';
+    document.getElementById('vapiCallerName').value    = 'Alex from ContentScale';
+    document.getElementById('vapiCompany').value       = 'ContentScale';
+    document.getElementById('vapiCallbackNumber').value= '+1 (279) 499 8736';
+    document.getElementById('vapiOpeningLine').value   = 'Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
+  } else {
+    loadVapiConfig();
+  }
   loadCallLog();
 });
 </script>
