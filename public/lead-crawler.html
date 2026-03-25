@@ -1544,8 +1544,7 @@ function clearCallLog(){callLog=[];persistCallLog();renderCallLog();document.get
 function exportCallLogCSV(){
   const h=['Name','Phone','Type','Status','Note','Summary','Time'];
   const rows=callLog.map(e=>[`"${e.name}"`,`"${e.phone}"`,`"${e.type}"`,`"${e.state}"`,`"${e.statusText}"`,`"${(e.summary||'').replace(/"/g,"'").slice(0,200)}"`,`"${new Date(e.ts).toLocaleString()}"`]);
-  dl([h.join(','),...rows.map(r=>r.join(','))].join('
-'),'call-log-'+Date.now()+'.csv','text/csv');
+  dl([h.join(','),...rows.map(r=>r.join(','))].join('\n'),'call-log-'+Date.now()+'.csv','text/csv');
   toast('Exported '+callLog.length+' call records');
 }
 
@@ -1553,26 +1552,22 @@ function exportCallLogCSV(){
 function copySelEmails(){
   const s=getSelLeads().filter(l=>l.email);
   if(!s.length){toast('No emails in selection');return;}
-  navigator.clipboard.writeText(s.map(l=>l.email).join('
-')).then(()=>toast('Copied '+s.length+' emails'));
+  navigator.clipboard.writeText(s.map(l=>l.email).join('\n')).then(()=>toast('Copied '+s.length+' emails'));
 }
 function copySelPhones(){
   const s=getSelLeads().filter(l=>l.phone);
   if(!s.length){toast('No phone numbers in selection');return;}
-  navigator.clipboard.writeText(s.map(l=>l.phone).join('
-')).then(()=>toast('Copied '+s.length+' phones'));
+  navigator.clipboard.writeText(s.map(l=>l.phone).join('\n')).then(()=>toast('Copied '+s.length+' phones'));
 }
 function copyAllEmails(){
   const e=allLeads.filter(l=>l.email).map(l=>l.email);
   if(!e.length){toast('No emails yet');return;}
-  navigator.clipboard.writeText(e.join('
-')).then(()=>toast('Copied '+e.length+' emails'));
+  navigator.clipboard.writeText(e.join('\n')).then(()=>toast('Copied '+e.length+' emails'));
 }
 function copyAllPhones(){
   const p=allLeads.filter(l=>l.phone).map(l=>l.phone);
   if(!p.length){toast('No phones yet');return;}
-  navigator.clipboard.writeText(p.join('
-')).then(()=>toast('Copied '+p.length+' phones'));
+  navigator.clipboard.writeText(p.join('\n')).then(()=>toast('Copied '+p.length+' phones'));
 }
 
 // ── Init on load ─────────────────────────────────────────
