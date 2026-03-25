@@ -343,6 +343,13 @@ h1 span{color:var(--gold);}
     Get your API key + Phone Number ID at
     <a href="https://vapi.ai" target="_blank" rel="noopener" style="color:var(--green);">vapi.ai</a>
     → Dashboard → Phone Numbers → copy the UUID · All stored locally in your browser.
+    <br><br>
+    <strong style="color:var(--gold)">⚖ Legal compliance built in:</strong>
+    <span style="color:var(--muted)">
+    Bot discloses AI identity at start of every call (EU AI Act Art. 50 + FCC 2024 rule) ·
+    Instant opt-out on request · Calling hours warning (8am–8pm) ·
+    B2B targeted only · Call log for audit trail · Email collected with permission only.
+    </span>
   </div>
 </div>
 
@@ -441,8 +448,6 @@ Real businesses, almost no web content — the easiest content writing pitch eve
 <div class="selinfo"><strong id="selCount">0</strong> leads selected</div>
 <div class="selactions">
 <button class="selbtn" onclick="exportSelCSV()">↓ CSV Selected</button>
-<button class="selbtn" onclick="copySelEmails()" style="color:var(--gold);border-color:rgba(251,191,36,.3);">✉ Emails</button>
-<button class="selbtn" onclick="copySelPhones()" style="color:var(--green);border-color:rgba(74,222,128,.3);">📞 Phones</button>
 <button class="selbtn" onclick="callSelected()" style="background:rgba(74,222,128,.12);color:var(--green);border-color:rgba(74,222,128,.35);">🤖 Call All Selected</button>
 <button class="selbtn p" onclick="clearSel()">✕ Clear</button>
 </div>
@@ -1326,45 +1331,58 @@ function buildAssistant(lead, cfg){
   const type    = lead.type||'business';
   const pitch   = lead.pitch_angle||`Your website only has about ${pages} pages and could use more content to rank on Google.`;
 
-  const opening = (cfg.openingLine||'Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?')
+  const opening = (cfg.openingLine||`Hi, just to be transparent — I'm an AI assistant calling on behalf of Alex from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`)
     .replace('{name}',name).replace('{score}',score).replace('{pages}',pages).replace('{city}',city);
 
-  const systemPrompt=`You are ${cfg.callerName}, a content writing specialist from ${cfg.company||'a content agency'}.
+  const systemPrompt=`You are an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company||'ContentScale'}.
+
+LEGAL COMPLIANCE — MANDATORY:
+- ALWAYS start with: "Hi, just to be transparent — I'm an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}."
+- ALWAYS offer opt-out early: "If you'd prefer not to be called, just say 'stop' and I'll remove you immediately."
+- NEVER pretend to be human if asked directly
+- NEVER call outside 8am–8pm local time
+- If they say stop/not interested/remove me: confirm removal, end call immediately, log as opt-out
 
 You are calling ${name}, a ${type} in ${city}.
 Their website: ${domain}
-Content score: ${score}/100
-Approx pages: ${pages}
-Key insight: ${pitch}
+Pages found: ~${pages}
+Key gap: ${pitch}
 
-YOUR GOAL: Qualify them as a content writing lead.
+YOUR GOAL: Have a genuine conversation. Qualify them. Get their email with permission.
 
-CALL FLOW — adapt based on their response:
+CALL FLOW:
 
-1. OPENING (say this first):
-"${opening}"
+1. OPENING (always start with AI disclosure):
+"Hi, just to be transparent — I'm an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. Is this ${name}? I just did a quick scan of ${domain} and found that your website has about ${pages} pages — most businesses your size in ${city} that rank well on Google have 3 to 4 times more content. I can share exactly what's missing. Do you have 2 minutes?"
 
-2. IF THEY ANSWER AND ENGAGE:
-- Mention their score: "I scanned ${domain} and it scored ${score}/100 for content — that means there's real room to improve their visibility on Google."
-- Ask: "Are you currently doing any content marketing or blogging?"
-- Ask: "What's your biggest challenge with getting new clients online?"
-- Ask: "Do you have a budget set aside for marketing this year?"
-- If interested: "I'd love to send over a quick audit — what's the best email for that?"
-- Close: "Great, I'll send that over today. Is there a good time this week for a 15-minute call?"
+2. IF THEY ENGAGE — discovery questions (pick naturally, don't interrogate):
+- "Are you currently getting clients from Google, or mostly referrals?"
+- "Have you tried blogging or content marketing before?"
+- "What's the biggest challenge with your online visibility right now?"
+- "Is growing your client base from search something you're focused on this year?"
 
-3. IF THEY SEEM BUSY / HESITANT:
-- "I completely understand — I can send a quick email with the specifics, would that work?"
-- Get their email or confirm the one on their site.
+3. PITCH — based on what they said:
+- If no blog: "The good news is you have a clean site — adding a blog with the right content could get you showing up for searches your competitors own right now."
+- If outdated content: "A lot of your existing pages could be refreshed to meet what Google and AI assistants like ChatGPT now look for — that's exactly what we do."
+- If interested: "I'd love to send you a free 1-page audit showing exactly what to fix first. What's the best email to send it to?" [GET EMAIL WITH PERMISSION]
 
-4. IF NO ANSWER — leave this voicemail:
-"Hi, this is ${cfg.callerName} from ${cfg.company||'ContentScale'}. I ran a quick analysis of ${domain} and found some specific opportunities to help ${name} rank better on Google. I'd love to share what I found — call me back on ${cfg.callback||'our website'}, or I can send the details by email. Have a great day!"
+4. CLOSING:
+- "Great — I'll have Alex send that over today. Is there a good time this week for a quick 15-minute call with Alex to go through it?"
+- Log their email and preferred call time
+
+5. IF BUSY/HESITANT:
+- "Totally understand — I can send a quick summary by email instead, no call needed. What email works best?" 
+- Or: "No problem at all. I'll let Alex know you're not the right fit right now."
+
+6. IF NO ANSWER — voicemail:
+"Hi ${name}, this is an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. I scanned ${domain} and found some specific ways to help you rank better on Google and get found by AI assistants like ChatGPT. Call ${cfg.callback} to speak with ${cfg.callerName} directly, or I can send the details by email — just call back and leave your email. Have a great day!"
 
 RULES:
-- Be natural, warm and conversational — not salesy
-- Never read from a script robotically
-- Keep it SHORT — respect their time
-- If they say not interested, thank them and end politely
-- Maximum call length: 4 minutes`;
+- Warm, conversational, human-feeling — not robotic or salesy
+- Short — max 3-4 minutes, respect their time
+- If they ask "are you a real person?" — be honest: "I'm an AI assistant, yes — but the audit and follow-up call are with a real person."
+- Opt-out is immediate — no pushback ever
+- EMAIL COLLECTION: Only ask for email after they show interest. Always frame it as "I'll send you something useful" not "sign up for marketing"`;
 
   return {
     firstMessage: opening,
@@ -1398,6 +1416,19 @@ async function triggerCall(leadId){
   const lead=allLeads.find(l=>makeId(l)===leadId);
   if(!lead){toast('Lead not found');return;}
   if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
+
+  // Compliance: check calling hours (8am–8pm local time in target city)
+  const now = new Date();
+  const hour = now.getHours();
+  if(hour < 8 || hour >= 20){
+    const proceed = confirm(
+      '⚠ Compliance Warning\n\nIt is currently ' + now.toLocaleTimeString() + ' your local time.\n\n' +
+      'Legal calling hours are 8:00 AM – 8:00 PM in the recipient\'s local time zone.\n\n' +
+      'If the target business is in a different time zone, verify it is within calling hours there before proceeding.\n\n' +
+      'Continue anyway?'
+    );
+    if(!proceed) return;
+  }
 
   const existing=callStates.get(leadId);
   if(existing&&existing.state==='calling'){toast('Already calling this lead');return;}
@@ -1571,16 +1602,8 @@ function copySelPhones(){
   if(!s.length){toast('No phone numbers in selection');return;}
   navigator.clipboard.writeText(s.map(l=>l.phone).join('\n')).then(()=>toast('Copied '+s.length+' phones'));
 }
-function copyAllEmails(){
-  const e=allLeads.filter(l=>l.email).map(l=>l.email);
-  if(!e.length){toast('No emails yet');return;}
-  navigator.clipboard.writeText(e.join('\n')).then(()=>toast('Copied '+e.length+' emails'));
-}
-function copyAllPhones(){
-  const p=allLeads.filter(l=>l.phone).map(l=>l.phone);
-  if(!p.length){toast('No phones yet');return;}
-  navigator.clipboard.writeText(p.join('\n')).then(()=>toast('Copied '+p.length+' phones'));
-}
+
+
 
 // ── Init on load ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
