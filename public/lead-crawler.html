@@ -154,6 +154,34 @@ h1 span{color:var(--gold);}
 .empty-state{text-align:center;padding:80px 20px;border:1px dashed var(--border);border-radius:6px;background:var(--card);margin-bottom:24px;}
 .empty-state .ebig{font-family:'Bebas Neue',sans-serif;font-size:68px;line-height:1;color:var(--border);margin-bottom:12px;}
 .empty-state p{font-size:13px;color:var(--muted);line-height:1.7;}
+.terms-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.terms-box{background:var(--card);border:1px solid var(--border);border-radius:8px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;position:relative;}
+.terms-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--purple),var(--gold));}
+.terms-head{padding:24px 28px 0;border-bottom:1px solid var(--border);padding-bottom:16px;}
+.terms-head h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;margin-bottom:4px;}
+.terms-head .sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.terms-body{padding:20px 28px;font-size:12px;line-height:1.8;color:var(--muted);}
+.terms-body h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink);margin:16px 0 6px;}
+.terms-body strong{color:var(--ink);}
+.terms-body .warn{background:rgba(244,63,63,.08);border:1px solid rgba(244,63,63,.2);border-radius:4px;padding:10px 14px;margin:10px 0;color:var(--red);font-size:11px;}
+.terms-footer{padding:16px 28px 24px;border-top:1px solid var(--border);}
+.terms-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;}
+.terms-check input[type=checkbox]{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--green);cursor:pointer;}
+.terms-check label{font-size:12px;color:var(--ink);line-height:1.5;cursor:pointer;}
+.terms-accept-btn{width:100%;background:var(--green);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:14px;border-radius:4px;cursor:pointer;transition:opacity .15s;opacity:.4;}
+.terms-accept-btn.ready{opacity:1;}
+.terms-accept-btn.ready:hover{opacity:.88;}
+.comp-mode{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.comp-mode-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);flex:1;}
+.comp-mode-label.on{color:var(--green);}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:11px;cursor:pointer;transition:background .2s;}
+.toggle input:checked~.toggle-slider{background:var(--green);}
+.toggle-slider::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;}
+.toggle input:checked~.toggle-slider::before{transform:translateX(18px);}
+.liability-bar{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--red);line-height:1.7;display:none;}
+.liability-bar.show{display:block;}
 .selbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 28px;display:none;align-items:center;gap:12px;z-index:100;flex-wrap:wrap;}
 .selbar.show{display:flex;}
 .selinfo{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);} .selinfo strong{color:var(--ink);}
@@ -338,6 +366,27 @@ h1 span{color:var(--gold);}
         value="Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?" />
     </div>
   </div>
+  <!-- Compliance Mode Toggle -->
+  <div class="comp-mode" id="compModeRow" style="margin-top:14px;">
+    <div>
+      <div class="comp-mode-label on" id="compModeLabel">🛡 Compliance Mode</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+        Blocks calls outside 8am–8pm · Forces AI disclosure · Logs every call with timestamp
+      </div>
+    </div>
+    <label class="toggle" title="Toggle Compliance Mode">
+      <input type="checkbox" id="compModeToggle" checked onchange="toggleComplianceMode()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;" id="compModeBadge">ON — Protected</span>
+  </div>
+
+  <!-- Liability reminder -->
+  <div class="liability-bar show" id="liabilityBar">
+    ⚖ REMINDER: You are the caller of record. ContentScale has zero liability for your calls.
+    You accepted this on <span id="termsDate">—</span>. All calls logged for your audit trail.
+  </div>
+
   <button class="vapi-save-btn" onclick="saveVapiConfig()">SAVE VOICEBOT CONFIG</button>
   <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">
     Get your API key + Phone Number ID at
@@ -1407,6 +1456,9 @@ RULES:
 
 // ── Trigger a single call ────────────────────────────────
 async function triggerCall(leadId){
+  // ── Gate 1: Terms must be accepted first ─────────────────
+  if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+
   const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
   if(!cfg||!cfg.vapiKey||!cfg.phoneId){
     toast('⚠ Configure your Voicebot first — click "Configure Voicebot" above');
@@ -1417,17 +1469,17 @@ async function triggerCall(leadId){
   if(!lead){toast('Lead not found');return;}
   if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
 
-  // Compliance: check calling hours (8am–8pm local time in target city)
-  const now = new Date();
-  const hour = now.getHours();
-  if(hour < 8 || hour >= 20){
-    const proceed = confirm(
-      '⚠ Compliance Warning\n\nIt is currently ' + now.toLocaleTimeString() + ' your local time.\n\n' +
-      'Legal calling hours are 8:00 AM – 8:00 PM in the recipient\'s local time zone.\n\n' +
-      'If the target business is in a different time zone, verify it is within calling hours there before proceeding.\n\n' +
-      'Continue anyway?'
-    );
-    if(!proceed) return;
+  // ── Gate 2: Calling hours + Compliance Mode ───────────────
+  const now=new Date();
+  const hour=now.getHours();
+  if(hour<8||hour>=20){
+    if(isComplianceModeOn()){
+      toast('🛡 Compliance Mode: calls blocked outside 8am–8pm. It is currently '+now.toLocaleTimeString());
+      return; // HARD BLOCK — cannot override in compliance mode
+    } else {
+      const proceed=confirm('⚠ Outside Legal Calling Hours\n\nIt is '+now.toLocaleTimeString()+' your local time.\nLegal hours: 8am–8pm in the recipient\'s time zone.\n\nCompliance Mode is OFF — you bear full legal risk.\nContinue anyway?');
+      if(!proceed)return;
+    }
   }
 
   const existing=callStates.get(leadId);
@@ -1529,6 +1581,7 @@ function startPolling(leadId,lead,callId,vapiKey){
 
 // ── Bulk call selected leads ─────────────────────────────
 async function callSelected(){
+  if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
   const sel=getSelLeads().filter(l=>l.phone);
   if(!sel.length){toast('No selected leads with phone numbers');return;}
   const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
@@ -1605,20 +1658,241 @@ function copySelPhones(){
 
 
 
+// ════════════════════════════════════════════════════════════════
+// TERMS + COMPLIANCE SYSTEM
+// ════════════════════════════════════════════════════════════════
+const LS_TERMS     = 'lc_terms_accepted';
+const LS_COMP_MODE = 'lc_compliance_mode';
+
+function hasAcceptedTerms(){
+  try{const t=JSON.parse(localStorage.getItem(LS_TERMS)||'null');return t&&t.accepted===true;}
+  catch(e){return false;}
+}
+function isComplianceModeOn(){
+  const v=localStorage.getItem(LS_COMP_MODE);
+  return v===null?true:v==='true'; // default ON
+}
+function showTermsModal(){
+  document.getElementById('termsModal').style.display='flex';
+  ['c1','c2','c3'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
+  checkTermsReady();
+}
+function toggleTermsCheck(id){
+  const el=document.getElementById(id);
+  if(el){el.checked=!el.checked;checkTermsReady();}
+}
+function checkTermsReady(){
+  const all=['c1','c2','c3'].every(id=>document.getElementById(id)?.checked);
+  const btn=document.getElementById('termsAcceptBtn');
+  if(btn){btn.disabled=!all;btn.classList.toggle('ready',all);}
+}
+function acceptTerms(){
+  if(!['c1','c2','c3'].every(id=>document.getElementById(id)?.checked))return;
+  const record={accepted:true,timestamp:Date.now(),date:new Date().toISOString()};
+  localStorage.setItem(LS_TERMS,JSON.stringify(record));
+  document.getElementById('termsModal').style.display='none';
+  renderTermsState();
+  toast('✅ Terms accepted — voicebot unlocked');
+}
+function toggleComplianceMode(){
+  const toggle=document.getElementById('compModeToggle');
+  const isOn=toggle?toggle.checked:true;
+  if(!isOn){
+    const ok=confirm('⚠ Turn off Compliance Mode?\n\nWith Compliance Mode OFF:\n• Calls outside 8am–8pm are NOT blocked\n• You bear full legal risk for every call\n\nContentScale recommends keeping this ON.\n\nAre you sure?');
+    if(!ok){if(toggle)toggle.checked=true;return;}
+  }
+  localStorage.setItem(LS_COMP_MODE,String(isOn));
+  renderComplianceMode();
+  toast(isOn?'🛡 Compliance Mode ON — protected':'⚠ Compliance Mode OFF — you own all risk');
+}
+function renderComplianceMode(){
+  const isOn=isComplianceModeOn();
+  const toggle=document.getElementById('compModeToggle');
+  const label=document.getElementById('compModeLabel');
+  const badge=document.getElementById('compModeBadge');
+  if(toggle)toggle.checked=isOn;
+  if(label){label.textContent=isOn?'🛡 Compliance Mode':'⚠ Compliance Mode';label.style.color=isOn?'var(--green)':'var(--red)';}
+  if(badge){badge.textContent=isOn?'ON — Protected':'OFF — At Risk';badge.style.background=isOn?'rgba(74,222,128,.12)':'rgba(244,63,63,.12)';badge.style.color=isOn?'var(--green)':'var(--red)';badge.style.border=isOn?'1px solid rgba(74,222,128,.3)':'1px solid rgba(244,63,63,.3)';}
+}
+function renderTermsState(){
+  try{
+    const t=JSON.parse(localStorage.getItem(LS_TERMS)||'null');
+    const dateEl=document.getElementById('termsDate');
+    const bar=document.getElementById('liabilityBar');
+    if(t&&t.accepted&&dateEl)dateEl.textContent=new Date(t.date||t.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    if(bar)bar.classList.toggle('show',!!(t&&t.accepted));
+  }catch(e){}
+}
+
+// ════════════════════════════════════════════════════════════════
+// LICENSE SYSTEM
+// ════════════════════════════════════════════════════════════════
+const LS_LICENSE='lc_license';
+
+function isVoicebotUnlocked(){
+  const lic=getLicense();return lic&&lic.valid===true;
+}
+function getLicense(){
+  try{return JSON.parse(localStorage.getItem(LS_LICENSE)||'null');}catch(e){return null;}
+}
+function showLicensePrompt(){
+  document.getElementById('licenseLocked')?.scrollIntoView({behavior:'smooth',block:'center'});
+  document.getElementById('licenseKeyInput')?.focus();
+  const s=document.getElementById('licenseStatus');
+  if(s)s.innerHTML='<span style="color:var(--gold)">👆 Enter your license key above to unlock</span>';
+}
+async function activateLicense(){
+  if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+  const key=(document.getElementById('licenseKeyInput')?.value||'').trim().toUpperCase();
+  const statusEl=document.getElementById('licenseStatus');
+  if(!key||key.length<10){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Enter a valid license key (CS-XXXX-XXXX-XXXX)</span>';return;}
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⟳ Validating...</span>';
+  try{
+    const resp=await fetch('/api/license/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+    const data=await resp.json();
+    if(resp.ok&&data.valid){
+      localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:data.plan||'voicebot',activatedAt:Date.now(),email:data.email||''}));
+      renderLicenseState();
+      toast('🎉 License activated! Voicebot unlocked.');
+      renderBuckets();
+    } else {
+      if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ '+(data.error||'Invalid key')+'</span>';
+    }
+  }catch(e){
+    if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Server error: '+e.message+'</span>';
+  }
+}
+function deactivateLicense(){
+  if(!confirm('Remove your license key? You can re-activate anytime.'))return;
+  localStorage.removeItem(LS_LICENSE);
+  renderLicenseState();renderBuckets();
+  toast('License removed');
+}
+function renderLicenseState(){
+  const lic=getLicense();
+  const locked=document.getElementById('licenseLocked');
+  const bar=document.getElementById('licenseActiveBar');
+  if(lic&&lic.valid){
+    if(locked)locked.style.display='none';
+    if(bar)bar.classList.add('show');
+    const lbl=document.getElementById('licensePlanLabel');
+    if(lbl)lbl.textContent=lic.plan==='pro'?'Pro Plan — $97/mo':'Voicebot Plan — $49/mo';
+    const badge=document.getElementById('licenseActiveBadge');
+    if(badge)badge.textContent=lic.plan==='pro'?'★ PRO ACTIVE':'✓ ACTIVE';
+  } else {
+    if(locked)locked.style.display='block';
+    if(bar)bar.classList.remove('show');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// CALL STATE HELPERS
+// ════════════════════════════════════════════════════════════════
+function getCallState(id){return(callStates.get(id)||{}).state||'ready';}
+function getCallLabel(id){
+  const s=callStates.get(id);
+  if(!s||s.state==='ready')return '🤖 Call';
+  if(s.state==='calling')  return '⟳ Calling...';
+  if(s.state==='answered') return '✅ Answered';
+  if(s.state==='voicemail')return '📬 Voicemail';
+  if(s.state==='busy')     return '🔴 Busy';
+  if(s.state==='no-answer')return '📵 No Answer';
+  if(s.state==='failed')   return '❌ Failed';
+  return '🤖 Call';
+}
+function getCallIcon(id){return '';}
+function getCallStatusClass(id){const s=callStates.get(id);return s?s.state:'';}
+function getCallStatusText(id){const s=callStates.get(id);return s?s.statusText||'':'';}
+
 // ── Init on load ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
+  renderTermsState();
+  renderComplianceMode();
+  renderLicenseState();
   // Pre-fill Vapi defaults if nothing saved yet
   if(!localStorage.getItem(LS_VAPI)){
     document.getElementById('vapiPhoneId').value       = '4a3b17c5-24f0-4e65-b64d-29e8e3f446a3';
     document.getElementById('vapiCallerName').value    = 'Alex from ContentScale';
     document.getElementById('vapiCompany').value       = 'ContentScale';
     document.getElementById('vapiCallbackNumber').value= '+1 (279) 499 8736';
-    document.getElementById('vapiOpeningLine').value   = 'Hi, is this {name}? My name is Alex from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
+    document.getElementById('vapiOpeningLine').value   = `Hi, just to be transparent — I'm an AI assistant calling on behalf of Alex from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`;
   } else {
     loadVapiConfig();
   }
   loadCallLog();
 });
 </script>
+<!-- ══ TERMS OF SERVICE MODAL ══ -->
+<div class="terms-modal" id="termsModal" style="display:none;">
+  <div class="terms-box">
+    <div class="terms-head">
+      <h2>⚖ Operator Compliance Agreement</h2>
+      <div class="sub">Read carefully before using the voicebot feature</div>
+    </div>
+    <div class="terms-body">
+      <div class="warn">
+        ⚠ This agreement establishes that <strong>YOU, the operator</strong>, are solely responsible
+        for how you use the voicebot feature — not ContentScale.
+      </div>
+
+      <h4>1. Your Responsibility as Operator</h4>
+      You understand and agree that ContentScale is a <strong>software tool provider only.</strong>
+      All calls are made using <strong>your own Vapi API key and phone number.</strong>
+      ContentScale never originates, controls, or stores your calls.
+      You are the "caller of record" under all applicable telecommunications laws.
+
+      <h4>2. Legal Calling Requirements You Must Follow</h4>
+      By using this tool you confirm you will comply with all applicable laws including:
+      <br>• <strong>USA:</strong> TCPA — calls only 8am–9pm local time, DNC list compliance, AI disclosure required (FCC 2024 ruling). Penalty: up to $1,500 per illegal call.
+      <br>• <strong>EU:</strong> GDPR + EU AI Act Article 50 — AI must be disclosed at start of call. Fines up to €20 million or 4% of global revenue.
+      <br>• <strong>UK:</strong> PECR — legitimate interest required, TPS list respected, AI disclosed.
+      <br>• <strong>All regions:</strong> B2B only. Never call consumers. Always honor immediate opt-out requests.
+
+      <h4>3. AI Disclosure is Mandatory Everywhere</h4>
+      <strong>You must not remove or bypass the AI disclosure</strong> from the voicebot opening script.
+      Calling without disclosing AI identity is illegal in the US, EU, and UK.
+      ContentScale has built disclosure into the default script — <strong>do not remove it.</strong>
+
+      <h4>4. ContentScale's Liability is Zero</h4>
+      ContentScale provides software tools only. ContentScale has no access to your calls,
+      your Vapi account, or your leads. Any fines, lawsuits, or regulatory actions resulting
+      from your use of this tool are <strong>entirely your responsibility.</strong>
+      By activating the voicebot you indemnify ContentScale against all claims arising from your use.
+
+      <h4>5. You Are Not Calling on Behalf of ContentScale</h4>
+      You call as yourself or your own business. ContentScale is not your employer,
+      partner, or co-caller. Do not represent ContentScale when making calls
+      unless you have a specific written reseller agreement.
+
+      <h4>6. Compliance Mode Recommendation</h4>
+      We strongly recommend keeping <strong>Compliance Mode ON</strong> at all times.
+      With Compliance Mode ON: calls outside 8am–8pm are hard-blocked (not just warned),
+      AI disclosure cannot be removed from the script, and every call is logged with timestamp.
+      This creates an audit trail that protects you if you are ever investigated.
+    </div>
+    <div class="terms-footer">
+      <div class="terms-check" onclick="toggleTermsCheck('c1')">
+        <input type="checkbox" id="c1" onchange="checkTermsReady()">
+        <label for="c1">I understand that <strong>I am the caller of record</strong> — ContentScale has no liability for my calls. I am responsible for compliance with TCPA, GDPR, EU AI Act, and all applicable laws in my jurisdiction.</label>
+      </div>
+      <div class="terms-check" onclick="toggleTermsCheck('c2')">
+        <input type="checkbox" id="c2" onchange="checkTermsReady()">
+        <label for="c2">I will <strong>only call during legal hours (8am–8pm local time)</strong>, only target B2B businesses, always disclose AI identity, and immediately honor any opt-out request.</label>
+      </div>
+      <div class="terms-check" onclick="toggleTermsCheck('c3')">
+        <input type="checkbox" id="c3" onchange="checkTermsReady()">
+        <label for="c3">I have read and agree to ContentScale's <strong>Operator Terms of Service</strong>. I accept full legal responsibility for my use of the voicebot feature.</label>
+      </div>
+      <button class="terms-accept-btn" id="termsAcceptBtn" onclick="acceptTerms()" disabled>
+        I AGREE — UNLOCK VOICEBOT
+      </button>
+      <div style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center;">
+        Acceptance recorded with timestamp · Stored locally in your browser
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ══ END TERMS MODAL ══ -->
+
 </body>
 </html>
