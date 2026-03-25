@@ -724,7 +724,7 @@ const apiKey = getApiKey();
 if (!apiKey || apiKey.length < 20) {
 throw new Error('ANTHROPIC_API_KEY missing — enter your key in the panel above');
 }
-const sys='You find real local businesses for content writing lead generation. Use web search to find businesses AND visit their websites to find phone numbers and email addresses (check homepage, contact page, footer). Return ONLY a valid JSON array — no markdown, no text, nothing outside the brackets.';
+const sys='Find real local businesses for content writing leads. Use web search. Visit sites to find phone/email. Return ONLY a JSON array — no markdown, nothing outside [ ].';
 const usr=[
 'Search for 12-15 real '+ind.q+' businesses in '+city+', '+country+' that have websites.',
 '',
@@ -732,16 +732,13 @@ const usr=[
 '[{"name":"Business Name","type":"'+ind.label+'","website":"https://domain.com","phone":"+1 234 567 8900","email":"info@domain.com","estimated_pages":18,"opportunity":"Specific content gap on their site","pitch_angle":"One punchy sentence to sell content writing","tags":["No Blog","Thin Service Pages"],"content_score":82,"industry_id":"'+ind.id+'"}]',
 '',
 'Rules:',
-'- Only real businesses with real verifiable websites found via search',
-'- pitch_angle must mention: thin content, missing from Google, or not appearing in AI answers (ChatGPT/Gemini/Perplexity)',
-'- opportunity must mention EXACTLY what content is missing (e.g. no service pages, no blog, no case studies)',
-'- estimated_pages: small local=5-20, medium service=15-40, agency=40-100',
-'- content_score 60-98 (higher = more urgent need for content)',
-'- tags from: "No Blog","Thin About Page","Zero Case Studies","Outdated Copy","No FAQ","Poor SEO Copy","No Location Pages","No Testimonials","Weak CTAs","No Social Proof","No Expert Quotes","No Schema Markup","Thin Service Pages","No How-To Content","Not AI-Citation Ready","No Fresh Content"',
-'- IMPORTANT: Visit each business website to find their real phone number and email address',
-'- phone: real number from homepage/contact/footer, or "" if not found',
-'- email: real email address from site, or "" if not found',
-'- Return ONLY the raw JSON array starting with [ and ending with ]',
+'Rules: real businesses only, verified via search. Visit site for phone+email.',
+'- estimated_pages: local=5-20, service=15-40, agency=40-100',
+'- content_score 60-98 (urgency of content need)',
+'- tags (pick 3): "No Blog","Thin Pages","No Case Studies","Outdated Copy","No FAQ","Poor SEO","No Testimonials","Not AI-Citation Ready","No Fresh Content","No Schema"',
+'- phone: real number from site or ""',
+'- email: real email from site or ""',
+'- Return ONLY the JSON array',
 ].join('\n');
 const resp=await fetch('/api/claude-proxy',{
 method:'POST',
@@ -752,7 +749,7 @@ headers:{
 },
 body:JSON.stringify({
 model:'claude-sonnet-4-6',
-max_tokens:6000,
+max_tokens:2500,
 tools:[{type:'web_search_20250305',name:'web_search'}],
 system:sys,
 messages:[{role:'user',content:usr}]
@@ -825,7 +822,7 @@ setWave(i.id, completedIndustries.has(i.id)?'done':'');
 });
 let done=completedIndustries.size;
 updateProg(done,allLeads.length);
-const CONCURRENCY = 2;
+const CONCURRENCY = 1; // web_search uses ~20k tokens/call — sequential prevents 429
 const pending = INDUSTRIES.filter(i => !completedIndustries.has(i.id));
 fiveHourHit = false;
 async function runOne(ind){
@@ -854,32 +851,38 @@ setWave(ind.id,'error',0);
 done++; updateProg(done,allLeads.length);
 return;
 }
-if(msg.includes('concurrents') || (msg.includes('429') && !msg.includes('five_hour'))){
-setWave(ind.id,'');
-await new Promise(r=>setTimeout(r,4000));
-if(stopped || fiveHourHit) return;
-try{
-const leads = await callClaude(city,country,ind);
-if(stopped || fiveHourHit) return;
-const valid = dedup((leads||[]).filter(l=>l?.name&&l?.website));
-valid.forEach(l=>{ if(!l.sitemap) l.sitemap = l.website+'/sitemap.xml'; });
-allLeads.push(...valid);
-completedIndustries.add(ind.id);
-saveSession(city,country);
-setWave(ind.id,'done',valid.length);
-done++; updateProg(done,allLeads.length);
-appendLiveCards(valid);
-return;
-} catch(err2){
-if((err2.message||'').includes('five_hour')){
-fiveHourHit = true; stopped = true;
-showRateLimitBanner(null);
-setWave(ind.id,'error',0);
-done++; updateProg(done,allLeads.length);
-return;
+if(msg.includes('429') && !msg.includes('five_hour')){
+// Exponential backoff: 20s → 45s → 90s
+const delays = [20000, 45000, 90000];
+let lastErr = err;
+for(let attempt = 0; attempt < delays.length; attempt++){
+  const wait = delays[attempt];
+  setWave(ind.id,'');
+  document.getElementById('progMsg').textContent = 
+    '⏳ Rate limit hit — waiting ' + Math.round(wait/1000) + 's before retry ' + (attempt+1) + '/3...';
+  await new Promise(r=>setTimeout(r, wait));
+  if(stopped || fiveHourHit) return;
+  try{
+    const leads = await callClaude(city,country,ind);
+    if(stopped || fiveHourHit) return;
+    const valid = dedup((leads||[]).filter(l=>l?.name&&l?.website));
+    valid.forEach(l=>{ if(!l.sitemap) l.sitemap = l.website+'/sitemap.xml'; });
+    allLeads.push(...valid);
+    completedIndustries.add(ind.id);
+    saveSession(city,country);
+    setWave(ind.id,'done',valid.length);
+    done++; updateProg(done,allLeads.length);
+    appendLiveCards(valid);
+    return; // success — exit retry loop
+  } catch(retryErr){
+    const retryMsg = retryErr.message || '';
+    if(retryMsg.includes('five_hour')){ fiveHourHit=true; stopped=true; showRateLimitBanner(null); setWave(ind.id,'error',0); done++; updateProg(done,allLeads.length); return; }
+    lastErr = retryErr;
+    // If still 429 on last attempt, fall through to error log
+    if(attempt < delays.length - 1) continue;
+  }
 }
-err = err2;
-}
+err = lastErr;
 }
 errors.push('['+ind.label+'] '+err.message);
 console.error('[Crawler]['+ind.label+']', err);
@@ -892,6 +895,10 @@ async function worker(){
 while(idx < pending.length && !stopped && !fiveHourHit){
 const ind = pending[idx++];
 await runOne(ind);
+// 3s cooldown between requests to stay well under token/min limit
+if(idx < pending.length && !stopped && !fiveHourHit){
+  await new Promise(r=>setTimeout(r, 3000));
+}
 }
 }
 const workers = Array.from({length: Math.min(CONCURRENCY, pending.length)}, worker);
@@ -1077,7 +1084,7 @@ const pct=Math.round(done/INDUSTRIES.length*100);
 document.getElementById('progFill').style.width=pct+'%';
 document.getElementById('progPct').textContent=done+' / '+INDUSTRIES.length;
 document.getElementById('progMsg').textContent=done<INDUSTRIES.length
-?'Crawling '+INDUSTRIES.length+' industries in '+document.getElementById('city').value+'...'
+?'Searching '+done+'/'+INDUSTRIES.length+' industries (sequential — ~'+Math.round((INDUSTRIES.length-done)*12)+' seconds left)...'
 :'✓ All searches complete — rendering results';
 document.getElementById('bigCount').textContent=found;
 }
