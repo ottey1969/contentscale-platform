@@ -724,18 +724,23 @@ const apiKey = getApiKey();
 if (!apiKey || apiKey.length < 20) {
 throw new Error('ANTHROPIC_API_KEY missing — enter your key in the panel above');
 }
-const sys='You find real local businesses for content writing lead generation. Use web search. Return ONLY a valid JSON array — no markdown, no text, nothing outside the brackets.';
+const sys='You find real local businesses for content writing lead generation. Use web search to find businesses AND visit their websites to find phone numbers and email addresses (check homepage, contact page, footer). Return ONLY a valid JSON array — no markdown, no text, nothing outside the brackets.';
 const usr=[
 'Search for 12-15 real '+ind.q+' businesses in '+city+', '+country+' that have websites.',
 '',
 'Return ONLY this JSON array:',
-'[{"name":"Business Name","type":"'+ind.label+'","website":"https://domain.com","estimated_pages":18,"opportunity":"Specific content gap on their site","pitch_angle":"One punchy sentence to sell content writing","tags":["No Blog","Thin Service Pages"],"content_score":82,"industry_id":"'+ind.id+'"}]',
+'[{"name":"Business Name","type":"'+ind.label+'","website":"https://domain.com","phone":"+1 234 567 8900","email":"info@domain.com","estimated_pages":18,"opportunity":"Specific content gap on their site","pitch_angle":"One punchy sentence to sell content writing","tags":["No Blog","Thin Service Pages"],"content_score":82,"industry_id":"'+ind.id+'"}]',
 '',
 'Rules:',
 '- Only real businesses with real verifiable websites found via search',
+'- pitch_angle must mention: thin content, missing from Google, or not appearing in AI answers (ChatGPT/Gemini/Perplexity)',
+'- opportunity must mention EXACTLY what content is missing (e.g. no service pages, no blog, no case studies)',
 '- estimated_pages: small local=5-20, medium service=15-40, agency=40-100',
 '- content_score 60-98 (higher = more urgent need for content)',
-'- tags from: "No Blog","Thin About Page","Zero Case Studies","Outdated Copy","No FAQ","Poor SEO Copy","No Location Pages","No Testimonials","Weak CTAs","No Social Proof"',
+'- tags from: "No Blog","Thin About Page","Zero Case Studies","Outdated Copy","No FAQ","Poor SEO Copy","No Location Pages","No Testimonials","Weak CTAs","No Social Proof","No Expert Quotes","No Schema Markup","Thin Service Pages","No How-To Content","Not AI-Citation Ready","No Fresh Content"',
+'- IMPORTANT: Visit each business website to find their real phone number and email address',
+'- phone: real number from homepage/contact/footer, or "" if not found',
+'- email: real email address from site, or "" if not found',
 '- Return ONLY the raw JSON array starting with [ and ending with ]',
 ].join('\n');
 const resp=await fetch('/api/claude-proxy',{
@@ -746,8 +751,8 @@ headers:{
 'anthropic-version':'2023-06-01',
 },
 body:JSON.stringify({
-model:'claude-3-5-sonnet-latest',
-max_tokens:5000,
+model:'claude-sonnet-4-6',
+max_tokens:6000,
 tools:[{type:'web_search_20250305',name:'web_search'}],
 system:sys,
 messages:[{role:'user',content:usr}]
@@ -973,7 +978,7 @@ headers:{
 'anthropic-version':'2023-06-01',
 },
 body: JSON.stringify({
-model:'claude-3-5-sonnet-latest',
+model:'claude-sonnet-4-6',
 max_tokens:2000,
 tools:[{type:'web_search_20250305',name:'web_search'}],
 system: sys,
@@ -1181,7 +1186,7 @@ ${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="
 ${l.phone?`<button class="call-btn ${getCallState(id)}" id="callbtn-${id}"
   onclick="event.stopPropagation();triggerCall('${id}')"
   title="Call ${l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
-<div class="cscore ${sc}">${l.content_score||'?'}</div>
+<div class="cscore ${sc}" title="Estimated content score — based on site type and page count">${l.content_score||'?'}<span style="font-size:7px;opacity:.5;margin-left:2px;">est</span></div>
 </div>
 </div>
 <div class="call-status ${getCallStatusClass(id)} ${getCallStatusText(id)?'show':''}" id="callstatus-${id}">${getCallStatusText(id)}</div>
