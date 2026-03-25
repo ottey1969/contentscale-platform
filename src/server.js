@@ -2066,7 +2066,7 @@ app.post('/api/claude-proxy', async (req, res) => {
   
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 90000);
     
     // ✅ Clean URL - NO trailing spaces
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2075,7 +2075,6 @@ app.post('/api/claude-proxy', async (req, res) => {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify(req.body),
       signal: controller.signal,
@@ -2089,6 +2088,14 @@ app.post('/api/claude-proxy', async (req, res) => {
     catch { data = { raw: rawText.slice(0, 500) }; }
     
     console.log(`[claude-proxy] ${userId} → ${upstream.status} (${rawText.length} bytes)`);
+    
+    // Detect rate limit / overload errors and add clear message
+    if (upstream.status === 529 || upstream.status === 503) {
+      return res.status(upstream.status).json({ 
+        error: { message: 'Anthropic API rate limit or overload — wait a few minutes and try again', type: 'rate_limit' },
+        ...data 
+      });
+    }
     
     res.status(upstream.status).json(data);
   } catch (err) {
