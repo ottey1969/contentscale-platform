@@ -286,6 +286,73 @@ h1 span{color:var(--gold);}
 
 </div>
 <!-- ══ END API KEY PANEL ══ -->
+
+<!-- ══ VAPI VOICEBOT CONFIG ══ -->
+<div id="vapiToggleRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+  <button onclick="toggleVapiPanel()" id="vapiToggleBtn"
+    style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+           background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);
+           padding:8px 16px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:8px;">
+    <span>🤖</span>
+    <span id="vapiToggleTxt">Configure Voicebot</span>
+    <span id="vapiConfigBadge" style="display:none;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);border-radius:3px;padding:1px 6px;font-size:8px;">✓ READY</span>
+  </button>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Vapi.ai outbound calling — configure once, call any lead with one click</span>
+</div>
+
+<div class="vapi-panel" id="vapiPanel">
+  <div class="vapi-panel-head">
+    <span style="font-size:20px;">🤖</span>
+    <h3>Voicebot Configuration — Vapi.ai</h3>
+    <span id="vapiSavedBadge" class="vapi-saved" style="display:none;">✓ SAVED</span>
+  </div>
+  <div class="vapi-grid">
+    <div class="vapi-field">
+      <label>Vapi API Key</label>
+      <input type="password" id="vapiKey" placeholder="your-vapi-api-key" autocomplete="off" />
+    </div>
+    <div class="vapi-field">
+      <label>Vapi Phone Number ID</label>
+      <input type="text" id="vapiPhoneId" placeholder="uuid from vapi.ai dashboard → Phone Numbers" />
+    </div>
+    <div class="vapi-field">
+      <label>Your Name (bot introduces as)</label>
+      <input type="text" id="vapiCallerName" placeholder="e.g. Alex from ContentScale" />
+    </div>
+    <div class="vapi-field">
+      <label>Your Company / Website</label>
+      <input type="text" id="vapiCompany" placeholder="e.g. ContentScale" />
+    </div>
+    <div class="vapi-field" style="grid-column:1/-1">
+      <label>Your Callback Number (mentioned in voicemail)</label>
+      <input type="text" id="vapiCallbackNumber" placeholder="e.g. +31 6 12 34 56 78" />
+    </div>
+    <div class="vapi-field" style="grid-column:1/-1">
+      <label>Opening Line — {name} {score} {pages} {city} are auto-filled per lead</label>
+      <input type="text" id="vapiOpeningLine"
+        value="Hi, is this {name}? I just analysed your website and found something interesting — do you have 2 minutes?" />
+    </div>
+  </div>
+  <button class="vapi-save-btn" onclick="saveVapiConfig()">SAVE VOICEBOT CONFIG</button>
+  <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">
+    Get your API key + Phone Number ID at
+    <a href="https://vapi.ai" target="_blank" rel="noopener" style="color:var(--green);">vapi.ai</a>
+    → Dashboard → Phone Numbers → copy the UUID · All stored locally in your browser.
+  </div>
+</div>
+
+<!-- ══ CALL LOG ══ -->
+<div class="calllog" id="callLog">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    <div class="calllog-head" style="margin:0;">📋 Call Log</div>
+    <span id="callLogCount" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+    <button onclick="clearCallLog()" style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">Clear</button>
+    <button onclick="exportCallLogCSV()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);padding:5px 10px;border-radius:3px;cursor:pointer;">↓ Export CSV</button>
+  </div>
+  <div id="callLogItems"></div>
+</div>
+<!-- ══ END VAPI ══ -->
+
 <div class="panel-title">Target Location — Fires 20 Industry Searches In Parallel</div>
 <input type="hidden" id="apiKey" value="">
 <div class="form-row">
@@ -369,6 +436,9 @@ Real businesses, almost no web content — the easiest content writing pitch eve
 <div class="selinfo"><strong id="selCount">0</strong> leads selected</div>
 <div class="selactions">
 <button class="selbtn" onclick="exportSelCSV()">↓ CSV Selected</button>
+<button class="selbtn" onclick="copySelEmails()" style="color:var(--gold);border-color:rgba(251,191,36,.3);">✉ Emails</button>
+<button class="selbtn" onclick="copySelPhones()" style="color:var(--green);border-color:rgba(74,222,128,.3);">📞 Phones</button>
+<button class="selbtn" onclick="callSelected()" style="background:rgba(74,222,128,.12);color:var(--green);border-color:rgba(74,222,128,.35);">🤖 Call All Selected</button>
 <button class="selbtn p" onclick="clearSel()">✕ Clear</button>
 </div>
 </div>
@@ -1102,8 +1172,14 @@ ${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="
 <div class="ctags">${(l.tags||[]).map(t=>`<span class="ctag">${t}</span>`).join('')}</div>
 <div class="cfoot">
 <div class="cpages">~<strong>${l.estimated_pages||'?'}</strong> pages</div>
+<div style="display:flex;align-items:center;gap:6px;">
+${l.phone?`<button class="call-btn ${getCallState(id)}" id="callbtn-${id}"
+  onclick="event.stopPropagation();triggerCall('${id}')"
+  title="Call ${l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
 <div class="cscore ${sc}">${l.content_score||'?'}</div>
 </div>
+</div>
+<div class="call-status ${getCallStatusClass(id)} ${getCallStatusText(id)?'show':''}" id="callstatus-${id}">${getCallStatusText(id)}</div>
 </div>`;
 }
 function toggleSel(id,e){
@@ -1150,6 +1226,355 @@ function dl(content,name,type){const a=document.createElement('a');a.href=URL.cr
 function exportCSV(){dl(toCSV(allLeads),'leads-'+document.getElementById('city').value+'-'+Date.now()+'.csv','text/csv');toast('Exported '+allLeads.length+' leads');}
 function exportJSON(){dl(JSON.stringify(allLeads,null,2),'leads-'+document.getElementById('city').value+'-'+Date.now()+'.json','application/json');toast('Exported '+allLeads.length+' leads');}
 function exportSelCSV(){const s=getSelLeads();dl(toCSV(s),'selected-leads-'+Date.now()+'.csv','text/csv');toast('Exported '+s.length+' leads');}
+
+// ════════════════════════════════════════════════════════
+// VAPI VOICEBOT SYSTEM
+// ════════════════════════════════════════════════════════
+const LS_VAPI = 'lc_vapi_config';
+const LS_CALLLOG = 'lc_call_log';
+
+// callStates: Map of leadId → {state, callId, label, statusText, startedAt}
+const callStates = new Map();
+let callLog = [];
+const pollIntervals = new Map();
+
+// ── Helper: get state info for a lead id ────────────────
+function getCallState(id){ return (callStates.get(id)||{}).state||'ready'; }
+function getCallLabel(id){
+  const s=callStates.get(id);
+  if(!s||s.state==='ready') return '🤖 Call';
+  if(s.state==='calling')   return '⟳ Calling...';
+  if(s.state==='answered')  return '✅ Answered';
+  if(s.state==='voicemail') return '📬 Voicemail';
+  if(s.state==='busy')      return '🔴 Busy';
+  if(s.state==='no-answer') return '📵 No Answer';
+  if(s.state==='failed')    return '❌ Failed';
+  return '🤖 Call';
+}
+function getCallIcon(id){ return ''; }
+function getCallStatusClass(id){ const s=callStates.get(id); return s?s.state:''; }
+function getCallStatusText(id){ const s=callStates.get(id); return s?s.statusText||'':''; }
+
+// ── Vapi config save/load ───────────────────────────────
+function saveVapiConfig(){
+  const cfg={
+    vapiKey:     document.getElementById('vapiKey').value.trim(),
+    phoneId:     document.getElementById('vapiPhoneId').value.trim(),
+    callerName:  document.getElementById('vapiCallerName').value.trim(),
+    company:     document.getElementById('vapiCompany').value.trim(),
+    callback:    document.getElementById('vapiCallbackNumber').value.trim(),
+    openingLine: document.getElementById('vapiOpeningLine').value.trim(),
+  };
+  if(!cfg.vapiKey||!cfg.phoneId||!cfg.callerName){
+    toast('⚠ Fill in API Key, Phone Number ID and your name');return;
+  }
+  localStorage.setItem(LS_VAPI, JSON.stringify(cfg));
+  document.getElementById('vapiSavedBadge').style.display='inline-block';
+  document.getElementById('vapiConfigBadge').style.display='inline-block';
+  document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
+  toast('✅ Voicebot config saved!');
+}
+
+function loadVapiConfig(){
+  try{
+    const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+    if(!cfg) return null;
+    document.getElementById('vapiKey').value=cfg.vapiKey||'';
+    document.getElementById('vapiPhoneId').value=cfg.phoneId||'';
+    document.getElementById('vapiCallerName').value=cfg.callerName||'';
+    document.getElementById('vapiCompany').value=cfg.company||'';
+    document.getElementById('vapiCallbackNumber').value=cfg.callback||'';
+    document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? I just analysed your website and found something interesting — do you have 2 minutes?';
+    document.getElementById('vapiSavedBadge').style.display='inline-block';
+    document.getElementById('vapiConfigBadge').style.display='inline-block';
+    document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
+    return cfg;
+  }catch(e){return null;}
+}
+
+function toggleVapiPanel(){
+  const p=document.getElementById('vapiPanel');
+  p.classList.toggle('visible');
+  document.getElementById('vapiToggleBtn').style.background=
+    p.classList.contains('visible')?'rgba(74,222,128,.18)':'rgba(74,222,128,.08)';
+}
+
+// ── Build dynamic Vapi assistant for a lead ────────────
+function buildAssistant(lead, cfg){
+  const name    = lead.name||'there';
+  const domain  = (lead.website||'').replace(/^https?:\/\//,'').replace(/\/$/,'');
+  const score   = lead.content_score||'?';
+  const pages   = lead.estimated_pages||'?';
+  const city    = document.getElementById('city').value||'your city';
+  const type    = lead.type||'business';
+  const pitch   = lead.pitch_angle||`Your website only has about ${pages} pages and could use more content to rank on Google.`;
+
+  const opening = (cfg.openingLine||'Hi, is this {name}? I just analysed your website and found something interesting — do you have 2 minutes?')
+    .replace('{name}',name).replace('{score}',score).replace('{pages}',pages).replace('{city}',city);
+
+  const systemPrompt=`You are ${cfg.callerName}, a content writing specialist from ${cfg.company||'a content agency'}.
+
+You are calling ${name}, a ${type} in ${city}.
+Their website: ${domain}
+Content score: ${score}/100
+Approx pages: ${pages}
+Key insight: ${pitch}
+
+YOUR GOAL: Qualify them as a content writing lead.
+
+CALL FLOW — adapt based on their response:
+
+1. OPENING (say this first):
+"${opening}"
+
+2. IF THEY ANSWER AND ENGAGE:
+- Mention their score: "I scanned ${domain} and it scored ${score}/100 for content — that means there's real room to improve their visibility on Google."
+- Ask: "Are you currently doing any content marketing or blogging?"
+- Ask: "What's your biggest challenge with getting new clients online?"
+- Ask: "Do you have a budget set aside for marketing this year?"
+- If interested: "I'd love to send over a quick audit — what's the best email for that?"
+- Close: "Great, I'll send that over today. Is there a good time this week for a 15-minute call?"
+
+3. IF THEY SEEM BUSY / HESITANT:
+- "I completely understand — I can send a quick email with the specifics, would that work?"
+- Get their email or confirm the one on their site.
+
+4. IF NO ANSWER — leave this voicemail:
+"Hi, this is ${cfg.callerName} from ${cfg.company||'ContentScale'}. I ran a quick analysis of ${domain} and found some specific opportunities to help ${name} rank better on Google. I'd love to share what I found — call me back on ${cfg.callback||'our website'}, or I can send the details by email. Have a great day!"
+
+RULES:
+- Be natural, warm and conversational — not salesy
+- Never read from a script robotically
+- Keep it SHORT — respect their time
+- If they say not interested, thank them and end politely
+- Maximum call length: 4 minutes`;
+
+  return {
+    firstMessage: opening,
+    model:{
+      provider:'openai',
+      model:'gpt-4o',
+      systemPrompt,
+      temperature:0.7,
+    },
+    voice:{
+      provider:'11labs',
+      voiceId:'pNInz6obpgDQGcFmaJgB', // Adam — natural, professional
+    },
+    endCallMessage:'Thanks for your time, have a great day!',
+    voicemailMessage:`Hi, this is ${cfg.callerName} from ${cfg.company||'ContentScale'}. I analysed ${domain} and found some great opportunities to help with your online visibility. Call me back on ${cfg.callback||'our website'} — have a great day!`,
+    maxDurationSeconds:240,
+    backgroundSound:'off',
+    backchannelingEnabled:true,
+    endCallFunctionEnabled:true,
+  };
+}
+
+// ── Trigger a single call ────────────────────────────────
+async function triggerCall(leadId){
+  const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+  if(!cfg||!cfg.vapiKey||!cfg.phoneId){
+    toast('⚠ Configure your Voicebot first — click "Configure Voicebot" above');
+    document.getElementById('vapiPanel').classList.add('visible');return;
+  }
+
+  const lead=allLeads.find(l=>makeId(l)===leadId);
+  if(!lead){toast('Lead not found');return;}
+  if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
+
+  const existing=callStates.get(leadId);
+  if(existing&&existing.state==='calling'){toast('Already calling this lead');return;}
+
+  setCallState(leadId,'calling','Connecting...');
+
+  try{
+    const resp=await fetch('/api/voicebot/call',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        vapiKey:    cfg.vapiKey,
+        phoneId:    cfg.phoneId,
+        customerPhone: lead.phone,
+        customerName:  lead.name||'',
+        assistant:  buildAssistant(lead,cfg),
+        leadId,
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok||!data.callId){
+      const err=data.error||('HTTP '+resp.status);
+      setCallState(leadId,'failed','Failed: '+err);
+      toast('❌ Call failed: '+err);return;
+    }
+
+    setCallState(leadId,'calling','Ringing...',data.callId);
+    addCallLog(lead,leadId,data.callId,'calling');
+    toast('📞 Calling '+lead.name+'...');
+
+    // Start polling for outcome
+    startPolling(leadId,lead,data.callId,cfg.vapiKey);
+
+  }catch(e){
+    setCallState(leadId,'failed','Error: '+e.message);
+    toast('❌ '+e.message);
+  }
+}
+
+// ── Set call state + update card button ─────────────────
+function setCallState(id, state, statusText, callId){
+  callStates.set(id,{state,statusText:statusText||'',callId:callId||callStates.get(id)?.callId});
+  const btn=document.getElementById('callbtn-'+id);
+  const statusEl=document.getElementById('callstatus-'+id);
+  if(btn){
+    btn.className='call-btn '+state;
+    btn.innerHTML=getCallLabel(id);
+  }
+  if(statusEl){
+    statusEl.textContent=statusText||'';
+    statusEl.className='call-status '+state+(statusText?' show':'');
+  }
+}
+
+// ── Poll Vapi for call outcome ───────────────────────────
+function startPolling(leadId,lead,callId,vapiKey){
+  if(pollIntervals.has(leadId)) clearInterval(pollIntervals.get(leadId));
+  let attempts=0;
+  const iv=setInterval(async()=>{
+    attempts++;
+    if(attempts>60){clearInterval(iv);pollIntervals.delete(leadId);return;}
+    try{
+      const resp=await fetch('/api/voicebot/status/'+callId,{
+        headers:{'x-vapi-key':vapiKey}
+      });
+      if(!resp.ok)return;
+      const data=await resp.json();
+      const status=data.status||'';
+      const endedReason=data.endedReason||'';
+
+      if(status==='ended'||status==='failed'){
+        clearInterval(iv);pollIntervals.delete(leadId);
+
+        let finalState='failed';
+        let statusText='';
+        if(endedReason==='voicemail'){finalState='voicemail';statusText='Voicemail left';}
+        else if(endedReason==='assistant-said-end-call-phrase'||endedReason==='customer-ended-call'){
+          finalState='answered';statusText='Call completed ✓';
+        }
+        else if(endedReason==='no-answer'){finalState='no-answer';statusText='No answer';}
+        else if(endedReason==='busy'){finalState='busy';statusText='Line busy';}
+        else if(endedReason==='failed'||endedReason==='phone-call-provider-failed'){finalState='failed';statusText='Call failed';}
+        else{finalState='answered';statusText=endedReason||'Ended';}
+
+        setCallState(leadId,finalState,statusText);
+        updateCallLog(callId,finalState,statusText,data.summary||data.transcript||'');
+
+        // Store outcome in lead object
+        const l=allLeads.find(x=>makeId(x)===leadId);
+        if(l){l.callStatus=finalState;l.callNote=statusText;l.callId=callId;}
+
+        toast((finalState==='answered'?'✅ ':finalState==='voicemail'?'📬 ':'📵 ')+(lead.name||'Lead')+': '+statusText);
+      }
+    }catch(e){}
+  },5000);
+  pollIntervals.set(leadId,iv);
+}
+
+// ── Bulk call selected leads ─────────────────────────────
+async function callSelected(){
+  const sel=getSelLeads().filter(l=>l.phone);
+  if(!sel.length){toast('No selected leads with phone numbers');return;}
+  const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+  if(!cfg||!cfg.vapiKey){
+    toast('⚠ Configure Voicebot first');
+    document.getElementById('vapiPanel').classList.add('visible');return;
+  }
+  toast('📞 Queuing '+sel.length+' calls...');
+  for(let i=0;i<sel.length;i++){
+    const l=sel[i];
+    const id=makeId(l);
+    // Stagger calls 3 seconds apart to avoid hammering
+    await new Promise(r=>setTimeout(r,i*3000));
+    if(!callStates.get(id)||callStates.get(id).state==='ready'||callStates.get(id).state==='failed'){
+      triggerCall(id);
+    }
+  }
+}
+
+// ── Call Log ─────────────────────────────────────────────
+function loadCallLog(){
+  try{callLog=JSON.parse(localStorage.getItem(LS_CALLLOG)||'[]');}catch(e){callLog=[];}
+  renderCallLog();
+}
+function addCallLog(lead,leadId,callId,state){
+  const entry={leadId,callId,name:lead.name||'Unknown',phone:lead.phone||'',
+    type:lead.type||'',state,statusText:'Calling...',summary:'',ts:Date.now()};
+  callLog.unshift(entry);
+  if(callLog.length>100)callLog.splice(100);
+  persistCallLog();
+  renderCallLog();
+  document.getElementById('callLog').classList.add('visible');
+}
+function updateCallLog(callId,state,statusText,summary){
+  const e=callLog.find(x=>x.callId===callId);
+  if(e){e.state=state;e.statusText=statusText;e.summary=summary;persistCallLog();renderCallLog();}
+}
+function persistCallLog(){
+  try{localStorage.setItem(LS_CALLLOG,JSON.stringify(callLog));}catch(e){}
+}
+function renderCallLog(){
+  const items=document.getElementById('callLogItems');
+  if(!items)return;
+  document.getElementById('callLogCount').textContent=callLog.length+' calls';
+  if(!callLog.length){items.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No calls yet.</div>';return;}
+  items.innerHTML=callLog.map(e=>{
+    const t=new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return`<div class="calllog-item">
+      <span class="calllog-status cls-${e.state}">${e.state}</span>
+      <div><div class="calllog-name">${e.name}</div><div class="calllog-phone">${e.phone} · ${e.type}</div>${e.summary?`<div style="font-size:10px;color:var(--muted);margin-top:2px;">${e.summary.slice(0,100)}</div>`:''}</div>
+      <span class="calllog-time">${t}</span>
+    </div>`;
+  }).join('');
+}
+function clearCallLog(){callLog=[];persistCallLog();renderCallLog();document.getElementById('callLog').classList.remove('visible');}
+function exportCallLogCSV(){
+  const h=['Name','Phone','Type','Status','Note','Summary','Time'];
+  const rows=callLog.map(e=>[`"${e.name}"`,`"${e.phone}"`,`"${e.type}"`,`"${e.state}"`,`"${e.statusText}"`,`"${(e.summary||'').replace(/"/g,"'").slice(0,200)}"`,`"${new Date(e.ts).toLocaleString()}"`]);
+  dl([h.join(','),...rows.map(r=>r.join(','))].join('
+'),'call-log-'+Date.now()+'.csv','text/csv');
+  toast('Exported '+callLog.length+' call records');
+}
+
+// ── Copy helpers ─────────────────────────────────────────
+function copySelEmails(){
+  const s=getSelLeads().filter(l=>l.email);
+  if(!s.length){toast('No emails in selection');return;}
+  navigator.clipboard.writeText(s.map(l=>l.email).join('
+')).then(()=>toast('Copied '+s.length+' emails'));
+}
+function copySelPhones(){
+  const s=getSelLeads().filter(l=>l.phone);
+  if(!s.length){toast('No phone numbers in selection');return;}
+  navigator.clipboard.writeText(s.map(l=>l.phone).join('
+')).then(()=>toast('Copied '+s.length+' phones'));
+}
+function copyAllEmails(){
+  const e=allLeads.filter(l=>l.email).map(l=>l.email);
+  if(!e.length){toast('No emails yet');return;}
+  navigator.clipboard.writeText(e.join('
+')).then(()=>toast('Copied '+e.length+' emails'));
+}
+function copyAllPhones(){
+  const p=allLeads.filter(l=>l.phone).map(l=>l.phone);
+  if(!p.length){toast('No phones yet');return;}
+  navigator.clipboard.writeText(p.join('
+')).then(()=>toast('Copied '+p.length+' phones'));
+}
+
+// ── Init on load ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  loadVapiConfig();
+  loadCallLog();
+});
 </script>
 </body>
 </html>
