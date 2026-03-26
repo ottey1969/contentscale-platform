@@ -1681,13 +1681,17 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
                const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
                const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
-               const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
-               const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema;
+               const hasAuthorBio=/written by|about the author|about the founder|meet the author/i.test(rawHtml.toLowerCase());
+               const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())
+               || /id=["'][^"']*faq[^"']*["']/i.test(rawHtml)
+               || hasFAQPageSchema;
                const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
                let host=''; try{host=new URL(su).hostname;}catch(e){}
                const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
                const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
-               const expertQuoteCount=(rawHtml.match(/<blockquote/gi)||[]).length;
+               const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length;
+               const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length;
+               const expertQuoteCount=Math.max(bqCount, citeCount);
                const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
                const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
                const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
@@ -1896,11 +1900,26 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                }
                } catch (e) {}
                });
-               const hasFAQContent = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
-               h.textContent.toLowerCase().includes('faq') ||
-               h.textContent.toLowerCase().includes('frequently asked') ||
-               h.textContent.toLowerCase().includes('common question')
+               const hasFAQContent = (() => {
+               // Check headings text
+               const headingMatch = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
+                 h.textContent.toLowerCase().includes('faq') ||
+                 h.textContent.toLowerCase().includes('frequently asked') ||
+                 h.textContent.toLowerCase().includes('common question')
                );
+               // Check for id="faq" or id containing "faq" on any element
+               const idMatch = Array.from(document.querySelectorAll('[id]')).some(el =>
+                 el.id.toLowerCase().includes('faq')
+               );
+               // Check for section/div with class containing faq
+               const classMatch = Array.from(document.querySelectorAll('[class]')).some(el =>
+                 el.className.toLowerCase().includes('faq')
+               );
+               // Check raw text for FAQ patterns
+               const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+               const textMatch = bodyText.includes('frequently asked') || bodyText.includes('common questions');
+               return headingMatch || idMatch || classMatch || textMatch;
+               })();
                const images = document.querySelectorAll('img');
                const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
                let baseHostname = '';
@@ -1918,7 +1937,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                let expertQuoteCount = 0;
                document.querySelectorAll('blockquote').forEach(bq => {
                const cite = bq.querySelector('cite');
-               if (bq.textContent.trim().length > 30 && cite && cite.textContent.trim().length > 3) expertQuoteCount++;
+               const text = bq.textContent.trim();
+               // Count if: has cite, OR is long enough to be a real quote (>80 chars)
+               if (text.length > 30 && (cite || text.length > 80)) expertQuoteCount++;
+               });
+               // Also count standalone <cite> tags not inside blockquote
+               document.querySelectorAll('cite').forEach(cite => {
+               if (!cite.closest('blockquote') && cite.textContent.trim().length > 3) expertQuoteCount++;
                });
                const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
                testimonialSelectors.forEach(sel => {
@@ -1959,8 +1984,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
                const hasAuthorBio = (
                !!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
-               /about the author|written by/i.test(rawHtml)
-               ) && /years of experience|certified|specializ|founder|director|ceo/i.test(rawHtml);
+               /about the author|about the founder|written by|meet the author/i.test(rawHtml)
+               ) && /years of experience|certified|specializ|founder|director|ceo|operations|amsterdam/i.test(rawHtml);
                return {
                wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
                metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
