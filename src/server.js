@@ -267,11 +267,21 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    // Puppeteer Browser
    let browserInstance = null;
    async function getBrowser() {
+   // Auto-restart if browser crashed or disconnected
+   if (browserInstance) {
+   try {
+   await browserInstance.version(); // ping — throws if dead
+   } catch(e) {
+   console.warn('⚠️ Browser instance dead, restarting...');
+   try { await browserInstance.close(); } catch(_) {}
+   browserInstance = null;
+   }
+   }
    if (!browserInstance) {
    console.log('🚀 Launching Puppeteer...');
    browserInstance = await puppeteer.launch({
    headless: 'new',
-   args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+   args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--memory-pressure-off']
    }).catch(err => { console.error('❌ Puppeteer error:', err.message); return null; });
    }
    return browserInstance;
@@ -1836,8 +1846,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                let scanUrl = url.startsWith('http') ? url : 'https://' + url;
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
-               const browser = await getBrowser();
-               if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
+               let browser = await getBrowser();
+               // One retry — force fresh browser if first attempt returns null
+               if (!browser) {
+                 browserInstance = null;
+                 browser = await getBrowser();
+               }
+               if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable — please try again in 10 seconds' });
                const page = await browser.newPage();
                await page.setViewport({ width: 1920, height: 1080 });
                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
