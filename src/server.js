@@ -3322,4 +3322,222 @@ app.post('/api/vapi/webcall', async (req, res) => {
 });
 
 
+
+// ============================================
+// LICENSE KEY SYSTEM — ContentScale LTD
+// ============================================
+// Keys stored in DB table: license_keys
+// Admin creates keys via POST /api/admin/license/create (x-admin-key required)
+// Users validate via POST /api/license/validate (public)
+
+// Ensure license_keys table exists
+async function ensureLicenseTable() {
+  if (!pool) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS license_keys (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(32) UNIQUE NOT NULL,
+        plan VARCHAR(50) DEFAULT 'voicebot',
+        email VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        activated_at TIMESTAMPTZ,
+        is_active BOOLEAN DEFAULT TRUE,
+        notes TEXT
+      )
+    `);
+  } catch(e) { console.error('[license] table init error:', e.message); }
+}
+ensureLicenseTable();
+
+// ADMIN: Generate a new license key
+app.post('/api/admin/license/create', verifyAdmin, async (req, res) => {
+  try {
+    const { plan = 'voicebot', email = '', notes = '' } = req.body || {};
+    // Generate CS-XXXX-XXXX-XXXX format
+    const rand = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+    const key = `CS-${rand()}-${rand()}-${rand()}`;
+    await pool.query(
+      'INSERT INTO license_keys (key, plan, email, notes) VALUES ($1, $2, $3, $4)',
+      [key, plan, email, notes]
+    );
+    console.log(`[license] created: ${key} plan=${plan} email=${email}`);
+    res.json({ success: true, key, plan, email });
+  } catch(e) {
+    console.error('[license] create error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ADMIN: List all license keys
+app.get('/api/admin/license/list', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM license_keys ORDER BY created_at DESC LIMIT 200');
+    res.json({ keys: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUBLIC: Validate a license key
+app.post('/api/license/validate', async (req, res) => {
+  try {
+    const { key } = req.body || {};
+    if (!key || key.length < 10) return res.status(400).json({ valid: false, error: 'Invalid key format' });
+    if (!pool) return res.status(503).json({ valid: false, error: 'DB unavailable' });
+    const r = await pool.query(
+      'SELECT * FROM license_keys WHERE key = $1 AND is_active = TRUE',
+      [key.trim().toUpperCase()]
+    );
+    if (!r.rows.length) return res.status(404).json({ valid: false, error: 'Key not found or inactive' });
+    const lic = r.rows[0];
+    // Mark first activation time
+    if (!lic.activated_at) {
+      await pool.query('UPDATE license_keys SET activated_at = NOW() WHERE key = $1', [key]);
+    }
+    console.log(`[license] validated: ${key} plan=${lic.plan}`);
+    res.json({ valid: true, plan: lic.plan, email: lic.email });
+  } catch(e) {
+    console.error('[license] validate error:', e.message);
+    res.status(500).json({ valid: false, error: e.message });
+  }
+});
+
+
+// ============================================
+// CONTENTSCALE OUTBOUND AGENT — Server-side
+// Uses VAPI_PRIVATE_KEY — no user key needed
+// For Ottmar's own lead crawler outbound calls
+// ============================================
+app.post('/api/cs-agent/call', async (req, res) => {
+  const { customerPhone, customerName, customerDomain, customerPages, customerCity, customerType, pitchAngle, opportunity, bucket, leadId } = req.body || {};
+
+  if (!customerPhone) return res.status(400).json({ error: 'customerPhone required' });
+
+  const privateKey = process.env.VAPI_PRIVATE_KEY;
+  const phoneId    = process.env.VAPI_PHONE_ID; // your Vapi phone number ID
+  if (!privateKey) return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set' });
+  if (!phoneId)    return res.status(500).json({ error: 'VAPI_PHONE_ID not set' });
+
+  let phone = customerPhone.replace(/[\s\-().]/g, '');
+  if (!phone.startsWith('+')) phone = '+' + phone;
+
+  const name    = customerName  || 'there';
+  const domain  = customerDomain || 'your website';
+  const pages   = customerPages  || '?';
+  const city    = customerCity   || 'your city';
+  const type    = customerType   || 'business';
+
+  const assistant = {
+    firstMessage: `Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this ${name}? I just scanned ${domain} and spotted something that could help you get more clients — do you have 2 minutes?`,
+    model: {
+      provider: 'openai',
+      model: 'gpt-4o',
+      temperature: 0.7,
+      systemPrompt: `You are Otto, an AI assistant calling on behalf of Ottmar Francisca from ContentScale — a content intelligence platform based in Amsterdam.
+
+LEGAL COMPLIANCE — MANDATORY FIRST LINE:
+Always start with: "Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale."
+
+LEAD CONTEXT:
+- Business name: ${name}
+- Website: ${domain}
+- Pages found: ~${pages} pages
+- City: ${city}
+- Business type: ${type}
+
+YOUR GOAL: Qualify the lead. Get their email with permission. Book a 15-min call with Ottmar.
+
+CALL FLOW:
+1. OPENING (AI disclosure first, always):
+"Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this ${name}? I just scanned ${domain} and found your website has about ${pages} pages — most businesses in ${city} that rank well on Google have 3–4× more content. I can share exactly what's missing. Do you have 2 minutes?"
+
+2. IF THEY ENGAGE — discovery:
+- "Are you currently getting clients from Google, or mostly referrals?"
+- "Have you tried content marketing before?"
+- "Is growing your online visibility a priority this year?"
+
+3. PITCH:
+- If few pages: "The good news is you have a clean site — adding the right content could get you showing up for searches your competitors own right now."
+- If interested: "I'd love to send you a free 1-page audit showing exactly what to fix first. What's the best email for that?" [GET EMAIL WITH PERMISSION]
+
+4. CLOSE:
+"Great — I'll have Ottmar send that over today. Is there a good time this week for a quick 15-minute call with him to go through it?"
+
+5. IF NOT INTERESTED:
+"Totally understand. I'll let Ottmar know. Have a great day!"
+
+6. VOICEMAIL:
+"Hi ${name}, this is an AI assistant calling for Ottmar Francisca from ContentScale. I scanned ${domain} and found specific ways to help you rank better on Google. Call +31 6 2807 3996 to speak with Ottmar directly — or visit contentscale.site. Have a great day!"
+
+RULES:
+- Always disclose AI upfront — never pretend to be human
+- If asked "are you a real person?" → be honest: "I'm an AI, yes — but Ottmar is a real person and will follow up personally."
+- Immediate opt-out: if they say stop/remove/not interested — confirm removal and end call
+- B2B only, calling hours 8am–8pm
+- Warm and conversational — not robotic
+- Max 3–4 minutes, respect their time`,
+    },
+    voice: {
+      provider: '11labs',
+      voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam — natural, professional
+    },
+    endCallMessage: 'Thanks for your time, have a great day!',
+    voicemailMessage: `Hi ${name}, this is an AI assistant calling for Ottmar from ContentScale. I scanned ${domain} and found ways to help you get more clients from Google. Call +31 6 2807 3996 or visit contentscale.site. Have a great day!`,
+    maxDurationSeconds: 240,
+    backchannelingEnabled: true,
+    endCallFunctionEnabled: true,
+  };
+
+  try {
+    const upstream = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${privateKey}`,
+      },
+      body: JSON.stringify({
+        phoneNumberId: phoneId,
+        customer: { number: phone, name },
+        assistant,
+      }),
+    });
+
+    const data = await upstream.json();
+    console.log(`[cs-agent] call → ${phone} | ${name} | ${domain} | status ${upstream.status} | id ${data.id||'?'}`);
+
+    if (!upstream.ok) {
+      const errMsg = data.message || data.error || JSON.stringify(data).slice(0, 200);
+      return res.status(upstream.status).json({ error: errMsg });
+    }
+
+    res.json({ callId: data.id, status: data.status, leadId });
+  } catch (err) {
+    console.error('[cs-agent] error:', err.message);
+    res.status(502).json({ error: 'Vapi request failed: ' + err.message });
+  }
+});
+
+// GET /api/cs-agent/status/:callId — poll outcome (uses server VAPI_PRIVATE_KEY)
+app.get('/api/cs-agent/status/:callId', async (req, res) => {
+  const privateKey = process.env.VAPI_PRIVATE_KEY;
+  if (!privateKey) return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set' });
+  try {
+    const upstream = await fetch(`https://api.vapi.ai/call/${req.params.callId}`, {
+      headers: { 'Authorization': `Bearer ${privateKey}` },
+    });
+    const data = await upstream.json();
+    if (!upstream.ok) return res.status(upstream.status).json({ error: data.message || 'Vapi error' });
+    let summary = data.analysis?.summary || data.summary || '';
+    if (!summary && Array.isArray(data.messages)) {
+      summary = data.messages
+        .filter(m => m.role === 'assistant' || m.role === 'user')
+        .slice(-4)
+        .map(m => `${m.role === 'assistant' ? 'Otto' : 'Customer'}: ${(m.message||'').slice(0,80)}`)
+        .join(' | ');
+    }
+    res.json({ callId: data.id, status: data.status, endedReason: data.endedReason, duration: data.endedAt && data.startedAt ? Math.round((new Date(data.endedAt) - new Date(data.startedAt)) / 1000) : null, summary });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 startServer();
