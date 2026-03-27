@@ -1928,7 +1928,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                );
                // Check for section/div with class containing faq
                const classMatch = Array.from(document.querySelectorAll('[class]')).some(el =>
-                 ( typeof el.className === 'string' ? el.className : (el.className.baseVal || '')).toLowerCase().includes('faq')
+                 el.className.toLowerCase().includes('faq')
                );
                // Check raw text for FAQ patterns
                const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
@@ -3280,6 +3280,40 @@ app.post('/api/voicebot/webhook', (req, res) => {
   console.log('[vapi webhook]', event?.message?.type, event?.message?.call?.id || '');
   // Just acknowledge — frontend polls for status itself
   res.json({ received: true });
+});
+
+
+// ============================================
+// VAPI WEB CALL ENDPOINT — for Otto on homepage
+// ============================================
+app.post('/api/vapi/webcall', async (req, res) => {
+  try {
+    const privateKey = process.env.VAPI_PRIVATE_KEY;
+    if (!privateKey) {
+      return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set' });
+    }
+    const response = await fetch('https://api.vapi.ai/call', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${privateKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'webCall',
+        assistantId: 'b4ba165e-daaa-4723-a10d-40262359a8da'
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[vapi/webcall] error:', data);
+      return res.status(response.status).json(data);
+    }
+    console.log('[vapi/webcall] created:', data.id);
+    res.json(data);
+  } catch (err) {
+    console.error('[vapi/webcall] exception:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 startServer();
