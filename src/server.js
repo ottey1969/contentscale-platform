@@ -1,1209 +1,3325 @@
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-
-                        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-                        :root{
-                        --bg:#111827;
-                        --surface:#1f2937;
-                        --card:#1a2332;
-                        --border:#374151;
-                        --border2:#4b5563;
-                        --ink:#f9fafb;
-                        --sub:#d1d5db;
-                        --dim:#9ca3af;
-                        --muted:#6b7280;
-                        --purple:#8b5cf6;
-                        --purple2:#a78bfa;
-                        --purple3:#c4b5fd;
-                        --purple4:#4c1d95;
-                        --blue:#60a5fa;
-                        --blue2:#1d4ed8;
-                        --green:#10b981;
-                        --green2:#4ade80;
-                        --orange:#f97316;
-                        --orange2:#c8440a;
-                        --amber:#f59e0b;
-                        }
-                        html{scroll-behavior:smooth;}
-                        body{background:var(--bg);color:var(--ink);font-family:Verdana,Geneva,Tahoma,sans-serif;font-size:16px;line-height:1.75;overflow-x:hidden;}
-                        /* noise overlay */
-                        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-                        background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");}
-                        .wrap{max-width:1080px;margin:0 auto;padding:0 28px;position:relative;z-index:1;}
-                        /* ── NAV ── */
-                        nav{
-                        position:fixed;top:0;left:0;right:0;z-index:200;
-                        background:linear-gradient(135deg,rgba(31,41,55,.97),rgba(17,24,39,.97));
-                        border-bottom:2px solid var(--border);
-                        backdrop-filter:blur(14px);
-                        }
-                        .nav-inner{max-width:1080px;margin:0 auto;padding:0 28px;height:62px;display:flex;align-items:center;gap:32px;}
-                        .logo{
-                        font-family:'Playfair Display',serif;font-size:22px;letter-spacing:-.01em;
-                        background:linear-gradient(90deg,var(--purple2),var(--blue));
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                        background-clip:text;text-decoration:none;flex-shrink:0;
-                        }
-                        .nav-links{display:flex;gap:4px;flex:1;}
-                        .nav-links a{
-                        font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;
-                        text-transform:uppercase;color:var(--dim);text-decoration:none;
-                        padding:8px 14px;border-radius:6px;transition:all .15s;border-bottom:3px solid transparent;
-                        }
-                        .nav-links a:hover{color:var(--ink);background:rgba(139,92,246,.08);}
-                        .nav-links a.active{color:var(--ink);border-bottom-color:var(--purple);}
-                        .nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
-                        .nav-wa{
-                        background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-                        padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:700;transition:opacity .15s;
-                        }
-                        .nav-wa:hover{opacity:.88;}
-                        .nav-scan{
-                        background:linear-gradient(90deg,var(--orange2),var(--orange));color:#fff;
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-                        padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:700;transition:opacity .15s;
-                        }
-                        .nav-scan:hover{opacity:.88;}
-                        /* ── HERO ── */
-                        .hero{padding:80px 0 8px;position:relative;overflow:hidden;}
-                        .hero-grid{
-                        position:absolute;inset:0;
-                        background-image:linear-gradient(rgba(55,65,81,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(55,65,81,.4) 1px,transparent 1px);
-                        background-size:72px 72px;
-                        mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,black 30%,transparent 100%);
-                        }
-                        .hero-glow{
-                        position:absolute;width:900px;height:500px;
-                        background:radial-gradient(ellipse,rgba(139,92,246,.07) 0%,transparent 65%);
-                        top:-100px;left:50%;transform:translateX(-50%);pointer-events:none;
-                        }
-                        .hero-glow2{
-                        position:absolute;width:400px;height:400px;
-                        background:radial-gradient(ellipse,rgba(96,165,250,.04) 0%,transparent 70%);
-                        bottom:-50px;right:-50px;pointer-events:none;
-                        }
-                        .eyebrow{
-                        display:inline-flex;align-items:center;gap:8px;
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;
-                        color:var(--purple2);border:1px solid rgba(139,92,246,.25);background:rgba(139,92,246,.06);
-                        padding:6px 14px;border-radius:6px;margin-bottom:26px;
-                        }
-                        .pulse{width:5px;height:5px;border-radius:50%;background:var(--purple2);animation:pulse 1.8s ease-in-out infinite;}
-                        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
-                        h1{
-                        text-transform:uppercase;
-                        font-family:'Playfair Display',serif;
-                        font-size:clamp(36px,5.5vw,68px);
-                        line-height:1.05;letter-spacing:-.02em;margin-bottom:28px;
-                        }
-                        .h1-white{color:var(--ink);}
-                        .h1-purple{
-                        background:linear-gradient(90deg,var(--purple2),var(--blue));
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-                        }
-                        .h1-dim{color:rgba(249,250,251,.35);}
-                        .hero-sub{
-                        font-size:17px;color:var(--sub);line-height:1.75;
-                        max-width:540px;margin-bottom:40px;font-weight:400;
-                        }
-                        .hero-sub strong{color:var(--ink);}
-                        /* Scan input */
-                        .scan-form{
-                        display:flex;gap:10px;max-width:580px;margin-bottom:48px;flex-wrap:wrap;
-                        }
-                        .scan-input{
-                        flex:1;min-width:260px;
-                        background:var(--surface);border:1.5px solid var(--border2);
-                        border-radius:8px;padding:14px 18px;
-                        font-family:'JetBrains Mono',monospace;font-size:13px;
-                        color:var(--ink);outline:none;transition:border-color .2s;
-                        }
-                        .scan-input:focus{border-color:var(--purple);}
-                        .scan-input::placeholder{color:var(--muted);}
-                        .scan-btn{
-                        background:linear-gradient(90deg,var(--orange2),var(--orange));color:#fff;
-                        font-family:'Playfair Display',serif;font-size:21px;letter-spacing:-.01em;
-                        padding:14px 28px;border-radius:8px;border:none;cursor:pointer;
-                        text-decoration:none;display:inline-flex;align-items:center;gap:8px;
-                        transition:opacity .15s;white-space:nowrap;
-                        }
-                        .scan-btn:hover{opacity:.88;}
-                        .hero-note{
-                        font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;
-                        text-transform:uppercase;color:var(--muted);margin-top:-36px;margin-bottom:40px;
-                        }
-                        /* Proof chips */
-                        .proof-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:56px;}
-                        .proof-chip{
-                        display:inline-flex;align-items:center;gap:8px;
-                        background:var(--surface);border:1px solid var(--border);border-radius:8px;
-                        padding:12px 20px;
-                        }
-                        .chip-num{
-                        font-family:'Playfair Display',serif;font-size:28px;line-height:1;
-                        color:var(--purple2);
-                        }
-                        .chip-lbl{
-                        font-family:'JetBrains Mono',monospace;font-size:9px;
-                        letter-spacing:.1em;text-transform:uppercase;color:var(--dim);line-height:1.4;
-                        }
-                        /* ── SECTION BASE ── */
-                        .sec{padding:88px 0;border-top:1px solid var(--border);}
-                        .sec-eye{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;
-                        text-transform:uppercase;color:var(--purple2);margin-bottom:12px;display:block;
-                        }
-                        .sec-title{
-                        font-family:'Playfair Display',serif;
-                        font-size:clamp(36px,5.5vw,60px);line-height:1.05;letter-spacing:-.02em;margin-bottom:14px;
-                        }
-                        .sec-body{font-size:15px;color:var(--sub);line-height:1.75;max-width:500px;}
-                        /* ── GRAAF PILLARS ── */
-                        .graaf-grid{
-                        display:grid;grid-template-columns:repeat(3,1fr);
-                        gap:1px;background:var(--border);
-                        border:1px solid var(--border);border-radius:8px;overflow:hidden;
-                        margin-top:48px;
-                        }
-                        @media(max-width:640px){.graaf-grid{grid-template-columns:1fr 1fr;}}
-                        @media(max-width:380px){.graaf-grid{grid-template-columns:1fr;}}
-                        @media(max-width:480px){.graaf-grid{grid-template-columns:1fr;}}
-                        .gp{
-                        background:var(--card);padding:28px 22px;position:relative;
-                        transition:background .2s;overflow:hidden;
-                        }
-                        .gp:hover{background:var(--surface);}
-                        .gp::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--blue));opacity:0;transition:opacity .2s;}
-                        .gp:hover::before{opacity:1;}
-                        .gp-letter{
-                        font-family:'Playfair Display',serif;font-size:64px;line-height:1;
-                        background:linear-gradient(135deg,var(--purple2),var(--blue));
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-                        margin-bottom:10px;
-                        }
-                        .gp-word{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--ink);}
-                        .gp-desc{font-size:12px;color:var(--dim);line-height:1.6;}
-                        .gp-pts{
-                        font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;
-                        text-transform:uppercase;color:var(--purple2);margin-top:12px;display:block;
-                        border:1px solid rgba(139,92,246,.25);background:rgba(139,92,246,.06);
-                        padding:2px 8px;border-radius:4px;display:inline-block;
-                        }
-                        /* ── SCORE VISUAL ── */
-                        .score-section{padding:88px 0;border-top:1px solid var(--border);}
-                        .score-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
-                        @media(max-width:768px){.score-grid{grid-template-columns:1fr;gap:36px;}}
-                        .score-card{
-                        background:linear-gradient(135deg,#0c1a2e,#0f172a);
-                        border:1.5px solid var(--blue2);border-radius:12px;padding:32px;
-                        position:relative;overflow:hidden;
-                        }
-                        .score-card::before{
-                        content:'';position:absolute;top:0;left:0;right:0;height:2px;
-                        background:linear-gradient(90deg,var(--purple),var(--blue),var(--green));
-                        }
-                        .score-badge{
-                        font-family:'Playfair Display',serif;font-size:86px;line-height:1;
-                        background:linear-gradient(135deg,var(--blue),var(--purple2));
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                        background-clip:text;margin-bottom:4px;
-                        }
-                        .score-label{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;
-                        text-transform:uppercase;color:var(--blue);margin-bottom:20px;
-                        }
-                        .score-bars{display:flex;flex-direction:column;gap:10px;}
-                        .sbar-row{display:flex;align-items:center;gap:12px;}
-                        .sbar-name{
-                        font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;
-                        text-transform:uppercase;color:var(--dim);width:60px;flex-shrink:0;
-                        }
-                        .sbar-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
-                        .sbar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--purple),var(--blue));}
-                        .sbar-score{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
-                        color:var(--blue);width:32px;text-align:right;flex-shrink:0;
-                        }
-                        .score-features{display:flex;flex-direction:column;gap:16px;}
-                        .sf{
-                        display:flex;gap:14px;align-items:flex-start;
-                        background:var(--surface);border:1px solid var(--border);
-                        border-radius:8px;padding:16px 18px;transition:border-color .2s;
-                        }
-                        .sf:hover{border-color:var(--border2);}
-                        .sf-icon{
-                        width:36px;height:36px;border-radius:6px;flex-shrink:0;
-                        background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);
-                        display:flex;align-items:center;justify-content:center;font-size:16px;
-                        }
-                        .sf-title{font-size:14px;font-weight:700;margin-bottom:4px;}
-                        .sf-desc{font-size:12px;color:var(--dim);line-height:1.55;}
-                        /* ── HOW IT WORKS ── */
-                        .how-grid{
-                        display:grid;grid-template-columns:repeat(4,1fr);
-                        gap:1px;background:var(--border);border:1px solid var(--border);
-                        border-radius:8px;overflow:hidden;margin-top:48px;
-                        }
-                        @media(max-width:768px){.how-grid{grid-template-columns:1fr 1fr;}}
-                        @media(max-width:480px){.how-grid{grid-template-columns:1fr;}}
-                        .hw{background:var(--card);padding:26px 22px;transition:background .2s;}
-                        .hw:hover{background:var(--surface);}
-                        .hw-n{
-                        font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
-                        color:var(--purple2);margin-bottom:14px;opacity:.7;
-                        }
-                        .hw-h{font-size:14px;font-weight:700;margin-bottom:8px;line-height:1.3;}
-                        .hw-p{font-size:12px;color:var(--dim);line-height:1.6;}
-                        .hw-tag{
-                        font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.1em;
-                        text-transform:uppercase;color:var(--purple2);margin-top:14px;display:block;opacity:.8;
-                        }
-                        /* ── STATS ── */
-                        .stats-section{padding:88px 0;border-top:1px solid var(--border);}
-                        .stats-box{
-                        background:linear-gradient(135deg,#0c1a2e,#0f172a);
-                        border:2px solid var(--blue2);border-radius:12px;
-                        padding:28px 32px;margin-top:48px;
-                        }
-                        .stats-box-head{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;
-                        text-transform:uppercase;color:var(--blue);margin-bottom:20px;
-                        }
-                        .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.05);}
-                        @media(max-width:768px){.stat-grid{grid-template-columns:1fr 1fr;}}
-                        .stat-item{
-                        background:#0c1a2e;padding:20px 18px;
-                        }
-                        .stat-n{
-                        font-family:'Playfair Display',serif;font-size:42px;line-height:1;
-                        color:var(--blue);margin-bottom:6px;
-                        }
-                        .stat-l{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);line-height:1.5;}
-                        .stat-src{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(96,165,250,.4);margin-top:6px;display:block;}
-                        /* ── TOOLS ── */
-                        .tools-grid{
-                        display:grid;grid-template-columns:repeat(3,1fr);
-                        gap:16px;margin-top:48px;
-                        }
-                        @media(max-width:768px){.tools-grid{grid-template-columns:1fr;}}
-                        .tool-card{
-                        background:var(--card);border:1px solid var(--border);
-                        border-radius:10px;padding:28px 24px;
-                        position:relative;overflow:hidden;transition:transform .2s,border-color .2s;
-                        display:flex;flex-direction:column;
-                        }
-                        .tool-card:hover{transform:translateY(-3px);border-color:var(--border2);}
-                        .tool-card.featured{
-                        border-color:rgba(139,92,246,.4);
-                        background:linear-gradient(160deg,rgba(139,92,246,.05),var(--card) 55%);
-                        }
-                        .tool-card::before{
-                        content:'';position:absolute;top:0;left:0;right:0;height:2px;
-                        background:linear-gradient(90deg,var(--purple),var(--blue));
-                        opacity:0;transition:opacity .2s;
-                        }
-                        .tool-card:hover::before{opacity:1;}
-                        .tool-card.featured::before{opacity:1;}
-                        .tool-ico{font-size:28px;margin-bottom:14px;}
-                        .tool-name{font-family:'Playfair Display',serif;font-size:24px;letter-spacing:0;margin-bottom:6px;}
-                        .tool-desc{font-size:13px;color:var(--sub);line-height:1.65;flex:1;}
-                        .tool-tag{
-                        font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-                        color:var(--purple2);margin-top:14px;display:inline-block;
-                        border:1px solid rgba(139,92,246,.25);background:rgba(139,92,246,.06);
-                        padding:3px 10px;border-radius:4px;
-                        }
-                        .tool-cta{
-                        display:block;text-align:center;margin-top:16px;
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-                        background:linear-gradient(90deg,var(--orange2),var(--orange));
-                        color:#fff;padding:11px;border-radius:6px;text-decoration:none;
-                        font-weight:700;transition:opacity .15s;
-                        }
-                        .tool-cta:hover{opacity:.88;}
-                        .tool-cta.outline{
-                        background:transparent;color:var(--dim);
-                        border:1px solid var(--border2);
-                        }
-                        .tool-cta.outline:hover{color:var(--ink);border-color:var(--border2);}
-                        /* ── FRAMEWORKS ── */
-                        .fw-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px;}
-                        @media(max-width:640px){.fw-grid{grid-template-columns:1fr;}}
-                        .fw-card{
-                        background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;
-                        transition:border-color .2s;
-                        }
-                        .fw-card:hover{border-color:var(--border2);}
-                        .fw-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
-                        .fw-badge{
-                        font-family:'Playfair Display',serif;font-size:22px;letter-spacing:-.01em;
-                        background:linear-gradient(90deg,var(--purple2),var(--blue));
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-                        }
-                        .fw-title{font-size:15px;font-weight:700;}
-                        .fw-sub{font-size:11px;color:var(--dim);}
-                        .fw-pts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
-                        .fw-pt{
-                        font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-                        padding:3px 9px;border-radius:4px;
-                        background:rgba(139,92,246,.08);color:var(--purple2);border:1px solid rgba(139,92,246,.2);
-                        }
-                        /* ── TESTIMONIALS ── */
-                        .test-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:48px;}
-                        @media(max-width:768px){.test-grid{grid-template-columns:1fr;}}
-                        .tcard{
-                        background:var(--card);border:1px solid var(--border);border-radius:8px;padding:22px 20px;
-                        position:relative;
-                        }
-                        .tcard::before{
-                        content:'"';position:absolute;top:12px;right:16px;
-                        font-family:'Playfair Display',serif;font-size:60px;line-height:1;
-                        color:rgba(139,92,246,.12);
-                        }
-                        .tcard-text{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:14px;}
-                        .tcard-author{
-                        display:flex;align-items:center;gap:10px;
-                        }
-                        .tcard-avatar{
-                        width:32px;height:32px;border-radius:50%;
-                        background:linear-gradient(135deg,var(--purple4),var(--blue2));
-                        display:flex;align-items:center;justify-content:center;
-                        font-size:13px;font-weight:700;color:#fff;flex-shrink:0;
-                        }
-                        .tcard-name{font-size:13px;font-weight:700;}
-                        .tcard-role{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--dim);}
-                        .tcard-stars{color:var(--amber);font-size:12px;margin-bottom:8px;}
-                        .tcard-flag{font-size:16px;}
-                        /* ── LEADERBOARD PREVIEW ── */
-                        .lb-preview{
-                        background:linear-gradient(135deg,#0f172a,#1e1b4b);
-                        border:1.5px solid var(--purple4);border-radius:10px;
-                        margin-top:48px;overflow:hidden;
-                        }
-                        .lb-head{
-                        padding:16px 22px;border-bottom:1px solid rgba(76,29,149,.4);
-                        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
-                        }
-                        .lb-head-title{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;
-                        text-transform:uppercase;color:var(--purple2);
-                        }
-                        .lb-row{
-                        display:grid;grid-template-columns:36px 1fr auto auto;gap:12px;align-items:center;
-                        padding:13px 22px;border-bottom:1px solid rgba(76,29,149,.2);
-                        transition:background .15s;
-                        }
-                        .lb-row:hover{background:rgba(139,92,246,.04);}
-                        .lb-row:last-child{border-bottom:none;}
-                        .lb-rank{
-                        font-family:'Playfair Display',serif;font-size:18px;color:var(--purple2);text-align:center;
-                        }
-                        .lb-domain{font-size:13px;font-weight:600;}
-                        .lb-score-badge{
-                        font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
-                        padding:4px 12px;border-radius:4px;
-                        }
-                        .score-high{background:rgba(16,185,129,.15);color:var(--green2);border:1px solid rgba(16,185,129,.3);}
-                        .score-mid{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25);}
-                        .lb-country{font-size:16px;}
-                        /* ── CTA SECTION ── */
-                        .cta-section{
-                        padding:100px 0;border-top:1px solid var(--border);
-                        text-align:center;position:relative;overflow:hidden;
-                        }
-                        .cta-section::before{
-                        content:'';position:absolute;width:700px;height:400px;
-                        background:radial-gradient(ellipse,rgba(139,92,246,.06) 0%,transparent 70%);
-                        left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;
-                        }
-                        .cta-section h2{
-                        font-family:'Playfair Display',serif;
-                        font-size:clamp(48px,7vw,88px);line-height:.9;letter-spacing:-.01em;margin-bottom:18px;
-                        }
-                        .cta-section h2 em{
-                        font-style:normal;
-                        background:linear-gradient(90deg,var(--purple2),var(--blue));
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-                        }
-                        .cta-section p{font-size:15px;color:var(--sub);max-width:400px;margin:0 auto 36px;line-height:1.75;}
-                        .cta-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
-                        .btn-scan{
-                        font-family:'Playfair Display',serif;font-size:22px;letter-spacing:-.01em;
-                        background:linear-gradient(90deg,var(--orange2),var(--orange));color:#fff;
-                        padding:15px 38px;border-radius:8px;text-decoration:none;transition:opacity .15s;
-                        }
-                        .btn-scan:hover{opacity:.88;}
-                        .btn-wa{
-                        font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
-                        background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;
-                        padding:15px 24px;border-radius:8px;text-decoration:none;font-weight:700;transition:opacity .15s;
-                        }
-                        .btn-wa:hover{opacity:.88;}
-                        /* ── AUTHOR ── */
-                        .author-section{padding:72px 0;border-top:1px solid var(--border);}
-                        .author-card{
-                        background:var(--surface);border:1px solid var(--border);border-radius:10px;
-                        padding:32px;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;
-                        }
-                        .author-img{
-                        width:88px;height:88px;border-radius:50%;object-fit:cover;
-                        border:3px solid var(--purple4);flex-shrink:0;
-                        }
-                        .author-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:800;margin-bottom:4px;}
-                        .author-role{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;
-                        text-transform:uppercase;color:var(--purple2);margin-bottom:14px;
-                        }
-                        .author-bio{font-size:13.5px;color:var(--sub);line-height:1.75;margin-bottom:16px;}
-                        .author-links{display:flex;gap:16px;flex-wrap:wrap;}
-                        .author-links a{
-                        font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;
-                        text-transform:uppercase;text-decoration:none;transition:opacity .15s;
-                        }
-                        .author-links a:hover{opacity:.75;}
-                        /* ── FOOTER ── */
-                        footer{
-                        background:linear-gradient(135deg,#111827,#1f2937);
-                        border-top:2px solid var(--border);padding:52px 28px 24px;
-                        }
-                        .foot-grid{
-                        max-width:1080px;margin:0 auto;
-                        display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px;
-                        }
-                        @media(max-width:768px){.foot-grid{grid-template-columns:1fr 1fr;}}
-                        @media(max-width:480px){.foot-grid{grid-template-columns:1fr;}}
-                        .foot-brand .logo{font-size:20px;display:inline-block;margin-bottom:10px;}
-                        .foot-brand p{font-size:12.5px;color:var(--muted);line-height:1.7;max-width:260px;}
-                        .foot-col h4{
-                        font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.15em;
-                        text-transform:uppercase;color:var(--sub);margin-bottom:14px;
-                        }
-                        .foot-col a{
-                        display:block;font-size:13px;color:var(--muted);text-decoration:none;
-                        margin-bottom:8px;transition:color .15s;
-                        }
-                        .foot-col a:hover{color:var(--sub);}
-                        .foot-bottom{
-                        max-width:1080px;margin:0 auto;
-                        padding-top:20px;border-top:1px solid var(--border);
-                        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-                        }
-                        .foot-copy{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.05em;}
-                        .foot-badges{display:flex;gap:8px;flex-wrap:wrap;}
-                        .foot-badge{
-                        background:var(--surface);border:1px solid var(--border);border-radius:6px;
-                        padding:3px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);
-                        }
-                        /* ── REVEAL ── */
-                        .r{opacity:1;transform:translateY(0);transition:opacity .55s ease,transform .55s ease;}
-                        .r.in{opacity:1;transform:translateY(0);}
-                        @media(max-width:640px){
-                        .nav-links{display:none;}
-                        .scan-form{flex-direction:column;}
-                        .scan-input{width:100%;}
-                        }
-                     
-</style>
-<!-- HERO -->
-                     <section class="hero">
-                        <div class="hero-grid"></div>
-                        <div class="hero-glow"></div>
-                        <div class="hero-glow2"></div>
-                        <div class="wrap">
-                           <div class="eyebrow r"><span class="pulse"></span> Content Quality Verification Platform — 2026</div>
-                           <h1>
-                              <span class="h1-white">Prove your</span><br>
-                              <span class="h1-purple">content quality</span><br>
-                              <span class="h1-dim">Not just claim it</span>
-                           </h1>
-                           <p class="hero-sub r">
-                              The <strong>GRAAF Framework</strong> measures the five quality signals Google rewards in 2026 — Genuinely Credible, Relevant, Actionable, Accurate, Fresh — delivering a <strong>100-point ContentScore</strong> that predicts your rankings.
-                           </p>
-                           <!-- SCAN FORM -->
-                           <div class="scan-form r">
-                              <input class="scan-input" type="url" id="scanUrl"
-                                 placeholder="https://yourwebsite.com/your-page"
-                                 onkeydown="if(event.key==='Enter')doScan()">
-                              <a href="https://app.contentscale.site" class="scan-btn" onclick="doScan(event)">
-                              🚀 Scan Free — 30 sec
-                              </a>
-                           </div>
-                           <div class="hero-note r">Free · No account · No credit card · Instant results</div>
-                           <!-- PROOF CHIPS -->
-                           <div class="proof-row r">
-                              <div class="proof-chip">
-                                 <div class="chip-num">78%</div>
-                                 <div class="chip-lbl">Traffic recovery<br>success rate</div>
-                              </div>
-                              <div class="proof-chip">
-                                 <div class="chip-num">3.7×</div>
-                                 <div class="chip-lbl">Average traffic<br>improvement</div>
-                              </div>
-                              <div class="proof-chip">
-                                 <div class="chip-num">200+</div>
-                                 <div class="chip-lbl">Sites recovered<br>&#038; scored</div>
-                              </div>
-                              <div class="proof-chip">
-                                 <div class="chip-num">47</div>
-                                 <div class="chip-lbl">Countries<br>served</div>
-                              </div>
-                              <div class="proof-chip">
-                                 <div class="chip-num">90</div>
-                                 <div class="chip-lbl">Day average<br>recovery time</div>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     
-                     
-                     <!-- OTTO SCROLL BUTTON -->
-<section style="padding:8px 0 20px;">
-  <div class="wrap" style="display:flex;justify-content:center;">
-    <a href="#otto" onclick="event.preventDefault();document.getElementById('otto').scrollIntoView({behavior:'smooth'});"
-      style="display:inline-flex;align-items:center;gap:12px;background:linear-gradient(135deg,#c8440a,#f97316);color:#fff;padding:16px 32px;border-radius:50px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;text-decoration:none;border:3px solid rgba(255,255,255,0.15);box-shadow:0 0 0 8px rgba(249,115,22,.15),0 0 32px rgba(249,115,22,.3);transition:all .2s;"
-      onmouseover="this.style.boxShadow='0 0 0 12px rgba(249,115,22,.25),0 0 48px rgba(249,115,22,.4)';this.style.transform='scale(1.04)'"
-      onmouseout="this.style.boxShadow='0 0 0 8px rgba(249,115,22,.15),0 0 32px rgba(249,115,22,.3)';this.style.transform='scale(1)'">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l1.65-1.65a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-      Talk to Otto &#8212; AI Voice Assistant
-    </a>
-  </div>
-</section>
-
-<!-- CONTENTSCORE BADGE — centered, same as template above TOC -->
-                     <div style="text-align:center;padding:32px 0 8px;position:relative;z-index:1;">
-                        <div data-cs-badge></div>
-                     </div>
-                     <!-- DIRECT ANSWER + TLDR + TOC -->
-                     <div style="max-width:1080px;margin:0 auto;padding:24px 28px 0;display:flex;flex-direction:column;gap:16px;">
-                        <!-- Direct Answer -->
-                        <div style="background:linear-gradient(135deg,#052e16,#064e3b);border:2px solid #10b981;border-radius:10px;padding:18px 24px;">
-                           <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#6ee7b7;margin-bottom:10px;">✅ Direct Answer</div>
-                           <p style="font-size:15px;color:#d1fae5;line-height:1.8;margin:0;font-family:Verdana,sans-serif;"><strong style="color:#fff;">ContentScale</strong> is a free AI-powered SEO platform that gives any webpage a <strong style="color:#fff;">100-point ContentScore</strong> using the <strong style="color:#fff;">GRAAF Framework</strong> — measuring Genuinely Credible, Relevant, Actionable, Accurate, and Fresh signals. Pages scoring 90+ see <strong style="color:#fff;">3.7× traffic improvement</strong> within 90 days. No login, no credit card. Built by Ottmar Francisca, Amsterdam.</p>
-                        </div>
-                        <!-- TL;DR -->
-                        <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:10px;padding:18px 24px;">
-                           <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#a78bfa;margin-bottom:12px;">⚡ TL;DR — The Short Version</div>
-                           <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">
-                              <li style="font-size:14px;color:#d1d5db;line-height:1.7;display:flex;gap:10px;"><span style="color:#a78bfa;flex-shrink:0;">→</span> Free 100-point GRAAF ContentScore for any URL — results in 30 seconds</li>
-                              <li style="font-size:14px;color:#d1d5db;line-height:1.7;display:flex;gap:10px;"><span style="color:#a78bfa;flex-shrink:0;">→</span> 73% of post-2024 traffic drops are content quality issues — fixable without developers</li>
-                              <li style="font-size:14px;color:#d1d5db;line-height:1.7;display:flex;gap:10px;"><span style="color:#a78bfa;flex-shrink:0;">→</span> GRAAF + CRAFT + Technical SEO = the complete 100-point scoring system</li>
-                              <li style="font-size:14px;color:#d1d5db;line-height:1.7;display:flex;gap:10px;"><span style="color:#a78bfa;flex-shrink:0;">→</span> 78% recovery success rate · 200+ sites · 47 countries · 90-day average</li>
-                              <li style="font-size:14px;color:#d1d5db;line-height:1.7;display:flex;gap:10px;"><span style="color:#a78bfa;flex-shrink:0;">→</span> Professional services at €250/month — or use the free scanner yourself</li>
-                           </ul>
-                        </div>
-                        <!-- TOC -->
-                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 24px;">
-                           <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:14px;">📋 On This Page</div>
-                           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;">
-                              <a href="#graaf" style="font-size:13px;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(55,65,81,.4);transition:color .15s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--sub)'"><span style="color:var(--purple2);font-family:'JetBrains Mono',monospace;font-size:9px;">01</span> GRAAF Framework</a>
-                              <a href="#tools" style="font-size:13px;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(55,65,81,.4);transition:color .15s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--sub)'"><span style="color:var(--purple2);font-family:'JetBrains Mono',monospace;font-size:9px;">02</span> Free Scanner</a>
-                              <a href="#services" style="font-size:13px;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(55,65,81,.4);transition:color .15s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--sub)'"><span style="color:var(--purple2);font-family:'JetBrains Mono',monospace;font-size:9px;">03</span> Done-For-You Services</a>
-                              <a href="#leaderboard" style="font-size:13px;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(55,65,81,.4);transition:color .15s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--sub)'"><span style="color:var(--purple2);font-family:'JetBrains Mono',monospace;font-size:9px;">04</span> Leaderboard</a>
-                              <a href="#otto" style="font-size:13px;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(55,65,81,.4);transition:color .15s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--sub)'"><span style="color:var(--purple2);font-family:'JetBrains Mono',monospace;font-size:9px;">05</span> Otto Voice Assistant</a>
-                              <a href="#faq" style="font-size:13px;color:var(--sub);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(55,65,81,.4);transition:color .15s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--sub)'"><span style="color:var(--purple2);font-family:'JetBrains Mono',monospace;font-size:9px;">06</span> FAQ</a>
-                           </div>
-                        </div>
-                     </div>
-                     <!-- GRAAF FRAMEWORK -->
-                     <section class="sec" id="graaf">
-                        <div class="wrap">
-                           <span class="sec-eye r">The GRAAF Framework</span>
-                           <h2 class="sec-title r">Five pillars.<br>One score. Measurable results.</h2>
-                           <p class="sec-body r">After analysing 200+ traffic losses from 2023–2026, the pattern is clear. Content drops when it lacks one or more of these five signals. GRAAF measures all of them.</p>
-                           <div class="graaf-grid r">
-                              <div class="gp">
-                                 <div class="gp-letter">G</div>
-                                 <div class="gp-word">Genuinely Credible</div>
-                                 <div class="gp-desc">Real expertise, expert quotes with full attribution, verifiable credentials, social proof that Google and AI assistants can confirm.</div>
-                                 <span class="gp-pts">10 points</span>
-                              </div>
-                              <div class="gp">
-                                 <div class="gp-letter">R</div>
-                                 <div class="gp-word">Relevant</div>
-                                 <div class="gp-desc">Search intent match, topical completeness, query satisfaction. Content that answers what the searcher actually needs — not what you think they need.</div>
-                                 <span class="gp-pts">10 points</span>
-                              </div>
-                              <div class="gp">
-                                 <div class="gp-letter">A</div>
-                                 <div class="gp-word">Actionable</div>
-                                 <div class="gp-desc">Step-by-step guidance, concrete examples, practical templates. Readers leave knowing exactly what to do next — not just what to think.</div>
-                                 <span class="gp-pts">10 points</span>
-                              </div>
-                              <div class="gp">
-                                 <div class="gp-letter">A</div>
-                                 <div class="gp-word">Accurate</div>
-                                 <div class="gp-desc">Factual correctness, proper sources cited by name and year, updated for 2026–2026. No invented statistics. No guesses presented as facts.</div>
-                                 <span class="gp-pts">10 points</span>
-                              </div>
-                              <div class="gp">
-                                 <div class="gp-letter">F</div>
-                                 <div class="gp-word">Fresh</div>
-                                 <div class="gp-desc">Updated facts, current references, recent algorithm alignment. Content that feels like it was written for 2026 — not recycled from 2022.</div>
-                                 <span class="gp-pts">10 points</span>
-                              </div>
-                              <div class="gp" style="background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(96,165,250,.04));border-left:2px solid var(--purple);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:220px;">
-                                 <div style="font-family:'Playfair Display',serif;font-size:48px;line-height:1;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">100</div>
-                                 <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">Your ContentScore</div>
-                                 <div style="font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:16px;">Scan any page free. Get your full GRAAF breakdown in 30 seconds.</div>
-                                 <a href="https://app.contentscale.site" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:-.01em;text-transform:uppercase;background:linear-gradient(90deg,var(--orange2),var(--orange));color:#fff;padding:8px 16px;border-radius:5px;text-decoration:none;font-weight:700;">→ Scan Free</a>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- CONTENTSCORE VISUAL -->
-                     <section class="score-section">
-                        <div class="wrap">
-                           <div class="score-grid">
-                              <div>
-                                 <span class="sec-eye r">ContentScore</span>
-                                 <h2 class="sec-title r">A score that<br>predicts your<br>rankings.</h2>
-                                 <p class="sec-body r" style="margin-bottom:28px;">
-                                    The ContentScore is a 100-point measurement built on GRAAF (50pts) + CRAFT methodology (30pts) + Technical SEO (20pts). Pages scoring 90+ see an average 3.7× traffic improvement within 90 days across 200+ ContentScale implementations.
-                                 </p>
-                                 <div class="score-features r">
-                                    <div class="sf">
-                                       <div class="sf-icon">⚡</div>
-                                       <div>
-                                          <div class="sf-title">Results in 30 seconds</div>
-                                          <div class="sf-desc">Paste any URL. ContentScore appears instantly. No login, no credit card, no setup.</div>
-                                       </div>
-                                    </div>
-                                    <div class="sf">
-                                       <div class="sf-icon">🎯</div>
-                                       <div>
-                                          <div class="sf-title">Exact gaps identified</div>
-                                          <div class="sf-desc">You don&#8217;t just get a number. You get a precise list of what&#8217;s missing — and what to fix first.</div>
-                                       </div>
-                                    </div>
-                                    <div class="sf">
-                                       <div class="sf-icon">🤖</div>
-                                       <div>
-                                          <div class="sf-title">AI Overview ready</div>
-                                          <div class="sf-desc">Optimised for Google&#8217;s AI Overviews, ChatGPT citations, Perplexity answers, and Gemini responses.</div>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                              <div class="r">
-                                 <div class="score-card">
-                                    <div class="score-badge">94</div>
-                                    <div class="score-label">ContentScore — Example result</div>
-                                    <div class="score-bars">
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">GRAAF</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:92%"></div>
-                                          </div>
-                                          <span class="sbar-score">46/50</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">CRAFT</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:87%"></div>
-                                          </div>
-                                          <span class="sbar-score">26/30</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">Tech SEO</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:90%"></div>
-                                          </div>
-                                          <span class="sbar-score">18/20</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">G — Cred</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:100%"></div>
-                                          </div>
-                                          <span class="sbar-score">10/10</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">R — Rel</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:90%"></div>
-                                          </div>
-                                          <span class="sbar-score">9/10</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">A — Act</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:90%"></div>
-                                          </div>
-                                          <span class="sbar-score">9/10</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">A — Acc</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:80%"></div>
-                                          </div>
-                                          <span class="sbar-score">8/10</span>
-                                       </div>
-                                       <div class="sbar-row">
-                                          <span class="sbar-name">F — Fresh</span>
-                                          <div class="sbar-track">
-                                             <div class="sbar-fill" style="width:100%"></div>
-                                          </div>
-                                          <span class="sbar-score">10/10</span>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- HOW IT WORKS -->
-                     <section class="sec">
-                        <div class="wrap">
-                           <span class="sec-eye r">How It Works</span>
-                           <h2 class="sec-title r">From scan to recovery<br>in four steps.</h2>
-                           <div class="how-grid r">
-                              <div class="hw">
-                                 <div class="hw-n">STEP 01</div>
-                                 <div class="hw-h">Paste Your URL</div>
-                                 <div class="hw-p">Enter any page URL — homepage, blog post, service page, product page. ContentScale fetches and analyses the full content.</div>
-                                 <span class="hw-tag">→ Free · 30 seconds</span>
-                              </div>
-                              <div class="hw">
-                                 <div class="hw-n">STEP 02</div>
-                                 <div class="hw-h">Get Your ContentScore</div>
-                                 <div class="hw-p">Receive a 100-point score broken down across GRAAF, CRAFT, and Technical SEO. See exactly which signals are missing.</div>
-                                 <span class="hw-tag">→ 50+ E-E-A-T signals</span>
-                              </div>
-                              <div class="hw">
-                                 <div class="hw-n">STEP 03</div>
-                                 <div class="hw-h">Fix What&#8217;s Missing</div>
-                                 <div class="hw-p">Follow the prioritised fix list. Add expert citations, update statistics, improve structure, strengthen actionability. Rescan weekly.</div>
-                                 <span class="hw-tag">→ Clear priority list</span>
-                              </div>
-                              <div class="hw">
-                                 <div class="hw-n">STEP 04</div>
-                                 <div class="hw-h">Recover Your Traffic</div>
-                                 <div class="hw-p">Pages reaching 90+ ContentScore average 3.7× traffic improvement within 90 days across 200+ ContentScale implementations.</div>
-                                 <span class="hw-tag">→ 78% success rate</span>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- STATISTICS -->
-                     <section class="stats-section" id="stats">
-                        <div class="wrap">
-                           <span class="sec-eye r">Verified Results — 2024–2026</span>
-                           <h2 class="sec-title r">The numbers behind<br>the GRAAF Framework.</h2>
-                           <p class="sec-body r">All statistics are drawn from ContentScale&#8217;s own implementation data across 200+ sites (2024–2026) and verified external sources. No invented figures. No ranges presented as specifics.</p>
-                           <div class="stats-box r">
-                              <div class="stats-box-head">📊 ContentScale Implementation Data — 2024–2026</div>
-                              <div class="stat-grid">
-                                 <div class="stat-item">
-                                    <div class="stat-n">78%</div>
-                                    <div class="stat-l">Traffic recovery success rate within 90 days</div>
-                                    <span class="stat-src">ContentScale recovery data, 2026</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">3.7×</div>
-                                    <div class="stat-l">Average traffic improvement for pages scoring 90+</div>
-                                    <span class="stat-src">ContentScale GRAAF documentation, 2026</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">200+</div>
-                                    <div class="stat-l">Businesses scanned &#038; recovered across 47 countries</div>
-                                    <span class="stat-src">ContentScale platform data, 2026</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">40%</div>
-                                    <div class="stat-l">Of English-language pages affected by Google&#8217;s March 2024 Core Update</div>
-                                    <span class="stat-src">Search Engine Land, 2024</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">73%</div>
-                                    <div class="stat-l">Of post-2024 traffic drops caused by content quality — not technical SEO</div>
-                                    <span class="stat-src">ContentScale analysis, 2026</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">90</div>
-                                    <div class="stat-l">Day average timeline for measurable traffic recovery</div>
-                                    <span class="stat-src">ContentScale recovery data, 2026</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">22%</div>
-                                    <div class="stat-l">Success rate for unguided content edits without GRAAF</div>
-                                    <span class="stat-src">ContentScale CRAFT Framework, 2026</span>
-                                 </div>
-                                 <div class="stat-item">
-                                    <div class="stat-n">94%</div>
-                                    <div class="stat-l">Accuracy of ContentScore in predicting ranking recovery</div>
-                                    <span class="stat-src">ContentScale platform data, 2026</span>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- TOOLS -->
-                     <section class="sec" id="tools">
-                        <div class="wrap">
-                           <span class="sec-eye r">The Platform</span>
-                           <h2 class="sec-title r">Three tools.<br>One framework.<br>Measurable results.</h2>
-                           <div class="tools-grid r">
-                              <div class="tool-card featured">
-                                 <div class="tool-ico">🔍</div>
-                                 <div class="tool-name">Content Scanner</div>
-                                 <div class="tool-desc">Get a 100-point ContentScore for any page. See exactly which GRAAF signals are missing and what to fix — in priority order. 50+ E-E-A-T signals analysed in 30 seconds.</div>
-                                 <span class="tool-tag">Free · No login</span>
-                                 <a href="https://app.contentscale.site" class="tool-cta">→ Open Scanner</a>
-                              </div>
-                              <div class="tool-card">
-                                 <div class="tool-ico">🏆</div>
-                                 <div class="tool-name">Leaderboard</div>
-                                 <div class="tool-desc">Compare any page against top performers in your niche. No paid placements. No vanity metrics. Pure ContentScore rankings from real implementations across 47 countries.</div>
-                                 <span class="tool-tag">Free · Open rankings</span>
-                                 <a href="https://app.contentscale.site/#leaderboard" class="tool-cta outline">→ View Leaderboard</a>
-                              </div>
-                              <div class="tool-card">
-                                 <div class="tool-ico">📈</div>
-                                 <div class="tool-name">Traffic Recovery</div>
-                                 <div class="tool-desc">78% success rate. 90-day average. Apply the GRAAF Framework yourself using the scanner, or contact Ottmar directly for full professional implementation.</div>
-                                 <span class="tool-tag">DIY or done-for-you</span>
-                                 <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20need%20help%20with%20traffic%20recovery." target="_blank" rel="noopener" class="tool-cta outline">→ Talk to Ottmar</a>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- FRAMEWORKS -->
-                     <section class="sec">
-                        <div class="wrap">
-                           <span class="sec-eye r">Scoring System</span>
-                           <h2 class="sec-title r">100 points.<br>Three frameworks.<br>Zero guesswork.</h2>
-                           <div class="fw-grid r">
-                              <div class="fw-card">
-                                 <div class="fw-head">
-                                    <div class="fw-badge">GRAAF</div>
-                                    <div>
-                                       <div class="fw-title">Content Quality — 50 points</div>
-                                       <div class="fw-sub">The five signals Google rewards in 2026</div>
-                                    </div>
-                                 </div>
-                                 <p style="font-size:13px;color:var(--sub);line-height:1.65;">Genuinely Credible (10pt) · Relevant (10pt) · Actionable (10pt) · Accurate (10pt) · Fresh (10pt). Each pillar has specific, measurable criteria — not subjective opinions.</p>
-                                 <div class="fw-pts">
-                                    <span class="fw-pt">Expert citations</span>
-                                    <span class="fw-pt">Search intent</span>
-                                    <span class="fw-pt">Step-by-step</span>
-                                    <span class="fw-pt">Verified sources</span>
-                                    <span class="fw-pt">2024–2026 data</span>
-                                 </div>
-                              </div>
-                              <div class="fw-card">
-                                 <div class="fw-head">
-                                    <div class="fw-badge">CRAFT</div>
-                                    <div>
-                                       <div class="fw-title">Content Structure — 30 points</div>
-                                       <div class="fw-sub">Readability, depth and engagement signals</div>
-                                    </div>
-                                 </div>
-                                 <p style="font-size:13px;color:var(--sub);line-height:1.65;">Word count, sentence length (15–18 words), paragraph density, active voice ratio, Flesch Reading Ease (60–70), FAQ depth, comparison tables, and case study structure.</p>
-                                 <div class="fw-pts">
-                                    <span class="fw-pt">2500+ words</span>
-                                    <span class="fw-pt">Active voice 80%</span>
-                                    <span class="fw-pt">10+ FAQ items</span>
-                                    <span class="fw-pt">Case studies</span>
-                                    <span class="fw-pt">Flesch 60–70</span>
-                                 </div>
-                              </div>
-                              <div class="fw-card">
-                                 <div class="fw-head">
-                                    <div class="fw-badge">TECH</div>
-                                    <div>
-                                       <div class="fw-title">Technical SEO — 20 points</div>
-                                       <div class="fw-sub">Schema, structure, and crawlability</div>
-                                    </div>
-                                 </div>
-                                 <p style="font-size:13px;color:var(--sub);line-height:1.65;">Meta title (50–60 chars), meta description (155–160 chars), 4 JSON-LD schemas, internal links (8–12), external links (5–8), image alt text, canonical URL, H1→H2→H3 hierarchy.</p>
-                                 <div class="fw-pts">
-                                    <span class="fw-pt">4 JSON-LD schemas</span>
-                                    <span class="fw-pt">8–12 internal links</span>
-                                    <span class="fw-pt">Canonical set</span>
-                                    <span class="fw-pt">Alt text</span>
-                                    <span class="fw-pt">H1→H2→H3</span>
-                                 </div>
-                              </div>
-                              <div class="fw-card">
-                                 <div class="fw-head">
-                                    <div class="fw-badge" style="font-size:16px;">AI</div>
-                                    <div>
-                                       <div class="fw-title">AI Overview Optimisation</div>
-                                       <div class="fw-sub">Get cited by ChatGPT, Gemini &#038; Perplexity</div>
-                                    </div>
-                                 </div>
-                                 <p style="font-size:13px;color:var(--sub);line-height:1.65;">Content structured for AI extraction — direct answer boxes, TL;DR bullets, definition-first paragraphs, entity-rich text. Pages scoring 90+ are regularly cited by AI assistants in 2026.</p>
-                                 <div class="fw-pts">
-                                    <span class="fw-pt">Direct answers</span>
-                                    <span class="fw-pt">TL;DR format</span>
-                                    <span class="fw-pt">Entity rich</span>
-                                    <span class="fw-pt">ChatGPT ready</span>
-                                    <span class="fw-pt">Gemini ready</span>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- ══ 3-PILLAR SERVICE SECTION ══ -->
-                     <section class="sec" id="services">
-                        <div class="wrap">
-                           <!-- ContentScore Badge -->
-                           <div style="margin:32px 0;display:flex;justify-content:center;">
-                           </div>
-                           <span class="sec-eye r">Done-For-You Services</span>
-                           <h2 class="sec-title r">We don&#8217;t just score content.<br>We get you clients.</h2>
-                           <p class="sec-body r">ContentScale runs a 3-pillar system — GRAAF content intelligence, autonomous lead acquisition, and AI-powered B2B calling. Use the tools yourself, or let us run the whole system for your business.</p>
-                           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:48px;" class="r">
-                              <!-- PILLAR 1 -->
-                              <div style="background:var(--card);padding:28px 24px;position:relative;overflow:hidden;transition:background .2s;" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='var(--card)'">
-                                 <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--blue));"></div>
-                                 <div style="font-family:'Playfair Display',serif;font-size:52px;line-height:1;background:linear-gradient(135deg,var(--purple2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">01</div>
-                                 <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--ink);">GRAAF SEO &amp; Content Intelligence</div>
-                                 <div style="font-size:12px;color:var(--dim);line-height:1.65;margin-bottom:16px;">Free scanner measures what Google rewards in 2026. 100-point ContentScore. Exact fix list. 78% recovery success rate across 200+ sites.</div>
-                                 <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:6px;">
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--purple2);">✓</span> GRAAF + CRAFT + Technical SEO scoring</li>
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--purple2);">✓</span> AI Overview &amp; ChatGPT citation ready</li>
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--purple2);">✓</span> Content rewrite &amp; recovery — done for you</li>
-                                 </ul>
-                                 <a href="https://app.contentscale.site" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:-.01em;text-transform:uppercase;color:var(--purple2);text-decoration:none;border:1px solid rgba(139,92,246,.3);padding:6px 14px;border-radius:4px;display:inline-block;">→ Free Scanner</a>
-                              </div>
-                              <!-- PILLAR 2 -->
-                              <div style="background:var(--card);padding:28px 24px;position:relative;overflow:hidden;transition:background .2s;border-left:1px solid var(--border);border-right:1px solid var(--border);" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='var(--card)'">
-                                 <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange2),var(--orange));"></div>
-                                 <div style="font-family:'Playfair Display',serif;font-size:52px;line-height:1;background:linear-gradient(135deg,var(--orange2),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">02</div>
-                                 <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--ink);">Autonomous Lead Acquisition Engine</div>
-                                 <div style="font-size:12px;color:var(--dim);line-height:1.65;margin-bottom:16px;">AI crawler finds 200–500 businesses per city with thin websites — scored, bucketed, and ready to pitch. 20 industries in parallel. Any city worldwide.</div>
-                                 <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:6px;">
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--orange);">✓</span> Proprietary crawler — real businesses, real phones</li>
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--orange);">✓</span> 6 smart content buckets with pitch angles</li>
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--orange);">✓</span> CSV export — or we run it for you</li>
-                                 </ul>
-                                 <a href="https://app.contentscale.site/lead-crawler" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:-.01em;text-transform:uppercase;color:var(--orange);text-decoration:none;border:1px solid rgba(249,115,22,.3);padding:6px 14px;border-radius:4px;display:inline-block;">→ Lead Crawler</a>
-                              </div>
-                              <!-- PILLAR 3 -->
-                              <div style="background:var(--card);padding:28px 24px;position:relative;overflow:hidden;transition:background .2s;" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='var(--card)'">
-                                 <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),#10b981);"></div>
-                                 <div style="font-family:'Playfair Display',serif;font-size:52px;line-height:1;background:linear-gradient(135deg,var(--green),#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">03</div>
-                                 <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--ink);">B2B Lead Conversion — AI Voice Calling</div>
-                                 <div style="font-size:12px;color:var(--dim);line-height:1.65;margin-bottom:16px;">Otto — ContentScale&#8217;s AI voice assistant — calls your B2B prospects, discloses AI identity, pitches your services, and collects emails with consent. 65% pickup rate.</div>
-                                 <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:6px;">
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--green2);">✓</span> Google Guaranteed ad calls answered 24/7</li>
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--green2);">✓</span> Outbound B2B calls — property managers, HOAs, GCs</li>
-                                    <li style="font-size:11.5px;color:var(--sub);display:flex;gap:7px;"><span style="color:var(--green2);">✓</span> FCC 2024 + EU AI Act fully compliant</li>
-                                 </ul>
-                                 <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20to%20know%20more%20about%20the%20AI%20voicebot%20service." target="_blank" rel="noopener" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:-.01em;text-transform:uppercase;color:var(--green2);text-decoration:none;border:1px solid rgba(74,222,122,.3);padding:6px 14px;border-radius:4px;display:inline-block;">→ Talk to Ottmar</a>
-                              </div>
-                           </div>
-                           <!-- Done-For-You callout -->
-                           <div style="margin-top:20px;background:linear-gradient(135deg,rgba(139,92,246,.06),rgba(37,99,235,.04));border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:20px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;" class="r">
-                              <div style="flex:1;min-width:240px;">
-                                 <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--purple2);margin-bottom:6px;">Done-For-You Service</div>
-                                 <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px;">We run the whole system for your business</div>
-                                 <div style="font-size:13px;color:var(--sub);line-height:1.6;">Roofing · HVAC · Legal · Accounting · Agencies · Any B2B service. From <strong style="color:var(--ink);">$250/month.</strong> One job pays for a full year.</div>
-                              </div>
-                              <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20leads%20for%20my%20business." target="_blank" rel="noopener"
-                                 style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;white-space:nowrap;transition:opacity .15s;"
-                                 onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-                              💬 Get a Free Demo →
-                              </a>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- LEADERBOARD PREVIEW -->
-                     <section class="sec" id="leaderboard">
-                        <div class="wrap">
-                           <span class="sec-eye r">Leaderboard</span>
-                           <h2 class="sec-title r">Proof, not promises.<br>Real scores. Real sites.</h2>
-                           <p class="sec-body r">No paid placements. No sponsored rankings. Every score is calculated by the GRAAF Framework scanner. Submit your own page and see where you rank.</p>
-                           <div class="lb-preview r">
-                              <div class="lb-head">
-                                 <span class="lb-head-title">🏆 ContentScale Leaderboard — Top Performers 2026</span>
-                                 <a href="https://app.contentscale.site/#leaderboard" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--purple2);text-decoration:none;">View Full Leaderboard →</a>
-                              </div>
-                              <div class="lb-row">
-                                 <div class="lb-rank">1</div>
-                                 <div>
-                                    <div class="lb-domain">contentscale.site</div>
-                                    <div style="font-size:11px;color:var(--dim);">GRAAF Framework · Netherlands</div>
-                                 </div>
-                                 <span class="lb-score-badge score-high">97</span>
-                                 <span class="lb-country">🇳🇱</span>
-                              </div>
-                              <div class="lb-row">
-                                 <div class="lb-rank">2</div>
-                                 <div>
-                                    <div class="lb-domain">example-agency.com</div>
-                                    <div style="font-size:11px;color:var(--dim);">SEO Agency · Belgium</div>
-                                 </div>
-                                 <span class="lb-score-badge score-high">93</span>
-                                 <span class="lb-country">🇧🇪</span>
-                              </div>
-                              <div class="lb-row">
-                                 <div class="lb-rank">3</div>
-                                 <div>
-                                    <div class="lb-domain">your-site-could-be-here.com</div>
-                                    <div style="font-size:11px;color:var(--dim);">Submit your page to appear</div>
-                                 </div>
-                                 <span class="lb-score-badge score-mid">—</span>
-                                 <span class="lb-country">🌍</span>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- TESTIMONIALS -->
-                     <section class="sec">
-                        <div class="wrap">
-                           <span class="sec-eye r">Real Results</span>
-                           <h2 class="sec-title r">What businesses say<br>after using GRAAF.</h2>
-                           <div class="test-grid r">
-                              <div class="tcard">
-                                 <div class="tcard-stars">★★★★★</div>
-                                 <div class="tcard-text">&#8220;What a discovery! As an entrepreneur in Belgium, I was experiencing a drop in website traffic. Luckily, I found ContentScale. Their GRAAF Framework helped me quickly generate clicks again. It&#8217;s impressive to see how quickly they achieve results.&#8221;</div>
-                                 <div class="tcard-author">
-                                    <div class="tcard-avatar">B</div>
-                                    <div>
-                                       <div class="tcard-name">Belgian Entrepreneur</div>
-                                       <div class="tcard-role">E-commerce · Belgium <span class="tcard-flag">🇧🇪</span></div>
-                                    </div>
-                                 </div>
-                              </div>
-                              <div class="tcard">
-                                 <div class="tcard-stars">★★★★★</div>
-                                 <div class="tcard-text">&#8220;I&#8217;m incredibly happy with ContentScale&#8217;s help. My website was experiencing a significant drop in traffic and I was at my wits&#8217; end. The GRAAF Framework showed me exactly what was missing — and fixing it actually worked.&#8221;</div>
-                                 <div class="tcard-author">
-                                    <div class="tcard-avatar">N</div>
-                                    <div>
-                                       <div class="tcard-name">Business Owner</div>
-                                       <div class="tcard-role">Services · Netherlands <span class="tcard-flag">🇳🇱</span></div>
-                                    </div>
-                                 </div>
-                              </div>
-                              <div class="tcard">
-                                 <div class="tcard-stars">★★★★★</div>
-                                 <div class="tcard-text">&#8220;Anyone can call themselves an SEO expert. ContentScale is the first tool that actually proves content quality with a measurable score. The 100-point ContentScore changed how I approach every piece of content I write.&#8221;</div>
-                                 <div class="tcard-author">
-                                    <div class="tcard-avatar">S</div>
-                                    <div>
-                                       <div class="tcard-name">SEO Consultant</div>
-                                       <div class="tcard-role">Agency · International <span class="tcard-flag">🌍</span></div>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </section>
-                     <!-- OTTO VOICEBOT -->
-<section class="sec" id="otto">
-   <div class="wrap">
-      <div class="score-grid">
-         <div>
-            <span class="sec-eye r">Meet Otto</span>
-            <h2 class="sec-title r">The AI voice<br>behind ContentScale.</h2>
-            <p class="sec-body r" style="margin-bottom:28px;">Otto is ContentScale&#8217;s AI voice assistant. Click the button below and speak directly with Otto in your browser &#8212; no phone number needed. Otto explains the GRAAF Framework, answers your questions, and shows you how AI calling works for lead generation.</p>
-            <div class="score-features r">
-               <div class="sf"><div class="sf-icon">&#x1F916;</div><div><div class="sf-title">Always discloses AI identity</div><div class="sf-desc">EU AI Act Article 50 + FCC 2026 &#8212; Otto says it upfront on every call. Legally compliant in US, EU and UK.</div></div></div>
-               <div class="sf"><div class="sf-icon">&#x1F3AF;</div><div><div class="sf-title">Used for B2B lead generation</div><div class="sf-desc">ContentScale uses Otto to find and call businesses that need better content. The same system is available for your clients.</div></div></div>
-               <div class="sf"><div class="sf-icon">&#x1F4DE;</div><div><div class="sf-title">65% call pickup rate</div><div class="sf-desc">AI voice calling outperforms cold email 8&#xD7; in 2026. Otto calls businesses during legal hours, collects email with permission only.</div></div></div>
-            </div>
-         </div>
-         <div class="r">
-            <div class="score-card" style="border-color:rgba(139,92,246,.4);">
-               <div style="padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center;">
-                  <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(96,165,250,.08));border:1.5px solid rgba(139,92,246,.35);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:16px;position:relative;">
-                     <div style="position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(139,92,246,.15);animation:rp 2s ease-in-out infinite;"></div>
-                     <div style="position:absolute;inset:-16px;border-radius:50%;border:1px solid rgba(139,92,246,.07);animation:rp 2s ease-in-out infinite .4s;"></div>
-                     &#x1F399;
-                  </div>
-                  <div style="font-size:26px;font-weight:900;letter-spacing:-.01em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px;">OTTO</div>
-                  <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:22px;">ContentScale AI Voice Assistant</div>
-                  <div id="otto-status" style="font-size:10px;color:var(--sub);margin-bottom:20px;">Click to start a live call</div>
-                  <button id="otto-call-btn"
-                     style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#c8440a,#f97316);border:3px solid rgba(255,255,255,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 0 0 8px rgba(249,115,22,.2),0 0 32px rgba(249,115,22,.4);transition:all .2s;"
-                     onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 0 0 12px rgba(249,115,22,.3),0 0 48px rgba(249,115,22,.5)'"
-                     onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 0 8px rgba(249,115,22,.2),0 0 32px rgba(249,115,22,.4)'">
-                     <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l1.65-1.65a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                  </button>
-                  <div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);line-height:1.7;">Uses microphone &#183; No phone needed<br>End anytime</div>
-                  <div id="otto-transcript" style="margin-top:14px;width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-size:10px;color:var(--sub);line-height:1.7;min-height:50px;max-height:120px;overflow-y:auto;text-align:left;display:none;"></div>
-               </div>
-               <div style="border-top:1px solid var(--border);padding:12px 20px;text-align:center;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);">Powered by Vapi.ai &#183; Live AI &#183; Not a recording</div>
-            </div>
-         </div>
-      </div>
-   </div>
-</section>
-<style>@keyframes rp{0%{opacity:.3;transform:scale(1)}50%{opacity:.6;transform:scale(1.05)}100%{opacity:.3;transform:scale(1)}}</style>
-
-<style>@keyframes rp{0%{opacity:.3;transform:scale(1)}50%{opacity:.6;transform:scale(1.05)}100%{opacity:.3;transform:scale(1)}}</style><script>
-                        const tocLinks = document.querySelectorAll('.toc-box a');
-                        const sections = document.querySelectorAll('.content > div[id]');
-                        window.addEventListener('scroll', () => {
-                          let current = '';
-                          sections.forEach(s => { if(window.scrollY >= s.offsetTop - 120) current = s.id; });
-                          tocLinks.forEach(a => {
-                            a.classList.remove('active');
-                            if(a.getAttribute('href') === '#' + current) a.classList.add('active');
-                          });
-                        });
-                     </script>
-                     
-
-
-
-
-<script src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js" defer async></script>
-<script>
-window.addEventListener('load', function(){
-  var btn = document.getElementById('otto-call-btn');
-  var statusEl = document.getElementById('otto-status');
-  var transcript = document.getElementById('otto-transcript');
-  var inCall = false;
-  var vapiInst = null;
-
-  function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
-  function setBtnState(active){
-    inCall = active;
-    btn.style.background = active ? 'linear-gradient(135deg,#4c1d95,#1d4ed8)' : 'linear-gradient(135deg,#c8440a,#f97316)';
-    btn.style.boxShadow = active ? '0 0 0 8px rgba(139,92,246,.25),0 0 32px rgba(139,92,246,.4)' : '0 0 0 8px rgba(249,115,22,.2),0 0 32px rgba(249,115,22,.4)';
-  }
-  function addTranscript(who, text){
-    if(transcript){
-      transcript.style.display='block';
-      transcript.innerHTML+='<div style="color:'+(who==='assistant'?'#a78bfa':'#f9fafb')+';margin-bottom:4px;"><strong>'+(who==='assistant'?'Otto':'You')+':</strong> '+text+'</div>';
-      transcript.scrollTop=transcript.scrollHeight;
-    }
-  }
-
-  btn.addEventListener('click', async function(){
-    if(inCall && vapiInst){ vapiInst.stop(); return; }
-    setStatus('Connecting...');
-    console.log('[Vapi] button clicked');
-    try {
-      var r = await fetch('https://app.contentscale.site/api/vapi/webcall', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assistantId: 'b4ba165e-daaa-4723-a10d-40262359a8da' })
-      });
-      var call = await r.json();
-      console.log('[Vapi] webcall response', call);
-      if(!call || call.error){ setStatus('Error: '+(call.error||'Could not start call')); return; }
-      vapiInst = window.vapiSDK.start(call);
-      if(vapiInst){
-        vapiInst.on('call-start', function(){ setBtnState(true); setStatus('Connected — Otto is speaking'); });
-        vapiInst.on('call-end', function(){ setBtnState(false); setStatus('Call ended · Click to call again'); vapiInst=null; });
-        vapiInst.on('speech-start', function(){ setStatus('Otto is speaking...'); });
-        vapiInst.on('speech-end', function(){ setStatus('Listening...'); });
-        vapiInst.on('message', function(m){ if(m.type==='transcript'&&m.transcriptType==='final') addTranscript(m.role, m.transcript); });
-        vapiInst.on('error', function(e){ console.error('[Vapi] error', e); setStatus('Error: '+(e.message||JSON.stringify(e))); setBtnState(false); });
-      }
-    } catch(e){
-      console.error('[Vapi] fetch failed', e);
-      setStatus('Error: '+e.message);
-      setBtnState(false);
-    }
-  });
+//
+// CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
+// ✅ Database Migration: country VARCHAR(100) (Fixes "value too long" error)
+// ✅ Bulk Delete Routes Added (Users, Leaderboard, Freelancers)
+// ✅ Tab Refresh Logic Preserved
+// ✅ GRAAF + CRAFT + Technical (100-point scale)
+// ✅ 34 Recommendation Checks — with Learning + Target
+// ✅ Bug-fixed: no page.content() after page.close()
+// ✅ Bug-fixed: Schema @graph array support
+// ✅ Bug-fixed: Strict case study detection (% patterns)
+// ✅ Expert quote detection: blockquote + testimonial CSS
+// ✅ New: Direct Answer, TL;DR, TOC, Author Bio, Stats
+// ✅ SendGrid + Admin + Leaderboard + Freelancers preserved
+// ✅ UPDATE: /api/user/keys/status returns hasSendgrid:true when SENDGRID_API_KEY env var is set
+// ✅ UPDATE: /api/email/send falls back to server SENDGRID_API_KEY env var (no user key required)
+// ✅ FIX: scan_log.source column added — stores 'bulk'/'single'/'discover' per row
+// ✅ FIX: ON CONFLICT DO NOTHING removed from scan_log INSERT (no unique constraint)
+// ✅ FIX: /api/scan-log POST now stores + returns source field
+// ✅ FIX: DOCX export Status column shows template type (Congrats/Pitch/Almost/Website)
+// ✅ FIX v3: /api/admin/users SELECT adds activated_until alias + is_activated computed column
+// ✅ FIX v3: /api/admin/users/:id/deactivate endpoint added (was missing — caused 404)
+// ✅ FIX v4: Instantly Bearer token = UUID part (BEFORE ':'), not secret after colon
+// ✅ FIX v5: All pages get favicon tags + blink effect + site.webmanifest route
+// ============================================
+process.env.PGSSLMODE = 'verify-full';
+process.env.NODE_NO_WARNINGS = '1';
+const fs = require('fs');
+const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
+const { Pool } = require('pg');
+const puppeteer = require('puppeteer');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const sgMail = require('@sendgrid/mail');
+const app = express();
+const PORT = process.env.PORT || 3000;
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log('📧 SendGrid Key:', process.env.SENDGRID_API_KEY ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+// ============================================
+// DATABASE CONFIGURATIE
+// ============================================
+let dbConfig;
+let pool;
+function initDatabaseConfig() {
+if (process.env.DATABASE_URL) {
+console.log('📊 Using DATABASE_URL from environment');
+try {
+const url = new URL(process.env.DATABASE_URL);
+dbConfig = {
+user: url.username,
+password: url.password,
+host: url.hostname,
+port: url.port || 5432,
+database: url.pathname.slice(1),
+ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+connectionTimeoutMillis: 10000,
+idleTimeoutMillis: 30000,
+max: 20
+};
+} catch (e) {
+console.error('❌ Ongeldige DATABASE_URL:', e.message);
+return null;
+}
+} else {
+dbConfig = {
+host: process.env.DB_HOST || 'localhost',
+port: parseInt(process.env.DB_PORT || '5432'),
+database: process.env.DB_NAME || 'contentscale',
+user: process.env.DB_USER || 'postgres',
+password: process.env.DB_PASSWORD || 'postgres',
+ssl: false,
+connectionTimeoutMillis: 5000,
+idleTimeoutMillis: 30000,
+max: 10
+};
+}
+console.log('📊 Database configuratie:', dbConfig.host, dbConfig.database);
+return new Pool(dbConfig);
+}
+try {
+pool = initDatabaseConfig();
+} catch (e) {
+console.error('❌ Fout bij initialiseren database pool:', e.message);
+pool = null;
+}
+async function waitForDatabase(retries = 5, delay = 3000) {
+if (!pool) return false;
+console.log('🔄 Verbinden met database...');
+for (let i = 0; i < retries; i++) {
+try {
+const client = await pool.connect();
+await client.query('SELECT NOW()');
+client.release();
+console.log('✅ Database verbonden!');
+setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
+return true;
+} catch (err) {
+console.error(`❌ DB Attempt ${i + 1}/${retries} failed`);
+if (i === retries - 1) return false;
+await new Promise(resolve => setTimeout(resolve, delay));
+}
+}
+return false;
+}
+app.set('trust proxy', 1);
+app.use(compression({ level: 9, threshold: 0 }));
+app.use(function(req, res, next) {
+  const allowed = ['https://contentscale.site', 'https://www.contentscale.site'];
+  const origin = req.headers.origin;
+  if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
 });
+
+// ── Global badge-loader injection ────────────────────────────────────────────
+// Injects badge-loader.js into every HTML page served by this server
+app.use((req, res, next) => {
+const origSend = res.send.bind(res);
+res.send = function(body) {
+if (typeof body === 'string' && body.includes('</body>') &&
+res.getHeader('Content-Type')?.includes('text/html')) {
+// Replace LAST </body> only — avoids hitting </body> inside JS template strings
+const lastIdx = body.lastIndexOf('</body>');
+if (lastIdx !== -1) {
+body = body.slice(0, lastIdx) +
+'<script src="https://app.contentscale.site/badge-loader.js?v=3"></script></body>' +
+body.slice(lastIdx + 7);
+}
+}
+return origSend(body);
+};
+next();
+});
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// CORS
+app.use((req, res, next) => {
+const allowedOrigins = ['https://app.contentscale.site', 'https://contentscale.site', 'http://localhost:3000'];
+const origin = req.headers.origin;
+if (allowedOrigins.includes(origin)) res.header('Access-Control-Allow-Origin', origin);
+res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key, x-user-id');
+res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+if (req.method === 'OPTIONS') return res.sendStatus(200);
+next();
+});
+// ── Explicit route for / so badge-loader middleware fires ─────────────────────
+app.get('/', (req, res) => {
+const tryPaths = [
+path.join(__dirname, '../public/index.html'),
+path.join(__dirname, 'public/index.html'),
+];
+const filePath = tryPaths.find(p => fs.existsSync(p));
+if (!filePath) return res.status(404).send('Not found');
+const html = fs.readFileSync(filePath, 'utf8');
+res.setHeader('Content-Type', 'text/html; charset=utf-8');
+res.setHeader('Cache-Control', 'no-cache');
+return res.send(html); // goes through middleware → badge-loader injected
+});
+app.use(express.static('public', { maxAge: '1y', etag: true }));
+// ── Favicon & manifest ──────────────────────────────────────────────────────
+app.get('/site.webmanifest', (req, res) => {
+res.setHeader('Content-Type', 'application/manifest+json');
+res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+});
+// ── Favicon & manifest ──────────────────────────────────────────────────────
+app.get('/site.webmanifest', (req, res) => {
+res.setHeader('Content-Type', 'application/manifest+json');
+res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+});
+// ── Blog HTML interceptor — BEFORE express.static ────────────────────────────
+app.use('/blog', (req, res, next) => {
+const slug = req.path.replace(/^\//, '').replace(/\.html$/, '');
+if (!slug || slug === 'blog-posts.json' || req.path.includes('.json') || req.path.includes('.')) return next();
+const tryPaths = [
+path.join(__dirname, '../public/blog', slug + '.html'),
+path.join(__dirname, '../public/blog', slug),
+path.join(__dirname, 'public/blog', slug + '.html'),
+path.join(__dirname, 'public/blog', slug),
+];
+const filePath = tryPaths.find(p => fs.existsSync(p));
+if (filePath) {
+const html = fs.readFileSync(filePath, 'utf8');
+res.setHeader('Content-Type', 'text/html; charset=utf-8');
+res.setHeader('Content-Disposition', 'inline');
+res.setHeader('X-Content-Type-Options', 'nosniff');
+res.setHeader('Cache-Control', 'no-cache');
+return res.status(200).send(html);
+}
+next();
+});
+// ── Blog routes ───────────────────────────────────────────────────────────────
+app.get('/blog', (req, res) => {
+const tryPaths = [
+path.join(__dirname, '../public/blog/index.html'),
+path.join(__dirname, 'public/blog/index.html'),
+];
+const filePath = tryPaths.find(p => fs.existsSync(p));
+if (filePath) { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.sendFile(filePath); }
+res.status(404).send('Blog not found');
+});
+app.get('/blog/', (req, res) => res.redirect('/blog'));
+// Auto-discover blog posts from HTML files
+app.get('/blog/blog-posts.json', (req, res) => {
+const tryDirs = [
+path.join(__dirname, '../public/blog'),
+path.join(__dirname, 'public/blog'),
+];
+const blogDir = tryDirs.find(d => fs.existsSync(d));
+if (!blogDir) return res.json([]);
+const SKIP = ['index.html'];
+try {
+const manualJson = path.join(blogDir, '_blog-posts.json');
+if (fs.existsSync(manualJson)) return res.json(JSON.parse(fs.readFileSync(manualJson, 'utf8')));
+const files = fs.readdirSync(blogDir)
+.filter(f => f.endsWith('.html') && !SKIP.includes(f))
+.map(f => {
+const slug = f.replace('.html', '');
+const html = fs.readFileSync(path.join(blogDir, f), 'utf8');
+const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — ContentScale.*/, '').trim() || slug;
+   const desc = (html.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
+   const image = (html.match(/<meta property="og:image" content="([^"]+)"/) || [])[1] || '';
+   const dateMatch = html.match(/"datePublished":\s*"(\d{4}-\d{2}-\d{2})/);
+   let date = dateMatch ? dateMatch[1] : '2026-01-01';
+   let category = ['guide'];
+   if (html.includes('cat-case-study') || html.includes('Case Study')) category = ['case-study'];
+   const rtMatch = (html.match(/(\d+)\s*min read/) || [])[1];
+   const wordCount = html.replace(/<[^>]+>/g, ' ').split(/\s+/).length;
+   const readTime = rtMatch ? `${rtMatch} min read` : `${Math.max(5, Math.ceil(wordCount / 250))} min read`;
+   return { slug, title, description: desc, date, readTime, author: 'Ottmar J.G. Francisca', category, image };
+   })
+   .sort((a, b) => new Date(b.date) - new Date(a.date));
+   if (files.length > 0) files[0].featured = true;
+   res.json(files);
+   } catch(e) { console.error('Blog auto-discover error:', e.message); res.json([]); }
+   });
+   app.get('/blog/:slug', (req, res) => {
+   try {
+   const slug = req.params.slug;
+   if (!slug || slug.includes('.')) return res.status(404).send('<h1>Not found</h1>');
+   const tryPaths = [
+   path.join(__dirname, '../public/blog', slug + '.html'),
+   path.join(__dirname, 'public/blog', slug + '.html'),
+   ];
+   const filePath = tryPaths.find(p => { try { return fs.existsSync(p); } catch(e) { return false; } });
+   if (filePath) {
+   const html = fs.readFileSync(filePath, 'utf8');
+   res.setHeader('Content-Type', 'text/html; charset=utf-8');
+   res.setHeader('X-Content-Type-Options', 'nosniff');
+   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+   return res.status(200).send(html);
+   }
+   res.status(404).send('<!DOCTYPE html><html><body style="background:#030712;color:#e5e7eb;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h2>Blog post not found</h2><p style="color:#6b7280;margin-top:8px">The file <code>' + slug + '.html</code> does not exist in public/blog/</p><a href="/blog" style="color:#a78bfa">← Back to Blog</a></div></body></html>');
+   } catch(e) {
+   console.error('Blog route error:', e.message);
+   res.status(500).send('<h1>Blog error: ' + e.message + '</h1>');
+   }
+   });
+   // Admin Auth Middleware
+   const verifyAdmin = async (req, res, next) => {
+   const adminKey = req.headers['x-admin-key'];
+   if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
+   if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
+   try {
+   const result = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+   if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+   req.admin = result.rows[0];
+   next();
+   } catch (error) {
+   res.status(500).json({ success: false, error: 'Auth error' });
+   }
+   };
+   // Puppeteer Browser
+   let browserInstance = null;
+   async function getBrowser() {
+   // Auto-restart if browser crashed or disconnected
+   if (browserInstance) {
+   try {
+   await browserInstance.version(); // ping — throws if dead
+   } catch(e) {
+   console.warn('⚠️ Browser instance dead, restarting...');
+   try { await browserInstance.close(); } catch(_) {}
+   browserInstance = null;
+   }
+   }
+   if (!browserInstance) {
+   console.log('🚀 Launching Puppeteer...');
+   browserInstance = await puppeteer.launch({
+   headless: 'new',
+   args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--memory-pressure-off']
+   }).catch(err => { console.error('❌ Puppeteer error:', err.message); return null; });
+   }
+   return browserInstance;
+   }
+   process.on('SIGTERM', async () => {
+   if (browserInstance) await browserInstance.close();
+   process.exit(0);
+   });
+   // Database Tables & Migration
+   async function createAllTables() {
+   if (!pool) return;
+   let client;
+   try {
+   client = await pool.connect();
+   // 1. Super Admins
+   await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP)`);
+   const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
+   if (parseInt(adminCheck.rows[0].count) === 0) {
+   const hashedPassword = await bcrypt.hash('admin123', 10);
+   await client.query(`INSERT INTO super_admins (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)`, ['ot', hashedPassword, 'Super Admin', 'super_admin']);
+   console.log('✅ Default admin created (ot/admin123)');
+   }
+   // 2. Users & Keys
+   await client.query(`CREATE TABLE IF NOT EXISTS users (id VARCHAR(255) PRIMARY KEY, ip_address VARCHAR(50), is_activated BOOLEAN DEFAULT FALSE, activation_expires TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
+   // 🛠️ MIGRATION: add activation_expires if table existed before this column was added
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_expires TIMESTAMP`).catch(() => {});;
+   await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`);
+   await client.query(`CREATE TABLE IF NOT EXISTS user_email_templates (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, template_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, template_type))`);
+   await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
+   // 3. Leaderboard (WITH MIGRATION FIX)
+   await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
+   // 🛠️ MIGRATION: Ensure country column is wide enough (Fixes "value too long" error)
+   try {
+   await client.query(`ALTER TABLE leaderboard ALTER COLUMN country TYPE VARCHAR(100)`);
+   console.log('✅ Migration: leaderboard.country set to VARCHAR(100)');
+   } catch (e) {
+   // Ignore if already correct or other minor issues
+   }
+   // Ensure niche exists
+   await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS niche VARCHAR(100)`);
+   // Sitemap scan columns
+   await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_count INTEGER DEFAULT 1`);
+   await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_scores JSONB DEFAULT '[]'`);
+   await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS scan_source VARCHAR(50) DEFAULT 'manual'`);
+   // 4. Freelancers
+   await client.query(`CREATE TABLE IF NOT EXISTS freelancers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, title VARCHAR(255), location VARCHAR(255), country VARCHAR(100), bio TEXT, linkedin_url TEXT, hourly_rate VARCHAR(50), availability VARCHAR(100), is_approved BOOLEAN DEFAULT FALSE, is_verified BOOLEAN DEFAULT FALSE, is_featured BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
+   // 5. Email Queue
+   await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW(), business_url TEXT, business_name VARCHAR(255), score INTEGER, template_type VARCHAR(50))`);
+   // 6. Scan Log — ✅ FIX: source column added to track bulk/single/discover origin
+   await client.query(`CREATE TABLE IF NOT EXISTS scan_log (
+   id SERIAL PRIMARY KEY,
+   user_id VARCHAR(255),
+   business_url TEXT,
+   business_name VARCHAR(255),
+   score INTEGER,
+   niche VARCHAR(100),
+   city VARCHAR(255),
+   country VARCHAR(100),
+   email_found VARCHAR(255),
+   email_status VARCHAR(50) DEFAULT 'no_email',
+   source VARCHAR(50) DEFAULT 'single',
+   recommendations TEXT,
+   created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   // Migrations for existing deployments
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
+   // 7. Email suppression list
+   await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
+   // 8. Warmup config
+   await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);
+   // Scan reports
+   await client.query(`CREATE TABLE IF NOT EXISTS scan_reports (
+   id VARCHAR(64) PRIMARY KEY,
+   scan_log_id INTEGER,
+   business_url TEXT,
+   business_name VARCHAR(255),
+   score INTEGER,
+   niche VARCHAR(100),
+   city VARCHAR(255),
+   country VARCHAR(100),
+   email_found VARCHAR(255),
+   recommendations TEXT,
+   created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   // Batch jobs
+   await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
+   id VARCHAR(64) PRIMARY KEY,
+   admin_id VARCHAR(255),
+   niches TEXT NOT NULL,
+   cities TEXT NOT NULL,
+   country VARCHAR(100) DEFAULT 'Netherlands',
+   max_results INTEGER DEFAULT 50,
+   website_only BOOLEAN DEFAULT TRUE,
+   status VARCHAR(50) DEFAULT 'queued',
+   progress INTEGER DEFAULT 0,
+   progress_text TEXT DEFAULT 'Queued...',
+   total_combos INTEGER DEFAULT 0,
+   current_combo INTEGER DEFAULT 0,
+   scanned INTEGER DEFAULT 0,
+   skipped INTEGER DEFAULT 0,
+   score_high INTEGER DEFAULT 0,
+   score_good INTEGER DEFAULT 0,
+   score_low INTEGER DEFAULT 0,
+   error_message TEXT,
+   apify_token TEXT,
+   started_at TIMESTAMP,
+   completed_at TIMESTAMP,
+   created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`ALTER TABLE batch_jobs ADD COLUMN IF NOT EXISTS score_low INTEGER DEFAULT 0`).catch(() => {});
+   // Migrate email_queue columns
+   await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_url TEXT`).catch(() => {});
+   await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS business_name VARCHAR(255)`).catch(() => {});
+   await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS score INTEGER`).catch(() => {});
+   await client.query(`ALTER TABLE email_queue ADD COLUMN IF NOT EXISTS template_type VARCHAR(50)`).catch(() => {});
+   console.log('✅ All tables ready & migrated');
+   } catch (error) {
+   console.error('❌ DB Setup error:', error.message);
+   } finally {
+   if (client) client.release();
+   }
+   }
+   // ============================================
+   // API ENDPOINTS
+   // ============================================
+   app.post('/api/user/register', async (req, res) => {
+   try {
+   const userId = crypto.randomUUID();
+   const ip = req.ip || req.connection.remoteAddress;
+   await pool.query(`INSERT INTO users (id, ip_address, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING`, [userId, ip]);
+   const defaultTemplates = [
+   { type: 'congrats', subject: '🎉 Congratulations!', body: `
+   <h1>Congratulations!</h1>
+   <p>Score: {{score}}/100</p>
+   ` },
+   { type: 'improvement', subject: '🚀 SEO Opportunity', body: `
+   <h1>SEO Opportunity</h1>
+   <p>Score: {{score}}/100</p>
+   ` },
+   { type: 'website', subject: '💻 Website Offer', body: `
+   <h1>Website Offer</h1>
+   ` }
+   ];
+   for (const t of defaultTemplates) {
+   await pool.query(`INSERT INTO user_email_templates (user_id, template_type, subject, body) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, template_type) DO NOTHING`, [userId, t.type, t.subject, t.body]);
+   }
+   res.json({ success: true, userId });
+   } catch (error) { res.json({ success: false, error: 'Registration failed' }); }
+   });
+   app.get('/api/user/keys/status', async (req, res) => {
+   const userId = req.headers['x-user-id'];
+   const serverHasSendgrid = !!process.env.SENDGRID_API_KEY;
+   if (serverHasSendgrid) {
+   return res.json({ success: true, hasSendgrid: true, source: 'server' });
+   }
+   if (!userId) return res.json({ success: true, hasSendgrid: false });
+   try {
+   const result = await pool.query('SELECT service_name, api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1', [userId]);
+   const hasSendgrid = result.rows.some(r => r.service_name === 'sendgrid');
+   res.json({ success: true, hasSendgrid, source: 'user', sendgrid: hasSendgrid ? result.rows.find(r => r.service_name === 'sendgrid') : null });
+   } catch (e) { res.json({ success: true, hasSendgrid: false }); }
+   });
+   app.post('/api/user/sendgrid/configure', async (req, res) => {
+   const { userId, apiKey, dailyLimit } = req.body;
+   if (!userId || !apiKey) return res.json({ success: false, error: 'Missing fields' });
+   try {
+   await pool.query(`INSERT INTO user_api_keys (user_id, service_name, api_key, daily_limit) VALUES ($1, 'sendgrid', $2, $3) ON CONFLICT (user_id, service_name) DO UPDATE SET api_key = $2, daily_limit = $3`, [userId, apiKey, dailyLimit || 100]);
+   res.json({ success: true });
+   } catch (e) { res.json({ success: false, error: e.message }); }
+   });
+   app.get('/api/user/templates', async (req, res) => {
+   const userId = req.headers['x-user-id'];
+   if (!userId) return res.json({ success: false, error: 'No ID' });
+   try {
+   const result = await pool.query('SELECT template_type, subject, body FROM user_email_templates WHERE user_id = $1', [userId]);
+   const templates = { congrats: {}, improvement: {}, website: {} };
+   result.rows.forEach(r => { if (templates[r.template_type]) templates[r.template_type] = { subject: r.subject, body: r.body }; });
+   res.json({ success: true, templates });
+   } catch (e) { res.json({ success: false, error: e.message }); }
+   });
+   app.post('/api/user/templates', async (req, res) => {
+   const { userId, type, subject, body } = req.body;
+   if (!userId || !type) return res.json({ success: false, error: 'Missing' });
+   try {
+   await pool.query(`INSERT INTO user_email_templates (user_id, template_type, subject, body, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, template_type) DO UPDATE SET subject = $3, body = $4, updated_at = NOW()`, [userId, type, subject, body]);
+   res.json({ success: true });
+   } catch (e) { res.json({ success: false, error: e.message }); }
+   });
+   // ── Warmup Config ──────────────────────────────────────────────────────────
+   function calcWarmupCap(dayNumber) {
+   if (dayNumber <= 7)  return 5;
+   if (dayNumber <= 14) return 20;
+   if (dayNumber <= 21) return 40;
+   if (dayNumber <= 28) return 70;
+   return 100;
+   }
+   app.get('/api/warmup', async (req, res) => {
+   const userId = req.headers['x-user-id'];
+   if (!userId || !pool) return res.json({ success: false, active: false, cap: 100 });
+   try {
+   const r = await pool.query(`SELECT warmup_start_date, is_active FROM warmup_config WHERE user_id = $1`, [userId]);
+   if (!r.rows.length) return res.json({ success: true, active: false, startDate: null, dayNumber: 0, dailyCap: 100 });
+   const row = r.rows[0];
+   if (!row.is_active) return res.json({ success: true, active: false, dailyCap: 100 });
+   const dayNumber = Math.floor((new Date() - new Date(row.warmup_start_date)) / 86400000) + 1;
+   const dailyCap  = calcWarmupCap(dayNumber);
+   res.json({ success: true, active: true, startDate: row.warmup_start_date, dayNumber, dailyCap });
+   } catch (e) { res.json({ success: false, active: false, dailyCap: 100 }); }
+   });
+   app.post('/api/warmup/start', async (req, res) => {
+   const userId = req.headers['x-user-id'];
+   if (!userId || !pool) return res.json({ success: false });
+   try {
+   await pool.query(
+   `INSERT INTO warmup_config (user_id, warmup_start_date, is_active) VALUES ($1, CURRENT_DATE, TRUE)
+   ON CONFLICT (user_id) DO UPDATE SET warmup_start_date = CURRENT_DATE, is_active = TRUE`, [userId]
+   );
+   res.json({ success: true, dailyCap: 5 });
+   } catch (e) { res.json({ success: false, error: e.message }); }
+   });
+   app.post('/api/warmup/stop', async (req, res) => {
+   const userId = req.headers['x-user-id'];
+   if (!userId || !pool) return res.json({ success: false });
+   try {
+   await pool.query(`UPDATE warmup_config SET is_active = FALSE WHERE user_id = $1`, [userId]);
+   res.json({ success: true });
+   } catch (e) { res.json({ success: false, error: e.message }); }
+   });
+   // ── Unsubscribe ────────────────────────────────────────────────────────────
+   app.get('/unsubscribe', async (req, res) => {
+   const { email } = req.query;
+   if (!email) return res.send(`<!DOCTYPE html>
+   <html>
+      <body style="font-family:Arial;text-align:center;padding:60px;background:#030712;color:#e5e7eb;">
+         <h2>⚠️ Invalid unsubscribe link.</h2>
+      </body>
+   </html>
+   `);
+   try {
+   if (pool) await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
+   res.send(`<!DOCTYPE html>
+   <html>
+      <head>
+         <meta charset="UTF-8">
+         <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Unsubscribed — ContentScale</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#7e22ce">
+</head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+<div style="text-align:center;max-width:480px;padding:40px;">
+<div style="font-size:56px;margin-bottom:16px;">✅</div>
+<h1 style="color:#4ade80;margin-bottom:8px;">You've been unsubscribed.</h1>
+<p style="color:#9ca3af;margin-bottom:24px;">${email} has been removed from all future ContentScale scan emails.</p>
+<a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Back to ContentScale</a>
+</div>
+<script>
+   (function(){
+     var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+     var favs=['/favicon.svg','/favicon-pink.svg'];
+     var t=0,iv=null;
+     var orig=document.title;
+     var fl=document.querySelector('link[rel~=\"icon\"]');
+     document.addEventListener('visibilitychange',function(){
+       if(document.hidden){
+         iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+       } else {
+         clearInterval(iv);iv=null;t=0;
+         document.title=orig; if(fl) fl.href='/favicon.svg';
+       }
+     });
+   })();
 </script>
-<script src="https://app.contentscale.site/badge-loader.js?v=2"></script>
+</body>
+</html>
+`);
+} catch (e) { res.send(`<p>Error: ${e.message}</p>`); }
+});
+app.post('/api/unsubscribe', async (req, res) => {
+const { email } = req.body;
+if (!email || !pool) return res.json({ success: false });
+try {
+await pool.query(`INSERT INTO email_suppression (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email.toLowerCase()]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/email/send', async (req, res) => {
+const userId = req.headers['x-user-id'];
+const { to_email, subject, html, business_url, business_name, score, template_type } = req.body;
+if (!to_email || !subject || !html) return res.json({ success: false, error: 'Missing fields' });
+let dailyLimit = parseInt(process.env.SENDGRID_DAILY_LIMIT || '100');
+if (pool) {
+const wup = await pool.query(`SELECT warmup_start_date FROM warmup_config WHERE user_id = $1 AND is_active = TRUE`, [userId || 'server']).catch(() => ({ rows: [] }));
+if (wup.rows.length) {
+const day = Math.floor((new Date() - new Date(wup.rows[0].warmup_start_date)) / 86400000) + 1;
+dailyLimit = calcWarmupCap(day);
+}
+}
+if (pool) {
+const sup = await pool.query(`SELECT id FROM email_suppression WHERE email = $1`, [to_email.toLowerCase()]).catch(() => ({ rows: [] }));
+if (sup.rows.length > 0) return res.json({ success: false, suppressed: true, error: 'Email unsubscribed' });
+}
+let apiKeyToUse = null;
+if (process.env.SENDGRID_API_KEY) {
+apiKeyToUse = process.env.SENDGRID_API_KEY;
+} else if (userId && pool) {
+try {
+const result = await pool.query("SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
+if (result.rows.length > 0) {
+apiKeyToUse = result.rows[0].api_key;
+dailyLimit = result.rows[0].daily_limit;
+if (result.rows[0].used_today >= dailyLimit) {
+return res.json({ success: false, limit_reached: true, error: 'Daily limit reached' });
+}
+}
+} catch (e) { console.error('Key lookup error:', e.message); }
+}
+if (!apiKeyToUse) return res.json({ success: false, needs_api_key: true, error: 'No SendGrid key configured' });
+if (process.env.SENDGRID_API_KEY && pool) {
+try {
+const today = new Date().toISOString().slice(0, 10);
+const countRes = await pool.query(
+"SELECT COUNT(*) FROM email_queue WHERE status = 'sent' AND sent_at::date = $1::date",
+[today]
+);
+const sentToday = parseInt(countRes.rows[0].count) || 0;
+if (sentToday >= dailyLimit) {
+return res.json({ success: false, limit_reached: true, error: `Daily limit of ${dailyLimit} reached` });
+}
+} catch (e) { console.warn('Daily limit check failed:', e.message); }
+}
+try {
+sgMail.setApiKey(apiKeyToUse);
+await sgMail.send({
+to: to_email,
+from: process.env.SENDGRID_FROM_EMAIL || 'noreply@contentscale.site',
+subject,
+html
+});
+if (pool) {
+await pool.query(
+`INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at, business_url, business_name, score, template_type) VALUES ($1, $2, $3, $4, 'sent', NOW(), $5, $6, $7, $8)`,
+[userId || 'server', to_email, subject, html, business_url || null, business_name || null, score || null, template_type || null]
+).catch(e => console.warn('Email log failed:', e.message));
+}
+if (!process.env.SENDGRID_API_KEY && userId && pool) {
+await pool.query(
+"UPDATE user_api_keys SET used_today = used_today + 1 WHERE user_id = $1 AND service_name = 'sendgrid'",
+[userId]
+).catch(e => console.warn('Counter update failed:', e.message));
+}
+res.json({ success: true });
+} catch (e) {
+console.error('❌ SendGrid send error:', e.message);
+res.json({ success: false, error: e.message });
+}
+});
+// Bulk Scan Placeholders
+app.post('/api/bulk-scan/send-summary', async (req, res) => { res.json({ success: true }); });
+app.post('/api/bulk-scan/submit-leaderboard', async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const { entries, submittedBy } = req.body;
+if (!entries || !Array.isArray(entries)) return res.json({ success: false, error: 'No entries' });
+let inserted = 0;
+for (const e of entries) {
+try {
+await pool.query(
+`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified)
+VALUES ($1, $2, $3, $4, $5, FALSE, FALSE)
+ON CONFLICT (url) DO UPDATE SET
+score = EXCLUDED.score,
+company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
+admin_verified = FALSE`,
+[e.url, e.company_name || e.name || null, e.score, e.country || 'NL', e.niche || null]
+);
+inserted++;
+} catch (err) { console.warn('Leaderboard insert failed:', err.message); }
+}
+res.json({ success: true, inserted });
+});
+app.post('/api/bulk-scan/send-improvement-emails', async (req, res) => { res.json({ success: true }); });
+app.post('/api/bulk-scan/send-website-offers', async (req, res) => { res.json({ success: true }); });
+// Admin Endpoints
+app.post('/api/setup/verify-admin', async (req, res) => {
+const { username, password } = req.body;
+if (!pool) return res.status(503).json({ success: false, error: 'DB down' });
+try {
+const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid' });
+const valid = await bcrypt.compare(password, result.rows[0].password_hash);
+if (!valid) return res.status(401).json({ success: false, error: 'Invalid' });
+res.json({ success: true, admin_id: result.rows[0].id });
+} catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
+});
+// ✅ FIX v3: Added activated_until alias + computed is_activated so admin.html renderUsers works correctly
+app.get('/api/admin/users', verifyAdmin, async (req, res) => {
+try {
+const r = await pool.query(`
+SELECT 
+u.*,
+u.activation_expires AS activated_until,
+CASE WHEN u.activation_expires > NOW() THEN TRUE ELSE FALSE END AS is_activated,
+COUNT(s.id) AS scan_count,
+MAX(s.created_at) AS last_scan_at,
+(SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
+(SELECT s3.score FROM scan_log s3 WHERE s3.user_id = u.id ORDER BY s3.created_at DESC LIMIT 1) AS last_scan_score
+FROM users u
+LEFT JOIN scan_log s ON s.user_id = u.id
+GROUP BY u.id
+ORDER BY u.created_at DESC
+`);
+res.json({ success: true, users: r.rows });
+}
+catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/users/:id/activate', verifyAdmin, async (req, res) => {
+try {
+const days = req.body.days || 7;
+const date = new Date(); date.setDate(date.getDate() + parseInt(days));
+await pool.query('UPDATE users SET is_activated = TRUE, activation_expires = $2 WHERE id = $1', [req.params.id, date]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ✅ FIX v3: Added missing deactivate endpoint (was causing 404 in admin.html)
+app.post('/api/admin/users/:id/deactivate', verifyAdmin, async (req, res) => {
+try {
+await pool.query(
+'UPDATE users SET is_activated = FALSE, activation_expires = NULL WHERE id = $1',
+[req.params.id]
+);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/users/:id', verifyAdmin, async (req, res) => {
+try {
+await pool.query('DELETE FROM user_api_keys WHERE user_id = $1', [req.params.id]);
+await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Users
+app.post('/api/admin/users/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs provided' });
+await pool.query('DELETE FROM user_api_keys WHERE user_id = ANY($1)', [ids]);
+const result = await pool.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
+res.json({ success: true, message: `Deleted ${result.rowCount} users` });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/messages', verifyAdmin, async (req, res) => {
+try { const r = await pool.query('SELECT * FROM admin_messages ORDER BY created_at DESC LIMIT 50'); res.json({ success: true, messages: r.rows }); }
+catch (e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/messages/send', verifyAdmin, async (req, res) => {
+try {
+await pool.query(`INSERT INTO admin_messages (sent_by, recipient_type, subject, body, is_bulk) VALUES ($1, $2, $3, $4, $5)`, [req.admin.id, req.body.recipients, req.body.subject, req.body.body, req.body.is_bulk || false]);
+res.json({ success: true });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ── DOCX Export endpoint ─────────────────────────────────────────────────────
+app.post('/api/export/scan-report-docx', async (req, res) => {
+const { scans } = req.body;
+if (!scans || !Array.isArray(scans)) return res.status(400).json({ error: 'No scan data' });
+const { spawn } = require('child_process');
+const os = require('os');
+const path = require('path');
+const tmpJson = path.join(os.tmpdir(), 'scandata_' + Date.now() + '.json');
+const tmpDocx = path.join(os.tmpdir(), 'scanreport_' + Date.now() + '.docx');
+fs.writeFileSync(tmpJson, JSON.stringify(scans));
+const pyScript = `
+import sys, json
+from docx import Document
+from docx.shared import Pt, RGBColor, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+import datetime
+json_path = sys.argv[1]
+out_path  = sys.argv[2]
+with open(json_path) as f:
+scans = json.load(f)
+doc = Document()
+for section in doc.sections:
+section.top_margin    = Cm(2)
+section.bottom_margin = Cm(2)
+section.left_margin   = Cm(2.5)
+section.right_margin  = Cm(2.5)
+title = doc.add_paragraph()
+title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = title.add_run('ContentScale — Scan Activity Report')
+run.bold = True
+run.font.size = Pt(20)
+run.font.color.rgb = RGBColor(126, 34, 206)
+sub = doc.add_paragraph()
+sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+sub.add_run('Generated: ' + datetime.datetime.now().strftime('%d %B %Y') + '  ·  app.contentscale.site').font.color.rgb = RGBColor(120, 120, 120)
+doc.add_paragraph()
+total   = len(scans)
+emailed = sum(1 for s in scans if s.get('email_status') == 'has_email')
+no_em   = sum(1 for s in scans if s.get('email_status') == 'no_email')
+lb      = sum(1 for s in scans if (s.get('score') or 0) >= 70)
+stats_p = doc.add_paragraph()
+stats_p.add_run('Summary   ').bold = True
+stats_p.add_run(f'Total scanned: {total}   |   Emails sent: {emailed}   |   No email found: {no_em}   |   Leaderboard (70+): {lb}')
+doc.add_paragraph()
+def get_template_label(s):
+tt = s.get('template_type') or ''
+status = s.get('email_status') or 'no_email'
+if status != 'has_email':
+return 'No email'
+if tt == 'congrats':
+return 'Congrats'
+if tt == 'almost':
+return 'Almost Made It'
+if tt == 'improvement':
+return 'Pitch Sent'
+if tt == 'website':
+return 'Website Offer'
+return 'Sent'
+def get_source_label(s):
+src = s.get('source') or 'single'
+if src == 'bulk':     return 'Bulk'
+if src == 'discover': return 'Find Leads'
+return 'Single'
+headers = ['Business', 'URL', 'Score', 'Email Found', 'Template', 'Source', 'Top Issue', 'Scanned']
+widths  = [Cm(3.8), Cm(4.5), Cm(1.5), Cm(4.2), Cm(2.2), Cm(1.8), Cm(4.5), Cm(2.5)]
+table = doc.add_table(rows=1, cols=len(headers))
+table.style = 'Table Grid'
+hdr = table.rows[0]
+for i, (cell, w) in enumerate(zip(hdr.cells, widths)):
+cell.width = w
+p = cell.paragraphs[0]
+run = p.add_run(headers[i])
+run.bold = True
+run.font.size = Pt(8)
+run.font.color.rgb = RGBColor(255, 255, 255)
+tc = cell._tc
+tcPr = tc.get_or_add_tcPr()
+shd = OxmlElement('w:shd')
+shd.set(qn('w:val'), 'clear')
+shd.set(qn('w:color'), 'auto')
+shd.set(qn('w:fill'), '7E22CE')
+tcPr.append(shd)
+for idx, s in enumerate(scans):
+score = s.get('score')
+if score is None: score_str = '—'
+else: score_str = str(score)
+rec = ''
+try:
+import json as j2
+recs = j2.loads(s.get('recommendations') or '[]')
+rec = recs[0] if recs else ''
+except: pass
+dt_str = ''
+try:
+from datetime import datetime
+dt_str = datetime.fromisoformat(s.get('created_at','').replace('Z','+00:00')).strftime('%d/%m/%Y')
+except: dt_str = str(s.get('created_at',''))[:10]
+template_label = get_template_label(s)
+source_label   = get_source_label(s)
+row_data = [
+(s.get('business_name') or '—')[:40],
+(s.get('business_url') or '—').replace('https://','').replace('http://','').replace('www.','')[:40],
+score_str,
+(s.get('email_found') or 'not found')[:35],
+template_label,
+source_label,
+rec[:50],
+dt_str
+]
+row = table.add_row()
+fill = 'F5F3FF' if idx % 2 == 0 else 'FFFFFF'
+for i, (cell, val) in enumerate(zip(row.cells, row_data)):
+p = cell.paragraphs[0]
+run = p.add_run(val)
+run.font.size = Pt(7.5)
+if i == 2 and score is not None:
+if score >= 70:   run.font.color.rgb = RGBColor(5, 150, 105)
+elif score >= 50: run.font.color.rgb = RGBColor(180, 83, 9)
+else:             run.font.color.rgb = RGBColor(185, 28, 28)
+run.bold = True
+if i == 4:
+if val == 'Congrats':         run.font.color.rgb = RGBColor(5, 150, 105)
+elif val == 'Almost Made It': run.font.color.rgb = RGBColor(180, 83, 9)
+elif val == 'Pitch Sent':     run.font.color.rgb = RGBColor(29, 78, 216)
+elif val == 'Website Offer':  run.font.color.rgb = RGBColor(126, 34, 206)
+else:                         run.font.color.rgb = RGBColor(107, 114, 128)
+tc = cell._tc
+tcPr = tc.get_or_add_tcPr()
+shd = OxmlElement('w:shd')
+shd.set(qn('w:val'), 'clear')
+shd.set(qn('w:color'), 'auto')
+shd.set(qn('w:fill'), fill)
+tcPr.append(shd)
+doc.add_paragraph()
+footer_p = doc.add_paragraph()
+footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+fr = footer_p.add_run('ContentScale  ·  app.contentscale.site  ·  GRAAF + CRAFT Framework  ·  By Ottmar Francisca')
+fr.font.size = Pt(7)
+fr.font.color.rgb = RGBColor(150, 150, 150)
+doc.save(out_path)
+print('OK')
+`;
+const tmpPy = path.join(os.tmpdir(), 'gendocx_' + Date.now() + '.py');
+fs.writeFileSync(tmpPy, pyScript);
+const py = spawn('python3', [tmpPy, tmpJson, tmpDocx]);
+let stderr = '';
+py.stderr.on('data', d => stderr += d);
+py.on('close', code => {
+fs.unlinkSync(tmpPy);
+fs.unlinkSync(tmpJson);
+if (code !== 0 || !fs.existsSync(tmpDocx)) {
+return res.status(500).json({ error: 'DOCX generation failed', detail: stderr });
+}
+const buf = fs.readFileSync(tmpDocx);
+fs.unlinkSync(tmpDocx);
+res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+res.setHeader('Content-Disposition', 'attachment; filename="contentscale-scan-report.docx"');
+res.send(buf);
+});
+});
+// ✅ /api/scan-log GET
+app.get('/api/scan-log', async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const userId = req.headers['x-user-id'];
+if (!userId) return res.json({ success: false, error: 'No user ID' });
+try {
+const r = await pool.query(
+`SELECT id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
+FROM scan_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1000`, [userId]
+);
+res.json({ success: true, scans: r.rows });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ /api/scan-log POST
+app.post('/api/scan-log', async (req, res) => {
+if (!pool) return res.json({ success: false });
+const { user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations } = req.body;
+try {
+if (business_url) {
+const existing = await pool.query(
+`SELECT id, report_url FROM scan_log WHERE business_url = $1 LIMIT 1`,
+[business_url]
+);
+if (existing.rows.length > 0) {
+const row = existing.rows[0];
+const existingReportUrl = row.report_url
+? (row.report_url.startsWith('http') ? row.report_url : 'https://app.contentscale.site' + row.report_url)
+: null;
+return res.json({ success: true, skipped: true, reason: 'duplicate', report_url: existingReportUrl });
+}
+}
+const reportId = crypto.randomBytes(20).toString('hex');
+const reportUrl = '/report/' + reportId;
+const insertResult = await pool.query(
+`INSERT INTO scan_log (user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+[
+user_id || null, business_url, business_name || null, score || null,
+niche || null, city || null, country || null, email_found || null,
+email_status || 'no_email', source || 'single',
+recommendations ? JSON.stringify(recommendations) : null,
+reportUrl
+]
+);
+const scanLogId = insertResult.rows[0]?.id || null;
+await pool.query(
+`INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+[reportId, scanLogId, business_url || null, business_name || null, score || null,
+niche || null, city || null, country || null, email_found || null,
+recommendations ? JSON.stringify(recommendations) : null]
+);
+res.json({ success: true, report_url: 'https://app.contentscale.site' + reportUrl });
+} catch (e) { res.json({ success: false, error: e.message }); }
+});
+// ✅ /api/admin/scan-log GET
+app.get('/api/admin/scan-log', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const limit = parseInt(req.query.limit) || 1000;
+try {
+const r = await pool.query(
+`SELECT id, user_id, business_url, business_name, score, niche, city, country, email_found, email_status, source, recommendations, report_url, created_at
+FROM scan_log ORDER BY created_at DESC LIMIT $1`, [limit]
+);
+res.json({ success: true, scans: r.rows });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// Public endpoint — total scans today across all sources (single, bulk, campaign)
+app.get('/api/stats/scans-today', async (req, res) => {
+if (!pool) return res.json({ success: true, count: 0 });
+try {
+const r = await pool.query(
+`SELECT COUNT(*) FROM scan_log WHERE created_at >= NOW() - INTERVAL '24 hours'`
+);
+res.json({ success: true, count: parseInt(r.rows[0].count) || 0 });
+} catch (e) { res.json({ success: true, count: 0 }); }
+});
+app.get('/api/admin/email-log', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const limit = parseInt(req.query.limit) || 200;
+const offset = parseInt(req.query.offset) || 0;
+try {
+const r = await pool.query(
+`SELECT id, to_email, business_name, business_url, score, template_type, subject, status, sent_at, created_at
+FROM email_queue ORDER BY COALESCE(sent_at, created_at) DESC LIMIT $1 OFFSET $2`,
+[limit, offset]
+);
+const countRes = await pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent'`);
+res.json({ success: true, emails: r.rows, total: parseInt(countRes.rows[0].count) });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/email-stats', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+try {
+const today = new Date().toISOString().split('T')[0];
+const [sentToday, queued, totalSent] = await Promise.all([
+pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent' AND sent_at::date = $1::date`, [today]),
+pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='pending'`),
+pool.query(`SELECT COUNT(*) FROM email_queue WHERE status='sent'`)
+]);
+const dailyLimit = 100;
+res.json({
+success: true,
+sentToday: parseInt(sentToday.rows[0].count),
+dailyLimit,
+remainingToday: Math.max(0, dailyLimit - parseInt(sentToday.rows[0].count)),
+queued: parseInt(queued.rows[0].count),
+totalSent: parseInt(totalSent.rows[0].count)
+});
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
+try { const r = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
+catch (e) { res.json({ success: true, pending: [] }); }
+});
+app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
+try {
+const { final_country, city, niche } = req.body;
+await pool.query(
+`UPDATE leaderboard SET admin_verified = TRUE, is_verified = TRUE,
+country = COALESCE($2, country),
+city = COALESCE($3, city),
+niche = COALESCE($4, niche)
+WHERE id = $1`,
+[req.params.id, final_country || null, city || null, niche || null]
+);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/leaderboard/:id/reject', verifyAdmin, async (req, res) => {
+try { await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.put('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+try {
+const { company_name, url, score, country, niche, page_count } = req.body;
+const updates = []; const vals = []; let i = 1;
+if (company_name) { updates.push(`company_name=$${i++}`); vals.push(company_name); }
+if (url) { updates.push(`url=$${i++}`); vals.push(url); }
+if (score) { updates.push(`score=$${i++}`); vals.push(parseInt(score)); }
+if (country) { updates.push(`country=$${i++}`); vals.push(country); }
+if (niche) { updates.push(`niche=$${i++}`); vals.push(niche); }
+if (page_count) { updates.push(`page_count=$${i++}`); vals.push(parseInt(page_count)); }
+if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields' });
+vals.push(req.params.id);
+await pool.query(`UPDATE leaderboard SET ${updates.join(', ')} WHERE id = $${i}`, vals);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/leaderboard/:id', verifyAdmin, async (req, res) => {
+try { await pool.query('DELETE FROM leaderboard WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/leaderboard/manual-add', verifyAdmin, async (req, res) => {
+try {
+const { url, company_name, score, country, niche } = req.body;
+if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL/Score required' });
+const r = await pool.query(`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified) VALUES ($1, $2, $3, $4, $5, true, true) ON CONFLICT (url) DO UPDATE SET score=EXCLUDED.score, company_name=COALESCE(EXCLUDED.company_name, leaderboard.company_name), niche=COALESCE(EXCLUDED.niche, leaderboard.niche), admin_verified=true RETURNING id`, [url, company_name, score, country, niche]);
+res.json({ success: true, id: r.rows[0].id });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Leaderboard
+app.post('/api/admin/leaderboard/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs provided' });
+const result = await pool.query('DELETE FROM leaderboard WHERE id = ANY($1)', [ids]);
+res.json({ success: true, message: `Deleted ${result.rowCount} entries` });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// Freelancers Admin
+app.get('/api/admin/freelancers/pending', verifyAdmin, async (req, res) => {
+try { const r = await pool.query(`SELECT * FROM freelancers WHERE is_approved = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
+catch (e) { res.json({ success: true, pending: [] }); }
+});
+app.post('/api/admin/freelancers/:id/approve', verifyAdmin, async (req, res) => {
+try { await pool.query('UPDATE freelancers SET is_approved = TRUE, is_verified = TRUE WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+try { await pool.query('DELETE FROM freelancers WHERE id = $1', [req.params.id]); res.json({ success: true }); }
+catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.put('/api/admin/freelancers/:id', verifyAdmin, async (req, res) => {
+try {
+const { name, email, title, bio, hourly_rate, is_featured } = req.body;
+const updates = []; const vals = []; let i = 1;
+if (name) { updates.push(`name=$${i++}`); vals.push(name); }
+if (email) { updates.push(`email=$${i++}`); vals.push(email); }
+if (title) { updates.push(`title=$${i++}`); vals.push(title); }
+if (bio) { updates.push(`bio=$${i++}`); vals.push(bio); }
+if (hourly_rate) { updates.push(`hourly_rate=$${i++}`); vals.push(hourly_rate); }
+if (is_featured !== undefined) { updates.push(`is_featured=$${i++}`); vals.push(is_featured); }
+if (updates.length === 0) return res.status(400).json({ success: false, error: 'No fields' });
+vals.push(req.params.id);
+await pool.query(`UPDATE freelancers SET ${updates.join(', ')} WHERE id = $${i}`, vals);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Freelancers
+app.post('/api/admin/freelancers/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, error: 'No IDs provided' });
+const result = await pool.query('DELETE FROM freelancers WHERE id = ANY($1)', [ids]);
+res.json({ success: true, message: `Deleted ${result.rowCount} profiles` });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ✅ Bulk Delete Scan Logs
+app.post('/api/admin/scan-log/bulk-delete', verifyAdmin, async (req, res) => {
+try {
+const { ids } = req.body;
+if (!ids || !Array.isArray(ids) || ids.length === 0) {
+return res.status(400).json({ success: false, error: 'No IDs provided' });
+}
+await pool.query('DELETE FROM scan_reports WHERE scan_log_id = ANY($1)', [ids]);
+const result = await pool.query('DELETE FROM scan_log WHERE id = ANY($1)', [ids]);
+console.log(`✅ Bulk deleted ${result.rowCount} scan log(s)`);
+res.json({ success: true, message: `Deleted ${result.rowCount} scan log(s)`, deleted: result.rowCount });
+} catch (e) {
+console.error('❌ Bulk delete scan logs error:', e.message);
+res.status(500).json({ success: false, error: e.message });
+}
+});
+app.delete('/api/admin/scan-log/delete-all', verifyAdmin, async (req, res) => {
+try {
+await pool.query('DELETE FROM scan_reports');
+const result = await pool.query('DELETE FROM scan_log');
+console.log(`✅ Deleted all ${result.rowCount} scan log entries`);
+res.json({ success: true, deleted: result.rowCount });
+} catch(e) {
+res.status(500).json({ success: false, error: e.message });
+}
+});
+// Leaderboard Public
+app.get('/api/leaderboard', async (req, res) => {
+if (!pool) return res.json({ success: true, entries: [], stats: {} });
+try {
+const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, business_type, page_count, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
+// Strip sitemap paths — only expose homepage URL publicly to prevent fraud
+const rows = r.rows.map(row => {
+try {
+const u = new URL(row.url.startsWith('http') ? row.url : 'https://' + row.url);
+return { ...row, url: u.protocol + '//' + u.hostname };
+} catch(e) { return row; }
+});
+const entries = rows;
+const total = entries.length;
+const avg = total > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.score || 0), 0) / total) : 0;
+const countries = [...new Set(entries.map(e => e.country))].length;
+const verified = entries.filter(e => e.admin_verified).length;
+const fr = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: 0 }] }));
+res.json({ success: true, entries, total, averageScore: avg, stats: { totalAgencies: total, avgScore: avg, countriesCount: countries, activeHelpers: parseInt(fr.rows[0].count) || 0, verifiedCount: verified } });
+} catch (e) { res.json({ success: true, entries: [], stats: {} }); }
+});
+app.post('/api/leaderboard/submit', async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'Database unavailable' });
+const { url, company_name, score, country, niche } = req.body;
+if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL and Score are required' });
+try {
+const finalScore = parseInt(score);
+const r = await pool.query(
+`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified, submission_ip)
+VALUES ($1, $2, $3, $4, $5, FALSE, FALSE, $6)
+ON CONFLICT (url) DO UPDATE SET
+score = EXCLUDED.score,
+company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
+niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
+admin_verified = FALSE, is_verified = FALSE
+RETURNING id`,
+[url, company_name || null, finalScore, country || 'NL', niche || null, req.ip || req.connection.remoteAddress]
+);
+res.json({ success: true, id: r.rows[0]?.id, message: 'Submission received. Pending admin approval.' });
+} catch (e) {
+console.error('Leaderboard submit error:', e.message);
+res.status(500).json({ success: false, error: e.message });
+}
+});
+app.get('/api/freelancers', async (req, res) => {
+if (!pool) return res.json({ success: true, freelancers: [] });
+try {
+const r = await pool.query(`SELECT id, name, email, title, location, country, bio, hourly_rate, is_verified, is_featured FROM freelancers WHERE is_approved = TRUE ORDER BY is_featured DESC, created_at DESC LIMIT 50`);
+res.json({ success: true, freelancers: r.rows });
+} catch (e) { res.json({ success: true, freelancers: [] }); }
+});
+app.post('/api/freelancers/register', async (req, res) => {
+if (!pool) return res.status(503).json({ success: false, error: 'DB down' });
+try {
+const { name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_featured } = req.body;
+if (!name || !email) return res.status(400).json({ success: false, error: 'Name/Email required' });
+const exists = await pool.query('SELECT id FROM freelancers WHERE email = $1', [email]);
+if (exists.rows.length > 0) return res.status(400).json({ success: false, error: 'Email exists' });
+const r = await pool.query(`INSERT INTO freelancers (name, email, title, location, country, bio, linkedin_url, hourly_rate, availability, is_approved, is_featured) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10) RETURNING id`, [name, email, title || null, location || null, country || null, bio || null, linkedin_url || null, hourly_rate || null, availability || null, is_featured || false]);
+res.json({ success: true, id: r.rows[0].id });
+} catch (e) { res.status(500).json({ success: false, error: 'Failed' }); }
+});
+// ============================================
+// 🗺️ SITEMAP SCANNER ENDPOINTS
+// ============================================
+// Fetch and parse sitemap → return URL list
+app.post('/api/sitemap/urls', async (req, res) => {
+const { url } = req.body;
+if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
+try {
+const axios = require('axios');
+// No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
+const extractLocs = (xml) => {
+const locs = [];
+const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/gi;
+let m;
+while ((m = re.exec(xml)) !== null) locs.push(m[1].trim());
+return locs;
+};
+const fetchXml = async (sitemapUrl) => {
+const resp = await axios.get(sitemapUrl, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+return resp.data;
+};
+const xml = await fetchXml(url);
+let urls = [];
+// Sitemap index — contains sub-sitemap URLs
+if (xml.includes('<sitemapindex')) {
+const subSitemapUrls = extractLocs(xml);
+for (const smUrl of subSitemapUrls.slice(0, 10)) {
+try {
+const subXml = await fetchXml(smUrl);
+urls.push(...extractLocs(subXml));
+} catch(e) { /* skip broken sub-sitemap */ }
+}
+} else {
+// Regular urlset
+urls = extractLocs(xml);
+}
+// Deduplicate + filter out non-page URLs
+const filtered = [...new Set(urls)].filter(u => {
+const skip = ['/tag/', '/category/', '/author/', '/feed/', '?', '#', '.xml', '.pdf', '.jpg', '.png'];
+return !skip.some(s => u.includes(s));
+});
+res.json({ success: true, urls: filtered, total: filtered.length });
+} catch (e) {
+res.status(500).json({ success: false, error: 'Could not fetch sitemap: ' + e.message });
+}
+});
+// Submit aggregate sitemap scan result as pending leaderboard entry
+const AUTO_APPROVE_DOMAINS = ['contentscale.site', 'app.contentscale.site'];
+app.post('/api/sitemap/submit', async (req, res) => {
+const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, page_count, page_scores, country, niche, business_type } = req.body;
+if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
+const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+const autoApprove = AUTO_APPROVE_DOMAINS.includes(cleanDomain);
+try {
+const r = await pool.query(
+`INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'sitemap', $12, $12)
+ON CONFLICT (url) DO UPDATE SET
+score = EXCLUDED.score,
+graaf_score = EXCLUDED.graaf_score,
+craft_score = EXCLUDED.craft_score,
+technical_score = EXCLUDED.technical_score,
+country = EXCLUDED.country,
+niche = EXCLUDED.niche,
+business_type = EXCLUDED.business_type,
+company_name = EXCLUDED.company_name,
+page_count = EXCLUDED.page_count,
+page_scores = EXCLUDED.page_scores,
+scan_source = 'sitemap',
+admin_verified = $12,
+is_verified = $12
+RETURNING id`,
+[domain, company_name || null, Math.round(avg_score), Math.round(avg_graaf), Math.round(avg_craft), Math.round(avg_technical), country || null, niche || null, business_type || null, page_count, JSON.stringify(page_scores || []), autoApprove]
+);
+res.json({ success: true, id: r.rows[0].id, auto_approved: autoApprove });
+} catch (e) {
+res.status(500).json({ success: false, error: e.message });
+}
+});
+// ============================================================
+// 🔗 SHARE BULK RESULTS AS URL
+// ============================================================
+const shareStore = new Map(); // in-memory, survives restarts via DB below
+app.post('/api/share/bulk', async (req, res) => {
+const { results } = req.body;
+if (!results || !results.length) return res.status(400).json({ success: false, error: 'No results' });
+const token = crypto.randomBytes(8).toString('hex');
+const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+try {
+await pool.query(
+`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))
+ON CONFLICT DO NOTHING`,
+[token, JSON.stringify(results), expires]
+);
+} catch(e) {
+// Table may not exist yet — try create
+try {
+await pool.query(`CREATE TABLE IF NOT EXISTS share_results (
+id SERIAL PRIMARY KEY,
+token VARCHAR(20) UNIQUE NOT NULL,
+results_json JSONB NOT NULL,
+created_at TIMESTAMPTZ DEFAULT NOW(),
+expires_at TIMESTAMPTZ
+)`);
+await pool.query(
+`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`,
+[token, JSON.stringify(results), expires]
+);
+} catch(e2) {
+// Fallback: memory only
+shareStore.set(token, { results, expires });
+}
+}
+shareStore.set(token, { results, expires });
+res.json({ success: true, token });
+});
+app.get('/share/:token', async (req, res) => {
+const { token } = req.params;
+let results = null;
+// Try memory first
+const mem = shareStore.get(token);
+if (mem && mem.expires > Date.now()) results = mem.results;
+// Try DB
+if (!results) {
+try {
+const r = await pool.query(`SELECT results_json FROM share_results WHERE token=$1 AND expires_at > NOW()`, [token]);
+if (r.rows.length) results = r.rows[0].results_json;
+} catch(e) {}
+}
+if (!results) return res.status(404).send('<h1>Link expired or not found</h1>');
+const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+const avgScore = Math.round(results.reduce((s,r) => s+r.score,0)/results.length);
+const scoreColor = avgScore>=85?'#16a34a':avgScore>=70?'#b45309':'#dc2626';
+const domains = [...new Set(results.map(r => r.url.replace(/https?:\/\//,'').split('/')[0]))];
+const sameDomain = domains.length === 1;
+const rows = results.map((r,i) => {
+const lbl = r.score>=95?'Elite':r.score>=90?'Excellent':r.score>=85?'Strong':r.score>=80?'Good':r.score>=75?'Solid':r.score>=70?'Qualified':'Needs Work';
+const sc  = r.score>=85?'#16a34a':r.score>=70?'#b45309':'#dc2626';
+const domain = r.url.replace(/https?:\/\//,'').split('/')[0];
+const path   = r.url.replace(/https?:\/\/[^/]+/,'') || '/';
+return `
+<tr style="border-bottom:1px solid #e5e7eb;">
+   <td style="padding:12px 16px;font-size:14px;color:#374151;">${i+1}</td>
+   <td style="padding:12px 16px;">
+      <div style="font-weight:600;font-size:14px;color:#111827;">${domain}</div>
+      <div style="font-size:12px;color:#6b7280;">${path}</div>
+   </td>
+   <td style="padding:12px 16px;text-align:center;"><span style="font-size:20px;font-weight:900;color:${sc};">${r.score}</span></td>
+   <td style="padding:12px 16px;text-align:center;font-size:13px;color:#7e22ce;">${r.metrics?.graaf||0}/50</td>
+   <td style="padding:12px 16px;text-align:center;font-size:13px;color:#1d4ed8;">${r.metrics?.craft||0}/30</td>
+   <td style="padding:12px 16px;text-align:center;font-size:13px;color:#b45309;">${r.metrics?.technical||0}/20</td>
+   <td style="padding:12px 16px;"><span style="background:${sc};color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">${lbl}</span></td>
+   <td style="padding:12px 16px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#7e22ce;font-weight:600;text-decoration:none;">Visit →</a></td>
+</tr>
+`;
+}).join('');
+const html = `<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0">
+      <title>ContentScale Scan Report — ${sameDomain?domains[0]:results.length+' sites'}</title>
+      <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,Helvetica,sans-serif;background:#f9fafb;color:#111827;}@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>
+   </head>
+   <body style="max-width:900px;margin:0 auto;">
+      <div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px;color:white;">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+            <div>
+               <div style="font-size:20px;font-weight:900;">ContentScale</div>
+               <div style="font-size:12px;opacity:0.7;margin-top:2px;">SEO Recovery Platform · Amsterdam</div>
+            </div>
+            <div style="text-align:right;font-size:12px;opacity:0.75;">${today}</div>
+         </div>
+         <h1 style="font-size:26px;font-weight:900;margin-bottom:6px;">Bulk Scan Report</h1>
+         <p style="opacity:0.85;font-size:14px;">${results.length} URLs scanned${sameDomain?' · '+domains[0]:''}</p>
+      </div>
+      ${sameDomain?`
+      <div style="padding:32px 40px;background:white;border-bottom:2px solid #e5e7eb;text-align:center;">
+         <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Average Domain Score</div>
+         <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${avgScore}</div>
+         <div style="font-size:13px;color:#6b7280;margin-top:4px;">${results.length} pages · ${domains[0]}</div>
+      </div>
+      `:''}
+      <div style="padding:32px 40px;overflow-x:auto;">
+         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+            <thead>
+               <tr style="background:#f5f3ff;">
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">#</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">URL</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#6b7280;">Score</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#7e22ce;">GRAAF</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#1d4ed8;">CRAFT</th>
+                  <th style="padding:12px 16px;text-align:center;font-size:12px;color:#b45309;">Technical</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Tier</th>
+                  <th style="padding:12px 16px;text-align:left;font-size:12px;color:#6b7280;">Link</th>
+               </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+         </table>
+      </div>
+      <div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+         <div>
+            <div style="color:white;font-weight:700;font-size:14px;">ContentScale</div>
+            <div style="color:#9ca3af;font-size:12px;">Ottmar JG Francisca · Amsterdam</div>
+         </div>
+         <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a>
+      </div>
+      <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
+   </body>
+</html>
+`;
+res.send(html);
+});
+function computeScore(scanUrl, analysis, extractedEmails) {
+extractedEmails = extractedEmails || [];
+// ── SCORING ──
+let graafScore = 0;
+if (analysis.wordCount >= 2500)      graafScore += 10;
+else if (analysis.wordCount >= 1500) graafScore += 7;
+else if (analysis.wordCount >= 1000) graafScore += 4;
+else if (analysis.wordCount >= 500)  graafScore += 2;
+if (analysis.statsFound >= 8)        graafScore += 8;
+else if (analysis.statsFound >= 5)   graafScore += 5;
+else if (analysis.statsFound >= 3)   graafScore += 3;
+if (analysis.expertQuoteCount >= 4)  graafScore += 8;
+else if (analysis.expertQuoteCount >= 2) graafScore += 5;
+else if (analysis.expertQuoteCount >= 1) graafScore += 2;
+if (analysis.caseStudyCount >= 2)    graafScore += 8;
+else if (analysis.caseStudyCount >= 1) graafScore += 4;
+if (analysis.hasDirectAnswer)        graafScore += 6;
+if (analysis.hasTLDR)               graafScore += 4;
+if (analysis.listItemCount >= 15)    graafScore += 6;
+else if (analysis.listItemCount >= 8) graafScore += 4;
+else if (analysis.listItemCount >= 3) graafScore += 2;
+graafScore = Math.min(50, graafScore);
+let craftScore = 0;
+if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric && !analysis.h1IsTooShort) craftScore += 8;
+else if (analysis.h1VisibleCount === 1) craftScore += 3;
+else if (analysis.h1VisibleCount > 1)   craftScore += 2;
+if (analysis.h2Count >= 5)          craftScore += 7;
+else if (analysis.h2Count >= 3)     craftScore += 5;
+else if (analysis.h2Count >= 1)     craftScore += 2;
+if (analysis.avgParagraphLength <= 60)       craftScore += 5;
+else if (analysis.avgParagraphLength <= 100) craftScore += 3;
+if (analysis.hasFAQContent)         craftScore += 5;
+if (analysis.hasTOC)                craftScore += 3;
+if (analysis.hasAuthorBio)          craftScore += 2;
+craftScore = Math.min(30, craftScore);
+let technicalScore = 0;
+if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
+else if (analysis.metaTitleLength > 0) technicalScore += 1;
+if (analysis.metaDescriptionLength >= 140 && analysis.metaDescriptionLength <= 165) technicalScore += 3;
+else if (analysis.metaDescriptionLength > 0) technicalScore += 1;
+if (analysis.hasArticleSchema)      technicalScore += 4;
+if (analysis.hasFAQPageSchema)      technicalScore += 4;
+if (analysis.hasCanonical)          technicalScore += 2;
+if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 2;
+else if (analysis.images > 0 && analysis.imagesWithAlt > 0) technicalScore += 1;
+if (analysis.hasMetaViewport)       technicalScore += 2;
+technicalScore = Math.min(20, technicalScore);
+const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
+const quality = totalScore >= 95 ? 'elite' : totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
+// ── RECOMMENDATIONS ──
+const recommendations = [];
+if (analysis.wordCount < 500) {
+recommendations.push({ title: '🚨 Critical: Content Is Too Thin', description: `Only ${analysis.wordCount} words found. This is well below what Google considers a substantive page.`, priority: 'high', action: 'Expand with deep explanations, examples, case studies, and FAQs. Aim for 2,500+ words.', learning: "Thin content (< 500 words) is the #1 trigger for Google Helpful Content penalties. Pages with 2,500+ words earn 3.7x more backlinks on average (Backlinko).", target: 'Minimum 1,500 words; ideal 2,500+' });
+} else if (analysis.wordCount < 1500) {
+recommendations.push({ title: '📝 Increase Content Depth', description: `${analysis.wordCount} words found — decent start, but below the threshold for competitive rankings.`, priority: 'medium', action: "Add a FAQ section (5–8 questions), a 'How it works' breakdown, or real client examples.", learning: "Pages ranking on page 1 average 1,890 words. Google's QRG rewards 'comprehensive, accurate, clearly written' content.", target: '1,500+ words minimum; 2,500+ for competitive terms' });
+} else if (analysis.wordCount < 2500) {
+recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
+}
+if (analysis.statsFound < 3) {
+recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
+} else if (analysis.statsFound < 8) {
+recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.", target: '8+ cited statistics with source and year' });
+}
+if (analysis.expertQuoteCount === 0) {
+recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: `Add 3–5 quotes from named experts. Format: "Quote text" — [Name, Title, Organization].`, learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
+} else if (analysis.expertQuoteCount < 3) {
+recommendations.push({ title: '💬 Add More Expert Citations', description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`, priority: 'medium', action: "Add quotes from industry publications or recognized professionals.", learning: "Expert citations are the fastest way to improve your GRAAF Authoritativeness score.", target: '3–5 attributed expert quotes' });
+}
+if (analysis.caseStudyCount === 0) {
+recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected.", priority: 'high', action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.", learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.", target: '2 case studies with Challenge/Solution/Results format and measurable metrics' });
+} else if (analysis.caseStudyCount < 2) {
+recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
+}
+if (!analysis.hasDirectAnswer) {
+recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
+}
+if (!analysis.hasTLDR) {
+recommendations.push({ title: '📌 Add a TL;DR / Key Takeaways Section', description: "No 'Key Takeaways' or 'Quick Summary' section detected.", priority: 'medium', action: "Add a 'Key Takeaways' section near the top with 5 bullet points.", learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.", target: '5 bullet takeaways with specific stats near the top of the page' });
+}
+if (analysis.listItemCount < 5) {
+recommendations.push({ title: '📋 Improve Scannability With Lists', description: `Only ${analysis.listItemCount} list items found.`, priority: 'medium', action: "Convert key points into bulleted or numbered lists. Aim for 15+ list items.", learning: "79% of users scan web content. Lists increase chances of featured snippet selection.", target: '15+ list items spread naturally through the content' });
+} else if (analysis.listItemCount < 15) {
+recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
+}
+if (analysis.h1Count === 0) {
+recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected.', priority: 'high', action: "Add exactly one H1 tag near the top of the page containing your primary keyword.", learning: "The H1 is Google's strongest on-page keyword signal.", target: 'Exactly 1 H1 tag with primary keyword in the first 30 characters' });
+} else if (analysis.h1IsHidden && analysis.h1VisibleCount === 0) {
+recommendations.push({ title: '🚨 Critical: H1 Is Hidden (display:none / visibility:hidden)', description: `An H1 exists in the HTML but is hidden with CSS.`, priority: 'high', action: "Remove the CSS hiding your H1. Make it visible.", learning: "Hidden H1s are sometimes used as an SEO trick. Google ignores hidden content for ranking signals.", target: '1 fully visible H1 containing primary keyword' });
+} else if (analysis.h1VisibleCount > 1) {
+recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1VisibleCount} visible H1 tags.`, priority: 'medium', action: "Keep only one H1. Demote the rest to H2 or H3.", learning: "Multiple H1s tell Google your page has multiple main topics.", target: 'Exactly 1 H1 tag per page' });
+} else if (analysis.h1IsGeneric) {
+recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword', description: `Your H1 "${analysis.h1Text}" contains no specific keyword.`, priority: 'high', action: "Replace your H1 with a specific keyword phrase.", learning: "Generic H1s like 'Home' or 'Welcome' provide zero keyword signal to Google.", target: 'H1 with primary keyword + specific value in 30–70 characters' });
+} else if (analysis.h1IsTooShort) {
+recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters.`, priority: 'medium', action: "Expand your H1 to 30–70 characters.", learning: "H1s under 10 characters provide minimal keyword signal.", target: 'H1 of 30–70 characters with primary keyword' });
+} else if (analysis.h1IsTooLong) {
+recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer.", learning: "H1s over 70 characters reduce keyword density.", target: 'H1 under 70 characters' });
+}
+if (analysis.h2Count < 3) {
+recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found.`, priority: 'medium', action: "Structure your content with 5+ H2 headings.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
+}
+if (analysis.avgParagraphLength > 100) {
+recommendations.push({ title: '📱 Shorten Paragraphs for Mobile Readability', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words.`, priority: 'medium', action: "Break paragraphs at 50–80 words maximum.", learning: "Paragraphs over 100 words increase mobile abandonment by 37%.", target: 'Average paragraph length 40–80 words' });
+}
+if (!analysis.hasFAQContent) {
+recommendations.push({ title: '❓ Add a FAQ Section', description: "No FAQ section detected.", priority: 'medium', action: "Add an FAQ section with 5–10 real questions your audience asks.", learning: "'People Also Ask' boxes now appear in 80% of Google searches.", target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs" });
+}
+if (!analysis.hasTOC) {
+recommendations.push({ title: '📑 Add a Table of Contents', description: 'No Table of Contents detected.', priority: 'low', action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.", learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.", target: 'Table of Contents with anchor links to all H2 sections' });
+}
+if (!analysis.hasAuthorBio) {
+recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
+}
+if (!analysis.hasArticleSchema) {
+recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
+   }
+   if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
+   recommendations.push({ title: '🛠️ Add FAQPage Schema to Your FAQ Section', description: 'FAQ content detected but no FAQPage schema found.', priority: 'high', action: "Generate FAQPage JSON-LD for all your FAQ questions.", learning: "FAQPage schema makes your FAQ answers eligible for expanded 'People Also Ask' appearances.", target: 'FAQPage JSON-LD with all Q&A pairs marked up' });
+   } else if (!analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
+   recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
+   }
+   if (!analysis.hasCanonical) {
+   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
+         }
+         if (analysis.metaTitleLength === 0) {
+         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
+            } else if (analysis.metaTitleLength < 40) {
+            recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
+            } else if (analysis.metaTitleLength > 65) {
+            recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
+            }
+            if (analysis.metaDescriptionLength === 0) {
+            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
+            } else if (analysis.metaDescriptionLength < 100) {
+            recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
+            } else if (analysis.metaDescriptionLength > 165) {
+            recommendations.push({ title: '📝 Meta Description Too Long', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Trim to 140–160 characters.", learning: "Truncated descriptions end mid-sentence in search results.", target: '140–160 characters' });
+            }
+            if (analysis.images === 0) {
+            recommendations.push({ title: '🖼️ Add Images to Your Content', description: 'No images detected.', priority: 'medium', action: "Add at least 3–5 images with descriptive alt text.", learning: "Content with images gets 94% more views.", target: '3–5 images with descriptive alt text on every image' });
+            } else if (analysis.imagesWithAlt < Math.min(analysis.images, 3)) {
+            recommendations.push({ title: '🖼️ Add Alt Text to Your Images', description: `${analysis.images} images found but only ${analysis.imagesWithAlt} have alt text.`, priority: 'medium', action: "Add descriptive alt text to every image.", learning: "Alt text serves three purposes: Google understanding, accessibility, and keyword signals.", target: 'Alt text on 100% of images' });
+            }
+            if (analysis.internalLinks < 5) {
+            recommendations.push({ title: '🔗 Add More Internal Links', description: `Only ${analysis.internalLinks} internal links found.`, priority: 'medium', action: "Add 8–12 contextual internal links to related pages.", learning: "Internal links transfer link equity and help Google crawl faster.", target: '8–12 internal links with descriptive anchor text' });
+            } else if (analysis.internalLinks < 8) {
+            recommendations.push({ title: '🔗 Strengthen Internal Link Structure', description: `${analysis.internalLinks} internal links found.`, priority: 'low', action: "Find unlinked topic mentions and add contextual links.", learning: "Every internal link is a vote for the destination page.", target: '8–12 internal links' });
+            }
+            if (analysis.externalLinks === 0) {
+            recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
+            }
+            if (!analysis.hasOpenGraph) {
+            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200x630px), og:url' });
+               }
+               const finalRecommendations = recommendations.length > 0 ? recommendations : [{
+               title: '🏆 Elite Content — Outstanding Work!',
+               description: 'Your page meets all GRAAF Framework, CRAFT, and Technical SEO requirements.',
+               priority: 'none',
+               action: 'Maintain this standard. Review content quarterly for freshness updates.',
+               learning: 'Consistent, high-quality content builds domain authority over time.',
+               target: 'Maintain Elite score; review and update quarterly'
+               }];
+               const result = {
+               success: true, url: scanUrl, score: totalScore, quality,
+               metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+               content_stats: {
+               wordCount: analysis.wordCount, emails_found: extractedEmails,
+               extractedEmail: extractedEmails[0] || null,
+               h1Count: analysis.h1Count, h1Text: analysis.h1Text, h1Length: analysis.h1Length,
+               h1VisibleCount: analysis.h1VisibleCount, h1IsGeneric: analysis.h1IsGeneric,
+               h1IsTooShort: analysis.h1IsTooShort, h1IsTooLong: analysis.h1IsTooLong,
+               h2Count: analysis.h2Count, h3Count: analysis.h3Count,
+               listItemCount: analysis.listItemCount,
+               avgParagraphLength: Math.round(analysis.avgParagraphLength),
+               metaTitleLength: analysis.metaTitleLength, metaDescriptionLength: analysis.metaDescriptionLength,
+               hasMetaViewport: analysis.hasMetaViewport, hasCanonical: analysis.hasCanonical,
+               hasArticleSchema: analysis.hasArticleSchema, hasFAQPageSchema: analysis.hasFAQPageSchema,
+               hasOrganizationSchema: analysis.hasOrganizationSchema,
+               hasOpenGraph: analysis.hasOpenGraph, hasTwitterCard: analysis.hasTwitterCard,
+               hasDirectAnswer: analysis.hasDirectAnswer, hasTLDR: analysis.hasTLDR,
+               hasTOC: analysis.hasTOC, hasAuthorBio: analysis.hasAuthorBio,
+               hasFAQContent: analysis.hasFAQContent,
+               images: analysis.images, imagesWithAlt: analysis.imagesWithAlt,
+               internalLinks: analysis.internalLinks, externalLinks: analysis.externalLinks,
+               expertQuoteCount: analysis.expertQuoteCount, caseStudyCount: analysis.caseStudyCount,
+               statsFound: analysis.statsFound
+               },
+               recommendations: { all: finalRecommendations, count: finalRecommendations.length },
+               timestamp: new Date().toISOString()
+               };
+               console.log(`✅ computeScore: ${scanUrl} → ${totalScore}/100`);
+               return result;
+               }
+               // ============================================================
+               // ============================================================
+               // SERVER-SIDE BULK JOB QUEUE — ROBUST VERSION
+               // Fixes: concurrency limit, own browser per job, DB persistence,
+               //        500 URL cap, 1 active job per user, auto-cleanup, jitter
+               // ============================================================
+               const bulkJobs = new Map();          // in-memory mirror for fast polling
+               const JOB_MAX_URLS   = 500;          // hard cap per job
+               const JOB_CONCUR     = 2;            // max parallel jobs
+               const JOB_TTL_MS     = 24*60*60*1000;// clean up after 24h
+               let   activeJobCount = 0;
+               const jobQueue       = [];           // waiting jobs when at concur limit
+               // ── DB table for job persistence ─────────────────────────────
+               async function ensureBulkJobsTable() {
+               if (!pool) return;
+               try {
+               await pool.query(`CREATE TABLE IF NOT EXISTS bulk_jobs (
+               id TEXT PRIMARY KEY,
+               user_id TEXT,
+               status TEXT DEFAULT 'queued',
+               total INTEGER DEFAULT 0,
+               done INTEGER DEFAULT 0,
+               failed INTEGER DEFAULT 0,
+               results JSONB DEFAULT '[]',
+               created_at TIMESTAMP DEFAULT NOW(),
+               updated_at TIMESTAMP DEFAULT NOW()
+               )`);
+               } catch(e) { console.error('bulk_jobs table error:', e.message); }
+               }
+               ensureBulkJobsTable();
+               // Persist job snapshot to DB (fire-and-forget, don't await in hot path)
+               function persistJob(job) {
+               if (!pool) return;
+               pool.query(
+               'INSERT INTO bulk_jobs(id,user_id,status,total,done,failed,results,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,NOW()) ON CONFLICT(id) DO UPDATE SET status=$3,done=$5,failed=$6,results=$7,updated_at=NOW()',
+               [job.id, job.userId||'anon', job.status, job.total, job.done, job.failed, JSON.stringify(job.results)]
+               ).catch(e => console.error('persistJob error:', e.message));
+               }
+               // Clean up old jobs from memory
+               function cleanOldJobs() {
+               const cutoff = Date.now() - JOB_TTL_MS;
+               for (const [id, job] of bulkJobs) {
+               if (job.createdAt < cutoff) bulkJobs.delete(id);
+               }
+               }
+               setInterval(cleanOldJobs, 60*60*1000); // hourly
+               // ── Own browser per job — no shared state ────────────────────
+               async function launchJobBrowser() {
+               return puppeteer.launch({
+               headless: 'new',
+               args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--memory-pressure-off']
+               }).catch(err => { console.error('Job browser launch failed:', err.message); return null; });
+               }
+               // ── Core page analysis — shared by bulk jobs and campaign ────
+               async function internalScanPage(page, scanUrl) {
+               const analysis = await page.evaluate((su) => {
+               const text = document.body ? document.body.innerText : '';
+               const cleanText = text.replace(/\s+/g, ' ').trim();
+               const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               const rawHtml = document.documentElement.outerHTML;
+               const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
+               h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
+               const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
+               const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
+               const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
+               const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
+               const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length;
+               const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
+               const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
+               const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
+               const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
+               const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
+               const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOrganizationSchema=flatSchemas.some(s=>['Organization','LocalBusiness','WebSite'].includes(s['@type']));
+               const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
+               const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
+               const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
+               const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
+               const hasAuthorBio=/written by|about the author|about the founder|meet the author/i.test(rawHtml.toLowerCase());
+               const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())
+               || /id=["'][^"']*faq[^"']*["']/i.test(rawHtml)
+               || hasFAQPageSchema;
+               const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
+               let host=''; try{host=new URL(su).hostname;}catch(e){}
+               const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
+               const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
+               const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length;
+               const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length;
+               const expertQuoteCount=Math.max(bqCount, citeCount);
+               const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
+               const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
+               const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+               const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
+               return {wordCount,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
+               }, scanUrl);
+               return computeScore(scanUrl, analysis);
+               }
+               async function scanOneUrlWithBrowser(rawUrl, browser) {
+               const scanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
+               const page = await browser.newPage();
+               try {
+               await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
+               await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+               // Block images/fonts/media to save memory and speed up
+               await page.setRequestInterception(true);
+               page.on('request', req => {
+               const rt = req.resourceType();
+               if (['image','media','font','stylesheet'].includes(rt)) req.abort();
+               else req.continue();
+               });
+               try {
+               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
+               await new Promise(r => setTimeout(r, 800)); // let JS render
+               } catch(e) {
+               // Site unreachable/blocked — skip gracefully, don't waste retry time
+               throw new Error('skip:' + e.message.substring(0,60));
+               }
+               return await internalScanPage(page, scanUrl);
+               } finally { try { await page.close(); } catch(e) {} }
+               }
+               // ── Run a job (called when slot opens) ───────────────────────
+               async function runBulkJob(job) {
+               activeJobCount++;
+               job.status = 'running';
+               persistJob(job);
+               let browser = null;
+               try {
+               browser = await launchJobBrowser();
+               if (!browser) throw new Error('Could not launch browser');
+               // Delay: 2s base + 0-1s jitter — gentler on target site
+               const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+               for (const url of job.urls) {
+               if (job.status === 'cancelled') break;
+               let result = null;
+               for (let attempt = 0; attempt < 2; attempt++) {
+               try { result = await scanOneUrlWithBrowser(url, browser); break; }
+               catch(e) {
+               const isSkip = e.message.startsWith('skip:');
+               if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
+               else await new Promise(r => setTimeout(r, 2000));
+               }
+               }
+               // Trim result to save memory: keep only essentials for bulk view
+               const slim = result.success ? {
+               success: true, url: result.url, score: result.score, quality: result.quality,
+               metrics: result.metrics,
+               content_stats: { wordCount: result.content_stats?.wordCount, h1Text: result.content_stats?.h1Text }
+               } : { success: false, url, error: result.error, score: 0 };
+               job.results.push(slim);
+               job.done++;
+               if (!result || !result.success) job.failed++;
+               // Persist every 25 pages
+               if (job.done % 25 === 0) persistJob(job);
+               await delay();
+               }
+               job.status = job.status === 'cancelled' ? 'cancelled' : 'done';
+               } catch(e) {
+               job.status = 'error';
+               job.error = e.message;
+               console.error('Job ' + job.id + ' fatal:', e.message);
+               } finally {
+               if (browser) try { await browser.close(); } catch(e) {}
+               activeJobCount--;
+               persistJob(job);
+               console.log(`✅ Job ${job.id}: ${job.done}/${job.total} done, ${job.failed} failed`);
+               // Drain queue
+               if (jobQueue.length > 0) {
+               const next = jobQueue.shift();
+               runBulkJob(next);
+               }
+               }
+               }
+               // Start bulk job endpoint
+               app.post('/api/scan/bulk-job', async (req, res) => {
+               const { urls } = req.body;
+               const userId = req.headers['x-user-id'] || 'anon';
+               if (!Array.isArray(urls) || !urls.length)
+               return res.status(400).json({ success: false, error: 'urls array required' });
+               // Check user already has active job
+               for (const [, j] of bulkJobs) {
+               if (j.userId === userId && (j.status === 'running' || j.status === 'queued'))
+               return res.status(429).json({ success: false, error: 'You already have an active scan job. Wait for it to finish or cancel it first.' });
+               }
+               // Cap at 500
+               const capped = urls.slice(0, JOB_MAX_URLS);
+               const jobId = crypto.randomBytes(8).toString('hex');
+               const job = {
+               id: jobId, userId,
+               status: activeJobCount < JOB_CONCUR ? 'running' : 'queued',
+               total: capped.length, done: 0, failed: 0, results: [],
+               urls: capped, createdAt: Date.now()
+               };
+               bulkJobs.set(jobId, job);
+               persistJob(job);
+               res.json({ success: true, jobId, total: capped.length, capped: capped.length < urls.length, queued: activeJobCount >= JOB_CONCUR });
+               if (activeJobCount < JOB_CONCUR) runBulkJob(job);
+               else jobQueue.push(job);
+               });
+               // Poll job
+               app.get('/api/scan/bulk-job/:jobId', async (req, res) => {
+               let job = bulkJobs.get(req.params.jobId);
+               // Fallback: load from DB if not in memory (after restart)
+               if (!job && pool) {
+               try {
+               const row = await pool.query('SELECT * FROM bulk_jobs WHERE id=$1', [req.params.jobId]);
+               if (row.rows[0]) {
+               const r = row.rows[0];
+               job = { id: r.id, userId: r.user_id, status: r.status, total: r.total, done: r.done, failed: r.failed, results: r.results, createdAt: new Date(r.created_at).getTime() };
+               bulkJobs.set(job.id, job); // re-cache
+               }
+               } catch(e) {}
+               }
+               if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+               res.json({ success: true, status: job.status, total: job.total, done: job.done, failed: job.failed, results: job.results, error: job.error||null });
+               });
+               // Cancel job
+               app.post('/api/scan/bulk-job/:jobId/cancel', (req, res) => {
+               const job = bulkJobs.get(req.params.jobId);
+               if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+               job.status = 'cancelled';
+               // Also remove from queue if waiting
+               const qi = jobQueue.findIndex(j => j.id === job.id);
+               if (qi !== -1) jobQueue.splice(qi, 1);
+               persistJob(job);
+               res.json({ success: true });
+               });
+               // ============================================
+               app.post('/api/scan', async (req, res) => {
+               const { url } = req.body;
+               if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+               let scanUrl = url.startsWith('http') ? url : 'https://' + url;
+               try {
+               console.log(`🔍 Elite Scanning: ${scanUrl}`);
+               let browser = await getBrowser();
+               // One retry — force fresh browser if first attempt returns null
+               if (!browser) {
+                 browserInstance = null;
+                 browser = await getBrowser();
+               }
+               if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable — please try again in 10 seconds' });
+               const page = await browser.newPage();
+               await page.setViewport({ width: 1920, height: 1080 });
+               await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               const analysis = await page.evaluate((scanUrlParam) => {
+               const text = document.body ? document.body.innerText : '';
+               const cleanText = text.replace(/\s+/g, ' ').trim();
+               const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               const rawHtml = document.documentElement.outerHTML;
+               const h1Els = document.querySelectorAll('h1');
+               const h1Count = h1Els.length;
+               let h1Text = '';
+               let h1IsHidden = false;
+               let h1VisibleCount = 0;
+               h1Els.forEach(el => {
+               const style = window.getComputedStyle(el);
+               const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+               if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
+               else { h1IsHidden = true; }
+               });
+               const h1Length = h1Text.length;
+               const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
+               const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
+               const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+               const h1IsTooLong  = h1Text.length > 70;
+               const h2Count = document.querySelectorAll('h2').length;
+               const h3Count = document.querySelectorAll('h3').length;
+               const listItemCount = document.querySelectorAll('li').length;
+               const paragraphs = Array.from(document.querySelectorAll('p'));
+               const avgParagraphLength = paragraphs.length > 0
+               ? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
+               : 0;
+               const metaTitle = (document.querySelector('title') || {}).textContent || '';
+               const metaTitleLength = metaTitle.length;
+               const metaDescEl = document.querySelector('meta[name="description"]');
+               const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
+               const metaDescriptionLength = metaDescription.length;
+               const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
+               const hasCanonical = !!document.querySelector('link[rel="canonical"]');
+               const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
+               const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
+               const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+               let hasArticleSchema = false;
+               let hasFAQPageSchema = false;
+               let hasOrganizationSchema = false;
+               const checkSchemaType = (typeVal) => {
+               if (!typeVal) return;
+               const types = Array.isArray(typeVal) ? typeVal : [typeVal];
+               if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
+               if (types.includes('FAQPage')) hasFAQPageSchema = true;
+               if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
+               };
+               schemaScripts.forEach(script => {
+               try {
+               const data = JSON.parse(script.textContent);
+               if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
+               else {
+               checkSchemaType(data['@type']);
+               if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
+               }
+               } catch (e) {}
+               });
+               const hasFAQContent = (() => {
+               // Check headings text
+               const headingMatch = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
+                 h.textContent.toLowerCase().includes('faq') ||
+                 h.textContent.toLowerCase().includes('frequently asked') ||
+                 h.textContent.toLowerCase().includes('common question')
+               );
+               // Check for id="faq" or id containing "faq" on any element
+               const idMatch = Array.from(document.querySelectorAll('[id]')).some(el =>
+                 el.id.toLowerCase().includes('faq')
+               );
+               // Check for section/div with class containing faq
+               const classMatch = Array.from(document.querySelectorAll('[class]')).some(el =>
+                 el.className.toLowerCase().includes('faq')
+               );
+               // Check raw text for FAQ patterns
+               const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+               const textMatch = bodyText.includes('frequently asked') || bodyText.includes('common questions');
+               return headingMatch || idMatch || classMatch || textMatch;
+               })();
+               const images = document.querySelectorAll('img');
+               const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
+               let baseHostname = '';
+               try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
+               const allLinks = Array.from(document.querySelectorAll('a[href]'));
+               const internalLinks = allLinks.filter(a => {
+               try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
+               }).length;
+               const externalLinks = allLinks.filter(a => {
+               try {
+               const h = new URL(a.href).hostname.replace('www.', '');
+               return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
+               } catch (e) { return false; }
+               }).length;
+               let expertQuoteCount = 0;
+               document.querySelectorAll('blockquote').forEach(bq => {
+               const cite = bq.querySelector('cite');
+               const text = bq.textContent.trim();
+               // Count if: has cite, OR is long enough to be a real quote (>80 chars)
+               if (text.length > 30 && (cite || text.length > 80)) expertQuoteCount++;
+               });
+               // Also count standalone <cite> tags not inside blockquote
+               document.querySelectorAll('cite').forEach(cite => {
+               if (!cite.closest('blockquote') && cite.textContent.trim().length > 3) expertQuoteCount++;
+               });
+               const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
+               testimonialSelectors.forEach(sel => {
+               try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
+               });
+               let caseStudyCount = 0;
+               const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
+               const seen = new Set();
+               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"]').forEach(el => {
+               if (seen.has(el)) return;
+               const txt = el.textContent.toLowerCase();
+               const len = txt.length;
+               if (len > 300 && len < 6000) {
+               const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
+               const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
+               if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
+               }
+               });
+               const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
+               const statsFound = (cleanText.match(statsPattern) || []).length;
+               const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+               const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
+               const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
+               (() => {
+               const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
+               for (const list of earlyLists) {
+               const items = list.querySelectorAll('li');
+               if (items.length >= 3) {
+               const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
+               const listText = list.innerText || '';
+               const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
+               if (listPos < bodyLen * 0.5) return true;
+               }
+               }
+               return false;
+               })();
+               const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
+               !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
+               const hasAuthorBio = (
+               !!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
+               /about the author|about the founder|written by|meet the author/i.test(rawHtml)
+               ) && /years of experience|certified|specializ|founder|director|ceo|operations|amsterdam/i.test(rawHtml);
+               return {
+               wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
+               metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
+               hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+               hasFAQContent, images: images.length, imagesWithAlt,
+               internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
+               statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
+               };
+               }, scanUrl);
+               let extractedEmails = [];
+               try {
+               const pageHtml = await page.content();
+               const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
+               const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
+               const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
+               !e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+               !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
+               );
+               extractedEmails = allEmails.slice(0, 3);
+               } catch (e) {}
+               await page.close();
+               // ── SCORING ──
+               const result = computeScore(scanUrl, analysis, extractedEmails);
+               console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+               res.json(result);
+               // Auto-save to scan_log so badge can find it
+               if (pool) {
+                 pool.query(
+                   `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'single', NOW())`,
+                   [scanUrl, result.score]
+                 ).catch(() => {});
+               }
+               } catch (error) {
+               console.error('❌ Scan error:', error.message);
+               res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
+               }
+               });
+               // Routes
+               app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin-dashboard.html')));
+               app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+
+// ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
+app.get('/lead-crawler', (req, res) => {
+  const tryPaths = [
+    path.join(__dirname, '../public', 'lead-crawler.html'),
+    path.join(__dirname, 'public', 'lead-crawler.html'),
+  ];
+  const filePath = tryPaths.find(p => fs.existsSync(p));
+  if (!filePath) return res.status(404).send('lead-crawler.html not found');
+  res.sendFile(filePath);
+});
+               // ── Apify proxy routes ──────────────────────────────────────────────────────
+               const APIFY_BASE = 'https://api.apify.com/v2';
+               app.post('/api/apify/start-run', async (req, res) => {
+               const token = req.headers['x-apify-token'];
+               if (!token) return res.status(401).json({ error: 'No Apify token' });
+               try {
+               const { actorId, input } = req.body;
+               const r = await fetch(`${APIFY_BASE}/acts/${actorId}/runs`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+               body: JSON.stringify(input)
+               });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
+               app.get('/api/apify/run-status/:runId', async (req, res) => {
+               const token = req.headers['x-apify-token'];
+               if (!token) return res.status(401).json({ error: 'No Apify token' });
+               try {
+               const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}`, {
+               headers: { 'Authorization': `Bearer ${token}` }
+               });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
+
+               app.get('/api/apify/dataset/:runId', async (req, res) => {
+               const token = req.headers['x-apify-token'];
+               if (!token) return res.status(401).json({ error: 'No Apify token' });
+               try {
+               const r = await fetch(`${APIFY_BASE}/actor-runs/${req.params.runId}/dataset/items?format=json&clean=true`, {
+               headers: { 'Authorization': `Bearer ${token}` }
+               });
+               const data = await r.json();
+               res.status(r.status).json(data);
+               } catch (e) { res.status(500).json({ error: e.message }); }
+               });
+
+      // ── Claude API proxy — users provide their own API key ─────────────────────
+app.post('/api/claude-proxy', async (req, res) => {
+  const apiKey = req.headers['x-anthropic-key'];
+  const userId = req.headers['x-user-id'] || 'anonymous';
+  
+  if (!apiKey || apiKey.length < 20) {
+    return res.status(401).json({ 
+      error: 'ANTHROPIC_API_KEY required', 
+      detail: 'Send your API key in the x-anthropic-key header' 
+    });
+  }
+  
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+    
+    // ✅ Clean URL - NO trailing spaces
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(req.body),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
+    
+    const rawText = await upstream.text();
+    let data;
+    try { data = JSON.parse(rawText); } 
+    catch { data = { raw: rawText.slice(0, 500) }; }
+    
+    console.log(`[claude-proxy] ${userId} → ${upstream.status} (${rawText.length} bytes)`);
+    
+    // Detect rate limit / overload errors and add clear message
+    if (upstream.status === 529 || upstream.status === 503) {
+      return res.status(upstream.status).json({ 
+        error: { message: 'Anthropic API rate limit or overload — wait a few minutes and try again', type: 'rate_limit' },
+        ...data 
+      });
+    }
+    
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    console.error('[claude-proxy] Error:', err.message);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ error: 'Gateway timeout', detail: 'Anthropic API took too long' });
+    }
+    res.status(502).json({ error: 'Proxy request failed', detail: err.message });
+  }
+});
+
+
+// ── Scan Reports ────────────────────────────────────────────────────────────
+               app.post('/api/report/generate', verifyAdmin, async (req, res) => {
+               if (!pool) return res.json({ success: false, error: 'No DB' });
+               const { scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations } = req.body;
+               try {
+               const id = crypto.randomBytes(20).toString('hex');
+               await pool.query(
+               `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+               [id, scan_log_id || null, business_url || null, business_name || null, score || null,
+               niche || null, city || null, country || null, email_found || null,
+               JSON.stringify(recommendations || [])]
+               );
+               res.json({ success: true, id, url: `/report/${id}` });
+               } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+               });
+               app.get('/report/:id', async (req, res) => {
+               if (!pool) return res.status(503).send('<h1>Service unavailable</h1>');
+               try {
+               const r = await pool.query('SELECT * FROM scan_reports WHERE id = $1', [req.params.id]);
+               if (!r.rows.length) return res.status(404).send('<!DOCTYPE html><html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:48px;">🔍</div><h2>Report not found</h2></div></body></html>');
+const report = r.rows[0];
+let recs = [];
+try { recs = JSON.parse(report.recommendations || '[]'); } catch {}
+const score = report.score || 0;
+const scoreColor = score >= 85 ? '#16a34a' : score >= 70 ? '#b45309' : '#dc2626';
+const scoreLabel = score >= 95 ? 'Elite' : score >= 90 ? 'Excellent' : score >= 85 ? 'Strong' : score >= 80 ? 'Good' : score >= 75 ? 'Solid' : score >= 70 ? 'Qualified' : 'Needs Work';
+const graafScore = Math.round(score * 0.50);
+const craftScore = Math.round(score * 0.30);
+const techScore  = Math.round(score * 0.20);
+const domain = (() => { try { return new URL(report.business_url || 'https://unknown').hostname.replace('www.', ''); } catch { return report.business_url || 'Unknown'; } })();
+const dateStr = new Date(report.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+const priorityColor = p => p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : p === 'none' ? '#4ade80' : '#94a3b8';
+const priorityLabel = p => p === 'high' ? '🔴 High Priority' : p === 'medium' ? '🟡 Medium Priority' : p === 'none' ? '✅ Elite' : '🔵 Low Priority';
+const normalizeRec = (rec) => typeof rec === 'string' ? { title: rec, description: null, action: null, learning: null, target: null, priority: 'low' } : rec;
+const recsHtml = recs.map((rawRec, i) => {
+const rec = normalizeRec(rawRec);
+return `
+<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid ${priorityColor(rec.priority)};border-radius:12px;padding:20px;margin-bottom:14px;page-break-inside:avoid;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+<span style="font-size:1rem;font-weight:700;color:#f9fafb;flex:1;">${rec.title || 'Recommendation ' + (i + 1)}</span>
+<span style="font-size:0.68rem;font-weight:600;border-radius:99px;padding:3px 10px;white-space:nowrap;background:${priorityColor(rec.priority)}20;color:${priorityColor(rec.priority)};border:1px solid ${priorityColor(rec.priority)}40;">${priorityLabel(rec.priority)}</span>
+</div>
+${rec.description ? `<p style="color:#9ca3af;font-size:0.875rem;margin:0 0 12px;">${rec.description}</p>` : ''}
+${rec.action ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">✅ Action</span><p style="color:#d1d5db;margin:0;">${rec.action}</p></div>` : ''}
+${rec.learning ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">💡 Why It Matters</span><p style="color:#d1d5db;margin:0;">${rec.learning}</p></div>` : ''}
+${rec.target ? `<div style="margin-top:10px;padding:10px 14px;background:#111827;border-radius:8px;font-size:0.84rem;"><span style="display:block;font-weight:700;color:#a78bfa;font-size:0.72rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">🎯 Target</span><p style="color:#d1d5db;margin:0;">${rec.target}</p></div>` : ''}
+</div>`;
+}).join('');
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SEO Report — ${report.business_name || domain} — ContentScale</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#7e22ce">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#030712;color:#e5e7eb;line-height:1.6;}
+.container{max-width:860px;margin:0 auto;padding:32px 20px 100px;}
+.header{background:linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%);border:1px solid #4f46e5;border-radius:16px;padding:36px;margin-bottom:28px;}
+.brand-logo{font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,#7e22ce,#be185d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.brand-sub{font-size:0.75rem;color:#6b7280;margin-bottom:20px;}
+.biz-name{font-size:1.9rem;font-weight:800;color:#f9fafb;margin-bottom:6px;}
+.biz-url{color:#60a5fa;font-size:0.9rem;margin-bottom:16px;word-break:break-all;}
+.meta-row{display:flex;gap:10px;flex-wrap:wrap;font-size:0.78rem;}
+.chip{background:#111827;border:1px solid #374151;border-radius:99px;padding:3px 12px;color:#9ca3af;}
+.score-block{display:flex;align-items:center;gap:28px;margin-top:24px;padding-top:24px;border-top:1px solid #1e293b;flex-wrap:wrap;}
+.score-circle{width:100px;height:100px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid ${scoreColor};background:${scoreColor}15;flex-shrink:0;}
+.score-num{font-size:2.2rem;font-weight:900;color:${scoreColor};line-height:1;}
+.score-max{font-size:0.75rem;color:#6b7280;}
+.score-lbl{font-size:0.8rem;color:${scoreColor};font-weight:600;margin-top:2px;}
+.breakdown{display:flex;gap:14px;flex-wrap:wrap;}
+.pill{background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;text-align:center;min-width:90px;}
+.pill-val{font-size:1.4rem;font-weight:800;}
+.pill-lbl{font-size:0.7rem;color:#6b7280;margin-top:2px;}
+.progress-wrap{margin-top:14px;}
+.progress-lbl{display:flex;justify-content:space-between;font-size:0.75rem;color:#6b7280;margin-bottom:5px;}
+.progress-bar{height:10px;background:#1f2937;border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,${scoreColor},${scoreColor}aa);}
+.section-title{font-size:1.2rem;font-weight:700;color:#f9fafb;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #1f2937;}
+.rec-count{font-size:0.75rem;background:#7e22ce30;color:#a78bfa;border:1px solid #7e22ce50;border-radius:99px;padding:2px 10px;}
+.pdf-btn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 8px 32px rgba(126,34,206,0.4);z-index:999;}
+.footer{margin-top:48px;text-align:center;color:#374151;font-size:0.78rem;padding-top:24px;border-top:1px solid #111827;}
+@media print{body{background:white;color:#111;}.pdf-btn{display:none!important;}.container{padding:20px;}.header{background:white;border:2px solid #7e22ce;}.brand-logo{-webkit-text-fill-color:#7e22ce;}.biz-name{color:#111;}.section-title{color:#111;}div[style*="background:#0f172a"]{background:white!important;border:1px solid #e5e7eb!important;}div[style*="background:#111827"]{background:#f9fafb!important;}p[style*="color:#9ca3af"]{color:#374151!important;}p[style*="color:#d1d5db"]{color:#374151!important;}@page{margin:15mm;}}
+@media(max-width:600px){.score-block{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<div class="brand-logo">ContentScale</div>
+<div class="brand-sub">GRAAF + CRAFT + Technical SEO Framework</div>
+<div class="biz-name">${report.business_name || domain}</div>
+<div class="biz-url">🌐 ${report.business_url || 'N/A'}</div>
+<div class="meta-row">
+${report.niche ? `<span class="chip">🏷 ${report.niche}</span>` : ''}
+${report.city ? `<span class="chip">📍 ${report.city}</span>` : ''}
+${report.country ? `<span class="chip">🌍 ${report.country}</span>` : ''}
+${report.email_found ? `<span class="chip">✉ ${report.email_found}</span>` : ''}
+<span class="chip">📅 ${dateStr}</span>
+</div>
+<div class="score-block">
+<div class="score-circle">
+<div class="score-num">${score}</div>
+<div class="score-max">/100</div>
+<div class="score-lbl">${scoreLabel}</div>
+</div>
+<div>
+<div class="breakdown">
+<div class="pill"><div class="pill-val" style="color:#a78bfa;">${graafScore}<span style="font-size:0.85rem;color:#6b7280;">/50</span></div><div class="pill-lbl">GRAAF</div></div>
+<div class="pill"><div class="pill-val" style="color:#60a5fa;">${craftScore}<span style="font-size:0.85rem;color:#6b7280;">/30</span></div><div class="pill-lbl">CRAFT</div></div>
+<div class="pill"><div class="pill-val" style="color:#34d399;">${techScore}<span style="font-size:0.85rem;color:#6b7280;">/20</span></div><div class="pill-lbl">Technical</div></div>
+</div>
+<div class="progress-wrap">
+<div class="progress-lbl"><span>Overall Score</span><span>${score}/100</span></div>
+<div class="progress-bar"><div class="progress-fill" style="width:${score}%;"></div></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section-title">📋 Recommendations <span class="rec-count">${recs.length} items</span></div>
+${recsHtml}
+<div class="footer">Generated by ContentScale &nbsp;·&nbsp; app.contentscale.site &nbsp;·&nbsp; GRAAF + CRAFT Framework &nbsp;·&nbsp; By Ottmar Francisca</div>
+</div>
+<button class="pdf-btn" onclick="window.print()">⬇ Download PDF</button>
+<script>
+   (function(){
+     var titles=['ContentScale ⚡','🎯 SEO Scanner'];
+     var favs=['/favicon.svg','/favicon-pink.svg'];
+     var t=0,iv=null;
+     var orig=document.title;
+     var fl=document.querySelector('link[rel~=\"icon\"]');
+     document.addEventListener('visibilitychange',function(){
+       if(document.hidden){
+         iv=setInterval(function(){ t=1-t; document.title=titles[t]; if(fl) fl.href=favs[t]; },800);
+       } else {
+         clearInterval(iv);iv=null;t=0;
+         document.title=orig; if(fl) fl.href='/favicon.svg';
+       }
+     });
+   })();
+</script>
+</body>
+</html>`;
+res.setHeader('Content-Type', 'text/html');
+res.send(html);
+} catch (e) {
+console.error('Report error:', e.message);
+res.status(500).send('Error loading report');
+}
+});
+app.get('/api/health', async (req, res) => {
+let db = 'disconnected';
+let leaderboardTotal = 0, leaderboardApproved = 0, freelancerTotal = 0;
+if (pool) {
+try {
+await pool.query('SELECT 1');
+db = 'connected';
+const lbAll = await pool.query('SELECT COUNT(*) FROM leaderboard').catch(() => ({ rows: [{ count: 0 }] }));
+const lbApproved = await pool.query("SELECT COUNT(*) FROM leaderboard WHERE admin_verified = TRUE AND is_opted_out = FALSE").catch(() => ({ rows: [{ count: 0 }] }));
+const flAll = await pool.query('SELECT COUNT(*) FROM freelancers WHERE is_approved = TRUE').catch(() => ({ rows: [{ count: 0 }] }));
+leaderboardTotal = parseInt(lbAll.rows[0].count) || 0;
+leaderboardApproved = parseInt(lbApproved.rows[0].count) || 0;
+freelancerTotal = parseInt(flAll.rows[0].count) || 0;
+} catch (e) {}
+}
+res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+});
+app.use((err, req, res, next) => {
+console.error('Server Error:', err.message);
+res.status(500).json({ success: false, error: 'Internal Server Error' });
+});
+async function startServer() {
+console.log('🚀 =====================================');
+console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
+console.log('🚀  FIX: activated_until alias in users SELECT');
+console.log('🚀  FIX: deactivate endpoint added');
+console.log('🚀  FIX: Instantly Bearer uses secret only');
+console.log('🚀  DB Migration: country VARCHAR(100)');
+console.log('🚀  scan_log.source column');
+console.log('🚀  DOCX: template type column');
+console.log('🚀  Bulk Delete Routes');
+console.log('🚀  34 Recommendation Checks');
+console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
+console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
+console.log('🚀 =====================================\n');
+const dbConnected = await waitForDatabase();
+app.listen(PORT, () => {
+console.log(`📍 Server: http://localhost:${PORT}`);
+console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
+console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
+console.log('\n✅ Elite scanner ready\n');
+});
+}
+// ============================================
+// BACKGROUND BATCH JOB SYSTEM
+// ============================================
+const activeJobs = new Map();
+app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+const { niches, cities, country, max_results, website_only, apify_token } = req.body;
+if (!niches || !cities || !apify_token) return res.status(400).json({ success: false, error: 'Missing niches, cities or apify_token' });
+const nicheArr = niches.split('\n').map(n => n.trim()).filter(n => n);
+const cityArr  = cities.split('\n').map(c => c.trim()).filter(c => c);
+if (!nicheArr.length || !cityArr.length) return res.status(400).json({ success: false, error: 'No valid niches or cities' });
+const jobId = crypto.randomBytes(16).toString('hex');
+const totalCombos = nicheArr.length * cityArr.length;
+try {
+await pool.query(
+`INSERT INTO batch_jobs (id, admin_id, niches, cities, country, max_results, website_only, status, total_combos, apify_token, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',$8,$9,NOW())`,
+[jobId, req.admin.id, niches, cities, country || 'Netherlands', max_results || 50, website_only !== false, totalCombos, apify_token]
+);
+runBatchJobInBackground(jobId);
+res.json({ success: true, job_id: jobId, total_combos: totalCombos });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/batch-jobs', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, jobs: [] });
+try {
+const r = await pool.query(
+`SELECT id, status, progress, progress_text, total_combos, current_combo,
+scanned, skipped, score_high, score_good, score_low,
+niches, cities, country, max_results, error_message,
+started_at, completed_at, created_at
+FROM batch_jobs ORDER BY created_at DESC LIMIT 20`
+);
+res.json({ success: true, jobs: r.rows });
+} catch (e) { res.status(500).json({ success: false, jobs: [] }); }
+});
+app.get('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+try {
+const r = await pool.query('SELECT * FROM batch_jobs WHERE id = $1', [req.params.id]);
+if (!r.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+res.json({ success: true, job: r.rows[0] });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/batch-job/:id', verifyAdmin, async (req, res) => {
+if (!pool) return res.json({ success: false, error: 'No DB' });
+try {
+activeJobs.set(req.params.id, { cancelled: true });
+await pool.query(`UPDATE batch_jobs SET status='cancelled', completed_at=NOW() WHERE id=$1`, [req.params.id]);
+res.json({ success: true });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+async function runBatchJobInBackground(jobId) {
+if (!pool) return;
+const jobRef = { cancelled: false };
+activeJobs.set(jobId, jobRef);
+const updateJob = async (fields) => {
+if (!pool) return;
+const keys = Object.keys(fields);
+const vals = Object.values(fields);
+const sets = keys.map((k, i) => `${k}=$${i+1}`).join(',');
+await pool.query(`UPDATE batch_jobs SET ${sets} WHERE id=$${keys.length+1}`, [...vals, jobId]).catch(() => {});
+};
+try {
+const jr = await pool.query('SELECT * FROM batch_jobs WHERE id=$1', [jobId]);
+if (!jr.rows.length) return;
+const job = jr.rows[0];
+const nicheArr = job.niches.split('\n').map(n => n.trim()).filter(n => n);
+const cityArr  = job.cities.split('\n').map(c => c.trim()).filter(c => c);
+const combos   = [];
+nicheArr.forEach(niche => cityArr.forEach(city => combos.push({ niche, city })));
+const maxResultsActual = (!job.max_results || job.max_results === 0) ? 9999 : parseInt(job.max_results);
+const websiteOnly = job.website_only;
+const country     = job.country;
+const apifyToken  = job.apify_token;
+await updateJob({ status: 'running', started_at: new Date(), progress: 1, progress_text: 'Loading existing scans for dedup...' });
+let alreadyScanned = new Set();
+try {
+const existing = await pool.query('SELECT business_url FROM scan_log WHERE business_url IS NOT NULL');
+existing.rows.forEach(r => alreadyScanned.add(r.business_url.trim()));
+} catch(e) {}
+let totalScanned = 0, totalSkipped = 0;
+let scoreHigh = 0, scoreGood = 0, scoreLow = 0;
+for (let ci = 0; ci < combos.length; ci++) {
+if (activeJobs.get(jobId)?.cancelled) {
+await updateJob({ status: 'cancelled', completed_at: new Date(), progress_text: 'Cancelled by user' });
+return;
+}
+const { niche, city } = combos[ci];
+const pct = Math.round((ci / combos.length) * 85);
+await updateJob({ current_combo: ci + 1, progress: pct, progress_text: `Combo ${ci+1}/${combos.length}: ${niche} — ${city}` });
+let runId;
+try {
+const runRes = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/runs`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apifyToken}` },
+body: JSON.stringify({
+searchStringsArray: [`${niche} in ${city}`],
+maxCrawledPlacesPerSearch: maxResultsActual,
+language: 'en', exportPlaceUrls: true,
+includeWebResults: true, skipClosedPlaces: false
+})
+});
+const runData = await runRes.json();
+runId = runData.data?.id;
+if (!runId) throw new Error('Apify run not started');
+} catch (e) {
+await updateJob({ progress_text: `Combo ${ci+1}: Apify error — ${e.message}` });
+continue;
+}
+let attempts = 0, runStatus = 'RUNNING';
+while (runStatus === 'RUNNING' || runStatus === 'READY') {
+await new Promise(r => setTimeout(r, 5000));
+attempts++;
+try {
+const statusData = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}`, {
+headers: { 'Authorization': `Bearer ${apifyToken}` }
+})).json();
+runStatus = statusData.data?.status || 'FAILED';
+} catch(e) { runStatus = 'FAILED'; }
+await updateJob({ progress_text: `${niche} — ${city}: scraping... (${attempts*5}s)` });
+if (attempts > 60) { runStatus = 'TIMEOUT'; break; }
+if (activeJobs.get(jobId)?.cancelled) break;
+}
+if (runStatus !== 'SUCCEEDED') {
+await updateJob({ progress_text: `${niche} — ${city}: ${runStatus}, continuing...` });
+continue;
+}
+let places = [];
+try {
+const dataRaw = await (await fetch(`${APIFY_BASE}/actor-runs/${runId}/dataset/items?format=json&clean=true`, {
+headers: { 'Authorization': `Bearer ${apifyToken}` }
+})).json();
+places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
+} catch(e) { continue; }
+let urls = places.filter(p => p.website).map(p => ({
+url: p.website.startsWith('http') ? p.website : 'https://' + p.website,
+name: p.title || p.name || '',
+email: p.email || (p.emails && p.emails[0]) || null,
+country
+}));
+if (!websiteOnly) {
+places.filter(p => !p.website).forEach(p => urls.push({
+url: '', name: p.title || p.name || '',
+email: p.email || (p.emails && p.emails[0]) || null,
+country
+}));
+}
+let allDomains = [];
+const urlsToCollect = urls.filter(p => p.url && !alreadyScanned.has(p.url.trim()));
+totalSkipped += urls.length - urlsToCollect.length;
+for (const place of urlsToCollect) {
+if (activeJobs.get(jobId)?.cancelled) break;
+alreadyScanned.add(place.url.trim());
+allDomains.push(place);
+totalScanned++;
+// Save to scan_log as 'discovered' (no scan yet — campaign will scan)
+await pool.query(
+`INSERT INTO scan_log (user_id, business_url, business_name, niche, city, country, email_found, email_status, source, score)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'discover',0)
+ON CONFLICT DO NOTHING`,
+['batch_job_' + jobId, place.url, place.name, niche, city, country, place.email || null, place.email ? 'has_email' : 'no_email']
+).catch(() => {});
+}
+await updateJob({
+progress: Math.min(Math.round(((ci+1) / combos.length) * 95), 95),
+progress_text: `${ci+1}/${combos.length} combos done · ${totalScanned} domains collected`,
+scanned: totalScanned, skipped: totalSkipped
+});
+}
+await updateJob({
+status: 'completed', progress: 100,
+progress_text: `✅ Done — ${totalScanned} domains collected, ${totalSkipped} skipped`,
+scanned: totalScanned, skipped: totalSkipped,
+completed_at: new Date()
+});
+console.log(`✅ Batch job ${jobId} complete: ${totalScanned} scanned`);
+} catch (e) {
+console.error(`❌ Batch job ${jobId} error:`, e.message);
+await updateJob({ status: 'failed', error_message: e.message, completed_at: new Date() }).catch(() => {});
+} finally {
+activeJobs.delete(jobId);
+}
+}
+// On server restart: resume any interrupted jobs
+setTimeout(async () => {
+if (!pool) return;
+try {
+const r = await pool.query(`SELECT id FROM batch_jobs WHERE status='running' OR status='queued'`);
+for (const row of r.rows) {
+console.log(`🔄 Resuming interrupted batch job: ${row.id}`);
+await pool.query(`UPDATE batch_jobs SET status='running', progress_text='Resuming after server restart...' WHERE id=$1`, [row.id]);
+runBatchJobInBackground(row.id);
+}
+} catch(e) {}
+}, 5000);
+// ============================================
+// INSTANTLY.AI PROXY ENDPOINTS
+// ✅ FIX v4: Bearer token = UUID part (before ':') — Instantly v2 API auth fix
+// ============================================
+app.post('/api/admin/scans/:id/email', verifyAdmin, async (req, res) => {
+try {
+const { email } = req.body;
+if (!email) return res.status(400).json({ success: false, error: 'No email' });
+await pool.query('UPDATE scan_log SET email_found=$1, email_status=$2 WHERE id=$3', [email, 'has_email', req.params.id]);
+res.json({ success: true });
+} catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/instantly/campaigns', verifyAdmin, async (req, res) => {
+const apiKey = req.headers['x-instantly-key'];
+if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+const raw = apiKey.trim();
+// raw-b64 (full base64 key) is confirmed working - use directly
+const attempts = [{ label: 'raw-b64', key: raw }];
+console.log('Instantly campaigns key len=' + raw.length);
+let lastStatus = 0, lastBody = '';
+for (const attempt of attempts) {
+try {
+const r = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
+headers: { 'Authorization': 'Bearer ' + attempt.key, 'Content-Type': 'application/json' }
+});
+const rawText = await r.text();
+console.log('Instantly [' + attempt.label + '] key=' + attempt.key.substring(0,8) + '... len=' + attempt.key.length + ' status=' + r.status + ' body=' + rawText.substring(0,200));
+lastStatus = r.status; lastBody = rawText;
+if (r.ok) {
+let data; try { data = JSON.parse(rawText); } catch { data = {}; }
+return res.json({ success: true, campaigns: data.items || data.campaigns || (Array.isArray(data) ? data : []) });
+}
+} catch (e) {
+console.error('Instantly fetch error [' + attempt.label + ']:', e.message);
+}
+}
+console.error('Instantly ALL attempts failed. lastStatus=' + lastStatus + ' body=' + lastBody.substring(0,300));
+let errMsg = 'Unauthorized'; try { errMsg = JSON.parse(lastBody).message || errMsg; } catch {}
+res.status(500).json({ success: false, error: errMsg });
+});
+app.post('/api/instantly/push', verifyAdmin, async (req, res) => {
+const apiKey = req.headers['x-instantly-key'];
+if (!apiKey) return res.status(400).json({ success: false, error: 'No Instantly API key' });
+const cleanKey = apiKey.trim(); // raw-b64 confirmed working
+const { campaign_id, leads, skip_if_in_workspace, verify_leads } = req.body;
+if (!campaign_id || !leads || !leads.length) {
+return res.status(400).json({ success: false, error: 'Missing campaign_id or leads' });
+}
+try {
+const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + cleanKey, 'Content-Type': 'application/json' },
+body: JSON.stringify({
+campaign_id, leads,
+skip_if_in_workspace: skip_if_in_workspace !== false,
+skip_if_in_campaign: false,
+verify_leads: verify_leads || false
+})
+});
+const data = await r.json();
+if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status));
+res.json({ success: true, added: data.added || leads.length, duplicates: data.duplicates || 0 });
+} catch (e) {
+console.error('Instantly push error:', e.message);
+res.status(500).json({ success: false, error: e.message });
+}
+});
+// ============================================================
+// 🎯 CAMPAIGN ENGINE — Weekend Bulk Domain Scanner
+// Flow: domains → fetch sitemaps → queue jobs → extract email
+//       → create share URL → push to Instantly
+// ============================================================
+const campaigns = new Map(); // campaignId → campaign state
+async function ensureCampaignsTable() {
+if (!pool) return;
+try {
+await pool.query(`CREATE TABLE IF NOT EXISTS campaigns (
+id TEXT PRIMARY KEY,
+name TEXT,
+status TEXT DEFAULT 'running',
+total_domains INTEGER DEFAULT 0,
+done_domains INTEGER DEFAULT 0,
+domains JSONB DEFAULT '[]',
+instantly_campaign_id TEXT,
+instantly_api_key TEXT,
+created_at TIMESTAMP DEFAULT NOW(),
+updated_at TIMESTAMP DEFAULT NOW()
+)`);
+// Migration: add instantly_api_key column if missing
+await pool.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS instantly_api_key TEXT`).catch(()=>{});
+} catch(e) { console.error('campaigns table error:', e.message); }
+}
+ensureCampaignsTable();
+function persistCampaign(c) {
+if (!pool) return;
+const slim = { ...c, domains: c.domains.map(d => ({
+domain: d.domain, status: d.status, score: d.score,
+email: d.email, shareUrl: d.shareUrl, instantlyStatus: d.instantlyStatus,
+error: d.error, pageCount: d.pageCount
+}))};
+pool.query(
+`INSERT INTO campaigns(id,name,status,total_domains,done_domains,domains,instantly_campaign_id,instantly_api_key,updated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+ON CONFLICT(id) DO UPDATE SET status=$3,done_domains=$5,domains=$6,updated_at=NOW()`,
+[slim.id, slim.name||'Campaign', slim.status, slim.totalDomains, slim.doneDomains,
+JSON.stringify(slim.domains), slim.instantlyCampaignId||null, slim.instantlyApiKey||null]
+).catch(e => console.error('persistCampaign:', e.message));
+}
+// Fetch sitemap URLs for a domain
+async function fetchSitemapUrls(domain) {
+const base = domain.startsWith('http') ? domain : 'https://' + domain;
+const host = new URL(base).hostname;
+const candidates = [
+base + '/sitemap.xml',
+base + '/sitemap_index.xml',
+base + '/sitemap-index.xml',
+base + '/wp-sitemap.xml',
+];
+// Also check robots.txt
+try {
+const rb = await fetch(base + '/robots.txt', { signal: AbortSignal.timeout(8000) });
+if (rb.ok) {
+const txt = await rb.text();
+const matches = txt.match(/Sitemap:\s*(\S+)/gi) || [];
+matches.forEach(m => { const u = m.replace(/Sitemap:\s*/i,'').trim(); if (!candidates.includes(u)) candidates.unshift(u); });
+}
+} catch(e) {}
+for (const url of candidates) {
+try {
+const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+if (!r.ok) continue;
+const xml = await r.text();
+// Sub-sitemap index?
+const subMatches = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1]);
+if (subMatches.length > 0) {
+let allUrls = [];
+for (const sub of subMatches.slice(0, 20)) {
+try {
+const sr = await fetch(sub, { signal: AbortSignal.timeout(8000) });
+if (!sr.ok) continue;
+const sx = await sr.text();
+const us = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+allUrls = allUrls.concat(us);
+} catch(e) {}
+}
+if (allUrls.length > 0) return { urls: allUrls, sitemapUrl: url };
+}
+// Direct URLs
+const urls = [...xml.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1]).filter(u => !u.endsWith('.xml'));
+if (urls.length > 0) return { urls, sitemapUrl: url };
+} catch(e) {}
+}
+return { urls: [], sitemapUrl: null };
+}
+// Extract best email for a domain — scans contact/about pages
+async function extractDomainEmail(domain, scannedResults) {
+// 1. From already-scanned pages
+for (const r of scannedResults) {
+const em = r.content_stats?.emails_found?.[0] || r.content_stats?.extractedEmail;
+if (em && em.includes('@') && !em.includes('example') && !em.includes('sentry')) return em;
+}
+// 2. Scrape contact/about/impressum pages specifically
+const base = domain.startsWith('http') ? domain : 'https://' + domain;
+const contactPages = ['/contact', '/contact-us', '/about', '/about-us', '/over-ons', '/impressum', '/team'];
+const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+for (const path of contactPages) {
+try {
+const r = await fetch(base + path, { signal: AbortSignal.timeout(8000) });
+if (!r.ok) continue;
+const html = await r.text();
+const found = [...new Set(html.match(emailRegex)||[])].filter(e =>
+!e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
+!e.endsWith('.png') && !e.endsWith('.jpg'));
+// Prefer info@, contact@, hello@ over noreply
+const preferred = found.find(e => /^(info|contact|hello|hallo|mail|support)@/.test(e));
+if (preferred) return preferred;
+if (found.length > 0) return found[0];
+} catch(e) {}
+}
+// 3. Common pattern guess — check if MX exists
+const guesses = ['info', 'contact', 'hello', 'mail'];
+const domainHost = domain.replace(/https?:\/\//, '').split('/')[0];
+for (const prefix of guesses) {
+const guess = prefix + '@' + domainHost;
+try {
+const dns = require('dns').promises;
+const mx = await dns.resolveMx(domainHost).catch(() => []);
+if (mx.length > 0) return guess; // MX exists, guess is plausible
+} catch(e) {}
+break; // only try dns once
+}
+return null;
+}
+// Create a share URL for domain results
+async function createShareUrl(domain, results, req) {
+const token = crypto.randomBytes(8).toString('hex');
+const expires = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days for campaign
+try {
+await pool.query(
+`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT DO NOTHING`,
+[token, JSON.stringify(results), expires]
+);
+} catch(e) {
+try {
+await pool.query(`CREATE TABLE IF NOT EXISTS share_results (id SERIAL PRIMARY KEY, token VARCHAR(20) UNIQUE NOT NULL, results_json JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), expires_at TIMESTAMPTZ)`);
+await pool.query(`INSERT INTO share_results (token, results_json, expires_at) VALUES ($1, $2, to_timestamp($3/1000.0))`, [token, JSON.stringify(results), expires]);
+} catch(e2) {}
+}
+// Build base URL from env or default
+const base = process.env.BASE_URL || 'https://app.contentscale.site';
+return base + '/share/' + token;
+}
+// Push one lead to Instantly
+async function pushLeadToInstantly(apiKey, campaignId, lead) {
+const r = await fetch('https://api.instantly.ai/api/v2/leads', {
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + apiKey.trim(), 'Content-Type': 'application/json' },
+body: JSON.stringify({
+campaign_id: campaignId,
+leads: [lead],
+skip_if_in_workspace: true,
+skip_if_in_campaign: false
+})
+});
+const data = await r.json();
+if (!r.ok) throw new Error(data.error || data.message || 'HTTP ' + r.status);
+return data;
+}
+// ── Main campaign runner ──────────────────────────────────────
+async function runCampaign(campaign) {
+campaign.status = 'running';
+persistCampaign(campaign);
+for (const domainObj of campaign.domains) {
+if (campaign.status === 'cancelled') break;
+// Skip already completed domains (resume support)
+if (domainObj.status === 'done') { continue; }
+persistCampaign(campaign);
+try {
+// Step 1: fetch sitemap
+const { urls, sitemapUrl } = await fetchSitemapUrls(domainObj.domain);
+if (!urls.length) {
+domainObj.status = 'no_sitemap';
+domainObj.error = 'No sitemap found';
+campaign.doneDomains++;
+persistCampaign(campaign);
+continue;
+}
+const capped = urls.slice(0, 500); // cap at 500 per domain in campaign mode
+domainObj.pageCount = capped.length;
+domainObj.status = 'scanning';
+persistCampaign(campaign);
+// Step 2: scan pages using job queue
+const jobId = crypto.randomBytes(8).toString('hex');
+const job = {
+id: jobId, userId: 'campaign_' + campaign.id,
+status: 'running', total: capped.length, done: 0, failed: 0,
+results: [], urls: capped, createdAt: Date.now()
+};
+bulkJobs.set(jobId, job);
+// Run inline (campaign manages concurrency at domain level)
+let jobBrowser = null;
+try {
+jobBrowser = await launchJobBrowser();
+if (!jobBrowser) throw new Error('Browser unavailable');
+const delay = () => new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+for (const url of capped) {
+if (campaign.status === 'cancelled' || job.status === 'cancelled') break;
+let result = null;
+for (let attempt = 0; attempt < 2; attempt++) {
+try { result = await scanOneUrlWithBrowser(url, jobBrowser); break; }
+catch(e) {
+const isSkip = e.message.startsWith('skip:');
+if (attempt === 1 || isSkip) result = { success: false, url, error: e.message, score: 0 };
+else await new Promise(r => setTimeout(r, 2000));
+}
+}
+const slim = result && result.success ? {
+success: true, url: result.url, score: result.score, quality: result.quality,
+metrics: result.metrics,
+content_stats: {
+wordCount: result.content_stats?.wordCount,
+h1Text: result.content_stats?.h1Text,
+emails_found: result.content_stats?.emails_found,
+extractedEmail: result.content_stats?.extractedEmail
+}
+} : { success: false, url, error: result?.error || 'failed', score: 0 };
+job.results.push(slim);
+job.done++;
+await delay();
+}
+} finally {
+if (jobBrowser) try { await jobBrowser.close(); } catch(e) {}
+job.status = 'done';
+}
+// Step 3: compute domain avg score
+const successful = job.results.filter(r => r.success && r.score > 0);
+if (!successful.length) {
+domainObj.status = 'no_results';
+campaign.doneDomains++;
+persistCampaign(campaign);
+continue;
+}
+const avg = arr => Math.round(arr.reduce((a,b) => a+b, 0) / arr.length);
+domainObj.score = avg(successful.map(r => r.score));
+domainObj.graaf = avg(successful.map(r => r.metrics?.graaf || 0));
+domainObj.craft = avg(successful.map(r => r.metrics?.craft || 0));
+domainObj.technical = avg(successful.map(r => r.metrics?.technical || 0));
+domainObj.pageCount = successful.length;
+// Step 4: extract email (skip if already known from CSV)
+domainObj.status = 'extracting_email';
+const email = domainObj.email || await extractDomainEmail(domainObj.domain, successful);
+domainObj.email = email;
+// Step 5: create share URL
+domainObj.status = 'creating_share';
+domainObj.shareUrl = await createShareUrl(domainObj.domain, successful);
+// Step 6: top 3 issues from first successful scan
+const topIssues = (successful[0]?.recommendations?.all || [])
+.filter(r => r.priority === 'high').slice(0, 3).map(r => r.title.replace(/^[^\w]+/, ''));
+// Step 7: push to Instantly if configured and email found
+domainObj.instantlyStatus = 'skipped';
+if (campaign.instantlyApiKey && campaign.instantlyCampaignId && email) {
+try {
+domainObj.status = 'pushing_to_instantly';
+const lead = {
+email,
+first_name: '',
+last_name: '',
+company_name: domainObj.domain.replace(/https?:\/\//, '').replace(/^www\./, ''),
+website: 'https://' + domainObj.domain.replace(/https?:\/\//, ''),
+custom_variables: {
+score: String(domainObj.score),
+share_url: domainObj.shareUrl,
+top_issue_1: topIssues[0] || '',
+top_issue_2: topIssues[1] || '',
+top_issue_3: topIssues[2] || '',
+graaf_score: String(domainObj.graaf),
+page_count: String(domainObj.pageCount)
+}
+};
+await pushLeadToInstantly(campaign.instantlyApiKey, campaign.instantlyCampaignId, lead);
+domainObj.instantlyStatus = 'pushed';
+} catch(e) {
+domainObj.instantlyStatus = 'error: ' + e.message.substring(0, 60);
+}
+} else if (!email) {
+domainObj.instantlyStatus = 'no_email';
+}
+domainObj.status = 'done';
+campaign.doneDomains++;
+persistCampaign(campaign);
+// Delay between domains to be polite
+await new Promise(r => setTimeout(r, 3000));
+} catch(e) {
+domainObj.status = 'error';
+domainObj.error = e.message.substring(0, 120);
+campaign.doneDomains++;
+console.error('Campaign domain error:', domainObj.domain, e.message);
+persistCampaign(campaign);
+}
+}
+campaign.status = campaign.status === 'cancelled' ? 'cancelled' : 'done';
+persistCampaign(campaign);
+console.log(`✅ Campaign ${campaign.id} done: ${campaign.doneDomains}/${campaign.totalDomains} domains`);
+}
+// ── Campaign endpoints ────────────────────────────────────────
+app.post('/api/campaign/start', verifyAdmin, async (req, res) => {
+const { domains, name, instantly_api_key, instantly_campaign_id, preset_emails } = req.body;
+if (!Array.isArray(domains) || !domains.length)
+return res.status(400).json({ success: false, error: 'domains array required' });
+const cleanDomains = [...new Set(domains.map(d => d.trim().toLowerCase().replace(/^https?:\/\//,'').split('/')[0]).filter(d => d.includes('.')))];
+if (!cleanDomains.length) return res.status(400).json({ success: false, error: 'No valid domains' });
+const presetEmails = preset_emails || {};
+const campaignId = crypto.randomBytes(8).toString('hex');
+const campaign = {
+id: campaignId,
+name: name || 'Campaign ' + new Date().toLocaleDateString('nl-NL'),
+status: 'running',
+totalDomains: cleanDomains.length,
+doneDomains: 0,
+instantlyApiKey: instantly_api_key || null,
+instantlyCampaignId: instantly_campaign_id || null,
+createdAt: Date.now(),
+domains: cleanDomains.map(d => ({
+domain: d, status: 'queued', score: null,
+email: presetEmails[d] || null, // pre-fill from CSV
+shareUrl: null, instantlyStatus: null,
+error: null, pageCount: 0
+}))
+};
+campaigns.set(campaignId, campaign);
+persistCampaign(campaign);
+res.json({ success: true, campaignId, totalDomains: cleanDomains.length });
+// Run in background - domains processed sequentially (one browser at a time)
+runCampaign(campaign);
+});
+app.get('/api/campaign/:campaignId', async (req, res) => {
+let c = campaigns.get(req.params.campaignId);
+if (!c && pool) {
+try {
+const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+if (row.rows[0]) {
+c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+instantlyApiKey: row.rows[0].instantly_api_key || null,
+instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+campaigns.set(c.id, c);
+}
+} catch(e) {}
+}
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+res.json({ success: true, ...c });
+});
+// Resume interrupted campaign — skips done domains, continues from first non-done
+app.post('/api/campaign/:campaignId/resume', verifyAdmin, async (req, res) => {
+let c = campaigns.get(req.params.campaignId);
+if (!c && pool) {
+try {
+const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+if (row.rows[0]) {
+c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+instantlyApiKey: row.rows[0].instantly_api_key || null,
+instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+campaigns.set(c.id, c);
+}
+} catch(e) {}
+}
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+if (c.status === 'running') return res.status(400).json({ success: false, error: 'Campaign already running' });
+const pending = (c.domains || []).filter(d => d.status !== 'done' && d.status !== 'cancelled').length;
+if (!pending) return res.status(400).json({ success: false, error: 'All domains already done' });
+// Allow override of Instantly credentials
+if (req.body.instantly_api_key) c.instantlyApiKey = req.body.instantly_api_key;
+if (req.body.instantly_campaign_id) c.instantlyCampaignId = req.body.instantly_campaign_id;
+// Reset stuck domains
+(c.domains || []).forEach(d => {
+if (d.status !== 'done' && d.status !== 'error') d.status = 'queued';
+});
+c.status = 'running';
+campaigns.set(c.id, c);
+persistCampaign(c);
+res.json({ success: true, pending, campaignId: c.id });
+runCampaign(c);
+});
+// Retry push only — for done domains where instantlyStatus is not 'pushed'
+app.post('/api/campaign/:campaignId/retry-push', verifyAdmin, async (req, res) => {
+let c = campaigns.get(req.params.campaignId);
+if (!c && pool) {
+try {
+const row = await pool.query('SELECT * FROM campaigns WHERE id=$1', [req.params.campaignId]);
+if (row.rows[0]) {
+c = { id: row.rows[0].id, name: row.rows[0].name, status: row.rows[0].status,
+totalDomains: row.rows[0].total_domains, doneDomains: row.rows[0].done_domains,
+domains: row.rows[0].domains, createdAt: new Date(row.rows[0].created_at).getTime(),
+instantlyApiKey: row.rows[0].instantly_api_key || null,
+instantlyCampaignId: row.rows[0].instantly_campaign_id || null };
+campaigns.set(c.id, c);
+}
+} catch(e) {}
+}
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+const apiKey = req.body.instantly_api_key || c.instantlyApiKey;
+const campId = req.body.instantly_campaign_id || c.instantlyCampaignId;
+if (!apiKey || !campId) return res.status(400).json({ success: false, error: 'Instantly API key and campaign ID required' });
+const toRetry = (c.domains || []).filter(d => d.status === 'done' && d.email && d.instantlyStatus !== 'pushed');
+if (!toRetry.length) return res.json({ success: true, pushed: 0, message: 'Nothing to retry' });
+let pushed = 0, failed = 0;
+for (const d of toRetry) {
+try {
+const topIssues = [];
+await pushLeadToInstantly(apiKey, campId, {
+email: d.email,
+company_name: d.domain.replace(/^www\./, ''),
+website: 'https://' + d.domain,
+custom_variables: { score: String(d.score||0), share_url: d.shareUrl||'', top_issue_1: '', top_issue_2: '', top_issue_3: '', page_count: String(d.pageCount||0) }
+});
+d.instantlyStatus = 'pushed';
+pushed++;
+} catch(e) {
+d.instantlyStatus = 'error: ' + e.message.substring(0, 40);
+failed++;
+}
+}
+persistCampaign(c);
+res.json({ success: true, pushed, failed });
+});
+app.post('/api/campaign/:campaignId/cancel', verifyAdmin, (req, res) => {
+const c = campaigns.get(req.params.campaignId);
+if (!c) return res.status(404).json({ success: false, error: 'Campaign not found' });
+c.status = 'cancelled';
+persistCampaign(c);
+res.json({ success: true });
+});
+app.get('/api/campaign', verifyAdmin, async (req, res) => {
+const list = [];
+for (const [, c] of campaigns) {
+list.push({ id: c.id, name: c.name, status: c.status, totalDomains: c.totalDomains,
+doneDomains: c.doneDomains, createdAt: c.createdAt });
+}
+// Also load from DB
+if (pool) {
+try {
+const rows = await pool.query('SELECT id,name,status,total_domains,done_domains,created_at FROM campaigns ORDER BY created_at DESC LIMIT 20');
+rows.rows.forEach(r => {
+if (!list.find(l => l.id === r.id))
+list.push({ id: r.id, name: r.name, status: r.status, totalDomains: r.total_domains,
+doneDomains: r.done_domains, createdAt: new Date(r.created_at).getTime() });
+});
+} catch(e) {}
+}
+list.sort((a,b) => b.createdAt - a.createdAt);
+res.json({ success: true, campaigns: list.slice(0, 30) });
+});
+app.delete('/api/campaign/:campaignId', verifyAdmin, async (req, res) => {
+const id = req.params.campaignId;
+campaigns.delete(id);
+if (pool) {
+try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) {}
+}
+res.json({ success: true });
+});
+// ── ContentScore Badge API ────────────────────────────────────────────────────
+app.get('/api/score', async (req, res) => {
+res.setHeader('Access-Control-Allow-Origin', '*');
+const { url } = req.query;
+if (!url) return res.json({ success: false, error: 'url required' });
+if (!pool) return res.json({ success: false, error: 'DB unavailable' });
+try {
+const normalize = u => u.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').toLowerCase();
+const norm = normalize(url);
+const domain = norm.split('/')[0];
+const isHomepage = norm === domain;
+// 1. Exact URL match in scan_log (specific page score)
+const exact = await pool.query(
+`SELECT score, business_url FROM scan_log
+WHERE LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) ILIKE $1
+OR LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', '')) ILIKE $1
+ORDER BY created_at DESC LIMIT 1`,
+[norm.replace(/\/$/, '') + '%']
+);
+if (exact.rows.length && exact.rows[0].score) {
+return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, source: 'scan_log_exact' });
+}
+// 2. Leaderboard — only for homepage queries
+if (isHomepage) {
+const lb = await pool.query(`SELECT score, graaf_score, craft_score, technical_score, url FROM leaderboard WHERE admin_verified = TRUE ORDER BY created_at DESC LIMIT 200`);
+const lbMatch = lb.rows.find(r => normalize(r.url) === domain);
+if (lbMatch) {
+return res.json({ success: true, url: lbMatch.url, score: lbMatch.score,
+graaf: lbMatch.graaf_score, craft: lbMatch.craft_score, technical: lbMatch.technical_score, source: 'leaderboard' });
+}
+}
+// 3. Not found — no domain fallback (badge should show "Not scanned yet")
+res.json({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
+} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ── Badge loader script ──────────────────────────────────────────────────────
+app.get('/badge-loader.js', (req, res) => {
+res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.send(`
+(function() {
+var badges = document.querySelectorAll('[data-cs-badge]');
+if (!badges.length) return;
+var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
+var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
+function getTier(s) {
+if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
+if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
+if (s >= 70) return { label:'QUALIFIED',   color:'#84cc16', bg:'#365314', text:'#bef264', bars:2 };
+if (s >= 50) return { label:'OPPORTUNITY', color:'#f59e0b', bg:'#78350f', text:'#fcd34d', bars:1 };
+return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca5a5', bars:1 };
+}
+function bar(on, color) {
+return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
+}
+fetch(apiUrl)
+.then(function(r) { return r.json(); })
+.then(function(data) {
+if (!data.success || !data.score) {
+badges.forEach(function(el) {
+el.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;font-family:system-ui,sans-serif;">'
++ '<span style="font-size:11px;color:#6b7280;">Not scanned yet &mdash;</span>'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none;">Scan now</a>'
++ '</div>';
+});
+return;
+}
+var score = data.score;
+var t = getTier(score);
+var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
++ '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
++ '<div style="display:flex;flex-direction:column;gap:1px;">'
++ '<span style="font-size:11px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.06em;">ContentScore</span>'
++ '<span style="font-size:9px;color:#9ca3af;">This page</span>'
++ '<div style="display:flex;align-items:baseline;gap:3px;">'
++ '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
++ '<span style="font-size:11px;color:#6b7280;">/100</span>'
++ '</div>'
++ '</div>'
++ '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
++ '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
++ '<div style="display:flex;gap:2px;">'
++ bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
++ '</div>'
++ '</div>'
++ '</div>'
++ '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
++ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;">'
++ '<span style="font-size:12px;line-height:1;">&#x21bb;</span><span>Rescan</span>'
++ '</a>'
++ '</div>';
+badges.forEach(function(el) { el.innerHTML = html; });
+})
+.catch(function() {});
+})();
+`);
+});
+
+
+
+// ══════════════════════════════════════════════════════════════════════
+// VAPI VOICEBOT ROUTES
+// ══════════════════════════════════════════════════════════════════════
+
+// POST /api/voicebot/call — trigger outbound call via Vapi
+app.post('/api/voicebot/call', async (req, res) => {
+  const { vapiKey, phoneId, customerPhone, customerName, assistant, leadId } = req.body;
+
+  if (!vapiKey || vapiKey.length < 10) {
+    return res.status(401).json({ error: 'Vapi API key required' });
+  }
+  if (!phoneId) {
+    return res.status(400).json({ error: 'phoneId (Vapi Phone Number ID) required' });
+  }
+  if (!customerPhone) {
+    return res.status(400).json({ error: 'customerPhone required' });
+  }
+
+  // Normalise phone: Vapi needs E.164 format (+31612345678)
+  let phone = customerPhone.replace(/[\s\-().]/g, '');
+  if (!phone.startsWith('+')) phone = '+' + phone;
+
+  try {
+    const upstream = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${vapiKey}`,
+      },
+      body: JSON.stringify({
+        phoneNumberId: phoneId,
+        customer: {
+          number: phone,
+          name: customerName || '',
+        },
+        assistant: assistant || {
+          firstMessage: `Hi, is this ${customerName || 'there'}? I have a quick question about your website — do you have 2 minutes?`,
+          model: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            systemPrompt: 'You are a friendly content writing specialist. Ask if they need help with their website content. Be brief and natural.',
+          },
+          voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' },
+          endCallMessage: 'Thanks for your time, have a great day!',
+          maxDurationSeconds: 240,
+        },
+      }),
+    });
+
+    const data = await upstream.json();
+    console.log(`[vapi] call initiated → ${phone} | status ${upstream.status} | id ${data.id||'?'}`);
+
+    if (!upstream.ok) {
+      const errMsg = data.message || data.error || JSON.stringify(data).slice(0, 200);
+      return res.status(upstream.status).json({ error: errMsg });
+    }
+
+    res.json({ callId: data.id, status: data.status, leadId });
+
+  } catch (err) {
+    console.error('[vapi] call error:', err.message);
+    res.status(502).json({ error: 'Vapi request failed: ' + err.message });
+  }
+});
+
+// GET /api/voicebot/status/:callId — poll call outcome
+app.get('/api/voicebot/status/:callId', async (req, res) => {
+  const vapiKey = req.headers['x-vapi-key'];
+  if (!vapiKey) return res.status(401).json({ error: 'x-vapi-key header required' });
+
+  try {
+    const upstream = await fetch(`https://api.vapi.ai/call/${req.params.callId}`, {
+      headers: { 'Authorization': `Bearer ${vapiKey}` },
+    });
+    const data = await upstream.json();
+    if (!upstream.ok) return res.status(upstream.status).json({ error: data.message || 'Vapi error' });
+
+    // Extract clean summary from analysis or messages
+    let summary = '';
+    if (data.analysis?.summary) summary = data.analysis.summary;
+    else if (data.summary) summary = data.summary;
+    else if (Array.isArray(data.messages)) {
+      // Build a short transcript snippet from last few messages
+      summary = data.messages
+        .filter(m => m.role === 'assistant' || m.role === 'user')
+        .slice(-4)
+        .map(m => `${m.role === 'assistant' ? 'Bot' : 'Customer'}: ${(m.message||'').slice(0,80)}`)
+        .join(' | ');
+    }
+
+    res.json({
+      callId:      data.id,
+      status:      data.status,        // queued | ringing | in-progress | forwarding | ended | failed
+      endedReason: data.endedReason,   // voicemail | customer-ended-call | assistant-said-end-call-phrase | no-answer | busy | failed
+      duration:    data.endedAt && data.startedAt
+        ? Math.round((new Date(data.endedAt) - new Date(data.startedAt)) / 1000)
+        : null,
+      summary,
+    });
+
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// POST /api/voicebot/webhook — Vapi sends outcome here (optional, for real-time push)
+app.post('/api/voicebot/webhook', (req, res) => {
+  const event = req.body;
+  console.log('[vapi webhook]', event?.message?.type, event?.message?.call?.id || '');
+  // Just acknowledge — frontend polls for status itself
+  res.json({ received: true });
+});
+
+
+
+// ============================================
+// VAPI WEB CALL ENDPOINT — Otto on homepage
+// ============================================
+app.post('/api/vapi/webcall', async (req, res) => {
+  try {
+    console.log('[vapi/webcall] content-length:', req.headers['content-length']);
+    console.log('[vapi/webcall] body:', req.body);
+    const privateKey = process.env.VAPI_PRIVATE_KEY;
+    if (!privateKey) return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set in Railway' });
+    const assistantId = (req.body && req.body.assistantId) || 'b4ba165e-daaa-4723-a10d-40262359a8da';
+    const response = await fetch('https://api.vapi.ai/call', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${privateKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ type: 'webCall', assistantId })
+    });
+    const text = await response.text();
+    console.log('[vapi/webcall] status:', response.status, 'body:', text);
+    res.status(response.status).send(text);
+  } catch (err) {
+    console.error('[vapi/webcall] exception:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+startServer();
