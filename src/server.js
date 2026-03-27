@@ -1928,7 +1928,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                );
                // Check for section/div with class containing faq
                const classMatch = Array.from(document.querySelectorAll('[class]')).some(el =>
-                 el.className.toLowerCase().includes('faq')
+                 ( typeof el.className === 'string' ? el.className : (el.className.baseVal || '')).toLowerCase().includes('faq')
                );
                // Check raw text for FAQ patterns
                const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
