@@ -3540,4 +3540,14 @@ app.get('/api/cs-agent/status/:callId', async (req, res) => {
   }
 });
 
+
+// ── Headshot redirect — serves Ottmar's photo from GitHub raw ──
+app.get('/headshot', (req, res) => {
+  res.redirect(301, 'https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg');
+});
+// Also serve via wp-content path for compatibility
+app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) => {
+  res.redirect(301, 'https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg');
+});
+
 startServer();
