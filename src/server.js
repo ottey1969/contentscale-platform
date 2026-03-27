@@ -3301,16 +3301,14 @@ app.post('/api/vapi/webcall', async (req, res) => {
   try {
     const privateKey = process.env.VAPI_PRIVATE_KEY;
     if (!privateKey) return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set in Railway' });
+    const assistantId = (req.body && req.body.assistantId) || 'b4ba165e-daaa-4723-a10d-40262359a8da';
     const response = await fetch('https://api.vapi.ai/call', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${privateKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        type: 'webCall',
-        assistantId: 'b4ba165e-daaa-4723-a10d-40262359a8da'
-      })
+      body: JSON.stringify({ type: 'webCall', assistantId })
     });
     const text = await response.text();
     console.log('[vapi/webcall] status:', response.status, 'body:', text);
