@@ -107,16 +107,12 @@ return false;
 }
 app.set('trust proxy', 1);
 app.use(compression({ level: 9, threshold: 0 }));
-
-// ── CORS — allow contentscale.site to call Railway ──
-const cors = require('cors');
 app.use(cors({
   origin: ['https://contentscale.site', 'https://www.contentscale.site'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.options('*', cors());
-
 
 // ── Global badge-loader injection ────────────────────────────────────────────
 // Injects badge-loader.js into every HTML page served by this server
