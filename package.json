@@ -4,8 +4,7 @@
   "description": "ContentScale GRAAF scoring platform backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "build": "npx puppeteer browsers install chrome"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -17,6 +16,7 @@
     "bcryptjs": "^2.4.3",
     "express-rate-limit": "^7.1.5",
     "compression": "^1.7.4",
-    "@sendgrid/mail": "^8.1.0"
+    "@sendgrid/mail": "^8.1.0",
+    "axios": "^1.6.0"
   }
 }
