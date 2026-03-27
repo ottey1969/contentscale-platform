@@ -107,12 +107,15 @@ return false;
 }
 app.set('trust proxy', 1);
 app.use(compression({ level: 9, threshold: 0 }));
-app.use(cors({
-  origin: ['https://contentscale.site', 'https://www.contentscale.site'],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-app.options('*', cors());
+app.use(function(req, res, next) {
+  const allowed = ['https://contentscale.site', 'https://www.contentscale.site'];
+  const origin = req.headers.origin;
+  if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 // ── Global badge-loader injection ────────────────────────────────────────────
 // Injects badge-loader.js into every HTML page served by this server
