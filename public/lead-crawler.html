@@ -6,200 +6,176 @@
 <title>Lead Crawler — ContentScale</title>
 <meta name="description" content="Find 200–500 content writing leads in any city. 20 industries, AI-powered, bucketed by urgency. Free tool by ContentScale.">
 <link rel="canonical" href="https://contentscale.site/lead-crawler">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#111827;--card:#1a2235;--surface:#1f2d42;--border:#2d3f5a;
---ink:#f9fafb;--muted:#6b7280;--sub:#9ca3af;--dim:#4b5563;
---purple:#7c3aed;--purple2:#a78bfa;--purple3:#c4b5fd;--purple4:rgba(124,58,237,.25);
---blue:#3b82f6;--blue2:#2563eb;--green:#10b981;--green2:#34d399;
---orange:#f97316;--amber:#f59e0b;--red:#ef4444;
---oldgold:#fbbf24;
+--bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+--ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+--purple:#a78bfa;--purple2:#c4b5fd;--purple-glow:rgba(167,139,250,0.15);
+--blue:#60a5fa;--blue2:#2563eb;--green:#4ade80;--green2:#22c55e;
+--orange:#fb923c;--amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+--gold-glow:rgba(251,191,36,0.1);
 }
-body{background:var(--bg);color:var(--ink);font-family:'Syne',sans-serif;min-height:100vh;padding-bottom:80px;}
-.wrap{max-width:1200px;margin:0 auto;padding:0 24px;}
-/* ── top nav ── */
-.topnav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:32px;}
-.topnav .brand{font-family:'Playfair Display',serif;font-size:22px;letter-spacing:.06em;color:var(--purple2);text-decoration:none;}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:100px;line-height:1.5;}
+.wrap{max-width:1400px;margin:0 auto;padding:0 24px;}
+
+/* ── Top Navigation ── */
+.topnav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:40px;}
+.topnav .brand{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.08em;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:4px;}
 .topnav .brand span{color:var(--ink);}
-.topnav .back{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .15s;}
-.topnav .back:hover{color:var(--ink);}
-header{padding:0 0 28px;border-bottom:1px solid var(--border);margin-bottom:28px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.topnav .back{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);text-decoration:none;transition:all .2s;}
+.topnav .back:hover{color:var(--gold);transform:translateX(-4px);}
+
+header{padding:0 0 32px;border-bottom:1px solid var(--border);margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;}
 .logo-block{flex:1;}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.ldot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1.2s ease-in-out infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-h1{font-family:'Playfair Display',serif;font-size:clamp(46px,7vw,82px);line-height:.9;letter-spacing:.02em;}
-h1 span{color:var(--purple2);}
-.tagline{font-size:13px;color:var(--muted);margin-top:10px;max-width:480px;line-height:1.65;}
-.hbadges{display:flex;flex-direction:column;gap:7px;align-items:flex-end;}
-.hb{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:3px;border:1px solid;white-space:nowrap;}
-.hb.g{color:var(--green);border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06);}
-.hb.y{color:var(--purple2);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.06);}
-.hb.p{color:var(--purple);border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.06);}
-.strategy{background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:24px;overflow:hidden;}
-.strategy-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
-.strategy-head h3{font-family:'Playfair Display',serif;font-size:18px;letter-spacing:.04em;flex:1;}
-.strategy-head .tog{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
-.strategy-body{padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;}
-.sbucket{border-radius:4px;padding:12px;border:1px solid;}
-.sbucket .sb-range{font-family:'Playfair Display',serif;font-size:20px;line-height:1;margin-bottom:4px;}
-.sbucket .sb-name{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
-.sbucket .sb-desc{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:6px;}
-.sbucket .sb-pitch{font-size:11px;font-style:italic;line-height:1.45;}
-.sbucket .sb-hot{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;display:inline-block;margin-top:4px;}
-.sb-ghost{border-color:rgba(82,82,110,.3);background:rgba(82,82,110,.05);}
-.sb-ghost .sb-range,.sb-ghost .sb-pitch{color:var(--muted);} .sb-ghost .sb-name{color:var(--muted);} .sb-ghost .sb-hot{background:rgba(82,82,110,.12);color:var(--muted);}
-.sb-skeleton{border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.05);}
-.sb-skeleton .sb-range,.sb-skeleton .sb-pitch{color:var(--blue);} .sb-skeleton .sb-name{color:var(--blue);} .sb-skeleton .sb-hot{background:rgba(96,165,250,.12);color:var(--blue);}
-.sb-brochure{border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.05);}
-.sb-brochure .sb-range,.sb-brochure .sb-pitch{color:var(--purple2);} .sb-brochure .sb-name{color:var(--purple2);} .sb-brochure .sb-hot{background:rgba(251,191,36,.15);color:var(--purple2);}
-.sb-stale{border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.05);}
-.sb-stale .sb-range,.sb-stale .sb-pitch{color:var(--orange);} .sb-stale .sb-name{color:var(--orange);} .sb-stale .sb-hot{background:rgba(251,146,60,.12);color:var(--orange);}
-.sb-active{border-color:rgba(244,63,63,.3);background:rgba(244,63,63,.05);}
-.sb-active .sb-range,.sb-active .sb-pitch{color:var(--red);} .sb-active .sb-name{color:var(--red);} .sb-active .sb-hot{background:rgba(244,63,63,.12);color:var(--red);}
-.sb-estab{border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.05);}
-.sb-estab .sb-range,.sb-estab .sb-pitch{color:var(--purple);} .sb-estab .sb-name{color:var(--purple);} .sb-estab .sb-hot{background:rgba(167,139,250,.12);color:var(--purple);}
-.search-panel{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:26px;margin-bottom:22px;position:relative;overflow:hidden;}
-.search-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--purple2),var(--green));}
-.panel-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
-.form-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:12px;align-items:end;margin-bottom:18px;}
-@media(max-width:680px){.form-row{grid-template-columns:1fr 1fr}}
-.field label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;}
-.field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:11px 14px;font-family:'Syne',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s;}
-.field input:focus{border-color:var(--purple2);}
-.field input::placeholder{color:var(--muted);}
-.crawl-btn{background:var(--purple2);color:#000;border:none;font-family:'Playfair Display',serif;font-size:22px;letter-spacing:.05em;padding:12px 28px;border-radius:4px;cursor:pointer;transition:opacity .15s;white-space:nowrap;height:46px;align-self:end;font-weight:400;}
-.crawl-btn:hover{opacity:.88;} .crawl-btn:disabled{opacity:.35;cursor:not-allowed;}
-.stop-btn{background:var(--surface);color:var(--red);border:1px solid rgba(244,63,63,.35);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:12px 18px;border-radius:4px;cursor:pointer;height:46px;align-self:end;display:none;transition:all .15s;}
-.stop-btn:hover{background:rgba(244,63,63,.08);}
-.wave-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;}
-.waves{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:5px;}
-.wchip{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px 9px;font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px;transition:all .25s;}
-.wchip .wd{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .25s;}
-.wchip .wn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.wchip .wk{margin-left:auto;font-size:9px;}
-.wchip.running{color:var(--orange);border-color:rgba(251,146,60,.3);} .wchip.running .wd{background:var(--orange);animation:blink .65s ease-in-out infinite;}
-.wchip.done{color:var(--green);border-color:rgba(74,222,128,.25);} .wchip.done .wd{background:var(--green);}
-.wchip.error{color:var(--red);border-color:rgba(244,63,63,.25);} .wchip.error .wd{background:var(--red);}
-.prog-wrap{margin-bottom:22px;display:none;}
-.prog-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.prog-msg{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
-.prog-pct{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);}
-.prog-track{height:3px;background:var(--surface);border-radius:2px;overflow:hidden;margin-bottom:12px;}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--purple2));border-radius:2px;transition:width .35s ease;}
-.big-count{font-family:'Playfair Display',serif;font-size:56px;line-height:1;color:var(--green);}
-.big-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:22px;}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:13px 15px;}
-.stat .sn{font-family:'Playfair Display',serif;font-size:34px;line-height:1;}
-.stat .sl{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
-.stat.hi{border-top:2px solid var(--purple2);} .stat.hi .sn{color:var(--purple2);}
-.toolbar{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:11px 14px;margin-bottom:18px;display:none;flex-wrap:wrap;gap:8px;align-items:center;}
-.tb-grp{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
-.tb-sep{width:1px;height:18px;background:var(--border);}
-.tbl{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
-.tbtn{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;transition:all .15s;}
-.tbtn:hover,.tbtn.on{background:var(--ink);border-color:var(--ink);color:var(--bg);}
-.tbtn.gold{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.3);color:var(--purple2);}
-.tbtn.gold:hover{background:var(--purple2);border-color:var(--purple2);color:#000;}
-.srch{background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink);outline:none;width:160px;}
-.srch:focus{border-color:var(--purple2);} .srch::placeholder{color:var(--muted);}
-.ml{margin-left:auto;}
-.bucket{margin-bottom:38px;}
-.bhead{padding:18px 20px;border-radius:6px;margin-bottom:14px;border:1px solid;}
-.bhead-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
-.bicon{font-size:22px;line-height:1;flex-shrink:0;}
-.bname{font-family:'Playfair Display',serif;font-size:32px;letter-spacing:.03em;line-height:1;}
-.bsublabel{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin-top:2px;}
-.brange{font-family:'Playfair Display',serif;font-size:18px;padding:4px 12px;border-radius:3px;border:1px solid;white-space:nowrap;}
-.bhot{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:3px;}
-.bcnt{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto;}
-.bhead-bottom{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.baction{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:inherit;opacity:.75;}
-.baction::before{content:'→ ';}
-.bdesc{font-size:12px;color:var(--muted);line-height:1.5;margin-left:auto;max-width:420px;text-align:right;}
-.bcnt{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto;}
-.bk-ghost .bhead{background:rgba(82,82,110,.06);border-color:rgba(82,82,110,.2);}
-.bk-ghost .bname,.bk-ghost .brange,.bk-ghost .baction{color:var(--muted);} .bk-ghost .brange{border-color:rgba(82,82,110,.3);background:rgba(82,82,110,.08);} .bk-ghost .bhot{background:rgba(82,82,110,.1);color:var(--muted);}
-.bk-skeleton .bhead{background:rgba(96,165,250,.06);border-color:rgba(96,165,250,.25);}
-.bk-skeleton .bname,.bk-skeleton .brange,.bk-skeleton .baction{color:var(--blue);} .bk-skeleton .brange{border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.1);} .bk-skeleton .bhot{background:rgba(96,165,250,.15);color:var(--blue);}
-.bk-brochure .bhead{background:rgba(251,191,36,.05);border-color:rgba(251,191,36,.3);}
-.bk-brochure .bname,.bk-brochure .brange,.bk-brochure .baction{color:var(--purple2);} .bk-brochure .brange{border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.1);} .bk-brochure .bhot{background:rgba(251,191,36,.18);color:var(--purple2);}
-.bk-stale .bhead{background:rgba(251,146,60,.05);border-color:rgba(251,146,60,.25);}
-.bk-stale .bname,.bk-stale .brange,.bk-stale .baction{color:var(--orange);} .bk-stale .brange{border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.1);} .bk-stale .bhot{background:rgba(251,146,60,.14);color:var(--orange);}
-.bk-active .bhead{background:rgba(244,63,63,.05);border-color:rgba(244,63,63,.25);}
-.bk-active .bname,.bk-active .brange,.bk-active .baction{color:var(--red);} .bk-active .brange{border-color:rgba(244,63,63,.4);background:rgba(244,63,63,.1);} .bk-active .bhot{background:rgba(244,63,63,.14);color:var(--red);}
-.bk-estab .bhead{background:rgba(167,139,250,.05);border-color:rgba(167,139,250,.25);}
-.bk-estab .bname,.bk-estab .brange,.bk-estab .baction{color:var(--purple);} .bk-estab .brange{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.1);} .bk-estab .bhot{background:rgba(167,139,250,.14);color:var(--purple);}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:9px;}
-.lcard{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:15px;transition:border-color .15s,transform .15s;animation:fup .22s ease both;position:relative;cursor:pointer;}
-.lcard:hover{border-color:#333;transform:translateY(-1px);} .lcard.sel{border-color:var(--purple2);background:rgba(251,191,36,.04);}
-@keyframes fup{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.chk{position:absolute;top:11px;right:11px;width:15px;height:15px;border:1.5px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:all .12s;flex-shrink:0;}
-.chk.on{background:var(--purple2);border-color:var(--purple2);} .chk.on::after{content:'✓';font-size:9px;color:#000;font-weight:700;}
-.pitch-banner{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:8px 10px;margin-bottom:10px;font-size:11.5px;color:var(--purple2);line-height:1.5;font-style:italic;}
-.pitch-banner::before{content:'💬 ';font-style:normal;}
-.cn{font-size:15px;font-weight:700;line-height:1.2;padding-right:22px;margin-bottom:2px;}
-.ct{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;}
-.srow{background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:5px 9px;display:flex;align-items:center;gap:6px;margin-bottom:8px;cursor:pointer;}
-.cpy{background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:1px;transition:color .15s;flex-shrink:0;}
-.cpy:hover{color:var(--ink);}
-.opp{font-size:11.5px;color:#7070a0;line-height:1.5;margin-bottom:8px;}
-.ctags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px;}
-.ctag{font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:2px 5px;border-radius:2px;}
-.cfoot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:8px;}
-.cpages{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);} .cpages strong{color:var(--ink);font-size:12px;}
-.cscore{font-family:'Playfair Display',serif;font-size:18px;padding:2px 8px;border-radius:3px;}
-.csh{color:var(--red);} .csm{color:var(--orange);} .csl{color:var(--blue);}
-.empty-state{text-align:center;padding:80px 20px;border:1px dashed var(--border);border-radius:6px;background:var(--card);margin-bottom:24px;}
-.empty-state .ebig{font-family:'Playfair Display',serif;font-size:68px;line-height:1;color:var(--border);margin-bottom:12px;}
-.empty-state p{font-size:13px;color:var(--muted);line-height:1.7;}
-.terms-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;}
-.terms-box{background:var(--card);border:1px solid var(--border);border-radius:8px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;position:relative;}
-.terms-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--purple),var(--purple2));}
-.terms-head{padding:24px 28px 0;border-bottom:1px solid var(--border);padding-bottom:16px;}
-.terms-head h2{font-family:'Playfair Display',serif;font-size:28px;letter-spacing:.04em;margin-bottom:4px;}
-.terms-head .sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
-.terms-body{padding:20px 28px;font-size:12px;line-height:1.8;color:var(--muted);}
-.terms-body h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink);margin:16px 0 6px;}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.ldot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink 1.5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(0.8)}}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(50px,8vw,100px);line-height:.85;letter-spacing:.02em;}
+h1 span{color:var(--gold);}
+.tagline{font-size:15px;color:var(--muted);margin-top:14px;max-width:540px;line-height:1.6;}
+
+.hbadges{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.hb{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:4px;border:1px solid;white-space:nowrap;background:rgba(0,0,0,0.3);}
+.hb.g{color:var(--green);border-color:rgba(74,222,128,0.25);}
+.hb.y{color:var(--gold);border-color:rgba(251,191,36,0.25);}
+.hb.p{color:var(--purple);border-color:rgba(167,139,250,0.25);}
+
+/* ── Strategy Buckets ── */
+.strategy{background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:32px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+.strategy-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,0.02);}
+.strategy-head h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;flex:1;}
+.strategy-head .tog{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--sub);}
+.strategy-body{padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+.sbucket{border-radius:6px;padding:16px;border:1px solid;transition:transform .2s;}
+.sbucket:hover{transform:translateY(-2px);}
+.sbucket .sb-range{font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1;margin-bottom:6px;}
+.sbucket .sb-name{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;display:block;}
+.sbucket .sb-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+.sbucket .sb-pitch{font-size:11px;font-style:italic;line-height:1.45;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);}
+.sbucket .sb-hot{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:8px;}
+
+.sb-ghost{border-color:rgba(148,163,184,0.2);background:rgba(148,163,184,0.05);}
+.sb-skeleton{border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.05);}
+.sb-skeleton .sb-range, .sb-skeleton .sb-name{color:var(--blue);} .sb-skeleton .sb-hot{background:rgba(96,165,250,0.1);color:var(--blue);}
+.sb-brochure{border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.05);}
+.sb-brochure .sb-range, .sb-brochure .sb-name{color:var(--gold);} .sb-brochure .sb-hot{background:rgba(251,191,36,0.1);color:var(--gold);}
+.sb-stale{border-color:rgba(251,146,60,0.3);background:rgba(251,146,60,0.05);}
+.sb-active{border-color:rgba(244,63,63,0.3);background:rgba(244,63,63,0.05);}
+.sb-estab{border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.05);}
+
+/* ── License & Resume Banners ── */
+#licenseActiveBar{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:8px;padding:12px 20px;margin-bottom:16px;display:none;align-items:center;gap:15px;}
+#licenseActiveBar.show{display:flex;}
+.resume-banner{background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:8px;padding:14px 20px;margin-bottom:20px;display:none;align-items:center;gap:16px;}
+
+/* ── Search Panel ── */
+.search-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:32px;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);}
+.search-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));}
+.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--sub);margin-bottom:20px;display:block;}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:16px;align-items:end;margin-bottom:24px;}
+@media(max-width:768px){.form-row{grid-template-columns:1fr 1fr;}}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:8px;}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ink);outline:none;transition:all .2s;}
+.field input:focus{border-color:var(--gold);background:rgba(255,255,255,0.02);box-shadow:0 0 0 3px rgba(251,191,36,0.1);}
+
+.crawl-btn{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.05em;padding:0 36px;border-radius:6px;cursor:pointer;transition:all .2s;height:52px;display:flex;align-items:center;justify-content:center;}
+.crawl-btn:hover{background:var(--ink);transform:translateY(-1px);}
+.crawl-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+.stop-btn{background:var(--surface);color:var(--red);border:1px solid rgba(244,63,63,0.3);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:0 24px;border-radius:6px;cursor:pointer;height:52px;display:none;transition:all .2s;}
+.stop-btn:hover{background:var(--red);color:#fff;}
+
+/* ── Live Search Chips ── */
+.waves{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+.wchip{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:10px;transition:all .3s;}
+.wchip .wd{width:6px;height:6px;border-radius:50%;background:var(--dim);}
+.wchip.running{color:var(--orange);border-color:rgba(251,146,60,0.3);background:rgba(251,146,60,0.05);}
+.wchip.running .wd{background:var(--orange);box-shadow:0 0 10px var(--orange);animation:blink 1s infinite;}
+.wchip.done{color:var(--green);border-color:rgba(74,222,128,0.25);background:rgba(74,222,128,0.02);}
+.wchip.done .wd{background:var(--green);}
+
+/* ── Voicebot Config Panel ── */
+.vapi-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:24px;display:none;border-left:5px solid var(--gold);box-shadow:0 15px 35px rgba(0,0,0,0.6);}
+.vapi-panel.visible{display:block;animation:fdown .3s ease-out;}
+@keyframes fdown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.vapi-panel-head{display:flex;align-items:center;gap:15px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.vapi-panel-head h3{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;flex:1;}
+.vapi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+@media(max-width:640px){.vapi-grid{grid-template-columns:1fr;}}
+.vapi-field label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--sub);display:block;margin-bottom:10px;}
+.vapi-field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;transition:all .2s;}
+.vapi-field input:focus{border-color:var(--purple);background:rgba(255,255,255,0.03);}
+.vapi-save-btn{grid-column:1/-1;background:var(--green);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:15px;border-radius:6px;cursor:pointer;margin-top:10px;transition:all .2s;}
+.vapi-save-btn:hover{background:var(--ink);transform:translateY(-1px);}
+
+/* ── Results Display ── */
+.toolbar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:24px;display:none;align-items:center;gap:15px;flex-wrap:wrap;box-shadow:0 4px 15px rgba(0,0,0,0.3);}
+.tbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:4px;cursor:pointer;transition:all .2s;}
+.tbtn:hover{color:var(--ink);border-color:var(--sub);}
+.tbtn.on{background:var(--gold);color:#000;border-color:var(--gold);font-weight:700;}
+.tbtn.gold-outline{border-color:var(--gold);color:var(--gold);}
+.tbtn.gold-outline:hover{background:var(--gold);color:#000;}
+
+.bucket{margin-bottom:48px;}
+.bhead{padding:24px 28px;border-radius:8px;margin-bottom:20px;border:1px solid;display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:rgba(255,255,255,0.01);}
+.bname{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:.05em;line-height:1;flex:1;}
+.brange{font-family:'Bebas Neue',sans-serif;font-size:20px;padding:6px 16px;border-radius:4px;border:1px solid;background:rgba(0,0,0,0.2);}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;}
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;transition:all .2s;position:relative;cursor:pointer;display:flex;flex-direction:column;gap:10px;}
+.lcard:hover{border-color:var(--sub);transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.5);}
+.lcard.sel{border-color:var(--gold);background:var(--gold-glow);box-shadow:0 0 20px rgba(251,191,36,0.05);}
+
+.chk{position:absolute;top:15px;right:15px;width:18px;height:18px;border:2px solid var(--border);border-radius:4px;background:var(--bg);transition:all .2s;}
+.chk.on{background:var(--gold);border-color:var(--gold);}
+.chk.on::after{content:'✓';font-size:11px;color:#000;position:absolute;left:3px;top:-1px;font-weight:900;}
+
+.cn{font-size:18px;font-weight:700;letter-spacing:-0.02em;padding-right:30px;}
+.ct{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;color:var(--sub);letter-spacing:.1em;}
+.pitch-banner{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:4px;padding:12px;font-size:12px;color:var(--gold);line-height:1.5;font-style:italic;}
+
+.card-contact{display:flex;flex-direction:column;gap:6px;margin-top:5px;}
+.contact-item{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;text-decoration:none;padding:8px 12px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);transition:all .2s;}
+.contact-item.ph{color:var(--green);border-color:rgba(74,222,128,0.2);}
+.contact-item.em{color:var(--purple);border-color:rgba(167,139,250,0.2);}
+.contact-item:hover{background:rgba(255,255,255,0.08);transform:translateX(2px);}
+
+.card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:15px;border-top:1px solid rgba(255,255,255,0.05);}
+.call-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:var(--green);padding:8px 14px;border-radius:4px;cursor:pointer;transition:all .2s;font-weight:700;}
+.call-btn:hover{background:var(--green);color:#000;}
+.call-btn.calling{background:var(--orange);color:#000;border-color:var(--orange);animation:pulse-orange 1s infinite;}
+
+/* ── Call Log & Persistence ── */
+.calllog{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:32px;display:none;box-shadow:0 10px 25px rgba(0,0,0,0.4);}
+.calllog.visible{display:block;}
+.calllog-head{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
+.calllog-item{display:grid;grid-template-columns:100px 1fr 100px;gap:20px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center;}
+.calllog-status{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 8px;border-radius:3px;text-align:center;font-weight:700;}
+.cls-answered{background:rgba(74,222,128,0.15);color:var(--green);}
+.cls-calling{background:rgba(251,146,60,0.15);color:var(--orange);}
+
+/* ── Modals & Terms ── */
+.terms-modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(10px);}
+.terms-box{background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;border-top:6px solid var(--gold);box-shadow:0 0 100px rgba(0,0,0,1);}
+.terms-body{padding:40px;font-size:14px;line-height:1.8;color:var(--muted);}
+.terms-body h2{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);margin-bottom:20px;}
 .terms-body strong{color:var(--ink);}
-.terms-body .warn{background:rgba(244,63,63,.08);border:1px solid rgba(244,63,63,.2);border-radius:4px;padding:10px 14px;margin:10px 0;color:var(--red);font-size:11px;}
-.terms-footer{padding:16px 28px 24px;border-top:1px solid var(--border);}
-.terms-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;}
-.terms-check input[type=checkbox]{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--green);cursor:pointer;}
-.terms-check label{font-size:12px;color:var(--ink);line-height:1.5;cursor:pointer;}
-.terms-accept-btn{width:100%;background:var(--green);color:#000;border:none;font-family:'Playfair Display',serif;font-size:22px;letter-spacing:.05em;padding:14px;border-radius:4px;cursor:pointer;transition:opacity .15s;opacity:.4;}
-.terms-accept-btn.ready{opacity:1;}
-.terms-accept-btn.ready:hover{opacity:.88;}
-.comp-mode{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-.comp-mode-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);flex:1;}
-.comp-mode-label.on{color:var(--green);}
-.toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
-.toggle input{opacity:0;width:0;height:0;position:absolute;}
-.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:11px;cursor:pointer;transition:background .2s;}
-.toggle input:checked~.toggle-slider{background:var(--green);}
-.toggle-slider::before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;}
-.toggle input:checked~.toggle-slider::before{transform:translateX(18px);}
-.liability-bar{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);line-height:1.7;display:none;}
-.liability-bar.show{display:block;}
-.selbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 28px;display:none;align-items:center;gap:12px;z-index:100;flex-wrap:wrap;}
-.selbar.show{display:flex;}
-.selinfo{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);} .selinfo strong{color:var(--ink);}
-.selactions{display:flex;gap:7px;margin-left:auto;}
-.selbtn{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:7px 12px;border-radius:3px;cursor:pointer;transition:all .15s;}
-.selbtn:hover{background:var(--ink);border-color:var(--ink);color:var(--bg);}
-.selbtn.p{background:var(--purple2);border-color:var(--purple2);color:#000;font-weight:700;} .selbtn.p:hover{opacity:.88;}
-.toast{position:fixed;top:24px;right:24px;background:var(--ink);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 16px;border-radius:4px;opacity:0;transform:translateY(-8px);transition:all .2s;z-index:999;pointer-events:none;}
-.toast.show{opacity:1;transform:translateY(0);}
-.err-log{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:4px;padding:10px 14px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);line-height:1.6;display:none;}
-.resume-banner{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:13px 18px;margin-bottom:18px;display:none;align-items:center;gap:12px;flex-wrap:wrap;}
-.resume-text{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--blue);flex:1;line-height:1.6;} .resume-text strong{color:var(--ink);}
-.rbtn{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:3px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
-.rbtn.load{background:rgba(96,165,250,.15);border-color:rgba(96,165,250,.4);color:var(--blue);} .rbtn.load:hover{background:var(--blue);color:#000;}
-.rbtn.clear{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.3);color:var(--red);} .rbtn.clear:hover{background:var(--red);color:#fff;}
+.terms-body ul{margin:20px 0;padding-left:20px;}
+.terms-check{display:flex;align-items:flex-start;gap:12px;margin-top:30px;background:rgba(255,255,255,0.03);padding:20px;border-radius:8px;cursor:pointer;}
+.terms-accept-btn{width:100%;background:var(--green);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:28px;padding:18px;border-radius:6px;cursor:pointer;margin-top:20px;opacity:0.3;pointer-events:none;transition:all .3s;}
+.terms-accept-btn.ready{opacity:1;pointer-events:all;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:12px 24px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;box-shadow:0 10px 40px rgba(0,0,0,0.5);opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.selbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 28px;align-items:center;gap:12px;z-index:100;flex-wrap:wrap;}
+.selbar.show{display:flex !important;}
+
 </style>
+</head>
 </head>
 <body>
 <div class="wrap">
@@ -247,10 +223,10 @@ h1 span{color:var(--purple2);}
   <!-- STATE A: No key saved — shown by default, hidden when key exists -->
   <div id="keyEntryBlock" style="background:rgba(244,63,63,0.06);border:1.5px solid rgba(244,63,63,0.35);border-radius:6px;padding:18px 20px;margin-bottom:18px;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <span style="font-family:'Playfair Display',serif;font-size:20px;color:var(--red);line-height:1;">🔑 ANTHROPIC API KEY REQUIRED</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);line-height:1;">🔑 ANTHROPIC API KEY REQUIRED</span>
       <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"
-         style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-                color:var(--purple2);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;
+         style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;
                 text-decoration:none;margin-left:auto;white-space:nowrap;">
         Get your key → console.anthropic.com
       </a>
@@ -261,10 +237,10 @@ h1 span{color:var(--purple2);}
              autocomplete="off" spellcheck="false"
              onkeydown="if(event.key==='Enter')saveAndTestKey()"
              style="background:var(--bg);border:1.5px solid rgba(244,63,63,.4);border-radius:4px;
-                    padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;
+                    padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;
                     color:var(--ink);outline:none;width:100%;transition:border-color .2s;" />
       <button onclick="saveAndTestKey()"
-              style="background:var(--purple2);color:#000;border:none;font-family:'Playfair Display',serif;
+              style="background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;
                      font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;
                      cursor:pointer;white-space:nowrap;height:46px;">
         SAVE &amp; TEST
@@ -277,7 +253,7 @@ h1 span{color:var(--purple2);}
         👁
       </button>
     </div>
-    <div id="keyTestStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;min-height:18px;"></div>
+    <div id="keyTestStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:18px;"></div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
       🔒 Stored in your browser (localStorage) · Never sent to ContentScale servers
     </div>
@@ -290,22 +266,22 @@ h1 span{color:var(--purple2);}
     <div style="display:flex;align-items:center;gap:8px;flex:1;">
       <span style="font-size:16px;">✅</span>
       <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">
           API Key Active
         </div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="keyMasked">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="keyMasked">
           sk-ant-···
         </div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
-      <div id="keyBadge" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+      <div id="keyBadge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
            padding:4px 10px;border-radius:3px;background:rgba(74,222,128,.15);
            color:var(--green);border:1px solid rgba(74,222,128,.3);">
         ✓ TESTED &amp; WORKING
       </div>
       <button onclick="changeApiKey()"
-              style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+              style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
                      background:var(--surface);border:1px solid var(--border);color:var(--muted);
                      padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s;"
               onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">
@@ -318,16 +294,39 @@ h1 span{color:var(--purple2);}
 <!-- ══ END API KEY PANEL ══ -->
 
 <!-- ══ VAPI VOICEBOT CONFIG ══ -->
+
+<!-- LICENSE SECTION -->
+<div id="licenseLocked" style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--purple);margin-bottom:10px;">🔒 Voicebot — Unlock Required</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Enter your ContentScale license key to unlock outbound calling. Get your key at <a href="https://contentscale.site" target="_blank" style="color:var(--gold);">contentscale.site</a></div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <input id="licenseKeyInput" type="text" placeholder="CS-XXXX-XXXX-XXXX"
+      style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;min-width:200px;">
+    <button onclick="activateLicense()"
+      style="background:var(--purple);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:18px;padding:10px 22px;border-radius:4px;cursor:pointer;white-space:nowrap;">
+      ACTIVATE
+    </button>
+  </div>
+  <div id="licenseStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:16px;"></div>
+</div>
+<div id="licenseActiveBar" style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);border-radius:6px;padding:12px 18px;margin-bottom:18px;display:none;align-items:center;gap:10px;">
+  <span style="font-size:16px;">✅</span>
+  <div>
+    <div id="licensePlanLabel" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);">Voicebot Plan — Active</div>
+  </div>
+  <span id="licenseActiveBadge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);margin-left:auto;">✓ ACTIVE</span>
+  <button onclick="deactivateLicense()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">Remove</button>
+</div>
 <div id="vapiToggleRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
   <button onclick="toggleVapiPanel()" id="vapiToggleBtn"
-    style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
            background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);
            padding:8px 16px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:8px;">
     <span>🤖</span>
     <span id="vapiToggleTxt">Configure Voicebot</span>
     <span id="vapiConfigBadge" style="display:none;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);border-radius:3px;padding:1px 6px;font-size:8px;">✓ READY</span>
   </button>
-  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Vapi.ai outbound calling — configure once, call any lead with one click</span>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Vapi.ai outbound calling — configure once, call any lead with one click</span>
 </div>
 
 <div class="vapi-panel" id="vapiPanel">
@@ -336,7 +335,7 @@ h1 span{color:var(--purple2);}
     <h3>Voicebot Configuration — Vapi.ai</h3>
     <span id="vapiSavedBadge" class="vapi-saved" style="display:none;">✓ SAVED</span>
   </div>
-  <div style="background:rgba(244,63,63,.08);border:1px solid rgba(244,63,63,.3);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);line-height:1.6;">
+  <div style="background:rgba(244,63,63,.08);border:1px solid rgba(244,63,63,.3);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red);line-height:1.6;">
     ⚠ Your previous API key was shared publicly — <strong>regenerate it</strong> at
     <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener" style="color:var(--red);text-decoration:underline;">dashboard.vapi.ai → API Keys</a>
     before entering it here. Phone Number ID, name, company and callback are already pre-filled.
@@ -352,7 +351,7 @@ h1 span{color:var(--purple2);}
     </div>
     <div class="vapi-field">
       <label>Your Name (bot introduces as)</label>
-      <input type="text" id="vapiCallerName" value="Otto from ContentScale" />
+      <input type="text" id="vapiCallerName" value="Ottmar from ContentScale" />
     </div>
     <div class="vapi-field">
       <label>Your Company / Website</label>
@@ -365,7 +364,7 @@ h1 span{color:var(--purple2);}
     <div class="vapi-field" style="grid-column:1/-1">
       <label>Opening Line — {name} {score} {pages} {city} are auto-filled per lead</label>
       <input type="text" id="vapiOpeningLine"
-        value="Hi, is this {name}? My name is Otto from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?" />
+        value="Hi, is this {name}? My name is Ottmar from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?" />
     </div>
   </div>
   <!-- Compliance Mode Toggle -->
@@ -380,7 +379,7 @@ h1 span{color:var(--purple2);}
       <input type="checkbox" id="compModeToggle" checked onchange="toggleComplianceMode()">
       <span class="toggle-slider"></span>
     </label>
-    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;" id="compModeBadge">ON — Protected</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;" id="compModeBadge">ON — Protected</span>
   </div>
 
   <!-- Liability reminder -->
@@ -395,7 +394,7 @@ h1 span{color:var(--purple2);}
     <a href="https://vapi.ai" target="_blank" rel="noopener" style="color:var(--green);">vapi.ai</a>
     → Dashboard → Phone Numbers → copy the UUID · All stored locally in your browser.
     <br><br>
-    <strong style="color:var(--purple2)">⚖ Legal compliance built in:</strong>
+    <strong style="color:var(--gold)">⚖ Legal compliance built in:</strong>
     <span style="color:var(--muted)">
     Bot discloses AI identity at start of every call (EU AI Act Art. 50 + FCC 2024 rule) ·
     Instant opt-out on request · Calling hours warning (8am–8pm) ·
@@ -408,9 +407,9 @@ h1 span{color:var(--purple2);}
 <div class="calllog" id="callLog">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
     <div class="calllog-head" style="margin:0;">📋 Call Log</div>
-    <span id="callLogCount" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);"></span>
-    <button onclick="clearCallLog()" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">Clear</button>
-    <button onclick="exportCallLogCSV()" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);padding:5px 10px;border-radius:3px;cursor:pointer;">↓ Export CSV</button>
+    <span id="callLogCount" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+    <button onclick="clearCallLog()" style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">Clear</button>
+    <button onclick="exportCallLogCSV()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);padding:5px 10px;border-radius:3px;cursor:pointer;">↓ Export CSV</button>
   </div>
   <div id="callLogItems"></div>
 </div>
@@ -430,19 +429,19 @@ h1 span{color:var(--purple2);}
 <div class="err-log" id="errLog"></div>
 <div id="rlBanner" style="display:none;background:rgba(244,63,63,.07);border:1px solid rgba(244,63,63,.3);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
 <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-<div style="font-family:'Playfair Display',serif;font-size:28px;color:var(--red);line-height:1;">⚠ 5-HOUR LIMIT HIT</div>
+<div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);line-height:1;">⚠ 5-HOUR LIMIT HIT</div>
 <div style="flex:1;">
-<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);margin-bottom:4px;">Anthropic API 5-hour token budget exhausted. All searches paused.</div>
-<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">Your leads so far are saved. Resets in: <strong id="rlCountdown" style="color:var(--purple2);">calculating...</strong></div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red);margin-bottom:4px;">Anthropic API 5-hour token budget exhausted. All searches paused.</div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">Your leads so far are saved. Resets in: <strong id="rlCountdown" style="color:var(--gold);">calculating...</strong></div>
 </div>
 <div style="text-align:right;">
-<div style="font-family:'Playfair Display',serif;font-size:42px;color:var(--purple2);line-height:1;" id="rlTimer">--:--</div>
-<div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">until reset</div>
+<div style="font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--gold);line-height:1;" id="rlTimer">--:--</div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">until reset</div>
 </div>
 </div>
-<div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Session is auto-saved — hit FIND LEADS again after reset to resume.</div>
+<div style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Session is auto-saved — hit FIND LEADS again after reset to resume.</div>
 </div>
-<div class="prog-wrap" id="progWrap">
+<div class="prog-wrap" id="progWrap" style="display:none;">
 <div class="prog-top">
 <div class="prog-msg" id="progMsg">Starting parallel crawl...</div>
 <div class="prog-pct" id="progPct">0 / 20</div>
@@ -491,11 +490,11 @@ h1 span{color:var(--purple2);}
 <div class="ebig">FIND<br>LEADS</div>
 <p>Enter any city + country and hit <strong>FIND LEADS</strong>.<br>
 20 industry searches fire simultaneously — results stream in live.<br><br>
-<strong style="color:var(--purple2)">Focus on the 🔥 5–30 page buckets.</strong><br>
+<strong style="color:var(--gold)">Focus on the 🔥 5–30 page buckets.</strong><br>
 Real businesses, almost no web content — the easiest content writing pitch ever.</p>
 </div>
 </div>
-<div class="selbar" id="selbar">
+<div class="selbar" id="selbar" style="display:none;">
 <div class="selinfo"><strong id="selCount">0</strong> leads selected</div>
 <div class="selactions">
 <button class="selbtn" onclick="exportSelCSV()">↓ CSV Selected</button>
@@ -570,7 +569,7 @@ function showSavedState(key, tested) {
   } else {
     badge.textContent = '✓ SAVED';
     badge.style.background = 'rgba(251,191,36,.1)';
-    badge.style.color = 'var(--purple2)';
+    badge.style.color = 'var(--gold)';
     badge.style.borderColor = 'rgba(251,191,36,.3)';
   }
 }
@@ -599,7 +598,7 @@ function toggleKeyVisible() {
 // ── Test key against Anthropic API ──────────────────────────────────────
 async function testKey(key) {
   const statusEl = document.getElementById('keyTestStatus');
-  statusEl.innerHTML = '<span style="color:var(--purple2)">⟳ Testing...</span>';
+  statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Testing...</span>';
   try {
     const resp = await fetch('/api/claude-proxy', {
       method: 'POST',
@@ -639,7 +638,7 @@ async function saveAndTestKey() {
   // Save immediately
   localStorage.setItem(LS_KEY_ANTHROPIC, key);
   localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '0');
-  statusEl.innerHTML = '<span style="color:var(--purple2)">⟳ Key saved — testing connection...</span>';
+  statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Key saved — testing connection...</span>';
 
   // Test against real API
   const result = await testKey(key);
@@ -775,66 +774,38 @@ if(p<150)return 'active';
 return 'estab';
 }
 // ── PHASE 1: FIND BUSINESSES (fast — no sitemap/contact lookup) ──────────────
-async function callClaude(city,country,ind){
-const apiKey = getApiKey();
-if (!apiKey || apiKey.length < 20) {
-throw new Error('ANTHROPIC_API_KEY missing — enter your key in the panel above');
+async function callClaude(city, country, ind) {
+    const apiKey = localStorage.getItem(LS_KEY_ANTHROPIC);
+    
+    // THE CRITICAL INSTRUCTION FOR CLAUDE
+    const sys = `You are a high-precision Lead Scraper. MISSION: Find real local B2B leads for content services.
+    CRITICAL: A lead without a phone number is WORTHLESS. You MUST prioritize finding business phone numbers. 
+    Look for "Goldmine" leads: Businesses with 5-30 pages of content (Skeleton/Brochure status).
+    Return ONLY a raw JSON array. No markdown. No text.`;
+
+    const usr = `Visit websites and find 15 real ${ind.q} businesses in ${city}, ${country}.
+    JSON SCHEMA: [{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
+
+    const resp = await fetch('/api/claude-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-anthropic-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 2500,
+            tools: [{type:'web_search_20250305', name:'web_search'}],
+            system: sys,
+            messages: [{role:'user', content:usr}]
+        })
+    });
+
+    const data = await resp.json();
+    const text = data.content.find(b => b.type === 'text')?.text || "[]";
+    const cleaned = text.match(/\[[\s\S]*\]/);
+    return cleaned ? JSON.parse(cleaned[0]) : [];
 }
-const sys='Find real local businesses for content writing leads. Use web search. Visit sites to find phone/email. Return ONLY a JSON array — no markdown, nothing outside [ ].';
-const usr=[
-'Search for 12-15 real '+ind.q+' businesses in '+city+', '+country+' that have websites.',
-'',
-'Return ONLY this JSON array:',
-'[{"name":"Business Name","type":"'+ind.label+'","website":"https://domain.com","phone":"+1 234 567 8900","email":"info@domain.com","estimated_pages":18,"opportunity":"Specific content gap on their site","pitch_angle":"One punchy sentence to sell content writing","tags":["No Blog","Thin Service Pages"],"content_score":82,"industry_id":"'+ind.id+'"}]',
-'',
-'Rules:',
-'Rules: real businesses only, verified via search. Visit site for phone+email.',
-'- estimated_pages: local=5-20, service=15-40, agency=40-100',
-'- content_score 60-98 (urgency of content need)',
-'- tags (pick 3): "No Blog","Thin Pages","No Case Studies","Outdated Copy","No FAQ","Poor SEO","No Testimonials","Not AI-Citation Ready","No Fresh Content","No Schema"',
-'- phone: real number from site or ""',
-'- email: real email from site or ""',
-'- Return ONLY the JSON array',
-].join('\n');
-const resp=await fetch('/api/claude-proxy',{
-method:'POST',
-headers:{
-'Content-Type':'application/json',
-'x-anthropic-key': apiKey,
-'anthropic-version':'2023-06-01',
-},
-body:JSON.stringify({
-model:'claude-sonnet-4-6',
-max_tokens:2500,
-tools:[{type:'web_search_20250305',name:'web_search'}],
-system:sys,
-messages:[{role:'user',content:usr}]
-})
-});
-if(!resp.ok){
-const t=await resp.text();
-let msg=`HTTP ${resp.status}`;
-try{const j=JSON.parse(t);msg+=': '+(j.error?.message||t.slice(0,200));}
-catch{msg+=': '+t.slice(0,200);}
-throw new Error(msg);
-}
-const data=await resp.json();
-if(!data.content||!Array.isArray(data.content))throw new Error('No content array');
-const textBlocks=data.content.filter(b=>b.type==='text');
-if(!textBlocks.length)throw new Error(`No text blocks. stop_reason:${data.stop_reason}`);
-for(let i=textBlocks.length-1;i>=0;i--){
-const raw=(textBlocks[i].text||'').trim();
-if(!raw)continue;
-const cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-if(cleaned.startsWith('[')){try{return JSON.parse(cleaned);}catch{}}
-const m=cleaned.match(/\[[\s\S]*\]/);
-if(m){try{return JSON.parse(m[0]);}catch{}}
-const objs=[];const re=/\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;let x;
-while((x=re.exec(cleaned))!==null){try{const o=JSON.parse(x[0]);if(o.name&&o.website)objs.push(o);}catch{}}
-if(objs.length)return objs;
-}
-throw new Error('JSON parse failed: '+textBlocks[textBlocks.length-1]?.text?.slice(0,200));
-}
+
+
+
 function stopCrawl(){
 stopped=true;
 document.getElementById('stopBtn').style.display='none';
@@ -1071,7 +1042,7 @@ const[srcLabel,srcStyle]=srcMap[lead.sitemap_source]||['?','background:rgba(82,8
 const srow = card.querySelector('.srow');
 if(srow){
 srow.setAttribute('onclick','event.stopPropagation();window.open(\''+url+'\',\'_blank\',\'noopener\')');
-srow.innerHTML=`<span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span><span style="font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span><button class="cpy" data-url="${url}" onclick="event.stopPropagation();cpyBtn(this)" title="Copy URL">⧉</button>`;
+srow.innerHTML=`<span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span><button class="cpy" data-url="${url}" onclick="event.stopPropagation();cpyBtn(this)" title="Copy URL">⧉</button>`;
 }
 if(lead.phone || lead.email){
 let contactRow = card.querySelector('.contact-row');
@@ -1082,8 +1053,8 @@ contactRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8p
 card.insertBefore(contactRow, card.querySelector('.srow'));
 }
 contactRow.innerHTML =
-(lead.phone ? `<a href="tel:${lead.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">📞 ${lead.phone}</a>` : '') +
-(lead.email ? `<a href="mailto:${lead.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--purple2);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">✉ ${lead.email}</a>` : '');
+(lead.phone ? `<a href="tel:${lead.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">📞 ${lead.phone}</a>` : '') +
+(lead.email ? `<a href="mailto:${lead.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">✉ ${lead.email}</a>` : '');
 }
 }
 function updateResolveBtn(active, remaining){
@@ -1167,10 +1138,10 @@ const g=c.skeleton+c.brochure;
 const avg=t?Math.round(allLeads.reduce((a,l)=>a+(l.content_score||75),0)/t):0;
 document.getElementById('statsRow').innerHTML=`
 <div class="stat hi"><div class="sn">${t}</div><div class="sl">Total Leads</div></div>
-<div class="stat"><div class="sn" style="color:var(--purple2)">${g}</div><div class="sl">🔥 Goldmine (5–30)</div></div>
+<div class="stat"><div class="sn" style="color:var(--gold)">${g}</div><div class="sl">🔥 Goldmine (5–30)</div></div>
 <div class="stat"><div class="sn" style="color:var(--muted)">${c.ghost}</div><div class="sl">Ghost (0–5)</div></div>
 <div class="stat"><div class="sn" style="color:var(--blue)">${c.skeleton}</div><div class="sl">Skeleton (5–15)</div></div>
-<div class="stat"><div class="sn" style="color:var(--purple2)">${c.brochure}</div><div class="sl">Brochure (15–30)</div></div>
+<div class="stat"><div class="sn" style="color:var(--gold)">${c.brochure}</div><div class="sl">Brochure (15–30)</div></div>
 <div class="stat"><div class="sn" style="color:var(--orange)">${c.stale}</div><div class="sl">Stale (30–60)</div></div>
 <div class="stat"><div class="sn" style="color:var(--red)">${c.active}</div><div class="sl">Active (60–150)</div></div>
 <div class="stat"><div class="sn" style="color:var(--purple)">${c.estab}</div><div class="sl">Estab (150+)</div></div>
@@ -1233,12 +1204,12 @@ return `
 <div class="ct">${l.type||''}</div>
 <div class="pitch-banner">${pitch}</div>
 ${(l.phone||l.email)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-${l.phone?`<a href="tel:${l.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Call">📞 ${l.phone}</a>`:''}
-${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--purple2);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Send email">✉ ${l.email}</a>`:''}
+${l.phone?`<a href="tel:${l.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Call">📞 ${l.phone}</a>`:''}
+${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Send email">✉ ${l.email}</a>`:''}
 </div>`:''}
 <div class="srow" onclick="event.stopPropagation();window.open('${url}','_blank','noopener')" style="cursor:pointer" title="Open in new tab">
-<span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span>
-<span style="font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span>
 <button class="cpy" data-url="${url.replace(/"/g,'&quot;')}" onclick="event.stopPropagation();cpyBtn(this)" title="Copy URL">⧉</button>
 </div>
 <div class="opp">${l.opportunity||''}</div>
@@ -1312,23 +1283,6 @@ let callLog = [];
 const pollIntervals = new Map();
 
 // ── Helper: get state info for a lead id ────────────────
-function getCallState(id){ return (callStates.get(id)||{}).state||'ready'; }
-function getCallLabel(id){
-  const s=callStates.get(id);
-  if(!s||s.state==='ready') return '🤖 Call';
-  if(s.state==='calling')   return '⟳ Calling...';
-  if(s.state==='answered')  return '✅ Answered';
-  if(s.state==='voicemail') return '📬 Voicemail';
-  if(s.state==='busy')      return '🔴 Busy';
-  if(s.state==='no-answer') return '📵 No Answer';
-  if(s.state==='failed')    return '❌ Failed';
-  return '🤖 Call';
-}
-function getCallIcon(id){ return ''; }
-function getCallStatusClass(id){ const s=callStates.get(id); return s?s.state:''; }
-function getCallStatusText(id){ const s=callStates.get(id); return s?s.statusText||'':''; }
-
-// ── Vapi config save/load ───────────────────────────────
 function saveVapiConfig(){
   const cfg={
     vapiKey:     document.getElementById('vapiKey').value.trim(),
@@ -1357,7 +1311,7 @@ function loadVapiConfig(){
     document.getElementById('vapiCallerName').value=cfg.callerName||'';
     document.getElementById('vapiCompany').value=cfg.company||'';
     document.getElementById('vapiCallbackNumber').value=cfg.callback||'';
-    document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? My name is Otto from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
+    document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? My name is Ottmar from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
     document.getElementById('vapiSavedBadge').style.display='inline-block';
     document.getElementById('vapiConfigBadge').style.display='inline-block';
     document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
@@ -1382,7 +1336,7 @@ function buildAssistant(lead, cfg){
   const type    = lead.type||'business';
   const pitch   = lead.pitch_angle||`Your website only has about ${pages} pages and could use more content to rank on Google.`;
 
-  const opening = (cfg.openingLine||`Hi, just to be transparent — I'm an AI assistant calling on behalf of Otto from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`)
+  const opening = (cfg.openingLine||`Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`)
     .replace('{name}',name).replace('{score}',score).replace('{pages}',pages).replace('{city}',city);
 
   const systemPrompt=`You are an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company||'ContentScale'}.
@@ -1418,12 +1372,12 @@ CALL FLOW:
 - If interested: "I'd love to send you a free 1-page audit showing exactly what to fix first. What's the best email to send it to?" [GET EMAIL WITH PERMISSION]
 
 4. CLOSING:
-- "Great — I'll have Otto send that over today. Is there a good time this week for a quick 15-minute call with Otto to go through it?"
+- "Great — I'll have Ottmar send that over today. Is there a good time this week for a quick 15-minute call with Ottmar to go through it?"
 - Log their email and preferred call time
 
 5. IF BUSY/HESITANT:
 - "Totally understand — I can send a quick summary by email instead, no call needed. What email works best?" 
-- Or: "No problem at all. I'll let Otto know you're not the right fit right now."
+- Or: "No problem at all. I'll let Ottmar know you're not the right fit right now."
 
 6. IF NO ANSWER — voicemail:
 "Hi ${name}, this is an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. I scanned ${domain} and found some specific ways to help you rank better on Google and get found by AI assistants like ChatGPT. Call ${cfg.callback} to speak with ${cfg.callerName} directly, or I can send the details by email — just call back and leave your email. Have a great day!"
@@ -1741,14 +1695,14 @@ function showLicensePrompt(){
   document.getElementById('licenseLocked')?.scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('licenseKeyInput')?.focus();
   const s=document.getElementById('licenseStatus');
-  if(s)s.innerHTML='<span style="color:var(--purple2)">👆 Enter your license key above to unlock</span>';
+  if(s)s.innerHTML='<span style="color:var(--gold)">👆 Enter your license key above to unlock</span>';
 }
 async function activateLicense(){
   if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
   const key=(document.getElementById('licenseKeyInput')?.value||'').trim().toUpperCase();
   const statusEl=document.getElementById('licenseStatus');
   if(!key||key.length<10){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Enter a valid license key (CS-XXXX-XXXX-XXXX)</span>';return;}
-  if(statusEl)statusEl.innerHTML='<span style="color:var(--purple2)">⟳ Validating...</span>';
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⟳ Validating...</span>';
   try{
     const resp=await fetch('/api/license/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
     const data=await resp.json();
@@ -1814,10 +1768,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Pre-fill Vapi defaults if nothing saved yet
   if(!localStorage.getItem(LS_VAPI)){
     document.getElementById('vapiPhoneId').value       = '4a3b17c5-24f0-4e65-b64d-29e8e3f446a3';
-    document.getElementById('vapiCallerName').value    = 'Otto from ContentScale';
+    document.getElementById('vapiCallerName').value    = 'Ottmar from ContentScale';
     document.getElementById('vapiCompany').value       = 'ContentScale';
     document.getElementById('vapiCallbackNumber').value= '+1 (279) 499 8736';
-    document.getElementById('vapiOpeningLine').value   = `Hi, just to be transparent — I'm an AI assistant calling on behalf of Otto from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`;
+    document.getElementById('vapiOpeningLine').value   = `Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`;
   } else {
     loadVapiConfig();
   }
