@@ -107,6 +107,17 @@ return false;
 }
 app.set('trust proxy', 1);
 app.use(compression({ level: 9, threshold: 0 }));
+
+// ── CORS — allow contentscale.site to call Railway ──
+const cors = require('cors');
+app.use(cors({
+  origin: ['https://contentscale.site', 'https://www.contentscale.site'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.options('*', cors());
+
+
 // ── Global badge-loader injection ────────────────────────────────────────────
 // Injects badge-loader.js into every HTML page served by this server
 app.use((req, res, next) => {
@@ -3283,15 +3294,14 @@ app.post('/api/voicebot/webhook', (req, res) => {
 });
 
 
+
 // ============================================
-// VAPI WEB CALL ENDPOINT — for Otto on homepage
+// VAPI WEB CALL ENDPOINT — Otto on homepage
 // ============================================
 app.post('/api/vapi/webcall', async (req, res) => {
   try {
     const privateKey = process.env.VAPI_PRIVATE_KEY;
-    if (!privateKey) {
-      return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set' });
-    }
+    if (!privateKey) return res.status(500).json({ error: 'VAPI_PRIVATE_KEY not set in Railway' });
     const response = await fetch('https://api.vapi.ai/call', {
       method: 'POST',
       headers: {
@@ -3304,10 +3314,7 @@ app.post('/api/vapi/webcall', async (req, res) => {
       })
     });
     const data = await response.json();
-    if (!response.ok) {
-      console.error('[vapi/webcall] error:', data);
-      return res.status(response.status).json(data);
-    }
+    if (!response.ok) { console.error('[vapi/webcall] error:', data); return res.status(response.status).json(data); }
     console.log('[vapi/webcall] created:', data.id);
     res.json(data);
   } catch (err) {
@@ -3315,5 +3322,6 @@ app.post('/api/vapi/webcall', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 startServer();
