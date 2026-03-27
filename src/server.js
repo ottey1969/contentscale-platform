@@ -3313,10 +3313,9 @@ app.post('/api/vapi/webcall', async (req, res) => {
         assistantId: 'b4ba165e-daaa-4723-a10d-40262359a8da'
       })
     });
-    const data = await response.json();
-    if (!response.ok) { console.error('[vapi/webcall] error:', data); return res.status(response.status).json(data); }
-    console.log('[vapi/webcall] created:', data.id);
-    res.json(data);
+    const text = await response.text();
+    console.log('[vapi/webcall] status:', response.status, 'body:', text);
+    res.status(response.status).type('application/json').send(text);
   } catch (err) {
     console.error('[vapi/webcall] exception:', err.message);
     res.status(500).json({ error: err.message });
