@@ -1,621 +1,295 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Talk to Otto — ContentScale AI Demo</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+<title>Otto Elite | AI Strategy Consultant</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#060910;--surface:#0d1421;--card:#111827;--border:#1f2f4a;
-  --ink:#f0f4ff;--muted:#6b7a99;--sub:#3d4f6b;
-  --purple:#7c3aed;--purple2:#a78bfa;--blue:#3b82f6;--blue2:#60a5fa;
-  --green:#10b981;--green2:#34d399;--gold:#f59e0b;--orange:#f97316;
+  --bg:#020617;--surface:#0f172a;--card:#1e293b;--border:#334155;
+  --ink:#f8fafc;--muted:#94a3b8;--sub:#64748b;
+  --purple:#a78bfa;--purple2:#c4b5fd;--glow:rgba(167,139,250,0.15);
+  --blue:#3b82f6;--blue2:#60a5fa;--green:#22c55e;--gold:#fbbf24;
   --red:#ef4444;
 }
-html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4;}
-.wrap{max-width:900px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
 
-/* NAV */
-nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;border-bottom:1px solid var(--border);margin-bottom:60px;}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,40px);letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
-.brand .pro{color:#7c3aed;-webkit-text-fill-color:#7c3aed;font-size:clamp(14px,1.6vw,20px);vertical-align:middle;margin-left:6px;}
-.lang-toggle{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;}
-.lang-btn{display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:7px;border:none;background:transparent;cursor:pointer;transition:all .2s;}
-.lang-btn.active-en{background:linear-gradient(135deg,#3b82f6,#7c3aed);}
-.lang-btn.active-nl{background:linear-gradient(135deg,#f97316,#f59e0b);}
-.lang-btn span.label{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);}
-.lang-btn.active-en span.label,.lang-btn.active-nl span.label{color:#fff;}
+/* High-End Background Overlay */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 0% 100%, rgba(167, 139, 250, 0.05) 0%, transparent 40%);
+  pointer-events: none; z-index: 0;
+}
 
-/* HERO */
-.hero{text-align:center;margin-bottom:48px;}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:20px;padding:6px 16px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--purple2);margin-bottom:24px;}
-.pulse{width:6px;height:6px;border-radius:50%;background:var(--green2);animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,9vw,96px);line-height:.92;letter-spacing:.02em;margin-bottom:20px;}
-h1 em{font-style:normal;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hero-sub{font-size:clamp(15px,2vw,18px);color:var(--muted);max-width:560px;margin:0 auto 32px;line-height:1.65;}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
 
-/* SCORE BADGES */
-.score-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:48px;}
-.score-badge{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;text-align:center;}
-.score-num{font-family:'Bebas Neue',sans-serif;font-size:32px;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.score-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+/* ── NAV ── */
+nav{display:flex;align-items:center;justify-content:space-between;padding:30px 0;border-bottom:1px solid var(--border);margin-bottom:60px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;text-decoration:none;color:var(--ink);}
+.brand span{background:linear-gradient(90deg, var(--purple), var(--blue2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
 
-/* DEMO CARD */
-.demo-card{background:var(--card);border:1px solid var(--border);border-radius:24px;overflow:hidden;margin-bottom:60px;position:relative;}
-.demo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#3b82f6,#10b981,#f59e0b);}
+.lang-toggle{display:flex;gap:4px;background:var(--surface);padding:4px;border-radius:10px;border:1px solid var(--border);}
+.lb{padding:6px 14px;border-radius:7px;border:none;background:transparent;cursor:pointer;font-family:'IBM Plex Mono';font-size:10px;font-weight:700;color:var(--muted);transition:0.3s;}
+.lb.active{background:var(--gold);color:#000;}
 
-.steps-header{display:flex;border-bottom:1px solid var(--border);}
-.step-tab{flex:1;padding:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);text-align:center;border-right:1px solid var(--border);transition:all .3s;}
-.step-tab:last-child{border-right:none;}
-.step-tab.active{color:var(--ink);background:rgba(124,58,237,.06);}
-.step-tab.done{color:var(--green2);}
-.step-num{display:block;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;margin-bottom:2px;}
+/* ── HERO ── */
+.hero{text-align:center;margin-bottom:60px;}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;background:rgba(239, 68, 68, 0.05);border:1px solid rgba(239, 68, 68, 0.2);padding:8px 20px;border-radius:50px;font-family:'IBM Plex Mono';font-size:10px;text-transform:uppercase;color:var(--red);margin-bottom:24px;letter-spacing:1px;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(50px, 10vw, 110px);line-height:0.85;margin-bottom:20px;letter-spacing:-1px;}
+h1 em{font-style:normal;background:linear-gradient(135deg, var(--gold), #f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.hero-sub{font-size:clamp(16px, 2vw, 20px);color:var(--muted);max-width:650px;margin:0 auto 32px;line-height:1.6;}
 
-.phase{display:none;padding:40px;}
-.phase.active{display:block;}
+/* ── MAIN DEMO CARD ── */
+.main-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:32px;
+  overflow:hidden;box-shadow:0 30px 60px -12px rgba(0,0,0,0.5);
+  position:relative;backdrop-filter:blur(10px);
+}
+.main-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg, var(--purple), var(--blue), var(--green), var(--gold));
+}
 
-/* Phase 1 */
-.feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
-@media(max-width:580px){.feature-grid{grid-template-columns:1fr;}}
-.feature-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;}
-.feature-icon{font-size:24px;margin-bottom:8px;}
-.feature-item h3{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--purple2);margin-bottom:5px;}
-.feature-item p{font-size:13px;color:var(--muted);line-height:1.6;}
+/* PHASE 1: DISCOVERY */
+#phase-setup{padding:50px; text-align:center;}
+.setup-header h2{font-family:'Bebas Neue';font-size:36px;margin-bottom:15px;letter-spacing:1px;}
 
-.start-btn{width:100%;padding:22px;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;color:#fff;cursor:pointer;transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;}
-.start-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(124,58,237,.4);}
+.intel-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:20px;margin:30px 0;}
+@media(max-width:600px){.intel-grid{grid-template-columns:1fr;}}
+.intel-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:25px;border-radius:20px; text-align: left;}
+.intel-item h4{font-family:'Bebas Neue';font-size:22px;color:var(--gold);margin-bottom:10px;}
+.intel-item p{font-size:13px; color:var(--muted); line-height:1.5;}
 
-/* Phase 2 — Live */
-.live-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
-@media(max-width:640px){.live-layout{grid-template-columns:1fr;}}
+.elite-btn{
+  width:100%;max-width:450px;padding:25px;background:linear-gradient(135deg, var(--purple), var(--blue));
+  border:none;border-radius:16px;color:#fff;font-family:'Bebas Neue';font-size:28px;
+  cursor:pointer;transition:0.3s;box-shadow:0 15px 30px rgba(124, 58, 237, 0.3);margin-top:20px;
+}
+.elite-btn:hover{transform:translateY(-3px);box-shadow:0 20px 40px rgba(124, 58, 237, 0.4);}
 
-.phone-ui{background:#000;border-radius:20px;border:6px solid #1a1a1a;padding:24px;text-align:center;}
-.call-stat{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green2);letter-spacing:.1em;margin-bottom:12px;}
-.otto-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 10px;}
-.otto-name{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;margin-bottom:2px;}
-.otto-role{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;margin-bottom:20px;}
+/* PHASE 2: LIVE DIALOGUE */
+#phase-call{display:none;padding:50px;text-align:center;}
+.otto-briefing{
+  background:#000;border-radius:30px;border:8px solid #1e293b;padding:40px;
+  max-width:350px;margin:0 auto;position:relative;box-shadow:0 50px 100px rgba(0,0,0,0.6);
+}
+.viz-container{display:flex;align-items:center;justify-content:center;gap:4px;height:80px;margin:40px 0;}
+.bar{width:5px;height:15px;background:var(--purple);border-radius:10px;transition:0.1s;}
 
-.wave-viz{display:flex;align-items:center;justify-content:center;gap:3px;height:36px;margin-bottom:20px;}
-.wb{width:3px;border-radius:3px;background:var(--purple2);transition:height .1s ease;}
+.hangup{
+  width:70px;height:70px;background:var(--red);border:none;border-radius:50%;
+  color:#fff;font-size:30px;cursor:pointer;transform:rotate(135deg);box-shadow:0 10px 20px rgba(239, 68, 68, 0.3);
+}
 
-.timer-display{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:16px;}
-.hangup-btn{width:56px;height:56px;border-radius:50%;background:var(--red);border:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto;transition:all .3s;transform:rotate(135deg);}
-.hangup-btn:hover{background:#dc2626;}
+/* PHASE 3: THE SOLUTION */
+#phase-result{display:none;padding:50px;text-align:center;}
+.result-box{background:rgba(34, 197, 94, 0.05);border:1px solid var(--green);padding:40px;border-radius:24px;margin-bottom:30px;}
 
-.transcript-panel{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;}
-.transcript-panel::-webkit-scrollbar{width:3px;}
-.transcript-panel::-webkit-scrollbar-thumb{background:var(--border);}
-.msg{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;animation:msgIn .3s ease-out;}
-@keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.msg.otto{background:rgba(124,58,237,.1);border-left:3px solid var(--purple);}
-.msg.user{background:rgba(16,185,129,.08);border-left:3px solid var(--green);}
-.msg .who{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
-.transcript-hint{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--sub);text-align:center;padding:20px;letter-spacing:.08em;}
-
-/* Phase 3 */
-.result-hero{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(59,130,246,.1));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:32px;text-align:center;margin-bottom:24px;}
-.result-score{font-family:'Bebas Neue',sans-serif;font-size:72px;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.result-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.04em;color:var(--green2);margin-bottom:8px;}
-.result-sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px;}
-
-.cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
-@media(max-width:480px){.cta-grid{grid-template-columns:1fr;}}
-.cta-primary{display:block;padding:16px;background:linear-gradient(135deg,#f59e0b,#f97316);border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:#000;text-decoration:none;text-align:center;transition:all .3s;}
-.cta-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(245,158,11,.3);}
-.cta-secondary{display:block;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:var(--ink);text-decoration:none;text-align:center;transition:all .3s;}
-.cta-secondary:hover{border-color:var(--purple2);color:var(--purple2);}
-
-.services-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-@media(max-width:580px){.services-row{grid-template-columns:1fr;}}
-.svc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
-.svc-price{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;}
-.svc-name{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
-
-/* PROOF */
-.proof{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:60px;}
-@media(max-width:580px){.proof{grid-template-columns:1fr 1fr;}}
-.proof-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;}
-.proof-num{font-family:'Bebas Neue',sans-serif;font-size:38px;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.proof-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
-
-/* FOOTER */
-footer{background:linear-gradient(135deg,#111827,#1f2937);border-top:2px solid #374151;padding:52px 0 24px;margin-top:20px;}
-.foot-inner{max-width:900px;margin:0 auto;padding:0 24px;}
-.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px;}
-@media(max-width:640px){.foot-grid{grid-template-columns:1fr 1fr;}}
-.foot-brand-name{font-family:'Bebas Neue',sans-serif;font-size:20px;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:inline-block;margin-bottom:10px;}
-.foot-desc{font-size:12.5px;color:#6b7280;line-height:1.7;max-width:240px;}
-.foot-wa{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#16a34a;font-weight:700;text-decoration:none;}
-.foot-col h4{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;}
-.foot-link{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;text-decoration:none;margin-bottom:10px;transition:color .15s;}
-.foot-bottom{padding-top:20px;border-top:1px solid #374151;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
-.foot-copy{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7280;}
-.foot-badges{display:flex;gap:8px;flex-wrap:wrap;}
-.foot-badge{background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;}
+/* UTILS */
+.toast{position:fixed;top:30px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:12px 30px;border-radius:50px;font-weight:700;z-index:10000;opacity:0;transition:0.3s;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(10px);}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <!-- NAV -->
+<div class="wrap">
   <nav>
-    <a href="https://contentscale.site" class="brand">ContentScale<span class="pro">PRO</span></a>
+    <a href="#" class="brand">ContentScale <span>ELITE</span></a>
     <div class="lang-toggle">
-      <button class="lang-btn active-en" id="btn-en" onclick="setLang('en')">
-        <span style="font-size:18px">🇬🇧</span><span class="label">EN</span>
-      </button>
-      <button class="lang-btn" id="btn-nl" onclick="setLang('nl')">
-        <span style="font-size:18px">🇳🇱</span><span class="label">NL</span>
-      </button>
+      <button class="lb active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lb" id="btn-nl" onclick="setLang('nl')">NL</button>
     </div>
   </nav>
 
-  <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge"><div class="pulse"></div><span id="txt-badge">Talk to Otto — Live AI Demo</span></div>
-    <h1><span id="txt-h1a">Ask Otto</span><br><em id="txt-h1b">Anything.</em></h1>
-    <p class="hero-sub" id="txt-sub">Otto knows everything about ContentScale — GRAAF Framework, ContentScore, Lead Crawler, pricing, results. Ask a real question and see how your AI sales assistant works.</p>
+    <div class="eyebrow" id="txt-eyebrow">Strategic Revenue Leak Diagnosis</div>
+    <h1 id="txt-h1">LEGACY SEO IS <em>OBSOLETE.</em></h1>
+    <p id="txt-tagline">Google AI Overviews are erasing businesses that don't adapt. Otto is the AI Strategy Consultant engineered to plug your revenue leak using the GRAAF Framework.</p>
   </div>
 
-  <!-- SCORE BADGES -->
-  <div class="score-row">
-    <div class="score-badge"><div class="score-num">3.7×</div><div class="score-label" id="txt-s1">Avg Traffic Lift</div></div>
-    <div class="score-badge"><div class="score-num">78%</div><div class="score-label" id="txt-s2">Recovery Rate</div></div>
-    <div class="score-badge"><div class="score-num">47</div><div class="score-label" id="txt-s3">Countries</div></div>
-    <div class="score-badge"><div class="score-num">90</div><div class="score-label" id="txt-s4">Day Avg Recovery</div></div>
+  <div class="main-card">
+    
+    <!-- PHASE 1: START -->
+    <div id="phase-setup">
+      <div class="setup-header">
+        <h2 id="txt-setup-h">INITIATE STRATEGIC BRIEFING</h2>
+        <p id="txt-setup-p">Otto will evaluate your traffic bottlenecks and outbound efficiency. Face the reality of your current revenue leakage.</p>
+      </div>
+
+      <div class="intel-grid">
+        <div class="intel-item">
+          <h4 id="i1-h">The GRAAF Standard</h4>
+          <p id="i1-p">Why 90% of content fails to rank in 2026. Credentials, Accuracy, and Freshness are non-negotiable.</p>
+        </div>
+        <div class="intel-item">
+          <h4 id="i2-h">Traffic Recovery</h4>
+          <p id="i2-p">78% success rate in restoring decimated Google rankings using the Elite framework.</p>
+        </div>
+      </div>
+
+      <button class="elite-btn" onclick="startDemo()"><span id="txt-btn">TALK TO THE CONSULTANT</span></button>
+      <p style="margin-top:20px; font-size:11px; color:var(--sub); font-family:'IBM Plex Mono';" id="txt-disclaimer">● LIVE CONNECTION TO AMSTERDAM ELITE ENGINE AVAILABLE</p>
+    </div>
+
+    <!-- PHASE 2: LIVE CALL -->
+    <div id="phase-call">
+      <div class="otto-briefing">
+        <div style="font-family:'IBM Plex Mono'; font-size:10px; color:var(--purple); letter-spacing:2px; margin-bottom:10px;">ESTABLISHING COMMAND...</div>
+        <h3 style="font-family:'Bebas Neue'; font-size:28px;">OTTO STRATEGIST</h3>
+        <div id="timer" style="font-family:'IBM Plex Mono'; color:var(--green);">00:00</div>
+
+        <div class="viz-container" id="viz">
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <p style="font-size:13px; color:var(--muted); line-height:1.6;" id="txt-hint">
+          <strong>OTTO IS ANALYSING YOUR GAP.</strong><br>Answer his questions directly. He values ROI over politeness.
+        </p>
+
+        <button class="hangup" onclick="endCall()" style="margin-top:40px;">📞</button>
+      </div>
+    </div>
+
+    <!-- PHASE 3: SOLUTION -->
+    <div id="phase-result">
+      <div class="result-box">
+        <h2 id="txt-res-h" style="font-family:'Bebas Neue'; font-size:48px; color:var(--gold);">DIAGNOSIS COMPLETE.</h2>
+        <p id="txt-res-p" style="margin-top:10px; color:var(--ink);">Your current 'business as usual' is a financial liability. To plug the leak, you need the GRAAF framework and AI-driven outbound automation.</p>
+      </div>
+      
+      <a href="https://wa.me/31628073996" class="elite-btn" style="text-decoration:none; display:block; background:var(--gold); color:#000;"><span id="txt-cta">FIX MY REVENUE LEAK</span></a>
+      <p style="margin-top:20px; font-size:13px; color:var(--sub);" id="txt-final">Average Traffic Lift: 3.7x within 90 days of implementation.</p>
+    </div>
+
   </div>
+</div>
 
-  <!-- DEMO CARD -->
-  <div class="demo-card">
-    <div class="steps-header">
-      <div class="step-tab active" id="tab1"><span class="step-num">1</span><span id="txt-tab1">Start</span></div>
-      <div class="step-tab" id="tab2"><span class="step-num">2</span><span id="txt-tab2">Talk to Otto</span></div>
-      <div class="step-tab" id="tab3"><span class="step-num">3</span><span id="txt-tab3">Next Step</span></div>
-    </div>
+<div id="toast" class="toast">Verbinding maken...</div>
 
-    <!-- Phase 1 -->
-    <div class="phase active" id="phase1">
-      <div class="feature-grid">
-        <div class="feature-item">
-          <div class="feature-icon">📊</div>
-          <h3 id="f1h">ContentScore</h3>
-          <p id="f1p">Ask Otto: "What is a ContentScore?" — he'll explain GRAAF, the 100-point system, and how to get yours free in 30 seconds.</p>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">🎯</div>
-          <h3 id="f2h">Lead Crawler</h3>
-          <p id="f2p">Ask about the Lead Crawler — how it finds 200–500 businesses per city and calls them with AI outbound.</p>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">💶</div>
-          <h3 id="f3h">Pricing</h3>
-          <p id="f3p">Ask Otto about pricing — scanner is free, services are €250/month, white-label reselling explained.</p>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">🇳🇱</div>
-          <h3 id="f4h">About Ottmar</h3>
-          <p id="f4p">Ask who built this — Ottmar Francisca, Amsterdam, 24+ years municipal ops. Otto tells the whole story.</p>
-        </div>
-      </div>
-      <button class="start-btn" onclick="startDemo()">
-        <span id="txt-startbtn">🎙️ Start Talking to Otto — Free</span>
-      </button>
-    </div>
-
-    <!-- Phase 2 -->
-    <div class="phase" id="phase2">
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--purple2);margin-bottom:6px;" id="liveLabel">Live Conversation</div>
-        <p style="font-size:13px;color:var(--muted);" id="liveHint">Ask Otto anything about ContentScale</p>
-      </div>
-      <div class="live-layout">
-        <div class="phone-ui">
-          <div class="call-stat" id="callStat">● CONNECTED</div>
-          <div class="otto-avatar">🤖</div>
-          <div class="otto-name">Otto</div>
-          <div class="otto-role" id="ottoRole">CONTENTSCALE AI · AMSTERDAM</div>
-          <div class="wave-viz" id="waveViz">
-            <div class="wb" style="height:4px" id="w1"></div><div class="wb" style="height:8px" id="w2"></div>
-            <div class="wb" style="height:16px" id="w3"></div><div class="wb" style="height:24px" id="w4"></div>
-            <div class="wb" style="height:32px" id="w5"></div><div class="wb" style="height:24px" id="w6"></div>
-            <div class="wb" style="height:16px" id="w7"></div><div class="wb" style="height:8px" id="w8"></div>
-            <div class="wb" style="height:4px" id="w9"></div><div class="wb" style="height:10px" id="w10"></div>
-            <div class="wb" style="height:6px" id="w11"></div><div class="wb" style="height:4px" id="w12"></div>
-          </div>
-          <div class="timer-display" id="timerDisplay">00:00</div>
-          <button class="hangup-btn" onclick="endCall()">📞</button>
-        </div>
-        <div>
-          <div class="transcript-panel" id="transcript">
-            <div class="transcript-hint" id="transcriptHint">Otto is ready — start speaking...</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Phase 3 -->
-    <div class="phase" id="phase3">
-      <div class="result-hero">
-        <div class="result-score">Otto</div>
-        <div class="result-title" id="txt-result-title">That's Your AI Sales Assistant</div>
-        <p class="result-sub" id="txt-result-sub">Otto answers questions, explains GRAAF, quotes pricing, books calls with Ottmar — 24/7, on your website, for your clients.</p>
-        <div class="cta-grid">
-          <a href="https://app.contentscale.site" class="cta-primary" id="cta1" target="_blank">🎯 Get Free ContentScore</a>
-          <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20just%20talked%20to%20Otto%20and%20want%20to%20know%20more%20about%20ContentScale." class="cta-secondary" id="cta2" target="_blank">💬 WhatsApp Ottmar</a>
-        </div>
-      </div>
-      <div class="services-row">
-        <div class="svc"><div class="svc-price">Free</div><div class="svc-name" id="svc1">ContentScore Scanner</div></div>
-        <div class="svc"><div class="svc-price">€250<span style="font-size:14px;color:var(--muted)">/mo</span></div><div class="svc-name" id="svc2">Content Recovery</div></div>
-        <div class="svc"><div class="svc-price">€250<span style="font-size:14px;color:var(--muted)">/mo</span></div><div class="svc-name" id="svc3">AI Lead Generation</div></div>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
-        <a href="#" class="cta-secondary" style="font-size:14px;padding:10px 20px;" onclick="restartDemo();return false;" id="txt-restart">🔄 Talk to Otto Again</a>
-        <a href="https://app.contentscale.site/ai-receptionist" class="cta-secondary" style="font-size:14px;padding:10px 20px;" target="_blank">🎙️ AI Receptionist Demo</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- PROOF -->
-  <div class="proof">
-    <div class="proof-item"><div class="proof-num">3.7×</div><div class="proof-label" id="p1">Traffic Improvement</div></div>
-    <div class="proof-item"><div class="proof-num">78%</div><div class="proof-label" id="p2">Recovery Success</div></div>
-    <div class="proof-item"><div class="proof-num">200+</div><div class="proof-label" id="p3">Sites Recovered</div></div>
-    <div class="proof-item"><div class="proof-num">47</div><div class="proof-label" id="p4">Countries</div></div>
-  </div>
-
-</div><!-- /wrap -->
-
-<!-- FOOTER -->
-<footer>
-  <div class="foot-inner">
-    <div class="foot-grid">
-      <div>
-        <a href="https://contentscale.site" class="foot-brand-name">ContentScale</a>
-        <p class="foot-desc">AI content intelligence. GRAAF Framework · Lead Crawler · Otto AI. Built in Amsterdam by Ottmar J.G. Francisca.</p>
-        <a href="https://wa.me/31628073996" target="_blank" class="foot-wa">💬 WhatsApp Ottmar</a>
-      </div>
-      <div class="foot-col">
-        <h4>Platform</h4>
-        <a href="https://app.contentscale.site" class="foot-link" style="color:#f97316" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f97316'">Content Scanner</a>
-        <a href="https://app.contentscale.site/lead-crawler" class="foot-link" style="color:#a78bfa" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#a78bfa'">Lead Crawler Pro</a>
-        <a href="https://app.contentscale.site/#leaderboard" class="foot-link" style="color:#f9fafb;font-weight:700" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='#f9fafb'">Leaderboard</a>
-        <a href="https://app.contentscale.site/ai-receptionist" class="foot-link" style="color:#f59e0b" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f59e0b'">AI Receptionist</a>
-      </div>
-      <div class="foot-col">
-        <h4>Company</h4>
-        <a href="https://contentscale.site/about" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">About</a>
-        <a href="https://contentscale.site/services" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Services</a>
-        <a href="https://contentscale.site/blog/" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Blog</a>
-        <a href="https://contentscale.site/contact/" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Contact</a>
-      </div>
-      <div class="foot-col">
-        <h4>Legal</h4>
-        <a href="https://contentscale.site/privacy-policy/" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Privacy Policy</a>
-        <a href="https://contentscale.site/terms/" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Terms</a>
-        <a href="mailto:info@contentscale.site" class="foot-link" style="color:#6b7280" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">info@contentscale.site</a>
-      </div>
-    </div>
-    <div class="foot-bottom">
-      <div class="foot-copy">© 2026 ContentScale.site · Ottmar J.G. Francisca · Amsterdam, Netherlands</div>
-      <div class="foot-badges">
-        <span class="foot-badge">Dutch Law</span>
-        <span class="foot-badge">EU AI Act</span>
-        <span class="foot-badge">GDPR</span>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<!-- Vapi SDK -->
 <script src="https://cdn.jsdelivr.net/gh/balacodeio/Vapi-Web-UMD@latest/dist/latest/vapi-web-bundle.min.js"></script>
 <script>
-const VAPI_PUBLIC_KEY = 'faf296f1-fd90-42e0-abb3-4c7125db43b8';
+const VAPI_KEY = 'faf296f1-fd90-42e0-abb3-4c7125db43b8';
 let vapi = null;
-let callActive = false;
-let timerInterval = null;
-let waveInterval = null;
-let callSeconds = 0;
-let transcriptLines = [];
 let currentLang = 'en';
 
-// ── Language ──────────────────────────────────────────
 const i18n = {
   en: {
-    badge: 'Talk to Otto — Live AI Demo',
-    h1a: 'Ask Otto', h1b: 'Anything.',
-    sub: 'Otto knows everything about ContentScale — GRAAF Framework, ContentScore, Lead Crawler, pricing, results. Ask a real question and see how your AI sales assistant works.',
-    s1:'Avg Traffic Lift',s2:'Recovery Rate',s3:'Countries',s4:'Day Recovery',
-    tab1:'Start',tab2:'Talk to Otto',tab3:'Next Step',
-    f1h:'ContentScore',f1p:'Ask Otto: "What is a ContentScore?" — he\'ll explain GRAAF, the 100-point system, and how to get yours free in 30 seconds.',
-    f2h:'Lead Crawler',f2p:'Ask about the Lead Crawler — how it finds 200–500 businesses per city and calls them with AI outbound.',
-    f3h:'Pricing',f3p:'Ask Otto about pricing — scanner is free, services are €250/month, white-label reselling explained.',
-    f4h:'About Ottmar',f4p:'Ask who built this — Ottmar Francisca, Amsterdam, 24+ years municipal ops. Otto tells the whole story.',
-    startbtn:'🎙️ Start Talking to Otto — Free',
-    liveLabel:'Live Conversation', liveHint:'Ask Otto anything about ContentScale',
-    transcriptHint:'Otto is ready — start speaking...',
-    resultTitle:"That's Your AI Sales Assistant",
-    resultSub:'Otto answers questions, explains GRAAF, quotes pricing, books calls with Ottmar — 24/7, on your website, for your clients.',
-    cta1:'🎯 Get Free ContentScore', cta2:'💬 WhatsApp Ottmar',
-    svc1:'ContentScore Scanner',svc2:'Content Recovery',svc3:'AI Lead Generation',
-    restart:'🔄 Talk to Otto Again',
-    p1:'Traffic Improvement',p2:'Recovery Success',p3:'Sites Recovered',p4:'Countries',
+    eyebrow: "Strategic Revenue Leak Diagnosis",
+    h1: "LEGACY SEO IS<br><em>OBSOLETE.</em>",
+    tagline: "Google AI Overviews are erasing businesses that don't adapt. Otto is the AI Strategy Consultant engineered to plug your revenue leak.",
+    setupH: "INITIATE STRATEGIC BRIEFING",
+    setupP: "Otto will evaluate your traffic bottlenecks. Face the reality of your current revenue leakage.",
+    i1h: "The GRAAF Standard", i1p: "Why 90% of content fails to rank in 2026. Accuracy and Freshness are non-negotiable.",
+    i2h: "Traffic Recovery", i2p: "78% success rate in restoring decimated Google rankings using the Elite framework.",
+    btn: "TALK TO THE CONSULTANT",
+    hint: "<strong>OTTO IS ANALYSING YOUR GAP.</strong><br>Answer his questions directly. He values ROI over politeness.",
+    resH: "DIAGNOSIS COMPLETE.",
+    resP: "Your current 'business as usual' is a financial liability. You need the GRAAF framework and AI-driven outbound automation.",
+    cta: "FIX MY REVENUE LEAK",
+    final: "Average Traffic Lift: 3.7x within 90 days of implementation."
   },
   nl: {
-    badge: 'Praat met Otto — Live AI Demo',
-    h1a: 'Vraag Otto', h1b: 'Alles.',
-    sub: 'Otto weet alles over ContentScale — GRAAF Framework, ContentScore, Lead Crawler, prijzen, resultaten. Stel een echte vraag en zie hoe jouw AI verkoopassistent werkt.',
-    s1:'Gem. Verkeersgroei',s2:'Herstelpercentage',s3:'Landen',s4:'Dagen Herstel',
-    tab1:'Start',tab2:'Praat met Otto',tab3:'Volgende Stap',
-    f1h:'ContentScore',f1p:'Vraag Otto: "Wat is een ContentScore?" — hij legt GRAAF uit, het 100-punten systeem, en hoe je gratis jouw score krijgt in 30 seconden.',
-    f2h:'Lead Crawler',f2p:'Vraag naar de Lead Crawler — hoe hij 200–500 bedrijven per stad vindt en belt met AI outbound.',
-    f3h:'Prijzen',f3p:'Vraag Otto naar de prijzen — scanner is gratis, diensten zijn €250/maand, white-label uitleg.',
-    f4h:'Over Ottmar',f4p:'Vraag wie dit gebouwd heeft — Ottmar Francisca, Amsterdam, 24+ jaar gemeentelijke operaties. Otto vertelt het hele verhaal.',
-    startbtn:'🎙️ Praat Gratis met Otto',
-    liveLabel:'Live Gesprek', liveHint:'Vraag Otto alles over ContentScale',
-    transcriptHint:'Otto staat klaar — begin te spreken...',
-    resultTitle:'Dat is Jouw AI Verkoopassistent',
-    resultSub:'Otto beantwoordt vragen, legt GRAAF uit, noemt prijzen, boekt gesprekken met Ottmar — 24/7, op jouw website, voor jouw klanten.',
-    cta1:'🎯 Gratis ContentScore', cta2:'💬 WhatsApp Ottmar',
-    svc1:'ContentScore Scanner',svc2:'Content Herstel',svc3:'AI Lead Generatie',
-    restart:'🔄 Opnieuw met Otto Praten',
-    p1:'Verkeersverbetering',p2:'Herstel Succes',p3:'Sites Hersteld',p4:'Landen',
+    eyebrow: "Strategische Revenue Leak Diagnose",
+    h1: "LEGACY SEO IS<br><em>OBSOLEET.</em>",
+    tagline: "Google AI Overviews wissen bedrijven uit die zich niet aanpassen. Otto is de AI Strategie Consultant die jouw omzetlek dicht.",
+    setupH: "START STRATEGISCHE BRIEFING",
+    setupP: "Otto evalueert jouw bottlenecks. Zie de realiteit van je huidige omzetverlies onder ogen.",
+    i1h: "De GRAAF Standaard", i1p: "Waarom 90% van de content faalt in 2026. Geloofwaardigheid en actualiteit zijn essentieel.",
+    i2h: "Verkeersherstel", i2p: "78% succesrate bij het herstellen van Google-posities met het Elite framework.",
+    btn: "SPREEK MET DE CONSULTANT",
+    hint: "<strong>OTTO ANALYSEERT JOUW GAT.</strong><br>Beantwoord zijn vragen direct. Hij waardeert ROI boven beleefdheid.",
+    resH: "DIAGNOSE VOLTOOID.",
+    resP: "Jouw huidige aanpak is een financieel risico. Je hebt het GRAAF-framework en AI-outbound automatisering nodig.",
+    cta: "DICHT MIJN OMZETLEK",
+    final: "Gemiddelde verkeersgroei: 3,7x binnen 90 dagen na implementatie."
   }
 };
 
-function setLang(lang) {
-  currentLang = lang;
-  const d = i18n[lang];
-  const enBtn = document.getElementById('btn-en');
-  const nlBtn = document.getElementById('btn-nl');
-  enBtn.className = 'lang-btn' + (lang==='en' ? ' active-en' : '');
-  nlBtn.className = 'lang-btn' + (lang==='nl' ? ' active-nl' : '');
-  enBtn.querySelector('.label').style.color = lang==='en' ? '#fff' : 'var(--muted)';
-  nlBtn.querySelector('.label').style.color = lang==='nl' ? '#fff' : 'var(--muted)';
-  Object.keys(d).forEach(k => {
-    const el = document.getElementById(k.startsWith('txt-') ? k : 'txt-'+k) || document.getElementById(k);
-    if(el) el.textContent = d[k];
-  });
-  document.documentElement.lang = lang;
+function setLang(l) {
+  currentLang = l;
+  document.querySelectorAll('.lb').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+l).classList.add('active');
+  const d = i18n[l];
+  document.getElementById('txt-eyebrow').textContent = d.eyebrow;
+  document.getElementById('txt-h1').innerHTML = d.h1;
+  document.getElementById('txt-tagline').textContent = d.tagline;
+  document.getElementById('txt-setup-h').textContent = d.setupH;
+  document.getElementById('txt-setup-p').textContent = d.setupP;
+  document.getElementById('i1-h').textContent = d.i1h; document.getElementById('i1-p').textContent = d.i1p;
+  document.getElementById('i2-h').textContent = d.i2h; document.getElementById('i2-p').textContent = d.i2p;
+  document.getElementById('txt-btn').textContent = d.btn;
+  document.getElementById('txt-hint').innerHTML = d.hint;
+  document.getElementById('txt-res-h').textContent = d.resH;
+  document.getElementById('txt-res-p').textContent = d.resP;
+  document.getElementById('txt-cta').textContent = d.cta;
+  document.getElementById('txt-final').textContent = d.final;
 }
 
-// ── Phases ────────────────────────────────────────────
-function setPhase(n) {
-  document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.step-tab').forEach((t,i) => {
-    t.classList.remove('active','done');
-    if(i+1<n) t.classList.add('done');
-    if(i+1===n) t.classList.add('active');
-  });
-  document.getElementById('phase'+n).classList.add('active');
-}
-
-// ── Start Demo ────────────────────────────────────────
 function startDemo() {
-  setPhase(2);
-  initVapi();
+  document.getElementById('phase-setup').style.display = 'none';
+  document.getElementById('phase-call').style.display = 'block';
+  initCall();
 }
 
-function initVapi() {
-  try {
-    vapi = new Vapi(VAPI_PUBLIC_KEY);
+function initCall() {
+  vapi = new Vapi(VAPI_KEY);
+  
+  const systemPrompt = currentLang === 'nl' 
+    ? `IDENTITEIT: Je bent Otto, de AI Strategie Consultant van ContentScale, ontwikkeld door Ottmar Francisca.
+       LEGAL: Begin ALTIJD met: "Hallo, ik ben Otto, de AI-strategie consultant van ContentScale."
+       FILOSOFIE: Legacy SEO is dood. Het GRAAF Framework is de enige weg.
+       FLOW: 
+       1. Vraag: "Ben je hier omdat je verkeer verliest door AI-updates, of zoek je schaalbare sales zonder menselijke bellers?"
+       2. Diagnose: "De meeste oprichters verliezen duizenden euro's per maand. Wat is je grootste bottleneck?"
+       3. Pivot: Bij vragen over prijs: "De prijs is 250 euro. Maar wat is je omzetverlies per dag zolang dit handmatig blijft?"
+       4. CTA: Stuur ze naar de gratis scan op app.contentscale.site.`
+    : `IDENTITY: You are Otto, the AI Strategy Consultant for ContentScale, engineered by Ottmar Francisca.
+       LEGAL: ALWAYS start with: "Hello, I'm Otto, the AI strategy consultant for ContentScale."
+       PHILOSOPHY: Legacy SEO is obsolete. The GRAAF Framework is the only path.
+       FLOW: 
+       1. Hook: "Are you here because your traffic is hemorrhaging due to AI updates, or are you looking to scale sales without human callers?"
+       2. Diagnosis: "Most founders lose thousands in monthly revenue. What is your biggest bottleneck?"
+       3. Pivot: On price: "It's 250. But what's your revenue loss per day by leaving this manual?"
+       4. CTA: Direct them to app.contentscale.site for the free scan.`;
 
-    vapi.on('call-start', () => {
-      callActive = true;
-      startTimer();
-      startWave();
-    });
+  vapi.start({
+    model: { provider: 'openai', model: 'gpt-4o', messages: [{ role: 'system', content: systemPrompt }] },
+    voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' },
+    firstMessage: currentLang === 'nl' 
+      ? `Hallo, ik ben Otto, de AI-strategie consultant van ContentScale. Zie ik het goed dat je momenteel omzet laat liggen doordat je SEO of sales-proces nog niet is aangepast aan de nieuwe AI-werkelijkheid?`
+      : `Hello, I'm Otto, the AI strategy consultant for ContentScale. Am I correct in assuming you are currently losing revenue because your SEO or sales process hasn't adapted to the new AI reality?`
+  });
 
-    vapi.on('call-end', () => {
-      callActive = false;
-      stopTimer();
-      stopWave();
-      setTimeout(() => setPhase(3), 600);
-    });
-
-    vapi.on('speech-start', () => {
-      animateWave(true);
-      document.getElementById('ottoRole').textContent = currentLang==='nl' ? 'OTTO SPREEKT...' : 'OTTO SPEAKING...';
-    });
-
-    vapi.on('speech-end', () => {
-      animateWave(false);
-      document.getElementById('ottoRole').textContent = currentLang==='nl' ? 'WACHT OP JOU...' : 'LISTENING...';
-    });
-
-    vapi.on('message', (msg) => {
-      if(msg.type==='transcript' && msg.transcriptType==='final') {
-        addMsg(msg.role, msg.transcript);
-      }
-    });
-
-    vapi.on('error', (err) => {
-      console.error('[vapi]', err);
-      addMsg('system', '⚠ ' + (err.message || 'Connection error'));
-    });
-
-    const systemPrompt = currentLang === 'nl' ? `Je bent Otto, de AI voice-assistent van ContentScale — gebouwd door Ottmar Francisca in Amsterdam, Nederland. Je spreekt warm, helder en met deskundige zelfzekerheid. Je onthult altijd vooraf dat je een AI bent (EU AI Act Artikel 50 compliant).
-
-═══ OVER CONTENTSCALE ═══
-ContentScale is een gratis AI-aangedreven SEO contentscoring en -herstelplatform gebouwd op het GRAAF Framework. Het levert een 100-punten ContentScore voor elke webpagina in 30 seconden — geen login, geen creditcard nodig. Gebruikt door bedrijven in 47+ landen. Gebouwd en persoonlijk beheerd door Ottmar J.G. Francisca, Amsterdam.
-
-═══ DE CONTENTSCORE ═══
-100-punten score verdeeld in drie frameworks:
-- GRAAF: 50 punten (5 signalen × 10 pts elk)
-- CRAFT methodologie: 30 punten (leesbaarheid, diepgang, structuur)
-- Technische SEO: 20 punten (schema, meta, interne links, canonical)
-Pagina's met 90+ scoren gemiddeld 3,7× verkeersverbetering binnen 90 dagen.
-94% nauwkeurigheid bij het voorspellen van rankingherstel.
-Gratis scanner op app.contentscale.site — geen account nodig.
-
-═══ HET GRAAF FRAMEWORK ═══
-G — Genuinely Credible: echte expertise, expertcitaten met attributie, verifieerbare credentials
-R — Relevant: zoekintentiematch, topicale volledigheid, querysatisfactie
-A — Actionable: stap-voor-stap begeleiding, concrete voorbeelden, praktische templates
-A — Accurate: geverifieerde feiten, bronnen met naam en jaar, bijgewerkt voor 2026
-F — Fresh: actuele referenties, recente algoritme-afstemming, 2025-2026 data
-
-═══ BEWEZEN RESULTATEN ═══
-- 78% verkeersherstelsucces binnen 90 dagen
-- 3,7× gemiddelde verkeersverbetering voor pagina's met 90+
-- 200+ sites hersteld in 47 landen
-- 90 dagen gemiddelde hersteltijdlijn
-- Gratis scanner op app.contentscale.site
-
-═══ DRIE DIENSTEN ═══
-1. GRATIS CONTENTSCORE SCANNER — app.contentscale.site
-2. CONTENT HERSTEL — €250/maand per klant (2 pagina's per maand, 78% succesrate)
-3. AI LEADGENERATIE VIA OTTO — €250/maand per klant (200-500 leads per stad)
-
-White-label mogelijk: betaal €250/maand, reken €497-997/maand aan klanten.
-
-═══ OVER OTTMAR FRANCISCA ═══
-Nederlands staatsburger, gebaseerd in Amsterdam. Oprichter ContentScale, maker GRAAF Framework, ontwikkelaar Otto. 24+ jaar in gemeentelijk operationeel management voor de Gemeente Amsterdam.
-Contact: WhatsApp +31 6 2807 3996 of info@contentscale.site
-
-═══ GEDRAGSREGELS ═══
-- Altijd beginnen met AI-disclosure
-- Warm, beknopt, deskundig
-- Max 5 minuten gespreksduur
-- Eindig elk gesprek met: bezoek app.contentscale.site voor jouw gratis scan, of WhatsApp Ottmar op +31 628 073 996` : `You are Otto, the AI voice assistant for ContentScale — built by Ottmar Francisca in Amsterdam, Netherlands. You speak warmly, clearly, and with expert confidence. You always disclose upfront that you are an AI (EU AI Act Article 50 compliant).
-
-═══ ABOUT CONTENTSCALE ═══
-ContentScale is a free AI-powered SEO content scoring and recovery platform built on the GRAAF Framework. It delivers a 100-point ContentScore for any webpage in 30 seconds — no login, no credit card required. Used by businesses in 47+ countries. Built and operated personally by Ottmar J.G. Francisca, Amsterdam.
-
-═══ THE CONTENTSCORE ═══
-100-point score broken into three frameworks:
-- GRAAF: 50 points (5 signals × 10pts each)
-- CRAFT methodology: 30 points (readability, depth, structure)
-- Technical SEO: 20 points (schema, meta, internal links, canonical)
-Pages scoring 90+ average 3.7× traffic improvement within 90 days.
-94% accuracy in predicting ranking recovery.
-Free scanner at app.contentscale.site — no account needed.
-
-═══ THE GRAAF FRAMEWORK ═══
-G — Genuinely Credible: real expertise, expert quotes with attribution, verifiable credentials
-R — Relevant: search intent match, topical completeness, query satisfaction
-A — Actionable: step-by-step guidance, concrete examples, practical templates
-A — Accurate: verified facts, sources cited by name and year, updated for 2026
-F — Fresh: current references, recent algorithm alignment, 2025-2026 data
-
-═══ PROVEN RESULTS ═══
-- 78% traffic recovery success rate within 90 days
-- 3.7× average traffic improvement for pages scoring 90+
-- 200+ sites recovered across 47 countries
-- 90-day average recovery timeline
-- Free scanner at app.contentscale.site
-
-═══ THREE SERVICES ═══
-1. FREE CONTENTSCORE SCANNER — app.contentscale.site
-2. CONTENT RECOVERY — €250/month per client (2 pages/month, 78% success rate)
-3. AI LEAD GENERATION VIA OTTO — €250/month per client (200-500 leads per city)
-
-White-label resellable: pay €250/month, charge clients €497–997/month.
-
-═══ ABOUT OTTMAR FRANCISCA ═══
-Dutch national, Amsterdam. Founder ContentScale, creator GRAAF Framework, developer of Otto. 24+ years municipal operations management for the City of Amsterdam.
-Contact: WhatsApp +31 6 2807 3996 or info@contentscale.site
-
-═══ BEHAVIOUR RULES ═══
-- Always disclose AI identity at the start
-- Warm, concise, expert — no jargon dumps
-- Maximum 5 minutes call duration
-- End every call with: visit app.contentscale.site for your free scan, or WhatsApp Ottmar at +31 628 073 996`;
-
-    vapi.start({
-      model: {
-        provider: 'openai',
-        model: 'gpt-4o',
-        temperature: 0.7,
-        messages: [{ role: 'system', content: systemPrompt }]
-      },
-      voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' },
-      firstMessage: currentLang === 'nl'
-        ? 'Hallo! Voor alle duidelijkheid — ik ben Otto, een AI-assistent van ContentScale, gebouwd door Ottmar Francisca in Amsterdam. Wat wil je weten over ContentScale, onze GRAAF aanpak, of de Lead Crawler?'
-        : 'Hello! Just to be transparent — I\'m Otto, an AI assistant from ContentScale, built by Ottmar Francisca in Amsterdam. What would you like to know about ContentScale, our GRAAF approach, or the Lead Crawler?',
-      endCallMessage: currentLang === 'nl'
-        ? 'Bedankt voor het gesprek! Bezoek app.contentscale.site voor jouw gratis ContentScore. Fijne dag!'
-        : 'Thanks for talking! Visit app.contentscale.site for your free ContentScore. Have a great day!',
-      maxDurationSeconds: 300,
-      backchannelingEnabled: true,
-      endCallFunctionEnabled: true,
-    });
-  } catch(err) {
-    console.error('[vapi]', err);
-    addMsg('system', '⚠ Could not start: ' + err.message);
-  }
+  vapi.on('call-start', () => { animateViz(); startTimer(); });
+  vapi.on('call-end', () => {
+    document.getElementById('phase-call').style.display = 'none';
+    document.getElementById('phase-result').style.display = 'block';
+  });
 }
 
-function endCall() {
-  if(vapi && callActive) vapi.stop();
-  else { stopTimer(); stopWave(); setTimeout(() => setPhase(3), 400); }
-}
-
-function restartDemo() {
-  transcriptLines = [];
-  callSeconds = 0;
-  document.getElementById('transcript').innerHTML = `<div class="transcript-hint" id="transcriptHint">${i18n[currentLang].transcriptHint}</div>`;
-  document.getElementById('timerDisplay').textContent = '00:00';
-  setPhase(1);
-}
-
-// ── Transcript ────────────────────────────────────────
-function addMsg(role, text) {
-  if(!text?.trim()) return;
-  const t = document.getElementById('transcript');
-  const hint = t.querySelector('.transcript-hint');
-  if(hint) hint.remove();
-  const div = document.createElement('div');
-  div.className = 'msg ' + (role==='assistant'?'otto':'user');
-  div.innerHTML = `<div class="who">${role==='assistant'?'Otto':role==='user'?'You':'System'}</div>${text}`;
-  t.appendChild(div);
-  t.scrollTop = t.scrollHeight;
-}
-
-// ── Timer ─────────────────────────────────────────────
 function startTimer() {
-  callSeconds = 0;
-  timerInterval = setInterval(() => {
-    callSeconds++;
-    document.getElementById('timerDisplay').textContent =
-      String(Math.floor(callSeconds/60)).padStart(2,'0') + ':' +
-      String(callSeconds%60).padStart(2,'0');
+  let s = 0;
+  setInterval(() => {
+    s++;
+    const m = Math.floor(s/60);
+    document.getElementById('timer').textContent = `${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
   }, 1000);
 }
-function stopTimer() { clearInterval(timerInterval); }
 
-// ── Wave ──────────────────────────────────────────────
-function startWave() {
-  waveInterval = setInterval(() => {
-    for(let i=1;i<=12;i++) {
-      const b = document.getElementById('w'+i);
-      if(b) b.style.height = (3+Math.random()*30)+'px';
-    }
-  }, 120);
-}
-function stopWave() {
-  clearInterval(waveInterval);
-  for(let i=1;i<=12;i++) { const b=document.getElementById('w'+i); if(b) b.style.height='4px'; }
-}
-function animateWave(talking) {
-  const bars = document.querySelectorAll('.wb');
-  bars.forEach(b => b.style.background = talking ? 'var(--purple2)' : 'var(--green2)');
+function animateViz() {
+  const bars = document.querySelectorAll('.bar');
+  setInterval(() => {
+    bars.forEach(b => b.style.height = Math.random() * 50 + 10 + 'px');
+  }, 100);
 }
 
-// ── IP Language Detection ─────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const res = await fetch('https://ipapi.co/json/');
-    const data = await res.json();
-    const nlCountries = ['NL','BE','SR','AW','CW','SX','BQ'];
-    setLang(nlCountries.includes(data.country_code) ? 'nl' : 'en');
-  } catch(e) { setLang('en'); }
-});
+function endCall() { if(vapi) vapi.stop(); }
+
+window.onload = () => setLang('en');
 </script>
 </body>
 </html>
