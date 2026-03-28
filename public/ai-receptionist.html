@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Receptionist — Nooit Meer Een Gemiste Oproep | ContentScale</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060910;--surface:#0d1421;--card:#111827;--border:#1f2f4a;
+  --ink:#f0f4ff;--muted:#6b7a99;--sub:#3d4f6b;
+  --blue:#3b82f6;--blue2:#60a5fa;--purple:#7c3aed;--purple2:#a78bfa;
+  --green:#10b981;--green2:#34d399;--gold:#f59e0b;--orange:#f97316;
+  --red:#ef4444;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* Noise overlay */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4;}
+
+.wrap{max-width:900px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;border-bottom:1px solid var(--border);margin-bottom:60px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,40px);letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.brand .pro{color:#7c3aed;-webkit-text-fill-color:#7c3aed;font-size:clamp(14px,1.6vw,20px);vertical-align:middle;margin-left:6px;}
+.nav-back{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s;}
+.nav-back:hover{color:var(--blue2);}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:60px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:20px;padding:6px 16px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue2);margin-bottom:24px;}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green2);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,8vw,88px);line-height:.95;letter-spacing:.02em;margin-bottom:20px;}
+h1 em{font-style:normal;background:linear-gradient(135deg,#f59e0b,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:clamp(15px,2vw,18px);color:var(--muted);max-width:560px;margin:0 auto 40px;line-height:1.65;}
+
+/* DEMO CARD */
+.demo-card{background:var(--card);border:1px solid var(--border);border-radius:24px;overflow:hidden;margin-bottom:60px;position:relative;}
+.demo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#3b82f6,#10b981);}
+
+/* STEPS */
+.steps-header{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);}
+.step-tab{flex:1;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);text-align:center;border-right:1px solid var(--border);transition:all .3s;position:relative;}
+.step-tab:last-child{border-right:none;}
+.step-tab.active{color:var(--ink);background:rgba(59,130,246,.06);}
+.step-tab.done{color:var(--green);}
+.step-tab .step-num{display:block;font-size:18px;font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;margin-bottom:2px;}
+
+/* PHASE PANELS */
+.phase{display:none;padding:40px;}
+.phase.active{display:block;}
+
+/* Phase 1 — Intro */
+.intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;}
+@media(max-width:600px){.intro-grid{grid-template-columns:1fr;}}
+.intro-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.intro-item-icon{font-size:28px;margin-bottom:10px;}
+.intro-item h3{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blue2);margin-bottom:6px;}
+.intro-item p{font-size:13px;color:var(--muted);line-height:1.6;}
+
+.start-btn{width:100%;padding:20px;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;color:#fff;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;}
+.start-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#3b82f6,#7c3aed);opacity:0;transition:opacity .3s;}
+.start-btn:hover::after{opacity:1;}
+.start-btn span{position:relative;z-index:1;}
+
+/* Phase 2 — Live call */
+.phone-ui{background:#000;border-radius:20px;border:6px solid #1a1a1a;padding:28px 24px;max-width:340px;margin:0 auto;}
+.phone-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.call-status{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green2);letter-spacing:.1em;}
+.call-timer-display{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+
+.caller-name{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.04em;text-align:center;margin-bottom:4px;}
+.caller-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);text-align:center;margin-bottom:28px;letter-spacing:.1em;}
+
+/* Sound wave viz */
+.wave-viz{display:flex;align-items:center;justify-content:center;gap:3px;height:40px;margin-bottom:28px;}
+.wave-bar{width:3px;border-radius:3px;background:var(--blue2);transition:height .1s ease;}
+
+.hangup-btn{width:64px;height:64px;border-radius:50%;background:var(--red);border:none;font-size:24px;cursor:pointer;margin:0 auto 0;display:flex;align-items:center;justify-content:center;transition:all .3s;transform:rotate(135deg);}
+.hangup-btn:hover{background:#dc2626;transform:rotate(135deg) scale(1.05);}
+
+/* Transcript */
+.transcript{margin-top:28px;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.transcript::-webkit-scrollbar{width:3px;}
+.transcript::-webkit-scrollbar-track{background:transparent;}
+.transcript::-webkit-scrollbar-thumb{background:var(--border);}
+.msg{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;animation:msgIn .3s ease-out;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.otto{background:rgba(59,130,246,.1);border-left:3px solid var(--blue);}
+.msg.user{background:rgba(16,185,129,.08);border-left:3px solid var(--green);text-align:right;}
+.msg .who{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+
+/* Phase 3 — Result */
+.result-card{background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:32px;text-align:center;margin-bottom:28px;}
+.result-emoji{font-size:48px;margin-bottom:16px;}
+.result-title{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.04em;color:var(--green2);margin-bottom:8px;}
+.result-sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px;}
+.cta-btn{display:inline-block;padding:16px 36px;background:linear-gradient(135deg,#f59e0b,#f97316);border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;color:#000;text-decoration:none;transition:all .3s;}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(245,158,11,.3);}
+
+.share-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;}
+.share-btn{padding:10px 20px;border:1px solid var(--border);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:all .2s;background:var(--card);}
+.share-btn:hover{border-color:var(--blue2);color:var(--blue2);}
+
+/* PROOF SECTION */
+.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:60px;}
+@media(max-width:600px){.proof{grid-template-columns:1fr;}}
+.proof-item{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;}
+.proof-num{font-family:'Bebas Neue',sans-serif;font-size:48px;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.proof-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+
+/* HOW IT WORKS */
+.how{margin-bottom:60px;}
+.how h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,42px);letter-spacing:.04em;margin-bottom:28px;}
+.how-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.how-grid{grid-template-columns:1fr;}}
+.how-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;display:flex;gap:16px;}
+.how-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--purple2);line-height:1;flex-shrink:0;}
+.how-text h4{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin-bottom:4px;}
+.how-text p{font-size:13px;color:var(--muted);line-height:1.6;}
+
+/* PRICING */
+.pricing-strip{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(59,130,246,.12));border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:36px;text-align:center;margin-bottom:60px;}
+.pricing-strip h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,40px);letter-spacing:.04em;margin-bottom:8px;}
+.pricing-strip p{color:var(--muted);margin-bottom:24px;}
+.price-tag{font-family:'Bebas Neue',sans-serif;font-size:60px;background:linear-gradient(135deg,#f59e0b,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:4px;}
+.price-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:24px;}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:28px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:20px;}
+.foot-copy{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);}
+.foot-links{display:flex;gap:16px;}
+.foot-links a{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);text-decoration:none;transition:color .2s;}
+.foot-links a:hover{color:var(--blue2);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- NAV -->
+  <nav>
+    <a href="https://contentscale.site" class="brand">ContentScale<span class="pro">PRO</span></a>
+    <div style="display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;">
+      <button onclick="setLang('en')" id="btn-en" style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#3b82f6,#7c3aed);cursor:pointer;transition:all .2s;">
+        <span style="font-size:18px;line-height:1;">🇬🇧</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.1em;color:#fff;">EN</span>
+      </button>
+      <button onclick="setLang('nl')" id="btn-nl" style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:7px;border:none;background:transparent;cursor:pointer;transition:all .2s;">
+        <span style="font-size:18px;line-height:1;">🇳🇱</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);">NL</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge"><span data-en="🎙️ AI Receptionist — Live Demo" data-nl="🎙️ AI Receptionist — Live Demo">🎙️ AI Receptionist — Live Demo</span></div>
+    <h1><span data-en="Never Miss<br>A <em>Call</em> Again" data-nl="Nooit Meer<br>Een <em>Gemiste</em> Oproep">Never Miss<br>A <em>Call</em> Again</span></h1>
+    <p class="hero-sub"><span data-en="Say your name and company. Otto instantly becomes YOUR receptionist and plays a real customer calling in — from Google, ads, your website, anywhere. Hear exactly how it works." data-nl="Zeg je naam en bedrijfsnaam. Otto wordt meteen JOUW receptionist en speelt een echte klant na — van Google, advertenties, je website, overal vandaan. Zo hoor je hoe het werkt.">Say your name and company. Otto instantly becomes YOUR receptionist and plays a real customer calling in — from Google, ads, your website, anywhere. Hear exactly how it works.</span></p>
+  </div>
+
+  <!-- USE CASES -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:40px;">
+    <span style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:20px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#fbbf24;letter-spacing:.08em;">✓ Google Guaranteed</span>
+    <span style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:20px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#60a5fa;letter-spacing:.08em;">✓ Google Ads</span>
+    <span style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#34d399;letter-spacing:.08em;">✓ Website Bellers</span>
+    <span style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:20px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#a78bfa;letter-spacing:.08em;">✓ Facebook / Instagram</span>
+    <span style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:20px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#fb923c;letter-spacing:.08em;">✓ Yelp / Directories</span>
+    <span style="background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);border-radius:20px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8;letter-spacing:.08em;">✓ Elke Inkomende Oproep</span>
+  </div>
+
+  <!-- DEMO CARD -->
+  <div class="demo-card">
+
+    <!-- Step tabs -->
+    <div class="steps-header">
+      <div class="step-tab active" id="tab1"><span class="step-num">1</span><span data-en="Start Demo" data-nl="Start Demo">Start Demo</span></div>
+      <div class="step-tab" id="tab2"><span class="step-num">2</span><span data-en="Your AI Calls" data-nl="Jouw AI Belt">Your AI Calls</span></div>
+      <div class="step-tab" id="tab3"><span class="step-num">3</span><span data-en="Result" data-nl="Resultaat">Result</span></div>
+    </div>
+
+    <!-- Phase 1: Intro -->
+    <div class="phase active" id="phase1">
+      <div class="intro-grid">
+        <div class="intro-item">
+          <div class="intro-item-icon">🏗️</div>
+          <h3><span data-en="You Play the Customer" data-nl="Jij speelt de klant">You Play the Customer</span></h3>
+          <p><span data-en="Just say what a real customer would say. Otto responds as the receptionist of YOUR business." data-nl="Zeg gewoon wat een echte klant zou zeggen. Otto reageert als de receptionist van jóuw bedrijf.">Just say what a real customer would say. Otto responds as the receptionist of YOUR business.</span></p>
+        </div>
+        <div class="intro-item">
+          <div class="intro-item-icon">🤖</div>
+          <h3><span data-en="Otto = Your Receptionist" data-nl="Otto = Jouw Receptionist">Otto = Your Receptionist</span></h3>
+          <p><span data-en="Otto answers every call, qualifies the customer, books an appointment — 24/7, zero missed leads." data-nl="Otto neemt elke oproep aan, kwalificeert de klant, plant een afspraak in — 24/7 geen gemiste leads.">Otto answers every call, qualifies the customer, books an appointment — 24/7, zero missed leads.</span></p>
+        </div>
+        <div class="intro-item">
+          <div class="intro-item-icon">📞</div>
+          <h3><span data-en="Real Conversations" data-nl="Echte gesprekken">Real Conversations</span></h3>
+          <p><span data-en="No script. Otto improvises like a real receptionist — always professional." data-nl="Geen script. Otto improviseert zoals een echte receptionist — maar altijd professioneel.">No script. Otto improvises like a real receptionist — always professional.</span></p>
+        </div>
+        <div class="intro-item">
+          <div class="intro-item-icon">💶</div>
+          <h3><span data-en="Every Missed Call = Lost Revenue" data-nl="Elke gemiste oproep = verlies">Every Missed Call = Lost Revenue</span></h3>
+          <p><span data-en="Average €180–€400 per missed plumber/roofer customer. Otto catches them all." data-nl="Gemiddeld €180–€400 per gemiste loodgieter/dakdekker klant. Otto vangt ze allemaal op.">Average €180–€400 per missed plumber/roofer customer. Otto catches them all.</span></p>
+        </div>
+      </div>
+      <button class="start-btn" onclick="startDemo()">
+        <span data-en="🎙️ Start the Demo — Free" data-nl="🎙️ Start de Demo — Gratis">🎙️ Start the Demo — Free</span>
+      </button>
+    </div>
+
+    <!-- Phase 2: Live Call -->
+    <div class="phase" id="phase2">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue2);margin-bottom:8px;" id="callPhaseLabel">Verbinden...</div>
+        <p style="font-size:14px;color:var(--muted);" id="callInstruction">Spreek gewoon — Otto luistert</p>
+      </div>
+
+      <div class="phone-ui">
+        <div class="phone-top">
+          <div class="call-status" id="callStatusDot">● LIVE</div>
+          <div class="call-timer-display" id="callTimerDisplay">00:00</div>
+        </div>
+        <div class="caller-name" id="callerName">Otto AI</div>
+        <div class="caller-sub" id="callerSub">CONTENTSCALE RECEPTIONIST</div>
+
+        <div class="wave-viz" id="waveViz">
+          <div class="wave-bar" style="height:8px" id="b1"></div>
+          <div class="wave-bar" style="height:16px" id="b2"></div>
+          <div class="wave-bar" style="height:24px" id="b3"></div>
+          <div class="wave-bar" style="height:32px" id="b4"></div>
+          <div class="wave-bar" style="height:24px" id="b5"></div>
+          <div class="wave-bar" style="height:16px" id="b6"></div>
+          <div class="wave-bar" style="height:8px" id="b7"></div>
+          <div class="wave-bar" style="height:4px" id="b8"></div>
+          <div class="wave-bar" style="height:8px" id="b9"></div>
+          <div class="wave-bar" style="height:16px" id="b10"></div>
+          <div class="wave-bar" style="height:10px" id="b11"></div>
+          <div class="wave-bar" style="height:6px" id="b12"></div>
+        </div>
+
+        <button class="hangup-btn" onclick="endCall()" style="display:flex;margin:0 auto;">📞</button>
+      </div>
+
+      <div class="transcript" id="transcript"></div>
+    </div>
+
+    <!-- Phase 3: Result -->
+    <div class="phase" id="phase3">
+      <div class="result-card">
+        <div class="result-emoji">🎯</div>
+        <div class="result-title"><span data-en="That's Your Receptionist" data-nl="Dat is Jouw Receptionist">That's Your Receptionist</span></div>
+        <p class="result-sub"><span data-en="Every incoming call — from Google, ads, your website, anywhere — handled like this. 24/7, always professional, zero missed leads." data-nl="Elke inkomende oproep — van Google, advertenties, je website, overal vandaan — zo behandeld. 24/7, altijd professioneel, nul gemiste leads.">Every incoming call — from Google, ads, your website, anywhere — handled like this. 24/7, always professional, zero missed leads.</span></p>
+        <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20did%20the%20demo%20and%20want%20the%20Google%20Guaranteed%20AI%20Receptionist%20for%20my%20business." class="cta-btn" target="_blank">
+          <span data-en="💬 I Want This For My Business" data-nl="💬 Ik Wil Dit Voor Mijn Bedrijf">💬 I Want This For My Business</span>
+        </a>
+        <div class="share-row">
+          <a href="#" class="share-btn" onclick="restartDemo()">🔄 Opnieuw Proberen</a>
+          <a href="https://contentscale.site/services" class="share-btn" target="_blank">📋 Alle Diensten</a>
+          <a href="https://app.contentscale.site/lead-crawler" class="share-btn">🎯 Lead Crawler</a>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Jouw gesprek samenvatting</div>
+        <div id="callSummary" style="font-size:13px;color:var(--muted);line-height:1.7;">—</div>
+      </div>
+    </div>
+
+  </div><!-- /demo-card -->
+
+  <!-- PROOF -->
+  <div class="proof">
+    <div class="proof-item">
+      <div class="proof-num">24/7</div>
+      <div class="proof-label"><span data-en="Zero missed calls" data-nl="Nul gemiste oproepen">Zero missed calls</span></div>
+    </div>
+    <div class="proof-item">
+      <div class="proof-num">€0</div>
+      <div class="proof-label"><span data-en="Cost per missed lead" data-nl="Kosten per gemiste lead">Cost per missed lead</span></div>
+    </div>
+    <div class="proof-item">
+      <div class="proof-num">3min</div>
+      <div class="proof-label"><span data-en="Setup per client" data-nl="Setup per klant">Setup per client</span></div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="how">
+    <h2><span data-en="How It Works" data-nl="Hoe Het Werkt">How It Works</span></h2>
+    <div class="how-grid">
+      <div class="how-item">
+        <div class="how-num">01</div>
+        <div class="how-text">
+          <h4><span data-en="Customer calls from anywhere" data-nl="Klant belt via elk kanaal">Customer calls from anywhere</span></h4>
+          <p><span data-en="Google Guaranteed, Google Ads, website, social media — Otto answers every call immediately. No wait time, no voicemail." data-nl="Google Guaranteed, Google Ads, website, social media — Otto neemt elke oproep direct op. Geen wachttijd, geen voicemail.">Google Guaranteed, Google Ads, website, social media — Otto answers every call immediately. No wait time, no voicemail.</span></p>
+        </div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">02</div>
+        <div class="how-text">
+          <h4><span data-en="Otto Qualifies the Customer" data-nl="Otto kwalificeert de klant">Otto Qualifies the Customer</span></h4>
+          <p><span data-en="What's the problem? Urgent or scheduled? Zip code? Otto asks everything — professional and friendly." data-nl="Wat is het probleem? Spoed of gepland? Postcode? Otto vraagt alles — professioneel en vriendelijk.">What's the problem? Urgent or scheduled? Zip code? Otto asks everything — professional and friendly.</span></p>
+        </div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">03</div>
+        <div class="how-text">
+          <h4><span data-en="Appointment Booked" data-nl="Afspraak ingepland">Appointment Booked</span></h4>
+          <p><span data-en="Otto books directly or sends a confirmation. You get a notification with all details." data-nl="Otto plant direct in of stuurt een bevestiging. Jij krijgt een melding met alle gegevens.">Otto books directly or sends a confirmation. You get a notification with all details.</span></p>
+        </div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">04</div>
+        <div class="how-text">
+          <h4><span data-en="You See Everything" data-nl="Jij ziet alles terug">You See Everything</span></h4>
+          <p><span data-en="Transcript, recording, customer data — all in your dashboard. Listen back whenever you want." data-nl="Transcript, opname, klantgegevens — alles in jouw dashboard. Luister terug wanneer je wil.">Transcript, recording, customer data — all in your dashboard. Listen back whenever you want.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="pricing-strip">
+    <h2><span data-en="What Does It Cost?" data-nl="Wat Kost Het?">What Does It Cost?</span></h2>
+    <p><span data-en="Works for every inbound call — Google Guaranteed, Ads, website, socials. No contracts. No setup costs." data-nl="Werkt voor elke inkomende oproep — Google Guaranteed, Ads, website, socials. Geen contracten. Geen setupkosten.">Works for every inbound call — Google Guaranteed, Ads, website, socials. No contracts. No setup costs.</span></p>
+    <div class="price-tag">€249</div>
+    <div class="price-sub">per maand · per bedrijf · inclusief onbeperkte oproepen</div>
+    <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20the%20Google%20Guaranteed%20AI%20Receptionist.%20What%20are%20the%20options?" class="cta-btn" target="_blank"><span data-en="Request a Demo" data-nl="Vraag een Demo Aan">Request a Demo</span></a>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="background:linear-gradient(135deg,#111827,#1f2937);border-top:2px solid #374151;padding:52px 0 24px;margin-top:40px;">
+    <div style="max-width:900px;margin:0 auto;padding:0 24px;">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px;">
+        <div>
+          <a href="https://contentscale.site" style="font-family:'Bebas Neue',sans-serif;font-size:20px;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:inline-block;margin-bottom:10px;">ContentScale</a>
+          <p style="font-size:12.5px;color:#6b7280;line-height:1.7;max-width:260px;font-family:'DM Sans',sans-serif;">AI content intelligence platform. GRAAF Framework · Lead Crawler · Otto AI. Built in Amsterdam.</p>
+          <a href="https://wa.me/31628073996" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#16a34a;font-weight:700;text-decoration:none;">💬 WhatsApp Ottmar</a>
+        </div>
+        <div>
+          <h4 style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;">Platform</h4>
+          <a href="https://app.contentscale.site" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f97316;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f97316'">Content Scanner</a>
+          <a href="https://app.contentscale.site/lead-crawler" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a78bfa;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#a78bfa'">Lead Crawler Pro</a>
+          <a href="https://app.contentscale.site/#leaderboard" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:#f9fafb;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='#f9fafb'">Leaderboard</a>
+          <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20access%20to%20the%20Lead%20Biz%20Crawler." target="_blank" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#60a5fa;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#60a5fa'">Lead Biz Crawler</a>
+          <a href="https://app.contentscale.site/ai-receptionist" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f59e0b;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f59e0b'">Google Guaranteed AI</a>
+        </div>
+        <div>
+          <h4 style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;">Company</h4>
+          <a href="https://contentscale.site/about" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">About</a>
+          <a href="https://contentscale.site/services" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Services</a>
+          <a href="https://contentscale.site/blog/" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Blog</a>
+          <a href="https://contentscale.site/contact/" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Contact</a>
+        </div>
+        <div>
+          <h4 style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;">Legal</h4>
+          <a href="https://contentscale.site/privacy-policy/" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Privacy Policy</a>
+          <a href="https://contentscale.site/terms/" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Terms of Service</a>
+          <a href="mailto:info@contentscale.site" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">info@contentscale.site</a>
+        </div>
+      </div>
+      <div style="padding-top:20px;border-top:1px solid #374151;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7280;">© 2026 ContentScale.site · Ottmar J.G. Francisca · Amsterdam, Netherlands</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">Dutch Law</span>
+          <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">EU AI Act</span>
+          <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">GDPR</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /wrap -->
+
+<!-- Vapi Web SDK -->
+<script src="https://cdn.jsdelivr.net/gh/balacodeio/Vapi-Web-UMD@latest/dist/latest/vapi-web-bundle.min.js">
+// ── Language toggle ───────────────────────────────────
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  
+  // Update button styles
+  const enBtn = document.getElementById('btn-en');
+  const nlBtn = document.getElementById('btn-nl');
+  enBtn.style.background = lang === 'en' ? 'linear-gradient(135deg,#3b82f6,#7c3aed)' : 'transparent';
+  enBtn.querySelector('span:last-child').style.color = lang === 'en' ? '#fff' : 'var(--muted)';
+  nlBtn.style.background = lang === 'nl' ? 'linear-gradient(135deg,#f97316,#f59e0b)' : 'transparent';
+  nlBtn.querySelector('span:last-child').style.color = lang === 'nl' ? '#fff' : 'var(--muted)';
+
+  // Update all tagged elements
+  document.querySelectorAll('[data-en][data-nl]').forEach(el => {
+    const val = el.getAttribute('data-' + lang);
+    if(val) el.innerHTML = val;
+  });
+
+  // Update html lang
+  document.documentElement.lang = lang;
+}
+
+// Set English on load
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Free IP geolocation — no API key needed
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    const nlCountries = ['NL','BE','SR','AW','CW','SX','BQ'];
+    const lang = nlCountries.includes(data.country_code) ? 'nl' : 'en';
+    setLang(lang);
+    console.log('[geo] country:', data.country_code, '→ lang:', lang);
+  } catch(e) {
+    // Fallback to English if API fails
+    setLang('en');
+  }
+});
+
+</script>
+
+<script>
+const VAPI_PUBLIC_KEY = 'faf296f1-fd90-42e0-abb3-4c7125db43b8';
+
+let vapi = null;
+let callActive = false;
+let timerInterval = null;
+let waveInterval = null;
+let callSeconds = 0;
+let collectedName = '';
+let collectedCompany = '';
+let collectedTrade = '';
+let phase = 1;
+let transcriptLines = [];
+
+// ── Phase navigation ─────────────────────────────────
+function setPhase(n) {
+  phase = n;
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.step-tab').forEach((t, i) => {
+    t.classList.remove('active','done');
+    if(i+1 < n) t.classList.add('done');
+    if(i+1 === n) t.classList.add('active');
+  });
+  document.getElementById('phase' + n).classList.add('active');
+}
+
+// ── Start the demo call ───────────────────────────────
+function startDemo() {
+  setPhase(2);
+  initVapi();
+}
+
+function initVapi() {
+  try {
+    vapi = new Vapi(VAPI_PUBLIC_KEY);
+
+    vapi.on('call-start', () => {
+      callActive = true;
+      startTimer();
+      startWave();
+      document.getElementById('callStatusDot').textContent = '● LIVE';
+      document.getElementById('callPhaseLabel').textContent = 'Gesprek Actief';
+      document.getElementById('callInstruction').textContent = 'Otto luistert — spreek gewoon';
+    });
+
+    vapi.on('call-end', () => {
+      callActive = false;
+      stopTimer();
+      stopWave();
+      finishCall();
+    });
+
+    vapi.on('speech-start', () => {
+      document.getElementById('callerSub').textContent = 'OTTO SPREEKT...';
+      animateWave(true);
+    });
+
+    vapi.on('speech-end', () => {
+      document.getElementById('callerSub').textContent = 'WACHT OP JOU...';
+      animateWave(false);
+    });
+
+    vapi.on('message', (msg) => {
+      if(msg.type === 'transcript' && msg.transcriptType === 'final') {
+        addTranscript(msg.role, msg.transcript);
+        // Extract name/company from assistant messages
+        if(msg.role === 'assistant') {
+          parseCollectedInfo(msg.transcript);
+        }
+      }
+    });
+
+    vapi.on('error', (err) => {
+      console.error('[vapi]', err);
+      addTranscript('system', '⚠ Verbindingsfout — probeer opnieuw');
+    });
+
+    // Start the call with dynamic system prompt
+    vapi.start({
+      model: {
+        provider: 'openai',
+        model: 'gpt-4o',
+        temperature: 0.75,
+        messages: [{
+          role: 'system',
+          content: currentLang === 'nl'
+          ? `Je bent Otto, een AI-demonstratieassistent van ContentScale.
+
+FASE 1 — NAAM & BEDRIJF: Open altijd met:
+"Hallo! Welkom bij de ContentScale AI demo. Ik ben Otto. Mag ik jouw naam en bedrijfsnaam weten? En welk type bedrijf — dakdekker, loodgieter, schilder?"
+
+FASE 2 — ROL WISSELEN zodra je naam+bedrijf hebt:
+"Perfect [NAAM]! Ik word nu de receptionist van [BEDRIJF]. Jij bent de klant. Klaar? Hier gaan we..."
+
+FASE 3 — SPEEL RECEPTIONIST: "Goedemiddag, [BEDRIJF], waarmee kan ik u helpen?"
+Vraag: probleem, spoed/gepland, postcode, afspraak, naam+nummer.
+
+AFSLUITING na ~2 min: "Zo werkt het 24/7 voor jou. Wil je dit? WhatsApp Ottmar: +31 6 2807 3996 of contentscale.site. Dag!"
+TAAL: Nederlands. MAX DUUR: 4 minuten.`
+          : `You are Otto, an AI demo assistant from ContentScale.
+
+PHASE 1 — GET NAME & BUSINESS: Always open with:
+"Hello! Welcome to the ContentScale AI demo. I'm Otto. What's your name and company name? And what type of business — roofer, plumber, electrician?"
+
+PHASE 2 — SWITCH ROLE once you have name+company:
+"Perfect [NAME]! I'm now becoming the receptionist of [COMPANY]. You're the customer calling. Ready? Here we go..."
+
+PHASE 3 — PLAY RECEPTIONIST: "Good afternoon, [COMPANY], how can I help you?"
+Ask: problem, urgent/scheduled, zip code, book appointment, name+phone.
+
+CLOSE after ~2 min: "That's how it works 24/7 for you. Want this? WhatsApp Ottmar: +31 6 2807 3996 or contentscale.site. Have a great day!"
+LANGUAGE: English. MAX: 4 minutes."
+        }]
+      },
+      voice: {
+        provider: '11labs',
+        voiceId: 'pNInz6obpgDQGcFmaJgB',
+      },
+      firstMessage: currentLang === 'nl'
+        ? 'Hallo! Welkom bij de ContentScale AI demo. Ik ben Otto. Mag ik jouw naam en bedrijfsnaam weten? En welk type bedrijf?'
+        : 'Hello! Welcome to the ContentScale AI demo. I am Otto. What is your name and company name? And what type of business — roofer, plumber, electrician?',
+      endCallMessage: 'Bedankt voor de demo! WhatsApp Ottmar voor meer info. Dag!',
+      maxDurationSeconds: 300,
+      backchannelingEnabled: true,
+      endCallFunctionEnabled: true,
+    });
+
+  } catch(err) {
+    console.error('[vapi init]', err);
+    addTranscript('system', '⚠ Vapi kon niet starten: ' + err.message);
+  }
+}
+
+// ── Call controls ─────────────────────────────────────
+function endCall() {
+  if(vapi && callActive) {
+    vapi.stop();
+  } else {
+    finishCall();
+  }
+}
+
+function finishCall() {
+  stopTimer();
+  stopWave();
+  
+  // Build summary
+  const summary = transcriptLines
+    .filter(l => l.role !== 'system')
+    .slice(0, 6)
+    .map(l => `<strong style="color:${l.role === 'assistant' ? 'var(--blue2)' : 'var(--green2)'}">${l.role === 'assistant' ? 'Otto' : 'Jij'}:</strong> ${l.text.slice(0,120)}${l.text.length > 120 ? '…' : ''}`)
+    .join('<br><br>');
+
+  document.getElementById('callSummary').innerHTML = summary || 'Gesprek voltooid.';
+  
+  if(collectedCompany) {
+    document.getElementById('callSummary').innerHTML += 
+      `<br><br><strong style="color:var(--gold)">Bedrijf gedemonstreerd voor:</strong> ${collectedCompany}`;
+  }
+
+  setTimeout(() => setPhase(3), 800);
+}
+
+function restartDemo() {
+  transcriptLines = [];
+  collectedName = '';
+  collectedCompany = '';
+  collectedTrade = '';
+  callSeconds = 0;
+  document.getElementById('transcript').innerHTML = '';
+  document.getElementById('callTimerDisplay').textContent = '00:00';
+  setPhase(1);
+}
+
+// ── Transcript ────────────────────────────────────────
+function addTranscript(role, text) {
+  if(!text.trim()) return;
+  transcriptLines.push({ role, text });
+  
+  const t = document.getElementById('transcript');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'assistant' ? 'otto' : 'user');
+  div.innerHTML = `<div class="who">${role === 'assistant' ? 'Otto' : role === 'user' ? 'Jij' : 'Systeem'}</div>${text}`;
+  t.appendChild(div);
+  t.scrollTop = t.scrollHeight;
+}
+
+function parseCollectedInfo(text) {
+  // Try to extract company name mentioned by Otto
+  const match = text.match(/receptionist van ([A-Za-z\s\-&]+?)[\.\!,]/i);
+  if(match) collectedCompany = match[1].trim();
+}
+
+// ── Timer ─────────────────────────────────────────────
+function startTimer() {
+  callSeconds = 0;
+  timerInterval = setInterval(() => {
+    callSeconds++;
+    const m = String(Math.floor(callSeconds/60)).padStart(2,'0');
+    const s = String(callSeconds%60).padStart(2,'0');
+    document.getElementById('callTimerDisplay').textContent = `${m}:${s}`;
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); }
+
+// ── Wave animation ────────────────────────────────────
+function startWave() {
+  const bars = Array.from({length:12}, (_,i) => document.getElementById('b'+(i+1)));
+  waveInterval = setInterval(() => {
+    bars.forEach(b => {
+      if(b) b.style.height = (4 + Math.random()*28) + 'px';
+    });
+  }, 120);
+}
+function stopWave() {
+  clearInterval(waveInterval);
+  for(let i=1;i<=12;i++) {
+    const b = document.getElementById('b'+i);
+    if(b) b.style.height = '4px';
+  }
+}
+function animateWave(active) {
+  // Visual indicator for who's talking
+  const bars = document.querySelectorAll('.wave-bar');
+  bars.forEach(b => b.style.background = active ? 'var(--blue2)' : 'var(--green2)');
+}
+
+// ── Language toggle ───────────────────────────────────
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  
+  // Update button styles
+  const enBtn = document.getElementById('btn-en');
+  const nlBtn = document.getElementById('btn-nl');
+  enBtn.style.background = lang === 'en' ? 'linear-gradient(135deg,#3b82f6,#7c3aed)' : 'transparent';
+  enBtn.querySelector('span:last-child').style.color = lang === 'en' ? '#fff' : 'var(--muted)';
+  nlBtn.style.background = lang === 'nl' ? 'linear-gradient(135deg,#f97316,#f59e0b)' : 'transparent';
+  nlBtn.querySelector('span:last-child').style.color = lang === 'nl' ? '#fff' : 'var(--muted)';
+
+  // Update all tagged elements
+  document.querySelectorAll('[data-en][data-nl]').forEach(el => {
+    const val = el.getAttribute('data-' + lang);
+    if(val) el.innerHTML = val;
+  });
+
+  // Update html lang
+  document.documentElement.lang = lang;
+}
+
+// Set English on load
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Free IP geolocation — no API key needed
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    const nlCountries = ['NL','BE','SR','AW','CW','SX','BQ'];
+    const lang = nlCountries.includes(data.country_code) ? 'nl' : 'en';
+    setLang(lang);
+    console.log('[geo] country:', data.country_code, '→ lang:', lang);
+  } catch(e) {
+    // Fallback to English if API fails
+    setLang('en');
+  }
+});
+
+</script>
+</body>
+</html>
