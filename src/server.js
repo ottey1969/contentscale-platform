@@ -1925,31 +1925,35 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                }
                } catch (e) {}
                });
-               const hasFAQContent = (() => {
-               // Check headings text
-               const headingMatch = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
-                 h.textContent.toLowerCase().includes('faq') ||
-                 h.textContent.toLowerCase().includes('frequently asked') ||
-                 h.textContent.toLowerCase().includes('common question')
-               );
-               // Check for id="faq" or id containing "faq" on any element
-               const idMatch = Array.from(document.querySelectorAll('[id]')).some(el =>
-                 el.id.toLowerCase().includes('faq')
-               );
-               // Check for section/div with class containing faq
-               const classMatch = Array.from(document.querySelectorAll('[class]')).some(el => {
-  const cn = el.className;
-  if (!cn) return false;
-  // Handle both string and SVGAnimatedString
-  const classNameStr = typeof cn === 'string' ? cn : cn.baseVal || '';
-  return classNameStr.toLowerCase().includes('faq');
- });
-               );
-               // Check raw text for FAQ patterns
-               const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
-               const textMatch = bodyText.includes('frequently asked') || bodyText.includes('common questions');
-               return headingMatch || idMatch || classMatch || textMatch;
-               })();
+
+
+                 
+             const hasFAQContent = (() => {
+    // Check headings text
+    const headingMatch = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
+        h.textContent.toLowerCase().includes('faq') ||
+        h.textContent.toLowerCase().includes('frequently asked') ||
+        h.textContent.toLowerCase().includes('common question')
+    );
+    // Check for id="faq" or id containing "faq" on any element
+    const idMatch = Array.from(document.querySelectorAll('[id]')).some(el =>
+        el.id.toLowerCase().includes('faq')
+    );
+    // Check for section/div with class containing faq
+    const classMatch = Array.from(document.querySelectorAll('[class]')).some(el => {
+        const cn = el.className;
+        if (!cn) return false;
+        // Handle both string and SVGAnimatedString
+        const classNameStr = typeof cn === 'string' ? cn : cn.baseVal || '';
+        return classNameStr.toLowerCase().includes('faq');
+    });
+    // Check raw text for FAQ patterns
+    const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+    const textMatch = bodyText.includes('frequently asked') || bodyText.includes('common questions');
+    return headingMatch || idMatch || classMatch || textMatch;
+})();
+
+                 
                const images = document.querySelectorAll('img');
                const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
                let baseHostname = '';
