@@ -1943,7 +1943,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
   // Handle both string and SVGAnimatedString
   const classNameStr = typeof cn === 'string' ? cn : cn.baseVal || '';
   return classNameStr.toLowerCase().includes('faq');
-});
+}));
                );
                // Check raw text for FAQ patterns
                const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
