@@ -1937,8 +1937,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  el.id.toLowerCase().includes('faq')
                );
                // Check for section/div with class containing faq
-               const classMatch = Array.from(document.querySelectorAll('[class]')).some(el =>
-                 el.className.toLowerCase().includes('faq')
+               const classMatch = Array.from(document.querySelectorAll('[class]')).some(el => {
+  const cn = el.className;
+  if (!cn) return false;
+  // Handle both string and SVGAnimatedString
+  const classNameStr = typeof cn === 'string' ? cn : cn.baseVal || '';
+  return classNameStr.toLowerCase().includes('faq');
+});
                );
                // Check raw text for FAQ patterns
                const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
