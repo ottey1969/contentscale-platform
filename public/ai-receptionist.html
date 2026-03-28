@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Otto AI Elite | Hoor Jouw Bedrijf Verkopen</title>
+<title>Otto Elite | AI Strategy Consultant</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -16,7 +16,7 @@
 }
 body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
 
-/* Premium Background */
+/* High-End Background Overlay */
 body::before {
   content: ''; position: fixed; inset: 0;
   background: radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
@@ -37,11 +37,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:30px 0
 
 /* ── HERO ── */
 .hero{text-align:center;margin-bottom:60px;}
-.eyebrow{display:inline-flex;align-items:center;gap:10px;background:rgba(251, 191, 36, 0.05);border:1px solid rgba(251, 191, 36, 0.2);padding:8px 20px;border-radius:50px;font-family:'IBM Plex Mono';font-size:10px;text-transform:uppercase;color:var(--gold);margin-bottom:24px;letter-spacing:1px;}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;background:rgba(239, 68, 68, 0.05);border:1px solid rgba(239, 68, 68, 0.2);padding:8px 20px;border-radius:50px;font-family:'IBM Plex Mono';font-size:10px;text-transform:uppercase;color:var(--red);margin-bottom:24px;letter-spacing:1px;}
 h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(50px, 10vw, 110px);line-height:0.85;margin-bottom:20px;letter-spacing:-1px;}
 h1 em{font-style:normal;background:linear-gradient(135deg, var(--gold), #f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.hero-sub{font-size:clamp(16px, 2vw, 20px);color:var(--muted);max-width:650px;margin:0 auto 32px;line-height:1.6;}
 
-/* ── MAIN CARD ── */
+/* ── MAIN DEMO CARD ── */
 .main-card{
   background:var(--surface);border:1px solid var(--border);border-radius:32px;
   overflow:hidden;box-shadow:0 30px 60px -12px rgba(0,0,0,0.5);
@@ -52,57 +53,42 @@ h1 em{font-style:normal;background:linear-gradient(135deg, var(--gold), #f97316)
   background:linear-gradient(90deg, var(--purple), var(--blue), var(--green), var(--gold));
 }
 
-/* ── PHASE 1: SETUP ── */
-#phase-setup{padding:50px;}
-.setup-header{margin-bottom:35px;text-align:center;}
-.setup-header h2{font-family:'Bebas Neue';font-size:32px;margin-bottom:10px;letter-spacing:1px;}
+/* PHASE 1: START */
+#phase-setup{padding:50px; text-align:center;}
+.setup-header h2{font-family:'Bebas Neue';font-size:36px;margin-bottom:15px;letter-spacing:1px;}
 
-.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;}
-@media(max-width:600px){.field-grid{grid-template-columns:1fr;}}
-.field label{display:block;font-family:'IBM Plex Mono';font-size:9px;text-transform:uppercase;color:var(--sub);margin-bottom:10px;letter-spacing:2px;}
-.field input, .field select{
-  width:100%;background:var(--bg);border:1px solid var(--border);padding:18px;
-  border-radius:14px;color:#fff;font-size:16px;transition:0.3s;outline:none;
-}
-.field input:focus{border-color:var(--purple);box-shadow:0 0 20px rgba(167, 139, 250, 0.15);}
+.intel-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:20px;margin:30px 0;}
+@media(max-width:600px){.intel-grid{grid-template-columns:1fr;}}
+.intel-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:25px;border-radius:20px; text-align: left;}
+.intel-item h4{font-family:'Bebas Neue';font-size:22px;color:var(--gold);margin-bottom:10px;}
+.intel-item p{font-size:13px; color:var(--muted); line-height:1.5;}
 
 .elite-btn{
-  width:100%;padding:25px;background:linear-gradient(135deg, var(--purple), var(--blue));
+  width:100%;max-width:450px;padding:25px;background:linear-gradient(135deg, var(--purple), var(--blue));
   border:none;border-radius:16px;color:#fff;font-family:'Bebas Neue';font-size:28px;
-  cursor:pointer;transition:0.3s;box-shadow:0 15px 30px rgba(124, 58, 237, 0.3);
+  cursor:pointer;transition:0.3s;box-shadow:0 15px 30px rgba(124, 58, 237, 0.3);margin-top:20px;
 }
 .elite-btn:hover{transform:translateY(-3px);box-shadow:0 20px 40px rgba(124, 58, 237, 0.4);}
 
-/* ── PHASE 2: REVERSE CALL UI ── */
+/* PHASE 2: LIVE DIALOGUE */
 #phase-call{display:none;padding:50px;text-align:center;}
-.phone-frame{
-  background:#000;width:300px;height:550px;margin:0 auto;border-radius:40px;
-  border:8px solid #1e293b;padding:40px 20px;display:flex;flex-direction:column;
-  position:relative;box-shadow:0 50px 100px rgba(0,0,0,0.6);
+.otto-briefing{
+  background:#000;border-radius:30px;border:8px solid #1e293b;padding:40px;
+  max-width:350px;margin:0 auto;position:relative;box-shadow:0 50px 100px rgba(0,0,0,0.6);
 }
-.call-info h3{font-family:'Bebas Neue';font-size:24px;color:var(--purple2);margin-bottom:5px;}
-.timer{font-family:'IBM Plex Mono';font-size:14px;color:var(--green);margin-bottom:40px;}
-
-.visualizer{display:flex;align-items:center;justify-content:center;gap:4px;height:60px;margin-bottom:50px;}
-.bar{width:4px;height:10px;background:var(--purple2);border-radius:10px;transition:0.1s;}
+.viz-container{display:flex;align-items:center;justify-content:center;gap:4px;height:80px;margin:40px 0;}
+.bar{width:5px;height:15px;background:var(--purple);border-radius:10px;transition:0.1s;}
 
 .hangup{
   width:70px;height:70px;background:var(--red);border:none;border-radius:50%;
-  color:#fff;font-size:30px;cursor:pointer;transform:rotate(135deg);margin:auto auto 0;
-  box-shadow:0 10px 20px rgba(239, 68, 68, 0.3);
+  color:#fff;font-size:30px;cursor:pointer;transform:rotate(135deg);box-shadow:0 10px 20px rgba(239, 68, 68, 0.3);
 }
 
-/* ── PHASE 3: RESULTS ── */
+/* PHASE 3: SOLUTION */
 #phase-result{display:none;padding:50px;text-align:center;}
-.success-icon{width:80px;height:80px;background:rgba(34, 197, 94, 0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 25px;color:var(--green);font-size:40px;}
+.result-box{background:rgba(34, 197, 94, 0.05);border:1px solid var(--green);padding:40px;border-radius:24px;margin-bottom:30px;}
 
-/* ── STATS ── */
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:60px 0;}
-@media(max-width:768px){.stats-grid{grid-template-columns:1fr;}}
-.stat-card{background:var(--surface);border:1px solid var(--border);padding:30px;border-radius:24px;text-align:center;}
-.stat-card h4{font-family:'Bebas Neue';font-size:32px;color:var(--gold);margin-bottom:5px;}
-.stat-card p{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-
+/* UTILS */
 .toast{position:fixed;top:30px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:12px 30px;border-radius:50px;font-weight:700;z-index:10000;opacity:0;transition:0.3s;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(10px);}
 </style>
@@ -113,93 +99,73 @@ h1 em{font-style:normal;background:linear-gradient(135deg, var(--gold), #f97316)
   <nav>
     <a href="#" class="brand">ContentScale <span>ELITE</span></a>
     <div class="lang-toggle">
-      <button class="lb active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lb" id="btn-en" onclick="setLang('en')">EN</button>
       <button class="lb" id="btn-nl" onclick="setLang('nl')">NL</button>
     </div>
   </nav>
 
   <div class="hero">
-    <div class="eyebrow" id="txt-eyebrow">Exclusieve Reverse-Sales Simulatie</div>
-    <h1 id="txt-h1">HOOR HOE JOUW AI<br><em>VOOR JOU VERKOOPT.</em></h1>
-    <p id="txt-tagline">Otto identificeert beslissers en groot zakelijk vastgoed. In deze demo is Otto JOUW verkoopagent en ben JIJ de klant. Hoor de kracht van je eigen AI-medewerker.</p>
+    <div class="eyebrow" id="txt-eyebrow">Strategische Revenue Lek Analyse</div>
+    <h1 id="txt-h1">TRADITIONELE SEO IS <em>OBSOLEET.</em></h1>
+    <p id="txt-tagline">Bedrijven die niet overstappen op het GRAAF Framework worden onzichtbaar. Otto is de AI Strategie Consultant die jouw omzetlek dicht.</p>
   </div>
 
   <div class="main-card">
     
-    <!-- PHASE 1: CONFIG -->
+    <!-- PHASE 1: START -->
     <div id="phase-setup">
       <div class="setup-header">
-        <h2 id="txt-setup-h">STEL JE AI-VERKOOPAGENT IN</h2>
-        <p style="color:var(--muted)" id="txt-setup-p">Otto gebruikt jouw bedrijfsnaam en vakgebied om een live pitch uit te voeren naar jou (als lead).</p>
+        <h2 id="txt-setup-h">START STRATEGISCHE BRIEFING</h2>
+        <p id="txt-setup-p">Otto analyseert jouw verkeersbottlenecks en verkoop-efficiëntie. Zie de realiteit van je huidige omzetverlies onder ogen.</p>
       </div>
 
-      <div class="field-grid">
-        <div class="field">
-          <label id="lbl-biz">Bedrijfsnaam</label>
-          <input type="text" id="bizName" placeholder="Bijv. Jansen Dakonderhoud">
+      <div class="intel-grid">
+        <div class="intel-item">
+          <h4 id="i1-h">De GRAAF Standaard</h4>
+          <p id="i1-p">Waarom 90% van de content faalt in 2026. Geloofwaardigheid en actualiteit zijn essentieel.</p>
         </div>
-        <div class="field">
-          <label id="lbl-trade">Vakgebied</label>
-          <select id="tradeSelect">
-            <option value="dakdekker" data-en="Roofer">Dakdekker</option>
-            <option value="loodgieter" data-en="Plumber">Loodgieter</option>
-            <option value="elektricien" data-en="Electrician">Elektricien</option>
-            <option value="hovenier" data-en="Gardener">Hovenier</option>
-            <option value="schilder" data-en="Painter">Schilder</option>
-          </select>
+        <div class="intel-item">
+          <h4 id="i2-h">Verkeersherstel</h4>
+          <p id="i2-p">78% succesrate bij het herstellen van Google-posities met het Elite framework.</p>
         </div>
       </div>
-      <button class="elite-btn" onclick="startDemo()"><span id="txt-btn">START REVERSE DEMO</span></button>
+
+      <button class="elite-btn" onclick="startDemo()"><span id="txt-btn">SPREEK MET DE CONSULTANT</span></button>
+      <p style="margin-top:20px; font-size:11px; color:var(--sub); font-family:'IBM Plex Mono';" id="txt-disclaimer">● LIVE CONNECTIE MET AMSTERDAM ELITE ENGINE</p>
     </div>
 
     <!-- PHASE 2: LIVE CALL -->
     <div id="phase-call">
-      <div class="phone-frame">
-        <div class="call-info">
-          <p id="call-label" style="font-family:'IBM Plex Mono'; font-size:10px; color:var(--purple); letter-spacing:2px; margin-bottom:10px;">OUTBOUND PITCH SESSIE</p>
-          <h3 id="display-biz">JOUW BEDRIJF</h3>
-          <div class="timer" id="timer">00:00</div>
-        </div>
+      <div class="otto-briefing">
+        <div style="font-family:'IBM Plex Mono'; font-size:10px; color:var(--purple); letter-spacing:2px; margin-bottom:10px;">ESTABLISHING COMMAND...</div>
+        <h3 style="font-family:'Bebas Neue'; font-size:28px;">OTTO STRATEGIST</h3>
+        <div id="timer" style="font-family:'IBM Plex Mono'; color:var(--green);">00:00</div>
 
-        <div class="visualizer" id="viz">
+        <div class="viz-container" id="viz">
           <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
           <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
 
-        <div style="font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted); line-height:1.6;" id="txt-hint">
-          <strong>JIJ BENT NU DE LEAD (VASTGOEDBEHEERDER)</strong><br>Otto is JOUW medewerker en belt jou op.<br>Hoor hoe hij voor jou verkoopt.
-        </div>
+        <p style="font-size:13px; color:var(--muted); line-height:1.6;" id="txt-hint">
+          <strong>OTTO ANALYSEERT JOUW GAT.</strong><br>Beantwoord zijn vragen direct. Hij waardeert ROI boven beleefdheid.
+        </p>
 
-        <button class="hangup" onclick="endCall()">📞</button>
+        <button class="hangup" onclick="endCall()" style="margin-top:40px;">📞</button>
       </div>
     </div>
 
-    <!-- PHASE 3: RESULTS -->
+    <!-- PHASE 3: SOLUTION -->
     <div id="phase-result">
-      <div class="success-icon">🎯</div>
-      <h2 id="txt-res-h" style="font-family:'Bebas Neue'; font-size:48px; margin-bottom:10px;">KLUS GEBOEKT</h2>
-      <p id="txt-res-p" style="color:var(--muted); margin-bottom:40px; max-width:500px; margin-left:auto; margin-right:auto;">Dit is hoe Otto voor jou verkoopt terwijl jij op de ladder staat. Hij kwalificeert, overtuigt en boekt de inspectie direct in je agenda.</p>
-      <a href="https://wa.me/31628073996" class="elite-btn" style="text-decoration:none; display:block; background:var(--green); color:#000;"><span id="txt-cta">ACTIVEER OTTO VOOR MIJN BEDRIJF</span></a>
-      <button onclick="location.reload()" style="background:none; border:none; color:var(--sub); margin-top:20px; cursor:pointer; font-family:'IBM Plex Mono'; font-size:10px;">SIMULATIE OPNIEUW STARTEN</button>
+      <div class="result-box">
+        <h2 id="txt-res-h" style="font-family:'Bebas Neue'; font-size:48px; color:var(--gold);">DIAGNOSE VOLTOOID.</h2>
+        <p id="txt-res-p" style="margin-top:10px; color:var(--ink);">Jouw huidige aanpak is een financieel risico. Je hebt het GRAAF-framework en AI-outbound automatisering nodig.</p>
+      </div>
+      
+      <a href="https://wa.me/31628073996" class="elite-btn" style="text-decoration:none; display:block; background:var(--gold); color:#000;"><span id="txt-cta">DICHT MIJN OMZETLEK</span></a>
+      <p style="margin-top:20px; font-size:13px; color:var(--sub);" id="txt-final">Gemiddelde verkeersgroei: 3,7x binnen 90 dagen na implementatie.</p>
     </div>
 
   </div>
-
-  <div class="stats-grid">
-    <div class="stat-card">
-      <h4 id="stat1-h">Echt Personeel</h4>
-      <p id="stat1-p">Klinkt als een specialist</p>
-    </div>
-    <div class="stat-card">
-      <h4 id="stat2-h">Conversiegericht</h4>
-      <p id="stat2-p">Boekt direct inspecties</p>
-    </div>
-    <div class="stat-card">
-      <h4 id="stat3-h">48u Live</h4>
-      <p id="stat3-p">Snel operationeel</p>
-    </div>
-  </div>
-
 </div>
 
 <div id="toast" class="toast">Verbinding maken...</div>
@@ -208,38 +174,38 @@ h1 em{font-style:normal;background:linear-gradient(135deg, var(--gold), #f97316)
 <script>
 const VAPI_KEY = 'faf296f1-fd90-42e0-abb3-4c7125db43b8';
 let vapi = null;
-let currentLang = 'nl';
+let currentLang = 'en';
 
 const i18n = {
   en: {
-    eyebrow: "Exclusive Reverse-Sales Simulation",
-    h1: "HEAR YOUR AI AGENT<br><em>SELL FOR YOU.</em>",
-    tagline: "In this demo, Otto is YOUR sales employee and YOU are the customer. Hear how your own business sounds when pitching high-value contracts.",
-    setupH: "CONFIGURE YOUR AI SALES AGENT",
-    setupP: "Enter your business name to hear Otto pitch you as a property manager.",
-    lblBiz: "Business Name", lblTrade: "Industry", btn: "START REVERSE DEMO",
-    hint: "<strong>YOU ARE THE LEAD (PROPERTY MANAGER)</strong><br>Otto is YOUR employee calling you.<br>Hear how he sells for your company.",
-    resH: "JOB SECURED",
-    resP: "This is how Otto sells while you're on the job. He qualifies, persuades, and books the inspection directly into your calendar.",
-    cta: "ACTIVATE OTTO FOR MY BUSINESS",
-    s1h: "Real Staff", s1p: "Sounds like a specialist",
-    s2h: "Conversion Focused", s2p: "Books inspections live",
-    s3h: "48h Deployment", s3p: "Up and running fast"
+    eyebrow: "Strategic Revenue Leak Diagnosis",
+    h1: "LEGACY SEO IS<br><em>OBSOLETE.</em>",
+    tagline: "Google AI Overviews are erasing businesses that don't adapt. Otto is the AI Strategy Consultant engineered to plug your revenue leak.",
+    setupH: "INITIATE STRATEGIC BRIEFING",
+    setupP: "Otto will evaluate your traffic bottlenecks. Face the reality of your current revenue leakage.",
+    i1h: "The GRAAF Standard", i1p: "Why 90% of content fails to rank in 2026. Accuracy and Freshness are non-negotiable.",
+    i2h: "Traffic Recovery", i2p: "78% success rate in restoring decimated Google rankings using the Elite framework.",
+    btn: "TALK TO THE CONSULTANT",
+    hint: "<strong>OTTO IS ANALYSING YOUR GAP.</strong><br>Answer his questions directly. He values ROI over politeness.",
+    resH: "DIAGNOSIS COMPLETE.",
+    resP: "Your current 'business as usual' is a financial liability. You need the GRAAF framework and AI-driven outbound automation.",
+    cta: "FIX MY REVENUE LEAK",
+    final: "Average Traffic Lift: 3.7x within 90 days of implementation."
   },
   nl: {
-    eyebrow: "Exclusieve Reverse-Sales Simulatie",
-    h1: "HOOR HOE JOUW AI<br><em>VOOR JOU VERKOOPT.</em>",
-    tagline: "In deze demo is Otto JOUW verkoopmedewerker en ben JIJ de klant. Hoor hoe jouw eigen bedrijf klinkt bij het pitchen van grote contracten.",
-    setupH: "STEL JE AI-VERKOOPAGENT IN",
-    setupP: "Vul je bedrijfsnaam in en hoor hoe Otto jou belt als een vastgoedbeheerder.",
-    lblBiz: "Bedrijfsnaam", lblTrade: "Vakgebied", btn: "START REVERSE DEMO",
-    hint: "<strong>JIJ BENT DE LEAD (VASTGOEDBEHEERDER)</strong><br>Otto is JOUW medewerker en belt jou op.<br>Hoor hoe hij voor jouw bedrijf verkoopt.",
-    resH: "KLUS GEBOEKT",
-    resP: "Dit is hoe Otto verkoopt terwijl jij op de klus staat. Hij kwalificeert, overtuigt en boekt de inspectie direct in je agenda.",
-    cta: "ACTIVEER OTTO VOOR MIJN BEDRIJF",
-    s1h: "Echt Personeel", s1p: "Klinkt als een specialist",
-    s2h: "Conversiegericht", s2p: "Boekt direct inspecties",
-    s3h: "48u Live", s3p: "Snel operationeel"
+    eyebrow: "Strategische Revenue Leak Diagnose",
+    h1: "LEGACY SEO IS<br><em>OBSOLEET.</em>",
+    tagline: "Google AI Overviews wissen bedrijven uit die zich niet aanpassen. Otto is de AI Strategie Consultant die jouw omzetlek dicht.",
+    setupH: "START STRATEGISCHE BRIEFING",
+    setupP: "Otto evalueert jouw bottlenecks. Zie de realiteit van je huidige omzetverlies onder ogen.",
+    i1h: "De GRAAF Standaard", i1p: "Waarom 90% van de content faalt in 2026. Geloofwaardigheid en actualiteit zijn essentieel.",
+    i2h: "Verkeersherstel", i2p: "78% succesrate bij het herstellen van Google-posities met het Elite framework.",
+    btn: "SPREEK MET DE CONSULTANT",
+    hint: "<strong>OTTO ANALYSEERT JOUW GAT.</strong><br>Beantwoord zijn vragen direct. Hij waardeert ROI boven beleefdheid.",
+    resH: "DIAGNOSE VOLTOOID.",
+    resP: "Jouw huidige aanpak is een financieel risico. Je hebt het GRAAF-framework en AI-outbound automatisering nodig.",
+    cta: "DICHT MIJN OMZETLEK",
+    final: "Gemiddelde verkeersgroei: 3,7x binnen 90 dagen na implementatie."
   }
 };
 
@@ -253,64 +219,44 @@ function setLang(l) {
   document.getElementById('txt-tagline').textContent = d.tagline;
   document.getElementById('txt-setup-h').textContent = d.setupH;
   document.getElementById('txt-setup-p').textContent = d.setupP;
-  document.getElementById('lbl-biz').textContent = d.lblBiz;
-  document.getElementById('lbl-trade').textContent = d.lblTrade;
+  document.getElementById('i1-h').textContent = d.i1h; document.getElementById('i1-p').textContent = d.i1p;
+  document.getElementById('i2-h').textContent = d.i2h; document.getElementById('i2-p').textContent = d.i2p;
   document.getElementById('txt-btn').textContent = d.btn;
   document.getElementById('txt-hint').innerHTML = d.hint;
   document.getElementById('txt-res-h').textContent = d.resH;
   document.getElementById('txt-res-p').textContent = d.resP;
   document.getElementById('txt-cta').textContent = d.cta;
-  document.getElementById('stat1-h').textContent = d.s1h;
-  document.getElementById('stat1-p').textContent = d.s1p;
-  document.getElementById('stat2-h').textContent = d.s2h;
-  document.getElementById('stat2-p').textContent = d.s2p;
-  document.getElementById('stat3-h').textContent = d.s3h;
-  document.getElementById('stat3-p').textContent = d.s3p;
+  document.getElementById('txt-final').textContent = d.final;
 }
 
 function startDemo() {
-  const biz = document.getElementById('bizName').value;
-  const trade = document.getElementById('tradeSelect').value;
-  if(!biz) { alert("Vul eerst je bedrijfsnaam in."); return; }
-  
   document.getElementById('phase-setup').style.display = 'none';
   document.getElementById('phase-call').style.display = 'block';
-  document.getElementById('display-biz').textContent = biz.toUpperCase();
-  
-  initCall(biz, trade);
+  initCall();
 }
 
-function initCall(biz, trade) {
+function initCall() {
   vapi = new Vapi(VAPI_KEY);
   
-  // DE PROMPT: AI is de specialist van het bedrijf van de gebruiker. 
-  // De gebruiker wordt aangesproken als de Lead (Property Manager).
-  const prompt = currentLang === 'nl' 
-    ? `IDENTITEIT: Je bent de AI-verkoopassistent van ${biz}, gespecialiseerd in ${trade}.
-       CONTEXT: Je belt een Vastgoedbeheerder (de gebruiker). 
-       WETTELIJK: Begin ALTIJD met: "Hallo, dit is een AI-assistent van ${biz}."
-       SCRIPT: Zeg dat je belt over het onderhoud van hun panden. Noem specifiek dat jullie als ${trade} specialist een ronde doen voor preventieve inspecties.
-       DOEL: De gebruiker (lead) overtuigen om een afspraak te maken voor een gratis inspectie.
-       STIJL: Extreem professioneel, zakelijk, overtuigend.`
-    : `IDENTITY: You are the AI Sales Assistant for ${biz}, specialized in ${trade}.
-       CONTEXT: You are calling a Property Manager (the user).
-       LEGAL: ALWAYS start with: "Hello, this is an AI assistant calling on behalf of ${biz}."
-       GOAL: Pitch them on property maintenance. Offer a free inspection.
-       STYLE: Professional, persuasive, elite.`;
+  const systemPrompt = currentLang === 'nl' 
+    ? `IDENTITEIT: Je bent Otto, de AI Strategie Consultant van ContentScale.
+       LEGAL: Begin ALTIJD met: "Hallo, ik ben Otto, de AI-strategie consultant van ContentScale."
+       FILOSOFIE: Legacy SEO is dood. Het GRAAF Framework is de enige weg.
+       STRATEGIE: 1. Hook: "Verlies je verkeer door AI-updates of zoek je schaalbare sales?" 2. Diagnose: "Wat is je grootste bottleneck?" 3. Pivot: Bij prijsvragen: "Prijs is 250. Maar wat is je verlies per dag zonder dit?"`
+    : `IDENTITY: You are Otto, the AI Strategy Consultant for ContentScale.
+       LEGAL: ALWAYS start with: "Hello, I'm Otto, the AI strategy consultant for ContentScale."
+       PHILOSOPHY: Legacy SEO is obsolete. The GRAAF Framework is the only path.
+       STRATEGIE: 1. Hook: "Traffic hemorrhage or scaling sales?" 2. Diagnosis: "What's the bottleneck?" 3. Pivot: On price: "It's 250. But what's your daily loss without this?"`;
 
   vapi.start({
-    model: { provider: 'openai', model: 'gpt-4o', messages: [{ role: 'system', content: prompt }] },
+    model: { provider: 'openai', model: 'gpt-4o', messages: [{ role: 'system', content: systemPrompt }] },
     voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' },
     firstMessage: currentLang === 'nl' 
-      ? `Hallo, dit is een AI-assistent van ${biz}. Ik bel namens de specialist over het onderhoud van uw panden. Spreek ik met de beheerder?`
-      : `Hello, this is an AI assistant for ${biz}. I'm calling regarding the maintenance of your properties. Am I speaking with the manager?`
+      ? `Hallo, ik ben Otto, de AI-strategie consultant van ContentScale. Zie ik het goed dat je momenteel omzet laat liggen doordat je SEO of sales-proces nog niet is aangepast aan de nieuwe AI-werkelijkheid?`
+      : `Hello, I'm Otto, the AI strategy consultant for ContentScale. Am I correct in assuming you are currently losing revenue because your SEO or sales process hasn't adapted to the new AI reality?`
   });
 
-  vapi.on('call-start', () => {
-    startTimer();
-    animateViz();
-  });
-
+  vapi.on('call-start', () => { animateViz(); startTimer(); });
   vapi.on('call-end', () => {
     document.getElementById('phase-call').style.display = 'none';
     document.getElementById('phase-result').style.display = 'block';
@@ -329,13 +275,34 @@ function startTimer() {
 function animateViz() {
   const bars = document.querySelectorAll('.bar');
   setInterval(() => {
-    bars.forEach(b => b.style.height = Math.random() * 40 + 10 + 'px');
+    bars.forEach(b => b.style.height = Math.random() * 50 + 10 + 'px');
   }, 100);
 }
 
 function endCall() { if(vapi) vapi.stop(); }
 
-window.onload = () => setLang('nl');
+// ── AUTOMATISCHE IP HERKENNING ──
+window.onload = async () => {
+  // Standaard eerst op Engels zetten
+  setLang('en');
+
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    const nlCountries = ['NL', 'BE']; // Landcodes voor Nederland en België
+
+    if (nlCountries.includes(data.country_code)) {
+      setLang('nl');
+      console.log('IP-herkenning: Nederlands/België gedetecteerd. Taal ingesteld op NL.');
+    } else {
+      setLang('en');
+      console.log('IP-herkenning: Rest van de wereld gedetecteerd. Taal ingesteld op EN.');
+    }
+  } catch (e) {
+    console.warn('IP recognition failed, defaulting to EN:', e);
+    setLang('en');
+  }
+};
 </script>
   <!-- FOOTER -->
 <footer style="background:linear-gradient(135deg,#111827,#1f2937);border-top:2px solid #374151;padding:52px 28px 24px;margin-top:60px;">
@@ -377,5 +344,6 @@ window.onload = () => setLang('nl');
     </div>
   </div>
 </footer>
+
 </body>
 </html>
