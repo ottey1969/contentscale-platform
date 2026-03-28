@@ -3332,88 +3332,133 @@ app.post('/api/vapi/webcall', async (req, res) => {
     console.error('[vapi/webcall] exception:', err.message);
     res.status(500).json({ error: err.message });
   }
+});// ══════════════════════════════════════════════════════════════════════
+// VAPI VOICEBOT & DEMO ROUTES — ELITE v5
+// ══════════════════════════════════════════════════════════════════════
+
+// 1. Veilig ophalen van de Public Key (voor de frontend)
+app.get('/api/vapi-config', (req, res) => {
+  res.json({ publicKey: process.env.VAPI_PUBLIC_KEY || 'NIET_GECONFIGUREERD' });
 });
 
+// 2. Outbound Call Trigger (voor algemeen gebruik)
+app.post('/api/voicebot/call', async (req, res) => {
+  const { vapiKey, phoneId, customerPhone, customerName, assistant, leadId } = req.body;
+  if (!vapiKey || !phoneId || !customerPhone) return res.status(400).json({ error: 'Missing parameters' });
 
+  let phone = customerPhone.replace(/[\s\-().]/g, '');
+  if (!phone.startsWith('+')) phone = '+' + phone;
 
-// ============================================
-// LICENSE KEY SYSTEM — ContentScale LTD
-// ============================================
-// Keys stored in DB table: license_keys
-// Admin creates keys via POST /api/admin/license/create (x-admin-key required)
-// Users validate via POST /api/license/validate (public)
-
-// Ensure license_keys table exists
-async function ensureLicenseTable() {
-  if (!pool) return;
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS license_keys (
-        id SERIAL PRIMARY KEY,
-        key VARCHAR(32) UNIQUE NOT NULL,
-        plan VARCHAR(50) DEFAULT 'voicebot',
-        email VARCHAR(255),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        activated_at TIMESTAMPTZ,
-        is_active BOOLEAN DEFAULT TRUE,
-        notes TEXT
-      )
-    `);
-  } catch(e) { console.error('[license] table init error:', e.message); }
-}
-ensureLicenseTable();
+    const response = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${vapiKey}` },
+      body: JSON.stringify({
+        phoneNumberId: phoneId,
+        customer: { number: phone, name: customerName || '' },
+        assistant
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) return res.status(response.status).json(data);
+    res.json({ callId: data.id, status: data.status, leadId });
+  } catch (err) {
+    res.status(502).json({ error: 'Vapi error: ' + err.message });
+  }
+});
 
-// ADMIN: Generate a new license key
-app.post('/api/admin/license/create', verifyAdmin, async (req, res) => {
+// 3. De "Sales Android" Demo Trigger (De Architect)
+app.post('/api/demo/trigger', async (req, res) => {
+  const { industry, service, phone } = req.body;
+  const privateKey = process.env.VAPI_PRIVATE_KEY;
+  const phoneId = process.env.VAPI_PHONE_ID;
+
+  if (!privateKey || !phoneId) return res.status(500).json({ error: 'Server key setup incomplete' });
+
   try {
-    const { plan = 'voicebot', email = '', notes = '' } = req.body || {};
-    // Generate CS-XXXX-XXXX-XXXX format
-    const rand = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-    const key = `CS-${rand()}-${rand()}-${rand()}`;
-    await pool.query(
-      'INSERT INTO license_keys (key, plan, email, notes) VALUES ($1, $2, $3, $4)',
-      [key, plan, email, notes]
-    );
-    console.log(`[license] created: ${key} plan=${plan} email=${email}`);
-    res.json({ success: true, key, plan, email });
-  } catch(e) {
-    console.error('[license] create error:', e.message);
+    // FASE A: Claude bouwt de criteria (Architect)
+    const claudePrompt = `Create 4 specific B2B qualification criteria for ${industry} for their ${service}. Output 4 bullet points ONLY. No intro.`;
+    const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 250,
+        messages: [{ role: 'user', content: claudePrompt }]
+      })
+    });
+    const claudeData = await claudeResp.json();
+    const criteria = claudeData.content[0].text;
+
+    // FASE B: Vapi start de Call
+    const vapiResp = await fetch('https://api.vapi.ai/call/phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${privateKey}` },
+      body: JSON.stringify({
+        phoneNumberId: phoneId,
+        customer: { number: phone },
+        assistant: {
+          firstMessage: `Hi, this is Otto. I'm calling from the admin department for your ${industry} business regarding the ${service} inquiry. Are you the owner?`,
+          model: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            systemPrompt: `You are OTTO, the Sales Android. You are calling the business owner who is testing you. Act as their Admin. Use these criteria to qualify: ${criteria}. If they ask who you are, use the REVEAL script: "Experiment over. This is Otto. Check your dashboard."`
+          },
+          voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' }
+        }
+      })
+    });
+    const vapiData = await vapiResp.json();
+    res.json({ success: true, callId: vapiData.id, criteria });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Web Call (Voor de "Talk to Otto" knop op de site)
+app.post('/api/vapi/webcall', async (req, res) => {
+  try {
+    const privateKey = process.env.VAPI_PRIVATE_KEY;
+    if (!privateKey) return res.status(500).json({ error: 'VAPI_PRIVATE_KEY missing' });
+    const assistantId = req.body.assistantId || 'b4ba165e-daaa-4723-a10d-40262359a8da';
+    const response = await fetch('https://api.vapi.ai/call/web', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${privateKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assistantId })
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. License Validation
+app.post('/api/license/validate', async (req, res) => {
+  try {
+    const { key } = req.body;
+    if (!key) return res.status(400).json({ valid: false });
+    const r = await pool.query('SELECT * FROM license_keys WHERE key = $1 AND is_active = TRUE', [key.toUpperCase()]);
+    if (!r.rows.length) return res.status(404).json({ valid: false });
+    res.json({ valid: true, plan: r.rows[0].plan });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ADMIN: List all license keys
-app.get('/api/admin/license/list', verifyAdmin, async (req, res) => {
+// 6. Status Poll
+app.get('/api/voicebot/status/:callId', async (req, res) => {
+  const vapiKey = req.headers['x-vapi-key'] || process.env.VAPI_PRIVATE_KEY;
   try {
-    const r = await pool.query('SELECT * FROM license_keys ORDER BY created_at DESC LIMIT 200');
-    res.json({ keys: r.rows });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// PUBLIC: Validate a license key
-app.post('/api/license/validate', async (req, res) => {
-  try {
-    const { key } = req.body || {};
-    if (!key || key.length < 10) return res.status(400).json({ valid: false, error: 'Invalid key format' });
-    if (!pool) return res.status(503).json({ valid: false, error: 'DB unavailable' });
-    const r = await pool.query(
-      'SELECT * FROM license_keys WHERE key = $1 AND is_active = TRUE',
-      [key.trim().toUpperCase()]
-    );
-    if (!r.rows.length) return res.status(404).json({ valid: false, error: 'Key not found or inactive' });
-    const lic = r.rows[0];
-    // Mark first activation time
-    if (!lic.activated_at) {
-      await pool.query('UPDATE license_keys SET activated_at = NOW() WHERE key = $1', [key]);
-    }
-    console.log(`[license] validated: ${key} plan=${lic.plan}`);
-    res.json({ valid: true, plan: lic.plan, email: lic.email });
-  } catch(e) {
-    console.error('[license] validate error:', e.message);
-    res.status(500).json({ valid: false, error: e.message });
+    const response = await fetch(`https://api.vapi.ai/call/${req.params.callId}`, {
+      headers: { 'Authorization': `Bearer ${vapiKey}` }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
-
 
 // ============================================
 // CONTENTSCALE OUTBOUND AGENT — Server-side
