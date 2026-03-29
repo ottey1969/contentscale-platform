@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ContentScale Elite | Stop Revenue Leakage & AI Outbound</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ========== ELITE DARK THEME CSS ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--surface:#0f172a;--card:#1e293b;--border:#334155;
+  --ink:#f8fafc;--muted:#94a3b8;--sub:#64748b;
+  --purple:#a78bfa;--purple2:#c4b5fd;--glow:rgba(167,139,250,0.15);
+  --blue:#3b82f6;--blue2:#60a5fa;--green:#22c55e;--gold:#fbbf24;
+  --red:#ef4444;--orange:#f97316;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;line-height:1.6;}
+
+/* Background FX */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+
+/* ── NAV ── */
+nav{display:flex;align-items:center;justify-content:space-between;padding:30px 0;border-bottom:1px solid var(--border);margin-bottom:60px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;text-decoration:none;color:var(--ink);}
+.brand span{color:var(--gold);}
+.lang-toggle{display:flex;gap:4px;background:var(--surface);padding:4px;border-radius:10px;border:1px solid var(--border);}
+.lb{padding:6px 14px;border-radius:7px;border:none;background:transparent;cursor:pointer;font-family:'IBM Plex Mono';font-size:10px;font-weight:700;color:var(--muted);transition:0.3s;}
+.lb.active{background:var(--gold);color:#000;}
+
+/* ── HERO ── */
+.hero{text-align:center;margin-bottom:60px;}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;background:rgba(251, 191, 36, 0.05);border:1px solid rgba(251, 191, 36, 0.2);padding:8px 20px;border-radius:50px;font-family:'IBM Plex Mono';font-size:10px;text-transform:uppercase;color:var(--gold);margin-bottom:24px;letter-spacing:1px;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(50px, 10vw, 110px);line-height:0.85;margin-bottom:20px;letter-spacing:-1px;}
+h1 em{font-style:normal;background:linear-gradient(135deg, var(--gold), #f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+
+.header-img-2{width:100%; max-width:950px; border-radius:16px; border:1px solid var(--border); box-shadow:0 30px 60px rgba(0,0,0,0.5); margin: 40px auto;}
+
+/* ── PATHS (TOC) ── */
+.paths-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; margin-bottom:60px;}
+@media(max-width:768px){.paths-grid{grid-template-columns:1fr;}}
+.path-card{background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:35px; transition:all 0.3s; position:relative; overflow:hidden;}
+.path-card:hover{transform:translateY(-5px); border-color:var(--purple);}
+.path-card h3{font-family:'Bebas Neue'; font-size:28px; margin-bottom:15px; letter-spacing:1px;}
+.path-card.gold{border-top:4px solid var(--gold);}
+.path-card.purple{border-top:4px solid var(--purple);}
+.path-card ul{list-style:none;}
+.path-card li{margin-bottom:10px; font-size:14px; color:var(--muted); display:flex; gap:10px;}
+.path-card li::before{content:'→'; color:var(--gold);}
+.path-card a{color:var(--ink); text-decoration:none; font-weight:700;}
+
+/* ── SECTIONS ── */
+.sec{padding:100px 0; border-top:1px solid var(--border);}
+.sec-title{font-family:'Bebas Neue'; font-size:48px; letter-spacing:1px; margin-bottom:20px;}
+.sec-body{color:var(--muted); max-width:700px; margin-bottom:40px;}
+
+/* ── ANDROID TERMINAL ── */
+.android-terminal{background:var(--card); border:1px solid var(--border); border-radius:24px; padding:40px; border-left:6px solid var(--purple);}
+.field label{display:block; font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; color:var(--sub); margin-bottom:8px; letter-spacing:1px;}
+.field input{width:100%; background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:12px; color:#fff; margin-bottom:20px; outline:none;}
+.elite-btn{width:100%; padding:22px; background:linear-gradient(135deg, var(--purple), var(--blue)); border:none; border-radius:14px; color:#fff; font-family:'Bebas Neue'; font-size:24px; cursor:pointer;}
+
+/* ── CALL LOG ── */
+.calllog{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; margin-top:30px; display:none;}
+.calllog.visible{display:block;}
+.calllog-item{display:flex; align-items:center; gap:15px; padding:12px 0; border-bottom:1px solid var(--border);}
+
+/* ── MODALS ── */
+.terms-modal{position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:9999; display:none; align-items:center; justify-content:center; padding:24px;}
+.terms-box{background:var(--card); border:1px solid var(--border); border-radius:16px; max-width:600px; padding:40px; border-top:6px solid var(--gold);}
+
+/* ── TOAST ── */
+.toast{position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:var(--gold); color:#000; padding:12px 24px; border-radius:50px; font-weight:700; z-index:10000; opacity:0; transition:all 0.3s;}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-10px);}
+
+/* ── LICENSE BAR ── */
+#licenseActiveBar{background:rgba(34, 197, 94, 0.05); border:1px solid var(--green); padding:12px 20px; border-radius:12px; margin-bottom:20px; display:none; align-items:center; gap:15px;}
+#licenseActiveBar.show{display:flex;}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a href="#" class="brand">ContentScale <span>ELITE</span></a>
+    <div class="lang-toggle">
+      <button class="lb active" id="btn-en" onclick="setLang('en')">ENGLISH</button>
+      <button class="lb" id="btn-nl" onclick="setLang('nl')">NEDERLANDS</button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="eyebrow" id="txt-eyebrow">Enterprise Revenue Intelligence</div>
+    <h1 id="txt-h1">STOP <em>REVENUE</em><br>LEAKAGE.</h1>
+    <p id="txt-tagline">Stop omzetverlies door verouderde SEO en gemiste leads. Wij overbruggen de kloof tussen AI Search en Outbound Sales met het GRAAF Framework en Otto AI Agenten.</p>
+    
+    <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/header-image-2.jpg" alt="ContentScale Dashboard" class="header-img-2">
+  </div>
+
+  <!-- THE TWO REVENUE PATHS (TOC) -->
+  <div class="paths-grid">
+    <div class="path-card gold">
+      <h3 id="p1-h">PATH 01: TRAFFIC RECOVERY</h3>
+      <p style="font-size:13px; color:var(--sub); margin-bottom:20px;" id="p1-p">Herstel verloren Google-verkeer door AI Overview optimalisatie en Content Quality Scoring.</p>
+      <ul>
+        <li><a href="#traffic-sec" id="p1-l1">Free ContentScore Scanner</a></li>
+        <li><a href="#traffic-sec" id="p1-l2">GRAAF Framework Audit</a></li>
+        <li><a href="#traffic-sec" id="p1-l3">Recovery Statistics</a></li>
+      </ul>
+    </div>
+    <div class="path-card purple">
+      <h3 id="p2-h">PATH 02: AUTONOMOUS SALES</h3>
+      <p style="font-size:13px; color:var(--sub); margin-bottom:20px;" id="p2-p">Identificeer high-value beslissers en laat Otto AI jouw afspraken inplannen terwijl jij werkt.</p>
+      <ul>
+        <li><a href="#sales-sec" id="p2-l1">Hear Otto in Action (Demo)</a></li>
+        <li><a href="#sales-sec" id="p2-l2">Lead Crawler Silo (Roofer/Plumber)</a></li>
+        <li><a href="#sales-sec" id="p2-l3">Sales Android Deployment</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="licenseActiveBar">
+    <span style="color:var(--green); font-weight:700;">★ ELITE LICENSE ACTIVE</span>
+    <button onclick="deactivateLicense()" style="background:none; border:none; color:var(--sub); cursor:pointer; font-size:10px;">DEACTIVATE</button>
+  </div>
+
+  <!-- PATH 1: TRAFFIC RECOVERY -->
+  <section class="sec" id="traffic-sec">
+    <span class="eyebrow" style="color:var(--gold); border-color:var(--gold)">01 Content Intelligence</span>
+    <h2 class="sec-title">Traffic Recovery & Free SEO ContentScore Scanner</h2>
+    <p class="sec-body" id="txt-traffic-body">Google's AI-systemen filteren "dunne" content eruit. Onze scanner identificeert exact welk E-E-A-T signaal ontbreekt (Geloofwaardigheid, Accuratesse, of Actualiteit) en geeft je een herstelplan in 30 seconden.</p>
+    <div data-cs-badge style="margin-top:20px;"></div>
+  </section>
+
+  <!-- PATH 2: SALES ANDROID -->
+  <section class="sec" id="sales-sec">
+    <span class="eyebrow" style="color:var(--purple); border-color:var(--purple)">02 Outbound Automation</span>
+    <h2 class="sec-title">Hear Otto in Action: Your AI Sales Android</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px;">
+      <div>
+        <p class="sec-body" id="txt-sales-body">De Lead Intelligence Engine identificeert beslissers bij VvE's, vastgoedbeheerders en distributiecentra in jouw regio. Otto belt ze, kwalificeert de noodzaak en boekt de inspectie in jouw agenda.</p>
+        <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px dashed var(--border);">
+            <p style="font-family:'IBM Plex Mono'; font-size:11px; color:var(--purple2);" id="txt-otto-stats">✓ 65% Pickup Rate<br>✓ E.164 Phone Verification<br>✓ Instant CRM Integration</p>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE ANDROID FORM -->
+      <div class="android-terminal">
+        <div id="setup-form">
+          <div class="field">
+            <label id="lbl-ind">Bedrijfssector</label>
+            <input type="text" id="demo-ind" placeholder="Bijv. Dakdekker">
+          </div>
+          <div class="field">
+            <label id="lbl-ph">Telefoonnummer (voor de demo)</label>
+            <input type="text" id="demo-ph" placeholder="+316...">
+          </div>
+          <button class="elite-btn" onclick="triggerDemo()"><span id="btn-deploy">DEPLOY SALES ANDROID →</span></button>
+        </div>
+        <div id="demo-status" style="display:none; text-align:center;">
+          <div style="font-family:'IBM Plex Mono'; color:var(--gold); font-size:12px;" id="status-msg">Architecting Lead Criteria...</div>
+          <div style="width:100%; height:4px; background:var(--border); margin-top:10px; border-radius:2px; overflow:hidden;">
+            <div id="status-fill" style="width:10%; height:100%; background:var(--gold); transition: width 1s;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALL LOG -->
+  <div class="calllog" id="callLogView">
+    <h3 style="font-family:'Bebas Neue'; margin-bottom:15px;">📋 RECENT ACTIVITY LOG</h3>
+    <div id="callLogItems"></div>
+  </div>
+
+  <!-- BIO -->
+  <section class="sec" id="author-sec">
+    <div style="display:flex; gap:30px; align-items:center; flex-wrap:wrap; background:var(--surface); padding:40px; border-radius:24px;">
+        <img src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg" style="width:100px; height:100px; border-radius:50%; border:3px solid var(--purple);">
+        <div style="flex:1; min-width:300px;">
+            <h2 style="font-family:'Bebas Neue'; font-size:32px;">Ottmar J.G. Francisca</h2>
+            <p style="font-family:'IBM Plex Mono'; font-size:10px; color:var(--purple2); margin-bottom:10px;">FOUNDER · CONTENTSCALE · AMSTERDAM</p>
+            <p style="font-size:14px; color:var(--muted);">24 jaar ervaring in gemeentelijk operationeel management voor de Gemeente Amsterdam. Ottmar bouwt meetsystemen die onzichtbare omzetlekken dichten.</p>
+        </div>
+    </div>
+  </section>
+</div>
+
+<!-- FOOTER -->
+<footer style="background:var(--card); padding:60px 0 30px; border-top:1px solid var(--border);">
+    <div class="wrap" style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:40px;">
+        <div><a href="#" class="brand">ContentScale</a><p style="font-size:12px; color:var(--sub); margin-top:10px;">AI Agency & Revenue Protection. Built in Amsterdam.</p></div>
+        <div><h4 style="font-family:'IBM Plex Mono'; font-size:10px; color:var(--gold); margin-bottom:15px;">LEGAL</h4><a href="#" style="display:block; font-size:12px; color:var(--muted); text-decoration:none;">Privacy Policy</a></div>
+        <div><h4 style="font-family:'IBM Plex Mono'; font-size:10px; color:var(--gold); margin-bottom:15px;">CONTACT</h4><a href="https://wa.me/31628073996" style="display:block; font-size:12px; color:var(--muted); text-decoration:none;">WhatsApp</a></div>
+    </div>
+</footer>
+
+<!-- MODAL COMPLIANCE -->
+<div class="terms-modal" id="termsModal">
+    <div class="terms-box">
+        <h2 style="font-family:'Bebas Neue'; font-size:32px; color:var(--gold); margin-bottom:15px;">⚖ Operator Compliance</h2>
+        <p style="font-size:14px; color:var(--muted);">U gaat de AI outbound bot activeren. U bent de enige beller van record. U stemt ermee in te voldoen aan de EU AI Act en TCPA wetgeving.</p>
+        <button class="elite-btn" style="margin-top:20px;" onclick="acceptTerms()">I AGREE & UNLOCK</button>
+    </div>
+</div>
+
+<div class="toast" id="toast">Ready</div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/gh/balacodeio/Vapi-Web-UMD@latest/dist/latest/vapi-web-bundle.min.js"></script>
+<script>
+let currentLang = 'nl';
+const LS_TERMS = 'lc_terms_accepted';
+const LS_LICENSE = 'lc_license';
+const LS_CALLLOG = 'lc_call_log';
+
+const i18n = {
+    en: {
+        eyebrow: "Strategic Revenue Intelligence",
+        h1: "STOP <em>REVENUE</em><br>LEAKAGE.",
+        tagline: "We solve the two biggest threats to your growth: Traffic Drops from AI Search and Missed Leads from bandwidth limits.",
+        p1h: "PATH 01: TRAFFIC RECOVERY", p1p: "Recover rankings after Google Core Updates with GRAAF Scoring.",
+        p2h: "PATH 02: AUTONOMOUS SALES", p2p: "Identify high-value decision makers and let Otto book your calls.",
+        lblInd: "Your Industry", lblPh: "Phone Number", btnDeploy: "DEPLOY SALES ANDROID →",
+        status1: "Architecting Lead Criteria...", status2: "Injecting Challenger Logic...", status3: "Calling Device..."
+    },
+    nl: {
+        eyebrow: "Strategische Revenue Intelligence",
+        h1: "STOP <em>OMZET</em><br>VERLIES.",
+        tagline: "Wij lossen de twee grootste bedreigingen voor jouw groei op: Verkeersverlies door AI-updates en Gemiste Leads door tijdgebrek.",
+        p1h: "PATH 01: TRAFFIC HERSTEL", p1p: "Herstel posities na Google Core Updates met GRAAF Scoring.",
+        p2h: "PATH 02: AUTONOOM VERKOOP", p2p: "Identificeer beslissers en laat Otto jouw afspraken inplannen.",
+        lblInd: "Jouw Vakgebied", lblPh: "Telefoonnummer", btnDeploy: "ACTIVEER SALES ANDROID →",
+        status1: "Lead Criteria Ontwerpen...", status2: "Verkooplogica Injecteren...", status3: "Toestel Bellen..."
+    }
+};
+
+function setLang(l) {
+    currentLang = l;
+    document.querySelectorAll('.lb').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-'+l).classList.add('active');
+    const d = i18n[l];
+    document.getElementById('txt-eyebrow').textContent = d.eyebrow;
+    document.getElementById('txt-h1').innerHTML = d.h1;
+    document.getElementById('txt-tagline').textContent = d.tagline;
+    document.getElementById('p1-h').textContent = d.p1h; document.getElementById('p1-p').textContent = d.p1p;
+    document.getElementById('p2-h').textContent = d.p2h; document.getElementById('p2-p').textContent = d.p2p;
+    document.getElementById('lbl-ind').textContent = d.lblInd;
+    document.getElementById('lbl-ph').textContent = d.lblPh;
+    document.getElementById('btn-deploy').textContent = d.btnDeploy;
+}
+
+// ── ANDROID DEMO LOGIC ──
+async function triggerDemo() {
+    const ind = document.getElementById('demo-ind').value;
+    const ph = document.getElementById('demo-ph').value;
+    if(!ind || !ph) return toast("Fields required");
+
+    if(localStorage.getItem(LS_TERMS) !== 'true') {
+        document.getElementById('termsModal').style.display = 'flex';
+        return;
+    }
+
+    document.getElementById('setup-form').style.display = 'none';
+    document.getElementById('demo-status').style.display = 'block';
+
+    const d = i18n[currentLang];
+    const steps = [d.status1, d.status2, d.status3];
+    let i = 0;
+    const interval = setInterval(() => {
+        if(i < steps.length) {
+            document.getElementById('status-msg').textContent = steps[i];
+            document.getElementById('status-fill').style.width = ((i+1)*33) + '%';
+            i++;
+        } else { clearInterval(interval); }
+    }, 1500);
+
+    try {
+        const response = await fetch('https://app.contentscale.site/api/demo/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ industry: ind, service: 'Demo', phone: ph })
+        });
+        if(response.ok) {
+            const data = await response.json();
+            document.getElementById('status-msg').textContent = "SESSION LIVE - ANSWER PHONE";
+            addCallLog(ind, 'calling');
+            startPolling(data.callId);
+        }
+    } catch(e) { toast("Connection Error"); }
+}
+
+function startPolling(callId) {
+    const iv = setInterval(async () => {
+        const r = await fetch('/api/voicebot/status/' + callId);
+        const data = await r.json();
+        if(data.status === 'ended') {
+            clearInterval(iv);
+            updateCallLog(callId, 'answered');
+            toast("Simulation Finished");
+        }
+    }, 5000);
+}
+
+// ── UTILS ──
+function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+function acceptTerms() { localStorage.setItem(LS_TERMS, 'true'); document.getElementById('termsModal').style.display='none'; triggerDemo(); }
+function addCallLog(name, status) {
+    const log = JSON.parse(localStorage.getItem(LS_CALLLOG) || '[]');
+    log.unshift({ name, status, ts: Date.now() });
+    localStorage.setItem(LS_CALLLOG, JSON.stringify(log.slice(0, 5)));
+    renderCallLog();
+}
+function renderCallLog() {
+    const log = JSON.parse(localStorage.getItem(LS_CALLLOG) || '[]');
+    if(!log.length) return;
+    document.getElementById('callLogView').classList.add('visible');
+    document.getElementById('callLogItems').innerHTML = log.map(e => `
+        <div class="calllog-item">
+            <span style="color:var(--gold); font-family:'IBM Plex Mono'; font-size:10px;">[${e.status}]</span>
+            <div style="flex:1"><strong>${e.name} Simulation</strong></div>
+            <div style="font-size:10px; color:var(--sub);">${new Date(e.ts).toLocaleTimeString()}</div>
+        </div>
+    `).join('');
+}
+function activateLicense() { localStorage.setItem(LS_LICENSE, 'pro'); location.reload(); }
+function deactivateLicense() { localStorage.removeItem(LS_LICENSE); location.reload(); }
+
+window.onload = () => {
+    setLang('nl');
+    renderCallLog();
+    if(localStorage.getItem(LS_LICENSE)) document.getElementById('licenseActiveBar').classList.add('show');
+};
+</script>
+<script src="https://app.contentscale.site/badge-loader.js?v=2"></script>
+</body>
+</html>
