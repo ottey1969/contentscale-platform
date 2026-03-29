@@ -108,11 +108,14 @@ return false;
 app.set('trust proxy', 1);
 app.use(compression({ level: 9, threshold: 0 }));
 app.use(function(req, res, next) {
-  const allowed = ['https://contentscale.site', 'https://www.contentscale.site'];
   const origin = req.headers.origin;
-  if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  // Cruciaal: We staan alle origins toe die de pagina aanroepen (nodig voor WordPress snippets)
+  // En we voegen de specifieke headers toe die Claude nodig heeft om te werken
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-anthropic-key, x-user-id, x-admin-key');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
