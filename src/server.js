@@ -1474,13 +1474,15 @@ let technicalScore = 0;
 if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
 else if (analysis.metaTitleLength > 0) technicalScore += 1;
 if (analysis.metaDescriptionLength >= 140 && analysis.metaDescriptionLength <= 165) technicalScore += 3;
-else if (analysis.metaDescriptionLength > 0) technicalScore += 1;
-if (analysis.hasArticleSchema)      technicalScore += 4;
-if (analysis.hasFAQPageSchema)      technicalScore += 4;
-if (analysis.hasCanonical)          technicalScore += 2;
-if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 2;
+// meta description exists fallback removed — points reallocated to OG/Twitter
+if (analysis.hasArticleSchema)      technicalScore += 3; // was 4
+if (analysis.hasFAQPageSchema)      technicalScore += 3; // was 4
+if (analysis.hasCanonical)          technicalScore += 1; // was 2
+if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 1; // was 2
 else if (analysis.images > 0 && analysis.imagesWithAlt > 0) technicalScore += 1;
 if (analysis.hasMetaViewport)       technicalScore += 2;
+if (analysis.hasOpenGraph)          technicalScore += 2; // NEW
+if (analysis.hasTwitterCard)        technicalScore += 1; // NEW
 technicalScore = Math.min(20, technicalScore);
 const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
 const quality = totalScore >= 95 ? 'elite' : totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
