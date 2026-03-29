@@ -783,7 +783,9 @@ return 'estab';
 async function callClaude(city, country, ind) {
     const apiKey = localStorage.getItem(LS_KEY_ANTHROPIC);
     
-    // THE CRITICAL INSTRUCTION FOR CLAUDE
+    // Jouw specifieke Railway URL
+    const API_BASE = "https://contentscale-platform-production.up.railway.app"; 
+    
     const sys = `You are a high-precision Lead Scraper. MISSION: Find real local B2B leads for content services.
     CRITICAL: A lead without a phone number is WORTHLESS. You MUST prioritize finding business phone numbers. 
     Look for "Goldmine" leads: Businesses with 5-30 pages of content (Skeleton/Brochure status).
@@ -792,33 +794,49 @@ async function callClaude(city, country, ind) {
     const usr = `Visit websites and find 15 real ${ind.q} businesses in ${city}, ${country}.
     JSON SCHEMA: [{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
 
-    const resp = await fetch('/api/claude-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-anthropic-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 2500,
-            tools: [{type:'web_search_20250305', name:'web_search'}],
-            system: sys,
-            messages: [{role:'user', content:usr}]
-        })
-    });
+    try {
+        const resp = await fetch(`${API_BASE}/api/claude-proxy`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'x-anthropic-key': apiKey, 
+                'anthropic-version': '2023-06-01' 
+            },
+            body: JSON.stringify({
+                model: 'claude-3-5-sonnet-20241022',
+                max_tokens: 2500,
+                tools: [{type:'web_search_20250305', name:'web_search'}],
+                system: sys,
+                messages: [{role:'user', content:usr}]
+            })
+        });
 
-    const data = await resp.json();
-    const text = data.content.find(b => b.type === 'text')?.text || "[]";
-    const cleaned = text.match(/\[[\s\S]*\]/);
-    return cleaned ? JSON.parse(cleaned[0]) : [];
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            throw new Error(`Proxy Error (${resp.status}): ${errorText}`);
+        }
+
+        const data = await resp.json();
+        
+        // Voorkomt de "TypeError: Cannot read properties of undefined (reading 'find')"
+        if (!data || !data.content || !Array.isArray(data.content)) {
+            console.error("Geen geldige data van Claude ontvangen:", data);
+            return [];
+        }
+
+        const textBlock = data.content.find(b => b.type === 'text');
+        const text = textBlock ? textBlock.text : "[]";
+        
+        // Haal de JSON array uit de tekst (voor het geval Claude toch tekst meestuurt)
+        const cleaned = text.match(/\[[\s\S]*\]/);
+        return cleaned ? JSON.parse(cleaned[0]) : [];
+        
+    } catch (err) {
+        console.error("[Crawler][" + ind.label + "] Error:", err.message);
+        throw err;
+    }
 }
-
-
-
-function stopCrawl(){
-stopped=true;
-document.getElementById('stopBtn').style.display='none';
-document.getElementById('crawlBtn').disabled=false;
-toast('Stopped — showing results so far');
-}
-// ── MAIN CRAWL ────────────────────────────────────────────────────────────
+  // ── MAIN CRAWL ────────────────────────────────────────────────────────────
 async function startCrawl(){
 const city=document.getElementById('city').value.trim();
 const country=document.getElementById('country').value.trim();
