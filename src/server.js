@@ -2164,10 +2164,10 @@ app.post('/api/claude-proxy', async (req, res) => {
 });
 
 // ============================================
-// GEMINI PROXY — Lead Crawler (free tier)
-// Browser → jouw Railway server → Google API
-// Key zit veilig server-side, nooit exposed
-// Drop-in naast Anthropic — beide blijven werken
+// ============================================
+// GEMINI PROXY — Lead Crawler (gratis users)
+// User stuurt eigen key via x-gemini-key header
+// Gaat mis? Hun key, hun probleem.
 // ============================================
 app.post('/api/gemini-proxy', async (req, res) => {
   const apiKey = req.headers['x-gemini-key'];
@@ -2176,8 +2176,8 @@ app.post('/api/gemini-proxy', async (req, res) => {
 
   if (!apiKey || apiKey.length < 20) {
     return res.status(401).json({
-      error: 'GEMINI_API_KEY required',
-      detail: 'Send your Gemini key in the x-gemini-key header. Free key: aistudio.google.com/apikey'
+      error: 'x-gemini-key header required',
+      detail: 'Gratis gebruikers sturen hun eigen Gemini key mee. Geen key? Ga naar aistudio.google.com/apikey'
     });
   }
 
@@ -2201,24 +2201,134 @@ app.post('/api/gemini-proxy', async (req, res) => {
     try { data = JSON.parse(rawText); }
     catch { data = { raw: rawText.slice(0, 500) }; }
 
-    console.log(`[gemini-proxy] ${userId} → ${model} → ${upstream.status} (${rawText.length} bytes)`);
+    console.log(`[gemini-proxy-user] ${userId} → ${model} → ${upstream.status} (${rawText.length} bytes)`);
 
     if (upstream.status === 429) {
       return res.status(429).json({
-        error: { message: 'Gemini free tier rate limit — even wachten en opnieuw proberen', type: 'rate_limit' },
+        error: { message: 'Gemini Lead Crawler rate limit — even wachten', type: 'rate_limit' },
         ...data
       });
     }
 
     res.status(upstream.status).json(data);
   } catch (err) {
-    console.error('[gemini-proxy] Error:', err.message);
+    console.error('[gemini-proxy-user] Error:', err.message);
+    if (err.name === 'AbortError') return res.status(504).json({ error: 'Gateway timeout' });
+    res.status(502).json({ error: 'Proxy request failed', detail: err.message });
+  }
+});
+
+// ============================================
+// GEMINI PROXY — Otto Voicebot
+// Gebruikt GEMINI_KEY_VOICEBOT uit Railway env
+// Aparte route + aparte key = apart gebruik zichtbaar
+// ============================================
+app.post('/api/gemini-voicebot', async (req, res) => {
+  const apiKey = process.env.GEMINI_KEY_VOICEBOT;
+  const userId = req.headers['x-user-id'] || 'anonymous';
+  const model  = req.query.model || 'gemini-1.5-flash';
+
+  if (!apiKey) {
+    return res.status(500).json({
+      error: 'GEMINI_KEY_VOICEBOT not set',
+      detail: 'Voeg GEMINI_KEY_VOICEBOT toe als Railway environment variable'
+    });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+
+    const upstream = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeout);
+    const rawText = await upstream.text();
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch { data = { raw: rawText.slice(0, 500) }; }
+
+    console.log(`[gemini-voicebot] ${userId} → ${model} → ${upstream.status} (${rawText.length} bytes)`);
+
+    if (upstream.status === 429) {
+      return res.status(429).json({
+        error: { message: 'Gemini Voicebot rate limit — even wachten', type: 'rate_limit' },
+        ...data
+      });
+    }
+
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    console.error('[gemini-voicebot] Error:', err.message);
     if (err.name === 'AbortError') return res.status(504).json({ error: 'Gateway timeout' });
     res.status(502).json({ error: 'Proxy request failed', detail: err.message });
   }
 });
 
 
+
+
+// ============================================
+// GEMINI PROXY — Betaalde users (€97)
+// Gebruikt GEMINI_KEY_LEADCRAWLER van Railway
+// User heeft geen eigen key nodig
+// Activatie via license key systeem
+// ============================================
+app.post('/api/gemini-paid', async (req, res) => {
+  const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
+  const userId = req.headers['x-user-id'] || 'anonymous';
+  const model  = req.query.model || 'gemini-1.5-flash';
+
+  if (!apiKey) {
+    return res.status(500).json({
+      error: 'GEMINI_KEY_LEADCRAWLER not set on server',
+      detail: 'Neem contact op met Ottmar via WhatsApp'
+    });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+
+    const upstream = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeout);
+    const rawText = await upstream.text();
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch { data = { raw: rawText.slice(0, 500) }; }
+
+    console.log(`[gemini-paid] ${userId} → ${model} → ${upstream.status} (${rawText.length} bytes)`);
+
+    if (upstream.status === 429) {
+      return res.status(429).json({
+        error: { message: 'Server Gemini rate limit — even wachten en opnieuw proberen', type: 'rate_limit' },
+        ...data
+      });
+    }
+
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    console.error('[gemini-paid] Error:', err.message);
+    if (err.name === 'AbortError') return res.status(504).json({ error: 'Gateway timeout' });
+    res.status(502).json({ error: 'Proxy request failed', detail: err.message });
+  }
+});
 
 // ── Scan Reports ────────────────────────────────────────────────────────────
                app.post('/api/report/generate', verifyAdmin, async (req, res) => {
