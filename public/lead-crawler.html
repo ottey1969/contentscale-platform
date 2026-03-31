@@ -3,7 +3,7 @@
    <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Lead Crawler — ContentScale</title>
+      <title>Lead Crawler — ContentScale (Gemini)</title>
       <meta name="description" content="Find 200–500 content writing leads in any city. 20 industries, AI-powered, bucketed by urgency. Free tool by ContentScale.">
       <link rel="canonical" href="https://contentscale.site/lead-crawler">
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -198,7 +198,7 @@
          </nav>
          <header>
             <div class="logo-block">
-               <div class="eyebrow"><span class="ldot"></span> ContentScale — Bring Your Own API Key</div>
+               <div class="eyebrow"><span class="ldot"></span> ContentScale — Powered by Google Gemini (Free)</div>
                <h1>LEAD<br>CRAWLER <span class="pro-tag">PRO</span></h1>
                <p class="tagline">Enter any city + country. 20 industries searched in parallel. Every lead bucketed by content desperation — with a pitch angle ready to copy.</p>
             </div>
@@ -269,22 +269,25 @@
             <!-- ══ API KEY PANEL ══ -->
             <div id="keyPanel">
                <!-- STATE A: No key saved — shown by default, hidden when key exists -->
-               <div id="keyEntryBlock" style="background:rgba(244,63,63,0.06);border:1.5px solid rgba(244,63,63,0.35);border-radius:6px;padding:18px 20px;margin-bottom:18px;">
+               <div id="keyEntryBlock" style="background:rgba(26,115,232,0.06);border:1.5px solid rgba(26,115,232,0.35);border-radius:6px;padding:18px 20px;margin-bottom:18px;">
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-                     <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);line-height:1;">🔑 ANTHROPIC API KEY REQUIRED</span>
-                     <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"
+                     <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#60a5fa;line-height:1;">🔑 GOOGLE GEMINI API KEY REQUIRED</span>
+                     <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
                         style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
                         color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;
                         text-decoration:none;margin-left:auto;white-space:nowrap;">
-                     Get your key → console.anthropic.com
+                     FREE key → aistudio.google.com
                      </a>
+                  </div>
+                  <div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:8px 12px;margin-bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);line-height:1.6;">
+                     ✅ FREE TIER — No credit card needed · Get your key at <strong>aistudio.google.com/apikey</strong> in 30 seconds
                   </div>
                   <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
                      <input type="password" id="anthropicKey"
-                        placeholder="sk-ant-api03-..."
+                        placeholder="AIza..."
                         autocomplete="off" spellcheck="false"
                         onkeydown="if(event.key==='Enter')saveAndTestKey()"
-                        style="background:var(--bg);border:1.5px solid rgba(244,63,63,.4);border-radius:4px;
+                        style="background:var(--bg);border:1.5px solid rgba(26,115,232,.4);border-radius:4px;
                         padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;
                         color:var(--ink);outline:none;width:100%;transition:border-color .2s;" />
                      <button onclick="saveAndTestKey()"
@@ -295,7 +298,7 @@
                      </button>
                      <button onclick="toggleKeyVisible()"
                         id="keyToggleBtn"
-                        title="Toon/verberg key"
+                        title="Show/hide key"
                         style="background:var(--surface);color:var(--muted);border:1px solid var(--border);
                         font-size:16px;padding:12px 14px;border-radius:4px;cursor:pointer;height:46px;">
                      👁
@@ -474,7 +477,7 @@
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);line-height:1;">⚠ 5-HOUR LIMIT HIT</div>
                <div style="flex:1;">
-                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red);margin-bottom:4px;">Anthropic API 5-hour token budget exhausted. All searches paused.</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red);margin-bottom:4px;">Gemini free tier rate limit hit. All searches paused — resets shortly.</div>
                   <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">Your leads so far are saved. Resets in: <strong id="rlCountdown" style="color:var(--gold);">calculating...</strong></div>
                </div>
                <div style="text-align:right;">
@@ -616,12 +619,12 @@
          let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
          let completedIndustries=new Set();
          // ── API KEY MANAGEMENT ───────────────────────────────────────────────────
-         const LS_KEY_ANTHROPIC = 'lc_anthropic_key';
+         const LS_KEY_ANTHROPIC = 'lc_gemini_key';
          
-         // ── Mask the key: show first 10 + last 4 chars ──────────────────────────
+         // ── Mask the key: show first 6 + last 4 chars ──────────────────────────
          function maskKey(k) {
-           if (!k || k.length < 16) return 'sk-ant-···';
-           return k.slice(0, 14) + '···' + k.slice(-4);
+           if (!k || k.length < 12) return 'AIza···';
+           return k.slice(0, 6) + '···' + k.slice(-4);
          }
          
          // ── Show/hide saved bar vs entry block ──────────────────────────────────
@@ -665,28 +668,25 @@
            }
          }
          
-         // ── Test key against Anthropic API ──────────────────────────────────────
+         // ── Test key via Railway proxy ───────────────────────────────────────────
          async function testKey(key) {
            const statusEl = document.getElementById('keyTestStatus');
-           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Testing...</span>';
+           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Testing Gemini key...</span>';
+           const API_BASE = 'https://contentscale-platform-production.up.railway.app';
            try {
-             const resp = await fetch('/api/claude-proxy', {
+             const resp = await fetch(`${API_BASE}/api/gemini-proxy`, {
                method: 'POST',
                headers: {
                  'Content-Type': 'application/json',
-                 'x-anthropic-key': key,
+                 'x-gemini-key': key,
                },
-               body: JSON.stringify({
-                 model: 'claude-sonnet-4-6',
-                 max_tokens: 10,
-                 messages: [{ role: 'user', content: 'Hi' }]
-               })
+               body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] })
              });
              const data = await resp.json();
-             if (resp.ok && data.content) {
+             if (resp.ok && data.candidates) {
                return { ok: true };
              } else {
-               const msg = data.error?.message || ('HTTP ' + resp.status);
+               const msg = data.error?.message || data.detail || ('HTTP ' + resp.status);
                return { ok: false, msg };
              }
            } catch (e) {
@@ -699,8 +699,8 @@
            const key = document.getElementById('anthropicKey').value.trim();
            const statusEl = document.getElementById('keyTestStatus');
          
-           if (!key || !key.startsWith('sk-ant-') || key.length < 30) {
-             statusEl.innerHTML = '<span style="color:var(--red)">❌ Invalid key — must start with sk-ant- and be at least 30 characters</span>';
+           if (!key || !key.startsWith('AIza') || key.length < 20) {
+             statusEl.innerHTML = '<span style="color:var(--red)">❌ Invalid key — Gemini keys start with AIza and are at least 20 characters. Get yours free at aistudio.google.com/apikey</span>';
              return;
            }
          
@@ -709,20 +709,20 @@
            localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '0');
            statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Key saved — testing connection...</span>';
          
-           // Test against real API
+           // Test against Gemini API
            const result = await testKey(key);
          
            if (result.ok) {
              localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '1');
              document.getElementById('anthropicKey').value = '';
              showSavedState(key, true);
-             toast('✅ API key works! You can now crawl leads.');
+             toast('✅ Gemini key works! You can now crawl leads for free.');
            } else {
              localStorage.removeItem(LS_KEY_ANTHROPIC);
              localStorage.removeItem(LS_KEY_ANTHROPIC + '_tested');
              statusEl.innerHTML =
                '<span style="color:var(--red)">❌ Test failed: ' + result.msg + '</span>' +
-               '<br><span style="color:var(--muted);font-size:9px;">Check your key at console.anthropic.com — make sure billing is set up.</span>';
+               '<br><span style="color:var(--muted);font-size:9px;">Check your key at aistudio.google.com/apikey</span>';
            }
          }
          
@@ -842,60 +842,53 @@
          if(p<150)return 'active';
          return 'estab';
          }
-         // ── PHASE 1: FIND BUSINESSES (fast — no sitemap/contact lookup) ──────────────
+         // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — free tier) ─────────────
          async function callClaude(city, country, ind) {
              const apiKey = localStorage.getItem(LS_KEY_ANTHROPIC);
-             
-             // Jouw specifieke Railway URL
-             const API_BASE = "https://contentscale-platform-production.up.railway.app"; 
-             
-             const sys = `You are a high-precision Lead Scraper. MISSION: Find real local B2B leads for content services.
-             CRITICAL: A lead without a phone number is WORTHLESS. You MUST prioritize finding business phone numbers. 
-             Look for "Goldmine" leads: Businesses with 5-30 pages of content (Skeleton/Brochure status).
-             Return ONLY a raw JSON array. No markdown. No text.`;
-         
-             const usr = `Visit websites and find 15 real ${ind.q} businesses in ${city}, ${country}.
-             JSON SCHEMA: [{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
-         
+             if (!apiKey) { throw new Error('No Gemini API key saved — please add your key above.'); }
+
+             const prompt = `You are a high-precision Lead Scraper. MISSION: Find real local B2B leads for content services.
+CRITICAL: A lead without a phone number is WORTHLESS. Prioritize finding business phone numbers.
+Look for "Goldmine" leads: Businesses with 5-30 pages of content (Skeleton/Brochure status).
+
+Visit websites and find 15 real ${ind.q} businesses in ${city}, ${country}.
+
+Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Example schema:
+[{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
+
              try {
-                 const resp = await fetch(`${API_BASE}/api/claude-proxy`, {
+                 // ✅ Via Railway proxy — Gemini key nooit zichtbaar in browser
+                 const API_BASE = 'https://contentscale-platform-production.up.railway.app';
+                 const resp = await fetch(`${API_BASE}/api/gemini-proxy`,
+                 {
                      method: 'POST',
-                     headers: { 
-                         'Content-Type': 'application/json', 
-                         'x-anthropic-key': apiKey,
- 
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'x-gemini-key': apiKey,
                      },
                      body: JSON.stringify({
-                         model: 'claude-3-5-sonnet-20241022',
-                         max_tokens: 2500,
-                         tools: [{type:'web_search_20250305', name:'web_search'}],
-                         system: sys,
-                         messages: [{role:'user', content:usr}]
+                         contents: [{ parts: [{ text: prompt }] }],
+                         generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
                      })
                  });
-         
+
                  if (!resp.ok) {
-                     const errorText = await resp.text();
-                     throw new Error(`Proxy Error (${resp.status}): ${errorText}`);
+                     const errorData = await resp.json().catch(() => ({}));
+                     const msg = errorData.error?.message || ('HTTP ' + resp.status);
+                     // Gemini free tier quota hit
+                     if (resp.status === 429) throw new Error('429: ' + msg);
+                     throw new Error('Gemini Error (' + resp.status + '): ' + msg);
                  }
-         
+
                  const data = await resp.json();
-                 
-                 // Voorkomt de "TypeError: Cannot read properties of undefined (reading 'find')"
-                 if (!data || !data.content || !Array.isArray(data.content)) {
-                     console.error("Geen geldige data van Claude ontvangen:", data);
-                     return [];
-                 }
-         
-                 const textBlock = data.content.find(b => b.type === 'text');
-                 const text = textBlock ? textBlock.text : "[]";
-                 
-                 // Haal de JSON array uit de tekst (voor het geval Claude toch tekst meestuurt)
+                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+                 // Extract JSON array from response (strip any accidental markdown)
                  const cleaned = text.match(/\[[\s\S]*\]/);
                  return cleaned ? JSON.parse(cleaned[0]) : [];
-                 
+
              } catch (err) {
-                 console.error("[Crawler][" + ind.label + "] Error:", err.message);
+                 console.error('[Crawler][' + ind.label + '] Error:', err.message);
                  throw err;
              }
          }
@@ -1974,7 +1967,7 @@
             <div style="padding-top:20px;border-top:1px solid #374151;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7280;letter-spacing:.05em;">© 2026 ContentScale.site · Ottmar J.G. Francisca · Amsterdam, Netherlands</div>
                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">🤖 Bring Your Own API Key</span>
+                  <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">🤖 Powered by Gemini Flash (Free)</span>
                   <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">⚖ EU AI Act Compliant</span>
                   <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">🇳🇱 Made in Amsterdam</span>
                </div>
