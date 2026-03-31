@@ -592,6 +592,13 @@
          {key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
          ];
          let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
+         function stopCrawl(){
+           stopped=true;
+           document.getElementById('crawlBtn').disabled=false;
+           document.getElementById('stopBtn').style.display='none';
+           document.getElementById('progWrap').style.display='none';
+           toast('⏹ Crawl gestopt');
+         }
          let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
          let completedIndustries=new Set();
          // ── GEMINI KEY MANAGEMENT (BYOK — opgeslagen in localStorage gebruiker) ──
@@ -781,9 +788,9 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
 
                  if (!resp.ok) {
                      const errorData = await resp.json().catch(() => ({}));
-                     const msg = errorData.error?.message || ('HTTP ' + resp.status);
-                     // Gemini free tier quota hit
+                     const msg = errorData.error?.message || errorData.detail || ('HTTP ' + resp.status);
                      if (resp.status === 429) throw new Error('429: ' + msg);
+                     if (resp.status === 401) throw new Error('401: GEMINI_KEY_LEADCRAWLER ontbreekt op de server — voeg toe in Railway Variables');
                      throw new Error('Gemini Error (' + resp.status + '): ' + msg);
                  }
 
