@@ -38,14 +38,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// GEMINI MODEL AUTO-DETECT
-// Haalt beschikbare modellen op bij startup
-// Kiest automatisch beste flash model
-// Nooit meer handmatig aanpassen
+// GEMINI MODEL SELECTIE
+// Prioriteit:
+//   1. GEMINI_MODEL env var (Railway override) — postpay account
+//   2. Auto-detect via API (free tier fallback)
+//   3. Hardcoded fallback: gemini-1.5-flash
 // ============================================
-let GEMINI_MODEL = 'gemini-2.0-flash'; // fallback default
+let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash'; // postpay-safe default
 
 async function detectBestGeminiModel(apiKey) {
+  // Als GEMINI_MODEL expliciet gezet is in Railway → niet overschrijven
+  if (process.env.GEMINI_MODEL) {
+    console.log(`✅ Gemini model uit Railway env var: ${GEMINI_MODEL}`);
+    return;
+  }
+
   if (!apiKey) return;
   try {
     const resp = await fetch(
@@ -57,17 +64,17 @@ async function detectBestGeminiModel(apiKey) {
     const models = (data.models || [])
       .map(m => m.name.replace('models/', ''))
       .filter(m => m.includes('flash') && !m.includes('thinking') && !m.includes('8b'));
-    
-    // Prefer FREE tier models — 1.5-flash is free, 2.0+ may cost
-    // Priority: free > cheap > powerful
+
+    // Op postpay: 1.5-flash is stabiel en heeft geen limit:0 probleem
+    // Op free tier: 2.0-flash-lite is goedkoopst maar heeft quota limieten
     const ranked = models.sort((a, b) => {
       const score = m => {
-        if (m.includes('1.5-flash') && !m.includes('latest')) return 100; // most stable free
-        if (m.includes('1.5-flash')) return 90;                           // free tier
-        if (m.includes('2.0-flash-lite')) return 80;                      // cheapest 2.0
-        if (m.includes('2.0-flash') && !m.includes('thinking')) return 70; // cheap 2.0
-        if (m.includes('flash-lite')) return 60;                           // any lite
-        if (m.includes('flash')) return 40;                                // any flash
+        if (m.includes('1.5-flash') && !m.includes('latest')) return 100;
+        if (m.includes('1.5-flash')) return 90;
+        if (m.includes('2.0-flash-lite')) return 60; // free tier only — lagere prio op postpay
+        if (m.includes('2.0-flash') && !m.includes('thinking')) return 70;
+        if (m.includes('flash-lite')) return 50;
+        if (m.includes('flash')) return 40;
         return 10;
       };
       return score(b) - score(a);
@@ -3699,7 +3706,8 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 // ============================================
 async function startServer() {
 console.log('🚀 =====================================');
-console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
+console.log('🚀  CONTENTSCALE ELITE SERVER v5 (GEMINI POSTPAY FIX)');
+console.log('🚀  FIX v5: GEMINI_MODEL env var override (postpay fix)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
 console.log('🚀  FIX: deactivate endpoint added');
 console.log('🚀  FIX: Instantly Bearer uses secret only');
@@ -3712,8 +3720,9 @@ console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
-  // Auto-detect best Gemini model at startup
+  // Model selectie: GEMINI_MODEL env var heeft prioriteit boven auto-detect
   await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
+  console.log(`🤖 Gemini model actief: ${GEMINI_MODEL} ${process.env.GEMINI_MODEL ? '(Railway override ✅)' : '(auto-detected)'}`);
 app.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
