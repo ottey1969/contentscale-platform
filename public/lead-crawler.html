@@ -269,20 +269,23 @@
             <div id="keyPanel" style="margin-bottom:18px;">
                <!-- LOCKED: no key saved -->
                <div id="keyEntryBlock" style="background:rgba(26,115,232,0.06);border:1.5px solid rgba(26,115,232,0.3);border-radius:8px;padding:20px 24px;">
-                  <div style="position:relative;overflow:hidden;border-radius:6px;">
-                  </div>
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-                     <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#60a5fa;line-height:1;">🔑 JOUW GOOGLE GEMINI KEY</span>
+                     <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#60a5fa;line-height:1;">🔑 YOUR GOOGLE GEMINI API KEY</span>
                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
                         style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
                         color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;text-decoration:none;white-space:nowrap;">
-                        GRATIS KEY → aistudio.google.com
+                        FREE KEY → aistudio.google.com
                      </a>
                   </div>
-                  <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7;">
-                     <strong style="color:var(--green);">Gratis · Geen credit card · 1500 requests/dag</strong><br>
-                     Ga naar <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold);">aistudio.google.com/apikey</a> → inloggen met Google → "Create API key" → kopieer en plak hieronder.<br>
-                     <span style="color:var(--sub);font-size:11px;">Jouw key wordt alleen in jouw eigen browser opgeslagen. ContentScale heeft er geen toegang toe.</span>
+                  <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.7;">
+                     <strong style="color:var(--green);">Free · No credit card · 1500 requests/day</strong><br>
+                     Go to <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold);">aistudio.google.com/apikey</a> → sign in with Google → "Create API key" → paste below.<br>
+                     <span style="color:var(--sub);font-size:11px;">⚠ Your key is stored locally in your browser only. If your key runs out or gets blocked, that's on you.</span>
+                  </div>
+                  <div style="background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7;">
+                     <strong style="color:var(--gold);">🔒 Want better security? Use our server — €97 one-time</strong><br>
+                     Your key stays on our secure server — never stored in your browser. No setup needed.<br>
+                     <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20server-side%20Gemini%20access%20for%20the%20Lead%20Crawler." target="_blank" style="color:var(--gold);font-weight:700;">→ Contact Ottmar on WhatsApp</a>
                   </div>
                   <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
                      <input type="password" id="geminiKeyInput"
@@ -297,7 +300,7 @@
                      <button onclick="saveGeminiKey()"
                         style="background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;
                         font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;cursor:pointer;white-space:nowrap;height:46px;">
-                        OPSLAAN
+                        SAVE
                      </button>
                      <button onclick="toggleGeminiKeyVisible()" id="geminiKeyToggle"
                         style="background:var(--surface);color:var(--muted);border:1px solid var(--border);
@@ -323,8 +326,8 @@
                <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--purple);margin-bottom:10px;">🔒 Voicebot — Unlock Required</div>
                <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
                   The voicebot outbound calling feature requires a ContentScale license.<br>
-                  <a href="https://contentscale.site" target="_blank" style="color:var(--gold);font-weight:700;">→ Get your license key at contentscale.site</a>
-                  <span style="color:var(--muted);"> · Plans from $297 one-time</span>
+                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20to%20unlock%20the%20Voicebot%20feature." target="_blank" style="color:var(--gold);font-weight:700;">→ Get your license key via WhatsApp</a>
+                  <span style="color:var(--muted);"> · From €297/month</span>
                </div>
                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                   <input id="licenseKeyInput" type="text" placeholder="CS-XXXX-XXXX-XXXX"
@@ -1694,6 +1697,14 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
            const statusEl=document.getElementById('licenseStatus');
            if(!key||key.length<10){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Enter a valid license key (CS-XXXX-XXXX-XXXX)</span>';return;}
            if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⟳ Validating...</span>';
+           // Owner bypass — CS-OWNER skips server validation for testing
+           if(key==='CS-OWNER'){
+             localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:'pro',activatedAt:Date.now(),email:'owner@contentscale.site'}));
+             renderLicenseState();
+             toast('👑 Owner mode activated — full access unlocked');
+             renderBuckets();
+             return;
+           }
            try{
              const resp=await fetch('/api/license/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
              const data=await resp.json();
@@ -1723,7 +1734,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
              if(locked)locked.style.display='none';
              if(bar)bar.classList.add('show');
              const lbl=document.getElementById('licensePlanLabel');
-             if(lbl)lbl.textContent=lic.plan==='pro'?'Pro Plan — $97/mo':'Voicebot Plan — $49/mo';
+             if(lbl)lbl.textContent=lic.plan==='pro'?'Pro Plan — €97/month':'Voicebot Plan — €297/month';
              const badge=document.getElementById('licenseActiveBadge');
              if(badge)badge.textContent=lic.plan==='pro'?'★ PRO ACTIVE':'✓ ACTIVE';
            } else {
