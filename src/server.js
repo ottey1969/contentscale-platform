@@ -106,19 +106,25 @@ await new Promise(resolve => setTimeout(resolve, delay));
 return false;
 }
 app.set('trust proxy', 1);
-app.use(compression({ level: 9, threshold: 0 }));
 app.use(function(req, res, next) {
- // ── CORS CONFIGURATIE (ENKELE, COMPLETE VERSIE) ─────────────────────────────
-const allowedOrigins = [
-  'https://app.contentscale.site',
-  'https://contentscale.site',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  process.env.BASE_URL
-].filter(Boolean);
+  const allowedOrigins = [
+    'https://app.contentscale.site',
+    'https://contentscale.site',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    process.env.BASE_URL
+  ].filter(Boolean);
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key, x-user-id, x-anthropic-key, x-gemini-key');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
-
- 
 // ── Global badge-loader injection ────────────────────────────────────────────
 // Injects badge-loader.js into every HTML page served by this server
 app.use((req, res, next) => {
