@@ -265,82 +265,58 @@
             <button class="rbtn clear" onclick="clearSession()">✕ Clear &amp; Start Fresh</button>
          </div>
          <div class="search-panel">
-            <!-- ══ API KEY INPUT (NEW) ══ -->
-            <!-- ══ API KEY PANEL ══ -->
-            <div id="keyPanel">
-               <!-- STATE A: No key saved — shown by default, hidden when key exists -->
-               <div id="keyEntryBlock" style="background:rgba(26,115,232,0.06);border:1.5px solid rgba(26,115,232,0.35);border-radius:6px;padding:18px 20px;margin-bottom:18px;">
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-                     <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#60a5fa;line-height:1;">🔑 GOOGLE GEMINI API KEY REQUIRED</span>
+            <!-- ══ GEMINI KEY PANEL ══ -->
+            <div id="keyPanel" style="margin-bottom:18px;">
+               <!-- LOCKED: no key saved -->
+               <div id="keyEntryBlock" style="background:rgba(26,115,232,0.06);border:1.5px solid rgba(26,115,232,0.3);border-radius:8px;padding:20px 24px;">
+                  <div style="position:relative;overflow:hidden;border-radius:6px;">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                     <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#60a5fa;line-height:1;">🔑 JOUW GOOGLE GEMINI KEY</span>
                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
-                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-                        color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;
-                        text-decoration:none;margin-left:auto;white-space:nowrap;">
-                     FREE key → aistudio.google.com
+                        style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                        color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;text-decoration:none;white-space:nowrap;">
+                        GRATIS KEY → aistudio.google.com
                      </a>
                   </div>
-                  <div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:8px 12px;margin-bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);line-height:1.6;">
-                     ✅ FREE TIER — No credit card needed · Get your key at <strong>aistudio.google.com/apikey</strong> in 30 seconds
+                  <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7;">
+                     <strong style="color:var(--green);">Gratis · Geen credit card · 1500 requests/dag</strong><br>
+                     Ga naar <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold);">aistudio.google.com/apikey</a> → inloggen met Google → "Create API key" → kopieer en plak hieronder.<br>
+                     <span style="color:var(--sub);font-size:11px;">Jouw key wordt alleen in jouw eigen browser opgeslagen. ContentScale heeft er geen toegang toe.</span>
                   </div>
                   <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
-                     <input type="password" id="anthropicKey"
-                        placeholder="AIza..."
+                     <input type="password" id="geminiKeyInput"
+                        placeholder="AIzaSy..."
                         autocomplete="off" spellcheck="false"
-                        onkeydown="if(event.key==='Enter')saveAndTestKey()"
+                        onkeydown="if(event.key==='Enter')saveGeminiKey()"
+                        onfocus="this.style.borderColor='var(--gold)'"
+                        onblur="this.style.borderColor='rgba(26,115,232,.4)'"
                         style="background:var(--bg);border:1.5px solid rgba(26,115,232,.4);border-radius:4px;
                         padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;
                         color:var(--ink);outline:none;width:100%;transition:border-color .2s;" />
-                     <button onclick="saveAndTestKey()"
+                     <button onclick="saveGeminiKey()"
                         style="background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;
-                        font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;
-                        cursor:pointer;white-space:nowrap;height:46px;">
-                     SAVE &amp; TEST
+                        font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;cursor:pointer;white-space:nowrap;height:46px;">
+                        OPSLAAN
                      </button>
-                     <button onclick="toggleKeyVisible()"
-                        id="keyToggleBtn"
-                        title="Show/hide key"
+                     <button onclick="toggleGeminiKeyVisible()" id="geminiKeyToggle"
                         style="background:var(--surface);color:var(--muted);border:1px solid var(--border);
-                        font-size:16px;padding:12px 14px;border-radius:4px;cursor:pointer;height:46px;">
-                     👁
-                     </button>
+                        font-size:16px;padding:12px 14px;border-radius:4px;cursor:pointer;height:46px;">👁</button>
                   </div>
-                  <div id="keyTestStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:18px;"></div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                     🔒 Stored in your browser (localStorage) · Never sent to ContentScale servers
-                  </div>
+                  <div id="geminiKeyStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:16px;"></div>
                </div>
-               <!-- STATE B: Key is saved — compact green bar -->
-               <div id="keySavedBar" style="display:none;background:rgba(74,222,128,0.07);border:1.5px solid rgba(74,222,128,0.35);
-                  border-radius:6px;padding:12px 18px;margin-bottom:18px;
-                  display:none;align-items:center;gap:12px;flex-wrap:wrap;">
-                  <div style="display:flex;align-items:center;gap:8px;flex:1;">
-                     <span style="font-size:16px;">✅</span>
-                     <div>
-                        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">
-                           API Key Active
-                        </div>
-                        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="keyMasked">
-                           sk-ant-···
-                        </div>
-                     </div>
+               <!-- SAVED: key exists -->
+               <div id="keySavedBar" style="display:none;background:rgba(74,222,128,0.07);border:1.5px solid rgba(74,222,128,0.3);border-radius:6px;padding:12px 18px;align-items:center;gap:12px;flex-wrap:wrap;">
+                  <span style="font-size:16px;">✅</span>
+                  <div style="flex:1;">
+                     <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">Gemini Key Actief</div>
+                     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="geminiKeyMasked">AIzaSy···</div>
                   </div>
-                  <div style="display:flex;align-items:center;gap:6px;">
-                     <div id="keyBadge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-                        padding:4px 10px;border-radius:3px;background:rgba(74,222,128,.15);
-                        color:var(--green);border:1px solid rgba(74,222,128,.3);">
-                        ✓ TESTED &amp; WORKING
-                     </div>
-                     <button onclick="changeApiKey()"
-                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-                        background:var(--surface);border:1px solid var(--border);color:var(--muted);
-                        padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s;"
-                        onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">
-                     ✎ Change Key
-                     </button>
-                  </div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);">✓ OPGESLAGEN</span>
+                  <button onclick="removeGeminiKey()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">✎ Wijzig</button>
                </div>
             </div>
-            <!-- ══ END API KEY PANEL ══ -->
+            <!-- ══ END GEMINI KEY PANEL ══ -->
             <!-- ══ VAPI VOICEBOT CONFIG ══ -->
             <!-- LICENSE SECTION -->
             <div id="licenseLocked" style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
@@ -618,136 +594,72 @@
          let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
          let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
          let completedIndustries=new Set();
-         // ── API KEY MANAGEMENT ───────────────────────────────────────────────────
-         const LS_KEY_ANTHROPIC = 'lc_gemini_key';
-         
-         // ── Mask the key: show first 6 + last 4 chars ──────────────────────────
-         function maskKey(k) {
-           if (!k || k.length < 12) return 'AIza···';
-           return k.slice(0, 6) + '···' + k.slice(-4);
+         // ── GEMINI KEY MANAGEMENT (BYOK — opgeslagen in localStorage gebruiker) ──
+         const LS_GEMINI_KEY = 'lc_gemini_key';
+
+         function maskGeminiKey(k) {
+           if (!k || k.length < 12) return 'AIzaSy···';
+           return k.slice(0, 8) + '···' + k.slice(-4);
          }
-         
-         // ── Show/hide saved bar vs entry block ──────────────────────────────────
-         function showSavedState(key, tested) {
+
+         function saveGeminiKey() {
+           const key = document.getElementById('geminiKeyInput').value.trim();
+           const status = document.getElementById('geminiKeyStatus');
+           if (!key || !key.startsWith('AIza') || key.length < 20) {
+             status.innerHTML = '<span style="color:var(--red)">❌ Ongeldige key — moet beginnen met AIzaSy en minstens 20 tekens lang zijn</span>';
+             return;
+           }
+           localStorage.setItem(LS_GEMINI_KEY, key);
+           document.getElementById('geminiKeyInput').value = '';
+           status.innerHTML = '';
+           showGeminiSavedState(key);
+           toast('✅ Gemini key opgeslagen — je kunt nu crawlen!');
+         }
+
+         function showGeminiSavedState(key) {
            document.getElementById('keyEntryBlock').style.display = 'none';
            const bar = document.getElementById('keySavedBar');
            bar.style.display = 'flex';
-           document.getElementById('keyMasked').textContent = maskKey(key);
-           const badge = document.getElementById('keyBadge');
-           if (tested) {
-             badge.textContent = '✓ TESTED & WORKING';
-             badge.style.background = 'rgba(74,222,128,.15)';
-             badge.style.color = 'var(--green)';
-             badge.style.borderColor = 'rgba(74,222,128,.3)';
-           } else {
-             badge.textContent = '✓ SAVED';
-             badge.style.background = 'rgba(251,191,36,.1)';
-             badge.style.color = 'var(--gold)';
-             badge.style.borderColor = 'rgba(251,191,36,.3)';
-           }
+           document.getElementById('geminiKeyMasked').textContent = maskGeminiKey(key);
          }
-         
-         function showEntryState(msg) {
+
+         function showGeminiEntryState() {
            document.getElementById('keySavedBar').style.display = 'none';
            document.getElementById('keyEntryBlock').style.display = 'block';
-           if (msg) {
-             document.getElementById('keyTestStatus').innerHTML = msg;
-           }
          }
-         
-         // ── Toggle password visibility ───────────────────────────────────────────
-         function toggleKeyVisible() {
-           const inp = document.getElementById('anthropicKey');
-           const btn = document.getElementById('keyToggleBtn');
-           if (inp.type === 'password') {
-             inp.type = 'text';
-             btn.textContent = '🙈';
-           } else {
-             inp.type = 'password';
-             btn.textContent = '👁';
-           }
+
+         function removeGeminiKey() {
+           localStorage.removeItem(LS_GEMINI_KEY);
+           showGeminiEntryState();
+           toast('Key verwijderd');
          }
-         
-         // ── Test key via Railway proxy ───────────────────────────────────────────
-         async function testKey(key) {
-           const statusEl = document.getElementById('keyTestStatus');
-           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Testing Gemini key...</span>';
-           const API_BASE = 'https://contentscale-platform-production.up.railway.app';
-           try {
-             const resp = await fetch(`${API_BASE}/api/gemini-proxy`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'x-gemini-key': key,
-               },
-               body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] })
-             });
-             const data = await resp.json();
-             if (resp.ok && data.candidates) {
-               return { ok: true };
-             } else {
-               const msg = data.error?.message || data.detail || ('HTTP ' + resp.status);
-               return { ok: false, msg };
-             }
-           } catch (e) {
-             return { ok: false, msg: e.message };
-           }
+
+         function toggleGeminiKeyVisible() {
+           const inp = document.getElementById('geminiKeyInput');
+           const btn = document.getElementById('geminiKeyToggle');
+           inp.type = inp.type === 'password' ? 'text' : 'password';
+           btn.textContent = inp.type === 'password' ? '👁' : '🙈';
          }
-         
-         // ── Save + Test ──────────────────────────────────────────────────────────
-         async function saveAndTestKey() {
-           const key = document.getElementById('anthropicKey').value.trim();
-           const statusEl = document.getElementById('keyTestStatus');
-         
-           if (!key || !key.startsWith('AIza') || key.length < 20) {
-             statusEl.innerHTML = '<span style="color:var(--red)">❌ Invalid key — Gemini keys start with AIza and are at least 20 characters. Get yours free at aistudio.google.com/apikey</span>';
-             return;
-           }
-         
-           // Save immediately
-           localStorage.setItem(LS_KEY_ANTHROPIC, key);
-           localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '0');
-           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Key saved — testing connection...</span>';
-         
-           // Test against Gemini API
-           const result = await testKey(key);
-         
-           if (result.ok) {
-             localStorage.setItem(LS_KEY_ANTHROPIC + '_tested', '1');
-             document.getElementById('anthropicKey').value = '';
-             showSavedState(key, true);
-             toast('✅ Gemini key works! You can now crawl leads for free.');
-           } else {
-             localStorage.removeItem(LS_KEY_ANTHROPIC);
-             localStorage.removeItem(LS_KEY_ANTHROPIC + '_tested');
-             statusEl.innerHTML =
-               '<span style="color:var(--red)">❌ Test failed: ' + result.msg + '</span>' +
-               '<br><span style="color:var(--muted);font-size:9px;">Check your key at aistudio.google.com/apikey</span>';
-           }
+
+         function getGeminiKey() {
+           return localStorage.getItem(LS_GEMINI_KEY) || null;
          }
-         
-         // ── Change key (back to entry) ───────────────────────────────────────────
-         function changeApiKey() {
-           localStorage.removeItem(LS_KEY_ANTHROPIC);
-           localStorage.removeItem(LS_KEY_ANTHROPIC + '_tested');
-           showEntryState('<span style="color:var(--muted)">Enter your new API key</span>');
-         }
-         
-         // ── Get key (used by callClaude) ─────────────────────────────────────────
-         function getApiKey() {
-           return localStorage.getItem(LS_KEY_ANTHROPIC) || null;
-         }
-         
-         // ── Init on page load ────────────────────────────────────────────────────
+
+         // Init op pagina load
          document.addEventListener('DOMContentLoaded', () => {
-           const saved = localStorage.getItem(LS_KEY_ANTHROPIC);
-           const tested = localStorage.getItem(LS_KEY_ANTHROPIC + '_tested') === '1';
+           const saved = localStorage.getItem(LS_GEMINI_KEY);
            if (saved && saved.length >= 20) {
-             showSavedState(saved, tested);
+             showGeminiSavedState(saved);
            } else {
-             showEntryState(null);
+             showGeminiEntryState();
            }
          });
+         
+         // ── Key management handled by Gemini BYOK functions above ──
+         
+
+         
+
          // ── PERSISTENCE ───────────────────────────────────────────────────────────
          const LS_KEY='lc_session';
          function saveSession(city,country){
@@ -844,8 +756,8 @@
          }
          // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — free tier) ─────────────
          async function callClaude(city, country, ind) {
-             const apiKey = localStorage.getItem(LS_KEY_ANTHROPIC);
-             if (!apiKey) { throw new Error('No Gemini API key saved — please add your key above.'); }
+             const apiKey = getGeminiKey();
+             if (!apiKey) { throw new Error('Geen Gemini key opgeslagen — voer je key in bovenaan de pagina.'); }
 
              const prompt = `You are a high-precision Lead Scraper. MISSION: Find real local B2B leads for content services.
 CRITICAL: A lead without a phone number is WORTHLESS. Prioritize finding business phone numbers.
