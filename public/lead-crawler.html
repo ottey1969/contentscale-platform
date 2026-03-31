@@ -1,3 +1,9 @@
+Gratis · Geen credit card · 1500 requests/dag
+Ga naar aistudio.google.com/apikey → inloggen met Google → "Create API key" → kopieer en plak hieronder.
+Jouw key wordt alleen in jouw eigen browser opgeslagen. ContentScale heeft er geen toegang toe.
+
+
+
 <!DOCTYPE html>
 <html lang="en">
    <head>
@@ -272,7 +278,7 @@
                   <div style="position:relative;overflow:hidden;border-radius:6px;">
                   </div>
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-                     <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#60a5fa;line-height:1;">🔑 JOUW GOOGLE GEMINI KEY</span>
+                     <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#60a5fa;line-height:1;">🔑 YOUR GOOGLE GEMINI KEY</span>
                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
                         style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
                         color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;text-decoration:none;white-space:nowrap;">
@@ -280,9 +286,9 @@
                      </a>
                   </div>
                   <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7;">
-                     <strong style="color:var(--green);">Gratis · Geen credit card · 1500 requests/dag</strong><br>
-                     Ga naar <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold);">aistudio.google.com/apikey</a> → inloggen met Google → "Create API key" → kopieer en plak hieronder.<br>
-                     <span style="color:var(--sub);font-size:11px;">Jouw key wordt alleen in jouw eigen browser opgeslagen. ContentScale heeft er geen toegang toe.</span>
+                     <strong style="color:var(--green);">FREE · NO CREDIT CARD · 1500 requests/day</strong><br>
+                     Go to <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold);">aistudio.google.com/apikey</a> → login with Google → "Create API key" → Copy and paste below.<br>
+                     <span style="color:var(--sub);font-size:11px;">Your key will be stored on your web browser or use our server for more secutity.</span>
                   </div>
                   <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
                      <input type="password" id="geminiKeyInput"
@@ -297,7 +303,7 @@
                      <button onclick="saveGeminiKey()"
                         style="background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;
                         font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;cursor:pointer;white-space:nowrap;height:46px;">
-                        OPSLAAN
+                        SAVE
                      </button>
                      <button onclick="toggleGeminiKeyVisible()" id="geminiKeyToggle"
                         style="background:var(--surface);color:var(--muted);border:1px solid var(--border);
@@ -309,10 +315,10 @@
                <div id="keySavedBar" style="display:none;background:rgba(74,222,128,0.07);border:1.5px solid rgba(74,222,128,0.3);border-radius:6px;padding:12px 18px;align-items:center;gap:12px;flex-wrap:wrap;">
                   <span style="font-size:16px;">✅</span>
                   <div style="flex:1;">
-                     <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">Gemini Key Actief</div>
+                     <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">Gemini Key Active</div>
                      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="geminiKeyMasked">AIzaSy···</div>
                   </div>
-                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);">✓ OPGESLAGEN</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);">✓ SAVED</span>
                   <button onclick="removeGeminiKey()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">✎ Wijzig</button>
                </div>
             </div>
@@ -324,7 +330,7 @@
                <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
                   The voicebot outbound calling feature requires a ContentScale license.<br>
                   <a href="https://contentscale.site" target="_blank" style="color:var(--gold);font-weight:700;">→ Get your license key at contentscale.site</a>
-                  <span style="color:var(--muted);"> · Plans from $297 one-time</span>
+                  <span style="color:var(--muted);"> · Plans from $297/month</span>
                </div>
                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                   <input id="licenseKeyInput" type="text" placeholder="CS-XXXX-XXXX-XXXX"
