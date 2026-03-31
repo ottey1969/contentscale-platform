@@ -3629,8 +3629,18 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 // ============================================
 async function startServer() {
   console.log('🚀 =====================================');
-  console.log('🚀  CONTENTSCALE ELITE SERVER');
-  console.log('🚀 =====================================');
+  console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
+  console.log('🚀  FIX: activated_until alias in users SELECT');
+  console.log('🚀  FIX: deactivate endpoint added');
+  console.log('🚀  FIX: Instantly Bearer uses secret only');
+  console.log('🚀  DB Migration: country VARCHAR(100)');
+  console.log('🚀  scan_log.source column');
+  console.log('🚀  DOCX: template type column');
+  console.log('🚀  Bulk Delete Routes');
+  console.log('🚀  34 Recommendation Checks');
+  console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
+  console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
+  console.log('🚀 =====================================\n');
   
   const dbConnected = await waitForDatabase();
   
@@ -3638,7 +3648,7 @@ async function startServer() {
     console.log(`📍 Server: http://localhost:${PORT}`);
     console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
     console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
-    console.log('\n✅ Server ready\n');
+    console.log('\n✅ Elite scanner ready\n');
   });
 }
 
