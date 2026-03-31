@@ -2171,7 +2171,7 @@ app.post('/api/claude-proxy', async (req, res) => {
 app.post('/api/gemini-proxy', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || 'gemini-1.5-flash';
+  const model  = req.query.model || 'gemini-1.5-flash-latest';
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2225,7 +2225,7 @@ app.post('/api/gemini-proxy', async (req, res) => {
 app.post('/api/gemini-voicebot', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_VOICEBOT;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || 'gemini-1.5-flash';
+  const model  = req.query.model || 'gemini-1.5-flash-latest';
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2283,7 +2283,7 @@ app.post('/api/gemini-voicebot', async (req, res) => {
 app.post('/api/gemini-paid', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || 'gemini-1.5-flash';
+  const model  = req.query.model || 'gemini-1.5-flash-latest';
 
   if (!apiKey) {
     return res.status(500).json({
