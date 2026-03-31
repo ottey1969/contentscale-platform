@@ -2163,6 +2163,62 @@ app.post('/api/claude-proxy', async (req, res) => {
   }
 });
 
+// ============================================
+// GEMINI PROXY — Lead Crawler (free tier)
+// Browser → jouw Railway server → Google API
+// Key zit veilig server-side, nooit exposed
+// Drop-in naast Anthropic — beide blijven werken
+// ============================================
+app.post('/api/gemini-proxy', async (req, res) => {
+  const apiKey = req.headers['x-gemini-key'];
+  const userId = req.headers['x-user-id'] || 'anonymous';
+  const model  = req.query.model || 'gemini-1.5-flash';
+
+  if (!apiKey || apiKey.length < 20) {
+    return res.status(401).json({
+      error: 'GEMINI_API_KEY required',
+      detail: 'Send your Gemini key in the x-gemini-key header. Free key: aistudio.google.com/apikey'
+    });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+
+    const upstream = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeout);
+    const rawText = await upstream.text();
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch { data = { raw: rawText.slice(0, 500) }; }
+
+    console.log(`[gemini-proxy] ${userId} → ${model} → ${upstream.status} (${rawText.length} bytes)`);
+
+    if (upstream.status === 429) {
+      return res.status(429).json({
+        error: { message: 'Gemini free tier rate limit — even wachten en opnieuw proberen', type: 'rate_limit' },
+        ...data
+      });
+    }
+
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    console.error('[gemini-proxy] Error:', err.message);
+    if (err.name === 'AbortError') return res.status(504).json({ error: 'Gateway timeout' });
+    res.status(502).json({ error: 'Proxy request failed', detail: err.message });
+  }
+});
+
+
 
 // ── Scan Reports ────────────────────────────────────────────────────────────
                app.post('/api/report/generate', verifyAdmin, async (req, res) => {
