@@ -108,18 +108,38 @@ return false;
 app.set('trust proxy', 1);
 app.use(compression({ level: 9, threshold: 0 }));
 app.use(function(req, res, next) {
+ // ── CORS CONFIGURATIE (ENKELE, COMPLETE VERSIE) ─────────────────────────────
+const allowedOrigins = [
+  'https://app.contentscale.site',
+  'https://contentscale.site',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.BASE_URL
+].filter(Boolean);
+
+app.use((req, res, next) => {
   const origin = req.headers.origin;
-  // Cruciaal: We staan alle origins toe die de pagina aanroepen (nodig voor WordPress snippets)
-  // En we voegen de specifieke headers toe die Claude nodig heeft om te werken
-  res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-anthropic-key, x-user-id, x-admin-key');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  // Dynamisch toestaan van origins
+  if (allowedOrigins.includes(origin) || origin?.includes('localhost')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 
+    'Content-Type, Authorization, x-anthropic-key, x-user-id, x-admin-key, x-apify-token, x-instantly-key, x-vapi-key, anthropic-version'
+  );
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
   next();
 });
-
 // ── Global badge-loader injection ────────────────────────────────────────────
 // Injects badge-loader.js into every HTML page served by this server
 app.use((req, res, next) => {
@@ -141,16 +161,7 @@ next();
 });
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-// CORS
-app.use((req, res, next) => {
-const allowedOrigins = ['https://app.contentscale.site', 'https://contentscale.site', 'http://localhost:3000'];
-const origin = req.headers.origin;
-if (allowedOrigins.includes(origin)) res.header('Access-Control-Allow-Origin', origin);
-res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-admin-key, x-user-id');
-res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-if (req.method === 'OPTIONS') return res.sendStatus(200);
-next();
-});
+
 // ── Explicit route for / so badge-loader middleware fires ─────────────────────
 app.get('/', (req, res) => {
 const tryPaths = [
