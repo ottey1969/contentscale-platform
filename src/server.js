@@ -3615,284 +3615,32 @@ app.get('/api/cs-agent/status/:callId', async (req, res) => {
 });
 
 
-// ── Headshot redirect — serves Ottmar's photo from GitHub raw ──
+// ── Headshot redirect ──────────────────────────────────────────────────────
 app.get('/headshot', (req, res) => {
   res.redirect(301, 'https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg');
 });
-// Also serve via wp-content path for compatibility
+
 app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) => {
   res.redirect(301, 'https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg');
 });
 
+// ============================================
+// START SERVER
+// ============================================
+async function startServer() {
+  console.log('🚀 =====================================');
+  console.log('🚀  CONTENTSCALE ELITE SERVER');
+  console.log('🚀 =====================================');
+  
+  const dbConnected = await waitForDatabase();
+  
+  app.listen(PORT, () => {
+    console.log(`📍 Server: http://localhost:${PORT}`);
+    console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
+    console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
+    console.log('\n✅ Server ready\n');
+  });
+}
 
-// ============================================================
-// OTTO BOUW — Outbound agent for service-based business clients
-// Calls property managers / leads on behalf of CLIENT (not ContentScale)
-// Uses CLIENT's own Vapi key → client pays, client monitors cost
-// ============================================================
-app.post('/api/ottobouw/call', async (req, res) => {
-  const {
-    vapiKey,        // client's OWN Vapi private key
-    phoneId,        // client's Vapi phone number ID
-    customerPhone, customerName, customerDomain,
-    clientCompany,  // e.g. "Elite Dakonderhoud BV"
-    clientTrade,    // e.g. "dakdekker" / "loodgieter"
-    clientCallback, // client's real phone number for voicemail
-    language = 'nl',
-    leadId
-  } = req.body || {};
-
-  if (!vapiKey)       return res.status(401).json({ error: 'Client Vapi key required' });
-  if (!phoneId)       return res.status(400).json({ error: 'phoneId required' });
-  if (!customerPhone) return res.status(400).json({ error: 'customerPhone required' });
-
-  let phone = customerPhone.replace(/[\s\-().]/g, '');
-  if (!phone.startsWith('+')) phone = '+' + phone;
-
-  const name    = customerName || 'there';
-  const company = clientCompany || 'ons bedrijf';
-  const trade   = clientTrade || 'vakman';
-  const isNL    = language === 'nl';
-
-  const disclosure = isNL
-    ? `Goedemorgen, voor alle duidelijkheid — ik ben een AI-assistent die belt namens ${company}.`
-    : `Good morning, just to be transparent — I'm an AI assistant calling on behalf of ${company}.`;
-
-  const assistant = {
-    firstMessage: isNL
-      ? `${disclosure} Spreek ik met de beheerder van ${name}?`
-      : `${disclosure} Am I speaking with the manager at ${name}?`,
-
-    model: {
-      provider: 'openai',
-      model: 'gpt-4o',
-      temperature: 0.65,
-      systemPrompt: isNL ? `
-Je bent een professionele AI-assistent die belt namens ${company}, een gespecialiseerd ${trade}bedrijf.
-
-JURIDISCH VERPLICHT — ALTIJD ALS EERSTE:
-Zeg: "${disclosure}"
-Bied direct opt-out: "Als u niet gebeld wilt worden, zeg dan 'stop' en ik verwijder u meteen."
-
-DOEL: Kwalificeer de lead. Zorg voor een afspraak met een ${trade} van ${company}.
-
-BELSCRIPT:
-1. Opening (AI-disclosure altijd eerst):
-"${disclosure} Spreek ik met de beheerder van ${name}? 
-Wij zijn ${company} — gespecialiseerd ${trade}bedrijf. 
-Wij bieden momenteel gratis inspecties aan voor woningbeheerders in uw regio. 
-Heeft u 2 minuten?"
-
-2. KWALIFICATIE (kies natuurlijk):
-- "Hoeveel panden beheert u momenteel?"
-- "Wanneer was de laatste inspectie van uw dak/installaties?"
-- "Heeft u vaste onderhoudscontracten of werkt u op afroep?"
-
-3. AANBOD:
-- "Wij kunnen een gratis inspectie inplannen — geheel vrijblijvend. 
-   Wanneer schikt het u?"
-- "Mag ik uw e-mailadres voor de bevestiging?" [HAAL EMAIL OP MET TOESTEMMING]
-
-4. NIET GEÏNTERESSEERD:
-- "Helemaal begrijpelijk. Mag ik u over 3 maanden terugbellen voor een nieuwe inspectie?"
-- Of: "Geen probleem, ik zal u niet meer bellen. Fijne dag!"
-
-5. VOICEMAIL:
-"Goedemorgen ${name}, u heeft een bericht van de AI-assistent van ${company}. 
-Wij zijn een gespecialiseerd ${trade}bedrijf en bieden gratis inspecties aan. 
-Bel ons terug op ${clientCallback || 'ons nummer'} of kijk op onze website. 
-Goedendag!"
-
-REGELS:
-- Altijd AI-disclosure als eerste zin
-- Opt-out is onmiddellijk en zonder discussie
-- B2B only — alleen zakelijke beheerders
-- Bellen alleen 8:00–20:00
-- Max 4 minuten, respecteer hun tijd
-- Bij "bent u een mens?" → "Nee, ik ben een AI-assistent. Maar de ${trade} die langkomt is een echte vakman."
-` : `
-You are a professional AI assistant calling on behalf of ${company}, a specialized ${trade} company.
-
-MANDATORY LEGAL — ALWAYS FIRST:
-Say: "${disclosure}"
-Offer immediate opt-out: "If you prefer not to be called, just say 'stop' and I'll remove you immediately."
-
-GOAL: Qualify the lead. Schedule an appointment with a ${trade} from ${company}.
-
-CALL SCRIPT:
-1. Opening (AI disclosure always first):
-"${disclosure} Am I speaking with the manager at ${name}?
-We are ${company} — specialized ${trade} company.
-We're currently offering free inspections for property managers in your area.
-Do you have 2 minutes?"
-
-2. QUALIFY:
-- "How many properties do you currently manage?"
-- "When was your last roof/system inspection?"
-- "Do you have maintenance contracts or work on-call?"
-
-3. OFFER:
-- "We can schedule a free no-obligation inspection. When would suit you?"
-- "May I take your email for confirmation?" [GET EMAIL WITH PERMISSION]
-
-4. NOT INTERESTED:
-"No problem at all — I won't call again. Have a great day!"
-
-5. VOICEMAIL:
-"Good morning ${name}, message from the AI assistant of ${company}. 
-We're a specialized ${trade} company offering free inspections. 
-Call us at ${clientCallback || 'our number'} or visit our website. Have a great day!"
-
-RULES:
-- AI disclosure always first line
-- Instant opt-out, no pushback
-- B2B only
-- 8am–8pm calling hours
-- Max 4 minutes
-`,
-    },
-    voice: { provider: '11labs', voiceId: 'pNInz6obpgDQGcFmaJgB' },
-    endCallMessage: isNL ? 'Bedankt voor uw tijd, fijne dag!' : 'Thanks for your time, have a great day!',
-    voicemailMessage: isNL
-      ? `Goedemorgen ${name}, bericht van AI-assistent van ${company}. Bel ${clientCallback || 'ons'} terug. Fijne dag!`
-      : `Hi ${name}, message from ${company} AI assistant. Call us at ${clientCallback || 'our number'}. Have a great day!`,
-    maxDurationSeconds: 240,
-    backchannelingEnabled: true,
-    endCallFunctionEnabled: true,
-  };
-
-  try {
-    const upstream = await fetch('https://api.vapi.ai/call/phone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${vapiKey}` },
-      body: JSON.stringify({
-        phoneNumberId: phoneId,
-        customer: { number: phone, name },
-        assistant,
-      }),
-    });
-    const data = await upstream.json();
-    console.log(`[ottobouw] ${company}/${trade} → ${phone} | ${upstream.status} | ${data.id||'?'}`);
-    if (!upstream.ok) return res.status(upstream.status).json({ error: data.message || JSON.stringify(data).slice(0,200) });
-    res.json({ callId: data.id, status: data.status, leadId });
-  } catch(err) {
-    console.error('[ottobouw] error:', err.message);
-    res.status(502).json({ error: err.message });
-  }
-});
-
-// ============================================================
-// GOOGLE GUARANTEED RECEPTIONIST — Inbound for clients
-// Each client has their OWN Vapi phone number → cost tracked per client
-// Inbound from LSA: NO AI disclosure required by law
-// ============================================================
-app.post('/api/gg-receptionist/configure', async (req, res) => {
-  // Creates/updates an assistant config for a client's GG receptionist
-  const {
-    vapiPrivateKey, // client's Vapi private key (or yours if you manage for them)
-    clientCompany,
-    clientTrade,
-    clientCity,
-    language = 'nl',
-    bookingUrl,
-    emergencyKeywords = ['lek', 'kapot', 'brand', 'spoed', 'leak', 'broken', 'emergency'],
-  } = req.body || {};
-
-  if (!vapiPrivateKey) return res.status(401).json({ error: 'Vapi private key required' });
-
-  const isNL = language === 'nl';
-  const company = clientCompany || 'ons bedrijf';
-  const trade = clientTrade || 'vakman';
-
-  // Build the inbound assistant — NO AI disclosure needed for inbound LSA
-  const assistantConfig = {
-    name: `GG Receptionist — ${company}`,
-    firstMessage: isNL
-      ? `Goedendag, bedankt voor het bellen naar ${company}. Waarmee kan ik u helpen?`
-      : `Good day, thank you for calling ${company}. How can I help you?`,
-    model: {
-      provider: 'openai',
-      model: 'gpt-4o',
-      temperature: 0.6,
-      systemPrompt: isNL ? `
-Je bent de telefonische receptionist van ${company}, een ${trade}bedrijf in ${clientCity || 'Nederland'}.
-
-INBOUND GESPREK — geen AI-vermelding vereist voor inkomende LSA-oproepen.
-
-DOEL: Klant direct helpen. Klant kwalificeren. Afspraak inplannen.
-
-SCRIPT:
-1. WELKOM:
-"Goedendag, ${company}. Waarmee kan ik u helpen?"
-
-2. KWALIFICEER HET PROBLEEM:
-- "Kunt u kort beschrijven wat er aan de hand is?"
-- "Is dit een spoedgeval of kunt u even wachten op een afspraak?"
-- "Wat is uw adres / postcode?"
-
-3. SPOED (bij trefwoorden: lek, kapot, gesprongen, brand):
-"Ik begrijp dat dit spoed heeft. Ik verbind u nu direct door met onze monteur. Één moment."
-→ Forward call of neem contactgegevens op
-
-4. REGULIERE AFSPRAAK:
-"Ik kan een afspraak voor u inplannen. Wanneer schikt het u het beste?"
-"Mag ik uw naam en telefoonnummer voor de bevestiging?"
-${bookingUrl ? `"U kunt ook direct online boeken via: ${bookingUrl}"` : ''}
-
-5. AFSLUITING:
-"Wij bellen u zo snel mogelijk terug. Fijne dag!"
-
-REGELS:
-- Vriendelijk, snel, professioneel
-- Spoed altijd prioriteit
-- Naam + telefoonnummer + postcode + probleem vastleggen
-- Max 3 minuten
-` : `
-You are the receptionist for ${company}, a ${trade} company in ${clientCity || 'the area'}.
-
-INBOUND CALL — no AI disclosure required for incoming LSA calls.
-
-GOAL: Help the customer immediately. Qualify. Schedule appointment.
-
-SCRIPT:
-1. WELCOME: "Good day, ${company}. How can I help you?"
-2. QUALIFY: "Can you briefly describe the issue?" / "Is this urgent?"
-3. URGENT (leak, broken, emergency): "I understand this is urgent. Let me connect you with our technician right away."
-4. APPOINTMENT: "I can schedule an appointment. When works best for you?"
-5. CLOSE: "We'll call you back shortly. Have a great day!"
-`,
-    },
-    voice: { provider: '11labs', voiceId: 'EXAVITQu4vr4xnSDxMaL' }, // Bella — warm female voice for receptionist
-    maxDurationSeconds: 300,
-    backchannelingEnabled: true,
-    endCallFunctionEnabled: true,
-    serverUrl: `${process.env.BASE_URL}/api/gg-receptionist/webhook`,
-  };
-
-  try {
-    const upstream = await fetch('https://api.vapi.ai/assistant', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${vapiPrivateKey}` },
-      body: JSON.stringify(assistantConfig),
-    });
-    const data = await upstream.json();
-    if (!upstream.ok) return res.status(upstream.status).json({ error: data.message });
-    console.log(`[gg-receptionist] created assistant: ${data.id} for ${company}`);
-    res.json({ assistantId: data.id, company, trade });
-  } catch(err) {
-    console.error('[gg-receptionist] error:', err.message);
-    res.status(502).json({ error: err.message });
-  }
-});
-
-// Webhook to capture inbound GG call data (leads)
-app.post('/api/gg-receptionist/webhook', (req, res) => {
-  const event = req.body;
-  const callId = event?.message?.call?.id;
-  const type = event?.message?.type;
-  console.log(`[gg-webhook] ${type} | call: ${callId}`);
-  // TODO: save to DB — name, phone, issue, urgency, appointment time
-  res.json({ received: true });
-});
-
+// Start de server
 startServer();
