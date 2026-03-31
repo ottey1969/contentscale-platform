@@ -36,6 +36,54 @@ const compression = require('compression');
 const sgMail = require('@sendgrid/mail');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ============================================
+// GEMINI MODEL AUTO-DETECT
+// Haalt beschikbare modellen op bij startup
+// Kiest automatisch beste flash model
+// Nooit meer handmatig aanpassen
+// ============================================
+let GEMINI_MODEL = 'gemini-2.0-flash'; // fallback default
+
+async function detectBestGeminiModel(apiKey) {
+  if (!apiKey) return;
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const models = (data.models || [])
+      .map(m => m.name.replace('models/', ''))
+      .filter(m => m.includes('flash') && !m.includes('thinking') && !m.includes('8b'));
+    
+    // Prefer FREE tier models — 1.5-flash is free, 2.0+ may cost
+    // Priority: free > cheap > powerful
+    const ranked = models.sort((a, b) => {
+      const score = m => {
+        if (m.includes('1.5-flash') && !m.includes('latest')) return 100; // most stable free
+        if (m.includes('1.5-flash')) return 90;                           // free tier
+        if (m.includes('2.0-flash-lite')) return 80;                      // cheapest 2.0
+        if (m.includes('2.0-flash') && !m.includes('thinking')) return 70; // cheap 2.0
+        if (m.includes('flash-lite')) return 60;                           // any lite
+        if (m.includes('flash')) return 40;                                // any flash
+        return 10;
+      };
+      return score(b) - score(a);
+    });
+
+    if (ranked.length > 0) {
+      GEMINI_MODEL = ranked[0];
+      console.log(`✅ Gemini model auto-detected: ${GEMINI_MODEL}`);
+      console.log(`   Available flash models: ${ranked.join(', ')}`);
+    }
+  } catch(e) {
+    console.warn('⚠️ Gemini model detect failed, using fallback:', GEMINI_MODEL);
+  }
+}
+
+
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 console.log('📧 SendGrid Key:', process.env.SENDGRID_API_KEY ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
@@ -2171,7 +2219,7 @@ app.post('/api/claude-proxy', async (req, res) => {
 app.post('/api/gemini-proxy', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || 'gemini-1.5-flash-latest';
+  const model  = req.query.model || GEMINI_MODEL;
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2225,7 +2273,7 @@ app.post('/api/gemini-proxy', async (req, res) => {
 app.post('/api/gemini-voicebot', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_VOICEBOT;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || 'gemini-1.5-flash-latest';
+  const model  = req.query.model || GEMINI_MODEL;
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2283,7 +2331,7 @@ app.post('/api/gemini-voicebot', async (req, res) => {
 app.post('/api/gemini-paid', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || 'gemini-1.5-flash-latest';
+  const model  = req.query.model || GEMINI_MODEL;
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2510,7 +2558,7 @@ res.status(500).json({ success: false, error: 'Internal Server Error' });
 });
 async function startServer() {
 console.log('🚀 =====================================');
-console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
+console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
 console.log('🚀  FIX: deactivate endpoint added');
 console.log('🚀  FIX: Instantly Bearer uses secret only');
@@ -2523,6 +2571,8 @@ console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
+  // Auto-detect best Gemini model at startup
+  await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
 app.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
@@ -3649,7 +3699,7 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 // ============================================
 async function startServer() {
 console.log('🚀 =====================================');
-console.log('🚀  CONTENTSCALE ELITE SERVER v4 (FIXED v3)');
+console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
 console.log('🚀  FIX: deactivate endpoint added');
 console.log('🚀  FIX: Instantly Bearer uses secret only');
@@ -3662,6 +3712,8 @@ console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
+  // Auto-detect best Gemini model at startup
+  await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
 app.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
