@@ -2164,20 +2164,19 @@ app.post('/api/claude-proxy', async (req, res) => {
 });
 
 // ============================================
-// ============================================
-// GEMINI PROXY — Lead Crawler (gratis users)
-// User stuurt eigen key via x-gemini-key header
-// Gaat mis? Hun key, hun probleem.
+// GEMINI PROXY — Lead Crawler
+// Gebruikt GEMINI_KEY_LEADCRAWLER uit Railway env
+// HTML stuurt geen key — server regelt het
 // ============================================
 app.post('/api/gemini-proxy', async (req, res) => {
-  const apiKey = req.headers['x-gemini-key'];
+  const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
   const model  = req.query.model || 'gemini-1.5-flash';
 
-  if (!apiKey || apiKey.length < 20) {
-    return res.status(401).json({
-      error: 'x-gemini-key header required',
-      detail: 'Gratis gebruikers sturen hun eigen Gemini key mee. Geen key? Ga naar aistudio.google.com/apikey'
+  if (!apiKey) {
+    return res.status(500).json({
+      error: 'GEMINI_KEY_LEADCRAWLER not set',
+      detail: 'Voeg GEMINI_KEY_LEADCRAWLER toe in Railway Variables'
     });
   }
 
