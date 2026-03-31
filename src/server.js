@@ -3614,7 +3614,6 @@ app.get('/api/cs-agent/status/:callId', async (req, res) => {
   }
 });
 
-
 // ── Headshot redirect ──────────────────────────────────────────────────────
 app.get('/headshot', (req, res) => {
   res.redirect(301, 'https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg');
