@@ -38,55 +38,43 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// GEMINI MODEL SELECTIE
-// Prioriteit:
-//   1. GEMINI_MODEL env var (Railway override) — postpay account
-//   2. Auto-detect via API (free tier fallback)
-//   3. Hardcoded fallback: gemini-1.5-flash
+// GEMINI MODEL AUTO-DETECT
+// Haalt beschikbare modellen op bij startup
+// Kiest automatisch beste flash model
+// Nooit meer handmatig aanpassen
 // ============================================
-let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash'; // postpay-safe default
+let GEMINI_MODEL = 'gemini-2.0-flash'; // postpay default — works on billing-enabled accounts
 
 async function detectBestGeminiModel(apiKey) {
-  // Als GEMINI_MODEL expliciet gezet is in Railway → niet overschrijven
-  if (process.env.GEMINI_MODEL) {
-    console.log(`✅ Gemini model uit Railway env var: ${GEMINI_MODEL}`);
-    return;
-  }
-
   if (!apiKey) return;
+  // Priority: cheapest postpay models first (billing enabled account)
+  // gemini-2.0-flash = $0.075/1M tokens — best price/quality for postpay
+  const PRIORITY = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-001', 'gemini-1.5-pro-001'];
   try {
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
       { headers: { 'Content-Type': 'application/json' } }
     );
-    if (!resp.ok) return;
-    const data = await resp.json();
-    const models = (data.models || [])
-      .map(m => m.name.replace('models/', ''))
-      .filter(m => m.includes('flash') && !m.includes('thinking') && !m.includes('8b'));
-
-    // Op postpay: 1.5-flash is stabiel en heeft geen limit:0 probleem
-    // Op free tier: 2.0-flash-lite is goedkoopst maar heeft quota limieten
-    const ranked = models.sort((a, b) => {
-      const score = m => {
-        if (m.includes('1.5-flash') && !m.includes('latest')) return 100;
-        if (m.includes('1.5-flash')) return 90;
-        if (m.includes('2.0-flash-lite')) return 60; // free tier only — lagere prio op postpay
-        if (m.includes('2.0-flash') && !m.includes('thinking')) return 70;
-        if (m.includes('flash-lite')) return 50;
-        if (m.includes('flash')) return 40;
-        return 10;
-      };
-      return score(b) - score(a);
-    });
-
-    if (ranked.length > 0) {
-      GEMINI_MODEL = ranked[0];
-      console.log(`✅ Gemini model auto-detected: ${GEMINI_MODEL}`);
-      console.log(`   Available flash models: ${ranked.join(', ')}`);
+    if (!resp.ok) {
+      console.warn('⚠️ Could not list Gemini models, using default:', GEMINI_MODEL);
+      return;
     }
+    const data = await resp.json();
+    const available = (data.models || []).map(m => m.name.replace('models/', ''));
+    console.log(`📋 Gemini models available: ${available.filter(m=>m.includes('flash')).join(', ')}`);
+    // Pick first from priority list that exists
+    for (const preferred of PRIORITY) {
+      if (available.includes(preferred)) {
+        GEMINI_MODEL = preferred;
+        console.log(`✅ Gemini model selected: ${GEMINI_MODEL}`);
+        return;
+      }
+    }
+    // Fallback: any flash model
+    const anyFlash = available.find(m => m.includes('flash') && !m.includes('thinking'));
+    if (anyFlash) { GEMINI_MODEL = anyFlash; console.log(`✅ Gemini model fallback: ${GEMINI_MODEL}`); }
   } catch(e) {
-    console.warn('⚠️ Gemini model detect failed, using fallback:', GEMINI_MODEL);
+    console.warn('⚠️ Gemini detect failed, using default:', GEMINI_MODEL, e.message);
   }
 }
 
@@ -3706,8 +3694,7 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 // ============================================
 async function startServer() {
 console.log('🚀 =====================================');
-console.log('🚀  CONTENTSCALE ELITE SERVER v5 (GEMINI POSTPAY FIX)');
-console.log('🚀  FIX v5: GEMINI_MODEL env var override (postpay fix)');
+console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
 console.log('🚀  FIX: deactivate endpoint added');
 console.log('🚀  FIX: Instantly Bearer uses secret only');
@@ -3720,9 +3707,8 @@ console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
-  // Model selectie: GEMINI_MODEL env var heeft prioriteit boven auto-detect
+  // Auto-detect best Gemini model at startup
   await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
-  console.log(`🤖 Gemini model actief: ${GEMINI_MODEL} ${process.env.GEMINI_MODEL ? '(Railway override ✅)' : '(auto-detected)'}`);
 app.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
