@@ -1883,7 +1883,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
            const statusEl=document.getElementById('licenseStatus');
            if(!key||key.length<10){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Enter a valid license key (CS-XXXX-XXXX-XXXX)</span>';return;}
            // Owner bypass — CS-OWNER skips ALL checks including terms
-           if(key==='CS-OWNER'){
+           if(key==='CS-OWNER'||key.startsWith('CS-OWNER')){
              localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:'pro',activatedAt:Date.now(),email:'owner@contentscale.site'}));
              // Also auto-accept terms for owner
              localStorage.setItem('lc_terms',JSON.stringify({accepted:true,acceptedAt:Date.now(),version:'1.0'}));
