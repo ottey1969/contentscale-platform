@@ -43,13 +43,13 @@ const PORT = process.env.PORT || 3000;
 // Kiest automatisch beste flash model
 // Nooit meer handmatig aanpassen
 // ============================================
-let GEMINI_MODEL = 'gemini-2.0-flash'; // postpay default — works on billing-enabled accounts
+let GEMINI_MODEL = 'gemini-2.5-flash'; // postpay default — works on billing-enabled accounts
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
   // Priority: cheapest postpay models first (billing enabled account)
   // gemini-2.0-flash = $0.075/1M tokens — best price/quality for postpay
-  const PRIORITY = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-001', 'gemini-1.5-pro-001'];
+  const PRIORITY = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-001'];
   try {
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
