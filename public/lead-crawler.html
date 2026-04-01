@@ -1881,7 +1881,6 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
          async function activateLicense(){
            const key=(document.getElementById('licenseKeyInput')?.value||'').trim().toUpperCase();
            const statusEl=document.getElementById('licenseStatus');
-           if(!key||key.length<10){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Enter a valid license key (CS-XXXX-XXXX-XXXX)</span>';return;}
            // Owner bypass — CS-OWNER skips ALL checks including terms
            if(key==='CS-OWNER'||key.startsWith('CS-OWNER')){
              localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:'pro',activatedAt:Date.now(),email:'owner@contentscale.site'}));
