@@ -189,6 +189,7 @@
          .err-log{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:8px;padding:16px 20px;margin-bottom:20px;}
       </style>
    </head>
+   </head>
    <body>
       <div class="wrap">
          <nav class="topnav">
@@ -319,6 +320,7 @@
                </div>
             </div>
             <!-- ══ END GEMINI KEY PANEL ══ -->
+            <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:2px;margin:28px 0;opacity:0.7;"></div>
             <!-- ══ VAPI VOICEBOT CONFIG ══ -->
             <!-- LICENSE SECTION -->
             <div id="licenseLocked" style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
@@ -439,6 +441,93 @@
                <div id="callLogItems"></div>
             </div>
             <!-- ══ END VAPI ══ -->
+
+            <!-- ══ TEST CALL SECTION ══ -->
+            <div id="testCallSection" style="background:rgba(167,139,250,0.06);border:1.5px solid rgba(167,139,250,0.25);border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+               <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                  <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--purple);line-height:1;">🧪 TEST CALL — NO REAL LEAD NEEDED</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);border-radius:3px;padding:3px 8px;">Safe to test</span>
+                  <button onclick="toggleTestCall()" id="testCallToggleBtn"
+                     style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                     background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:3px;cursor:pointer;">
+                     ▼ expand
+                  </button>
+               </div>
+               <div id="testCallBody" style="display:none;">
+                  <!-- Sample lead buttons -->
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                     <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);align-self:center;">Load sample:</span>
+                     <button onclick="loadSampleLead('skeleton')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:var(--blue);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">🔥 Skeleton Law Firm</button>
+                     <button onclick="loadSampleLead('brochure')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:var(--gold);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">📄 Brochure Dentist</button>
+                     <button onclick="loadSampleLead('ghost')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.3);color:var(--muted);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">👻 Ghost Site Gym</button>
+                     <button onclick="loadSampleLead('clear')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:var(--surface);border:1px solid var(--border);color:var(--sub);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">✕ Clear</button>
+                  </div>
+                  <!-- Manual lead form -->
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Business Name</label>
+                        <input type="text" id="tc_name" placeholder="e.g. Van der Berg Law Firm"
+                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                     </div>
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Website</label>
+                        <input type="text" id="tc_website" placeholder="https://vandenberg-law.nl"
+                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                     </div>
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">📞 Phone Number to Call</label>
+                        <input type="text" id="tc_phone" placeholder="+31628073996"
+                           style="width:100%;background:var(--bg);border:1px solid rgba(167,139,250,.4);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='rgba(167,139,250,.4)'"/>
+                     </div>
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Est. Pages</label>
+                        <input type="number" id="tc_pages" placeholder="4" value="4"
+                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                     </div>
+                  </div>
+                  <!-- Opportunity / pitch angle -->
+                  <div style="margin-bottom:12px;">
+                     <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Content Gap / Opportunity (what Otto will mention)</label>
+                     <textarea id="tc_opportunity" rows="2"
+                        placeholder="Google Business Site only — no blog, no proper service pages, no FAQ, no case studies, and no location-specific content for family law, criminal, or probate services."
+                        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;resize:vertical;line-height:1.5;"
+                        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+                  </div>
+                  <div style="margin-bottom:16px;">
+                     <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Pitch Angle (Otto's hook)</label>
+                     <input type="text" id="tc_pitch" placeholder="Your website has almost no content — I can write the pages that get you found for family law in Amsterdam."
+                        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;"
+                        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                  </div>
+                  <!-- Call button -->
+                  <button onclick="triggerTestCall()" id="testCallBtn"
+                     style="background:var(--purple);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;
+                     padding:14px 32px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;">
+                     📞 CALL THIS NUMBER NOW
+                  </button>
+                  <div id="testCallStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:16px;color:var(--muted);"></div>
+               </div>
+            </div>
+            <!-- ══ END TEST CALL ══ -->
+            <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:2px;margin:28px 0;opacity:0.7;"></div>
+
+
             <div class="panel-title">Target Location — Fires 20 Industry Searches In Parallel</div>
             <input type="hidden" id="apiKey" value="">
             <div class="form-row">
@@ -450,7 +539,7 @@
             <div class="wave-label">20 Industry Searches — Live Status</div>
             <div class="waves" id="waves"></div>
          </div>
-         <div class="err-log" id="errLog"></div>
+         <div class="err-log" id="errLog" style="display:none;"></div>
          <div id="rlBanner" style="display:none;background:rgba(244,63,63,.07);border:1px solid rgba(244,63,63,.3);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);line-height:1;">⚠ 5-HOUR LIMIT HIT</div>
@@ -594,6 +683,105 @@
          {key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
          ];
          let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
+         // ══ TEST CALL FUNCTIONS ══════════════════════════════════════════
+         function toggleTestCall(){
+           const body = document.getElementById('testCallBody');
+           const btn  = document.getElementById('testCallToggleBtn');
+           const open = body.style.display === 'none';
+           body.style.display = open ? 'block' : 'none';
+           btn.textContent = open ? '▲ collapse' : '▼ expand';
+         }
+
+         const SAMPLE_LEADS = {
+           skeleton: {
+             name: 'Van der Berg Law Firm',
+             website: 'https://vandenberg-law.nl',
+             pages: 4,
+             opportunity: 'Google Business Site only — no blog, no proper service pages, no FAQ, no case studies, and no location-specific content for family law, criminal, or probate services. No Blog · No FAQ · Zero Case Studies · Thin Service Pages · Not AI-Citation Ready · Poor SEO Copy · No How-To Content · Thin About Page',
+             pitch: 'Your website has almost no content — I can write the pages that get you found for family law, criminal defence, and probate in your area.'
+           },
+           brochure: {
+             name: 'Smile Perfect Dental',
+             website: 'https://smileperfect-dental.nl',
+             pages: 18,
+             opportunity: 'Basic homepage and 3 service pages — no blog, no patient FAQs, no before/after case studies, no local landing pages for surrounding cities.',
+             pitch: 'Your site covers the basics but Google can't find you for "dentist near me" — a content strategy would double your new patient enquiries.'
+           },
+           ghost: {
+             name: 'FitZone Gym',
+             website: 'https://fitzone-gym.nl',
+             pages: 2,
+             opportunity: 'Homepage and contact page only. No class schedules, no trainer bios, no membership info, no blog. Essentially invisible online.',
+             pitch: 'You have a great gym but your website says almost nothing — let me build the content that gets people through your door.'
+           },
+           clear: { name:'', website:'', pages:'', opportunity:'', pitch:'' }
+         };
+
+         function loadSampleLead(type){
+           const s = SAMPLE_LEADS[type];
+           if(!s) return;
+           document.getElementById('tc_name').value        = s.name;
+           document.getElementById('tc_website').value     = s.website;
+           document.getElementById('tc_pages').value       = s.pages;
+           document.getElementById('tc_opportunity').value = s.opportunity;
+           document.getElementById('tc_pitch').value       = s.pitch;
+           if(type !== 'clear') toast('Sample loaded — add your phone number and call!');
+         }
+
+         async function triggerTestCall(){
+           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+           const name        = document.getElementById('tc_name').value.trim();
+           const website     = document.getElementById('tc_website').value.trim();
+           const phone       = document.getElementById('tc_phone').value.trim();
+           const pages       = document.getElementById('tc_pages').value.trim() || '4';
+           const opportunity = document.getElementById('tc_opportunity').value.trim();
+           const pitch       = document.getElementById('tc_pitch').value.trim();
+           const statusEl    = document.getElementById('testCallStatus');
+
+           if(!phone){ toast('⚠ Enter a phone number first'); document.getElementById('tc_phone').focus(); return; }
+           if(!name) { toast('⚠ Enter a business name'); return; }
+
+           const btn = document.getElementById('testCallBtn');
+           btn.textContent = '⏳ CONNECTING...';
+           btn.disabled = true;
+           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Initiating call...</span>';
+
+           const API_BASE = 'https://contentscale-platform-production.up.railway.app';
+           try {
+             const resp = await fetch(`${API_BASE}/api/cs-agent/call`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                 customerPhone:  phone,
+                 customerName:   name || 'there',
+                 customerDomain: website.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'your website',
+                 customerPages:  pages,
+                 customerCity:   document.getElementById('city')?.value || 'your city',
+                 customerType:   'business',
+                 pitchAngle:     pitch,
+                 opportunity:    opportunity,
+                 bucket:         getBucket(parseInt(pages)),
+                 leadId:         'test-' + Date.now(),
+               })
+             });
+             const data = await resp.json();
+             if(!resp.ok || !data.callId){
+               statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + (data.error||'Call failed — check Vapi config') + '</span>';
+               toast('❌ ' + (data.error || 'Call failed'));
+             } else {
+               statusEl.innerHTML = '<span style="color:var(--green)">✅ Call connected! ID: ' + data.callId + '</span>';
+               toast('📞 Calling ' + phone + '...');
+             }
+           } catch(e){
+             statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
+             toast('❌ ' + e.message);
+           } finally {
+             btn.textContent = '📞 CALL THIS NUMBER NOW';
+             btn.disabled = false;
+           }
+         }
+         // ══ END TEST CALL ═══════════════════════════════════════════════════
+
          function stopCrawl(){
            stopped=true;
            document.getElementById('crawlBtn').disabled=false;
