@@ -140,7 +140,7 @@
          .terms-modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(10px);}
          .terms-box{background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;border-top:6px solid var(--gold);box-shadow:0 0 100px rgba(0,0,0,1);}
          .terms-body{padding:40px;font-size:14px;line-height:1.8;color:var(--muted);}
-         .terms-body h2{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);margin-bottom:20px;}
+         .terms-body h2{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);margin-bottom:20px;text-align:center;}
          .terms-body strong{color:var(--ink);}
          .terms-body ul{margin:20px 0;padding-left:20px;}
          .terms-check{display:flex;align-items:flex-start;gap:12px;margin-top:30px;background:rgba(255,255,255,0.03);padding:20px;border-radius:8px;cursor:pointer;}
@@ -1879,19 +1879,21 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
            if(s)s.innerHTML='<span style="color:var(--gold)">👆 Enter your license key above to unlock</span>';
          }
          async function activateLicense(){
-           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
            const key=(document.getElementById('licenseKeyInput')?.value||'').trim().toUpperCase();
            const statusEl=document.getElementById('licenseStatus');
            if(!key||key.length<10){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Enter a valid license key (CS-XXXX-XXXX-XXXX)</span>';return;}
-           if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⟳ Validating...</span>';
-           // Owner bypass — CS-OWNER skips server validation for testing
+           // Owner bypass — CS-OWNER skips ALL checks including terms
            if(key==='CS-OWNER'){
              localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:'pro',activatedAt:Date.now(),email:'owner@contentscale.site'}));
+             // Also auto-accept terms for owner
+             localStorage.setItem('lc_terms',JSON.stringify({accepted:true,acceptedAt:Date.now(),version:'1.0'}));
              renderLicenseState();
-             toast('👑 Owner mode activated — full access unlocked');
+             toast('👑 Owner mode — full access unlocked');
              renderBuckets();
              return;
            }
+           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+           if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⟳ Validating...</span>';
            try{
              const resp=await fetch('/api/license/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
              const data=await resp.json();
