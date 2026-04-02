@@ -145,6 +145,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
   <div class="tool-title">SEO AUDIT WORKFLOW MANAGER</div>
   <div class="topbar-right">
     <button class="btn btn-gold" onclick="document.getElementById('gscImportInput').click()">📊 Import GSC CSV</button>
+    <button class="btn btn-purple" onclick="scanAllScores()">⚡ Auto-Score All</button>
     <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
     <button class="btn btn-blue" onclick="document.getElementById('importInput').click()">↑ Import Progress</button>
     <button class="btn btn-purple" onclick="exportClientReport()">📄 Client Report</button>
@@ -462,6 +463,7 @@ function renderPages(){
       +'<span class="pri-dot '+priClass+'"></span>'
       +'<span class="card-url">'+shortUrl+'<span class="card-kw">'+( p.keyword?' — '+p.keyword:'')+'</span></span>'
       +(p.position?'<span class="card-gsc">pos '+Math.round(p.position)+(p.impressions?' · '+p.impressions.toLocaleString()+' impr':'')+'</span>':'')
+      +(p.scoreBefore?'<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
       +'<span class="card-chk" id="chk-'+p.id+'">'+prog.pct+'%</span>'
       +'<button class="status-btn" onclick="event.stopPropagation();cycleStatus(\''+p.id+'\')">'+STATUS_LABELS[p.status]+'</button>'
       +'<span class="chevron" id="chev-'+p.id+'">▾</span>'
@@ -478,7 +480,7 @@ function renderPages(){
       +'<div class="cb-field"><label>Priority</label><select onchange="updateField(\''+p.id+'\',\'priority\',this.value)">'
       +[['high','🔴 High'],['med','🟡 Medium'],['low','🟢 Low']].map(function(x){return '<option value="'+x[0]+'"'+(p.priority===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('')
       +'</select></div>'
-      +'<div class="cb-field"><label>ContentScore BEFORE</label><input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="e.g. 52" onchange="updateField(\''+p.id+'\',\'scoreBefore\',this.value)"></div>'
+      +'<div class="cb-field"><label>ContentScore BEFORE</label><input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="e.g. 52" data-score-before="'+p.id+'" onchange="updateField(\''+p.id+'\',\'scoreBefore\',this.value)"></div>'
       +'<div class="cb-field"><label>ContentScore AFTER</label><input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="e.g. 87" onchange="updateField(\''+p.id+'\',\'scoreAfter\',this.value)"></div>'
       +'<div class="cb-field"><label>GSC Position</label><input type="number" value="'+p.position+'" placeholder="34" onchange="updateField(\''+p.id+'\',\'position\',this.value)"></div>'
       +'<div class="cb-field"><label>Impressions</label><input type="number" value="'+p.impressions+'" placeholder="12400" onchange="updateField(\''+p.id+'\',\'impressions\',this.value)"></div>'
@@ -498,7 +500,8 @@ function renderPages(){
       +'<button class="btn btn-purple btn-sm" onclick="openInAudit(\''+p.id+'\')">🔬 Open in PULSE+NEXUS</button>'
       +'<button class="btn btn-green btn-sm" onclick="markDone(\''+p.id+'\')">✓ Mark Done</button>'
       +'<a href="'+p.url+'" target="_blank" class="btn btn-blue btn-sm">↗ Open Page</a>'
-      +'<a href="https://app.contentscale.site/?url='+encodeURIComponent(p.url)+'" target="_blank" class="btn btn-muted btn-sm">📊 ContentScore</a>'
+      +'<button class="btn btn-muted btn-sm" onclick="scanOnePage(''+p.id+'')">📊 Scan Score</button>'
+      +'<a href="https://app.contentscale.site/?url='+encodeURIComponent(p.url)+'" target="_blank" class="btn btn-blue btn-sm">↗ ContentScale</a>'
       +'<button class="btn btn-red btn-sm" onclick="deletePage(\''+p.id+'\')">✕ Delete</button>'
       +'</div>'
 
@@ -683,7 +686,17 @@ function importGSC(input){
       var pos=parseFloat(cols[iPos])||0;
       var ctr=parseFloat((cols[iCtr]||'0').replace('%',''))||0;
       // Auto priority: pos 11-30 = high, 31-60 = med, rest = low
-      var pri=pos>=11&&pos<=30?'high':pos>30&&pos<=60?'med':'low';
+      // Priority based purely on GSC opportunity
+      // High: pos 11-30 (closest to page 1) OR pos 1-10 with low CTR (<2%)
+      // Med: pos 31-60 with decent impressions
+      // Low: pos 60+ or pos 1-10 with good CTR
+      var pri;
+      if(pos>=11&&pos<=30) pri='high';
+      else if(pos>=1&&pos<=10&&ctr<2) pri='high'; // on page 1 but low CTR
+      else if(pos>30&&pos<=60&&impr>500) pri='med';
+      else if(pos>30&&pos<=60) pri='med';
+      else if(pos>60) pri='low';
+      else pri='low'; // pos 1-10 with good CTR = not urgent
       var existing=pages.find(function(p){return p.url===url;});
       if(existing){
         existing.position=pos;
@@ -701,6 +714,78 @@ function importGSC(input){
   };
   r.readAsText(file);
   input.value='';
+}
+
+// ── Auto-fetch ContentScore for all pages ──────────────────
+var scanQueue = [];
+var scanRunning = false;
+
+async function scanAllScores() {
+  var unscored = pages.filter(function(p){ return !p.scoreBefore; });
+  if(!unscored.length){ toast('✅ All pages already have a score'); return; }
+  if(!confirm('Fetch ContentScore for ' + unscored.length + ' pages?\n\nThis runs one by one (1.5s between each).\nPriority will NOT be changed — GSC data is leading.\nScores are stored as reference only.')) return;
+  scanQueue = unscored.slice();
+  scanRunning = true;
+  toast('⚡ Scanning ' + scanQueue.length + ' pages...', 8000);
+  processNextScan();
+}
+
+async function processNextScan() {
+  if(!scanRunning || !scanQueue.length){
+    scanRunning = false;
+    save(); renderPages(); renderOverview();
+    toast('✅ Auto-score complete');
+    return;
+  }
+  var p = scanQueue.shift();
+  try {
+    var r = await fetch('https://app.contentscale.site/api/score?url=' + encodeURIComponent(p.url));
+    var d = await r.json();
+    if(d.success && d.score) {
+      p.scoreBefore = d.score;
+      p.updated = new Date().toISOString();
+      // Score stored — priority NOT changed (GSC data is leading)
+      var beforeEl = document.querySelector('[data-score-before="' + p.id + '"]');
+      if(beforeEl) beforeEl.value = d.score;
+      var shortUrl = '';
+      try { shortUrl = new URL(p.url).pathname || p.url; } catch(e) { shortUrl = p.url.slice(0,40); }
+      toast('📊 ' + shortUrl + ' → ' + d.score + '/100');
+    }
+  } catch(e) { /* silent fail — continue queue */ }
+  // Wait 1.5s between requests to not overwhelm server
+  setTimeout(processNextScan, 1500);
+}
+
+function stopScan() {
+  scanRunning = false;
+  scanQueue = [];
+  toast('⏹ Scan stopped');
+}
+
+// Scan single page — no priority change
+async function scanOnePage(id) {
+  var p = pages.find(function(pg){ return pg.id===id; });
+  if(!p) return;
+  toast('⏳ Scanning...');
+  try {
+    var r = await fetch('https://app.contentscale.site/api/score?url=' + encodeURIComponent(p.url));
+    var d = await r.json();
+    if(d.success && d.score) {
+      p.scoreBefore = d.score;
+      p.updated = new Date().toISOString();
+      save();
+      // Update input if card is open
+      var el = document.querySelector('[data-score-before="' + id + '"]');
+      if(el) el.value = d.score;
+      // Update header score display
+      renderPages();
+      toast('📊 Score: ' + d.score + '/100' + (d.score < 70 ? ' — needs work' : d.score < 85 ? ' — qualified' : ' — elite'));
+    } else {
+      toast('⚠ No score yet — page may not be scanned. Open ContentScore first.');
+    }
+  } catch(e) {
+    toast('⚠ Could not fetch score — check connection');
+  }
 }
 
 // ── Init ──
