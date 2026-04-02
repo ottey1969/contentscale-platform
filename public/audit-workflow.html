@@ -1142,6 +1142,98 @@ function addSelectedSitemapUrls() {
   toast('✅ ' + added + ' pagina's toegevoegd (' + (selected.length - added) + ' al aanwezig)');
 }
 
+// ── Server sync + auto-save ─────────────────────────────────
+var _autoSaveTimer = null;
+var _lastSavedHash = '';
+
+function _dataHash(){
+  // Simple hash to detect changes
+  return pages.length + '_' + (pages[0]?.updated||'') + '_' + (pages[pages.length-1]?.updated||'');
+}
+
+async function syncToServer(silent){
+  if(!pages.length) return;
+  var btn = document.getElementById('syncBtn');
+  if(btn && !silent){ btn.textContent='☁ Saving...'; btn.disabled=true; }
+
+  var key = (project.client||'default').replace(/\s+/g,'-').toLowerCase()
+    + '-' + (project.site||'').replace(/https?:\/\//,'').split('/')[0].replace(/\s+/g,'-');
+  if(!key || key === '-') key = 'workflow-' + Date.now();
+
+  var payload = { key, project, pages, savedAt: new Date().toISOString() };
+
+  try {
+    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/workflow/save', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if(d.success){
+      _lastSavedHash = _dataHash();
+      var ts = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      setSyncStatus('☁ Opgeslagen om ' + ts + ' — key: ' + key, 'var(--green)');
+      try{ localStorage.setItem('cs_wf_sync_key', key); }catch(e){}
+      if(!silent) toast('☁ Opgeslagen op server');
+    } else {
+      setSyncStatus('⚠ Server save mislukt — data staat in browser', 'var(--gold)');
+    }
+  } catch(e) {
+    setSyncStatus('⚠ Server niet bereikbaar — data staat in browser', 'var(--gold)');
+    if(!silent) toast('⚠ Server offline — browser backup actief');
+  }
+  if(btn && !silent){ btn.textContent='☁ Save to Server'; btn.disabled=false; }
+}
+
+async function loadFromServer(){
+  var key = prompt('Project key (leeg = laatste opgeslagen):');
+  if(key === null) return;
+  if(!key){
+    try{ key = localStorage.getItem('cs_wf_sync_key')||''; }catch(e){}
+  }
+  if(!key){ toast('⚠ Geen key gevonden'); return; }
+  try {
+    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/workflow/load?key='+encodeURIComponent(key));
+    var d = await r.json();
+    if(d.success && d.data){
+      if(!confirm('Workflow "'+key+'" laden? Vervangt huidige data.')) return;
+      if(d.data.project) project = d.data.project;
+      if(d.data.pages)   pages   = d.data.pages;
+      if(project.client)   document.getElementById('pClient').value   = project.client;
+      if(project.site)     document.getElementById('pSite').value     = project.site;
+      if(project.deadline) document.getElementById('pDeadline').value = project.deadline;
+      if(project.auditor)  document.getElementById('pAuditor').value  = project.auditor;
+      save(); renderPages(); renderOverview();
+      var ts = new Date(d.data.savedAt||Date.now()).toLocaleString('nl-NL');
+      setSyncStatus('☁ Geladen van server (opgeslagen: '+ts+')', 'var(--green)');
+      toast('✅ '+pages.length+' paginas geladen van server');
+    } else {
+      toast('⚠ Niet gevonden: '+key);
+    }
+  } catch(e){ toast('⚠ Server niet bereikbaar'); }
+}
+
+function setSyncStatus(msg, color){
+  var el = document.getElementById('syncStatus');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--dim)'; }
+}
+
+function startAutoSave(){
+  if(_autoSaveTimer) clearInterval(_autoSaveTimer);
+  // Auto-save every 3 minutes IF data has changed
+  _autoSaveTimer = setInterval(function(){
+    if(pages.length > 0 && _dataHash() !== _lastSavedHash){
+      syncToServer(true); // silent = no toast
+    }
+  }, 3 * 60 * 1000);
+  // Also save on page unload
+  window.addEventListener('beforeunload', function(){
+    if(pages.length > 0 && _dataHash() !== _lastSavedHash){
+      syncToServer(true);
+    }
+  });
+}
+
 // ── Init ──
 load();
 renderPages();
