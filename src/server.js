@@ -3694,7 +3694,6 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 // AUDIT ROUTES — plak VÓÓR startServer() in server.js
 // ============================================================
 
-const multer = require('multer');
 
 function servePublic(filename) {
   return (req, res) => {
