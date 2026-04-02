@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request Your SEO Audit | ContentScale</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.6;}
+.wrap{max-width:760px;margin:0 auto;padding:40px 24px 80px;}
+
+/* Header */
+.header{text-align:center;margin-bottom:40px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:inline-block;margin-bottom:16px;}
+.header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,52px);letter-spacing:.04em;line-height:1;margin-bottom:10px;background:linear-gradient(135deg,var(--gold),var(--ink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header p{color:var(--muted);font-size:14px;max-width:520px;margin:0 auto;}
+
+/* Form */
+.form{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.form::before{content:'';display:block;height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--purple));}
+
+.section{padding:28px;border-bottom:1px solid var(--border);}
+.section:last-child{border-bottom:none;}
+.section-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+.section-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);}
+
+/* Fields */
+.field{margin-bottom:16px;}
+.field:last-child{margin-bottom:0;}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
+.field label .req{color:var(--gold);}
+.field input[type=text],
+.field input[type=url],
+.field input[type=email],
+.field input[type=number],
+.field input[type=tel],
+.field select,
+.field textarea{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);
+  outline:none;transition:all .2s;resize:vertical;
+}
+.field textarea{min-height:80px;font-size:13px;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.07);}
+.field select option{background:var(--card);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.g2{grid-template-columns:1fr;}}
+
+/* File upload */
+.file-zone{
+  border:2px dashed var(--border);border-radius:8px;padding:24px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative;
+  background:var(--bg);
+}
+.file-zone:hover,.file-zone.drag{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.file-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.file-zone-icon{font-size:28px;margin-bottom:8px;}
+.file-zone-label{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.04em;color:var(--ink);}
+.file-zone-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.file-list{margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);}
+
+/* Emergency toggle */
+.emergency-wrap{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:8px;cursor:pointer;}
+.emergency-wrap input[type=checkbox]{width:18px;height:18px;accent-color:var(--red);cursor:pointer;flex-shrink:0;}
+.emergency-wrap label{font-size:14px;font-weight:500;cursor:pointer;color:var(--ink);}
+.emergency-wrap small{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* Consent */
+.consent-wrap{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;}
+.consent-wrap input[type=checkbox]{width:16px;height:16px;accent-color:var(--purple);cursor:pointer;flex-shrink:0;margin-top:3px;}
+.consent-wrap label{font-size:13px;color:var(--muted);}
+.consent-wrap a{color:var(--blue);}
+
+/* Submit */
+.submit-btn{
+  width:100%;background:var(--gold);color:#000;border:none;
+  font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.05em;
+  padding:18px 36px;border-radius:8px;cursor:pointer;transition:all .2s;
+}
+.submit-btn:hover{background:var(--ink);transform:translateY(-1px);}
+.submit-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.microcopy{text-align:center;font-size:12px;color:var(--sub);margin-top:12px;}
+
+/* Success state */
+.success{display:none;text-align:center;padding:48px 28px;}
+.success.show{display:block;}
+.success-icon{font-size:56px;margin-bottom:16px;}
+.success h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.04em;color:var(--green);margin-bottom:10px;}
+.success p{color:var(--muted);font-size:14px;max-width:400px;margin:0 auto 20px;}
+
+/* Trust badges */
+.trust{display:flex;justify-content:center;gap:20px;margin-top:28px;flex-wrap:wrap;}
+.trust-item{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:5px;}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:10px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <a href="https://contentscale.site" class="brand">ContentScale</a>
+    <h1>Get Your SEO Audit</h1>
+    <p>Emergency traffic drop? We diagnose + prescribe in 15 min. Share as much as you can — files welcome. GDPR-compliant.</p>
+  </div>
+
+  <div class="form" id="auditForm">
+
+    <!-- SECTION 1 — Page & Goal -->
+    <div class="section">
+      <div class="section-title"><span class="section-num">01</span> Page & Goal</div>
+      <div class="field">
+        <label>Page URL to audit <span class="req">*</span></label>
+        <input type="url" id="f-url" name="url" placeholder="https://yoursite.com/target-page" required>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>Primary Keyword <span class="req">*</span></label>
+          <input type="text" id="f-kw" name="keyword" placeholder="e.g. SEO recovery Netherlands" required>
+        </div>
+        <div class="field">
+          <label>Secondary Keyword</label>
+          <input type="text" id="f-kw2" name="keyword2" placeholder="e.g. EEAT content score">
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>Target Market <span class="req">*</span></label>
+          <select id="f-geo" name="geo" required>
+            <option value="">Select...</option>
+            <option value="Netherlands">Netherlands 🇳🇱</option>
+            <option value="Belgium">Belgium 🇧🇪</option>
+            <option value="Europe">Europe 🇪🇺</option>
+            <option value="Global">Global 🌍</option>
+            <option value="UK">United Kingdom 🇬🇧</option>
+            <option value="USA">United States 🇺🇸</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Conversion Goal <span class="req">*</span></label>
+          <select id="f-goal" name="goal" required>
+            <option value="">Select...</option>
+            <option value="lead">Generate leads</option>
+            <option value="sale">Drive sales</option>
+            <option value="demo">Book consultations</option>
+            <option value="awareness">Brand awareness</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 — GSC Data -->
+    <div class="section">
+      <div class="section-title"><span class="section-num">02</span> Google Search Console Data (last 28–90 days)</div>
+      <div class="g2">
+        <div class="field">
+          <label>Impressions</label>
+          <input type="number" id="f-impr" name="impressions" placeholder="e.g. 12500">
+        </div>
+        <div class="field">
+          <label>Click-Through Rate (CTR %)</label>
+          <input type="text" id="f-ctr" name="ctr" placeholder="e.g. 2.4">
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>Average Position</label>
+          <input type="number" id="f-pos" name="position" placeholder="e.g. 34">
+        </div>
+        <div class="field">
+          <label>Mobile traffic %</label>
+          <input type="text" id="f-mob" name="mobile" placeholder="e.g. 68%">
+        </div>
+      </div>
+      <div class="field">
+        <label>Top 5 triggering queries (one per line)</label>
+        <textarea id="f-queries" name="queries" placeholder="seo specialist nederland&#10;emergency seo recovery&#10;graaf framework seo"></textarea>
+      </div>
+      <!-- GSC CSV Upload -->
+      <div class="field">
+        <label>GSC CSV Export (optional — drag & drop or click)</label>
+        <div class="file-zone" id="gscZone">
+          <input type="file" id="f-gsc-file" accept=".csv,.xlsx,.xls" multiple onchange="handleFiles(this,'gsc')">
+          <div class="file-zone-icon">📊</div>
+          <div class="file-zone-label">GSC Performance CSV</div>
+          <div class="file-zone-hint">Pages CSV · Queries CSV · Both accepted</div>
+          <div class="file-list" id="gsc-file-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3 — Your Page -->
+    <div class="section">
+      <div class="section-title"><span class="section-num">03</span> Your Page Content</div>
+      <div class="field">
+        <label>Current SEO Title (if you know it)</label>
+        <input type="text" id="f-title" name="current_title" placeholder="e.g. GRAAF Framework 2026: EEAT SEO Scan">
+      </div>
+      <div class="field">
+        <label>Paste page HTML or key content sections (optional but speeds up analysis)</label>
+        <textarea id="f-html" name="page_html" style="min-height:120px;font-size:12px;" placeholder="Paste your page source (View Source → Ctrl+A → Ctrl+C) or just the main content sections..."></textarea>
+      </div>
+      <!-- File upload for screenshots/docs -->
+      <div class="field">
+        <label>Upload screenshots, documents or reports (optional)</label>
+        <div class="file-zone" id="filesZone">
+          <input type="file" id="f-files" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.csv,.txt" multiple onchange="handleFiles(this,'files')">
+          <div class="file-zone-icon">📎</div>
+          <div class="file-zone-label">Any files that help</div>
+          <div class="file-zone-hint">Screenshots · PDFs · Docs · Max 10MB per file</div>
+          <div class="file-list" id="files-file-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4 — Competitors -->
+    <div class="section">
+      <div class="section-title"><span class="section-num">04</span> Competitors (optional)</div>
+      <div class="field">
+        <label>Competitor URLs you want to outrank (one per line)</label>
+        <textarea id="f-comps" name="competitors" placeholder="https://surferseo.com/blog/...&#10;https://marketmuse.com/...&#10;https://competitor.com/page"></textarea>
+      </div>
+      <div class="field">
+        <label>Known constraints</label>
+        <input type="text" id="f-constraints" name="constraints" placeholder="e.g. WordPress CMS · No JS changes · GDPR-strict · Multilingual NL/EN">
+      </div>
+    </div>
+
+    <!-- SECTION 5 — Contact -->
+    <div class="section">
+      <div class="section-title"><span class="section-num">05</span> Contact</div>
+      <div class="g2">
+        <div class="field">
+          <label>Your name <span class="req">*</span></label>
+          <input type="text" id="f-name" name="name" placeholder="Ottmar Francisca" required>
+        </div>
+        <div class="field">
+          <label>Email <span class="req">*</span></label>
+          <input type="email" id="f-email" name="email" placeholder="you@yoursite.com" required>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label>WhatsApp / Phone (optional)</label>
+          <input type="tel" id="f-phone" name="phone" placeholder="+31 6 1234 5678">
+        </div>
+        <div class="field">
+          <label>Website domain</label>
+          <input type="url" id="f-site" name="website" placeholder="https://yoursite.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 6 — Emergency + Submit -->
+    <div class="section">
+      <div class="emergency-wrap" onclick="toggleEmergency()" style="margin-bottom:20px;">
+        <input type="checkbox" id="f-emergency" name="emergency">
+        <label for="f-emergency">
+          ⚡ This is an emergency — traffic dropped significantly
+          <small>Marks your request as priority — reviewed within 2 hours during business hours</small>
+        </label>
+      </div>
+
+      <div class="consent-wrap">
+        <input type="checkbox" id="f-consent" required>
+        <label for="f-consent">I agree to GDPR-compliant processing. No data retained after the audit. <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a> <span class="req">*</span></label>
+      </div>
+
+      <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">
+        🔍 SEND MY AUDIT REQUEST →
+      </button>
+      <p class="microcopy">You'll get a prioritised action plan · No spam · Direct strategist contact via WhatsApp or email</p>
+
+      <div class="trust">
+        <span class="trust-item">✓ GDPR compliant</span>
+        <span class="trust-item">✓ No data retained</span>
+        <span class="trust-item">✓ ~15 min response</span>
+        <span class="trust-item">✓ Amsterdam based</span>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div class="success" id="successState">
+      <div class="success-icon">✅</div>
+      <h2>Audit Request Sent!</h2>
+      <p>Ottmar will review your page and send a prioritised action plan. Check your email — and WhatsApp if you shared your number.</p>
+      <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20just%20submitted%20an%20audit%20request." target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#16a34a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;margin-top:8px;">💬 Also message on WhatsApp</a>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const uploadedFiles = { gsc: [], files: [] };
+
+function toast(msg, dur=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function toggleEmergency() {
+  const cb = document.getElementById('f-emergency');
+  cb.checked = !cb.checked;
+}
+
+function handleFiles(input, key) {
+  const files = Array.from(input.files);
+  uploadedFiles[key] = files;
+  const listEl = document.getElementById(key + '-file-list');
+  listEl.innerHTML = files.map(f => `✓ ${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`).join('<br>');
+}
+
+// Drag & drop
+['gscZone','filesZone'].forEach(id => {
+  const z = document.getElementById(id);
+  const key = id === 'gscZone' ? 'gsc' : 'files';
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('drag'); });
+  z.addEventListener('dragleave', () => z.classList.remove('drag'));
+  z.addEventListener('drop', e => {
+    e.preventDefault(); z.classList.remove('drag');
+    const input = z.querySelector('input[type=file]');
+    // Simulate file input change
+    const dt = e.dataTransfer;
+    uploadedFiles[key] = Array.from(dt.files);
+    const listEl = document.getElementById(key + '-file-list');
+    listEl.innerHTML = uploadedFiles[key].map(f => `✓ ${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`).join('<br>');
+    toast(`✅ ${uploadedFiles[key].length} file(s) added`);
+  });
+});
+
+async function submitForm() {
+  // Validate required fields
+  const required = [
+    { id: 'f-url', label: 'Page URL' },
+    { id: 'f-kw', label: 'Primary Keyword' },
+    { id: 'f-geo', label: 'Target Market' },
+    { id: 'f-goal', label: 'Conversion Goal' },
+    { id: 'f-name', label: 'Your Name' },
+    { id: 'f-email', label: 'Email' },
+  ];
+  for (const r of required) {
+    const el = document.getElementById(r.id);
+    if (!el.value.trim()) {
+      toast(`⚠ Please fill in: ${r.label}`);
+      el.focus();
+      el.style.borderColor = 'var(--red)';
+      setTimeout(() => el.style.borderColor = '', 2000);
+      return;
+    }
+  }
+  if (!document.getElementById('f-consent').checked) {
+    toast('⚠ Please accept the privacy policy');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  // Build FormData (supports file uploads)
+  const fd = new FormData();
+  fd.append('url', document.getElementById('f-url').value);
+  fd.append('keyword', document.getElementById('f-kw').value);
+  fd.append('keyword2', document.getElementById('f-kw2').value);
+  fd.append('geo', document.getElementById('f-geo').value);
+  fd.append('goal', document.getElementById('f-goal').value);
+  fd.append('impressions', document.getElementById('f-impr').value);
+  fd.append('ctr', document.getElementById('f-ctr').value);
+  fd.append('position', document.getElementById('f-pos').value);
+  fd.append('mobile', document.getElementById('f-mob').value);
+  fd.append('queries', document.getElementById('f-queries').value);
+  fd.append('current_title', document.getElementById('f-title').value);
+  fd.append('page_html', document.getElementById('f-html').value);
+  fd.append('competitors', document.getElementById('f-comps').value);
+  fd.append('constraints', document.getElementById('f-constraints').value);
+  fd.append('name', document.getElementById('f-name').value);
+  fd.append('email', document.getElementById('f-email').value);
+  fd.append('phone', document.getElementById('f-phone').value);
+  fd.append('website', document.getElementById('f-site').value);
+  fd.append('emergency', document.getElementById('f-emergency').checked ? 'yes' : 'no');
+  fd.append('source', 'contentscale_audit_form');
+  fd.append('timestamp', new Date().toISOString());
+
+  // Attach files
+  uploadedFiles.gsc.forEach(f => fd.append('gsc_files', f));
+  uploadedFiles.files.forEach(f => fd.append('attachments', f));
+
+  try {
+    const resp = await fetch('https://contentscale-platform-production.up.railway.app/api/audit-intake', {
+      method: 'POST',
+      body: fd // FormData handles multipart/form-data automatically
+    });
+
+    if (resp.ok) {
+      showSuccess();
+    } else {
+      // Fallback: open WhatsApp with prefilled message
+      fallbackToWhatsApp();
+    }
+  } catch(e) {
+    // Network error — fallback to WhatsApp
+    fallbackToWhatsApp();
+  }
+}
+
+function fallbackToWhatsApp() {
+  const url = document.getElementById('f-url').value;
+  const kw = document.getElementById('f-kw').value;
+  const name = document.getElementById('f-name').value;
+  const msg = encodeURIComponent(`Hi Ottmar! I need an SEO audit.\n\nPage: ${url}\nKeyword: ${kw}\nName: ${name}\n\nI filled in the audit form at contentscale.site.`);
+  showSuccess();
+  setTimeout(() => {
+    window.open(`https://wa.me/31628073996?text=${msg}`, '_blank');
+  }, 500);
+}
+
+function showSuccess() {
+  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+  document.getElementById('successState').classList.add('show');
+  document.getElementById('successState').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
