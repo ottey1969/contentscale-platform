@@ -22,7 +22,7 @@
 // ✅ FIX v4: Instantly Bearer token = UUID part (BEFORE ':'), not secret after colon
 // ✅ FIX v5: All pages get favicon tags + blink effect + site.webmanifest route
 // ============================================
-process.env.PGSSLMODE = 'verify-full';
+// PGSSLMODE removed — pool config handles SSL (rejectUnauthorized: false for Railway)
 process.env.NODE_NO_WARNINGS = '1';
 const fs = require('fs');
 const express = require('express');
@@ -34,6 +34,8 @@ const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const sgMail = require('@sendgrid/mail');
+const axios = require('axios');
+const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -371,6 +373,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    }
    // Ensure niche exists
    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS niche VARCHAR(100)`);
+   await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS business_type VARCHAR(100)`);
    // Sitemap scan columns
    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_count INTEGER DEFAULT 1`);
    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_scores JSONB DEFAULT '[]'`);
@@ -1265,7 +1268,6 @@ app.post('/api/sitemap/urls', async (req, res) => {
 const { url } = req.body;
 if (!url) return res.status(400).json({ success: false, error: 'Sitemap URL required' });
 try {
-const axios = require('axios');
 // No xml2js needed — parse <loc> tags with regex (works for all standard sitemaps)
 const extractLocs = (xml) => {
 const locs = [];
@@ -3693,8 +3695,6 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 // ============================================================
 // AUDIT ROUTES — BEFORE startServer()
 // ============================================================
-
-const multer = require('multer');
 
 const auditUpload = multer({
   storage: multer.memoryStorage(),
