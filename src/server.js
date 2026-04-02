@@ -3782,10 +3782,8 @@ app.post('/api/audit-intake', (req, res) => {
 });
 
 // ============================================================
-// AUDIT ROUTES — plak VÓÓR startServer() in server.js
+// AUDIT ROUTES
 // ============================================================
-
-const multer = require('multer');
 
 function servePublic(filename) {
   return (req, res) => {
@@ -3941,38 +3939,7 @@ app.post('/api/audit-intake', (req, res) => {
   });
 });
 
-// ============================================================
-// AUDIT ROUTES — plak VÓÓR startServer() in server.js
-// ============================================================
-
-const multer = require('multer');
-
-function servePublic(filename) {
-  return (req, res) => {
-    const candidates = [
-      path.join(__dirname, 'public', filename),
-      path.join(__dirname, '..', 'public', filename),
-    ];
-    const found = candidates.find(p => fs.existsSync(p));
-    if (!found) return res.status(404).send(`<html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;padding:40px;"><h2 style="color:#fbbf24;">${filename} not found</h2><p style="color:#6b7280;">Place file in <code>public/${filename}</code></p></body></html>`);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(found);
-  };
-}
-
-app.get('/audit-seo',      servePublic('audit-seo.html'));
-app.get('/audit',          (req, res) => res.redirect(301, '/audit-seo'));
-app.get('/audit-intake',   servePublic('audit-intake.html'));
-app.get('/audit-workflow', servePublic('audit-workflow.html'));
-
-const auditUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-}).fields([
-  { name: 'gsc_files',   maxCount: 5  },
-  { name: 'attachments', maxCount: 10 },
-]);
+// ── AUDIT ROUTES (defined above) ──
 
 app.post('/api/audit-intake', (req, res) => {
   auditUpload(req, res, async (err) => {
