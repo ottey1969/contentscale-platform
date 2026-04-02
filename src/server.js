@@ -3715,6 +3715,7 @@ app.get('/audit',          (req, res) => res.redirect(301, '/audit-seo'));
 app.get('/audit-intake',   servePublic('audit-intake.html'));
 app.get('/audit-workflow',       servePublic('audit-workflow.html'));
 app.get('/audit-recommendations', servePublic('audit-recommendations.html'));
+app.get('/handleiding',           servePublic('handleiding.html'));
 
 
 app.post('/api/audit-intake', (req, res) => {
