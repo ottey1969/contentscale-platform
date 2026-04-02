@@ -1218,6 +1218,75 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent=msg; el.style.color=color||'var(--dim)'; }
 }
 
+
+// ── ContentScore scan per pagina ─────────────────────────────
+async function scanOnePage(pageId) {
+  var p = pages.find(function(pg){ return pg.id === pageId; });
+  if (!p) return;
+  var btn = document.querySelector('[onclick="scanOnePage(\'' + pageId + '\')"]');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+  try {
+    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: p.url})
+    });
+    var d = await r.json();
+    if (d.score) {
+      if (!p.scoreBefore) {
+        p.scoreBefore = d.score;
+        toast('✅ Pre-scan: ' + d.score + '/100 — ' + p.url.split('/').pop());
+      } else {
+        p.scoreAfter = d.score;
+        toast('✅ Na-scan: ' + d.score + '/100 — verschil: ' + (d.score - p.scoreBefore));
+      }
+      save(); renderPages();
+    } else {
+      toast('⚠ Scan mislukt: ' + (d.error || 'onbekende fout'));
+    }
+  } catch(e) {
+    toast('⚠ Server niet bereikbaar: ' + e.message);
+  }
+  if (btn) { btn.textContent = '📊 Scan Score'; btn.disabled = false; }
+}
+
+// ── Scan alle paginas zonder score ───────────────────────────
+var _scanQueue = [];
+var _scanRunning = false;
+
+async function scanAllScores() {
+  var unscored = pages.filter(function(p){ return !p.scoreBefore && p.url; });
+  if (!unscored.length) { toast('✓ Alle paginas hebben al een score'); return; }
+  if (_scanRunning) { toast('⏳ Scan al bezig...'); return; }
+  _scanQueue = unscored.slice();
+  _scanRunning = true;
+  toast('⏳ Scannen ' + _scanQueue.length + ' paginas...');
+  setSyncStatus('⏳ Auto-scan bezig: 0/' + _scanQueue.length, 'var(--gold)');
+
+  var done = 0;
+  for (var i = 0; i < _scanQueue.length; i++) {
+    var p = _scanQueue[i];
+    try {
+      var r = await fetch('https://contentscale-platform-production.up.railway.app/api/scan', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: p.url})
+      });
+      var d = await r.json();
+      if (d.score) { p.scoreBefore = d.score; done++; }
+    } catch(e) {}
+    setSyncStatus('⏳ Auto-scan: ' + (i+1) + '/' + _scanQueue.length + ' (' + done + ' scores geladen)', 'var(--gold)');
+    save();
+    await new Promise(function(res){ setTimeout(res, 2000); }); // 2s tussen scans
+  }
+
+  _scanRunning = false;
+  renderPages(); renderOverview();
+  setSyncStatus('✅ Auto-scan klaar — ' + done + ' scores geladen', 'var(--green)');
+  toast('✅ ' + done + '/' + _scanQueue.length + ' paginas gescand');
+}
+
 function startAutoSave(){
   if(_autoSaveTimer) clearInterval(_autoSaveTimer);
   // Auto-save every 3 minutes IF data has changed
