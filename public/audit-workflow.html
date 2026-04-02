@@ -135,6 +135,46 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #importInput{display:none;}
+
+/* ── MOBILE RESPONSIVE ─────────────────────────── */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .topbar-right{gap:5px;}
+  .btn{font-size:8px;padding:6px 10px;}
+  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
+  .add-row{flex-direction:column;}
+  .add-row input,.add-row select{width:100%!important;}
+  .filter-bar{flex-direction:column;gap:6px;}
+  .filter-bar select,.filter-bar input{width:100%!important;}
+  .card-head{flex-wrap:wrap;gap:6px;}
+  .rec-head{flex-direction:column;}
+  .prefill-box{max-width:100%;width:100%;}
+  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
+  .project-bar{flex-direction:column;}
+  .pf{min-width:100%!important;}
+  .steps{flex-direction:column!important;}
+  .step{border-right:none!important;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .how-step{flex-direction:column;}
+  .flow-step{gap:10px;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
+  .modes{grid-template-columns:1fr!important;}
+  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+}
+@media(max-width:480px){
+  .overview,.summary{grid-template-columns:1fr 1fr!important;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .topbar-right{flex-wrap:wrap;}
+  .card-meta{flex-wrap:wrap;gap:4px;}
+  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
+  h1,h2,.tool-name{word-break:break-word;}
+  .panel{padding:16px!important;}
+  .section{padding:14px 16px!important;}
+}
 </style>
 </head>
 <body>
@@ -147,6 +187,8 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
     <button class="btn btn-gold" onclick="document.getElementById('gscImportInput').click()">📊 Import GSC CSV</button>
     <button class="btn btn-purple" onclick="scanAllScores()">⚡ Auto-Score All</button>
     <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
+    <button class="btn btn-purple" onclick="syncToServer()" id="syncBtn" title="Save to server — accessible from any device">☁ Save to Server</button>
+    <button class="btn btn-muted" onclick="loadFromServer()" title="Load from server">↓ Load from Server</button>
     <button class="btn btn-blue" onclick="document.getElementById('importInput').click()">↑ Import Progress</button>
     <button class="btn btn-purple" onclick="exportClientReport()">📄 Client Report</button>
     <a href="/audit-recommendations" class="btn btn-gold">🎯 Recommendations</a>
@@ -156,6 +198,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
   </div>
 </div>
 
+<div id="syncStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
 <div class="project-bar">
   <div class="pf"><label>Client / Project</label><input id="pClient" placeholder="ContentScale.site" oninput="save()"></div>
   <div class="pf" style="flex:2"><label>Website</label><input id="pSite" placeholder="https://contentscale.site" oninput="save()"></div>
@@ -789,10 +832,95 @@ async function scanOnePage(id) {
   }
 }
 
+// ── Server sync ────────────────────────────────────────────
+var SYNC_KEY = 'cs_wf_sync';
+var autoSaveTimer = null;
+
+async function syncToServer() {
+  var btn = document.getElementById('syncBtn');
+  if(btn) { btn.textContent = '☁ Saving...'; btn.disabled = true; }
+  var payload = {
+    project: project,
+    pages: pages,
+    savedAt: new Date().toISOString(),
+    key: (project.client||'default').replace(/\s+/g,'-').toLowerCase() + '-' + (project.site||'').replace(/https?:\/\//,'').split('/')[0]
+  };
+  try {
+    var r = await fetch('/api/workflow/save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if(d.success) {
+      var ts = new Date().toLocaleTimeString();
+      setSyncStatus('✓ Saved to server at ' + ts, 'var(--green)');
+      try{localStorage.setItem(SYNC_KEY, payload.key);}catch(e){}
+      toast('☁ Saved to server');
+    } else {
+      setSyncStatus('⚠ Save failed — exported locally instead', 'var(--red)');
+      exportCSV();
+    }
+  } catch(e) {
+    setSyncStatus('⚠ Server unreachable — use Export CSV as backup', 'var(--red)');
+    toast('⚠ Server offline — CSV exported');
+    exportCSV();
+  }
+  if(btn) { btn.textContent = '☁ Save to Server'; btn.disabled = false; }
+}
+
+async function loadFromServer() {
+  var key = prompt('Enter project key (e.g. contentscale-contentscale.site) or leave empty to load last saved:');
+  if(key === null) return;
+  if(!key) {
+    try{key = localStorage.getItem(SYNC_KEY)||'';}catch(e){}
+  }
+  if(!key) { toast('⚠ No key found'); return; }
+  try {
+    var r = await fetch('/api/workflow/load?key=' + encodeURIComponent(key));
+    var d = await r.json();
+    if(d.success && d.data) {
+      if(!confirm('Load workflow "' + key + '" from server? This will replace your current data.')) return;
+      if(d.data.project) project = d.data.project;
+      if(d.data.pages)   pages   = d.data.pages;
+      // Restore project fields
+      if(project.client)   document.getElementById('pClient').value   = project.client;
+      if(project.site)     document.getElementById('pSite').value     = project.site;
+      if(project.deadline) document.getElementById('pDeadline').value = project.deadline;
+      if(project.auditor)  document.getElementById('pAuditor').value  = project.auditor;
+      save();renderPages();renderOverview();
+      var ts = new Date(d.data.savedAt||Date.now()).toLocaleString();
+      setSyncStatus('✓ Loaded from server (saved: ' + ts + ')', 'var(--green)');
+      toast('✅ Workflow loaded — ' + pages.length + ' pages');
+    } else {
+      toast('⚠ Not found: ' + key);
+    }
+  } catch(e) {
+    toast('⚠ Server unreachable');
+  }
+}
+
+function setSyncStatus(msg, color) {
+  var el = document.getElementById('syncStatus');
+  if(el) { el.textContent = msg; el.style.color = color||'var(--dim)'; }
+}
+
+// Auto-save to server every 5 minutes if pages exist
+function startAutoSave() {
+  if(autoSaveTimer) clearInterval(autoSaveTimer);
+  autoSaveTimer = setInterval(function(){
+    if(pages.length > 0) {
+      syncToServer();
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
 // ── Init ──
 load();
 renderPages();
 renderOverview();
+startAutoSave();
+if(pages.length>0) setSyncStatus('Data in browser — click ☁ Save to Server to backup', 'var(--dim)');
 </script>
 </body>
 </html>
