@@ -266,30 +266,43 @@ var AUDIT_URL = 'https://app.contentscale.site/audit-seo';
 var pages = [];
 var project = {};
 
+// points: true = adds ContentScore points, false = UX/CTR only (no score change)
 var CL = [
-  {id:'scan',     label:'ContentScore scan done',           cat:'audit'},
-  {id:'pulse',    label:'PULSE + NEXUS audit done',         cat:'audit'},
-  {id:'gsc_check',label:'GSC data checked & noted',        cat:'audit'},
-  {id:'h1',       label:'H1 verified & optimized',          cat:'content'},
-  {id:'h2',       label:'H2 structure reviewed',            cat:'content'},
-  {id:'title',    label:'SEO title updated (50-60 chars)',   cat:'technical'},
-  {id:'meta',     label:'Meta description (150-160 chars)', cat:'technical'},
-  {id:'content',  label:'Content gaps filled',              cat:'content'},
-  {id:'wordcount',label:'Word count adequate (1500+)',       cat:'content'},
-  {id:'stats',    label:'Stats updated (2025-2026)',         cat:'content'},
-  {id:'faq',      label:'FAQ section added/updated',        cat:'content'},
-  {id:'expert',   label:'Expert quotes added',              cat:'authority'},
-  {id:'eeat',     label:'E-E-A-T signals strengthened',     cat:'authority'},
-  {id:'schema_a', label:'Article schema added',             cat:'technical'},
-  {id:'schema_f', label:'FAQPage schema added',             cat:'technical'},
-  {id:'canonical',label:'Canonical tag verified',           cat:'technical'},
-  {id:'alt',      label:'Image alt text completed',         cat:'technical'},
-  {id:'intlinks', label:'Internal links added (3-5)',        cat:'technical'},
-  {id:'extlinks', label:'External links (2-3 authoritative)',cat:'authority'},
-  {id:'cta',      label:'CTA optimized for goal',           cat:'content'},
-  {id:'publish',  label:'Page republished + timestamp',     cat:'audit'},
-  {id:'reindex',  label:'GSC: request reindex done',        cat:'audit'},
-  {id:'recheck',  label:'GSC recheck scheduled (14 days)',  cat:'audit'},
+  // ── FASE 1: Pre-audit (geen score impact)
+  {id:'scan_before', label:'① Pre-scan gedaan (startscore genoteerd)',    cat:'fase1', points:false, fase:1},
+  {id:'gsc_check',   label:'① GSC data genoteerd',                        cat:'fase1', points:false, fase:1},
+  {id:'pulse',       label:'① PULSE+NEXUS audit gedaan',                  cat:'fase1', points:false, fase:1},
+
+  // ── FASE 2: Implementatie — PUNTEN (score gaat omhoog)
+  {id:'wordcount',   label:'② Woorden toegevoegd (min 1500)',             cat:'fase2', points:true,  fase:2},
+  {id:'stats',       label:'② Stats toegevoegd (2025-2026, 8+)',          cat:'fase2', points:true,  fase:2},
+  {id:'expert',      label:'② Expert quotes toegevoegd (3-5)',            cat:'fase2', points:true,  fase:2},
+  {id:'faq',         label:'② FAQ sectie toegevoegd/uitgebreid',          cat:'fase2', points:true,  fase:2},
+  {id:'casestudy',   label:'② Case study met metrics toegevoegd',         cat:'fase2', points:true,  fase:2},
+  {id:'direct_ans',  label:'② Direct Answer (40-80w) na H1 toegevoegd',  cat:'fase2', points:true,  fase:2},
+  {id:'tldr',        label:'② Key Takeaways / TL;DR toegevoegd',          cat:'fase2', points:true,  fase:2},
+  {id:'listcount',   label:'② Bullet/genummerde lijsten uitgebreid (15+)',cat:'fase2', points:true,  fase:2},
+  {id:'authorbio',   label:'② Auteursbio met credentials toegevoegd',     cat:'fase2', points:true,  fase:2},
+  {id:'schema_a',    label:'② Article schema JSON-LD toegevoegd',         cat:'fase2', points:true,  fase:2},
+  {id:'schema_f',    label:'② FAQPage schema JSON-LD toegevoegd',         cat:'fase2', points:true,  fase:2},
+  {id:'intlinks',    label:'② Interne links toegevoegd (3-5)',             cat:'fase2', points:true,  fase:2},
+  {id:'extlinks',    label:'② Externe links autoritatief (2-3)',           cat:'fase2', points:true,  fase:2},
+  {id:'eeat',        label:'② E-E-A-T signalen versterkt',                cat:'fase2', points:true,  fase:2},
+
+  // ── FASE 2: UX/CTR fixes — GEEN punten, wel belangrijk
+  {id:'h1',          label:'② H1 geoptimaliseerd',                        cat:'fase2_ctr', points:false, fase:2},
+  {id:'h2',          label:'② H2 structuur herzien',                      cat:'fase2_ctr', points:false, fase:2},
+  {id:'title',       label:'② SEO title herschreven (50-60 chars)',       cat:'fase2_ctr', points:false, fase:2},
+  {id:'meta',        label:'② Meta description herschreven (150-160)',    cat:'fase2_ctr', points:false, fase:2},
+  {id:'canonical',   label:'② Canonical tag gecontroleerd',               cat:'fase2_ctr', points:false, fase:2},
+  {id:'alt',         label:'② Afbeelding alt tekst compleet',             cat:'fase2_ctr', points:false, fase:2},
+  {id:'cta',         label:'② CTA geoptimaliseerd voor conversiedoel',    cat:'fase2_ctr', points:false, fase:2},
+
+  // ── FASE 3: Live zetten + nascan
+  {id:'publish',     label:'③ Pagina gepubliceerd + timestamp vernieuwd', cat:'fase3', points:false, fase:3},
+  {id:'reindex',     label:'③ GSC reindex aangevraagd',                   cat:'fase3', points:false, fase:3},
+  {id:'scan_after',  label:'③ Na-scan gedaan (eindscore genoteerd)',      cat:'fase3', points:false, fase:3},
+  {id:'recheck',     label:'③ GSC recheck ingepland (14 dagen)',          cat:'fase3', points:false, fase:3},
 ];
 
 var STATUS_ORDER = ['notstarted','inprogress','followup','blocked','done'];
@@ -395,7 +408,11 @@ function toggleCheck(pageId,checkId){
   var total=CL.length;
   var pct=Math.round(done/total*100);
   var el=document.getElementById('cl-prog-'+pageId);
-  if(el)el.textContent=done+'/'+total+' ('+pct+'%)';
+  if(el){
+    var pts=pointsDone(p);
+    el.innerHTML='<span style="color:var(--green)">+score: '+pts+'/'+pointsTotal()+'</span>'
+      +' <span style="color:var(--muted);margin-left:8px;">totaal: '+done+'/'+total+'</span>';
+  }
   var chkEl=document.getElementById('chk-'+pageId);
   if(chkEl)chkEl.textContent=pct+'%';
   // Update class on item
@@ -430,6 +447,21 @@ function markDone(id){
 function checkProgress(p){
   var done=Object.values(p.checks).filter(Boolean).length;
   return {done:done,total:CL.length,pct:Math.round(done/CL.length*100)};
+}
+
+// Returns true if the "after score" field should be locked
+// Locked until at least 3 points-giving items are checked
+function scoreAfterLocked(p){
+  var pointsDone = CL.filter(function(c){ return c.points && p.checks[c.id]; }).length;
+  return pointsDone < 3;
+}
+
+// Count points items done
+function pointsDone(p){
+  return CL.filter(function(c){ return c.points && p.checks[c.id]; }).length;
+}
+function pointsTotal(){
+  return CL.filter(function(c){ return c.points; }).length;
 }
 
 function renderOverview(){
@@ -490,14 +522,39 @@ function renderPages(){
     try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
     if(shortUrl.length>55)shortUrl=shortUrl.slice(0,55)+'…';
 
-    var cl=CL.map(function(c){
-      var checked=p.checks[c.id];
-      return '<div class="cl-item'+(checked?' checked':'')+'\" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\''+p.id+'\',\''+c.id+'\')">'
-        +'<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();toggleCheck(\''+p.id+'\',\''+c.id+'\')">'
+    // Grouped checklist by fase
+  function renderClItems(items){
+    return items.map(function(c){
+      var checked = p.checks[c.id];
+      var badge = (c.fase===2&&c.points)
+        ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(74,222,128,.12);color:var(--green);flex-shrink:0;">+score</span>'
+        : (c.fase===2&&!c.points)
+        ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
+        : '';
+      return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\''+p.id+'\',\''+c.id+'\'\">'
+        +'<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();toggleCheck(\''+p.id+'\',\''+c.id+'\'\")>'
         +'<label>'+c.label+'</label>'
-        +'<span class="cl-cat cat-'+c.cat+'">'+c.cat+'</span>'
+        +badge
         +'</div>';
     }).join('');
+  }
+  var f1 = CL.filter(function(c){return c.fase===1;});
+  var f2p = CL.filter(function(c){return c.fase===2&&c.points;});
+  var f2c = CL.filter(function(c){return c.fase===2&&!c.points;});
+  var f3 = CL.filter(function(c){return c.fase===3;});
+  var ph = function(label,color,border){
+    return '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:'+color+';padding:8px 0 4px;border-bottom:1px solid '+border+';margin-bottom:4px;margin-top:6px;">'+label+'</div>';
+  };
+  var cl = ph('① Pre-audit','var(--blue)','rgba(96,165,250,.2)')
+    + '<div class="cl-grid">'+renderClItems(f1)+'</div>'
+    + ph('② Implementatie — verbetert ContentScore','var(--green)','rgba(74,222,128,.2)')
+    + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Voeg échte content toe → score gaat omhoog. Meta/title alleen = geen punten.</div>'
+    + '<div class="cl-grid">'+renderClItems(f2p)+'</div>'
+    + ph('② UX & CTR fixes — geen score impact','var(--blue)','rgba(96,165,250,.15)')
+    + '<div class="cl-grid">'+renderClItems(f2c)+'</div>'
+    + ph('③ Live zetten + na-scan','var(--gold)','rgba(251,191,36,.2)')
+    + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Scan pas opnieuw NADAT pagina live staat en punten-items zijn gedaan.</div>'
+    + '<div class="cl-grid">'+renderClItems(f3)+'</div>';
 
     return '<div class="page-card s-'+p.status+'" id="card-'+p.id+'">'
 
@@ -524,8 +581,16 @@ function renderPages(){
       +'<div class="cb-field"><label>Priority</label><select onchange="updateField(\''+p.id+'\',\'priority\',this.value)">'
       +[['high','🔴 High'],['med','🟡 Medium'],['low','🟢 Low']].map(function(x){return '<option value="'+x[0]+'"'+(p.priority===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('')
       +'</select></div>'
-      +'<div class="cb-field"><label>ContentScore BEFORE</label><input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="e.g. 52" data-score-before="'+p.id+'" onchange="updateField(\''+p.id+'\',\'scoreBefore\',this.value)"></div>'
-      +'<div class="cb-field"><label>ContentScore AFTER</label><input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="e.g. 87" onchange="updateField(\''+p.id+'\',\'scoreAfter\',this.value)"></div>'
+      +'<div class="cb-field">'
+      +'<label style="color:var(--blue)">① Pre-scan Score (VOOR audit)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="Scan EERST, noteer hier" data-score-before="'+p.id+'" onchange="updateField(\''+p.id+'\',\'scoreBefore\',this.value)">'
+      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score knop — doe dit VÓÓR de audit</div>'
+      +'</div>'
+      +'<div class="cb-field">'
+      +'<label style="color:'+(scoreAfterLocked(p)?'var(--dim)':'var(--green)')+'">③ Na-scan Score (NA implementatie)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="'+(scoreAfterLocked(p)?'Implementeer punten eerst':'Scan NADAT pagina live staat')+'" '+(scoreAfterLocked(p)?'disabled style="opacity:.4;cursor:not-allowed"':'')+' onchange="updateField(\''+p.id+'\',\'scoreAfter\',this.value)">'
+      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Voer eerst punten-items (②) in — meta/title alleen verandert de score niet':'✓ Scan opnieuw NADAT je de pagina live hebt gezet')+'</div>'
+      +'</div>'
       +'<div class="cb-field"><label>GSC Position</label><input type="number" value="'+p.position+'" placeholder="34" onchange="updateField(\''+p.id+'\',\'position\',this.value)"></div>'
       +'<div class="cb-field"><label>Impressions</label><input type="number" value="'+p.impressions+'" placeholder="12400" onchange="updateField(\''+p.id+'\',\'impressions\',this.value)"></div>'
       +'<div class="cb-field"><label>Deadline</label><input type="date" value="'+p.deadline+'" onchange="updateField(\''+p.id+'\',\'deadline\',this.value)"></div>'
@@ -536,7 +601,12 @@ function renderPages(){
       +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea onchange="updateField(\''+p.id+'\',\'notes\',this.value)">'+p.notes+'</textarea></div>'
 
       // Checklist
-      +'<div class="cl-header"><span>Audit Checklist</span><span id="cl-prog-'+p.id+'" style="color:var(--gold)">'+prog.done+'/'+prog.total+' ('+prog.pct+'%)</span></div>'
+      +'<div class="cl-header"><span>Audit Checklist — 3 fasen</span>'
+      +'<span id="cl-prog-'+p.id+'" style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;display:flex;gap:10px;">'
+      +'<span style="color:var(--green)">+pts: '+pointsDone(p)+'/'+pointsTotal()+'</span>'
+      +'<span style="color:var(--muted)">totaal: '+prog.done+'/'+prog.total+'</span>'
+      +'</span>'
+      +'</div>'
       +'<div class="cl-grid">'+cl+'</div>'
 
       // Actions
