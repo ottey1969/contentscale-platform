@@ -3689,6 +3689,106 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
   res.redirect(301, 'https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg');
 });
 
+
+// ============================================================
+// AUDIT ROUTES — plak VÓÓR startServer() in server.js
+// ============================================================
+
+const multer = require('multer');
+
+function servePublic(filename) {
+  return (req, res) => {
+    const candidates = [
+      path.join(__dirname, 'public', filename),
+      path.join(__dirname, '..', 'public', filename),
+    ];
+    const found = candidates.find(p => fs.existsSync(p));
+    if (!found) return res.status(404).send(`<html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;padding:40px;"><h2 style="color:#fbbf24;">${filename} not found</h2><p style="color:#6b7280;">Place file in <code>public/${filename}</code></p></body></html>`);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(found);
+  };
+}
+
+app.get('/audit-seo',      servePublic('audit-seo.html'));
+app.get('/audit',          (req, res) => res.redirect(301, '/audit-seo'));
+app.get('/audit-intake',   servePublic('audit-intake.html'));
+app.get('/audit-workflow',       servePublic('audit-workflow.html'));
+app.get('/audit-recommendations', servePublic('audit-recommendations.html'));
+
+const auditUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).fields([
+  { name: 'gsc_files',   maxCount: 5  },
+  { name: 'attachments', maxCount: 10 },
+]);
+
+app.post('/api/audit-intake', (req, res) => {
+  auditUpload(req, res, async (err) => {
+    if (err) return res.status(400).json({ success: false, error: err.message });
+    const b = req.body;
+    const isEmergency = b.emergency === 'yes';
+    const allFiles = [...((req.files?.gsc_files) || []), ...((req.files?.attachments) || [])];
+
+    const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;margin:0;padding:0;">
+<div style="max-width:640px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden;">
+  <div style="background:${isEmergency ? '#dc2626' : '#7c3aed'};padding:20px 28px;">
+    <div style="color:rgba(255,255,255,.8);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">${isEmergency ? '⚡ EMERGENCY' : '🔍 New'} Audit Request</div>
+    <div style="color:#fff;font-size:22px;font-weight:700;">${b.name || 'Unknown'}</div>
+    <div style="color:rgba(255,255,255,.75);font-size:13px;">${b.email || ''} ${b.phone ? '· ' + b.phone : ''}</div>
+  </div>
+  <div style="padding:24px 28px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;">
+      <tr style="background:#f3f4f6;"><td style="padding:9px 12px;font-weight:600;width:40%;">Page URL</td><td style="padding:9px 12px;"><a href="${b.url}" style="color:#7c3aed;">${b.url}</a></td></tr>
+      <tr><td style="padding:9px 12px;font-weight:600;background:#f9fafb;">Primary Keyword</td><td style="padding:9px 12px;">${b.keyword}</td></tr>
+      <tr style="background:#f3f4f6;"><td style="padding:9px 12px;font-weight:600;">Geo / Goal</td><td style="padding:9px 12px;">${b.geo} · ${b.goal}</td></tr>
+      <tr><td style="padding:9px 12px;font-weight:600;background:#f9fafb;">GSC</td><td style="padding:9px 12px;">${b.impressions || '?'} impr · ${b.ctr || '?'}% CTR · pos ${b.position || '?'}</td></tr>
+      <tr style="background:#f3f4f6;"><td style="padding:9px 12px;font-weight:600;">No GSC?</td><td style="padding:9px 12px;">${b.no_gsc === 'yes' ? 'Yes — manual data' : 'No — CSV uploaded'}</td></tr>
+      <tr><td style="padding:9px 12px;font-weight:600;background:#f9fafb;">Website</td><td style="padding:9px 12px;">${b.website || '—'}</td></tr>
+    </table>
+    ${b.queries ? `<div style="margin-bottom:14px;"><strong style="font-size:11px;color:#6b7280;text-transform:uppercase;">Top Queries</strong><div style="background:#f3f4f6;border-radius:5px;padding:10px;font-size:13px;margin-top:5px;white-space:pre-wrap;">${b.queries}</div></div>` : ''}
+    ${b.competitors ? `<div style="margin-bottom:14px;"><strong style="font-size:11px;color:#6b7280;text-transform:uppercase;">Competitors</strong><div style="background:#f3f4f6;border-radius:5px;padding:10px;font-size:13px;margin-top:5px;white-space:pre-wrap;">${b.competitors}</div></div>` : ''}
+    ${allFiles.length ? `<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:5px;padding:10px 12px;margin-bottom:14px;"><strong style="color:#065f46;">📎 ${allFiles.length} file(s) attached</strong><br><span style="font-size:12px;color:#047857;">${allFiles.map(f => f.originalname + ' (' + (f.size/1024).toFixed(0) + ' KB)').join(', ')}</span></div>` : ''}
+    <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="mailto:${b.email}" style="background:#7c3aed;color:#fff;text-decoration:none;padding:9px 16px;border-radius:5px;font-weight:600;font-size:13px;">📧 Reply</a>
+      ${b.phone ? `<a href="https://wa.me/${b.phone.replace(/\D/g,'')}" style="background:#16a34a;color:#fff;text-decoration:none;padding:9px 16px;border-radius:5px;font-weight:600;font-size:13px;">💬 WhatsApp</a>` : ''}
+      <a href="https://app.contentscale.site/audit-seo?url=${encodeURIComponent(b.url)}&kw=${encodeURIComponent(b.keyword)}" style="background:#fbbf24;color:#000;text-decoration:none;padding:9px 16px;border-radius:5px;font-weight:600;font-size:13px;">🔬 Open in PULSE+NEXUS</a>
+    </div>
+  </div>
+  <div style="background:#f3f4f6;padding:10px 28px;font-size:11px;color:#9ca3af;">${b.timestamp || new Date().toISOString()} · contentscale.site</div>
+</div></body></html>`;
+
+    if (process.env.SENDGRID_API_KEY) {
+      try {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        await sgMail.send({
+          to:      'info@contentscale.site',
+          from:    process.env.SENDGRID_FROM_EMAIL || 'noreply@contentscale.site',
+          replyTo: b.email || 'noreply@contentscale.site',
+          subject: `${isEmergency ? '⚡ EMERGENCY — ' : '🔍 '}Audit: ${b.keyword} — ${b.name}`,
+          html:    emailHtml,
+          attachments: allFiles.map(f => ({
+            content: f.buffer.toString('base64'), filename: f.originalname,
+            type: f.mimetype, disposition: 'attachment',
+          })),
+        });
+        console.log(`[audit-intake] ✅ Email sent → info@contentscale.site`);
+      } catch (e) { console.error('[audit-intake] SendGrid error:', e.message); }
+    }
+
+    if (pool) {
+      pool.query(
+        `INSERT INTO scan_log (business_url, business_name, niche, country, email_found, email_status, source) VALUES ($1,$2,$3,$4,$5,$6,'audit_intake')`,
+        [b.url||null, b.name||null, b.keyword||null, b.geo||null, b.email||null, b.email?'has_email':'no_email']
+      ).catch(e => console.warn('[audit-intake] DB:', e.message));
+    }
+
+    res.json({ success: true, message: 'Audit request received.' });
+  });
+});
+
 // ============================================================
 // AUDIT ROUTES — plak VÓÓR startServer() in server.js
 // ============================================================
