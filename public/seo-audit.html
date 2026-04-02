@@ -159,6 +159,46 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
   .topbar{padding:14px 0;}
   .brand{font-size:20px;}
 }
+
+/* ── MOBILE RESPONSIVE ─────────────────────────── */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .topbar-right{gap:5px;}
+  .btn{font-size:8px;padding:6px 10px;}
+  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
+  .add-row{flex-direction:column;}
+  .add-row input,.add-row select{width:100%!important;}
+  .filter-bar{flex-direction:column;gap:6px;}
+  .filter-bar select,.filter-bar input{width:100%!important;}
+  .card-head{flex-wrap:wrap;gap:6px;}
+  .rec-head{flex-direction:column;}
+  .prefill-box{max-width:100%;width:100%;}
+  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
+  .project-bar{flex-direction:column;}
+  .pf{min-width:100%!important;}
+  .steps{flex-direction:column!important;}
+  .step{border-right:none!important;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .how-step{flex-direction:column;}
+  .flow-step{gap:10px;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
+  .modes{grid-template-columns:1fr!important;}
+  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+}
+@media(max-width:480px){
+  .overview,.summary{grid-template-columns:1fr 1fr!important;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .topbar-right{flex-wrap:wrap;}
+  .card-meta{flex-wrap:wrap;gap:4px;}
+  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
+  h1,h2,.tool-name{word-break:break-word;}
+  .panel{padding:16px!important;}
+  .section{padding:14px 16px!important;}
+}
 </style>
 </head>
 <body>
@@ -316,6 +356,17 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
       <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
+    <!-- META CONSISTENCY CHECKER — Stap ③b -->
+    <div class="panel" id="metaCheckerPanel">
+      <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span></div>
+      <div class="info" id="metaCheckerInfo" style="display:none;"></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
+        Plak je HTML hierboven (③) en klik Check — het systeem vergelijkt title, og:title, twitter:title, schema headline, dateModified, author en meer. Inconsistenties worden direct gemarkeerd.
+      </div>
+      <button class="btn-gold" style="font-size:16px;padding:12px 28px;width:auto;" onclick="runMetaCheck()">🔍 Check Meta Consistency</button>
+      <div id="metaCheckResults" style="margin-top:16px;"></div>
+    </div>
+
     <div class="panel">
       <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span></div>
       <div class="info">
@@ -376,6 +427,222 @@ let gscPages = [];
 let gscQueries = [];
 
 const RAILWAY = 'https://contentscale-platform-production.up.railway.app';
+
+
+// ── META CONSISTENCY CHECKER ─────────────────────────────────
+function runMetaCheck() {
+  var html = document.getElementById('dHtml').value.trim();
+  if (!html) {
+    document.getElementById('metaCheckerInfo').style.display = 'block';
+    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ Plak eerst je pagina HTML in veld ③ hierboven.</strong>';
+    return;
+  }
+  document.getElementById('metaCheckerInfo').style.display = 'none';
+
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+  var results = [];
+
+  // ── Extract all fields ──
+  var title       = (doc.querySelector('title')?.textContent || '').trim();
+  var h1          = Array.from(doc.querySelectorAll('h1')).map(e => e.textContent.trim()).filter(Boolean)[0] || '';
+  var metaDesc    = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+  var ogTitle     = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() || '';
+  var ogDesc      = doc.querySelector('meta[property="og:description"]')?.getAttribute('content')?.trim() || '';
+  var ogImage     = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')?.trim() || '';
+  var ogUrl       = doc.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
+  var twTitle     = doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content')?.trim() || '';
+  var twDesc      = doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content')?.trim() || '';
+  var twCard      = doc.querySelector('meta[name="twitter:card"]')?.getAttribute('content')?.trim() || '';
+  var twImage     = doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
+  var canonical   = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')?.trim() || '';
+  var viewport    = doc.querySelector('meta[name="viewport"]')?.getAttribute('content')?.trim() || '';
+
+  // Schema extraction
+  var schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s => {
+    try { return JSON.parse(s.textContent); } catch(e) { return null; }
+  }).filter(Boolean);
+  var flatSchemas = schemas.flatMap(s => Array.isArray(s) ? s : (s['@graph'] ? s['@graph'] : [s]));
+
+  var articleSchema = flatSchemas.find(s => ['Article','BlogPosting','NewsArticle','WebPage','TechArticle'].includes(s['@type']));
+  var orgSchema     = flatSchemas.find(s => ['Organization','LocalBusiness','Person'].includes(s['@type']));
+  var faqSchema     = flatSchemas.find(s => s['@type'] === 'FAQPage');
+
+  var schemaHeadline    = articleSchema?.headline?.trim() || '';
+  var schemaDesc        = articleSchema?.description?.trim() || '';
+  var schemaDatePub     = articleSchema?.datePublished || '';
+  var schemaDateMod     = articleSchema?.dateModified || '';
+  var schemaAuthorName  = (articleSchema?.author?.name || articleSchema?.author?.[0]?.name || '').trim();
+  var schemaImage       = articleSchema?.image?.url || articleSchema?.image || '';
+  var schemaUrl         = articleSchema?.url || '';
+
+  var now = new Date();
+  var thisYear = now.getFullYear().toString();
+  var thisMonth = (now.getMonth()+1).toString().padStart(2,'0');
+  var today = thisYear + '-' + thisMonth;
+
+  // ── Check functions ──
+  function ok(label, value, note) {
+    results.push({ status:'ok', label, value, note });
+  }
+  function warn(label, value, fix, severity) {
+    results.push({ status:'warn', label, value, fix, severity: severity||'medium' });
+  }
+  function err(label, value, fix) {
+    results.push({ status:'err', label, value, fix, severity:'high' });
+  }
+
+  // ── 1. Title tag ──
+  if (!title) err('Title tag', 'MISSING', 'Voeg <title> toe met primair keyword (50-60 chars)');
+  else if (title.length < 40) warn('Title tag te kort', title + ' (' + title.length + ' chars)', 'Breid uit naar 50-60 chars', 'low');
+  else if (title.length > 65) warn('Title tag te lang', title + ' (' + title.length + ' chars)', 'Trim naar 50-60 chars — wordt afgekapt in Google', 'medium');
+  else ok('Title tag', title + ' (' + title.length + ' chars)', '✓ Goede lengte');
+
+  // ── 2. H1 vs Title consistency ──
+  if (!h1) err('H1', 'MISSING', 'Voeg exact 1 H1 toe met primair keyword');
+  else {
+    var titleCore = title.split(/[|\-–:]/)[0].trim().toLowerCase();
+    var h1Core = h1.toLowerCase().substring(0,60);
+    var overlap = titleCore.split(' ').filter(w => w.length > 3 && h1Core.includes(w)).length;
+    if (overlap === 0) warn('H1 ↔ Title inconsistentie', 'H1: "'+h1.substring(0,60)+'" / Title: "'+title.substring(0,60)+'"', 'H1 en Title moeten hetzelfde primaire keyword bevatten', 'high');
+    else ok('H1 ↔ Title overlap', 'H1: "'+h1.substring(0,50)+'"', '✓ Keyword overlap gevonden');
+  }
+
+  // ── 3. og:title ──
+  if (!ogTitle) err('og:title', 'MISSING', 'Voeg <meta property="og:title"> toe — identiek aan je title tag');
+  else {
+    var sim = ogTitle.toLowerCase().split(' ').filter(w => w.length > 3 && title.toLowerCase().includes(w)).length;
+    if (sim === 0) warn('og:title ↔ Title mismatch', 'og:title: "'+ogTitle+'" / title: "'+title+'"', 'og:title moet overeenkomen met je <title> tag', 'high');
+    else ok('og:title', ogTitle.substring(0,60), '✓ Consistent met title');
+  }
+
+  // ── 4. twitter:title ──
+  if (!twTitle) warn('twitter:title', 'MISSING', 'Voeg <meta name="twitter:title"> toe', 'medium');
+  else {
+    var simTw = twTitle.toLowerCase().split(' ').filter(w => w.length > 3 && title.toLowerCase().includes(w)).length;
+    if (simTw === 0) warn('twitter:title ↔ Title mismatch', '"'+twTitle+'"', 'Zet gelijk aan title tag', 'medium');
+    else ok('twitter:title', twTitle.substring(0,60), '✓ Consistent');
+  }
+
+  // ── 5. Schema headline ──
+  if (!schemaHeadline && articleSchema) warn('Schema headline', 'MISSING in Article schema', 'Voeg "headline": "'+title+'" toe aan je Article schema', 'high');
+  else if (schemaHeadline) {
+    var schSim = schemaHeadline.toLowerCase().split(' ').filter(w => w.length > 3 && title.toLowerCase().includes(w)).length;
+    if (schSim === 0) warn('Schema headline ↔ Title mismatch', '"'+schemaHeadline+'"', 'Schema headline moet overeenkomen met je <title> tag', 'high');
+    else ok('Schema headline', '"'+schemaHeadline.substring(0,60)+'"', '✓ Consistent met title');
+  }
+  if (!articleSchema) warn('Article schema', 'MISSING', 'Voeg Article/BlogPosting JSON-LD toe aan <head>', 'high');
+
+  // ── 6. dateModified ──
+  if (!schemaDateMod && articleSchema) err('Schema dateModified', 'MISSING', 'Voeg "dateModified": "'+now.toISOString().split('T')[0]+'" toe aan je Article schema');
+  else if (schemaDateMod) {
+    var modYear = schemaDateMod.substring(0,4);
+    var modMonth = schemaDateMod.substring(0,7);
+    if (modYear !== thisYear) warn('Schema dateModified — jaar verouderd', '"'+schemaDateMod+'"', 'Update naar '+now.toISOString().split('T')[0]+' — Google ziet dit als verouderd', 'high');
+    else if (modMonth !== today) warn('Schema dateModified — maand niet actueel', '"'+schemaDateMod+'"', 'Update naar '+now.toISOString().split('T')[0]+' na elke content update', 'medium');
+    else ok('Schema dateModified', '"'+schemaDateMod+'"', '✓ Actueel');
+  }
+
+  // ── 7. datePublished ──
+  if (!schemaDatePub && articleSchema) warn('Schema datePublished', 'MISSING', 'Voeg "datePublished" toe aan Article schema', 'medium');
+  else if (schemaDatePub) {
+    ok('Schema datePublished', '"'+schemaDatePub+'"', '');
+  }
+
+  // ── 8. Meta description ──
+  if (!metaDesc) err('Meta description', 'MISSING', 'Voeg <meta name="description"> toe (150-160 chars)');
+  else if (metaDesc.length < 100) warn('Meta description te kort', metaDesc.length+' chars', 'Breid uit naar 150-160 chars', 'medium');
+  else if (metaDesc.length > 165) warn('Meta description te lang', metaDesc.length+' chars — wordt afgekapt', 'Trim naar 150-160 chars', 'low');
+  else ok('Meta description', metaDesc.length+' chars', '✓ Goede lengte');
+
+  // ── 9. og:description ──
+  if (!ogDesc) warn('og:description', 'MISSING', 'Voeg <meta property="og:description"> toe', 'low');
+  else ok('og:description', ogDesc.substring(0,60)+'…', '✓ Aanwezig');
+
+  // ── 10. og:image ──
+  if (!ogImage) warn('og:image', 'MISSING', 'Voeg og:image toe (aanbevolen: 1200×630px)', 'medium');
+  else {
+    if (!ogImage.startsWith('http')) warn('og:image — relatieve URL', ogImage, 'Gebruik absolute URL (https://...)', 'high');
+    else ok('og:image', ogImage.substring(0,60)+'…', '');
+    if (ogImage === twImage || !twImage) {
+      if (!twImage) warn('twitter:image', 'MISSING', 'Voeg twitter:image toe (kan zelfde zijn als og:image)', 'low');
+    } else {
+      ok('twitter:image', twImage.substring(0,60)+'…', '');
+    }
+  }
+
+  // ── 11. twitter:card ──
+  if (!twCard) warn('twitter:card', 'MISSING', 'Voeg <meta name="twitter:card" content="summary_large_image"> toe', 'medium');
+  else ok('twitter:card', twCard, '');
+
+  // ── 12. canonical ──
+  if (!canonical) warn('Canonical tag', 'MISSING', 'Voeg <link rel="canonical" href="https://..."> toe', 'medium');
+  else {
+    if (!canonical.startsWith('http')) warn('Canonical — relatieve URL', canonical, 'Gebruik absolute URL', 'high');
+    else ok('Canonical', canonical, '');
+  }
+
+  // ── 13. og:url ──
+  if (!ogUrl) warn('og:url', 'MISSING', 'Voeg <meta property="og:url"> toe — zelfde als canonical', 'low');
+  else if (canonical && ogUrl !== canonical) warn('og:url ↔ Canonical mismatch', 'og:url: '+ogUrl+' / canonical: '+canonical, 'og:url en canonical moeten identiek zijn', 'high');
+  else ok('og:url', ogUrl.substring(0,60), '✓ Consistent met canonical');
+
+  // ── 14. Schema author ──
+  if (articleSchema && !schemaAuthorName) warn('Schema author', 'MISSING', 'Voeg "author": {"@type":"Person","name":"Jouw naam"} toe aan Article schema', 'medium');
+  else if (schemaAuthorName) ok('Schema author', '"'+schemaAuthorName+'"', '');
+
+  // ── 15. viewport ──
+  if (!viewport) err('Meta viewport', 'MISSING', 'Voeg <meta name="viewport" content="width=device-width, initial-scale=1"> toe');
+  else ok('Meta viewport', viewport, '✓ Aanwezig');
+
+  // ── 16. Year in content ──
+  var bodyText = (doc.body?.innerText || '').toLowerCase();
+  var lastYear = (thisYear - 1).toString();
+  var yearMatches = (html.match(/202[0-9]/g) || []);
+  var oldYears = yearMatches.filter(y => parseInt(y) < parseInt(thisYear) - 1);
+  if (oldYears.length > 3) warn('Verouderde jaren in HTML', 'Gevonden: '+[...new Set(oldYears)].join(', '), 'Controleer of '+[...new Set(oldYears)].join('/')+ ' moet worden bijgewerkt naar '+thisYear, 'medium');
+  else if (oldYears.length > 0) ok('Jaren in HTML', 'Verouderde jaren: '+[...new Set(oldYears)].join(', '), '⚠ Controleer of updates nodig zijn');
+  else ok('Jaren in HTML', 'Alleen actuele jaren gevonden', '✓');
+
+  // ── Render results ──
+  var errs  = results.filter(r => r.status === 'err');
+  var warns = results.filter(r => r.status === 'warn');
+  var oks   = results.filter(r => r.status === 'ok');
+
+  var score = Math.round((oks.length / results.length) * 100);
+  var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : 'var(--red)';
+
+  var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;">'
+    + '<div><span style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
+    + '<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
+    + '<div style="font-size:13px;color:var(--muted);">'
+    + '<span style="color:var(--red);">'+errs.length+' fouten</span> · '
+    + '<span style="color:var(--gold);">'+warns.length+' waarschuwingen</span> · '
+    + '<span style="color:var(--green);">'+oks.length+' ok</span>'
+    + '</div></div>';
+
+  function renderRow(r) {
+    var icon = r.status==='err' ? '🔴' : r.status==='warn' ? '🟡' : '✅';
+    var bg = r.status==='err' ? 'rgba(244,63,63,.06)' : r.status==='warn' ? 'rgba(251,191,36,.04)' : 'rgba(74,222,128,.04)';
+    var border = r.status==='err' ? 'rgba(244,63,63,.25)' : r.status==='warn' ? 'rgba(251,191,36,.2)' : 'rgba(74,222,128,.15)';
+    return '<div style="padding:10px 14px;margin-bottom:6px;background:'+bg+';border:1px solid '+border+';border-radius:6px;">'
+      + '<div style="display:flex;align-items:flex-start;gap:8px;">'
+      + '<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
+      + '<div style="flex:1;">'
+      + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
+      + '<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      + (r.fix ? '<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>' : '')
+      + (r.note ? '<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>' : '')
+      + '</div></div></div>';
+  }
+
+  if (errs.length) html_out += '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
+  if (oks.length) {
+    html_out += '<details style="margin-top:10px;"><summary style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
+  }
+
+  document.getElementById('metaCheckResults').innerHTML = html_out;
+}
 
 // ── Pre-fill from Workflow Manager URL params ──────────────
 (function(){
