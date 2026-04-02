@@ -377,6 +377,31 @@ let gscQueries = [];
 
 const RAILWAY = 'https://contentscale-platform-production.up.railway.app';
 
+// ── Pre-fill from Workflow Manager URL params ──────────────
+(function(){
+  const p = new URLSearchParams(window.location.search);
+  if(!p.get('url') && !p.get('kw')) return;
+  function fill(){
+    setMode('deep');
+    if(p.get('url'))  document.getElementById('dUrl').value  = p.get('url');
+    if(p.get('kw'))   document.getElementById('dKw').value   = p.get('kw');
+    if(p.get('pos'))  document.getElementById('dPos').value  = p.get('pos');
+    if(p.get('impr')) document.getElementById('dImpr').value = p.get('impr');
+    if(p.get('ctr'))  document.getElementById('dCtr').value  = p.get('ctr');
+    if(p.get('mob'))  document.getElementById('dMob').value  = p.get('mob');
+    if(p.get('wf'))   window._wfId = p.get('wf');
+    const deepView = document.getElementById('deepView');
+    if(!deepView) return;
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:12px 18px;margin-bottom:14px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:#fbbf24;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    banner.innerHTML = '<span>✓ Pre-filled vanuit Workflow Manager — paste Pagina HTML hieronder voor beste resultaat. Competitor HTML is optioneel (defaultt naar Surfer SEO + MarketMuse benchmark).</span>'
+      + (p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;margin-left:auto;white-space:nowrap;">← Terug naar Workflow</a>' : '');
+    deepView.insertBefore(banner, deepView.firstChild);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
+  else fill();
+})();
+
 function setMode(m) {
   document.getElementById('bulkView').className = m==='bulk'?'active':'';
   document.getElementById('deepView').className = m==='deep'?'active':'';
