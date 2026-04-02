@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Recommendations | ContentScale</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px 80px;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+
+/* Summary bar */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+@media(max-width:600px){.summary{grid-template-columns:1fr 1fr;}}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center;}
+.sum-n{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-bottom:3px;}
+.sum-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Filter */
+.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.filter-bar select{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 11px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--muted);outline:none;cursor:pointer;}
+.filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
+
+/* Recommendation cards */
+.rec-list{display:flex;flex-direction:column;gap:12px;}
+
+.rec-card{border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.rec-card.type-quickwin{border-left:4px solid var(--green);}
+.rec-card.type-ctr{border-left:4px solid var(--blue);}
+.rec-card.type-content{border-left:4px solid var(--gold);}
+.rec-card.type-rewrite{border-left:4px solid var(--orange);}
+.rec-card.type-authority{border-left:4px solid var(--purple);}
+.rec-card.type-build{border-left:4px solid var(--dim);}
+
+.rec-head{background:var(--card);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+.rec-badge{flex-shrink:0;padding:4px 10px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;white-space:nowrap;margin-top:2px;}
+.badge-quickwin{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.badge-ctr{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.badge-content{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.badge-rewrite{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
+.badge-authority{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
+.badge-build{background:rgba(71,85,105,.15);color:var(--dim);border:1px solid rgba(71,85,105,.3);}
+
+.rec-main{flex:1;min-width:200px;}
+.rec-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-bottom:5px;word-break:break-all;}
+.rec-kw{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.rec-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.03em;color:var(--ink);margin-bottom:5px;}
+.rec-why{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;}
+.rec-action{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:flex-start;gap:6px;}
+.rec-action::before{content:'→';color:var(--gold);flex-shrink:0;}
+
+.rec-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.meta-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:4px;border:1px solid var(--border);color:var(--dim);}
+.meta-chip strong{color:var(--muted);}
+
+/* Pre-filled info */
+.prefill-box{background:var(--surface);border-radius:8px;padding:12px 16px;margin:0 20px 0 0;min-width:200px;max-width:280px;flex-shrink:0;}
+@media(max-width:700px){.prefill-box{max-width:100%;margin:0;}}
+.prefill-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;}
+.prefill-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:11px;}
+.prefill-row.auto{color:var(--green);}
+.prefill-row.manual{color:var(--dim);}
+.prefill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-auto{background:var(--green);}
+.dot-manual{background:var(--dim);}
+
+/* Action button */
+.rec-foot{background:rgba(255,255,255,.02);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.action-btn{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;padding:10px 28px;border-radius:7px;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .18s;}
+.action-btn-gold{background:var(--gold);color:#000;}
+.action-btn-gold:hover{background:#e6b020;transform:translateY(-1px);}
+.action-btn-blue{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.action-btn-blue:hover{background:var(--blue);color:#000;}
+.time-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:5px;}
+
+.empty{text-align:center;padding:60px 20px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--sub);margin-bottom:8px;}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO RECOMMENDATIONS ENGINE</div>
+  <div style="display:flex;gap:8px;">
+    <a href="/audit-workflow" class="btn btn-muted">← Workflow Manager</a>
+    <a href="/audit-seo" class="btn btn-muted">🔬 PULSE+NEXUS</a>
+    <button class="btn btn-muted" onclick="location.reload()">↺ Refresh</button>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="summary" id="summary"></div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <select id="fType" onchange="render()">
+    <option value="all">All recommendations</option>
+    <option value="quickwin">⚡ Quick Wins</option>
+    <option value="ctr">📈 CTR Fix</option>
+    <option value="content">📝 Content Upgrade</option>
+    <option value="rewrite">✏️ Rewrite</option>
+    <option value="authority">🔗 Authority</option>
+  </select>
+  <select id="fPri" onchange="render()">
+    <option value="all">All priorities</option>
+    <option value="high">🔴 High</option>
+    <option value="med">🟡 Medium</option>
+    <option value="low">🟢 Low</option>
+  </select>
+  <select id="fStatus" onchange="render()">
+    <option value="active">Not done</option>
+    <option value="all">All pages</option>
+    <option value="done">Done only</option>
+  </select>
+  <select id="fSort" onchange="render()">
+    <option value="impact">Sort: Impact</option>
+    <option value="position">Sort: Position</option>
+    <option value="impressions">Sort: Impressions</option>
+  </select>
+</div>
+
+<div class="rec-list" id="recList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var AUDIT_URL = '/audit-seo';
+var pages = [];
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+function load(){
+  try{ var p=localStorage.getItem('cs_wf_pages'); if(p) pages=JSON.parse(p); }catch(e){}
+}
+
+// ── Recommendation engine ─────────────────────────────────
+var RECS = {
+  quickwin: {
+    label:'Quick Win', badgeClass:'badge-quickwin', cardClass:'type-quickwin',
+    title:'Title & Meta — 30 Minute Win',
+    icon:'⚡',
+  },
+  ctr: {
+    label:'CTR Fix', badgeClass:'badge-ctr', cardClass:'type-ctr',
+    title:'CTR Surgery Needed',
+    icon:'📈',
+  },
+  content: {
+    label:'Content Upgrade', badgeClass:'badge-content', cardClass:'type-content',
+    title:'Content Upgrade — Full Audit',
+    icon:'📝',
+  },
+  rewrite: {
+    label:'Rewrite + Audit', badgeClass:'badge-rewrite', cardClass:'type-rewrite',
+    title:'Page Rewrite Required',
+    icon:'✏️',
+  },
+  authority: {
+    label:'Authority Gap', badgeClass:'badge-authority', cardClass:'type-authority',
+    title:'Content Good — Build Authority',
+    icon:'🔗',
+  },
+  build: {
+    label:'Build Content', badgeClass:'badge-build', cardClass:'type-build',
+    title:'Content Needs Building First',
+    icon:'🏗️',
+  },
+};
+
+function getRecommendation(p){
+  var pos   = p.position   || 0;
+  var ctr   = parseFloat(p.ctr) || 0;
+  var impr  = p.impressions || 0;
+  var score = parseFloat(p.scoreBefore) || 0;
+  var hasScore = p.scoreBefore !== '' && p.scoreBefore !== undefined;
+
+  // ── SCENARIO 1: Page 1 but low CTR ─────────────────────
+  if(pos>=1 && pos<=10 && ctr<2){
+    return {
+      type:'quickwin',
+      impactScore: 95,
+      why: 'Je staat op pagina 1 (positie '+Math.round(pos)+') maar CTR is slechts '+ctr.toFixed(1)+'%. '
+          +'Searchers zien je maar klikken niet. De title of meta description trekt niet genoeg aan.',
+      action: 'Herschrijf de title tag (≤60 chars) en meta description (≤155 chars). '
+             +'Voeg een getal, power word of urgentie-trigger toe.',
+      auditFocus: 'CTR Surgery — Stap 2 in PULSE+NEXUS',
+      time: '30 min',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML (voor werkelijke title)','Competitor HTML'],
+      quickWin:  true,
+    };
+  }
+
+  // ── SCENARIO 2: Page 1, CTR ok — already winning ───────
+  if(pos>=1 && pos<=10 && ctr>=2){
+    if(hasScore && score>=85){
+      return {
+        type:'authority',
+        impactScore: 40,
+        why: 'Positie '+Math.round(pos)+', CTR '+ctr.toFixed(1)+'%, score '+score+'/100. '
+            +'Pagina presteert goed. Verdere groei komt via linkbuilding en autoriteit.',
+        action: 'Focus op interne links en externe backlinks. '
+               +'Voeg expertcitaten en fresh data toe (2026).',
+        auditFocus: 'NEXUS Signals — Stap 6 in PULSE+NEXUS',
+        time: '1-2 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Sitemap URLs (voor interne links)','Competitor HTML'],
+      };
+    }
+    return null; // Already performing well, no urgent action
+  }
+
+  // ── SCENARIO 3: Position 11-20 — closest to page 1 ─────
+  if(pos>=11 && pos<=20){
+    if(ctr<1.5){
+      return {
+        type:'ctr',
+        impactScore: 92,
+        why: 'Positie '+Math.round(pos)+' met CTR '+ctr.toFixed(1)+'%. '
+            +'Je staat bijna op pagina 1 maar de CTR is laag. '
+            +'Twee problemen: title trekt niet aan EN content net niet sterk genoeg.',
+        action: 'Stap 1: title + meta herschrijven (30 min). '
+               +'Stap 2: volledige PULSE+NEXUS audit voor de laatste push naar pagina 1.',
+        auditFocus: 'Start met Stap 2 (CTR Surgery) dan Stap 1 (Priority Actions)',
+        time: '1-3 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
+        quickWin:  true,
+      };
+    }
+    if(hasScore && score<70){
+      return {
+        type:'content',
+        impactScore: 90,
+        why: 'Positie '+Math.round(pos)+', score '+score+'/100. '
+            +'Bijna pagina 1 maar de content is te zwak. '
+            +'Met een score boven 80 heb je grote kans om naar de top te stijgen.',
+        action: 'Volledige PULSE+NEXUS audit. Focus op content gaps, PULSE rewrites en schema.',
+        auditFocus: 'Alle 10 stappen — Priority Actions eerst',
+        time: '2-4 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML','Competitor HTML (Surfer SEO + MarketMuse als default)','Sitemap URLs'],
+      };
+    }
+    return {
+      type:'content',
+      impactScore: 88,
+      why: 'Positie '+Math.round(pos)+' — één sterke audit verwijderd van pagina 1. '
+          +( impr>2000 ? impr.toLocaleString()+' impressies betekent veel te winnen. ' : '')
+          +(hasScore ? 'Score: '+score+'/100.' : 'ContentScore nog onbekend — scan eerst.'),
+      action: 'Volledige PULSE+NEXUS audit — focus op content gaps en interne links.',
+      auditFocus: 'Alle 10 stappen — Priority Actions eerst',
+      time: '2-3 uur',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
+    };
+  }
+
+  // ── SCENARIO 4: Position 21-30 ──────────────────────────
+  if(pos>=21 && pos<=30){
+    if(hasScore && score<70){
+      return {
+        type:'rewrite',
+        impactScore: 82,
+        why: 'Positie '+Math.round(pos)+', score '+score+'/100. '
+            +'Content moet herschreven worden én de pagina heeft een volledige audit nodig. '
+            +(impr>1000 ? 'Met '+impr.toLocaleString()+' impressies is de potentie er.' : ''),
+        action: 'Pagina herschrijven op basis van PULSE+NEXUS aanbevelingen. '
+               +'Daarna opnieuw scannen en score vergelijken.',
+        auditFocus: 'Stap 5 (PULSE rewrites) + Stap 4 (Content Gap) zijn prioriteit',
+        time: '3-5 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML (verplicht voor rewrite analyse)','Competitor HTML','Sitemap URLs'],
+      };
+    }
+    return {
+      type:'content',
+      impactScore: 78,
+      why: 'Positie '+Math.round(pos)+'. Pagina heeft potentie maar mist autoriteit of content diepte. '
+          +(impr>500 ? impr.toLocaleString()+' impressies — het onderwerp heeft vraag.' : ''),
+      action: 'Volledige audit — focus op NEXUS signals, interne links en schema.',
+      auditFocus: 'Alle 10 stappen',
+      time: '2-3 uur',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
+    };
+  }
+
+  // ── SCENARIO 5: Position 31-60 ──────────────────────────
+  if(pos>=31 && pos<=60){
+    if(impr>1000){
+      return {
+        type:'rewrite',
+        impactScore: 70,
+        why: 'Positie '+Math.round(pos)+' met '+impr.toLocaleString()+' impressies. '
+            +'Veel zoekvolume maar Google vindt de pagina niet sterk genoeg voor pagina 1-3. '
+            +'Diepgaande audit + content rewrite is de enige weg omhoog.',
+        action: 'Diepgaande PULSE+NEXUS audit. Alle 10 stappen doorlopen. '
+               +'Daarna content rewrite en schema toevoegen.',
+        auditFocus: 'Alle 10 stappen — focus Stap 3 (Competitor Diff) en Stap 5 (PULSE rewrites)',
+        time: '4-6 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML (kritiek)','Competitor HTML','Sitemap URLs'],
+      };
+    }
+    return {
+      type:'content',
+      impactScore: 55,
+      why: 'Positie '+Math.round(pos)+(impr<200?' met weinig impressies':'')+'. '
+          +'Content is te zwak of het onderwerp heeft weinig vraag. '
+          +'Audit geeft duidelijkheid welke richting het beste werkt.',
+      action: 'Audit om te bepalen of herschrijven of nieuwe aanpak nodig is.',
+      auditFocus: 'Stap 1 (Intent) en Stap 4 (Content Gap) eerst',
+      time: '1-3 uur',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML','Competitor HTML'],
+    };
+  }
+
+  // ── SCENARIO 6: Position 60+ ────────────────────────────
+  if(pos>60){
+    if(impr>500){
+      return {
+        type:'build',
+        impactScore: 40,
+        why: 'Positie '+Math.round(pos)+' maar '+impr.toLocaleString()+' impressies — er is vraag. '
+            +'Google beoordeelt deze pagina als te zwak. Fundamentele content rebuild nodig.',
+        action: 'Content volledig opnieuw schrijven met PULSE+NEXUS als briefing. '
+               +'Focus op E-E-A-T, schema en content diepte.',
+        auditFocus: 'Alle 10 stappen als content brief gebruiken',
+        time: '5+ uur',
+        prefilled: ['URL','Keyword'],
+        manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs','GSC queries'],
+      };
+    }
+    return {
+      type:'build',
+      impactScore: 25,
+      why: 'Positie '+Math.round(pos)+' met laag zoekvolume. '
+          +'Eerst bepalen of dit zoekwoord de moeite waard is.',
+      action: 'Keyword research eerst. Dan beslissen: rewrite of nieuw artikel.',
+      auditFocus: 'Stap 1 (Intent analyse) als startpunt',
+      time: 'Nader te bepalen',
+      prefilled: ['URL','Keyword'],
+      manual:    ['Alles — pagina heeft weinig data'],
+    };
+  }
+
+  // No position data
+  return {
+    type:'content',
+    impactScore: 50,
+    why: 'Geen GSC data beschikbaar. Voeg positie en impressies toe vanuit GSC voor een betere aanbeveling.',
+    action: 'Voeg GSC data toe, scan ContentScore, dan volledige audit.',
+    auditFocus: 'Alle 10 stappen',
+    time: 'Onbekend',
+    prefilled: ['URL','Keyword'],
+    manual:    ['GSC data','Pagina HTML','Competitor HTML'],
+  };
+}
+
+function buildAuditUrl(p){
+  var params = new URLSearchParams();
+  params.set('url', p.url);
+  if(p.keyword)     params.set('kw',   p.keyword);
+  if(p.position)    params.set('pos',  p.position);
+  if(p.impressions) params.set('impr', p.impressions);
+  if(p.ctr)         params.set('ctr',  p.ctr);
+  if(p.id)          params.set('wf',   p.id); // workflow callback
+  return AUDIT_URL + '?' + params.toString();
+}
+
+function render(){
+  var fType   = document.getElementById('fType').value;
+  var fPri    = document.getElementById('fPri').value;
+  var fStatus = document.getElementById('fStatus').value;
+  var fSort   = document.getElementById('fSort').value;
+
+  var arr = pages.filter(function(p){
+    if(fStatus==='active' && p.status==='done') return false;
+    if(fStatus==='done'   && p.status!=='done') return false;
+    if(fPri!=='all' && p.priority!==fPri) return false;
+    return true;
+  }).map(function(p){
+    return { page:p, rec:getRecommendation(p) };
+  }).filter(function(x){
+    if(!x.rec) return false;
+    if(fType!=='all' && x.rec.type!==fType) return false;
+    return true;
+  });
+
+  // Sort
+  if(fSort==='impact')      arr.sort(function(a,b){ return b.rec.impactScore - a.rec.impactScore; });
+  else if(fSort==='position') arr.sort(function(a,b){ return (a.page.position||999)-(b.page.position||999); });
+  else if(fSort==='impressions') arr.sort(function(a,b){ return b.page.impressions-a.page.impressions; });
+
+  // Summary
+  var types = {};
+  arr.forEach(function(x){ types[x.rec.type]=(types[x.rec.type]||0)+1; });
+  var quickwins = arr.filter(function(x){ return x.rec.quickWin; }).length;
+  document.getElementById('summary').innerHTML =
+    '<div class="sum-card"><div class="sum-n" style="color:var(--blue)">'+arr.length+'</div><div class="sum-l">Total pages</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--green)">'+quickwins+'</div><div class="sum-l">Quick wins</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--gold)">'+(types.content||0)+'</div><div class="sum-l">Need audit</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--orange)">'+(types.rewrite||0)+'</div><div class="sum-l">Need rewrite</div></div>';
+
+  if(!arr.length){
+    document.getElementById('recList').innerHTML='<div class="empty"><h3>No Pages</h3><p>Add pages in the Workflow Manager first, or adjust filters.</p></div>';
+    return;
+  }
+
+  document.getElementById('recList').innerHTML = arr.map(function(x,i){
+    var p   = x.page;
+    var rec = x.rec;
+    var R   = RECS[rec.type] || RECS.content;
+    var auditUrl = buildAuditUrl(p);
+
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
+    if(shortUrl.length>60) shortUrl=shortUrl.slice(0,60)+'…';
+
+    var gscChips = '';
+    if(p.position)    gscChips+='<span class="meta-chip"><strong>Pos</strong> '+Math.round(p.position)+'</span>';
+    if(p.impressions) gscChips+='<span class="meta-chip"><strong>Impr</strong> '+p.impressions.toLocaleString()+'</span>';
+    if(p.ctr)         gscChips+='<span class="meta-chip"><strong>CTR</strong> '+parseFloat(p.ctr).toFixed(1)+'%</span>';
+    if(p.scoreBefore) gscChips+='<span class="meta-chip"><strong>Score</strong> '+p.scoreBefore+'/100</span>';
+
+    var prefillHtml = rec.prefilled.map(function(item){
+      return '<div class="prefill-row auto"><span class="prefill-dot dot-auto"></span>'+item+'</div>';
+    }).join('');
+    var manualHtml = rec.manual.map(function(item){
+      return '<div class="prefill-row manual"><span class="prefill-dot dot-manual"></span>'+item+'</div>';
+    }).join('');
+
+    return '<div class="rec-card '+R.cardClass+'">'
+
+      // Head
+      +'<div class="rec-head">'
+      +'<div><span class="rec-badge '+R.badgeClass+'">'+R.icon+' '+R.label+'</span></div>'
+      +'<div class="rec-main">'
+      +'<div class="rec-url">'+shortUrl+'</div>'
+      +(p.keyword?'<div class="rec-kw">'+p.keyword+'</div>':'')
+      +'<div class="rec-title">'+rec.title+'</div>'
+      +'<div class="rec-why">'+rec.why+'</div>'
+      +'<div class="rec-action">'+rec.action+'</div>'
+      +(gscChips?'<div class="rec-meta">'+gscChips+'</div>':'')
+      +'</div>'
+
+      // Pre-fill info
+      +'<div class="prefill-box">'
+      +'<div class="prefill-title">In PULSE+NEXUS</div>'
+      +(prefillHtml?'<div style="margin-bottom:6px;font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.08em;color:var(--green);text-transform:uppercase;">✓ Auto-ingevuld</div>'+prefillHtml:'')
+      +(manualHtml?'<div style="margin:8px 0 4px;font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;">✎ Handmatig</div>'+manualHtml:'')
+      +'</div>'
+      +'</div>'
+
+      // Footer with action
+      +'<div class="rec-foot">'
+      +'<a href="'+auditUrl+'" target="_blank" class="action-btn action-btn-gold">🔬 Open in PULSE+NEXUS →</a>'
+      +'<a href="'+p.url+'" target="_blank" class="action-btn action-btn-blue">↗ Open pagina</a>'
+      +'<span class="time-chip">⏱ '+rec.time+'</span>'
+      +(rec.auditFocus?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);letter-spacing:.06em;">'+rec.auditFocus+'</span>':'')
+      +'</div>'
+
+      +'</div>';
+  }).join('');
+}
+
+load();
+render();
+</script>
+</body>
+</html>
