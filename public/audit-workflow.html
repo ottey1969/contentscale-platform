@@ -184,7 +184,7 @@ img,table,iframe{max-width:100%;}
   <a href="https://contentscale.site" class="brand">ContentScale</a>
   <div class="tool-title">SEO AUDIT WORKFLOW MANAGER</div>
   <div class="topbar-right">
-    <button class="btn btn-gold" onclick="document.getElementById('gscImportInput').click()">📊 Import GSC CSV</button>
+    <button class="btn btn-gold" onclick="document.getElementById('gscImportInput').click()">📊 Import GSC CSV (Pages + Queries)</button>
     <button class="btn btn-purple" onclick="scanAllScores()">⚡ Auto-Score All</button>
     <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
     <button class="btn btn-purple" onclick="syncToServer()" id="syncBtn" title="Save to server — accessible from any device">☁ Save to Server</button>
@@ -194,7 +194,7 @@ img,table,iframe{max-width:100%;}
     <a href="/audit-recommendations" class="btn btn-gold">🎯 Recommendations</a>
     <button class="btn btn-red" onclick="clearAll()">✕ Clear</button>
     <input type="file" id="importInput" accept=".csv" onchange="importCSV(this)">
-    <input type="file" id="gscImportInput" accept=".csv" onchange="importGSC(this)">
+    <input type="file" id="gscImportInput" accept=".csv" multiple onchange="importGSC(this)">
   </div>
 </div>
 
@@ -217,6 +217,8 @@ img,table,iframe{max-width:100%;}
 
 <div class="add-panel">
   <div class="add-panel-title">Add Pages to Audit Queue</div>
+
+  <!-- Single URL row -->
   <div class="add-row">
     <input class="ai-url" id="newUrl" placeholder="https://site.com/page" onkeydown="if(event.key==='Enter')addPage()">
     <input class="ai-kw" id="newKw" placeholder="Primary keyword" onkeydown="if(event.key==='Enter')addPage()">
@@ -225,10 +227,42 @@ img,table,iframe{max-width:100%;}
     <input class="ai-impr" id="newImpr" type="number" placeholder="Impressions">
     <button class="btn btn-gold" onclick="addPage()">+ Add</button>
   </div>
-  <textarea class="bulk-area" id="bulkArea" placeholder="Paste multiple URLs (one per line) then click Bulk Add — works with sitemap exports, GSC URL lists, etc."></textarea>
-  <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
-    <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
-    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);">Paste from sitemap / GSC / any URL list</span>
+
+  <!-- Sitemap fetch -->
+  <div style="margin-top:12px;padding:14px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Sitemap Importeren</div>
+    <div class="add-row" style="flex-wrap:wrap;">
+      <input id="sitemapUrl" placeholder="https://contentscale.site/sitemap.xml" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;" onkeydown="if(event.key==='Enter')fetchSitemap()">
+      <button class="btn btn-blue" onclick="fetchSitemap()" id="sitemapBtn">↓ Fetch Sitemap</button>
+    </div>
+    <div id="sitemapStatus" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
+
+    <!-- Sitemap preview + filter -->
+    <div id="sitemapPreview" style="display:none;margin-top:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <input id="sitemapFilter" placeholder="Filter op pad... bijv. /blog of /services" oninput="filterSitemapUrls()"
+          style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
+        <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Toon alleen sitemap URLs die ook in je GSC data staan">🔗 Filter op GSC</button>
+        <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ Alles</button>
+        <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ Niets</button>
+        <span id="sitemapSelCount" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+      </div>
+      <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-gold" onclick="addSelectedSitemapUrls()">+ Voeg geselecteerde toe aan queue</button>
+        <button class="btn btn-muted" onclick="document.getElementById('sitemapPreview').style.display='none'">✕ Sluiten</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk paste -->
+  <div style="margin-top:10px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Plakken</div>
+    <textarea class="bulk-area" id="bulkArea" placeholder="Plak meerdere URLs (één per regel) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
+    <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
+      <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);">Eén URL per regel</span>
+    </div>
   </div>
 </div>
 
@@ -777,212 +811,335 @@ function exportClientReport(){
 
 // ── Import GSC CSV → auto-populate pages ──────────────────
 // GSC export: Performance → Pages tab → Export CSV
+// ── GSC import — Pages CSV + Queries CSV beide tegelijk ────
+var _gscQueryMap = {}; // url → [query, query, ...]
+
 function importGSC(input){
-  var file=input.files[0];if(!file)return;
-  var r=new FileReader();
-  r.onload=function(e){
-    var lines=e.target.result.trim().split('\n');
-    if(lines.length<2){toast('⚠ Invalid GSC CSV');return;}
-    var header=lines[0].toLowerCase().replace(/"/g,'').split(',');
-    var iUrl=header.findIndex(function(h){return h.includes('page')||h.includes('url')||h.includes('top page');});
-    var iImpr=header.findIndex(function(h){return h.includes('impression');});
-    var iCtr=header.findIndex(function(h){return h.includes('ctr');});
-    var iPos=header.findIndex(function(h){return h.includes('position')||h.includes('pos');});
-    if(iUrl<0)iUrl=0;
-    if(iImpr<0)iImpr=2;
-    if(iPos<0)iPos=4;
-    var added=0,updated=0;
-    for(var i=1;i<lines.length;i++){
-      var cols=lines[i].replace(/"/g,'').split(',');
-      var url=(cols[iUrl]||'').trim();
-      if(!url||!url.includes('.'))continue;
-      var impr=parseInt(cols[iImpr])||0;
-      var pos=parseFloat(cols[iPos])||0;
-      var ctr=parseFloat((cols[iCtr]||'0').replace('%',''))||0;
-      // Auto priority: pos 11-30 = high, 31-60 = med, rest = low
-      // Priority based purely on GSC opportunity
-      // High: pos 11-30 (closest to page 1) OR pos 1-10 with low CTR (<2%)
-      // Med: pos 31-60 with decent impressions
-      // Low: pos 60+ or pos 1-10 with good CTR
-      var pri;
-      if(pos>=11&&pos<=30) pri='high';
-      else if(pos>=1&&pos<=10&&ctr<2) pri='high'; // on page 1 but low CTR
-      else if(pos>30&&pos<=60&&impr>500) pri='med';
-      else if(pos>30&&pos<=60) pri='med';
-      else if(pos>60) pri='low';
-      else pri='low'; // pos 1-10 with good CTR = not urgent
-      var existing=pages.find(function(p){return p.url===url;});
-      if(existing){
-        existing.position=pos;
-        existing.impressions=impr;
-        existing.priority=pri;
-        existing.updated=new Date().toISOString();
-        updated++;
-      } else {
-        pages.push(makePage(url,'',pri,pos,impr));
-        added++;
+  var files = Array.from(input.files);
+  if(!files.length) return;
+
+  var totalAdded = 0, totalUpdated = 0, queriesLoaded = 0;
+  var pending = files.length;
+
+  files.forEach(function(file){
+    var r = new FileReader();
+    r.onload = function(e){
+      var result = parseGSCFile(e.target.result);
+      if(result.type === 'pages'){
+        totalAdded += result.added;
+        totalUpdated += result.updated;
+      } else if(result.type === 'queries'){
+        queriesLoaded = result.count;
       }
+      pending--;
+      if(pending === 0){
+        save(); renderPages(); renderOverview();
+        var msg = '✅ GSC: ' + totalAdded + ' toegevoegd, ' + totalUpdated + ' bijgewerkt';
+        if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries geladen';
+        toast(msg);
+      }
+    };
+    r.readAsText(file);
+  });
+  input.value = '';
+}
+
+function parseGSCFile(raw){
+  var lines = raw.trim().split('\n');
+  if(lines.length < 2) return {type:'unknown'};
+  var header = lines[0].toLowerCase().replace(/"/g,'').split(',');
+
+  // Detect if this is a Queries CSV or Pages CSV
+  var isQueries = header.some(function(h){ return h.includes('query') || h.includes('search term'); });
+
+  if(isQueries){
+    // Queries CSV — build a query list (not linked to pages directly here)
+    // Store globally for use in PULSE+NEXUS
+    _gscQueryMap = {};
+    var iQuery = header.findIndex(function(h){ return h.includes('query')||h.includes('search term'); });
+    var iPos   = header.findIndex(function(h){ return h.includes('position'); });
+    var count  = 0;
+    for(var i=1;i<lines.length;i++){
+      var cols = lines[i].replace(/"/g,'').split(',');
+      var q = (cols[iQuery]||'').trim();
+      var pos = parseFloat(cols[iPos])||0;
+      if(q){ _gscQueryMap[q] = pos; count++; }
     }
-    save();renderPages();renderOverview();
-    toast('✅ GSC: '+added+' added, '+updated+' updated');
-  };
-  r.readAsText(file);
-  input.value='';
+    try{ localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap)); }catch(e){}
+    return {type:'queries', count:count};
+  }
+
+  // Pages CSV
+  var iUrl  = header.findIndex(function(h){ return h.includes('page')||h.includes('url')||h.includes('top page'); });
+  var iImpr = header.findIndex(function(h){ return h.includes('impression'); });
+  var iCtr  = header.findIndex(function(h){ return h.includes('ctr'); });
+  var iPos  = header.findIndex(function(h){ return h.includes('position')||h.includes('pos'); });
+  if(iUrl<0)iUrl=0; if(iImpr<0)iImpr=2; if(iPos<0)iPos=4;
+
+  var added=0, updated=0;
+  for(var i=1;i<lines.length;i++){
+    var cols = lines[i].replace(/"/g,'').split(',');
+    var url = (cols[iUrl]||'').trim();
+    if(!url||!url.includes('.')) continue;
+    var impr = parseInt(cols[iImpr])||0;
+    var pos  = parseFloat(cols[iPos])||0;
+    var ctr  = parseFloat((cols[iCtr]||'0').replace('%',''))||0;
+    var pri;
+    if(pos>=11&&pos<=30) pri='high';
+    else if(pos>=1&&pos<=10&&ctr<2) pri='high';
+    else if(pos>30&&pos<=60) pri='med';
+    else if(pos>60) pri='low';
+    else pri='low';
+    var existing = pages.find(function(p){ return p.url===url; });
+    if(existing){
+      existing.position=pos; existing.impressions=impr;
+      existing.priority=pri; existing.ctr=ctr;
+      existing.updated=new Date().toISOString();
+      updated++;
+    } else {
+      var np = makePage(url,'',pri,pos,impr);
+      np.ctr = ctr;
+      pages.push(np);
+      added++;
+    }
+  }
+  return {type:'pages', added:added, updated:updated};
 }
 
-// ── Auto-fetch ContentScore for all pages ──────────────────
-var scanQueue = [];
-var scanRunning = false;
+// ── Sitemap + GSC — groeperen in: in GSC / niet in GSC ─────
 
-async function scanAllScores() {
-  var unscored = pages.filter(function(p){ return !p.scoreBefore; });
-  if(!unscored.length){ toast('✅ All pages already have a score'); return; }
-  if(!confirm('Fetch ContentScore for ' + unscored.length + ' pages?\n\nThis runs one by one (1.5s between each).\nPriority will NOT be changed — GSC data is leading.\nScores are stored as reference only.')) return;
-  scanQueue = unscored.slice();
-  scanRunning = true;
-  toast('⚡ Scanning ' + scanQueue.length + ' pages...', 8000);
-  processNextScan();
+function addSelectedSitemapUrls(){
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if(!selected.length){ toast('⚠ Geen URLs geselecteerd'); return; }
+  var added=0, skipped=0;
+  selected.forEach(function(url){
+    if(pages.find(function(p){ return p.url===url; })){ skipped++; return; }
+    // Check if GSC data available from pages already imported
+    var gscEntry = _gscDataMap && _gscDataMap[url];
+    if(gscEntry){
+      var np = makePage(url,'',gscEntry.pri,gscEntry.pos,gscEntry.impr);
+      np.ctr = gscEntry.ctr;
+      pages.push(np);
+    } else {
+      pages.push(makePage(url,'','low',0,0));
+    }
+    added++;
+  });
+  save(); renderPages(); renderOverview();
+  document.getElementById('sitemapPreview').style.display='none';
+  document.getElementById('sitemapUrl').value='';
+  _sitemapUrls=[]; _sitemapFiltered=[];
+  document.getElementById('sitemapStatus').textContent='';
+  toast('✅ '+added+' toegevoegd'+(skipped?' · '+skipped+' al aanwezig':''));
 }
 
-async function processNextScan() {
-  if(!scanRunning || !scanQueue.length){
-    scanRunning = false;
-    save(); renderPages(); renderOverview();
-    toast('✅ Auto-score complete');
+// Global GSC data map for cross-referencing
+var _gscDataMap = {};
+
+// Build GSC map from imported pages
+function buildGscMap(){
+  _gscDataMap = {};
+  pages.forEach(function(p){
+    if(p.position>0 || p.impressions>0){
+      _gscDataMap[p.url] = {pos:p.position, impr:p.impressions, ctr:p.ctr||0, pri:p.priority};
+    }
+  });
+}
+
+// ── Main filter: show sitemap URLs in two groups ─────────────
+function filterSitemapByGSC(){
+  buildGscMap();
+  var gscUrls = Object.keys(_gscDataMap);
+  if(!gscUrls.length){
+    toast('⚠ Importeer eerst je GSC CSV — dan wordt de vergelijking gemaakt');
     return;
   }
-  var p = scanQueue.shift();
-  try {
-    var r = await fetch('https://app.contentscale.site/api/score?url=' + encodeURIComponent(p.url));
-    var d = await r.json();
-    if(d.success && d.score) {
-      p.scoreBefore = d.score;
-      p.updated = new Date().toISOString();
-      // Score stored — priority NOT changed (GSC data is leading)
-      var beforeEl = document.querySelector('[data-score-before="' + p.id + '"]');
-      if(beforeEl) beforeEl.value = d.score;
-      var shortUrl = '';
-      try { shortUrl = new URL(p.url).pathname || p.url; } catch(e) { shortUrl = p.url.slice(0,40); }
-      toast('📊 ' + shortUrl + ' → ' + d.score + '/100');
-    }
-  } catch(e) { /* silent fail — continue queue */ }
-  // Wait 1.5s between requests to not overwhelm server
-  setTimeout(processNextScan, 1500);
+  var inGSC    = _sitemapUrls.filter(function(u){ return _gscDataMap[u]; });
+  var notInGSC = _sitemapUrls.filter(function(u){ return !_gscDataMap[u]; });
+
+  renderSitemapGrouped(inGSC, notInGSC);
+  document.getElementById('sitemapStatus').innerHTML =
+    '<span style="color:var(--green)">🟢 '+inGSC.length+' in GSC</span>'
+    +' &nbsp; <span style="color:var(--gold)">🟡 '+notInGSC.length+' niet in GSC (niet geïndexeerd / nieuw)</span>'
+    +' &nbsp; <span style="color:var(--sub)">'+_sitemapUrls.length+' totaal</span>';
 }
 
-function stopScan() {
-  scanRunning = false;
-  scanQueue = [];
-  toast('⏹ Scan stopped');
-}
+function renderSitemapGrouped(inGSC, notInGSC){
+  var list = document.getElementById('sitemapUrlList');
+  var selCount = document.getElementById('sitemapSelCount');
 
-// Scan single page — no priority change
-async function scanOnePage(id) {
-  var p = pages.find(function(pg){ return pg.id===id; });
-  if(!p) return;
-  toast('⏳ Scanning...');
-  try {
-    var r = await fetch('https://app.contentscale.site/api/score?url=' + encodeURIComponent(p.url));
-    var d = await r.json();
-    if(d.success && d.score) {
-      p.scoreBefore = d.score;
-      p.updated = new Date().toISOString();
-      save();
-      // Update input if card is open
-      var el = document.querySelector('[data-score-before="' + id + '"]');
-      if(el) el.value = d.score;
-      // Update header score display
-      renderPages();
-      toast('📊 Score: ' + d.score + '/100' + (d.score < 70 ? ' — needs work' : d.score < 85 ? ' — qualified' : ' — elite'));
-    } else {
-      toast('⚠ No score yet — page may not be scanned. Open ContentScore first.');
-    }
-  } catch(e) {
-    toast('⚠ Could not fetch score — check connection');
+  function rowHtml(u, defaultChecked, gscData){
+    var shortUrl = u.replace(/^https?:\/\/[^/]+/,'') || '/';
+    var gscInfo = gscData
+      ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--green);margin-left:6px;">pos '+Math.round(gscData.pos)+(gscData.impr?' · '+gscData.impr.toLocaleString()+' impr':'')+'</span>'
+      : '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">niet in GSC</span>';
+    return '<div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(\'input\').click()">'
+      +'<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(defaultChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
+      +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      +gscInfo
+      +'<button onclick="event.stopPropagation();removeSitemapUrl(\''+u+'\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
+      +'</div>';
   }
+
+  var html = '';
+
+  // Group 1 — in GSC
+  if(inGSC.length){
+    // Sort by opportunity: pos 11-30 first
+    inGSC.sort(function(a,b){
+      var pa = _gscDataMap[a]?.pos || 999;
+      var pb = _gscDataMap[b]?.pos || 999;
+      var scoreA = (pa>=11&&pa<=30)?0:(pa>=1&&pa<=10)?1:(pa>30&&pa<=60)?2:3;
+      var scoreB = (pb>=11&&pb<=30)?0:(pb>=1&&pb<=10)?1:(pb>30&&pb<=60)?2:3;
+      return scoreA-scoreB || pa-pb;
+    });
+    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);padding:8px 8px 4px;border-bottom:1px solid rgba(74,222,128,.2);margin-bottom:4px;">'
+      +'🟢 In GSC — '+inGSC.length+' paginas (gesorteerd op kans)'
+      +'</div>';
+    html += inGSC.map(function(u){ return rowHtml(u, true, _gscDataMap[u]); }).join('');
+  }
+
+  // Group 2 — not in GSC
+  if(notInGSC.length){
+    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:12px 8px 4px;border-bottom:1px solid rgba(251,191,36,.2);margin-bottom:4px;margin-top:8px;">'
+      +'🟡 Niet in GSC — '+notInGSC.length+' paginas (niet geïndexeerd of nieuw)'
+      +'</div>'
+      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Deze paginas kent Google nog niet. Voeg toe om te onderzoeken waarom.</div>';
+    html += notInGSC.map(function(u){ return rowHtml(u, false, null); }).join('');
+  }
+
+  list.innerHTML = html || '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden.</div>';
+  updateSitemapCount();
 }
 
-// ── Server sync ────────────────────────────────────────────
-var SYNC_KEY = 'cs_wf_sync';
-var autoSaveTimer = null;
 
-async function syncToServer() {
-  var btn = document.getElementById('syncBtn');
-  if(btn) { btn.textContent = '☁ Saving...'; btn.disabled = true; }
-  var payload = {
-    project: project,
-    pages: pages,
-    savedAt: new Date().toISOString(),
-    key: (project.client||'default').replace(/\s+/g,'-').toLowerCase() + '-' + (project.site||'').replace(/https?:\/\//,'').split('/')[0]
-  };
+// ── Sitemap fetch + preview ─────────────────────────────────
+var _sitemapUrls = []; // all fetched URLs
+var _sitemapFiltered = []; // after filter
+
+async function fetchSitemap() {
+  var url = document.getElementById('sitemapUrl').value.trim();
+  if (!url) { toast('⚠ Voer een sitemap URL in'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+
+  var btn = document.getElementById('sitemapBtn');
+  var status = document.getElementById('sitemapStatus');
+  btn.textContent = '⏳ Fetching...';
+  btn.disabled = true;
+  status.textContent = 'Sitemap ophalen via server...';
+  status.style.color = 'var(--muted)';
+
   try {
-    var r = await fetch('/api/workflow/save', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+    // Use Railway server as proxy to avoid CORS
+    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/sitemap/urls', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: url})
     });
     var d = await r.json();
-    if(d.success) {
-      var ts = new Date().toLocaleTimeString();
-      setSyncStatus('✓ Saved to server at ' + ts, 'var(--green)');
-      try{localStorage.setItem(SYNC_KEY, payload.key);}catch(e){}
-      toast('☁ Saved to server');
-    } else {
-      setSyncStatus('⚠ Save failed — exported locally instead', 'var(--red)');
-      exportCSV();
+
+    if (!d.success || !d.urls || !d.urls.length) {
+      throw new Error(d.error || 'Geen URLs gevonden in sitemap');
     }
+
+    _sitemapUrls = d.urls;
+    _sitemapFiltered = d.urls.slice();
+    status.innerHTML = '<span style="color:var(--green)">✓ ' + d.total + ' URLs gevonden</span>';
+    document.getElementById('sitemapPreview').style.display = 'block';
+    renderSitemapList(_sitemapFiltered, true);
+    toast('✅ ' + d.total + ' URLs geladen uit sitemap');
+
   } catch(e) {
-    setSyncStatus('⚠ Server unreachable — use Export CSV as backup', 'var(--red)');
-    toast('⚠ Server offline — CSV exported');
-    exportCSV();
+    status.innerHTML = '<span style="color:var(--red)">⚠ ' + e.message + '</span>';
+    toast('⚠ Sitemap fetch mislukt: ' + e.message);
   }
-  if(btn) { btn.textContent = '☁ Save to Server'; btn.disabled = false; }
+
+  btn.textContent = '↓ Fetch Sitemap';
+  btn.disabled = false;
 }
 
-async function loadFromServer() {
-  var key = prompt('Enter project key (e.g. contentscale-contentscale.site) or leave empty to load last saved:');
-  if(key === null) return;
-  if(!key) {
-    try{key = localStorage.getItem(SYNC_KEY)||'';}catch(e){}
-  }
-  if(!key) { toast('⚠ No key found'); return; }
-  try {
-    var r = await fetch('/api/workflow/load?key=' + encodeURIComponent(key));
-    var d = await r.json();
-    if(d.success && d.data) {
-      if(!confirm('Load workflow "' + key + '" from server? This will replace your current data.')) return;
-      if(d.data.project) project = d.data.project;
-      if(d.data.pages)   pages   = d.data.pages;
-      // Restore project fields
-      if(project.client)   document.getElementById('pClient').value   = project.client;
-      if(project.site)     document.getElementById('pSite').value     = project.site;
-      if(project.deadline) document.getElementById('pDeadline').value = project.deadline;
-      if(project.auditor)  document.getElementById('pAuditor').value  = project.auditor;
-      save();renderPages();renderOverview();
-      var ts = new Date(d.data.savedAt||Date.now()).toLocaleString();
-      setSyncStatus('✓ Loaded from server (saved: ' + ts + ')', 'var(--green)');
-      toast('✅ Workflow loaded — ' + pages.length + ' pages');
-    } else {
-      toast('⚠ Not found: ' + key);
-    }
-  } catch(e) {
-    toast('⚠ Server unreachable');
-  }
+function filterSitemapUrls() {
+  var q = document.getElementById('sitemapFilter').value.trim().toLowerCase();
+  _sitemapFiltered = q
+    ? _sitemapUrls.filter(function(u){ return u.toLowerCase().includes(q); })
+    : _sitemapUrls.slice();
+
+  // Preserve checked state
+  var checked = {};
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){
+    checked[cb.dataset.url] = cb.checked;
+  });
+  renderSitemapList(_sitemapFiltered, false, checked);
 }
 
-function setSyncStatus(msg, color) {
-  var el = document.getElementById('syncStatus');
-  if(el) { el.textContent = msg; el.style.color = color||'var(--dim)'; }
+function renderSitemapList(urls, selectAll, preserveChecked) {
+  var list = document.getElementById('sitemapUrlList');
+  var selCount = document.getElementById('sitemapSelCount');
+
+  if (!urls.length) {
+    list.innerHTML = '<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
+    selCount.textContent = '';
+    return;
+  }
+
+  list.innerHTML = urls.map(function(u) {
+    var shortUrl = u.replace(/^https?:\/\/[^/]+/, '') || '/';
+    var isChecked = preserveChecked ? (preserveChecked[u] !== false) : (selectAll !== false);
+    // Skip homepage, XML, images by default
+    var skip = u.endsWith('.xml') || u.endsWith('.jpg') || u.endsWith('.png') || u.endsWith('.pdf');
+    if (skip) isChecked = false;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector('input').click()">'
+      + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
+      + '<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      + '<button onclick="event.stopPropagation();removeSitemapUrl(''+u+'')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
+      + '</div>';
+  }).join('');
+
+  updateSitemapCount();
 }
 
-// Auto-save to server every 5 minutes if pages exist
-function startAutoSave() {
-  if(autoSaveTimer) clearInterval(autoSaveTimer);
-  autoSaveTimer = setInterval(function(){
-    if(pages.length > 0) {
-      syncToServer();
-    }
-  }, 5 * 60 * 1000); // 5 minutes
+function updateSitemapCount() {
+  var all = document.querySelectorAll('.sitemap-cb');
+  var checked = document.querySelectorAll('.sitemap-cb:checked');
+  document.getElementById('sitemapSelCount').textContent = checked.length + '/' + all.length + ' geselecteerd';
+}
+
+function selectAllSitemap() {
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){ cb.checked = true; });
+  updateSitemapCount();
+}
+
+function deselectAllSitemap() {
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){ cb.checked = false; });
+  updateSitemapCount();
+}
+
+function removeSitemapUrl(url) {
+  _sitemapUrls = _sitemapUrls.filter(function(u){ return u !== url; });
+  _sitemapFiltered = _sitemapFiltered.filter(function(u){ return u !== url; });
+  var preserved = {};
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){
+    preserved[cb.dataset.url] = cb.checked;
+  });
+  renderSitemapList(_sitemapFiltered, false, preserved);
+  document.getElementById('sitemapStatus').innerHTML = '<span style="color:var(--muted)">' + _sitemapUrls.length + ' URLs resterend</span>';
+}
+
+function addSelectedSitemapUrls() {
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if (!selected.length) { toast('⚠ Geen URLs geselecteerd'); return; }
+  var added = 0;
+  selected.forEach(function(url){
+    var exists = pages.find(function(p){ return p.url === url; });
+    if (!exists) { pages.push(makePage(url,'','med',0,0)); added++; }
+  });
+  save(); renderPages(); renderOverview();
+  document.getElementById('sitemapPreview').style.display = 'none';
+  document.getElementById('sitemapUrl').value = '';
+  _sitemapUrls = [];
+  _sitemapFiltered = [];
+  document.getElementById('sitemapStatus').textContent = '';
+  toast('✅ ' + added + ' pagina's toegevoegd (' + (selected.length - added) + ' al aanwezig)');
 }
 
 // ── Init ──
