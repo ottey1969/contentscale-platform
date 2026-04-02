@@ -3715,13 +3715,6 @@ app.get('/audit-intake',   servePublic('audit-intake.html'));
 app.get('/audit-workflow',       servePublic('audit-workflow.html'));
 app.get('/audit-recommendations', servePublic('audit-recommendations.html'));
 
-const auditUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-}).fields([
-  { name: 'gsc_files',   maxCount: 5  },
-  { name: 'attachments', maxCount: 10 },
-]);
 
 app.post('/api/audit-intake', (req, res) => {
   auditUpload(req, res, async (err) => {
