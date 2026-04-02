@@ -3,23 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PULSE + NEXUS Audit Engine v3 | ContentScale</title>
+<title>PULSE + NEXUS v4 | ContentScale Elite SEO Audit</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
---ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
---purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
---amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
---pulse:#f43f3f;--nexus:#a78bfa;
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
+  --amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+  --pulse:#f43f3f;--nexus:#a78bfa;
 }
 body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
 .wrap{max-width:1200px;margin:0 auto;padding:0 24px 80px;}
 
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:28px;}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;background:linear-gradient(90deg,var(--pulse),var(--nexus));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
 
+/* Modes */
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:28px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
 .mode-btn{padding:16px 20px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.05em;background:none;border:none;border-right:1px solid var(--border);color:var(--sub);cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:12px;}
 .mode-btn:last-child{border-right:none;}
@@ -28,15 +32,18 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .mode-btn .ms{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:block;margin-top:3px;}
 .mode-btn.active .ms{color:var(--muted);}
 
+/* Panel */
 .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:26px;margin-bottom:18px;position:relative;overflow:hidden;}
 .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));}
-.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .panel-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
 
+/* Upload */
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:rgba(251,191,36,.04);}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 
+/* Fields */
 .field{margin-bottom:0;}
 .field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
 .field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:all .2s;resize:vertical;}
@@ -46,8 +53,8 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
 .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
-@media(max-width:720px){.g2,.g3,.g4,.modes{grid-template-columns:1fr;}}
 
+/* Buttons */
 .btn-gold{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:16px 36px;border-radius:6px;cursor:pointer;transition:all .2s;width:100%;margin-top:6px;}
 .btn-gold:hover{background:var(--ink);transform:translateY(-1px);}
 .btn-gold:disabled{opacity:.35;cursor:not-allowed;transform:none;}
@@ -60,6 +67,10 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .btn-green:hover{background:var(--green);color:#000;}
 .btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
 .btn-muted:hover{color:var(--ink);}
+
+/* Priority box — shown first */
+.priority-box{background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(244,63,63,.05));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:20px;margin-bottom:14px;}
+.priority-box-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 
 /* Opportunity table */
 .opp-table{width:100%;border-collapse:collapse;font-size:12px;}
@@ -133,8 +144,21 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+/* Priority action card */
+.action-card{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:7px;margin-bottom:8px;}
+.action-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
+.action-body strong{color:var(--ink);font-size:13px;display:block;margin-bottom:3px;}
+.action-body span{font-size:11px;color:var(--muted);}
+
 #bulkView,#deepView{display:none;}
 #bulkView.active,#deepView.active{display:block;}
+
+@media(max-width:720px){
+  .g2,.g3,.g4,.modes{grid-template-columns:1fr;}
+  .wrap{padding:0 16px 60px;}
+  .topbar{padding:14px 0;}
+  .brand{font-size:20px;}
+}
 </style>
 </head>
 <body>
@@ -142,36 +166,29 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
   <nav class="topbar">
     <a href="https://contentscale.site" class="brand">ContentScale</a>
     <div style="text-align:right;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.04em;background:linear-gradient(90deg,var(--pulse),var(--nexus));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">PULSE + NEXUS v3</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Elite SEO Audit Engine</div>
+      <div class="topbar-title">PULSE + NEXUS v4</div>
+      <div class="topbar-sub">Elite SEO Audit Engine</div>
     </div>
   </nav>
 
   <div class="modes">
     <button class="mode-btn active" onclick="setMode('bulk')" id="modeBulk">
       <span class="mi">📊</span>
-      <span>
-        BULK SCAN
-        <span class="ms">Upload GSC CSV → rank all pages → quick wins</span>
-      </span>
+      <span>BULK SCAN<span class="ms">Upload GSC CSV → rank pages → quick wins</span></span>
     </button>
     <button class="mode-btn" onclick="setMode('deep')" id="modeDeep">
       <span class="mi">🔬</span>
-      <span>
-        DEEP DIVE
-        <span class="ms">Paste HTML + competitor HTML → full 8-step audit</span>
-      </span>
+      <span>DEEP DIVE<span class="ms">Paste HTML → full 10-step audit + competitor diff</span></span>
     </button>
   </div>
 
   <!-- ══════════ BULK SCAN ══════════ -->
   <div id="bulkView" class="active">
-
     <div class="panel">
       <div class="panel-title">① Upload GSC CSV Files <span class="panel-badge">DRAG & DROP</span></div>
       <div class="info">
-        <strong>GSC Export:</strong> Performance → Pages tab → Export CSV &nbsp;·&nbsp;
-        <strong>Queries CSV:</strong> Performance → Queries tab → Export CSV (optional — enables cannibalization detection)
+        <strong>Pages CSV:</strong> GSC → Performance → Pages → Export CSV &nbsp;·&nbsp;
+        <strong>Queries CSV:</strong> GSC → Performance → Queries → Export CSV (enables cannibalization)
       </div>
       <div class="g2" style="gap:16px;">
         <div>
@@ -185,7 +202,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
           <div id="pagesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
         <div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional — for cannibalization)</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional)</div>
           <div class="upload-zone" id="queriesZone">
             <input type="file" id="queriesFile" accept=".csv" onchange="handleQueriesCSV(this)">
             <div style="font-size:28px;margin-bottom:8px;">🔍</div>
@@ -212,7 +229,6 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
       </div>
     </div>
 
-    <!-- Cannibalization report -->
     <div id="cannReport" style="display:none;" class="panel">
       <div class="panel-title">🔍 Keyword Cannibalization Detection <span class="panel-badge">AUTO-DETECTED</span></div>
       <div id="cannBody"></div>
@@ -221,14 +237,11 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
     <div id="opportunityTable" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;">🎯 Pages Ranked by Opportunity</div>
-        <div style="font-size:11px;color:var(--muted);">Trend = position change vs first half of period</div>
       </div>
       <div style="overflow-x:auto;">
         <table class="opp-table">
           <thead>
-            <tr>
-              <th>#</th><th>Page</th><th>Impr</th><th>CTR</th><th>Pos</th><th>Trend</th><th>Opportunity</th><th>Actions</th>
-            </tr>
+            <tr><th>#</th><th>Page</th><th>Impr</th><th>CTR</th><th>Pos</th><th>Score</th><th>Actions</th></tr>
           </thead>
           <tbody id="tableBody"></tbody>
         </table>
@@ -249,23 +262,23 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
     <div class="panel">
       <div class="panel-title">① Page Details</div>
       <div class="g2" style="margin-bottom:14px;">
-        <div class="field"><label>Page URL</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework"></div>
-        <div class="field"><label>Primary Keyword</label><input type="text" id="dKw" placeholder="GRAAF framework SEO 2026"></div>
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework"></div>
+        <div class="field"><label>Primary Keyword *</label><input type="text" id="dKw" placeholder="GRAAF framework SEO 2026"></div>
       </div>
       <div class="g3">
         <div class="field"><label>Secondary Keyword</label><input type="text" id="dKw2" placeholder="EEAT content score"></div>
         <div class="field">
           <label>Geo</label>
           <select id="dGeo">
-            <option value="Netherlands">Netherlands</option>
-            <option value="Belgium">Belgium</option>
+            <option value="Netherlands">Netherlands 🇳🇱</option>
+            <option value="Belgium">Belgium 🇧🇪</option>
             <option value="Global">Global</option>
             <option value="UK">UK</option>
             <option value="USA">USA</option>
           </select>
         </div>
         <div class="field">
-          <label>Goal</label>
+          <label>Conversion Goal</label>
           <select id="dGoal">
             <option>Lead generation</option>
             <option>Sale / purchase</option>
@@ -290,55 +303,53 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
       </div>
     </div>
 
-    <!-- GAME CHANGER 1: Your page HTML -->
     <div class="panel">
-      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER — Real content analysis</span></div>
+      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER</span></div>
       <div class="info">
         <strong>Chrome:</strong> Open page → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below.<br>
-        Gemini will read your ACTUAL H1, H2s, schema, word count, and internal links — not guess from the URL.
+        The engine reads your ACTUAL H1, H2s, schema, word count — not guesses.
       </div>
       <div class="field">
         <label>Raw HTML (full page source)</label>
-        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>&#10;...paste full page source...&#10;</html>" oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
+        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>...paste full page source...</html>" oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
       </div>
       <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
-    <!-- GAME CHANGER 2: Competitor HTML -->
     <div class="panel">
-      <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER — Real diff analysis</span></div>
+      <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span></div>
       <div class="info">
-        <strong>How:</strong> Visit competitor page → View Page Source → paste below. Real side-by-side comparison: their actual H2s, schema, word count, entities vs yours.
+        <strong>Leave empty</strong> → defaults to Surfer SEO &amp; MarketMuse benchmark comparison from training data.<br>
+        <strong>Paste HTML</strong> → real side-by-side diff of their actual content vs yours.
       </div>
       <div class="g2" style="gap:16px;">
         <div>
-          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL</label><input type="url" id="dComp1url" placeholder="https://competitor.com/page"></div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL</label><input type="url" id="dComp1url" placeholder="https://surferseo.com/..."></div>
           <div class="field">
-            <label>Competitor 1 HTML (paste source)</label>
-            <textarea id="dComp1html" style="min-height:110px;font-size:11px;" placeholder="<!DOCTYPE html>..." oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
+            <label>Competitor 1 HTML (optional)</label>
+            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty for Surfer SEO benchmark" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
           </div>
           <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
         <div>
-          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL</label><input type="url" id="dComp2url" placeholder="https://competitor2.com/page"></div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL</label><input type="url" id="dComp2url" placeholder="https://marketmuse.com/..."></div>
           <div class="field">
-            <label>Competitor 2 HTML (paste source)</label>
-            <textarea id="dComp2html" style="min-height:110px;font-size:11px;" placeholder="<!DOCTYPE html>..." oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
+            <label>Competitor 2 HTML (optional)</label>
+            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty for MarketMuse benchmark" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
           </div>
           <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
       </div>
     </div>
 
-    <!-- GAME CHANGER 3: Internal link finder -->
     <div class="panel">
-      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER — Exact anchor text</span></div>
+      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span></div>
       <div class="info">
-        <strong>Paste your sitemap or list of URLs</strong> (one per line) — Gemini finds the 5 best pages to link FROM and TO, with exact anchor text recommendations. No more guessing.
+        <strong>Paste your sitemap URLs</strong> (one per line) → engine finds the 5 best pages to link FROM and TO, with exact anchor text.
       </div>
       <div class="field">
-        <label>Your Site URLs (paste sitemap URLs or list — one per line)</label>
-        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework&#10;https://contentscale.site/lead-crawler&#10;https://contentscale.site/blog/eeat-guide&#10;https://contentscale.site/services"></textarea>
+        <label>Your Site URLs (one per line)</label>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework&#10;https://contentscale.site/craft-framework"></textarea>
       </div>
       <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
@@ -348,7 +359,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
       <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN"></div>
     </div>
 
-    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL AUDIT — 10 STEPS INCLUDING ALL GAME CHANGERS</button>
+    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
 
     <div class="progress" id="deepProgress">
       <div class="prog-label">Full Audit Running — 10 Steps · Do Not Close</div>
@@ -361,9 +372,10 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 <div class="toast" id="toast"></div>
 
 <script>
-// ── State ──
 let gscPages = [];
 let gscQueries = [];
+
+const RAILWAY = 'https://contentscale-platform-production.up.railway.app';
 
 function setMode(m) {
   document.getElementById('bulkView').className = m==='bulk'?'active':'';
@@ -375,26 +387,25 @@ function setMode(m) {
 function toast(msg) {
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// ── HTML Stats ──
 function updateHtmlStats(inputId, statsId) {
   const html = document.getElementById(inputId).value.trim();
   const el = document.getElementById(statsId);
   if (!html) { el.textContent=''; return; }
-  const doc = new DOMParser().parseFromString(html,'text/html');
-  const words = (doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
-  const h1 = doc.querySelectorAll('h1').length;
-  const h2 = doc.querySelectorAll('h2').length;
-  const h3 = doc.querySelectorAll('h3').length;
-  const schema = (html.match(/application\/ld\+json/gi)||[]).length;
-  const imgs = doc.querySelectorAll('img').length;
-  const alts = doc.querySelectorAll('img[alt]').length;
-  el.textContent = `✓ ~${words.toLocaleString()} words · ${h1} H1 · ${h2} H2s · ${h3} H3s · ${schema} schema · ${imgs} imgs (${alts} with alt)`;
+  try {
+    const doc = new DOMParser().parseFromString(html,'text/html');
+    const words = (doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
+    const h1 = doc.querySelectorAll('h1').length;
+    const h2 = doc.querySelectorAll('h2').length;
+    const schema = (html.match(/application\/ld\+json/gi)||[]).length;
+    const imgs = doc.querySelectorAll('img').length;
+    const alts = doc.querySelectorAll('img[alt]').length;
+    el.textContent = `✓ ~${words.toLocaleString()} words · ${h1} H1 · ${h2} H2s · ${schema} schema · ${imgs} imgs (${alts} with alt)`;
+  } catch(e) { el.textContent = 'Could not parse HTML'; }
 }
 
-// Update URL count
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dSiteUrls')?.addEventListener('input', function() {
     const urls = this.value.trim().split('\n').filter(l=>l.trim().startsWith('http'));
@@ -402,58 +413,55 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ── CSV PARSING ──
+// ── CSV ──
 function parseGSCCsv(raw) {
   const lines = raw.trim().split('\n');
   if (lines.length < 2) return [];
   const header = lines[0].toLowerCase().replace(/"/g,'').split(',');
   const idx = {
-    page:        header.findIndex(h=>h.includes('page')||h.includes('url')||h.includes('top page')),
-    clicks:      header.findIndex(h=>h.includes('click')),
+    page: header.findIndex(h=>h.includes('page')||h.includes('url')||h.includes('top page')),
+    clicks: header.findIndex(h=>h.includes('click')),
     impressions: header.findIndex(h=>h.includes('impression')),
-    ctr:         header.findIndex(h=>h.includes('ctr')),
-    position:    header.findIndex(h=>h.includes('position')||h.includes('pos')),
+    ctr: header.findIndex(h=>h.includes('ctr')),
+    position: header.findIndex(h=>h.includes('position')||h.includes('pos')),
   };
   if (idx.page<0) idx.page=0;
   if (idx.clicks<0) idx.clicks=1;
   if (idx.impressions<0) idx.impressions=2;
   if (idx.ctr<0) idx.ctr=3;
   if (idx.position<0) idx.position=4;
-
-  const rows = [];
+  const rows=[];
   for (let i=1;i<lines.length;i++) {
-    const cols = lines[i].replace(/"/g,'').split(',');
+    const cols=lines[i].replace(/"/g,'').split(',');
     if (cols.length<3) continue;
-    const page = cols[idx.page]?.trim();
+    const page=cols[idx.page]?.trim();
     if (!page) continue;
-    const impressions = parseFloat(cols[idx.impressions])||0;
+    const impressions=parseFloat(cols[idx.impressions])||0;
     if (impressions<1) continue;
     rows.push({
       page,
-      clicks: parseFloat(cols[idx.clicks])||0,
+      clicks:parseFloat(cols[idx.clicks])||0,
       impressions,
-      ctr: parseFloat((cols[idx.ctr]||'0').replace('%',''))||0,
-      position: parseFloat(cols[idx.position])||0,
+      ctr:parseFloat((cols[idx.ctr]||'0').replace('%',''))||0,
+      position:parseFloat(cols[idx.position])||0,
     });
   }
   return rows;
 }
 
 function handlePagesCSV(input) {
-  const file = input.files[0]; if (!file) return;
-  const r = new FileReader();
-  r.onload = e => {
-    gscPages = parseGSCCsv(e.target.result);
-    // Add opportunity scores
-    gscPages.forEach(p => {
-      const posScore = p.position>10 ? Math.min((p.position-10)/40,1) : 0;
-      const ctrGap = Math.max(0,3-p.ctr)/3;
-      const imprW = Math.min(Math.log10(Math.max(p.impressions,10))/5,1);
-      p.score = Math.round((posScore*.45+ctrGap*.35+imprW*.2)*100);
-      p.trend = 'flat'; // default, real trend needs date-split data
+  const file=input.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    gscPages=parseGSCCsv(e.target.result);
+    gscPages.forEach(p=>{
+      const posScore=p.position>10?Math.min((p.position-10)/40,1):0;
+      const ctrGap=Math.max(0,3-p.ctr)/3;
+      const imprW=Math.min(Math.log10(Math.max(p.impressions,10))/5,1);
+      p.score=Math.round((posScore*.45+ctrGap*.35+imprW*.2)*100);
     });
     gscPages.sort((a,b)=>b.score-a.score);
-    document.getElementById('pagesStatus').innerHTML = `<span style="color:var(--green)">✓ ${gscPages.length} pages loaded</span>`;
+    document.getElementById('pagesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscPages.length} pages loaded</span>`;
     document.getElementById('filterPanel').style.display='block';
     document.getElementById('opportunityTable').style.display='block';
     renderTable();
@@ -463,65 +471,43 @@ function handlePagesCSV(input) {
 }
 
 function handleQueriesCSV(input) {
-  const file = input.files[0]; if (!file) return;
-  const r = new FileReader();
-  r.onload = e => {
-    gscQueries = parseGSCCsv(e.target.result);
-    // Rename 'page' field to 'query' for queries CSV
-    gscQueries.forEach(q => { q.query = q.page; delete q.page; });
-    document.getElementById('queriesStatus').innerHTML = `<span style="color:var(--green)">✓ ${gscQueries.length} queries loaded — cannibalization detection ready</span>`;
+  const file=input.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    gscQueries=parseGSCCsv(e.target.result);
+    gscQueries.forEach(q=>{q.query=q.page;delete q.page;});
+    document.getElementById('queriesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscQueries.length} queries loaded</span>`;
     toast(`✅ ${gscQueries.length} queries loaded`);
   };
   r.readAsText(file);
 }
 
-// ── CANNIBALIZATION DETECTION ──
 function showCannibalization() {
   if (!gscPages.length) { toast('Upload pages CSV first'); return; }
-  const report = document.getElementById('cannReport');
-  const body = document.getElementById('cannBody');
-  report.style.display = 'block';
-
-  // Detect cannibalization: multiple pages with similar URL path segments
-  const groups = {};
-  gscPages.forEach(p => {
+  const report=document.getElementById('cannReport');
+  const body=document.getElementById('cannBody');
+  report.style.display='block';
+  const groups={};
+  gscPages.forEach(p=>{
     try {
-      const url = new URL(p.page);
-      const segs = url.pathname.split('/').filter(Boolean);
-      segs.forEach(seg => {
-        if (seg.length < 4) return;
-        if (!groups[seg]) groups[seg] = [];
+      const url=new URL(p.page);
+      const segs=url.pathname.split('/').filter(Boolean);
+      segs.forEach(seg=>{
+        if (seg.length<4) return;
+        if (!groups[seg]) groups[seg]=[];
         groups[seg].push(p);
       });
-    } catch(e) {}
+    } catch(e){}
   });
-
-  // Also detect by similar keywords in queries if available
-  const queryGroups = {};
-  if (gscQueries.length) {
-    gscQueries.forEach(q => {
-      const words = (q.query||'').toLowerCase().split(' ').filter(w=>w.length>4);
-      words.forEach(w => {
-        if (!queryGroups[w]) queryGroups[w] = [];
-        queryGroups[w].push(q);
-      });
-    });
-  }
-
-  const canns = Object.entries(groups)
-    .filter(([,pages]) => pages.length >= 2)
-    .sort((a,b) => b[1].length - a[1].length)
-    .slice(0,15);
-
+  const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
   if (!canns.length) {
-    body.innerHTML = '<p style="color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">✓ No obvious cannibalization detected from URL patterns.</p>';
+    body.innerHTML='<p style="color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
     return;
   }
-
-  body.innerHTML = canns.map(([seg, pages]) => `
+  body.innerHTML=canns.map(([seg,pages])=>`
     <div class="cann-card">
-      <h4>⚠ Potential conflict: "${seg}" appears in ${pages.length} pages</h4>
-      ${pages.map(p => `
+      <h4>⚠ Conflict: "${seg}" appears in ${pages.length} pages</h4>
+      ${pages.map(p=>`
         <div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">
           <span style="font-family:'IBM Plex Mono',monospace;color:var(--blue);flex:1;word-break:break-all;">${p.page.replace(/^https?:\/\//,'').slice(0,60)}</span>
           <span style="color:var(--muted);">${p.impressions.toLocaleString()} impr</span>
@@ -530,30 +516,23 @@ function showCannibalization() {
           <button class="btn-sm btn-purple" onclick="loadToDeep('${encodeURIComponent(p.page)}','${p.impressions}','${p.ctr}','${p.position}')">🔬 Audit</button>
         </div>`).join('')}
     </div>`).join('');
-
   report.scrollIntoView({behavior:'smooth'});
 }
 
-// ── OPPORTUNITY TABLE ──
 function renderTable() {
-  const minI = parseFloat(document.getElementById('minImpr').value)||0;
-  const minP = parseFloat(document.getElementById('minPos').value)||0;
-  const maxP = parseFloat(document.getElementById('maxPos').value)||999;
-  const maxC = parseFloat(document.getElementById('maxCtr').value)||100;
-
-  const filtered = gscPages.filter(r =>
-    r.impressions>=minI && r.position>=minP && r.position<=maxP && r.ctr<=maxC
-  );
-  document.getElementById('tableCount').textContent = `${filtered.length} pages`;
-  const maxScore = filtered[0]?.score||1;
-
-  const rows = filtered.slice(0,100).map((r,i) => {
-    const short = (() => { try { return new URL(r.page).pathname.slice(0,45)||'/'; } catch(e){ return r.page.slice(0,45); }})();
-    const posColor = r.position<20?'var(--amber)':r.position<35?'var(--orange)':'var(--red)';
-    const ctrColor = r.ctr<1?'var(--red)':r.ctr<3?'var(--amber)':'var(--green)';
-    const barW = Math.round((r.score/maxScore)*100);
-    const enc = encodeURIComponent(r.page);
-    const trendHtml = r.trend==='up'?'<span class="trend-up">↑</span>':r.trend==='down'?'<span class="trend-down">↓</span>':'<span class="trend-flat">→</span>';
+  const minI=parseFloat(document.getElementById('minImpr').value)||0;
+  const minP=parseFloat(document.getElementById('minPos').value)||0;
+  const maxP=parseFloat(document.getElementById('maxPos').value)||999;
+  const maxC=parseFloat(document.getElementById('maxCtr').value)||100;
+  const filtered=gscPages.filter(r=>r.impressions>=minI&&r.position>=minP&&r.position<=maxP&&r.ctr<=maxC);
+  document.getElementById('tableCount').textContent=`${filtered.length} pages`;
+  const maxScore=filtered[0]?.score||1;
+  const rows=filtered.slice(0,100).map((r,i)=>{
+    const short=(()=>{try{return new URL(r.page).pathname.slice(0,45)||'/';}catch(e){return r.page.slice(0,45);}})();
+    const posColor=r.position<20?'var(--amber)':r.position<35?'var(--orange)':'var(--red)';
+    const ctrColor=r.ctr<1?'var(--red)':r.ctr<3?'var(--amber)':'var(--green)';
+    const barW=Math.round((r.score/maxScore)*100);
+    const enc=encodeURIComponent(r.page);
     return `<tr>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${i<3?'var(--gold)':'var(--muted)'};">#${i+1}</td>
       <td>
@@ -563,7 +542,6 @@ function renderTable() {
       <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${r.impressions.toLocaleString()}</td>
       <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:${ctrColor};">${r.ctr.toFixed(1)}%</td>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${posColor};">${Math.round(r.position)}</td>
-      <td>${trendHtml}</td>
       <td style="min-width:90px;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);">${r.score}/100</div>
         <div class="opp-bar" style="width:${barW}%;"></div>
@@ -576,215 +554,234 @@ function renderTable() {
       </td>
     </tr>`;
   }).join('');
-
-  document.getElementById('tableBody').innerHTML = rows || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">No pages match filters</td></tr>';
+  document.getElementById('tableBody').innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No pages match filters</td></tr>';
 }
 
-function loadToDeep(enc, impr, ctr, pos) {
-  const url = decodeURIComponent(enc);
-  document.getElementById('dUrl').value = url;
-  document.getElementById('dImpr').value = impr;
-  document.getElementById('dCtr').value = ctr;
-  document.getElementById('dPos').value = pos;
+function loadToDeep(enc,impr,ctr,pos) {
+  document.getElementById('dUrl').value=decodeURIComponent(enc);
+  document.getElementById('dImpr').value=impr;
+  document.getElementById('dCtr').value=ctr;
+  document.getElementById('dPos').value=pos;
   setMode('deep');
   window.scrollTo({top:0,behavior:'smooth'});
   toast('Loaded → paste your HTML and run Deep Dive!');
 }
 
 function exportOpps() {
-  const rows = ['Page,Impressions,Clicks,CTR,Position,Score'];
+  const rows=['Page,Impressions,Clicks,CTR,Position,Score'];
   gscPages.forEach(r=>rows.push(`"${r.page}",${r.impressions},${r.clicks},${r.ctr},${r.position},${r.score}`));
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));a.download='seo-opportunities.csv';a.click();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='seo-opportunities.csv';a.click();
 }
 
-// ── GEMINI API ──
-async function callGemini(prompt, maxTokens=3500) {
-  const resp = await fetch('https://contentscale-platform-production.up.railway.app/api/gemini-proxy', {
+// ── GEMINI API via Railway proxy ──
+async function callGemini(prompt, maxTokens=4000) {
+  const resp = await fetch(`${RAILWAY}/api/gemini-proxy`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       contents:[{parts:[{text:prompt}]}],
-      generationConfig:{temperature:0.3,maxOutputTokens:maxTokens}
+      generationConfig:{temperature:0.25,maxOutputTokens:maxTokens}
     })
   });
   if (!resp.ok) {
-    const err = await resp.json().catch(()=>({}));
+    const err=await resp.json().catch(()=>({}));
     throw new Error(err.error?.message||err.detail||`HTTP ${resp.status}`);
   }
-  const data = await resp.json();
+  const data=await resp.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text||'';
 }
 
-// ── Extract content from HTML ──
 function extractContent(html, label='page') {
-  if (!html) return `[No ${label} HTML provided]`;
-  const doc = new DOMParser().parseFromString(html,'text/html');
-  const title = doc.querySelector('title')?.textContent||'';
-  const desc = doc.querySelector('meta[name="description"]')?.getAttribute('content')||'';
-  const h1 = Array.from(doc.querySelectorAll('h1')).map(e=>e.textContent.trim()).join(' | ');
-  const h2s = Array.from(doc.querySelectorAll('h2')).map(e=>e.textContent.trim()).join(' · ');
-  const h3s = Array.from(doc.querySelectorAll('h3')).slice(0,12).map(e=>e.textContent.trim()).join(' · ');
-  const schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,300)).join('\n');
-  const body = (doc.body?.innerText||'').replace(/\s+/g,' ').slice(0,2500);
-  const imgs = doc.querySelectorAll('img').length;
-  const alts = doc.querySelectorAll('img[alt]').length;
-  const intLinks = (doc.querySelectorAll('a[href]')||[]).length;
-  const wordCount = (doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
-  return `=== ${label.toUpperCase()} CONTENT ===
-Title: ${title}
-Meta desc: ${desc}
-H1: ${h1}
-H2s: ${h2s}
-H3s (first 12): ${h3s}
+  if (!html) return null;
+  try {
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const title=doc.querySelector('title')?.textContent||'';
+    const desc=doc.querySelector('meta[name="description"]')?.getAttribute('content')||'';
+    const h1=Array.from(doc.querySelectorAll('h1')).map(e=>e.textContent.trim()).join(' | ');
+    const h2s=Array.from(doc.querySelectorAll('h2')).map(e=>e.textContent.trim()).join(' · ');
+    const h3s=Array.from(doc.querySelectorAll('h3')).slice(0,10).map(e=>e.textContent.trim()).join(' · ');
+    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\n');
+    const body=(doc.body?.innerText||'').replace(/\s+/g,' ').slice(0,3000);
+    const imgs=doc.querySelectorAll('img').length;
+    const alts=doc.querySelectorAll('img[alt]').length;
+    const intLinks=doc.querySelectorAll('a[href]').length;
+    const wordCount=(doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
+    const faqs=doc.querySelectorAll('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"]').length;
+    return `=== ${label.toUpperCase()} ===
+Title (${title.length} chars): ${title}
+Meta desc (${desc.length} chars): ${desc}
+H1: ${h1||'MISSING'}
+H2s: ${h2s||'none'}
+H3s (first 10): ${h3s||'none'}
 Word count: ~${wordCount}
-Images: ${imgs} total, ${alts} with alt text
-Internal links: ${intLinks}
-Schema: ${schemas||'none'}
+Images: ${imgs} total, ${alts} with alt (${imgs-alts} missing alt text)
+Links: ${intLinks} total
+Schema blocks: ${schemas||'none'}
+FAQ section: ${faqs>0?'YES':'NOT DETECTED'}
 Body extract: ${body}`;
+  } catch(e) { return `[Error parsing ${label} HTML: ${e.message}]`; }
 }
 
+function extractTitle(html) {
+  if (!html) return 'not provided';
+  const m=html.match(/<title[^>]*>(.*?)<\/title>/i);
+  return m?m[1].trim():'not found in HTML';
+}
+function extractMeta(html) {
+  if (!html) return 'not provided';
+  const m=html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
+           ||html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+  return m?m[1].trim():'not found in HTML';
+}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
 // ── QUICK AUDIT ──
-async function quickAudit(enc, impr, ctr, pos) {
-  const url = decodeURIComponent(enc);
-  const prog = document.getElementById('quickProgress');
-  const out = document.getElementById('quickOutput');
-  prog.className='progress show';
-  out.innerHTML='';out.className='output show';
-
-  const QSTEPS = [
+async function quickAudit(enc,impr,ctr,pos) {
+  const url=decodeURIComponent(enc);
+  const prog=document.getElementById('quickProgress');
+  const out=document.getElementById('quickOutput');
+  prog.className='progress show';out.innerHTML='';out.className='output show';
+  const QSTEPS=[
+    {id:'q0',icon:'🔥',label:'PRIORITY ACTIONS — Top 5 right now'},
     {id:'q1',icon:'⚡',label:'CTR Surgery — new title + meta'},
-    {id:'q2',icon:'🔥',label:'Top 5 Quick Wins'},
-    {id:'q3',icon:'📈',label:'Position 11–20 query opportunities'},
+    {id:'q2',icon:'📈',label:'Position 11–20 query opportunities'},
   ];
-  document.getElementById('quickSteps').innerHTML = QSTEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
-  const bar = document.getElementById('quickBar');
-  const ctx = `URL: ${url}\nImpressions: ${impr}\nCTR: ${ctr}%\nPosition: ${pos}`;
-
-  // Check if we have query data for this page
-  const pageQueries = gscQueries.filter(q=>q.query).slice(0,20);
-  const queryCtx = pageQueries.length ? `\nTop queries data: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)} impr:${q.impressions}`).join(' | ')}` : '';
-
-  const prompts = {
-    q1:`You are an elite SEO strategist for ContentScale.site.\n${ctx}${queryCtx}\nWrite a new SEO title (≤60 chars) and meta desc (≤155 chars) to maximize CTR. Apply 2026 SERP psychology.\n**New Title**: [text]\n**New Meta Description**: [text]\n**Why This Wins**: [rationale]`,
-    q2:`You are an elite SEO strategist for ContentScale.site.\n${ctx}\nTop 5 quick wins (<30 min each) to improve position from ${pos}. Be specific — actionable fixes only.\nFormat: **[Action]**: [exact what to do] → Expected: [metric lift]`,
-    q3:`You are an elite SEO strategist for ContentScale.site.\n${ctx}${queryCtx}\nIdentify the 3-5 queries where this page ranks position 11-20 — these are the fastest wins to push to page 1. For each: what ONE specific change would push it over the line? Be precise.`,
+  document.getElementById('quickSteps').innerHTML=QSTEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
+  const bar=document.getElementById('quickBar');
+  const ctx=`URL: ${url}\nImpressions: ${impr}\nCTR: ${ctr}%\nPosition: ${pos}`;
+  const pageQueries=gscQueries.filter(q=>q.query).slice(0,20);
+  const queryCtx=pageQueries.length?`\nTop queries: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)} impr:${q.impressions}`).join(' | ')}`:'';
+  const prompts={
+    q0:`You are an elite SEO strategist.\n${ctx}${queryCtx}\n\nList EXACTLY 5 priority actions for this page. Each must be:\n- Specific and actionable (not generic advice)\n- Achievable in under 1 hour\n- Include expected metric change\n\nFormat each as:\n🔥 **[Action title]**\nDo: [exact what to do]\nExpect: [specific metric improvement]\n\nStart with the highest-impact action first.`,
+    q1:`You are an elite SEO strategist.\n${ctx}${queryCtx}\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\n\n**New Title**: [text]\n**New Meta Description**: [text]\n**Why**: [specific 2026 SERP psychology rationale]`,
+    q2:`You are an elite SEO strategist.\n${ctx}${queryCtx}\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.`,
   };
-
   for (let i=0;i<QSTEPS.length;i++) {
-    const s=QSTEPS[i];
-    setStep(s.id,'active');
+    const s=QSTEPS[i];setStep(s.id,'active');
     try {
-      const r = await callGemini(prompts[s.id], 1200);
-      addSection(out, s.id, s.icon, s.label, i===0?'b-win':i===1?'b-pulse':'b-gold', r);
+      const r=await callGemini(prompts[s.id],1500);
+      addSection(out,s.id,s.icon,s.label,i===0?'b-gold':i===1?'b-win':'b-pulse',r);
       setStep(s.id,'done');
     } catch(e) {
       setStep(s.id,'error');
-      addSection(out, s.id, s.icon, s.label, 'b-tech', `**Error:** ${e.message}`);
+      addSection(out,s.id,s.icon,s.label,'b-tech',`**Error:** ${e.message}`);
     }
     bar.style.width=((i+1)/QSTEPS.length*100)+'%';
     if (i<QSTEPS.length-1) await sleep(1200);
   }
-
   prog.className='progress';
   toast('✅ Quick audit done');
   out.scrollIntoView({behavior:'smooth'});
 }
 
-// ── DEEP AUDIT (10 steps) ──
-const DEEP_STEPS = [
-  {id:'d1',icon:'🔍',label:'Step 1 — Intent + AI Overview eligibility',badge:'b-tech'},
-  {id:'d2',icon:'⚡',label:'Step 2 — CTR Surgery (based on real title/meta)',badge:'b-win'},
-  {id:'d3',icon:'🕵️',label:'Step 3 — Real Competitor Diff (HTML vs HTML)',badge:'b-pulse'},
-  {id:'d4',icon:'🕳️',label:'Step 4 — Content Gap Matrix',badge:'b-pulse'},
-  {id:'d5',icon:'🫀',label:'Step 5 — PULSE Optimization (real content rewrites)',badge:'b-pulse'},
-  {id:'d6',icon:'🔗',label:'Step 6 — NEXUS Signals + Internal Link Finder',badge:'b-nexus'},
-  {id:'d7',icon:'🏗️',label:'Step 7 — Architecture Blueprint',badge:'b-nexus'},
-  {id:'d8',icon:'🛠️',label:'Step 8 — Technical Fix Checklist + Schema',badge:'b-tech'},
-  {id:'d9',icon:'📊',label:'Step 9 — Before/After Score Projection',badge:'b-gold'},
-  {id:'d10',icon:'📈',label:'Step 10 — 90-Day Ranking Plan',badge:'b-win'},
+// ── DEEP AUDIT — 10 steps, PRIORITY ACTIONS FIRST ──
+const DEEP_STEPS=[
+  {id:'d0',icon:'🔥',label:'PRIORITY ACTIONS — Do These First (top 7)',badge:'b-gold'},
+  {id:'d1',icon:'🔍',label:'Intent + AI Overview Eligibility',badge:'b-tech'},
+  {id:'d2',icon:'⚡',label:'CTR Surgery — real title/meta rewrite',badge:'b-win'},
+  {id:'d3',icon:'🕵️',label:'Competitor Diff — Surfer SEO & MarketMuse benchmark',badge:'b-pulse'},
+  {id:'d4',icon:'🕳️',label:'Content Gap Matrix — what you are missing',badge:'b-pulse'},
+  {id:'d5',icon:'🫀',label:'PULSE Optimization — before/after rewrites',badge:'b-pulse'},
+  {id:'d6',icon:'🔗',label:'NEXUS Signals + Internal Link Finder',badge:'b-nexus'},
+  {id:'d7',icon:'🏗️',label:'Architecture Blueprint — H1-H3 restructure',badge:'b-nexus'},
+  {id:'d8',icon:'🛠️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
+  {id:'d9',icon:'📊',label:'Before/After Score + Traffic Projection',badge:'b-gold'},
+  {id:'d10',icon:'📈',label:'90-Day Ranking Plan — by week',badge:'b-win'},
 ];
 
 async function runDeepAudit() {
-  const url = document.getElementById('dUrl').value.trim();
-  const kw = document.getElementById('dKw').value.trim();
+  const url=document.getElementById('dUrl').value.trim();
+  const kw=document.getElementById('dKw').value.trim();
   if (!url||!kw) { toast('Enter URL and keyword first'); return; }
 
-  const inp = {
-    url, kw,
-    kw2: document.getElementById('dKw2').value.trim(),
-    geo: document.getElementById('dGeo').value,
-    goal: document.getElementById('dGoal').value,
-    impr: document.getElementById('dImpr').value||'unknown',
-    ctr: document.getElementById('dCtr').value||'unknown',
-    pos: document.getElementById('dPos').value||'unknown',
-    mob: document.getElementById('dMob').value||'unknown',
-    queries: document.getElementById('dQueries').value.trim(),
-    html: document.getElementById('dHtml').value.trim(),
-    comp1url: document.getElementById('dComp1url').value.trim(),
-    comp1html: document.getElementById('dComp1html').value.trim(),
-    comp2url: document.getElementById('dComp2url').value.trim(),
-    comp2html: document.getElementById('dComp2html').value.trim(),
-    siteUrls: document.getElementById('dSiteUrls').value.trim(),
-    constraints: document.getElementById('dConstraints').value.trim(),
+  const inp={
+    url,kw,
+    kw2:document.getElementById('dKw2').value.trim(),
+    geo:document.getElementById('dGeo').value,
+    goal:document.getElementById('dGoal').value,
+    impr:document.getElementById('dImpr').value||'unknown',
+    ctr:document.getElementById('dCtr').value||'unknown',
+    pos:document.getElementById('dPos').value||'unknown',
+    mob:document.getElementById('dMob').value||'unknown',
+    queries:document.getElementById('dQueries').value.trim(),
+    html:document.getElementById('dHtml').value.trim(),
+    comp1url:document.getElementById('dComp1url').value.trim()||'https://surferseo.com',
+    comp1html:document.getElementById('dComp1html').value.trim(),
+    comp2url:document.getElementById('dComp2url').value.trim()||'https://marketmuse.com',
+    comp2html:document.getElementById('dComp2html').value.trim(),
+    siteUrls:document.getElementById('dSiteUrls').value.trim(),
+    constraints:document.getElementById('dConstraints').value.trim(),
   };
 
-  const myContent = extractContent(inp.html, 'YOUR PAGE');
-  const comp1Content = extractContent(inp.comp1html, `COMPETITOR 1 (${inp.comp1url||'unknown'})`);
-  const comp2Content = extractContent(inp.comp2html, `COMPETITOR 2 (${inp.comp2url||'unknown'})`);
-  const siteUrlList = inp.siteUrls.split('\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\n');
+  const myContent=extractContent(inp.html,'YOUR PAGE');
+  const myContentStr=myContent||`[No HTML provided — URL: ${inp.url}]`;
+
+  // Competitor context — real HTML or trained knowledge
+  let compContext='';
+  if (inp.comp1html||inp.comp2html) {
+    compContext=`\n${extractContent(inp.comp1html,`COMPETITOR 1 (${inp.comp1url})`)}\n\n${extractContent(inp.comp2html,`COMPETITOR 2 (${inp.comp2url})`)}`;
+  } else {
+    compContext=`\n[No competitor HTML pasted. Use your trained knowledge of:
+COMPETITOR 1: Surfer SEO (${inp.comp1url}) — known for: NLP content scores, content editor, SERP analyzer, keyword research, average ~2500-3500 word guides, heavy use of comparison tables, FAQ sections, JSON-LD FAQPage schema, strong internal linking]
+COMPETITOR 2: MarketMuse (${inp.comp2url}) — known for: topic modeling, content briefs, competitive analysis, comprehensive pillar pages, semantic clustering, authority scoring, strong structured data, 3000-5000 word pillar content]
+Compare the target page against these known competitor patterns.`;
+  }
+
+  const siteUrlList=inp.siteUrls.split('\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\n');
 
   document.getElementById('deepRunBtn').disabled=true;
   const prog=document.getElementById('deepProgress');
   const out=document.getElementById('deepOutput');
-  prog.className='progress show';
-  out.innerHTML='';out.className='output show';
-
-  document.getElementById('deepSteps').innerHTML = DEEP_STEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
+  prog.className='progress show';out.innerHTML='';out.className='output show';
+  document.getElementById('deepSteps').innerHTML=DEEP_STEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
   const bar=document.getElementById('deepBar');
 
-  const base=`You are an elite SEO strategist for ContentScale.site using PULSE (on-page conversion) and NEXUS (topical authority) frameworks.
+  const base=`You are an elite SEO strategist for ContentScale.site using PULSE + NEXUS frameworks.
 
-PAGE: ${inp.url} | KEYWORD: ${inp.kw} | SECONDARY: ${inp.kw2||'none'}
+PAGE: ${inp.url}
+PRIMARY KEYWORD: ${inp.kw}
+SECONDARY KEYWORD: ${inp.kw2||'none'}
 GEO: ${inp.geo} | GOAL: ${inp.goal} | CONSTRAINTS: ${inp.constraints||'none'}
 GSC: ${inp.impr} impressions · ${inp.ctr}% CTR · position ${inp.pos} · ${inp.mob}% mobile
 TOP QUERIES: ${inp.queries||'not provided'}
 
-${myContent}`;
+${myContentStr}`;
 
-  const compBase = inp.comp1html||inp.comp2html ? `\n${comp1Content}\n\n${comp2Content}` : '\n[No competitor HTML provided — use training knowledge for competitor benchmarks]';
+  const prompts={
+    d0:`${base}\n\nSTEP 0 — PRIORITY ACTIONS (show this first, before any analysis):\n\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\n\nFor each action use this format:\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change, add, or fix — copy-paste ready]\nWhere: [Exact location on page or in code]\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
 
-  const prompts = {
-    d1:`${base}\n\nSTEP 1 — INTENT DECODING: Based on the ACTUAL page content above, classify primary intent precisely. Assess AI Overview eligibility — will this keyword trigger one? Zero-click risk? Compare what the page currently delivers vs what top 5 results likely contain. State the mismatch clearly if one exists.`,
+    d1:`${base}\n\nSTEP 1 — INTENT DECODING:\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not? State any mismatch clearly with specific fix.`,
 
-    d2:`${base}\n\nSTEP 2 — CTR SURGERY: The page's CURRENT title is: "${extractTitle(inp.html)}". The CURRENT meta desc is: "${extractMeta(inp.html)}". Rewrite both specifically based on what you see in the actual content. New title ≤60 chars, meta ≤155 chars. Apply 2026 SERP psychology. If Netherlands geo, use Dutch power words where relevant.\n\n**Current Title**: ${extractTitle(inp.html)}\n**Current Meta**: ${extractMeta(inp.html)}\n**New Title**: [your version]\n**New Meta Description**: [your version]\n**Why This Wins**: [specific rationale referencing actual content]`,
+    d2:`${base}\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "${extractTitle(inp.html)}"\nCURRENT META: "${extractMeta(inp.html)}"\n\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\n\n**Current Title** (${extractTitle(inp.html).length} chars): ${extractTitle(inp.html)}\n**Current Meta** (${extractMeta(inp.html).length} chars): ${extractMeta(inp.html)}\n**New Title**: [your version]\n**New Meta Description**: [your version]\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
 
-    d3:`${base}${compBase}\n\nSTEP 3 — REAL COMPETITOR DIFF: You have the actual HTML of the target page AND competitor pages. Do a real side-by-side analysis. Compare: word count, H1/H2 structure, schema types, image count with alt text, internal links, FAQ sections, content depth, unique angles. Create a comparison table. Then list exactly what the target page is missing that competitors have.`,
+    d3:`${base}${compContext}\n\nSTEP 3 — COMPETITOR DIFF:\nCreate a comparison table between your page and the two competitors. Columns: Feature | Your Page | Competitor 1 (Surfer SEO) | Competitor 2 (MarketMuse) | Winner\nRows: Word count · H2 count · FAQ section · Schema types · Images with alt · CTA clarity · Data/stats count · Unique angle · Internal links\n\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: exact implementation instruction.`,
 
-    d4:`${base}${compBase}\n\nSTEP 4 — CONTENT GAP MATRIX: Based on actual HTML content above, create a precise 5-dimension gap analysis table (Subtopic Coverage · Data/Proof · Commercial Signals · Media/UX · Freshness). Then list 5-7 prioritized content additions with severity H/M/L and time to fix. Flag quick wins (<30 min). Be specific to THIS page's actual content.`,
+    d4:`${base}${compContext}\n\nSTEP 4 — CONTENT GAP MATRIX:\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\n\n| Dimension | Your Score | Gap | Specific Fix |\n|---|---|---|---|\n| Subtopic coverage | | | |\n| Data & proof | | | |\n| Commercial signals | | | |\n| Media & UX | | | |\n| Freshness (2025-2026) | | | |\n| FAQ depth | | | |\n| E-E-A-T signals | | | |\n\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.`,
 
-    d5:`${base}\n\nSTEP 5 — PULSE OPTIMIZATION: Based on the ACTUAL page content, rewrite 3 specific sections:\nP=Purpose: rewrite the actual current intro (show current → improved)\nU=Urgency: add 2026 AI search context to the most relevant section\nL=Legitimacy: where exactly to add proof/case data\nS=Structure: show 1 specific section that should be converted to bullet/table (show before/after)\nE=Engagement: rewrite the actual CTA (show current → new version aligned to ${inp.goal})\n\nEvery rewrite must reference actual content from the page.`,
+    d5:`${base}\n\nSTEP 5 — PULSE REWRITES (show current → improved for each):\n\nP — Purpose (intro rewrite):\nCURRENT: [quote first 3 sentences from body extract]\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\n\nU — Urgency signal:\nWhere to add: [exact location]\nNew sentence: [write it]\n\nL — Legitimacy:\nMissing proof elements: [list 3 specific items]\nWhere to add: [exact section]\n\nS — Structure improvement:\nPick ONE section and show Before/After conversion to table or bullets:\nBEFORE: [current format]\nAFTER: [improved format]\n\nE — Engagement (CTA rewrite):\nCURRENT CTA: [identify from page]\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
 
-    d6:`${base}\n\nAVAILABLE SITE URLS FOR INTERNAL LINKING:\n${siteUrlList||'[No site URLs provided — suggest based on URL patterns]'}\n\nSTEP 6 — NEXUS SIGNALS + INTERNAL LINK FINDER: Using the site URLs above, identify:\n1. TOP 5 pages to link FROM to this page (exact anchor text + why)\n2. TOP 5 pages this page should link TO (exact anchor text + why)\n3. 8-10 semantic entities to reinforce (Dutch variants if NL geo)\n4. Where to add first-hand experience markers\n5. 2-3 angles ContentScale can own uniquely\n6. Schema recommendation with exact JSON-LD snippet\n\nFor internal links: use real URLs from the list above — no generic suggestions.`,
+    d6:`${base}\n\nSITE URLS:\n${siteUrlList||'[No URLs provided — suggest based on URL patterns and domain: '+inp.url+']'}\n\nSTEP 6 — NEXUS + INTERNAL LINKS:\n1. TOP 5 pages to link FROM to this page (use real URLs from list if available):\n   - URL | Anchor text (exact) | Why (semantic reason)\n\n2. TOP 5 pages this page should link TO:\n   - URL | Anchor text (exact) | Why\n\n3. Missing semantic entities for "${inp.kw}" (10 terms)\n\n4. Schema recommendation — provide complete FAQPage JSON-LD with 5 Q&As (40-60 words each, optimized for AI Overviews)`,
 
-    d7:`${base}\n\nSTEP 7 — ARCHITECTURE BLUEPRINT: Based on the CURRENT H1-H3 structure from the actual HTML, show:\n- Current structure (what exists now)\n- Recommended structure (optimized for intent + AI Overview extraction)\n- Side-by-side comparison of each heading change\nEnsure new structure supports both human readability AND Google AI Overview extraction.`,
+    d7:`${base}\n\nSTEP 7 — ARCHITECTURE BLUEPRINT:\nCURRENT heading structure (from HTML):\nH1: ${extractTitle(inp.html)}\n[reconstruct H2-H3 from content]\n\nRECOMMENDED structure for intent + AI Overview extraction:\n[show new H1 → H2 → H3 hierarchy]\n\nFor each change: Old heading → New heading → Why this order wins`,
 
-    d8:`${base}\n\nSTEP 8 — TECHNICAL FIX CHECKLIST: Based on the ACTUAL HTML above:\n1. Keyword placement audit (is "${inp.kw}" in H1? First 100 words? URL? Image alt?)\n2. 5-7 semantic LSI keywords missing from the page\n3. FAQPage JSON-LD schema (3-5 Q&As, 40-60 word answers, AI-Overview optimized)\n4. Featured snippet opportunities (tables/lists that would win one)\n5. Specific HTML issues found (duplicate tags, missing alt, schema errors)\n6. Mobile optimization issues\n\nEvery item: copy-paste ready for a developer.`,
+    d8:`${base}\n\nSTEP 8 — TECHNICAL CHECKLIST:\n1. Keyword "${inp.kw}" placement audit:\n   □ In H1? □ First 100 words? □ URL? □ Meta title? □ Image alt?\n   → Fix for each missing item\n\n2. Missing LSI/semantic keywords (8 terms not found in content)\n\n3. Technical issues found in HTML:\n   - Duplicate tags, missing alt, schema errors, etc.\n\n4. Mobile optimization gaps (page is ${inp.mob||'?'}% mobile)\n\n5. Core Web Vitals recommendations based on page structure`,
 
-    d9:`${base}\n\nSTEP 9 — BEFORE/AFTER SCORE PROJECTION:\nBased on ContentScale's scoring system (GRAAF 50pts + CRAFT 30pts + Technical 20pts = 100):\n\n1. Estimate CURRENT score breakdown based on actual page content:\n- GRAAF (Genuine/Relevant/Actionable/Accurate/Fresh): [0-50]\n- CRAFT (writing quality signals): [0-30]\n- Technical SEO: [0-20]\n- TOTAL: [0-100]\n\n2. Projected score AFTER implementing all recommendations:\n- GRAAF: [new score + what changed]\n- CRAFT: [new score + what changed]\n- Technical: [new score + what changed]\n- TOTAL: [new score]\n\n3. Expected traffic impact: position ${inp.pos} → projected new position after full implementation\n4. Expected CTR lift: ${inp.ctr}% → projected new CTR\n5. Expected impressions impact at new position`,
+    d9:`${base}\n\nSTEP 9 — BEFORE/AFTER SCORE PROJECTION:\n\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\n\nCURRENT estimated score:\n- GRAAF: [score]/50 — [what's missing]\n- CRAFT: [score]/30 — [what's missing]\n- Technical: [score]/20 — [what's missing]\n- TOTAL: [score]/100\n\nAFTER implementing all recommendations:\n- GRAAF: [new score]/50 — [what improved]\n- CRAFT: [new score]/30 — [what improved]\n- Technical: [new score]/20 — [what improved]\n- TOTAL: [new score]/100\n\nTraffic projection:\n- Current position ${inp.pos} → Expected new position: [X]\n- Current CTR ${inp.ctr}% → Expected new CTR: [X]%\n- Current clicks per month: [calc] → New estimated clicks: [calc]`,
 
-    d10:`${base}\n\nSTEP 10 — 90-DAY RANKING PLAN: Organize ALL recommendations from this full audit by Impact × Effort:\n\n🔥 QUICK WINS (do today, <30 min each) — minimum 5 items\n⚙️ MEDIUM EFFORT (this week, 1-3 hours each) — minimum 4 items\n🏆 AUTHORITY BUILDERS (this month, ongoing) — minimum 3 items\n\nFor each item: exact action + expected metric lift.\nSuccess Metrics to track in GSC:\n- At 7 days: [what to check]\n- At 14 days: [what to check]\n- At 30 days: [target position + CTR]\n- At 90 days: [end goal]\n\nTarget: move from position ${inp.pos} → top 10 for "${inp.kw}"`,
+    d10:`${base}\n\nSTEP 10 — 90-DAY PLAN (week by week):\n\n**WEEK 1 — Quick Wins (do today):**\n[List 5 specific changes, each under 30 min]\n\n**WEEK 2-3 — Content Upgrades:**\n[List 3-4 content additions/rewrites]\n\n**WEEK 4 — Technical + Schema:**\n[Schema implementation, internal links, technical fixes]\n\n**MONTH 2 — Authority Building:**\n[Link building, content expansion, E-E-A-T signals]\n\n**MONTH 3 — Measurement + Iteration:**\n[What to check in GSC, when to expect results]\n\n**GSC Checkpoints:**\n- Day 7: [what metric to check]\n- Day 30: [target position + CTR]\n- Day 90: [end goal for "${inp.kw}"]\n\nSUCCESS DEFINITION: Position ${inp.pos} → [target] within 90 days`,
   };
 
   for (let i=0;i<DEEP_STEPS.length;i++) {
-    const s=DEEP_STEPS[i];
-    setStep(s.id,'active');
+    const s=DEEP_STEPS[i];setStep(s.id,'active');
     try {
-      const result = await callGemini(prompts[s.id], 3500);
-      addSection(out, s.id, s.icon, s.label.replace(/Step \d+ — /,''), s.badge, result);
+      const result=await callGemini(prompts[s.id],4000);
+      addSection(out,s.id,s.icon,s.label,s.badge,result);
       setStep(s.id,'done');
     } catch(e) {
       setStep(s.id,'error');
-      addSection(out, s.id, s.icon, s.label, s.badge, `**Error:** ${e.message}`);
+      addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`);
     }
     bar.style.width=((i+1)/DEEP_STEPS.length*100)+'%';
     if (i<DEEP_STEPS.length-1) await sleep(1500);
@@ -792,25 +789,12 @@ ${myContent}`;
 
   prog.className='progress';
   document.getElementById('deepRunBtn').disabled=false;
-  toast('✅ Full 10-step audit complete');
+  toast('✅ Full audit complete — scroll up for Priority Actions');
+  // Scroll to start of output to show Priority Actions first
   out.scrollIntoView({behavior:'smooth'});
 }
 
-// ── Helpers ──
-function extractTitle(html) {
-  if (!html) return 'not provided';
-  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
-  return m ? m[1].trim() : 'not found in HTML';
-}
-function extractMeta(html) {
-  if (!html) return 'not provided';
-  const m = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
-           || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
-  return m ? m[1].trim() : 'not found in HTML';
-}
-function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
-
-function setStep(id, state) {
+function setStep(id,state) {
   const el=document.getElementById('step-'+id);
   if (!el) return;
   el.className='prog-step '+state;
@@ -820,9 +804,11 @@ function setStep(id, state) {
   else if (state==='error') icon.textContent='✗';
 }
 
-function addSection(container, id, icon, title, badge, content) {
+function addSection(container,id,icon,title,badge,content) {
   const div=document.createElement('div');
   div.className='sec-card';
+  // Priority Actions card gets special gold border
+  if (id==='d0'||id==='q0') div.style.border='1px solid rgba(251,191,36,.4)';
   div.innerHTML=`
     <div class="sec-head" onclick="toggleBody('${id}')">
       <span style="font-size:17px;">${icon}</span>
@@ -857,34 +843,29 @@ function renderMd(t) {
     .replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
     .replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
     .replace(/^---+$/gm,'<hr>')
-    .replace(/^\|(.+)\|$/gm, m => {
+    .replace(/^\|(.+)\|$/gm,m=>{
       const cells=m.split('|').slice(1,-1);
       if (cells.every(c=>/^[\s\-:]+$/.test(c))) return '';
       return '<tr>'+cells.map(c=>`<td>${c.trim()}</td>`).join('')+'</tr>';
     })
-    .replace(/(<tr>[\s\S]*?<\/tr>)+/g, m=>`<table>${m}</table>`)
-    .replace(/^[\-\*\•] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<tr>[\s\S]*?<\/tr>)+/g,m=>`<table>${m}</table>`)
+    .replace(/^[\-\*•] (.+)$/gm,'<li>$1</li>')
     .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)+/g, m=>`<ul>${m}</ul>`)
+    .replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`)
     .replace(/\n\n/g,'</p><p>')
     .replace(/\n/g,'<br>');
 }
 
-// ── Drag & drop on upload zones ──
-['pagesZone','queriesZone'].forEach(zoneId => {
+// Drag & drop
+['pagesZone','queriesZone'].forEach(zoneId=>{
   const z=document.getElementById(zoneId);
   z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
   z.addEventListener('dragleave',()=>z.classList.remove('drag'));
   z.addEventListener('drop',e=>{
     e.preventDefault();z.classList.remove('drag');
-    const file=e.dataTransfer.files[0];
-    if (!file) return;
-    const r=new FileReader();
-    r.onload=ev=>{
-      if (zoneId==='pagesZone') { document.getElementById('pagesFile').dispatchEvent; handlePagesCSV({files:[file]}); }
-      else handleQueriesCSV({files:[file]});
-    };
-    r.readAsText(file);
+    const file=e.dataTransfer.files[0]; if (!file) return;
+    if (zoneId==='pagesZone') handlePagesCSV({files:[file]});
+    else handleQueriesCSV({files:[file]});
   });
 });
 </script>
