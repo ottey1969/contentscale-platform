@@ -3691,10 +3691,18 @@ app.get('/wp-content/uploads/2025/11/ottmar-francisca-headshot.png', (req, res) 
 
 
 // ============================================================
-// AUDIT ROUTES — plak VÓÓR startServer() in server.js
+// AUDIT ROUTES — BEFORE startServer()
 // ============================================================
 
 const multer = require('multer');
+
+const auditUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).fields([
+  { name: 'gsc_files',   maxCount: 5  },
+  { name: 'attachments', maxCount: 10 },
+]);
 
 function servePublic(filename) {
   return (req, res) => {
@@ -3710,13 +3718,67 @@ function servePublic(filename) {
   };
 }
 
-app.get('/audit-seo',      servePublic('audit-seo.html'));
-app.get('/audit',          (req, res) => res.redirect(301, '/audit-seo'));
-app.get('/audit-intake',   servePublic('audit-intake.html'));
-app.get('/audit-workflow',       servePublic('audit-workflow.html'));
+app.get('/audit-seo',             servePublic('audit-seo.html'));
+app.get('/audit',                 (req, res) => res.redirect(301, '/audit-seo'));
+app.get('/audit-intake',          servePublic('audit-intake.html'));
+app.get('/audit-workflow',        servePublic('audit-workflow.html'));
 app.get('/audit-recommendations', servePublic('audit-recommendations.html'));
 app.get('/handleiding',           servePublic('handleiding.html'));
 
+// ── Workflow Manager — save/load to server ──────────────────
+const wfCache = new Map(); // in-memory fallback if no DB
+
+app.post('/api/workflow/save', async (req, res) => {
+  const { key, project, pages, savedAt } = req.body;
+  if (!key) return res.status(400).json({ success: false, error: 'key required' });
+  const data = JSON.stringify({ project, pages, savedAt });
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO workflow_saves (wf_key, data, saved_at)
+         VALUES ($1,$2,NOW())
+         ON CONFLICT (wf_key) DO UPDATE SET data=$2, saved_at=NOW()`,
+        [key, data]
+      );
+      console.log('[workflow] Saved to DB:', key);
+      return res.json({ success: true, key, storage: 'db' });
+    } catch (e) {
+      console.warn('[workflow] DB save failed, using cache:', e.message);
+    }
+  }
+  wfCache.set(key, { data, savedAt });
+  res.json({ success: true, key, storage: 'memory' });
+});
+
+app.get('/api/workflow/load', async (req, res) => {
+  const key = req.query.key;
+  if (!key) return res.status(400).json({ success: false, error: 'key required' });
+  if (pool) {
+    try {
+      const r = await pool.query('SELECT data, saved_at FROM workflow_saves WHERE wf_key=$1', [key]);
+      if (r.rows.length) {
+        const d = JSON.parse(r.rows[0].data);
+        return res.json({ success: true, data: d, storage: 'db' });
+      }
+    } catch (e) {
+      console.warn('[workflow] DB load failed:', e.message);
+    }
+  }
+  const cached = wfCache.get(key);
+  if (cached) return res.json({ success: true, data: JSON.parse(cached.data), storage: 'memory' });
+  res.json({ success: false, error: 'Not found: ' + key });
+});
+
+// DB migration — create workflow_saves table if not exists
+if (pool) {
+  pool.query(`
+    CREATE TABLE IF NOT EXISTS workflow_saves (
+      wf_key   VARCHAR(200) PRIMARY KEY,
+      data     TEXT NOT NULL,
+      saved_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[workflow] Migration skipped:', e.message));
+}
 
 app.post('/api/audit-intake', (req, res) => {
   auditUpload(req, res, async (err) => {
