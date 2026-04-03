@@ -3895,6 +3895,7 @@ app.get('/api/gemini-live-token', async (req, res) => {
     const allModels = (modelsData.models || []).map(m => m.name.replace('models/', ''));
 
     const LIVE_PRIORITY = [
+      'gemini-3.1-flash-live-preview',
       'gemini-2.0-flash-live-001',
       'gemini-live-001',
       'gemini-2.0-flash-exp',
