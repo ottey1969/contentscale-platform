@@ -156,7 +156,7 @@
       setStatus('Connected — sending config...');
       // Correct first message format per official docs: "config" not "setup"
       _ws.send(JSON.stringify({
-        config: {
+        setup: {
           model: 'models/' + model,
           responseModalities: ['AUDIO'],
           speechConfig: {
