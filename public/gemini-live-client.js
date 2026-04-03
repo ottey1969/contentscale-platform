@@ -1,16 +1,16 @@
-// ContentScale — Otto AI Voice Client v2
-// Web Speech API (recognition) + Gemini REST + Web Speech Synthesis
+// ContentScale — Otto AI — Gemini Live (real WebSocket, real voice)
+// Audio in → Gemini Live → Audio out — no browser TTS
 
 (function() {
   'use strict';
 
-  var _active   = false;
-  var _recogn   = null;
-  var _synth    = window.speechSynthesis;
-  var _history  = [];
-  var _speaking = false;
-
-  var SYSTEM_PROMPT = 'You are Otto, ContentScale AI assistant. Help visitors understand the GRAAF Framework (content scoring 0-100), ContentScore SEO audits, and B2B lead generation. Be concise — max 2-3 sentences per answer. Always disclose you are an AI. ContentScale is based in Amsterdam.';
+  var _ws        = null;
+  var _active    = false;
+  var _audioCtx  = null;
+  var _stream    = null;
+  var _processor = null;
+  var _audioQueue = [];
+  var _playing   = false;
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -21,15 +21,15 @@
     var el = document.getElementById('gl-transcript');
     if (!el) return;
     el.style.display = 'block';
-    el.innerHTML += '<div style="color:' + (who === 'otto' ? '#4ade80' : '#f9fafb') + ';margin-bottom:6px;line-height:1.5;"><strong>' + (who === 'otto' ? 'Otto:' : 'You:') + '</strong> ' + msg + '</div>';
+    el.innerHTML += '<div style="color:' + (who === 'model' ? '#4ade80' : '#f9fafb') + ';margin-bottom:5px;"><strong>' + (who === 'model' ? 'Otto:' : 'You:') + '</strong> ' + msg + '</div>';
     el.scrollTop = el.scrollHeight;
   }
 
-  function setBtnActive(active) {
+  function setBtnActive(on) {
     var btn = document.getElementById('gl-call-btn');
     var r1  = document.getElementById('gl-ring1');
     if (!btn) return;
-    if (active) {
+    if (on) {
       btn.style.background = 'linear-gradient(135deg,#dc2626,#f87171)';
       btn.style.boxShadow  = '0 0 0 8px rgba(239,68,68,.2),0 0 32px rgba(239,68,68,.4)';
       if (r1) r1.style.animation = 'rp 1.2s ease-in-out infinite';
@@ -40,199 +40,201 @@
     }
   }
 
-  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  function stopSession() {
-    _active  = false;
-    _speaking = false;
-    if (_recogn) { try { _recogn.abort(); } catch(e){} _recogn = null; }
-    if (_synth)  _synth.cancel();
-    setBtnActive(false);
-    setStatus('Click to start a conversation');
-  }
-
-  // ── Gemini REST call — correct Gemini API format ──────────
-  async function askGemini(userText) {
-    setStatus('Otto is thinking...');
-    addTranscript('you', userText);
-    _history.push({ role: 'user', parts: [{ text: userText }] });
-
-    // Build Gemini-format request
-    var body = {
-      contents: _history,
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      generationConfig: { maxOutputTokens: 200, temperature: 0.7 }
-    };
-
+  // ── Play audio chunk from Gemini (base64 PCM16 → WebAudio) ──
+  async function playAudioChunk(b64data) {
+    if (!_audioCtx) _audioCtx = new AudioContext({ sampleRate: 24000 });
     try {
-      var r = await fetch(
-        'https://app.contentscale.site/api/gemini-proxy?model=gemini-2.0-flash-lite',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        }
-      );
+      var raw = atob(b64data);
+      var buf = new ArrayBuffer(raw.length);
+      var view = new Uint8Array(buf);
+      for (var i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i);
 
-      var d = await r.json();
+      // PCM16 → Float32
+      var pcm = new Int16Array(buf);
+      var float = new Float32Array(pcm.length);
+      for (var j = 0; j < pcm.length; j++) float[j] = pcm[j] / 32768;
 
-      var reply = '';
-      if (d.candidates && d.candidates[0] && d.candidates[0].content) {
-        reply = d.candidates[0].content.parts.map(function(p){ return p.text||''; }).join('');
-      } else if (d.error) {
-        reply = 'Sorry, I had a problem connecting. Please try again.';
-        console.error('[otto] Gemini error:', d.error);
+      var audioBuf = _audioCtx.createBuffer(1, float.length, 24000);
+      audioBuf.copyToChannel(float, 0);
+
+      var source = _audioCtx.createBufferSource();
+      source.buffer = audioBuf;
+      source.connect(_audioCtx.destination);
+      source.start();
+    } catch(e) { console.warn('[otto] audio play error:', e); }
+  }
+
+  // ── Stop everything ───────────────────────────────────────
+  function stopSession() {
+    _active = false;
+    if (_processor) { try{_processor.disconnect();}catch(e){} _processor = null; }
+    if (_stream)    { _stream.getTracks().forEach(function(t){t.stop();}); _stream = null; }
+    if (_audioCtx)  { try{_audioCtx.close();}catch(e){} _audioCtx = null; }
+    if (_ws && (_ws.readyState < 2)) { try{_ws.close();}catch(e){} }
+    _ws = null;
+    _audioQueue = [];
+    setBtnActive(false);
+    setStatus('Click to start a live conversation');
+  }
+
+  // ── Start mic input ───────────────────────────────────────
+  async function startMic() {
+    _stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    var micCtx  = new AudioContext({ sampleRate: 16000 });
+    var source  = micCtx.createMediaStreamSource(_stream);
+    _processor  = micCtx.createScriptProcessor(2048, 1, 1);
+
+    _processor.onaudioprocess = function(e) {
+      if (!_ws || _ws.readyState !== 1) return;
+      var input = e.inputBuffer.getChannelData(0);
+      var pcm16 = new Int16Array(input.length);
+      for (var i = 0; i < input.length; i++) {
+        var s = Math.max(-1, Math.min(1, input[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
+      var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm16.buffer)));
+      _ws.send(JSON.stringify({
+        realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: b64 }] }
+      }));
+    };
 
-      if (!reply) reply = 'Sorry, no response. Please try again.';
-
-      _history.push({ role: 'model', parts: [{ text: reply }] });
-      addTranscript('otto', reply);
-      speakReply(reply);
-
-    } catch(e) {
-      setStatus('Error: ' + e.message);
-      console.error('[otto] fetch error:', e);
-      if (_active) startListening();
-    }
+    source.connect(_processor);
+    _processor.connect(micCtx.destination);
+    setStatus('Listening — speak now');
   }
 
-  // ── Text-to-speech ────────────────────────────────────────
-  function speakReply(text) {
-    if (!_synth || !_active) { if (_active) startListening(); return; }
-    _speaking = true;
-    setStatus('Otto is speaking...');
-    _synth.cancel();
-
-    var utt = new SpeechSynthesisUtterance(text);
-    utt.lang  = 'en-GB';
-    utt.rate  = 0.95;
-    utt.pitch = 1.0;
-    utt.volume = 1.0;
-
-    // Pick best available voice
-    function pickVoice() {
-      var voices = _synth.getVoices();
-      // Prefer premium/natural-sounding voices
-      var preferred = voices.find(function(v){
-        return /Daniel|Google UK|Microsoft Ryan|Rishi/i.test(v.name) && v.lang.startsWith('en');
-      }) || voices.find(function(v){
-        return v.lang === 'en-GB' && !v.name.includes('compact');
-      }) || voices.find(function(v){
-        return v.lang.startsWith('en-') && v.localService === false;
-      }) || voices.find(function(v){
-        return v.lang.startsWith('en');
-      });
-      if (preferred) utt.voice = preferred;
-    }
-
-    if (_synth.getVoices().length) {
-      pickVoice();
-    } else {
-      _synth.addEventListener('voiceschanged', pickVoice, { once: true });
-    }
-
-    utt.onend = function() {
-      _speaking = false;
-      if (_active) { setStatus('Listening...'); startListening(); }
-    };
-    utt.onerror = function(e) {
-      _speaking = false;
-      console.warn('[otto] speech synth error:', e.error);
-      if (_active) startListening();
-    };
-
-    _synth.speak(utt);
-  }
-
-  // ── Speech recognition ────────────────────────────────────
-  function startListening() {
-    if (!_active || !SpeechRecognition || _speaking) return;
-    setStatus('Listening — speak now...');
-
-    _recogn = new SpeechRecognition();
-    _recogn.lang            = 'en-US';
-    _recogn.continuous      = false;
-    _recogn.interimResults  = false;
-    _recogn.maxAlternatives = 1;
-
-    _recogn.onresult = function(evt) {
-      var text = evt.results[0][0].transcript.trim();
-      if (text) { if (_recogn) { try{_recogn.stop();}catch(e){} _recogn=null; } askGemini(text); }
-    };
-
-    _recogn.onerror = function(evt) {
-      if (evt.error === 'aborted') return; // normal stop
-      console.warn('[otto] speech error:', evt.error);
-      if (evt.error === 'not-allowed') {
-        setStatus('Microphone blocked — allow in browser settings');
-        stopSession();
-      } else if (_active && !_speaking) {
-        setTimeout(startListening, 500);
-      }
-    };
-
-    try { _recogn.start(); } catch(e) { console.warn('[otto]', e); }
-  }
-
-  // ── Start ─────────────────────────────────────────────────
-  function startSession() {
+  // ── Connect to server WebSocket proxy ─────────────────────
+  async function startSession() {
     if (_active) { stopSession(); return; }
 
-    if (!SpeechRecognition) {
-      setStatus('Voice not supported — type below');
-      var ti = document.getElementById('otto-text-input');
-      if (ti) ti.style.display = 'flex';
+    setStatus('Checking server...');
+
+    // Verify API key + live model access
+    try {
+      var sr = await fetch('https://app.contentscale.site/api/gemini-live-status');
+      var sd = await sr.json();
+      if (!sd.keyWorks) {
+        setStatus('Error: ' + (sd.error || 'API key issue'));
+        return;
+      }
+      if (!sd.hasLiveAccess) {
+        setStatus('Gemini Live not available on this key — see hint below');
+        addTranscript('model', 'Note: ' + (sd.hint || 'Live API access needed. Visit aistudio.google.com and enable Gemini Live for your key.'));
+        return;
+      }
+    } catch(e) {
+      setStatus('Cannot reach server');
       return;
     }
 
-    _active  = true;
-    _history = [];
-    setBtnActive(true);
-
-    var greeting = 'Hi, I am Otto, ContentScale AI assistant. Ask me about SEO, content scoring, or lead generation.';
-    addTranscript('otto', greeting);
-    speakReply(greeting);
-  }
-
-  // ── Text fallback ─────────────────────────────────────────
-  function handleTextSend() {
-    var field = document.getElementById('otto-text-field');
-    if (!field || !field.value.trim()) return;
-    var text = field.value.trim();
-    field.value = '';
     _active = true;
-    askGemini(text);
+    setBtnActive(true);
+    setStatus('Connecting...');
+
+    _ws = new WebSocket('wss://app.contentscale.site/api/gemini-live-ws');
+
+    _ws.onopen = function() {
+      setStatus('Connected — sending setup...');
+      _ws.send(JSON.stringify({
+        setup: {
+          model: 'models/gemini-2.0-flash-live-001',
+          generationConfig: {
+            responseModalities: ['AUDIO', 'TEXT'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Puck' }
+              }
+            }
+          },
+          systemInstruction: {
+            parts: [{ text: 'You are Otto, ContentScale AI assistant. Help with GRAAF Framework, SEO content scoring, and B2B lead generation. Be concise and friendly. Always say you are an AI.' }]
+          }
+        }
+      }));
+    };
+
+    _ws.onmessage = function(evt) {
+      try {
+        var msg = typeof evt.data === 'string' ? JSON.parse(evt.data) : null;
+        if (!msg) return;
+
+        // Server proxy ready signal
+        if (msg.type === 'server_ready') { setStatus('Initialising...'); return; }
+
+        // Error from server
+        if (msg.error) {
+          setStatus('Error: ' + (msg.hint || msg.msg || msg.error));
+          console.error('[otto] server error:', msg);
+          stopSession();
+          return;
+        }
+
+        // Setup complete → start mic
+        if (msg.setupComplete) {
+          setStatus('Ready — speak now');
+          startMic().catch(function(e){
+            setStatus('Mic error: ' + e.message);
+            stopSession();
+          });
+          return;
+        }
+
+        // Audio response from Gemini
+        if (msg.serverContent) {
+          var turn = msg.serverContent.modelTurn;
+          if (turn && turn.parts) {
+            turn.parts.forEach(function(p) {
+              if (p.inlineData && p.inlineData.data) {
+                playAudioChunk(p.inlineData.data);
+              }
+              if (p.text) {
+                addTranscript('model', p.text);
+              }
+            });
+          }
+          if (msg.serverContent.turnComplete) {
+            setStatus('Listening...');
+          }
+        }
+
+      } catch(e) { console.warn('[otto] parse error:', e); }
+    };
+
+    _ws.onerror = function(e) {
+      console.error('[otto] ws error', e);
+      setStatus('Connection error — check Railway logs');
+      stopSession();
+    };
+
+    _ws.onclose = function(evt) {
+      console.log('[otto] ws closed code=' + evt.code + ' reason=' + evt.reason);
+      var reasons = {
+        1008: 'API key rejected by Google. Visit aistudio.google.com to enable Gemini Live.',
+        1011: 'Server error — check Railway logs',
+        1006: 'Connection dropped unexpectedly'
+      };
+      if (_active) {
+        setStatus(reasons[evt.code] || 'Disconnected (code ' + evt.code + ')');
+        if (reasons[evt.code]) addTranscript('model', reasons[evt.code]);
+        stopSession();
+      }
+    };
   }
 
-  // ── Tawk safety shim ──────────────────────────────────────
+  // Tawk safety shim
   window.Tawk_API = window.Tawk_API || {};
-  if (!window.Tawk_API.triggerEvent) {
-    window.Tawk_API.triggerEvent = function() {};
-  }
+  window.Tawk_API.triggerEvent = window.Tawk_API.triggerEvent || function(){};
 
-  // ── Attach ────────────────────────────────────────────────
+  // Attach button
   function attach() {
-    var callBtn = document.getElementById('gl-call-btn');
-    if (!callBtn) { setTimeout(attach, 150); return; }
-
-    callBtn.addEventListener('click', startSession);
-
-    var sendBtn = document.getElementById('otto-send-btn');
-    var textFld = document.getElementById('otto-text-field');
-    if (sendBtn) sendBtn.addEventListener('click', handleTextSend);
-    if (textFld) textFld.addEventListener('keydown', function(e){ if(e.key==='Enter') handleTextSend(); });
-
-    var ti = document.getElementById('otto-text-input');
-    if (ti) ti.style.display = 'flex';
-
-    console.log('[otto] voice button ready');
+    var btn = document.getElementById('gl-call-btn');
+    if (!btn) { setTimeout(attach, 150); return; }
+    btn.addEventListener('click', startSession);
+    console.log('[otto] Gemini Live button ready');
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attach);
-  } else {
-    attach();
-  }
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', attach)
+    : attach();
 
 })();
