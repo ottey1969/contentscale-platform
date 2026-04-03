@@ -3880,45 +3880,59 @@ app.get('/gemini-live-client.js', (req, res) => {
 // ── Gemini Live ephemeral token ─────────────────────────────
 // Browser calls this → gets short-lived token → connects DIRECTLY to Google
 // No audio proxy needed — lower latency, Google recommended approach
+// Gemini Live ephemeral token — server generates, browser uses directly
+// Endpoint per docs: POST /v1alpha/ephemeralTokens?key=API_KEY
+// Browser then connects to BidiGenerateContentConstrained?access_token=TOKEN
 app.get('/api/gemini-live-token', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
-  if (!apiKey) return res.status(500).json({ error: 'No Gemini API key configured' });
+  if (!apiKey) return res.status(500).json({ error: 'No Gemini API key — add GEMINI_KEY_LIVE in Railway Variables' });
 
   try {
-    // Generate ephemeral token via Google AI API
+    const expireTime = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+
     const tokenRes = await fetch(
       'https://generativelanguage.googleapis.com/v1alpha/ephemeralTokens?key=' + apiKey,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'models/gemini-3.1-flash-live-preview',
-          config: {
-            response_modalities: ['AUDIO'],
-            speech_config: {
-              voice_config: {
-                prebuilt_voice_config: { voice_name: 'Fenrir' }
+          liveConnectConstraints: {
+            model: 'models/gemini-3.1-flash-live-preview',
+            config: {
+              responseModalities: ['AUDIO'],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: 'Fenrir' }
+                }
+              },
+              systemInstruction: {
+                parts: [{ text: 'You are Otto, AI assistant of ContentScale Amsterdam. Help with ContentScore SEO audits, GRAAF Framework, and B2B lead generation. Be warm and concise — max 2-3 sentences. Always disclose you are an AI.' }]
               }
-            },
-            system_instruction: {
-              parts: [{ text: 'You are Otto, the AI assistant of ContentScale — an Amsterdam-based SEO platform. Help visitors understand ContentScore (0-100 content quality score), the GRAAF Framework, PULSE+NEXUS audits, and B2B lead generation with AI. Be warm, concise, and always disclose you are an AI. Max 2-3 sentences per response for voice.' }]
             }
           },
           uses: 1,
-          expire_time: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 min
+          expireTime: expireTime
         }),
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(10000)
       }
     );
 
-    const data = await tokenRes.json();
+    const rawText = await tokenRes.text();
+    let data;
+    try { data = JSON.parse(rawText); } catch(e) { data = { raw: rawText.slice(0, 200) }; }
+
     if (!tokenRes.ok) {
-      console.error('[gemini-live-token] error:', data);
-      return res.status(tokenRes.status).json({ error: data.error?.message || 'Token generation failed' });
+      console.error('[gemini-live-token] failed:', tokenRes.status, data);
+      return res.status(tokenRes.status).json({
+        error: data.error?.message || 'Token generation failed',
+        status: tokenRes.status,
+        detail: data
+      });
     }
 
-    console.log('[gemini-live-token] token generated OK');
-    res.json({ token: data.name, model: 'gemini-3.1-flash-live-preview' });
+    console.log('[gemini-live-token] ✅ token generated');
+    // token.name is the actual token value to use as access_token
+    res.json({ token: data.name, model: 'gemini-3.1-flash-live-preview', expires: expireTime });
 
   } catch(e) {
     console.error('[gemini-live-token] exception:', e.message);
