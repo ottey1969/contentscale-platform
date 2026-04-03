@@ -1,5 +1,5 @@
 // ContentScale — Otto AI — Gemini Live
-// Model: gemini-2.0-flash-exp | Voice: Fenrir | Ephemeral tokens
+// Auto-detects best available model from server | Voice: Fenrir
 
 (function() {
   'use strict';
@@ -11,7 +11,6 @@
   var _processor = null;
   var _playCtx   = null;
   var _nextStart = 0;
-  var MODEL      = 'gemini-2.0-flash-exp';
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -116,6 +115,7 @@
     _active = true;
     setBtnActive(true);
 
+    // Step 1: get ephemeral token + auto-detected model from server
     var tokenData;
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
@@ -132,11 +132,19 @@
       return;
     }
 
+    // Use model auto-detected by server
+    var detectedModel = tokenData.model || 'gemini-2.0-flash-exp';
+    console.log('[otto] using model:', detectedModel);
+    if (tokenData.availableModels) {
+      console.log('[otto] available live models:', tokenData.availableModels);
+    }
+
+    // Step 2: connect directly to Google with ephemeral token
     var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained'
       + '?access_token=' + encodeURIComponent(tokenData.token);
 
-    console.log('[otto] connecting with ephemeral token...');
     setStatus('Connecting...');
+    console.log('[otto] connecting to Google...');
 
     try {
       _ws = new WebSocket(wsUrl);
@@ -150,7 +158,7 @@
       setStatus('Connected — sending config...');
       _ws.send(JSON.stringify({
         config: {
-          model: 'models/' + MODEL,
+          model: 'models/' + detectedModel,
           responseModalities: ['AUDIO'],
           speechConfig: {
             voiceConfig: {
@@ -201,23 +209,26 @@
 
     _ws.onclose = function(evt) {
       console.log('[otto] closed code=' + evt.code + ' reason=' + evt.reason);
-      if (_active) {
-        var msg = evt.code === 1008 ? 'Access Denied — check API key model access' : 'Disconnected (code ' + evt.code + ')';
-        setStatus(msg);
-        stopSession();
+      if (evt.code === 1008) {
+        setStatus('Access denied — API key needs Gemini Live access at aistudio.google.com');
+        console.error('[otto] 1008: key lacks Live access. Model tried:', detectedModel);
+      } else if (_active) {
+        setStatus('Disconnected (code ' + evt.code + ')');
       }
+      stopSession();
     };
   }
 
   // Tawk safety shim
   window.Tawk_API = window.Tawk_API || {};
-  window.Tawk_API.triggerEvent = window.Tawk_API.triggerEvent || function() {};
+  window.Tawk_API.triggerEvent   = window.Tawk_API.triggerEvent   || function() {};
+  window.Tawk_API.addQuickReplies = window.Tawk_API.addQuickReplies || function() {};
 
   function attach() {
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] Gemini Live ready — model:', MODEL, '| voice: Fenrir');
+    console.log('[otto] Gemini Live ready — auto-detect model | voice: Fenrir');
   }
 
   document.readyState === 'loading'
