@@ -3877,21 +3877,25 @@ app.get('/gemini-live-client.js', (req, res) => {
 
 app.get('/api/gemini-live-status', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
-  if (!apiKey) return res.json({ available: false, error: 'No API key configured' });
+  if (!apiKey) return res.json({ available: false, error: 'No API key configured. Add GEMINI_KEY_LIVE in Railway Variables.' });
   try {
-    // Quick ping: list models to verify key works
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
       { signal: AbortSignal.timeout(5000) }
     );
     const d = await r.json();
-    const liveModels = (d.models||[]).filter(m => m.name.includes('flash') || m.name.includes('live'));
+    if (!r.ok) return res.json({ available: false, keyWorks: false, error: d.error?.message || 'Key rejected', status: r.status });
+    const allModels  = (d.models||[]).map(m => m.name.replace('models/',''));
+    const liveModels = allModels.filter(m => m.includes('live') || m.includes('flash-exp'));
+    const hasLive    = liveModels.length > 0;
     res.json({
-      available: r.ok,
-      keyWorks: r.ok,
-      liveModels: liveModels.map(m => m.name),
-      wsUrl: '/api/gemini-live-ws',
-      model: GEMINI_LIVE_MODEL
+      available: true,
+      keyWorks: true,
+      hasLiveAccess: hasLive,
+      liveModels,
+      allFlashModels: allModels.filter(m => m.includes('flash')),
+      hint: hasLive ? 'Gemini Live models available' : 'No live models found — key may need Live API access. Check aistudio.google.com',
+      wsUrl: 'wss://app.contentscale.site/api/gemini-live-ws'
     });
   } catch(e) {
     res.json({ available: false, error: e.message });
