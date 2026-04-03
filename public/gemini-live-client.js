@@ -1,6 +1,5 @@
-// ContentScale — Otto AI Voice Client
-// Uses Web Speech API (browser speech recognition) + Gemini REST API
-// No WebSocket, no special API access needed — works with standard Gemini key
+// ContentScale — Otto AI Voice Client v2
+// Web Speech API (recognition) + Gemini REST + Web Speech Synthesis
 
 (function() {
   'use strict';
@@ -8,11 +7,11 @@
   var _active   = false;
   var _recogn   = null;
   var _synth    = window.speechSynthesis;
-  var _history  = []; // conversation history for context
+  var _history  = [];
+  var _speaking = false;
 
-  var SYSTEM_PROMPT = 'You are Otto, ContentScale AI assistant. You help visitors understand the GRAAF Framework (content scoring 0-100), ContentScore SEO audits, and AI-driven B2B lead generation. Be concise — max 3 sentences per answer. Always disclose you are an AI. ContentScale is based in Amsterdam.';
+  var SYSTEM_PROMPT = 'You are Otto, ContentScale AI assistant. Help visitors understand the GRAAF Framework (content scoring 0-100), ContentScore SEO audits, and B2B lead generation. Be concise — max 2-3 sentences per answer. Always disclose you are an AI. ContentScale is based in Amsterdam.';
 
-  // ── DOM helpers ──────────────────────────────────────────
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
     if (el) el.textContent = msg;
@@ -41,156 +40,162 @@
     }
   }
 
-  // ── Check browser support ─────────────────────────────────
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    // Fallback: show text input if speech not supported
-    console.warn('[otto] Speech recognition not supported — showing text input');
-    var ti = document.getElementById('otto-text-input');
-    if (ti) ti.style.display = 'flex';
-    setStatus('Type to talk to Otto (voice not supported in this browser)');
-  }
 
-  // ── Stop everything ───────────────────────────────────────
   function stopSession() {
-    _active = false;
-    if (_recogn) { try { _recogn.stop(); } catch(e){} _recogn = null; }
-    if (_synth)  { _synth.cancel(); }
+    _active  = false;
+    _speaking = false;
+    if (_recogn) { try { _recogn.abort(); } catch(e){} _recogn = null; }
+    if (_synth)  _synth.cancel();
     setBtnActive(false);
     setStatus('Click to start a conversation');
   }
 
-  // ── Send text to Gemini REST API ──────────────────────────
+  // ── Gemini REST call — correct Gemini API format ──────────
   async function askGemini(userText) {
     setStatus('Otto is thinking...');
     addTranscript('you', userText);
-
     _history.push({ role: 'user', parts: [{ text: userText }] });
 
+    // Build Gemini-format request
+    var body = {
+      contents: _history,
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      generationConfig: { maxOutputTokens: 200, temperature: 0.7 }
+    };
+
     try {
-      var r = await fetch('https://app.contentscale.site/api/gemini-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gemini-2.0-flash',
-          max_tokens: 300,
-          system: SYSTEM_PROMPT,
-          messages: _history.map(function(m) {
-            return { role: m.role, content: m.parts[0].text };
-          })
-        })
-      });
+      var r = await fetch(
+        'https://app.contentscale.site/api/gemini-proxy?model=gemini-2.0-flash-lite',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }
+      );
 
       var d = await r.json();
 
-      // Extract text from response
       var reply = '';
-      if (d.content && d.content[0] && d.content[0].text) {
-        reply = d.content[0].text;
-      } else if (d.candidates && d.candidates[0]) {
-        var parts = d.candidates[0].content && d.candidates[0].content.parts;
-        if (parts) reply = parts.map(function(p){ return p.text||''; }).join('');
+      if (d.candidates && d.candidates[0] && d.candidates[0].content) {
+        reply = d.candidates[0].content.parts.map(function(p){ return p.text||''; }).join('');
       } else if (d.error) {
-        reply = 'Sorry, I had a problem: ' + (d.error.message || d.error);
+        reply = 'Sorry, I had a problem connecting. Please try again.';
+        console.error('[otto] Gemini error:', d.error);
       }
 
-      if (!reply) reply = 'Sorry, I did not get a response. Please try again.';
+      if (!reply) reply = 'Sorry, no response. Please try again.';
 
-      _history.push({ role: 'assistant', parts: [{ text: reply }] });
+      _history.push({ role: 'model', parts: [{ text: reply }] });
       addTranscript('otto', reply);
       speakReply(reply);
 
     } catch(e) {
       setStatus('Error: ' + e.message);
-      console.error('[otto] API error:', e);
-      setBtnActive(false);
+      console.error('[otto] fetch error:', e);
+      if (_active) startListening();
     }
   }
 
   // ── Text-to-speech ────────────────────────────────────────
   function speakReply(text) {
-    if (!_synth || !_active) return;
+    if (!_synth || !_active) { if (_active) startListening(); return; }
+    _speaking = true;
     setStatus('Otto is speaking...');
     _synth.cancel();
-    var utt = new SpeechSynthesisUtterance(text);
-    utt.lang  = 'en-US';
-    utt.rate  = 1.05;
-    utt.pitch = 1.0;
 
-    // Prefer a natural voice if available
-    var voices = _synth.getVoices();
-    var preferred = voices.find(function(v){
-      return /Google|Microsoft|Alex|Samantha/i.test(v.name) && v.lang.startsWith('en');
-    }) || voices.find(function(v){ return v.lang.startsWith('en'); });
-    if (preferred) utt.voice = preferred;
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.lang  = 'en-GB';
+    utt.rate  = 0.95;
+    utt.pitch = 1.0;
+    utt.volume = 1.0;
+
+    // Pick best available voice
+    function pickVoice() {
+      var voices = _synth.getVoices();
+      // Prefer premium/natural-sounding voices
+      var preferred = voices.find(function(v){
+        return /Daniel|Google UK|Microsoft Ryan|Rishi/i.test(v.name) && v.lang.startsWith('en');
+      }) || voices.find(function(v){
+        return v.lang === 'en-GB' && !v.name.includes('compact');
+      }) || voices.find(function(v){
+        return v.lang.startsWith('en-') && v.localService === false;
+      }) || voices.find(function(v){
+        return v.lang.startsWith('en');
+      });
+      if (preferred) utt.voice = preferred;
+    }
+
+    if (_synth.getVoices().length) {
+      pickVoice();
+    } else {
+      _synth.addEventListener('voiceschanged', pickVoice, { once: true });
+    }
 
     utt.onend = function() {
-      if (_active) {
-        setStatus('Listening...');
-        startListening();
-      }
+      _speaking = false;
+      if (_active) { setStatus('Listening...'); startListening(); }
     };
-    utt.onerror = function() {
+    utt.onerror = function(e) {
+      _speaking = false;
+      console.warn('[otto] speech synth error:', e.error);
       if (_active) startListening();
     };
+
     _synth.speak(utt);
   }
 
   // ── Speech recognition ────────────────────────────────────
   function startListening() {
-    if (!_active || !SpeechRecognition) return;
+    if (!_active || !SpeechRecognition || _speaking) return;
     setStatus('Listening — speak now...');
 
     _recogn = new SpeechRecognition();
-    _recogn.lang        = 'en-US';
-    _recogn.interimResults = false;
+    _recogn.lang            = 'en-US';
+    _recogn.continuous      = false;
+    _recogn.interimResults  = false;
     _recogn.maxAlternatives = 1;
 
     _recogn.onresult = function(evt) {
       var text = evt.results[0][0].transcript.trim();
-      if (text) askGemini(text);
+      if (text) { if (_recogn) { try{_recogn.stop();}catch(e){} _recogn=null; } askGemini(text); }
     };
 
     _recogn.onerror = function(evt) {
+      if (evt.error === 'aborted') return; // normal stop
       console.warn('[otto] speech error:', evt.error);
-      if (evt.error === 'no-speech') {
-        if (_active) startListening(); // keep listening
-      } else if (evt.error === 'not-allowed') {
-        setStatus('Mic access denied — allow microphone in browser');
+      if (evt.error === 'not-allowed') {
+        setStatus('Microphone blocked — allow in browser settings');
         stopSession();
-      } else {
-        if (_active) startListening();
+      } else if (_active && !_speaking) {
+        setTimeout(startListening, 500);
       }
     };
 
-    _recogn.onend = function() {
-      // Will restart in onresult → askGemini → speakReply → onend chain
-    };
-
-    try { _recogn.start(); } catch(e) { console.warn('[otto] recogn start:', e); }
+    try { _recogn.start(); } catch(e) { console.warn('[otto]', e); }
   }
 
-  // ── Start session ─────────────────────────────────────────
+  // ── Start ─────────────────────────────────────────────────
   function startSession() {
     if (_active) { stopSession(); return; }
+
     if (!SpeechRecognition) {
-      setStatus('Voice not supported — use text input below');
+      setStatus('Voice not supported — type below');
       var ti = document.getElementById('otto-text-input');
       if (ti) ti.style.display = 'flex';
       return;
     }
+
     _active  = true;
     _history = [];
     setBtnActive(true);
-    setStatus('Starting...');
 
-    // Greet first
-    var greeting = 'Hi! I am Otto, ContentScale AI assistant. Ask me anything about SEO, the GRAAF Framework, or B2B lead generation.';
+    var greeting = 'Hi, I am Otto, ContentScale AI assistant. Ask me about SEO, content scoring, or lead generation.';
     addTranscript('otto', greeting);
     speakReply(greeting);
   }
 
-  // ── Text input fallback (already in HTML) ─────────────────
+  // ── Text fallback ─────────────────────────────────────────
   function handleTextSend() {
     var field = document.getElementById('otto-text-field');
     if (!field || !field.value.trim()) return;
@@ -200,28 +205,28 @@
     askGemini(text);
   }
 
-  // ── Attach everything ─────────────────────────────────────
+  // ── Tawk safety shim ──────────────────────────────────────
+  window.Tawk_API = window.Tawk_API || {};
+  if (!window.Tawk_API.triggerEvent) {
+    window.Tawk_API.triggerEvent = function() {};
+  }
+
+  // ── Attach ────────────────────────────────────────────────
   function attach() {
-    var callBtn  = document.getElementById('gl-call-btn');
-    var sendBtn  = document.getElementById('otto-send-btn');
-    var textFld  = document.getElementById('otto-text-field');
+    var callBtn = document.getElementById('gl-call-btn');
+    if (!callBtn) { setTimeout(attach, 150); return; }
 
-    if (callBtn) {
-      callBtn.addEventListener('click', startSession);
-      console.log('[otto] voice button ready');
-    } else {
-      setTimeout(attach, 150);
-      return;
-    }
+    callBtn.addEventListener('click', startSession);
 
+    var sendBtn = document.getElementById('otto-send-btn');
+    var textFld = document.getElementById('otto-text-field');
     if (sendBtn) sendBtn.addEventListener('click', handleTextSend);
-    if (textFld) textFld.addEventListener('keydown', function(e){
-      if (e.key === 'Enter') handleTextSend();
-    });
+    if (textFld) textFld.addEventListener('keydown', function(e){ if(e.key==='Enter') handleTextSend(); });
 
-    // Show text input always as fallback
     var ti = document.getElementById('otto-text-input');
     if (ti) ti.style.display = 'flex';
+
+    console.log('[otto] voice button ready');
   }
 
   if (document.readyState === 'loading') {
