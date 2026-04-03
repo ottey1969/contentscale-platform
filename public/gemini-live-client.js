@@ -1,6 +1,6 @@
 // ContentScale — Otto AI — Gemini Live
-// Uses ephemeral tokens (Google recommended) — browser connects DIRECTLY to Google
-// No audio proxy — lower latency, natural Fenrir voice
+// Correct implementation based on official Google documentation
+// https://ai.google.dev/gemini-api/docs/live-api/get-started-websocket
 
 (function() {
   'use strict';
@@ -13,7 +13,9 @@
   var _playCtx   = null;
   var _nextStart = 0;
 
+  // v1beta direct API key endpoint (no ephemeral token needed)
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+  var MODEL   = 'gemini-3.1-flash-live-preview';
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -46,7 +48,7 @@
   // ── Gapless PCM16 audio playback ─────────────────────────
   function ensurePlayCtx() {
     if (!_playCtx || _playCtx.state === 'closed') {
-      _playCtx = new AudioContext({ sampleRate: 24000 });
+      _playCtx  = new AudioContext({ sampleRate: 24000 });
       _nextStart = 0;
     }
     if (_playCtx.state === 'suspended') _playCtx.resume();
@@ -58,7 +60,7 @@
       var raw   = atob(b64);
       var bytes = new Uint8Array(raw.length);
       for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-      var pcm16  = new Int16Array(bytes.buffer);
+      var pcm16   = new Int16Array(bytes.buffer);
       var float32 = new Float32Array(pcm16.length);
       for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
       var buf = _playCtx.createBuffer(1, float32.length, 24000);
@@ -70,7 +72,7 @@
       var when = Math.max(now, _nextStart);
       src.start(when);
       _nextStart = when + buf.duration;
-    } catch(e) { console.warn('[otto] audio error:', e.message); }
+    } catch(e) { console.warn('[otto] audio chunk error:', e.message); }
   }
 
   // ── Stop ─────────────────────────────────────────────────
@@ -88,10 +90,11 @@
   }
 
   // ── Mic → PCM16 → WebSocket ───────────────────────────────
+  // Correct audio format per docs: realtimeInput.audio.data + mimeType
   async function startMic() {
-    _stream  = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 }, video: false });
-    _micCtx  = new AudioContext({ sampleRate: 16000 });
-    var src  = _micCtx.createMediaStreamSource(_stream);
+    _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 }, video: false });
+    _micCtx    = new AudioContext({ sampleRate: 16000 });
+    var src    = _micCtx.createMediaStreamSource(_stream);
     _processor = _micCtx.createScriptProcessor(2048, 1, 1);
 
     _processor.onaudioprocess = function(e) {
@@ -103,8 +106,15 @@
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
       var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
+
+      // ✅ CORRECT format per official docs
       _ws.send(JSON.stringify({
-        realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: b64 }] }
+        realtimeInput: {
+          audio: {
+            data: b64,
+            mimeType: 'audio/pcm;rate=16000'
+          }
+        }
       }));
     };
 
@@ -120,28 +130,30 @@
     _active = true;
     setBtnActive(true);
 
-    // Step 1: get ephemeral token from our server
-    var token;
+    // Get ephemeral token from our server
+    var tokenData;
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
-      var d = await r.json();
-      if (!r.ok || !d.token) {
-        setStatus('Token error: ' + (d.error || 'unknown'));
-        console.error('[otto] token error:', d);
+      tokenData = await r.json();
+      if (!r.ok || !tokenData.token) {
+        setStatus('Token error: ' + (tokenData.error || 'unknown'));
+        console.error('[otto] token error:', tokenData);
         stopSession();
         return;
       }
-      token = d.token;
-      console.log('[otto] token received, connecting to Google...');
     } catch(e) {
       setStatus('Server error: ' + e.message);
       stopSession();
       return;
     }
 
-    // Step 2: connect DIRECTLY to Google using ephemeral token
-    setStatus('Connecting to Gemini...');
-    var wsUrl = WS_BASE + '?key=' + encodeURIComponent(token);
+    // ✅ CORRECT ephemeral token endpoint:
+    // v1alpha + BidiGenerateContentConstrained + access_token param
+    var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained'
+      + '?access_token=' + encodeURIComponent(tokenData.token);
+
+    console.log('[otto] connecting with ephemeral token...');
+    setStatus('Connecting...');
 
     try {
       _ws = new WebSocket(wsUrl);
@@ -152,18 +164,16 @@
     }
 
     _ws.onopen = function() {
-      setStatus('Connected — sending setup...');
-      // Send setup — model and config already locked in the ephemeral token
-      // but we can still send setup to confirm
+      setStatus('Connected — sending config...');
+
+      // ✅ CORRECT first message format per official docs: "config" not "setup"
       _ws.send(JSON.stringify({
-        setup: {
-          model: 'models/gemini-3.1-flash-live-preview',
-          generationConfig: {
-            responseModalities: ['AUDIO', 'TEXT'],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Fenrir' }
-              }
+        config: {
+          model: 'models/' + MODEL,
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Fenrir' }
             }
           },
           systemInstruction: {
@@ -175,9 +185,9 @@
 
     _ws.onmessage = function(evt) {
       try {
-        var msg = typeof evt.data === 'string' ? JSON.parse(evt.data) : null;
-        if (!msg) return;
+        var msg = JSON.parse(evt.data);
 
+        // Setup complete → start mic
         if (msg.setupComplete) {
           setStatus('Ready — speak now');
           startMic().catch(function(e) {
@@ -187,34 +197,43 @@
           return;
         }
 
+        // Server content: audio + transcript
         if (msg.serverContent) {
-          var turn = msg.serverContent.modelTurn;
-          if (turn && turn.parts) {
-            turn.parts.forEach(function(p) {
-              if (p.inlineData && p.inlineData.data) scheduleAudioChunk(p.inlineData.data);
-              if (p.text) addTranscript('model', p.text);
+          var sc = msg.serverContent;
+
+          // Audio response
+          if (sc.modelTurn && sc.modelTurn.parts) {
+            sc.modelTurn.parts.forEach(function(p) {
+              if (p.inlineData && p.inlineData.data) {
+                scheduleAudioChunk(p.inlineData.data);
+              }
             });
           }
-          if (msg.serverContent.turnComplete) setStatus('Listening...');
+
+          // Text transcriptions
+          if (sc.inputTranscription)  addTranscript('you',   sc.inputTranscription.text);
+          if (sc.outputTranscription) addTranscript('model', sc.outputTranscription.text);
+
+          if (sc.turnComplete) setStatus('Listening...');
         }
-      } catch(e) { console.warn('[otto] parse:', e.message); }
+
+      } catch(e) { console.warn('[otto] parse error:', e.message); }
     };
 
-    _ws.onerror = function() {
-      setStatus('Connection error — check console');
+    _ws.onerror = function(e) {
+      console.error('[otto] ws error', e);
+      setStatus('Connection error');
       stopSession();
     };
 
     _ws.onclose = function(evt) {
       console.log('[otto] closed code=' + evt.code + ' reason=' + evt.reason);
       var msgs = {
-        1008: 'Key/token rejected by Google. Try aistudio.google.com/live to verify key has Live access.',
-        1006: 'Connection dropped unexpectedly'
+        1008: 'Rejected — key needs Gemini Live access at aistudio.google.com',
+        1006: 'Dropped unexpectedly'
       };
       if (_active) {
-        var m = msgs[evt.code] || 'Disconnected (code ' + evt.code + ')';
-        setStatus(m);
-        if (msgs[evt.code]) addTranscript('model', m);
+        setStatus(msgs[evt.code] || 'Disconnected (code ' + evt.code + ')');
         stopSession();
       }
     };
@@ -228,7 +247,7 @@
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] Gemini Live ready (ephemeral tokens) voice: Fenrir');
+    console.log('[otto] Gemini Live ready — model:', MODEL, '| voice: Fenrir');
   }
 
   document.readyState === 'loading'
