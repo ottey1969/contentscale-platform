@@ -3862,6 +3862,19 @@ const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai
 const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // flash-exp has live support
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
+app.get('/gemini-live-client.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const candidates = [
+    require('path').join(__dirname, 'public', 'gemini-live-client.js'),
+    require('path').join(__dirname, '..', 'public', 'gemini-live-client.js'),
+  ];
+  const found = candidates.find(p => require('fs').existsSync(p));
+  if (found) return res.sendFile(found);
+  res.status(404).send('// gemini-live-client.js not found');
+});
+
 app.get('/api/gemini-live-status', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
   if (!apiKey) return res.json({ available: false, error: 'No API key configured' });
