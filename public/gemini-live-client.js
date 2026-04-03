@@ -155,10 +155,13 @@
     _ws.onopen = function() {
       setStatus('Connected — sending setup...');
       // setup + camelCase = correct for raw JS WebSocket to Gemini Live
-      // Send minimal setup first — just model to test connection
       var setupMsg = {
         setup: {
-          model: 'models/' + model
+          model: 'models/' + model,
+          responseModalities: ['AUDIO'],
+          systemInstruction: {
+            parts: [{ text: 'You are Otto, the AI assistant of ContentScale — an Amsterdam-based SEO platform. Help visitors understand ContentScore (0-100 content quality score), the GRAAF Framework, PULSE+NEXUS audits, and B2B lead generation with AI. Be concise, max 2-3 sentences per response for voice.' }]
+          }
         }
       };
       console.log('[otto] sending setup:', JSON.stringify(setupMsg));
