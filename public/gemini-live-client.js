@@ -1,6 +1,6 @@
 // ContentScale — Otto AI — Gemini Live
-// Real audio in/out via paid Gemini Live API
-// No Web Speech Synthesis — natural Gemini voice
+// Uses ephemeral tokens (Google recommended) — browser connects DIRECTLY to Google
+// No audio proxy — lower latency, natural Fenrir voice
 
 (function() {
   'use strict';
@@ -11,10 +11,9 @@
   var _stream    = null;
   var _processor = null;
   var _playCtx   = null;
-  var _nextStart = 0; // for gapless audio scheduling
+  var _nextStart = 0;
 
-  // Gemini Live voices: Puck · Charon · Kore · Fenrir · Aoede
-  var VOICE = 'Fenrir'; // natural male voice
+  var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -47,7 +46,7 @@
   // ── Gapless PCM16 audio playback ─────────────────────────
   function ensurePlayCtx() {
     if (!_playCtx || _playCtx.state === 'closed') {
-      _playCtx  = new AudioContext({ sampleRate: 24000 });
+      _playCtx = new AudioContext({ sampleRate: 24000 });
       _nextStart = 0;
     }
     if (_playCtx.state === 'suspended') _playCtx.resume();
@@ -56,31 +55,25 @@
   function scheduleAudioChunk(b64) {
     ensurePlayCtx();
     try {
-      var raw  = atob(b64);
+      var raw   = atob(b64);
       var bytes = new Uint8Array(raw.length);
       for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-
       var pcm16  = new Int16Array(bytes.buffer);
       var float32 = new Float32Array(pcm16.length);
       for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
-
-      var buf    = _playCtx.createBuffer(1, float32.length, 24000);
+      var buf = _playCtx.createBuffer(1, float32.length, 24000);
       buf.copyToChannel(float32, 0);
-
       var src = _playCtx.createBufferSource();
       src.buffer = buf;
       src.connect(_playCtx.destination);
-
-      var now = _playCtx.currentTime;
+      var now  = _playCtx.currentTime;
       var when = Math.max(now, _nextStart);
       src.start(when);
       _nextStart = when + buf.duration;
-    } catch(e) {
-      console.warn('[otto] audio chunk error:', e.message);
-    }
+    } catch(e) { console.warn('[otto] audio error:', e.message); }
   }
 
-  // ── Stop everything ───────────────────────────────────────
+  // ── Stop ─────────────────────────────────────────────────
   function stopSession() {
     _active = false;
     if (_processor) { try{_processor.disconnect();}catch(e){} _processor = null; }
@@ -94,7 +87,7 @@
     setStatus('Click to start a live conversation');
   }
 
-  // ── Microphone → PCM16 → WebSocket ───────────────────────
+  // ── Mic → PCM16 → WebSocket ───────────────────────────────
   async function startMic() {
     _stream  = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 }, video: false });
     _micCtx  = new AudioContext({ sampleRate: 16000 });
@@ -120,15 +113,35 @@
     setStatus('Listening — speak now');
   }
 
-  // ── Connect ───────────────────────────────────────────────
+  // ── Start session ─────────────────────────────────────────
   async function startSession() {
     if (_active) { stopSession(); return; }
-    setStatus('Connecting...');
+    setStatus('Getting token...');
     _active = true;
     setBtnActive(true);
 
-    var wsUrl = (location.protocol === 'https:' ? 'wss' : 'ws') + '://app.contentscale.site/api/gemini-live-ws';
-    console.log('[otto] connecting to', wsUrl);
+    // Step 1: get ephemeral token from our server
+    var token;
+    try {
+      var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
+      var d = await r.json();
+      if (!r.ok || !d.token) {
+        setStatus('Token error: ' + (d.error || 'unknown'));
+        console.error('[otto] token error:', d);
+        stopSession();
+        return;
+      }
+      token = d.token;
+      console.log('[otto] token received, connecting to Google...');
+    } catch(e) {
+      setStatus('Server error: ' + e.message);
+      stopSession();
+      return;
+    }
+
+    // Step 2: connect DIRECTLY to Google using ephemeral token
+    setStatus('Connecting to Gemini...');
+    var wsUrl = WS_BASE + '?key=' + encodeURIComponent(token);
 
     try {
       _ws = new WebSocket(wsUrl);
@@ -139,15 +152,17 @@
     }
 
     _ws.onopen = function() {
-      setStatus('Sending setup...');
+      setStatus('Connected — sending setup...');
+      // Send setup — model and config already locked in the ephemeral token
+      // but we can still send setup to confirm
       _ws.send(JSON.stringify({
         setup: {
-          model: 'models/gemini-2.0-flash-exp',
+          model: 'models/gemini-3.1-flash-live-preview',
           generationConfig: {
             responseModalities: ['AUDIO', 'TEXT'],
             speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: VOICE }
+                prebuiltVoiceConfig: { voiceName: 'Fenrir' }
               }
             }
           },
@@ -163,15 +178,6 @@
         var msg = typeof evt.data === 'string' ? JSON.parse(evt.data) : null;
         if (!msg) return;
 
-        if (msg.type === 'server_ready') { setStatus('Initialising...'); return; }
-
-        if (msg.error) {
-          setStatus('Error: ' + (msg.hint || msg.msg || msg.error));
-          console.error('[otto]', msg);
-          stopSession();
-          return;
-        }
-
         if (msg.setupComplete) {
           setStatus('Ready — speak now');
           startMic().catch(function(e) {
@@ -185,11 +191,7 @@
           var turn = msg.serverContent.modelTurn;
           if (turn && turn.parts) {
             turn.parts.forEach(function(p) {
-              // Real Gemini voice audio
-              if (p.inlineData && p.inlineData.data) {
-                scheduleAudioChunk(p.inlineData.data);
-              }
-              // Text transcript (optional display)
+              if (p.inlineData && p.inlineData.data) scheduleAudioChunk(p.inlineData.data);
               if (p.text) addTranscript('model', p.text);
             });
           }
@@ -199,20 +201,20 @@
     };
 
     _ws.onerror = function() {
-      setStatus('Connection error');
+      setStatus('Connection error — check console');
       stopSession();
     };
 
     _ws.onclose = function(evt) {
-      var reasons = {
-        1008: 'API key rejected — verify GEMINI_KEY_LIVE in Railway has Gemini Live access',
-        1011: 'Server error — check Railway deploy logs',
-        1006: 'Connection dropped'
+      console.log('[otto] closed code=' + evt.code + ' reason=' + evt.reason);
+      var msgs = {
+        1008: 'Key/token rejected by Google. Try aistudio.google.com/live to verify key has Live access.',
+        1006: 'Connection dropped unexpectedly'
       };
       if (_active) {
-        var msg = reasons[evt.code] || 'Disconnected (code ' + evt.code + ')';
-        setStatus(msg);
-        console.error('[otto] closed:', evt.code, evt.reason);
+        var m = msgs[evt.code] || 'Disconnected (code ' + evt.code + ')';
+        setStatus(m);
+        if (msgs[evt.code]) addTranscript('model', m);
         stopSession();
       }
     };
@@ -226,7 +228,7 @@
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] Gemini Live ready — voice:', VOICE);
+    console.log('[otto] Gemini Live ready (ephemeral tokens) voice: Fenrir');
   }
 
   document.readyState === 'loading'
