@@ -3897,7 +3897,7 @@ app.get('/api/gemini-live-token', async (req, res) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           liveConnectConstraints: {
-            model: 'models/gemini-3.1-flash-live-preview',
+            model: 'models/gemini-2.0-flash-exp',
             config: {
               responseModalities: ['AUDIO'],
               speechConfig: {
