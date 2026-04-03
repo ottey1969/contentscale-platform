@@ -146,6 +146,7 @@
 
     try {
       _ws = new WebSocket(wsUrl);
+      _ws.binaryType = 'arraybuffer';
     } catch(e) {
       setStatus('WebSocket error: ' + e.message);
       stopSession();
@@ -172,7 +173,12 @@
 
     _ws.onmessage = function(evt) {
       try {
-        var msg = JSON.parse(evt.data);
+        // Handle both text and binary (arraybuffer) messages
+        var rawData = evt.data;
+        if (rawData instanceof ArrayBuffer) {
+          rawData = new TextDecoder('utf-8').decode(new Uint8Array(rawData));
+        }
+        var msg = JSON.parse(rawData);
         if (msg.setupComplete) {
           setStatus('Ready — speak now');
           startMic().catch(function(e) {
