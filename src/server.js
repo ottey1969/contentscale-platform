@@ -3880,30 +3880,43 @@ app.get('/gemini-live-client.js', (req, res) => {
 // ── Gemini Live ephemeral token ─────────────────────────────
 // Browser calls this → gets short-lived token → connects DIRECTLY to Google
 // No audio proxy needed — lower latency, Google recommended approach
-// Gemini Live ephemeral token — server generates, browser uses directly
-// Endpoint per docs: POST /v1alpha/ephemeralTokens?key=API_KEY
-// Browser then connects to BidiGenerateContentConstrained?access_token=TOKEN
+// Gemini Live ephemeral token — auto-detects best available model
 app.get('/api/gemini-live-token', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
   if (!apiKey) return res.status(500).json({ error: 'No Gemini API key — add GEMINI_KEY_LIVE in Railway Variables' });
 
   try {
-    const expireTime = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+    // Fetch available models for this key
+    const modelsRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const modelsData = await modelsRes.json();
+    const allModels = (modelsData.models || []).map(m => m.name.replace('models/', ''));
 
+    // Priority list — first available wins
+    const LIVE_PRIORITY = [
+      'gemini-2.0-flash-live-001',
+      'gemini-live-001',
+      'gemini-2.0-flash-exp',
+      'gemini-3.1-flash-live-preview',
+    ];
+    const bestModel = LIVE_PRIORITY.find(m => allModels.includes(m)) || 'gemini-2.0-flash-exp';
+    console.log('[gemini-live-token] bestModel:', bestModel, '| allModels:', allModels.filter(m => m.includes('live') || m.includes('flash-exp')));
+
+    const expireTime = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const tokenRes = await fetch(
-      'https://generativelanguage.googleapis.com/v1alpha/ephemeralTokens?key=' + apiKey,
+      `https://generativelanguage.googleapis.com/v1alpha/ephemeralTokens?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           liveConnectConstraints: {
-            model: 'models/gemini-2.0-flash-exp',
+            model: `models/${bestModel}`,
             config: {
               responseModalities: ['AUDIO'],
               speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: 'Fenrir' }
-                }
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } }
               },
               systemInstruction: {
                 parts: [{ text: 'You are Otto, AI assistant of ContentScale Amsterdam. Help with ContentScore SEO audits, GRAAF Framework, and B2B lead generation. Be warm and concise — max 2-3 sentences. Always disclose you are an AI.' }]
@@ -3930,15 +3943,20 @@ app.get('/api/gemini-live-token', async (req, res) => {
       });
     }
 
-    console.log('[gemini-live-token] ✅ token generated');
-    // token.name is the actual token value to use as access_token
-    res.json({ token: data.name, model: 'gemini-3.1-flash-live-preview', expires: expireTime });
+    console.log(`[gemini-live-token] ✅ token generated for model: ${bestModel}`);
+    res.json({
+      token: data.name,
+      model: bestModel,
+      expires: expireTime,
+      availableModels: allModels.filter(m => m.includes('live') || m.includes('flash-exp'))
+    });
 
   } catch(e) {
     console.error('[gemini-live-token] exception:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 // Test endpoint — call this to diagnose key access
 app.get('/api/gemini-live-test', async (req, res) => {
