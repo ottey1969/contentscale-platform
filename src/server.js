@@ -3851,13 +3851,41 @@ app.post('/api/audit-intake', (req, res) => {
 
 
 // ══════════════════════════════════════════════════════════════════════
-// GEMINI LIVE WebSocket proxy
-// Browser → wss://app.contentscale.site/api/gemini-live-ws → Google
-// Key: GEMINI_KEY_LIVE or GEMINI_KEY_LEADCRAWLER (Railway env)
+// GEMINI LIVE — REST fallback + WebSocket proxy
+// Step 1: REST status check (/api/gemini-live-status)
+// Step 2: WebSocket proxy (/api/gemini-live-ws) → Google BidiGenerateContent
+// Key: GEMINI_KEY_LIVE or GEMINI_KEY_LEADCRAWLER
 // ══════════════════════════════════════════════════════════════════════
 
-const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+// Gemini Live WebSocket URL (v1alpha has better availability)
+const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
+const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // flash-exp has live support
 
+// REST endpoint to verify key + connectivity before browser opens WebSocket
+app.get('/api/gemini-live-status', async (req, res) => {
+  const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
+  if (!apiKey) return res.json({ available: false, error: 'No API key configured' });
+  try {
+    // Quick ping: list models to verify key works
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const d = await r.json();
+    const liveModels = (d.models||[]).filter(m => m.name.includes('flash') || m.name.includes('live'));
+    res.json({
+      available: r.ok,
+      keyWorks: r.ok,
+      liveModels: liveModels.map(m => m.name),
+      wsUrl: '/api/gemini-live-ws',
+      model: GEMINI_LIVE_MODEL
+    });
+  } catch(e) {
+    res.json({ available: false, error: e.message });
+  }
+});
+
+// WebSocket proxy
 const httpServer = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
@@ -3872,18 +3900,31 @@ httpServer.on('upgrade', (req, socket, head) => {
 wss.on('connection', (clientWs) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
   if (!apiKey) {
-    clientWs.send(JSON.stringify({ error: 'No Gemini API key on server' }));
-    clientWs.close(1011, 'No API key');
+    clientWs.send(JSON.stringify({ error: 'no_key', msg: 'No Gemini API key on server' }));
+    clientWs.close(1011);
     return;
   }
 
-  const googleWs = new WebSocket(GEMINI_LIVE_WS_URL + '?key=' + apiKey);
-  console.log('[gemini-live] client connected');
+  console.log('[gemini-live] client connected — opening Google WS');
+  const wsUrl = GEMINI_LIVE_WS_URL + '?key=' + apiKey;
+
+  let googleWs;
+  try {
+    googleWs = new WebSocket(wsUrl, {
+      headers: { 'Content-Type': 'application/json' },
+      handshakeTimeout: 10000,
+    });
+  } catch(e) {
+    console.error('[gemini-live] failed to create Google WS:', e.message);
+    clientWs.send(JSON.stringify({ error: 'ws_create_failed', msg: e.message }));
+    clientWs.close(1011);
+    return;
+  }
 
   googleWs.on('open', () => {
-    console.log('[gemini-live] google connected');
+    console.log('[gemini-live] Google WS open');
     if (clientWs.readyState === WebSocket.OPEN)
-      clientWs.send(JSON.stringify({ type: 'ready' }));
+      clientWs.send(JSON.stringify({ type: 'server_ready', model: GEMINI_LIVE_MODEL }));
   });
 
   googleWs.on('message', (data) => {
@@ -3891,34 +3932,38 @@ wss.on('connection', (clientWs) => {
   });
 
   clientWs.on('message', (data) => {
-    if (googleWs.readyState === WebSocket.OPEN) googleWs.send(data);
+    if (googleWs && googleWs.readyState === WebSocket.OPEN) googleWs.send(data);
   });
 
   googleWs.on('error', (err) => {
-    console.error('[gemini-live] google error:', err.message);
+    console.error('[gemini-live] Google WS error:', err.message, err.code||'');
     if (clientWs.readyState === WebSocket.OPEN) {
-      clientWs.send(JSON.stringify({ error: err.message }));
+      clientWs.send(JSON.stringify({
+        error: 'google_ws_error',
+        msg: err.message,
+        code: err.code || '',
+        hint: err.message.includes('401') ? 'API key invalid or no Live access'
+            : err.message.includes('403') ? 'API key lacks permission for Gemini Live'
+            : err.message.includes('ENOTFOUND') ? 'Cannot reach Google API — check network'
+            : 'Google WebSocket failed'
+      }));
       clientWs.close(1011);
     }
   });
 
-  googleWs.on('close', (code) => {
+  googleWs.on('close', (code, reason) => {
+    console.log('[gemini-live] Google WS closed:', code, reason.toString());
     if (clientWs.readyState === WebSocket.OPEN) clientWs.close(code);
   });
 
   clientWs.on('close', () => {
-    if (googleWs.readyState === WebSocket.OPEN) googleWs.close();
+    if (googleWs && googleWs.readyState === WebSocket.OPEN) googleWs.close();
   });
 
   clientWs.on('error', (err) => {
-    console.error('[gemini-live] client error:', err.message);
-    if (googleWs.readyState === WebSocket.OPEN) googleWs.close();
+    console.error('[gemini-live] client WS error:', err.message);
+    if (googleWs && googleWs.readyState === WebSocket.OPEN) googleWs.close();
   });
-});
-
-app.get('/api/gemini-live-status', (req, res) => {
-  const hasKey = !!(process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER);
-  res.json({ available: hasKey, wsUrl: 'wss://app.contentscale.site/api/gemini-live-ws' });
 });
 
 
