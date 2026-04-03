@@ -3877,6 +3877,34 @@ app.get('/gemini-live-client.js', (req, res) => {
   res.status(404).send('// gemini-live-client.js not found');
 });
 
+// Test endpoint — call this to diagnose key access
+app.get('/api/gemini-live-test', async (req, res) => {
+  const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
+  if (!apiKey) return res.json({ error: 'No key set in Railway Variables' });
+
+  const results = {};
+  const models = ['gemini-2.0-flash-live-001', 'gemini-live-001', 'gemini-2.0-flash-exp'];
+
+  for (const model of models) {
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}?key=${apiKey}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      const d = await r.json();
+      results[model] = r.ok ? 'available ✅' : `error: ${d.error?.message || r.status}`;
+    } catch(e) {
+      results[model] = 'timeout/error: ' + e.message;
+    }
+  }
+
+  res.json({
+    keyPrefix: apiKey.substring(0, 8) + '...',
+    models: results,
+    hint: 'If all models show errors, the key needs Gemini Live access at aistudio.google.com'
+  });
+});
+
 app.get('/api/gemini-live-status', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
   if (!apiKey) return res.json({ available: false, error: 'No API key configured. Add GEMINI_KEY_LIVE in Railway Variables.' });
@@ -3927,6 +3955,13 @@ wss.on('connection', (clientWs) => {
   console.log('[gemini-live] client connected — opening Google WS');
   const wsUrl = GEMINI_LIVE_WS_URL + '?key=' + apiKey;
 
+  // Try models in order until one works
+  const LIVE_MODELS = [
+    'models/gemini-2.0-flash-live-001',
+    'models/gemini-live-001',
+    'models/gemini-2.0-flash-exp',
+  ];
+
   let googleWs;
   try {
     googleWs = new WebSocket(wsUrl, {
@@ -3941,7 +3976,7 @@ wss.on('connection', (clientWs) => {
   }
 
   googleWs.on('open', () => {
-    console.log('[gemini-live] Google WS open');
+    console.log('[gemini-live] Google WS open ✅');
     if (clientWs.readyState === WebSocket.OPEN)
       clientWs.send(JSON.stringify({ type: 'server_ready', model: GEMINI_LIVE_MODEL }));
   });
@@ -3971,8 +4006,22 @@ wss.on('connection', (clientWs) => {
   });
 
   googleWs.on('close', (code, reason) => {
-    console.log('[gemini-live] Google WS closed:', code, reason.toString());
-    if (clientWs.readyState === WebSocket.OPEN) clientWs.close(code);
+    const reasonStr = reason ? reason.toString() : '';
+    console.error('[gemini-live] Google WS closed:', code, reasonStr || '(no reason)');
+    if (code === 1008) {
+      console.error('[gemini-live] 1008 = Policy Violation. Key:', apiKey ? apiKey.substring(0,8)+'...' : 'MISSING');
+      console.error('[gemini-live] → Verify key has Gemini Live access at aistudio.google.com');
+    }
+    if (clientWs.readyState === WebSocket.OPEN) {
+      if (code === 1008) {
+        clientWs.send(JSON.stringify({
+          error: 'google_rejected',
+          hint: 'API key does not have Gemini Live access. Go to aistudio.google.com → Get API key → make sure Gemini Live is enabled for this key.',
+          code: 1008
+        }));
+      }
+      clientWs.close(code);
+    }
   });
 
   clientWs.on('close', () => {
