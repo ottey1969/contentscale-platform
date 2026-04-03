@@ -21,6 +21,7 @@
 // ✅ FIX v3: /api/admin/users/:id/deactivate endpoint added (was missing — caused 404)
 // ✅ FIX v4: Instantly Bearer token = UUID part (BEFORE ':'), not secret after colon
 // ✅ FIX v5: All pages get favicon tags + blink effect + site.webmanifest route
+// ✅ v6: Gemini Live WebSocket proxy at /api/gemini-live-ws
 // ============================================
 // PGSSLMODE removed — pool config handles SSL (rejectUnauthorized: false for Railway)
 process.env.NODE_NO_WARNINGS = '1';
@@ -36,6 +37,8 @@ const compression = require('compression');
 const sgMail = require('@sendgrid/mail');
 const axios = require('axios');
 const multer = require('multer');
+const http   = require('http');
+const WebSocket = require('ws');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -2570,7 +2573,7 @@ console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
   // Auto-detect best Gemini model at startup
   await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
 console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
@@ -3843,6 +3846,79 @@ app.post('/api/audit-intake', (req, res) => {
 
     res.json({ success: true, message: 'Audit request received.' });
   });
+});
+
+
+
+// ══════════════════════════════════════════════════════════════════════
+// GEMINI LIVE WebSocket proxy
+// Browser → wss://app.contentscale.site/api/gemini-live-ws → Google
+// Key: GEMINI_KEY_LIVE or GEMINI_KEY_LEADCRAWLER (Railway env)
+// ══════════════════════════════════════════════════════════════════════
+
+const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+
+const httpServer = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+httpServer.on('upgrade', (req, socket, head) => {
+  if (req.url === '/api/gemini-live-ws') {
+    wss.handleUpgrade(req, socket, head, (ws) => { wss.emit('connection', ws, req); });
+  } else {
+    socket.destroy();
+  }
+});
+
+wss.on('connection', (clientWs) => {
+  const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
+  if (!apiKey) {
+    clientWs.send(JSON.stringify({ error: 'No Gemini API key on server' }));
+    clientWs.close(1011, 'No API key');
+    return;
+  }
+
+  const googleWs = new WebSocket(GEMINI_LIVE_WS_URL + '?key=' + apiKey);
+  console.log('[gemini-live] client connected');
+
+  googleWs.on('open', () => {
+    console.log('[gemini-live] google connected');
+    if (clientWs.readyState === WebSocket.OPEN)
+      clientWs.send(JSON.stringify({ type: 'ready' }));
+  });
+
+  googleWs.on('message', (data) => {
+    if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data);
+  });
+
+  clientWs.on('message', (data) => {
+    if (googleWs.readyState === WebSocket.OPEN) googleWs.send(data);
+  });
+
+  googleWs.on('error', (err) => {
+    console.error('[gemini-live] google error:', err.message);
+    if (clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify({ error: err.message }));
+      clientWs.close(1011);
+    }
+  });
+
+  googleWs.on('close', (code) => {
+    if (clientWs.readyState === WebSocket.OPEN) clientWs.close(code);
+  });
+
+  clientWs.on('close', () => {
+    if (googleWs.readyState === WebSocket.OPEN) googleWs.close();
+  });
+
+  clientWs.on('error', (err) => {
+    console.error('[gemini-live] client error:', err.message);
+    if (googleWs.readyState === WebSocket.OPEN) googleWs.close();
+  });
+});
+
+app.get('/api/gemini-live-status', (req, res) => {
+  const hasKey = !!(process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER);
+  res.json({ available: hasKey, wsUrl: 'wss://app.contentscale.site/api/gemini-live-ws' });
 });
 
 
