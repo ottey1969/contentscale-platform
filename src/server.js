@@ -3877,6 +3877,55 @@ app.get('/gemini-live-client.js', (req, res) => {
   res.status(404).send('// gemini-live-client.js not found');
 });
 
+// ── Gemini Live ephemeral token ─────────────────────────────
+// Browser calls this → gets short-lived token → connects DIRECTLY to Google
+// No audio proxy needed — lower latency, Google recommended approach
+app.get('/api/gemini-live-token', async (req, res) => {
+  const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
+  if (!apiKey) return res.status(500).json({ error: 'No Gemini API key configured' });
+
+  try {
+    // Generate ephemeral token via Google AI API
+    const tokenRes = await fetch(
+      'https://generativelanguage.googleapis.com/v1alpha/ephemeralTokens?key=' + apiKey,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/gemini-3.1-flash-live-preview',
+          config: {
+            response_modalities: ['AUDIO'],
+            speech_config: {
+              voice_config: {
+                prebuilt_voice_config: { voice_name: 'Fenrir' }
+              }
+            },
+            system_instruction: {
+              parts: [{ text: 'You are Otto, the AI assistant of ContentScale — an Amsterdam-based SEO platform. Help visitors understand ContentScore (0-100 content quality score), the GRAAF Framework, PULSE+NEXUS audits, and B2B lead generation with AI. Be warm, concise, and always disclose you are an AI. Max 2-3 sentences per response for voice.' }]
+            }
+          },
+          uses: 1,
+          expire_time: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 min
+        }),
+        signal: AbortSignal.timeout(8000)
+      }
+    );
+
+    const data = await tokenRes.json();
+    if (!tokenRes.ok) {
+      console.error('[gemini-live-token] error:', data);
+      return res.status(tokenRes.status).json({ error: data.error?.message || 'Token generation failed' });
+    }
+
+    console.log('[gemini-live-token] token generated OK');
+    res.json({ token: data.name, model: 'gemini-3.1-flash-live-preview' });
+
+  } catch(e) {
+    console.error('[gemini-live-token] exception:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Test endpoint — call this to diagnose key access
 app.get('/api/gemini-live-test', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
