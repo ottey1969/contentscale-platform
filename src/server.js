@@ -3859,7 +3859,7 @@ app.post('/api/audit-intake', (req, res) => {
 
 // Gemini Live WebSocket URL (v1alpha has better availability)
 const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
-const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-live-001'; // paid account live model
+const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // v1alpha Live model
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
 app.get('/gemini-live-client.js', (req, res) => {
