@@ -1,5 +1,6 @@
 // ContentScale — Otto AI — Gemini Live
-// Auto-detects best available model from server | Voice: Fenrir
+// Direct WebSocket to Google using API key via server relay
+// Correct message format per official docs
 
 (function() {
   'use strict';
@@ -11,6 +12,9 @@
   var _processor = null;
   var _playCtx   = null;
   var _nextStart = 0;
+
+  // v1beta direct connection with API key
+  var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -83,7 +87,7 @@
   }
 
   async function startMic() {
-    _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 }, video: false });
+    _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
     _micCtx    = new AudioContext({ sampleRate: 16000 });
     var src    = _micCtx.createMediaStreamSource(_stream);
     _processor = _micCtx.createScriptProcessor(2048, 1, 1);
@@ -97,6 +101,7 @@
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
       var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
+      // Correct audio format per official docs
       _ws.send(JSON.stringify({
         realtimeInput: {
           audio: { data: b64, mimeType: 'audio/pcm;rate=16000' }
@@ -111,18 +116,17 @@
 
   async function startSession() {
     if (_active) { stopSession(); return; }
-    setStatus('Getting token...');
+    setStatus('Getting key...');
     _active = true;
     setBtnActive(true);
 
-    // Step 1: get ephemeral token + auto-detected model from server
-    var tokenData;
+    // Get API key + best model from server
+    var keyData;
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
-      tokenData = await r.json();
-      if (!r.ok || !tokenData.token) {
-        setStatus('Token error: ' + (tokenData.error || 'unknown'));
-        console.error('[otto] token error:', tokenData);
+      keyData = await r.json();
+      if (!r.ok || !keyData.key) {
+        setStatus('Error: ' + (keyData.error || 'No key returned'));
         stopSession();
         return;
       }
@@ -132,19 +136,13 @@
       return;
     }
 
-    // Use model auto-detected by server
-    var detectedModel = tokenData.model || 'gemini-2.0-flash-exp';
-    console.log('[otto] using model:', detectedModel);
-    if (tokenData.availableModels) {
-      console.log('[otto] available live models:', tokenData.availableModels);
-    }
+    var model = keyData.model || 'gemini-2.0-flash-exp';
+    console.log('[otto] model:', model, '| available:', keyData.availableModels);
 
-    // Step 2: connect directly to Google with ephemeral token
-    var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained'
-      + '?access_token=' + encodeURIComponent(tokenData.token);
-
+    // Connect directly to Google with API key
+    var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
     setStatus('Connecting...');
-    console.log('[otto] connecting to Google...');
+    console.log('[otto] connecting to Google Live API...');
 
     try {
       _ws = new WebSocket(wsUrl);
@@ -156,9 +154,10 @@
 
     _ws.onopen = function() {
       setStatus('Connected — sending config...');
+      // Correct first message format per official docs: "config" not "setup"
       _ws.send(JSON.stringify({
         config: {
-          model: 'models/' + detectedModel,
+          model: 'models/' + model,
           responseModalities: ['AUDIO'],
           speechConfig: {
             voiceConfig: {
@@ -175,23 +174,19 @@
     _ws.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
-
         if (msg.setupComplete) {
           setStatus('Ready — speak now');
           startMic().catch(function(e) {
-            setStatus('Mic: ' + e.message);
+            setStatus('Mic error: ' + e.message);
             stopSession();
           });
           return;
         }
-
         if (msg.serverContent) {
           var sc = msg.serverContent;
           if (sc.modelTurn && sc.modelTurn.parts) {
             sc.modelTurn.parts.forEach(function(p) {
-              if (p.inlineData && p.inlineData.data) {
-                scheduleAudioChunk(p.inlineData.data);
-              }
+              if (p.inlineData && p.inlineData.data) scheduleAudioChunk(p.inlineData.data);
             });
           }
           if (sc.inputTranscription)  addTranscript('you',   sc.inputTranscription.text);
@@ -209,19 +204,20 @@
 
     _ws.onclose = function(evt) {
       console.log('[otto] closed code=' + evt.code + ' reason=' + evt.reason);
-      if (evt.code === 1008) {
-        setStatus('Access denied — API key needs Gemini Live access at aistudio.google.com');
-        console.error('[otto] 1008: key lacks Live access. Model tried:', detectedModel);
-      } else if (_active) {
-        setStatus('Disconnected (code ' + evt.code + ')');
+      if (_active) {
+        if (evt.code === 1008) {
+          setStatus('API key needs Gemini Live access — visit aistudio.google.com');
+        } else {
+          setStatus('Disconnected (code ' + evt.code + ')');
+        }
+        stopSession();
       }
-      stopSession();
     };
   }
 
-  // Tawk safety shim
+  // Safety shims
   window.Tawk_API = window.Tawk_API || {};
-  window.Tawk_API.triggerEvent   = window.Tawk_API.triggerEvent   || function() {};
+  window.Tawk_API.triggerEvent    = window.Tawk_API.triggerEvent    || function() {};
   window.Tawk_API.addQuickReplies = window.Tawk_API.addQuickReplies || function() {};
 
   function attach() {
