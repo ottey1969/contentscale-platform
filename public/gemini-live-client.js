@@ -1,6 +1,5 @@
 // ContentScale — Otto AI — Gemini Live
-// Correct implementation based on official Google documentation
-// https://ai.google.dev/gemini-api/docs/live-api/get-started-websocket
+// Model: gemini-2.0-flash-exp | Voice: Fenrir | Ephemeral tokens
 
 (function() {
   'use strict';
@@ -12,10 +11,7 @@
   var _processor = null;
   var _playCtx   = null;
   var _nextStart = 0;
-
-  // v1beta direct API key endpoint (no ephemeral token needed)
-  var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
-  var MODEL   = 'gemini-3.1-flash-live-preview';
+  var MODEL      = 'gemini-2.0-flash-exp';
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -45,7 +41,6 @@
     }
   }
 
-  // ── Gapless PCM16 audio playback ─────────────────────────
   function ensurePlayCtx() {
     if (!_playCtx || _playCtx.state === 'closed') {
       _playCtx  = new AudioContext({ sampleRate: 24000 });
@@ -72,25 +67,22 @@
       var when = Math.max(now, _nextStart);
       src.start(when);
       _nextStart = when + buf.duration;
-    } catch(e) { console.warn('[otto] audio chunk error:', e.message); }
+    } catch(e) { console.warn('[otto] audio error:', e.message); }
   }
 
-  // ── Stop ─────────────────────────────────────────────────
   function stopSession() {
     _active = false;
-    if (_processor) { try{_processor.disconnect();}catch(e){} _processor = null; }
-    if (_stream)    { _stream.getTracks().forEach(function(t){t.stop();}); _stream = null; }
-    if (_micCtx)    { try{_micCtx.close();}catch(e){} _micCtx = null; }
-    if (_playCtx)   { try{_playCtx.close();}catch(e){} _playCtx = null; }
-    if (_ws && _ws.readyState < 2) { try{_ws.close();}catch(e){} }
+    if (_processor) { try { _processor.disconnect(); } catch(e) {} _processor = null; }
+    if (_stream)    { _stream.getTracks().forEach(function(t) { t.stop(); }); _stream = null; }
+    if (_micCtx)    { try { _micCtx.close(); } catch(e) {} _micCtx = null; }
+    if (_playCtx)   { try { _playCtx.close(); } catch(e) {} _playCtx = null; }
+    if (_ws && _ws.readyState < 2) { try { _ws.close(); } catch(e) {} }
     _ws = null;
     _nextStart = 0;
     setBtnActive(false);
     setStatus('Click to start a live conversation');
   }
 
-  // ── Mic → PCM16 → WebSocket ───────────────────────────────
-  // Correct audio format per docs: realtimeInput.audio.data + mimeType
   async function startMic() {
     _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 }, video: false });
     _micCtx    = new AudioContext({ sampleRate: 16000 });
@@ -106,14 +98,9 @@
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
       var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
-
-      // ✅ CORRECT format per official docs
       _ws.send(JSON.stringify({
         realtimeInput: {
-          audio: {
-            data: b64,
-            mimeType: 'audio/pcm;rate=16000'
-          }
+          audio: { data: b64, mimeType: 'audio/pcm;rate=16000' }
         }
       }));
     };
@@ -123,14 +110,12 @@
     setStatus('Listening — speak now');
   }
 
-  // ── Start session ─────────────────────────────────────────
   async function startSession() {
     if (_active) { stopSession(); return; }
     setStatus('Getting token...');
     _active = true;
     setBtnActive(true);
 
-    // Get ephemeral token from our server
     var tokenData;
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
@@ -147,8 +132,6 @@
       return;
     }
 
-    // ✅ CORRECT ephemeral token endpoint:
-    // v1alpha + BidiGenerateContentConstrained + access_token param
     var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained'
       + '?access_token=' + encodeURIComponent(tokenData.token);
 
@@ -165,8 +148,6 @@
 
     _ws.onopen = function() {
       setStatus('Connected — sending config...');
-
-      // ✅ CORRECT first message format per official docs: "config" not "setup"
       _ws.send(JSON.stringify({
         config: {
           model: 'models/' + MODEL,
@@ -187,7 +168,6 @@
       try {
         var msg = JSON.parse(evt.data);
 
-        // Setup complete → start mic
         if (msg.setupComplete) {
           setStatus('Ready — speak now');
           startMic().catch(function(e) {
@@ -197,11 +177,8 @@
           return;
         }
 
-        // Server content: audio + transcript
         if (msg.serverContent) {
           var sc = msg.serverContent;
-
-          // Audio response
           if (sc.modelTurn && sc.modelTurn.parts) {
             sc.modelTurn.parts.forEach(function(p) {
               if (p.inlineData && p.inlineData.data) {
@@ -209,14 +186,10 @@
               }
             });
           }
-
-          // Text transcriptions
           if (sc.inputTranscription)  addTranscript('you',   sc.inputTranscription.text);
           if (sc.outputTranscription) addTranscript('model', sc.outputTranscription.text);
-
           if (sc.turnComplete) setStatus('Listening...');
         }
-
       } catch(e) { console.warn('[otto] parse error:', e.message); }
     };
 
@@ -228,12 +201,9 @@
 
     _ws.onclose = function(evt) {
       console.log('[otto] closed code=' + evt.code + ' reason=' + evt.reason);
-      var msgs = {
-        1008: 'Rejected — key needs Gemini Live access at aistudio.google.com',
-        1006: 'Dropped unexpectedly'
-      };
       if (_active) {
-        setStatus(msgs[evt.code] || 'Disconnected (code ' + evt.code + ')');
+        var msg = evt.code === 1008 ? 'Access Denied — check API key model access' : 'Disconnected (code ' + evt.code + ')';
+        setStatus(msg);
         stopSession();
       }
     };
@@ -241,7 +211,7 @@
 
   // Tawk safety shim
   window.Tawk_API = window.Tawk_API || {};
-  window.Tawk_API.triggerEvent = window.Tawk_API.triggerEvent || function(){};
+  window.Tawk_API.triggerEvent = window.Tawk_API.triggerEvent || function() {};
 
   function attach() {
     var btn = document.getElementById('gl-call-btn');
