@@ -822,22 +822,31 @@
 
                _previewWs = new WebSocket(wsUrl);
                _previewWs.binaryType = 'arraybuffer';
+               _previewWs.binaryType = 'arraybuffer';
                _previewAudioCtx = new AudioContext({ sampleRate: 24000 });
                _previewNextStart = 0;
 
                _previewWs.onopen = function() {
                  statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Otto is preparing pitch...</span>';
-                 _previewWs.send(JSON.stringify({
+                 var pitchText = 'You are Otto, a male AI voice assistant of ContentScale. Deliver this pitch ONCE naturally then stop. Say: Hey ' + name + '! I am Otto from ContentScale. We help businesses like yours recover lost SEO traffic with our free GRAAF Framework scan. We can also help with leads, outbound calls, and making sure you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! Then say goodbye.';
+                 var previewSetup = {
                    setup: {
                      model: 'models/' + model,
                      generation_config: {
-                       response_modalities: ['AUDIO']
+                       response_modalities: ['AUDIO'],
+                       speech_config: {
+                         voice_config: {
+                           prebuilt_voice_config: { voice_name: 'Fenrir' }
+                         }
+                       }
                      },
                      system_instruction: {
-                       parts: [{ text: 'You are Otto, a male AI voice assistant of ContentScale. Deliver this pitch ONCE, naturally and warmly, in a conversational tone. Say: Hey ' + name + '! I am Otto from ContentScale. We help businesses like yours recover lost SEO traffic with our free GRAAF Framework scan. We can also help with leads, outbound calls, and making sure you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! Then say goodbye and stop.' }]
+                       parts: [{ text: pitchText }]
                      }
                    }
-                 }));
+                 };
+                 console.log('[preview] sending setup:', JSON.stringify(previewSetup));
+                 _previewWs.send(JSON.stringify(previewSetup));
                };
 
                _previewWs.onmessage = function(evt) {
