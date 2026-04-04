@@ -746,7 +746,7 @@
            btn.disabled = true;
            statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Initiating call...</span>';
 
-           const API_BASE = 'https://contentscale-platform-production.up.railway.app';
+           const API_BASE = 'https://app.contentscale.site';
            try {
              const resp = await fetch(`${API_BASE}/api/cs-agent/call`, {
                method: 'POST',
@@ -953,17 +953,23 @@
          }
          // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — server key) ──────────────
          async function callClaude(city, country, ind) {
-             const prompt = `You are a high-precision Lead Scraper. MISSION: Find real local B2B leads for content services.
-CRITICAL: A lead without a phone number is WORTHLESS. Prioritize finding business phone numbers.
-Look for "Goldmine" leads: Businesses with 5-30 pages of content (Skeleton/Brochure status).
+             const prompt = `You are a high-precision B2B Lead Scraper. Use Google Search to find REAL local businesses.
+MISSION: Find 15 real ${ind.q} businesses in ${city}, ${country} that need SEO content services.
+CRITICAL: Search for actual business names, phone numbers, and websites. A lead without a phone number is WORTHLESS.
+Look for businesses with simple/outdated websites (5-30 pages) — these are the best leads.
 
-Visit websites and find 15 real ${ind.q} businesses in ${city}, ${country}.
+Search queries to use:
+- "${ind.q} ${city} ${country}"  
+- "${ind.q} ${city} contact phone"
+- "${ind.q} ${city} website"
 
-Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Example schema:
+For each business found, verify their website exists and estimate page count.
+
+Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
 [{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
 
              try {
-                 const API_BASE = 'https://contentscale-platform-production.up.railway.app';
+                 const API_BASE = 'https://app.contentscale.site';
                  const resp = await fetch(`${API_BASE}/api/gemini-proxy`,
                  {
                      method: 'POST',
@@ -1183,7 +1189,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation. Ex
          '- phone and email: real values or "" if not found',
          '- Return ONLY the raw JSON array'
          ].join('\n');
-         const API_BASE = 'https://contentscale-platform-production.up.railway.app';
+         const API_BASE = 'https://app.contentscale.site';
          const resp = await fetch(`${API_BASE}/api/gemini-proxy`, {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
