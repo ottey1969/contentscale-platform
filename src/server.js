@@ -4279,8 +4279,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     setStatus('Your turn — speak now...');
 
     // HARD KILL: 45 seconds max no matter what
-    _killTimer = setTimeout(function() { hangup('120s max reached'); }, 120000);
-    console.log('[otto] session started — 120s hard limit');
+    _killTimer = setTimeout(function() { hangup('2.5 min limit reached'); }, 150000);
+    console.log('[otto] session started — 2.5 min hard limit');
   }
 
   async function startSession() {
