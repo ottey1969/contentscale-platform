@@ -193,6 +193,7 @@ img,table,iframe{max-width:100%;}
     <button class="btn btn-purple" onclick="exportClientReport()">📄 Client Report</button>
     <a href="/audit-recommendations" class="btn btn-gold">🎯 Recommendations</a>
     <button class="btn btn-red" onclick="clearAll()">✕ Clear</button>
+    <button class="btn btn-muted" onclick="cleanBadPages()" title="Remove invalid entries (queries, keywords) from the list">🧹 Clean up</button>
     <input type="file" id="importInput" accept=".csv" onchange="importCSV(this)">
     <input type="file" id="gscImportInput" accept=".csv" multiple onchange="importGSC(this)">
   </div>
@@ -259,11 +260,11 @@ img,table,iframe{max-width:100%;}
 
   <!-- Bulk paste -->
   <div style="margin-top:10px;">
-    <div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Plakken</div>
-    <textarea class="bulk-area" id="bulkArea" placeholder="Plak meerdere URLs (één per regel) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
+    <div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Paste</div>
+    <textarea class="bulk-area" id="bulkArea" placeholder="Paste multiple URLs (één per line) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
     <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
       <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
-      <span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--dim);">One URL per regel</span>
+      <span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--dim);">One URL per line</span>
     </div>
   </div>
 </div>
@@ -378,6 +379,23 @@ function makePage(url,kw,pri,pos,impr){
     position:parseFloat(pos)||0,impressions:parseInt(impr)||0,
     status:'notstarted',scoreBefore:'',scoreAfter:'',notes:'',deadline:'',
     checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
+}
+
+function cleanBadPages(){
+  var before = pages.length;
+  pages = pages.filter(function(p){
+    if(!p.url) return false;
+    if(!p.url.startsWith('http') && !p.url.startsWith('/')) return false;
+    if(p.url.includes('-site:') || p.url.includes(' ')) return false;
+    return true;
+  });
+  var removed = before - pages.length;
+  if(removed > 0){
+    save(); renderPages(); renderOverview();
+    toast('🧹 Removed ' + removed + ' invalid entries');
+  } else {
+    toast('✓ No invalid entries found');
+  }
 }
 
 function addPage(){
@@ -882,7 +900,11 @@ function parseGSCFile(raw){
   for(var i=1;i<lines.length;i++){
     var cols = lines[i].replace(/"/g,'').split(',');
     var url = (cols[iUrl]||'').trim();
-    if(!url||!url.includes('.')) continue;
+    // Only accept real page URLs — must start with http or /
+    if(!url) continue;
+    if(!url.startsWith('http') && !url.startsWith('/')) continue;
+    // Reject query strings masquerading as URLs
+    if(url.includes('-site:') || url.includes(' ') || url.includes('?q=')) continue;
     var impr = parseInt(cols[iImpr])||0;
     var pos  = parseFloat(cols[iPos])||0;
     var ctr  = parseFloat((cols[iCtr]||'0').replace('%',''))||0;
