@@ -4231,7 +4231,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     };
     src.connect(_processor);
     _processor.connect(_micCtx.destination);
-    setStatus('Listening...');
+    setStatus('Your turn — speak now...');
 
     // HARD KILL: 45 seconds max no matter what
     _killTimer = setTimeout(function() { hangup('60s max reached'); }, 60000);
@@ -4282,8 +4282,19 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
         var msg = JSON.parse(raw);
 
         if (msg.setupComplete) {
-          setStatus('Ready — speak now');
+          setStatus('Otto is speaking...');
           startMic().catch(function(e) { setStatus('Mic: ' + e.message); stopSession(); });
+          // Send a dot to trigger Otto to speak first
+          setTimeout(function() {
+            if (_ws && _ws.readyState === 1) {
+              _ws.send(JSON.stringify({
+                clientContent: {
+                  turns: [{ role: 'user', parts: [{ text: '.' }] }],
+                  turnComplete: true
+                }
+              }));
+            }
+          }, 500);
           return;
         }
 
@@ -4305,7 +4316,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
             }
           }
           if (sc.turnComplete) {
-            setStatus('Listening...');
+            setStatus('Your turn — speak now...');
             console.log('[otto] turnComplete');
           }
         }
