@@ -2575,6 +2575,27 @@ const dbConnected = await waitForDatabase();
   await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
 httpServer.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
+
+// Log Otto client files on startup
+try {
+  const _fs = require('fs');
+  const _path = require('path');
+  const _publicDir = _path.join(__dirname, 'public');
+  if (_fs.existsSync(_publicDir)) {
+    const _ottoFiles = _fs.readdirSync(_publicDir).filter(f => f.includes('gemini-live') || f.includes('otto'));
+    if (_ottoFiles.length > 0) {
+      console.log('🤖 Otto files in public/: ' + _ottoFiles.join(', '));
+      _ottoFiles.forEach(f => {
+        const stat = _fs.statSync(_path.join(_publicDir, f));
+        console.log('   📄 ' + f + ' — ' + stat.size + ' bytes — modified: ' + stat.mtime.toISOString());
+      });
+    } else {
+      console.log('⚠️  No Otto/gemini-live files found in public/');
+    }
+  } else {
+    console.log('⚠️  public/ directory does not exist on Railway');
+  }
+} catch(e) { console.log('⚠️  Otto file check error:', e.message); }
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
 console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
 console.log('\n✅ Elite scanner ready\n');
@@ -3862,6 +3883,19 @@ const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai
 const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // v1alpha Live model
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
+app.get('/api/otto-version', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const files = ['gemini-live-client-v6.js','gemini-live-client-v5.js','gemini-live-client.js']
+    .map(f => path.join(__dirname, 'public', f))
+    .filter(f => fs.existsSync(f))
+    .map(f => ({ file: path.basename(f), size: fs.statSync(f).size, modified: fs.statSync(f).mtime }));
+  
+  // Also log to Railway console
+  console.log('[otto-version] files in public/:', files.map(f => f.file + ' (' + f.size + ' bytes)').join(', '));
+  res.json({ files, timestamp: new Date().toISOString() });
+});
+
 app.get('/gemini-live-client.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
