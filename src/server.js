@@ -3881,7 +3881,36 @@ app.get('/gemini-live-client.js', (req, res) => {
 // Browser calls this → gets short-lived token → connects DIRECTLY to Google
 // No audio proxy needed — lower latency, Google recommended approach
 // Gemini Live — relay API key securely to client for direct WS connection
+// Rate limit: max 2 sessions per IP per day
+const _ottoIpMap = new Map(); // ip -> { count, date }
+
+function checkOttoLimit(req, res) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const entry = _ottoIpMap.get(ip);
+
+  if (entry && entry.date === today) {
+    if (entry.count >= 1) {
+      console.log('[otto-limit] blocked:', ip, 'count:', entry.count);
+      res.status(429).json({ error: 'Daily limit reached — max 1 conversation per day per visitor. Come back tomorrow!' });
+      return false;
+    }
+    entry.count++;
+  } else {
+    _ottoIpMap.set(ip, { count: 1, date: today });
+  }
+
+  // Clean old entries every 1000 requests
+  if (_ottoIpMap.size > 1000) {
+    for (const [k, v] of _ottoIpMap.entries()) {
+      if (v.date !== today) _ottoIpMap.delete(k);
+    }
+  }
+  return true;
+}
+
 app.get('/api/gemini-live-token', async (req, res) => {
+  if (!checkOttoLimit(req, res)) return; // IP rate limit check
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
   if (!apiKey) return res.status(500).json({ error: 'No Gemini API key — add GEMINI_KEY_LIVE in Railway Variables' });
 
@@ -4136,11 +4165,13 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
   var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson — you are helpful and transparent. As soon as the conversation starts, introduce yourself immediately without waiting. Follow this exact script: 1. Say immediately without waiting: Hey! I am Otto, an AI assistant of ContentScale. I have 1 minute for you — is that okay or would you rather I hang up? 2a. If they say hang up or no: say No problem, have a great day! Goodbye! Then STOP. 2b. If they say yes or okay: say Great! May I have your name? Wait for answer. 3. Say: Hey [name]! We noticed many businesses lose Google traffic without knowing why. ContentScale helps recover that with a free GRAAF Framework SEO content score scan, onpage seo, plus a PULSE and NEXUS SEO audit using your Google Search Console data, offpage seo. We can also do outbound calls and lead generation for you — so you never miss a client again. 4. Ask: Would that be interesting for you? Please answer yes or no. Wait for answer. 5a. If interested: say Wonderful! On what number can I call back? include your country code.  Wait for answer. Thanks and have a great day, goodbye! Then STOP. 5b. If not interested: say No worries at all! maybe another time. Have a great day, goodbye! Then STOP. Always say goodbye before stopping. Never continue after goodbye.";
 
   function setStatus(msg) {
+    if (window._ottoStatusOverride) { window._ottoStatusOverride(msg); return; }
     var el = document.getElementById('gl-status');
     if (el) el.textContent = msg;
   }
 
   function addTranscript(who, msg) {
+    if (window._ottoTranscriptOverride) { window._ottoTranscriptOverride(who, msg); return; }
     var el = document.getElementById('gl-transcript');
     if (!el) return;
     el.style.display = 'block';
@@ -4149,6 +4180,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
   }
 
   function setBtnActive(on) {
+    if (window._ottoActiveOverride) { window._ottoActiveOverride(on); }
     var btn = document.getElementById('gl-call-btn');
     var r1  = document.getElementById('gl-ring1');
     if (!btn) return;
@@ -4248,6 +4280,13 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
       keyData = await r.json();
+      if (r.status === 429) {
+        setStatus('Daily limit reached — come back tomorrow!');
+        if (window._ottoLimitOverride) window._ottoLimitOverride();
+        setBtnActive(false);
+        _active = false;
+        return;
+      }
       if (!r.ok || !keyData.key) {
         setStatus('Error: ' + (keyData.error || 'No key'));
         stopSession(); return;
@@ -4352,104 +4391,284 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Otto AI — ContentScale</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
-    background: transparent;
-    font-family: 'JetBrains Mono', monospace, sans-serif;
+    background: #060910;
+    font-family: 'Inter', sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
+    padding: 16px;
   }
+
   .widget {
-    background: linear-gradient(135deg, #0a0a0f 0%, #111118 100%);
-    border: 1px solid rgba(74,222,128,.25);
-    border-radius: 16px;
-    padding: 32px 24px;
-    width: 280px;
+    background: linear-gradient(160deg, #0d1117 0%, #0a0f1a 100%);
+    border: 1px solid rgba(74,222,128,.2);
+    border-radius: 24px;
+    padding: 36px 28px 28px;
+    width: 100%;
+    max-width: 340px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: 0 0 40px rgba(74,222,128,.08), 0 20px 60px rgba(0,0,0,.6);
+    box-shadow:
+      0 0 0 1px rgba(74,222,128,.05),
+      0 0 60px rgba(74,222,128,.06),
+      0 30px 80px rgba(0,0,0,.7);
+    position: relative;
+    overflow: hidden;
   }
+
+  /* Subtle glow top */
+  .widget::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 120px;
+    background: radial-gradient(ellipse, rgba(74,222,128,.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Avatar */
+  .avatar-wrap {
+    position: relative;
+    width: 96px; height: 96px;
+    margin-bottom: 20px;
+  }
+
   .avatar {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d2e1a 0%, #0a1f12 100%);
+    border: 2px solid rgba(74,222,128,.4);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .avatar svg {
+    width: 42px; height: 42px;
+    opacity: .85;
+  }
+
+  /* Pulse rings */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1.5px solid rgba(74,222,128,.18);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
+  .ring-1 { width: 120px; height: 120px; }
+  .ring-2 { width: 148px; height: 148px; border-color: rgba(74,222,128,.08); }
+
+  @keyframes pulse-ring {
+    0%   { transform: translate(-50%,-50%) scale(1); opacity: .6; }
+    100% { transform: translate(-50%,-50%) scale(1.15); opacity: 0; }
+  }
+  .active .ring-1 { animation: pulse-ring 1.4s ease-out infinite; }
+  .active .ring-2 { animation: pulse-ring 1.4s ease-out .5s infinite; }
+
+  /* Name */
+  .name {
+    font-family: 'Inter', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    background: linear-gradient(90deg, #4ade80 0%, #86efac 50%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+
+  .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: #374151;
+    margin-bottom: 20px;
+  }
+
+  /* Status */
+  #gl-status {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 24px;
+    min-height: 20px;
+    line-height: 1.4;
+    transition: color .3s;
+  }
+  #gl-status.speaking { color: #4ade80; }
+  #gl-status.listening { color: #60a5fa; }
+  #gl-status.error { color: #f87171; }
+
+  /* Call button */
+  #gl-call-btn {
     width: 80px; height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg,rgba(74,222,128,.15),rgba(96,165,250,.08));
-    border: 1.5px solid rgba(74,222,128,.35);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px;
-    margin-bottom: 14px;
-    position: relative;
-  }
-  #gl-ring1 {
-    position: absolute; inset: -8px; border-radius: 50%;
-    border: 1px solid rgba(74,222,128,.2);
-  }
-  .name {
-    font-size: 22px; font-weight: 900; letter-spacing: .05em;
-    background: linear-gradient(90deg,#4ade80,#60a5fa);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text; margin-bottom: 2px;
-  }
-  .sub {
-    font-size: 8px; letter-spacing: .12em; text-transform: uppercase;
-    color: #4b5563; margin-bottom: 18px;
-  }
-  #gl-status {
-    font-size: 10px; color: #6b7280; margin-bottom: 18px;
-    min-height: 16px;
-  }
-  #gl-call-btn {
-    width: 72px; height: 72px; border-radius: 50%;
-    background: linear-gradient(135deg,#166534,#4ade80);
-    border: 2px solid rgba(255,255,255,.15);
+    background: linear-gradient(145deg, #16a34a, #4ade80);
+    border: none;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    margin-bottom: 12px;
-    box-shadow: 0 0 0 8px rgba(74,222,128,.12), 0 0 24px rgba(74,222,128,.25);
-    transition: all .2s;
+    margin-bottom: 16px;
+    box-shadow:
+      0 0 0 10px rgba(74,222,128,.1),
+      0 0 30px rgba(74,222,128,.3),
+      inset 0 1px 0 rgba(255,255,255,.15);
+    transition: all .2s ease;
+    position: relative;
+    z-index: 2;
   }
-  #gl-call-btn:hover { transform: scale(1.08); }
-  #gl-call-btn svg { width: 28px; height: 28px; }
+
+  #gl-call-btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 14px rgba(74,222,128,.12), 0 0 40px rgba(74,222,128,.4);
+  }
+
+  #gl-call-btn.active {
+    background: linear-gradient(145deg, #991b1b, #f87171);
+    box-shadow: 0 0 0 10px rgba(239,68,68,.12), 0 0 30px rgba(239,68,68,.3);
+  }
+
+  #gl-call-btn svg {
+    width: 32px; height: 32px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
+  }
+
   .hint {
-    font-size: 8px; letter-spacing: .08em; text-transform: uppercase;
-    color: #374151; line-height: 1.8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #1f2937;
+    line-height: 2;
+    margin-bottom: 4px;
   }
+
+  /* Transcript */
   #gl-transcript {
-    margin-top: 12px; width: 100%;
-    background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.06);
-    border-radius: 8px; padding: 10px 12px;
-    font-size: 10px; color: #9ca3af; line-height: 1.7;
-    max-height: 100px; overflow-y: auto; text-align: left;
+    margin-top: 16px;
+    width: 100%;
+    background: #0a0d12;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+    max-height: 140px;
+    overflow-y: auto;
+    text-align: left;
+    display: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74,222,128,.2) transparent;
+  }
+  #gl-transcript::-webkit-scrollbar { width: 4px; }
+  #gl-transcript::-webkit-scrollbar-track { background: transparent; }
+  #gl-transcript::-webkit-scrollbar-thumb { background: rgba(74,222,128,.2); border-radius: 2px; }
+
+  .t-otto { color: #4ade80; margin-bottom: 6px; }
+  .t-you  { color: #93c5fd; margin-bottom: 6px; }
+  .t-label { font-weight: 700; font-size: 11px; letter-spacing: .05em; }
+  .t-text  { font-weight: 400; }
+
+  /* Limit message */
+  .limit-msg {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #f87171;
+    line-height: 1.5;
     display: none;
   }
 </style>
 </head>
 <body>
-<div class="widget">
-  <div class="avatar">
-    <div id="gl-ring1"></div>
-    🎙
+<div class="widget" id="widget">
+  <div class="avatar-wrap" id="avatarWrap">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="avatar">
+      <!-- Brain/AI icon -->
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.5 2C7.57 2 6 3.57 6 5.5c0 .28.03.55.09.81C4.27 6.97 3 8.59 3 10.5c0 1.45.64 2.75 1.65 3.65C4.24 14.72 4 15.35 4 16c0 1.86 1.28 3.42 3 3.87V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-.13c1.72-.45 3-2.01 3-3.87 0-.65-.24-1.28-.65-1.85C20.36 13.25 21 11.95 21 10.5c0-1.91-1.27-3.53-3.09-4.19.06-.26.09-.53.09-.81C18 3.57 16.43 2 14.5 2c-.98 0-1.87.39-2.5 1.02C11.37 2.39 10.48 2 9.5 2z" fill="rgba(74,222,128,.15)" stroke="rgba(74,222,128,.6)" stroke-width="1.2"/>
+        <circle cx="9" cy="10" r="1.2" fill="#4ade80"/>
+        <circle cx="15" cy="10" r="1.2" fill="#4ade80"/>
+        <path d="M9 14s1 1.5 3 1.5 3-1.5 3-1.5" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M12 2v2M7 3.5l1 1.5M17 3.5l-1 1.5" stroke="rgba(74,222,128,.4)" stroke-width="1" stroke-linecap="round"/>
+      </svg>
+    </div>
   </div>
+
   <div class="name">OTTO</div>
-  <div class="sub">ContentScale AI · Gemini Live</div>
+  <div class="sub">ContentScale AI &nbsp;·&nbsp; Gemini Live</div>
+
   <div id="gl-status">Click to talk to Otto</div>
+
   <button id="gl-call-btn" title="Talk to Otto">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="rgba(255,255,255,.15)"/>
       <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
       <line x1="12" y1="19" x2="12" y2="23"/>
       <line x1="8" y1="23" x2="16" y2="23"/>
     </svg>
   </button>
-  <div class="hint">Microphone · No phone needed<br>End anytime</div>
+
+  <div class="hint">Microphone &nbsp;·&nbsp; No phone needed<br>Click again to end</div>
+  <div class="limit-msg" id="limitMsg">You've already spoken with Otto today.<br>Come back tomorrow for another conversation.</div>
   <div id="gl-transcript"></div>
 </div>
+
+<script>
+// Override addTranscript for better styling
+window._ottoTranscriptOverride = function(who, msg) {
+  var el = document.getElementById('gl-transcript');
+  if (!el) return;
+  el.style.display = 'block';
+  var cls = who === 'model' ? 't-otto' : 't-you';
+  var label = who === 'model' ? 'Otto' : 'You';
+  el.innerHTML += '<div class="' + cls + '"><span class="t-label">' + label + '&nbsp;</span><span class="t-text">' + msg + '</span></div>';
+  el.scrollTop = el.scrollHeight;
+};
+
+// Override setStatus for colored states
+window._ottoStatusOverride = function(msg) {
+  var el = document.getElementById('gl-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = '';
+  if (/speaking|praat/i.test(msg)) el.className = 'speaking';
+  else if (/listen|speak now|your turn|hallo/i.test(msg)) el.className = 'listening';
+  else if (/error|denied|limit|disconnected/i.test(msg)) el.className = 'error';
+};
+
+// Active state on button + avatar
+window._ottoActiveOverride = function(on) {
+  var btn = document.getElementById('gl-call-btn');
+  var wrap = document.getElementById('avatarWrap');
+  var widget = document.getElementById('widget');
+  if (btn) btn.classList.toggle('active', on);
+  if (wrap) wrap.classList.toggle('active', on);
+};
+
+// Handle limit message
+window._ottoLimitOverride = function() {
+  var msg = document.getElementById('limitMsg');
+  if (msg) msg.style.display = 'block';
+};
+</script>
 <script src="https://app.contentscale.site/otto-ai.js" defer></script>
 </body>
 </html>
