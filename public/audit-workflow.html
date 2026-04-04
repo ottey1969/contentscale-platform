@@ -248,8 +248,10 @@ img,table,iframe{max-width:100%;}
         <span id="sitemapSelCount" style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);"></span>
       </div>
       <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <button class="btn btn-gold" onclick="addSelectedSitemapUrls()">+ Add selected to queue</button>
+        <button class="btn btn-red btn-sm" onclick="deleteSelectedSitemapUrls()" title="Remove selected URLs from list">🗑 Delete selected</button>
+        <button class="btn btn-muted btn-sm" onclick="clearAllSitemapUrls()" title="Remove all URLs from list">✕ Clear all</button>
         <button class="btn btn-muted" onclick="document.getElementById('sitemapPreview').style.display='none'">✕ Close</button>
       </div>
     </div>
@@ -1102,6 +1104,28 @@ function updateSitemapCount() {
   var all = document.querySelectorAll('.sitemap-cb');
   var checked = document.querySelectorAll('.sitemap-cb:checked');
   document.getElementById('sitemapSelCount').textContent = checked.length + '/' + all.length + ' selected';
+}
+
+function deleteSelectedSitemapUrls() {
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if (!selected.length) { toast('⚠ No URLs selected'); return; }
+  if (!confirm('Delete ' + selected.length + ' selected URLs from the list?')) return;
+  _sitemapUrls = _sitemapUrls.filter(function(u){ return !selected.includes(u); });
+  _sitemapFiltered = _sitemapFiltered.filter(function(u){ return !selected.includes(u); });
+  renderSitemapList(_sitemapFiltered, false);
+  document.getElementById('sitemapStatus').innerHTML = '<span style="color:var(--green)">✓ ' + _sitemapUrls.length + ' URLs remaining</span>';
+  toast('🗑 ' + selected.length + ' URLs removed');
+  if (!_sitemapUrls.length) document.getElementById('sitemapPreview').style.display = 'none';
+}
+
+function clearAllSitemapUrls() {
+  if (!_sitemapUrls.length) return;
+  if (!confirm('Clear all ' + _sitemapUrls.length + ' URLs from the list?')) return;
+  _sitemapUrls = []; _sitemapFiltered = [];
+  document.getElementById('sitemapPreview').style.display = 'none';
+  document.getElementById('sitemapUrl').value = '';
+  document.getElementById('sitemapStatus').textContent = '';
+  toast('✕ Sitemap cleared');
 }
 
 function selectAllSitemap() {
