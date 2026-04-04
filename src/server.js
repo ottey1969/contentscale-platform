@@ -4622,6 +4622,7 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
 
   <div class="name">OTTO</div>
   <div class="sub">ContentScale AI &nbsp;·&nbsp; Gemini Live</div>
+  <div style="font-size:12px;color:#9ca3af;margin-bottom:6px;line-height:1.6;text-align:center">Do you have a website?<br>Then this is for you.</div>
 
   <div id="gl-status">Click to talk to Otto</div>
 
@@ -4655,6 +4656,20 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
   </div>
   <div class="limit-msg" id="limitMsg">You've already spoken with Otto today.<br>Come back tomorrow for another conversation.</div>
   <div id="gl-transcript"></div>
+  <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05);width:100%;text-align:center">
+    <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;color:#4b5563;line-height:2.2">
+      <a href="https://contentscale.site" target="_blank" style="color:#4b5563;text-decoration:none">ContentScale.site</a>
+      &nbsp;·&nbsp;
+      <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:#4b5563;text-decoration:none">Privacy</a>
+      &nbsp;·&nbsp;
+      <a href="https://contentscale.site/terms/" target="_blank" style="color:#4b5563;text-decoration:none">Terms</a>
+      &nbsp;·&nbsp;
+      <a href="https://contentscale.site/privacy-policy/#data-requests" target="_blank" style="color:#4b5563;text-decoration:none">Data requests</a>
+    </div>
+    <div style="font-size:8px;color:#374151;margin-top:2px;font-family:'JetBrains Mono',monospace">
+      AI conversations may be recorded for quality purposes
+    </div>
+  </div>
 </div>
 
 <script>
@@ -4771,19 +4786,7 @@ fetch('https://app.contentscale.site/api/otto/ref-code')
   }).catch(function(){});
 </script>
 <script src="https://app.contentscale.site/otto-ai.js" defer></script>
-<div style="margin-top:20px;text-align:center;padding-bottom:8px">
-  <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;color:#374151;line-height:2.2">
-    <a href="https://contentscale.site" target="_blank" style="color:#4b5563;text-decoration:none">ContentScale.site</a>
-    &nbsp;·&nbsp;
-    <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:#4b5563;text-decoration:none">Privacy</a>
-    &nbsp;·&nbsp;
-    <a href="https://contentscale.site/terms/" target="_blank" style="color:#4b5563;text-decoration:none">Terms</a>
-  </div>
-  <div style="font-size:9px;color:#1f2937;margin-top:2px;font-family:'JetBrains Mono',monospace">
-    AI conversations may be recorded for quality purposes.
-    <a href="https://contentscale.site/privacy-policy/#data-requests" target="_blank" style="color:#374151;text-decoration:none">Data requests →</a>
-  </div>
-</div>
+
 </body>
 </html>
 `;
