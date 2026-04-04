@@ -4117,29 +4117,23 @@ app.get('/api/otto-version', (req, res) => res.json({ version: 'v6', model: 'gem
 
 // ── Otto AI client JS — embedded inline ──────────────────────────────────
 const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
-// Male voice (Fenrir) + auto-hangup 3s after conversation ends
+// Hangup: 45s max session OR goodbye word detected
 
 (function() {
   'use strict';
 
-  var _ws          = null;
-  var _active      = false;
-  var _micCtx      = null;
-  var _stream      = null;
-  var _processor   = null;
-  var _playCtx     = null;
-  var _nextStart   = 0;
-  var _hangupTimer    = null;
-  var _maxTimer       = null;  // hard cutoff regardless of conversation
-  var _turnCount      = 0;     // count Otto's turns
-  var _sessionId   = null;
-  var _sessionStart = null;
-  var _transcript  = [];
-  var _sessionModel = null;
+  var _ws        = null;
+  var _active    = false;
+  var _micCtx    = null;
+  var _stream    = null;
+  var _processor = null;
+  var _playCtx   = null;
+  var _nextStart = 0;
+  var _killTimer = null;
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. Use a deep, warm, natural male voice. Follow this script exactly and do not deviate. 1. Say immediately: Hey! I am Otto, the AI assistant of ContentScale. May I have your name? 2. Wait for their answer. 3. Then say: Hey [name]! We help you recover lost SEO traffic with our free GRAAF Framework scan and our Google Search Console PULSE+NEXUS SEO audit framework. We can also help you with leads, call for you, and make sure you never miss any clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! 4. Then ask: Are you able to send Ottmar a message today? 5a. If yes: say: Okay, I will let him know! Speak to you soon! Then say goodbye and stop talking. 5b. If no: say: May I know why not? Wait for their answer. Then say: Okay, maybe next time! Take care! Then say goodbye and stop talking. Keep it exactly like this script. Do not add extra information.";
+  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. Follow this script and DO NOT deviate. 1. Say immediately: Hey! I am Otto, the AI assistant of ContentScale. May I have your name? 2. Wait for their answer. 3. Say: Hey [name]! We help you recover lost SEO traffic with our free GRAAF Framework scan and Google Search Console PULSE+NEXUS audit. We also help with leads and outbound calls so you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! 4. Ask: Are you able to send Ottmar a message today? 5a. If yes: say Okay I will let him know, speak to you soon, goodbye! Then STOP. 5b. If no: say May I know why not, wait, then say Okay maybe next time, take care, goodbye! Then STOP. After saying goodbye you MUST stop talking completely.";
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -4169,21 +4163,11 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     }
   }
 
-  function scheduleHangup(delayMs) {
-    clearTimeout(_hangupTimer);
-    clearTimeout(_maxTimer);
-    _maxTimer = null;
-    _hangupTimer = setTimeout(function() {
-      if (_active) {
-        setStatus('Call ended');
-        stopSession();
-      }
-    }, delayMs || 3000);
-  }
-
-  function cancelHangup() {
-    clearTimeout(_hangupTimer);
-    _hangupTimer = null;
+  function hangup(reason) {
+    if (!_active) return;
+    console.log('[otto] hanging up:', reason);
+    setStatus('Call ended');
+    stopSession();
   }
 
   function ensurePlayCtx() {
@@ -4212,29 +4196,12 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
       var when = Math.max(now, _nextStart);
       src.start(when);
       _nextStart = when + buf.duration;
-    } catch(e) { console.warn('[otto] audio error:', e.message); }
-  }
-
-  function saveSession() {
-    if (!_sessionId || !_transcript.length) return;
-    var duration = Math.round((Date.now() - _sessionStart) / 1000);
-    fetch('https://app.contentscale.site/api/otto/save-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: _sessionId,
-        transcript: _transcript,
-        durationSeconds: duration,
-        model: _sessionModel
-      })
-    }).then(function(r){ console.log('[otto] session saved, duration:', duration + 's'); })
-      .catch(function(e){ console.warn('[otto] save session error:', e.message); });
+    } catch(e) {}
   }
 
   function stopSession() {
-    saveSession();
     _active = false;
-    clearTimeout(_hangupTimer);
+    clearTimeout(_killTimer);
     if (_processor) { try { _processor.disconnect(); } catch(e) {} _processor = null; }
     if (_stream)    { _stream.getTracks().forEach(function(t) { t.stop(); }); _stream = null; }
     if (_micCtx)    { try { _micCtx.close(); } catch(e) {} _micCtx = null; }
@@ -4251,7 +4218,6 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     _micCtx    = new AudioContext({ sampleRate: 16000 });
     var src    = _micCtx.createMediaStreamSource(_stream);
     _processor = _micCtx.createScriptProcessor(2048, 1, 1);
-
     _processor.onaudioprocess = function(e) {
       if (!_ws || _ws.readyState !== 1 || !_active) return;
       var input = e.inputBuffer.getChannelData(0);
@@ -4261,14 +4227,15 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
       var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
-      _ws.send(JSON.stringify({
-        realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm;rate=16000' } }
-      }));
+      _ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm;rate=16000' } } }));
     };
-
     src.connect(_processor);
     _processor.connect(_micCtx.destination);
     setStatus('Listening...');
+
+    // HARD KILL: 45 seconds max no matter what
+    _killTimer = setTimeout(function() { hangup('45s max reached'); }, 45000);
+    console.log('[otto] session started — 45s hard limit');
   }
 
   async function startSession() {
@@ -4276,135 +4243,80 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     setStatus('Getting key...');
     _active = true;
     setBtnActive(true);
-    _sessionId    = 'otto-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
-    _sessionStart = Date.now();
-    _transcript   = [];
 
     var keyData;
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
       keyData = await r.json();
       if (!r.ok || !keyData.key) {
-        setStatus('Error: ' + (keyData.error || 'No key returned'));
-        stopSession();
-        return;
+        setStatus('Error: ' + (keyData.error || 'No key'));
+        stopSession(); return;
       }
-    } catch(e) {
-      setStatus('Server error: ' + e.message);
-      stopSession();
-      return;
-    }
+    } catch(e) { setStatus('Server error: ' + e.message); stopSession(); return; }
 
     var model = keyData.model || 'gemini-3.1-flash-live-preview';
     console.log('[otto] model:', model);
-    _sessionModel = model;
 
     var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
     setStatus('Connecting...');
 
-    try {
-      _ws = new WebSocket(wsUrl);
-      _ws.binaryType = 'arraybuffer';
-    } catch(e) {
-      setStatus('WebSocket error: ' + e.message);
-      stopSession();
-      return;
-    }
+    try { _ws = new WebSocket(wsUrl); _ws.binaryType = 'arraybuffer'; }
+    catch(e) { setStatus('WS error: ' + e.message); stopSession(); return; }
 
     _ws.onopen = function() {
       setStatus('Connected...');
-      var setupMsg = {
+      var setup = {
         setup: {
           model: 'models/' + model,
-          generation_config: {
-            response_modalities: ['AUDIO'],
-            speech_config: {
-              voice_config: {
-                prebuilt_voice_config: { voice_name: 'Fenrir' }
-              }
-            }
-          },
-          system_instruction: {
-            parts: [{ text: OTTO_SCRIPT }]
-          }
+          generation_config: { response_modalities: ['AUDIO'] },
+          system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
         }
       };
-      console.log('[otto] sending setup:', JSON.stringify(setupMsg));
-      _ws.send(JSON.stringify(setupMsg));
+      console.log('[otto] sending setup');
+      _ws.send(JSON.stringify(setup));
     };
 
     _ws.onmessage = function(evt) {
       try {
-        var rawData = evt.data;
-        if (rawData instanceof ArrayBuffer) {
-          rawData = new TextDecoder('utf-8').decode(new Uint8Array(rawData));
-        }
-        var msg = JSON.parse(rawData);
+        var raw = evt.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(evt.data)) : evt.data;
+        var msg = JSON.parse(raw);
 
         if (msg.setupComplete) {
-          setStatus('Otto is speaking...');
-          startMic().catch(function(e) {
-            setStatus('Mic error: ' + e.message);
-            stopSession();
-          });
+          setStatus('Ready — speak now');
+          startMic().catch(function(e) { setStatus('Mic: ' + e.message); stopSession(); });
           return;
         }
 
         if (msg.serverContent) {
           var sc = msg.serverContent;
-
-          // Play audio chunks
           if (sc.modelTurn && sc.modelTurn.parts) {
             sc.modelTurn.parts.forEach(function(p) {
-              if (p.inlineData && p.inlineData.data) {
-                scheduleAudioChunk(p.inlineData.data);
-              }
+              if (p.inlineData && p.inlineData.data) scheduleAudioChunk(p.inlineData.data);
             });
           }
-
-          // Show transcripts
-          if (sc.inputTranscription) {
-            // Only cancel hangup if we're early in conversation (< 4 turns)
-            if (_turnCount < 4) cancelHangup();
-            addTranscript('you', sc.inputTranscription.text);
-            _transcript.push({ role: 'user', text: sc.inputTranscription.text, t: Date.now() });
-          }
+          if (sc.inputTranscription)  addTranscript('you',   sc.inputTranscription.text);
           if (sc.outputTranscription) {
-            var oText = sc.outputTranscription.text || '';
-            addTranscript('model', oText);
-            _transcript.push({ role: 'otto', text: oText, t: Date.now() });
-            // Detect goodbye → hang up fast
-            var goodbyeWords = ['goodbye','cheers','take care','speak to you soon','good luck','bye'];
-            var isGoodbye = goodbyeWords.some(function(w){ return oText.toLowerCase().indexOf(w) > -1; });
-            if (isGoodbye) {
-              console.log('[otto] goodbye detected — hanging up in 2s');
-              scheduleHangup(2000);
+            var txt = sc.outputTranscription.text || '';
+            addTranscript('model', txt);
+            // Goodbye detection → hang up 3s after Otto says bye
+            if (/goodbye|cheers|take care|speak to you soon|bye/i.test(txt)) {
+              console.log('[otto] goodbye detected in: ' + txt);
+              setTimeout(function() { hangup('goodbye detected'); }, 3000);
             }
           }
-
           if (sc.turnComplete) {
-            _turnCount++;
             setStatus('Listening...');
-            // After 4+ turns always hang up within 5s
-            var delay = _turnCount >= 4 ? 3000 : 5000;
-            scheduleHangup(delay);
+            console.log('[otto] turnComplete');
           }
         }
-      } catch(e) { console.warn('[otto] parse error:', e.message); }
+      } catch(e) { console.warn('[otto] parse:', e.message); }
     };
 
-    _ws.onerror = function(e) {
-      console.error('[otto] ws error', e);
-      setStatus('Connection error');
-      stopSession();
-    };
+    _ws.onerror = function() { setStatus('Connection error'); stopSession(); };
 
     _ws.onclose = function(evt) {
       console.log('[otto] closed code=' + evt.code);
-      if (_active) {
-        setStatus(evt.code === 1008 ? 'API key needs Gemini Live access' : 'Disconnected');
-        stopSession();
-      }
+      if (_active) { setStatus('Disconnected (code ' + evt.code + ')'); stopSession(); }
     };
   }
 
@@ -4416,15 +4328,13 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v6 loaded — Gemini Live ready | Fenrir male voice');
+    console.log('[otto] v7 loaded — 45s hard limit + goodbye detection');
   }
 
   document.readyState === 'loading'
     ? document.addEventListener('DOMContentLoaded', attach)
     : attach();
-
-})();
-`;
+})();`;
 
 ['gemini-live-client.js','gemini-live-client-v5.js','gemini-live-client-v6.js'].forEach(function(name) {
   app.get('/' + name, function(req, res) {
