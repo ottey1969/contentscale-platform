@@ -4123,8 +4123,24 @@ pool.query(`CREATE TABLE IF NOT EXISTS otto_sessions (
   id SERIAL PRIMARY KEY, session_id VARCHAR(100) UNIQUE NOT NULL,
   lead_name VARCHAR(255), lead_website VARCHAR(255), lead_phone VARCHAR(100),
   transcript JSONB DEFAULT '[]', duration_seconds INTEGER DEFAULT 0,
-  model VARCHAR(100), created_at TIMESTAMP DEFAULT NOW()
+  model VARCHAR(100), has_phone BOOLEAN DEFAULT FALSE,
+  audio_chunks JSONB DEFAULT '[]', created_at TIMESTAMP DEFAULT NOW()
 )`).catch(e => console.warn('[otto_sessions]', e.message));
+
+// Save audio chunk (only called when phone number detected in transcript)
+app.post('/api/otto/save-audio', async (req, res) => {
+  const { sessionId, audioChunks } = req.body;
+  if (!sessionId || !audioChunks) return res.status(400).json({ error: 'sessionId and audioChunks required' });
+  try {
+    await pool.query(
+      'UPDATE otto_sessions SET audio_chunks=$1, has_phone=true WHERE session_id=$2',
+      [JSON.stringify(audioChunks), sessionId]
+    );
+    console.log('[otto] audio saved for session:', sessionId, 'chunks:', audioChunks.length);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 
 app.post('/api/otto/save-session', async (req, res) => {
   const { sessionId, leadName, leadWebsite, leadPhone, transcript, durationSeconds, model } = req.body;
@@ -4141,7 +4157,7 @@ app.post('/api/otto/save-session', async (req, res) => {
 
 app.get('/api/otto/sessions', async (req, res) => {
   try {
-    const r = await pool.query('SELECT id,session_id,lead_name,lead_website,lead_phone,duration_seconds,model,created_at FROM otto_sessions ORDER BY created_at DESC LIMIT 100');
+    const r = await pool.query('SELECT id,session_id,lead_name,lead_website,lead_phone,duration_seconds,model,has_phone,created_at, (audio_chunks IS NOT NULL AND audio_chunks != \'[]\') as has_audio FROM otto_sessions ORDER BY created_at DESC LIMIT 100');
     res.json(r.rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -4171,7 +4187,9 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
   var _processor = null;
   var _playCtx   = null;
   var _nextStart = 0;
-  var _killTimer = null;
+  var _killTimer    = null;
+  var _audioChunks  = [];   // collect raw PCM chunks
+  var _hasPhone     = false; // flag when phone detected
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
@@ -4208,10 +4226,35 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     }
   }
 
+  function saveAndHangup() {
+    // Save session transcript
+    if (_sessionId && (_transcript.length || _sessionModel)) {
+      var duration = Math.round((Date.now() - (_sessionStart||Date.now())) / 1000);
+      fetch('https://app.contentscale.site/api/otto/save-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: _sessionId, transcript: _transcript, durationSeconds: duration, model: _sessionModel })
+      }).then(function() {
+        console.log('[otto] session saved');
+        // Save audio only if phone number detected
+        if (_hasPhone && _audioChunks.length > 0) {
+          return fetch('https://app.contentscale.site/api/otto/save-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: _sessionId, audioChunks: _audioChunks })
+          });
+        }
+      }).then(function(){ if (_hasPhone) console.log('[otto] audio saved — phone detected'); })
+        .catch(function(e){ console.warn('[otto] save error:', e.message); });
+    }
+    _audioChunks = [];
+  }
+
   function hangup(reason) {
     if (!_active) return;
     console.log('[otto] hanging up:', reason);
     setStatus('Call ended');
+    saveAndHangup();
     stopSession();
   }
 
@@ -4325,7 +4368,11 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
       var setup = {
         setup: {
           model: 'models/' + model,
-          generation_config: { response_modalities: ['AUDIO'] },
+          generation_config: {
+            response_modalities: ['AUDIO'],
+            output_audio_transcription: {},
+            input_audio_transcription: {}
+          },
           system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
         }
       };
@@ -4348,7 +4395,10 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
           var sc = msg.serverContent;
           if (sc.modelTurn && sc.modelTurn.parts) {
             sc.modelTurn.parts.forEach(function(p) {
-              if (p.inlineData && p.inlineData.data) scheduleAudioChunk(p.inlineData.data);
+              if (p.inlineData && p.inlineData.data) {
+                scheduleAudioChunk(p.inlineData.data);
+                _audioChunks.push(p.inlineData.data); // collect for storage
+              }
             });
           }
           if (sc.inputTranscription)  addTranscript('you',   sc.inputTranscription.text);
@@ -6364,6 +6414,208 @@ app.get('/seo-audit', (req, res) => {
   res.send(_SEO_AUDIT_HTML);
 });
 app.get('/audit-seo', (req, res) => res.redirect('/seo-audit'));
+
+
+// ── Otto sessions admin page ─────────────────────────────────────────────
+const _OTTO_SESSIONS_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Otto Sessions — ContentScale Admin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#060910;font-family:'Inter',sans-serif;color:#f3f4f6;min-height:100vh;padding:24px 16px 48px}
+  .page{max-width:900px;margin:0 auto}
+  h1{font-size:24px;font-weight:900;letter-spacing:.06em;background:linear-gradient(90deg,#4ade80,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+  .sub{font-size:12px;color:#4b5563;font-family:'JetBrains Mono',monospace;margin-bottom:24px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+  .stat{background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;text-align:center}
+  .stat-num{font-size:24px;font-weight:700;color:#4ade80;font-family:'JetBrains Mono',monospace}
+  .stat-lbl{font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-top:3px}
+  .search-bar{display:flex;gap:8px;margin-bottom:16px}
+  .search-bar input{flex:1;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;font-size:13px;color:#f3f4f6;font-family:'Inter',sans-serif;outline:none}
+  .search-bar input:focus{border-color:rgba(74,222,128,.4)}
+  .session-list{display:flex;flex-direction:column;gap:10px}
+  .session-card{background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+  .session-card:hover{border-color:rgba(74,222,128,.25)}
+  .session-card.open{border-color:rgba(74,222,128,.4)}
+  .session-head{display:flex;align-items:center;gap:12px;padding:14px 16px}
+  .session-icon{width:36px;height:36px;border-radius:50%;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .session-info{flex:1;min-width:0}
+  .session-name{font-size:14px;font-weight:600;color:#f3f4f6}
+  .session-meta{font-size:11px;color:#4b5563;font-family:'JetBrains Mono',monospace;margin-top:2px}
+  .session-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .session-dur{font-size:12px;font-weight:600;color:#4ade80;font-family:'JetBrains Mono',monospace}
+  .session-date{font-size:10px;color:#374151}
+  .session-body{display:none;border-top:1px solid rgba(255,255,255,.05);padding:16px}
+  .session-body.open{display:block}
+  .transcript{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto}
+  .t-row{display:flex;gap:10px;align-items:flex-start}
+  .t-who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;padding-top:2px;min-width:40px}
+  .t-who.otto{color:#4ade80}
+  .t-who.user{color:#60a5fa}
+  .t-text{font-size:13px;color:#d1d5db;line-height:1.6}
+  .t-time{font-size:9px;color:#374151;font-family:'JetBrains Mono',monospace;flex-shrink:0;padding-top:4px}
+  .phone-badge{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:6px;padding:3px 10px;font-size:11px;color:#4ade80;font-family:'JetBrains Mono',monospace}
+  .empty{text-align:center;padding:60px;color:#374151;font-size:13px}
+  .loading{text-align:center;padding:40px;color:#4b5563;font-size:13px}
+  .no-transcript{font-size:12px;color:#374151;font-style:italic;padding:8px 0}
+  @media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+    <h1>OTTO SESSIONS</h1>
+    <a href="/otto" style="font-size:12px;color:#4ade80;text-decoration:none">← Back to Otto</a>
+  </div>
+  <div class="sub">Admin · ContentScale · Auto-refreshes every 30s</div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">Total Sessions</div></div>
+    <div class="stat"><div class="stat-num" id="statToday">—</div><div class="stat-lbl">Today</div></div>
+    <div class="stat"><div class="stat-num" id="statPhones">—</div><div class="stat-lbl">Phone Numbers</div></div>
+    <div class="stat"><div class="stat-num" id="statAvgDur">—</div><div class="stat-lbl">Avg Duration</div></div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search by name, phone, website..." oninput="filterSessions()">
+  </div>
+
+  <div class="session-list" id="sessionList"><div class="loading">Loading sessions...</div></div>
+</div>
+
+<script>
+var BASE = 'https://app.contentscale.site';
+var _sessions = [];
+
+function fmt(sec) {
+  if (!sec) return '—';
+  var m = Math.floor(sec/60), s = sec%60;
+  return m + ':' + (s<10?'0':'')+s;
+}
+
+function timeAgo(ts) {
+  var diff = Date.now() - new Date(ts).getTime();
+  var m = Math.floor(diff/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m/60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+function extractPhone(transcript) {
+  if (!transcript || !transcript.length) return null;
+  // Look for phone number pattern in Otto's speech
+  var allText = transcript.map(function(t){ return t.text || ''; }).join(' ');
+  var match = allText.match(/\\+?[\\d\\s\\-]{8,20}/g);
+  if (match) {
+    // Filter out short numbers
+    var phones = match.filter(function(m){ return m.replace(/\\D/g,'').length >= 8; });
+    return phones.length ? phones[phones.length-1].trim() : null;
+  }
+  return null;
+}
+
+function toggleCard(id) {
+  var body = document.getElementById('body-' + id);
+  var card = document.getElementById('card-' + id);
+  if (!body) return;
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  card.classList.toggle('open', !isOpen);
+}
+
+function renderSessions(sessions) {
+  var list = document.getElementById('sessionList');
+  if (!sessions.length) {
+    list.innerHTML = '<div class="empty">No sessions yet.<br><br>Conversations with Otto will appear here.</div>';
+    return;
+  }
+
+  // Stats
+  var today = new Date().toISOString().slice(0,10);
+  var todayCount = sessions.filter(function(s){ return s.created_at && s.created_at.slice(0,10) === today; }).length;
+  var phoneCount = sessions.filter(function(s){ return extractPhone(s.transcript); }).length;
+  var avgDur = sessions.reduce(function(a,s){ return a + (s.duration_seconds||0); }, 0) / sessions.length;
+
+  document.getElementById('statTotal').textContent = sessions.length;
+  document.getElementById('statToday').textContent = todayCount;
+  document.getElementById('statPhones').textContent = phoneCount;
+  document.getElementById('statAvgDur').textContent = fmt(Math.round(avgDur));
+
+  list.innerHTML = sessions.map(function(s) {
+    var transcript = s.transcript || [];
+    var phone = extractPhone(transcript);
+    var name = s.lead_name || 'Unknown';
+    var website = s.lead_website || '';
+
+    return '<div class="session-card" id="card-' + s.id + '" onclick="toggleCard(' + s.id + ')">' +
+      '<div class="session-head">' +
+        '<div class="session-icon">🎙</div>' +
+        '<div class="session-info">' +
+          '<div class="session-name">' + name + (phone ? ' <span class="phone-badge">' + phone + '</span>' : '') + '</div>' +
+          '<div class="session-meta">' + (website || 'No website') + ' · ' + (s.model || 'gemini') + '</div>' +
+        '</div>' +
+        '<div class="session-right">' +
+          '<div class="session-dur">' + fmt(s.duration_seconds) + '</div>' +
+          '<div class="session-date">' + timeAgo(s.created_at) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="session-body" id="body-' + s.id + '">' +
+        '<div class="transcript">' +
+          (transcript.length ? transcript.map(function(t) {
+            var who = t.role === 'otto' ? 'otto' : 'user';
+            var label = t.role === 'otto' ? 'Otto' : 'You';
+            var time = t.t ? new Date(t.t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+            return '<div class="t-row">' +
+              '<div class="t-who ' + who + '">' + label + '</div>' +
+              '<div class="t-text">' + (t.text||'') + '</div>' +
+              '<div class="t-time">' + time + '</div>' +
+            '</div>';
+          }).join('') : '<div class="no-transcript">No transcript recorded for this session.</div>') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function filterSessions() {
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  if (!q) { renderSessions(_sessions); return; }
+  var filtered = _sessions.filter(function(s) {
+    var text = (s.lead_name||'') + ' ' + (s.lead_website||'') + ' ' + (s.lead_phone||'') +
+      ' ' + (s.transcript||[]).map(function(t){ return t.text||''; }).join(' ');
+    return text.toLowerCase().includes(q);
+  });
+  renderSessions(filtered);
+}
+
+function loadSessions() {
+  fetch(BASE + '/api/otto/sessions')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      _sessions = data;
+      filterSessions();
+    })
+    .catch(function(e) {
+      document.getElementById('sessionList').innerHTML = '<div class="empty">Error loading sessions: ' + e.message + '</div>';
+    });
+}
+
+loadSessions();
+setInterval(loadSessions, 30000);
+</script>
+</body>
+</html>
+`;
+app.get('/otto/sessions', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(_OTTO_SESSIONS_HTML);
+});
 
 
 startServer();
