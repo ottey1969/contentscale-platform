@@ -4234,8 +4234,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     setStatus('Listening...');
 
     // HARD KILL: 45 seconds max no matter what
-    _killTimer = setTimeout(function() { hangup('45s max reached'); }, 45000);
-    console.log('[otto] session started — 45s hard limit');
+    _killTimer = setTimeout(function() { hangup('60s max reached'); }, 60000);
+    console.log('[otto] session started — 60s hard limit');
   }
 
   async function startSession() {
@@ -4328,7 +4328,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v7 loaded — 45s hard limit + goodbye detection');
+    console.log('[otto] v7 loaded — 60s hard limit + goodbye detection');
   }
 
   document.readyState === 'loading'
