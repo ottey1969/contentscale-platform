@@ -3911,6 +3911,13 @@ function checkOttoLimit(req, res) {
 
 app.get('/api/gemini-live-token', async (req, res) => {
   if (!checkOttoLimit(req, res)) return; // IP rate limit check
+  // Track conversation for referral
+  const ref = req.query.ref || req.headers['x-otto-ref'];
+  if (ref) {
+    const visitorIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
+    pool.query('UPDATE otto_referrals SET conversations=conversations+1, points=points+3 WHERE ref_code=$1', [ref]).catch(()=>{});
+    pool.query('INSERT INTO otto_ref_events (ref_code, event_type, visitor_ip, points_awarded) VALUES ($1,$2,$3,$4)', [ref, 'conversation', visitorIp, 3]).catch(()=>{});
+  }
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
   if (!apiKey) return res.status(500).json({ error: 'No Gemini API key — add GEMINI_KEY_LIVE in Railway Variables' });
 
@@ -4267,7 +4274,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
     // HARD KILL: 45 seconds max no matter what
     _killTimer = setTimeout(function() { hangup('60s max reached'); }, 60000);
-    console.log('[otto] session started — 75s hard limit');
+    console.log('[otto] session started — 90s hard limit');
   }
 
   async function startSession() {
@@ -4278,7 +4285,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
     var keyData;
     try {
-      var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
+      var refParam = window._ottoRefCode ? '?ref=' + encodeURIComponent(window._ottoRefCode) : '';
+    var r = await fetch('https://app.contentscale.site/api/gemini-live-token' + refParam);
       keyData = await r.json();
       if (r.status === 429) {
         setStatus('Daily limit reached — come back tomorrow!');
@@ -4367,7 +4375,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v7 loaded — 75s hard limit + goodbye detection');
+    console.log('[otto] v7 loaded — 90s hard limit + goodbye detection');
   }
 
   document.readyState === 'loading'
@@ -4627,6 +4635,24 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
   </button>
 
   <div class="hint">Microphone &nbsp;·&nbsp; No phone needed<br>Click again to end</div>
+  <div id="shareScreen" style="display:none;flex-direction:column;align-items:center;width:100%;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);">
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;font-family:'JetBrains Mono',monospace;margin-bottom:8px">Share & win</div>
+    <div style="font-size:15px;font-weight:700;color:#f3f4f6;margin-bottom:4px">You have <span id="myPts" style="color:#4ade80">0</span> points</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:12px;text-align:center">Share Otto. Top 3 this month wins €250 in free services.</div>
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;width:100%;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="myRefLink">Loading...</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px">
+      <a id="waShareBtn" href="#" target="_blank" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(37,211,102,.3);background:rgba(37,211,102,.08);color:#25d366;text-decoration:none;display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.3-.7-.5-.6-.7-.6h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1-1.1 2.5s1.1 2.9 1.3 3.1c.1.2 2.2 3.4 5.4 4.7.8.3 1.4.5 1.8.6.8.2 1.5.2 2 .1.6-.1 1.8-.7 2.1-1.4.3-.7.3-1.2.2-1.4l-.5-.2z"/></svg>
+        WhatsApp
+      </a>
+      <a id="liShareBtn" href="#" target="_blank" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(96,165,250,.3);background:rgba(96,165,250,.08);color:#60a5fa;text-decoration:none;display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        LinkedIn
+      </a>
+      <button id="copyShareBtn" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#d1d5db;cursor:pointer">Copy link</button>
+    </div>
+    <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="font-size:12px;color:#4ade80;text-decoration:none">View leaderboard →</a>
+  </div>
   <div class="limit-msg" id="limitMsg">You've already spoken with Otto today.<br>Come back tomorrow for another conversation.</div>
   <div id="gl-transcript"></div>
 </div>
@@ -4669,16 +4695,390 @@ window._ottoLimitOverride = function() {
   if (msg) msg.style.display = 'block';
 };
 </script>
+<script>
+// Get ref code from URL or localStorage
+var _ottRef = new URLSearchParams(location.search).get('ref') || '';
+
+// Share screen override — shows after conversation ends
+window._ottoOnSessionEnd = function() {
+  var shareEl = document.getElementById('shareScreen');
+  if (shareEl) shareEl.style.display = 'flex';
+};
+
+// Pass ref to token request
+window._ottoRefCode = _ottRef;
+
+// Load user's own ref code
+fetch('https://app.contentscale.site/api/otto/ref-code')
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    var myRef = d.ref_code;
+    localStorage.setItem('otto_ref', myRef);
+    var myLink = 'https://app.contentscale.site/otto?ref=' + myRef;
+    var box = document.getElementById('myRefLink');
+    if (box) box.textContent = myLink;
+    document.getElementById('waShareBtn').href = 'https://wa.me/?text=' + encodeURIComponent('Hey! Talk to Otto from ContentScale — he explains in 1 minute how we help recover lost SEO traffic: ' + myLink);
+    document.getElementById('liShareBtn').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(myLink);
+    document.getElementById('copyShareBtn').onclick = function() {
+      navigator.clipboard.writeText(myLink).catch(function(){
+        var ta = document.createElement('textarea'); ta.value = myLink;
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      });
+      document.getElementById('copyShareBtn').textContent = 'Copied!';
+      setTimeout(function(){ document.getElementById('copyShareBtn').textContent = 'Copy link'; }, 2000);
+    };
+    document.getElementById('myPts').textContent = d.points || 0;
+  }).catch(function(){});
+</script>
 <script src="https://app.contentscale.site/otto-ai.js" defer></script>
 </body>
 </html>
 `;
 
-app.get('/otto', (req, res) => {
+app.get('/otto', async (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('X-Frame-Options', 'ALLOWALL');
   res.setHeader('Access-Control-Allow-Origin', '*');
+  // Track ref click server-side too
+  const ref = req.query.ref;
+  if (ref) {
+    const visitorIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
+    pool.query('UPDATE otto_referrals SET clicks=clicks+1, points=points+1 WHERE ref_code=$1', [ref]).catch(()=>{});
+    pool.query('INSERT INTO otto_ref_events (ref_code, event_type, visitor_ip, points_awarded) VALUES ($1,$2,$3,$4)', [ref, 'click', visitorIp, 1]).catch(()=>{});
+  }
   res.send(_OTTO_WIDGET_HTML);
+});
+
+
+// ── Otto Referral & Leaderboard System ──────────────────────────────────────
+
+// Tables
+pool.query(`CREATE TABLE IF NOT EXISTS otto_referrals (
+  id SERIAL PRIMARY KEY,
+  ref_code VARCHAR(20) UNIQUE NOT NULL,
+  name VARCHAR(255) DEFAULT 'Anonymous',
+  points INTEGER DEFAULT 0,
+  clicks INTEGER DEFAULT 0,
+  conversations INTEGER DEFAULT 0,
+  shares INTEGER DEFAULT 0,
+  ip VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW(),
+  month_key VARCHAR(7) DEFAULT TO_CHAR(NOW(), 'YYYY-MM')
+)`).catch(e => console.warn('[referral]', e.message));
+
+pool.query(`CREATE TABLE IF NOT EXISTS otto_ref_events (
+  id SERIAL PRIMARY KEY,
+  ref_code VARCHAR(20) NOT NULL,
+  event_type VARCHAR(50) NOT NULL,
+  visitor_ip VARCHAR(100),
+  points_awarded INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+)`).catch(e => console.warn('[ref_events]', e.message));
+
+function genRefCode() {
+  return 'REF-' + Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+// Get or create ref code for a visitor IP
+app.get('/api/otto/ref-code', async (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'anon';
+  try {
+    const existing = await pool.query('SELECT ref_code, points, clicks, conversations FROM otto_referrals WHERE ip=$1 ORDER BY created_at DESC LIMIT 1', [ip]);
+    if (existing.rows.length) {
+      return res.json(existing.rows[0]);
+    }
+    const code = genRefCode();
+    await pool.query('INSERT INTO otto_referrals (ref_code, ip) VALUES ($1,$2)', [code, ip]);
+    res.json({ ref_code: code, points: 0, clicks: 0, conversations: 0 });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Track a click on a ref link
+app.post('/api/otto/ref-click', async (req, res) => {
+  const { refCode, visitorIp } = req.body;
+  if (!refCode) return res.status(400).json({ error: 'refCode required' });
+  try {
+    await pool.query('UPDATE otto_referrals SET clicks=clicks+1, points=points+1 WHERE ref_code=$1', [refCode]);
+    await pool.query('INSERT INTO otto_ref_events (ref_code, event_type, visitor_ip, points_awarded) VALUES ($1,$2,$3,$4)', [refCode, 'click', visitorIp||'', 1]);
+    res.json({ ok: true, points: 1 });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Track a conversation started via ref link
+app.post('/api/otto/ref-conversation', async (req, res) => {
+  const { refCode, visitorIp } = req.body;
+  if (!refCode) return res.json({ ok: true });
+  try {
+    await pool.query('UPDATE otto_referrals SET conversations=conversations+1, points=points+3 WHERE ref_code=$1', [refCode]);
+    await pool.query('INSERT INTO otto_ref_events (ref_code, event_type, visitor_ip, points_awarded) VALUES ($1,$2,$3,$4)', [refCode, 'conversation', visitorIp||'', 3]);
+    res.json({ ok: true, points: 3 });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Set name for leaderboard
+app.post('/api/otto/ref-name', async (req, res) => {
+  const { refCode, name } = req.body;
+  if (!refCode || !name) return res.status(400).json({ error: 'refCode and name required' });
+  try {
+    await pool.query('UPDATE otto_referrals SET name=$1 WHERE ref_code=$2', [name.slice(0,50), refCode]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Public leaderboard — top 25 current month
+app.get('/api/otto/leaderboard', async (req, res) => {
+  const monthKey = new Date().toISOString().slice(0,7);
+  try {
+    const r = await pool.query(
+      `SELECT ref_code, name, points, clicks, conversations 
+       FROM otto_referrals 
+       WHERE month_key=$1 AND points > 0
+       ORDER BY points DESC LIMIT 25`,
+      [monthKey]
+    );
+    res.json({ month: monthKey, leaderboard: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ── Otto leaderboard page ─────────────────────────────────────────────────
+const _OTTO_LB_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Otto AI Leaderboard — ContentScale</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#060910;font-family:'Inter',sans-serif;color:#f9fafb;min-height:100vh;padding:24px 16px 48px}
+  .page{max-width:480px;margin:0 auto}
+  .header{text-align:center;margin-bottom:32px;padding-top:16px}
+  .logo{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#374151;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
+  h1{font-size:32px;font-weight:900;letter-spacing:.08em;background:linear-gradient(90deg,#4ade80,#86efac,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+  .subtitle{font-size:13px;color:#6b7280;margin-bottom:4px}
+  .prize-banner{background:linear-gradient(135deg,#1a1206,#2a1d08);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:14px 18px;margin:20px 0;display:flex;align-items:center;gap:12px}
+  .prize-icon{font-size:24px;flex-shrink:0}
+  .prize-text{font-size:13px;color:#fbbf24;line-height:1.5}
+  .prize-text strong{font-size:15px;display:block;color:#fcd34d;font-weight:700}
+  .month-badge{display:inline-block;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.1em;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:#4ade80;padding:4px 10px;border-radius:20px;margin-bottom:20px}
+  .lb-card{background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;margin-bottom:20px}
+  .lb-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center}
+  .lb-header span{font-size:11px;color:#4b5563;font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
+  .lb-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+  .lb-row:last-child{border-bottom:none}
+  .lb-row:hover{background:rgba(255,255,255,.02)}
+  .rank{width:22px;text-align:center;font-size:13px;font-weight:600;color:#4b5563;font-family:'JetBrains Mono',monospace}
+  .medal{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+  .m1{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
+  .m2{background:rgba(156,163,175,.12);color:#9ca3af;border:1px solid rgba(156,163,175,.25)}
+  .m3{background:rgba(180,83,9,.15);color:#b45309;border:1px solid rgba(180,83,9,.3)}
+  .m-other{background:rgba(255,255,255,.04);color:#4b5563;font-size:12px}
+  .lb-info{flex:1;min-width:0}
+  .lb-name{font-size:14px;font-weight:600;color:#f3f4f6;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-meta{font-size:11px;color:#4b5563;display:flex;gap:10px}
+  .lb-pts{font-size:15px;font-weight:700;color:#4ade80;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+  .bar-wrap{height:3px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:6px}
+  .bar-fill{height:3px;border-radius:2px;background:linear-gradient(90deg,#4ade80,#60a5fa)}
+  .your-card{background:linear-gradient(135deg,#0d1f12,#0a1520);border:1px solid rgba(74,222,128,.2);border-radius:16px;padding:18px;margin-bottom:20px}
+  .your-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;font-family:'JetBrains Mono',monospace;margin-bottom:10px}
+  .your-code{background:rgba(0,0,0,.3);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#9ca3af;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer;border:1px solid rgba(74,222,128,.1)}
+  .copy-lbl{font-size:11px;color:#4ade80;font-weight:600}
+  .your-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .stat{text-align:center;background:rgba(0,0,0,.2);border-radius:8px;padding:10px 6px}
+  .stat-num{font-size:20px;font-weight:700;color:#f3f4f6}
+  .stat-lbl{font-size:10px;color:#4b5563;margin-top:2px}
+  .share-row{display:flex;gap:8px;flex-wrap:wrap}
+  .sbtn{font-size:12px;font-weight:600;padding:9px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#d1d5db;cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none;transition:all .15s}
+  .sbtn:hover{background:rgba(255,255,255,.08)}
+  .sbtn.wa{border-color:rgba(37,211,102,.3);color:#25d366}
+  .sbtn.li{border-color:rgba(10,102,194,.3);color:#60a5fa}
+  .name-form{margin-top:12px;display:flex;gap:8px}
+  .name-input{flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 12px;font-size:13px;color:#f3f4f6;font-family:'Inter',sans-serif;outline:none}
+  .name-input:focus{border-color:rgba(74,222,128,.4)}
+  .name-input::placeholder{color:#4b5563}
+  .name-btn{background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .empty{text-align:center;padding:40px 20px;color:#374151;font-size:13px}
+  .loading{text-align:center;padding:40px;color:#374151;font-size:13px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
+  .toast.show{opacity:1}
+  .cta{text-align:center;margin-top:8px}
+  .cta a{font-size:13px;color:#60a5fa;text-decoration:none}
+  .cta a:hover{color:#93c5fd}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="logo">ContentScale · Otto AI</div>
+    <h1>LEADERBOARD</h1>
+    <div class="subtitle">Share Otto. Earn points. Win €250 in free services.</div>
+    <div id="monthBadge" class="month-badge">Loading...</div>
+  </div>
+
+  <div class="prize-banner">
+    <div class="prize-icon">🏆</div>
+    <div class="prize-text">
+      <strong>Top 3 this month win €250</strong>
+      Free ContentScale services — GRAAF scan, PULSE+NEXUS audit, or lead generation credits.
+    </div>
+  </div>
+
+  <div class="your-card" id="yourCard" style="display:none">
+    <div class="your-label">Your referral link</div>
+    <div class="your-code" id="refCodeBox" onclick="copyLink()">
+      <span id="refCodeDisplay">Loading...</span>
+      <span class="copy-lbl">Copy</span>
+    </div>
+    <div class="your-stats">
+      <div class="stat"><div class="stat-num" id="statPts">0</div><div class="stat-lbl">Points</div></div>
+      <div class="stat"><div class="stat-num" id="statClicks">0</div><div class="stat-lbl">Clicks</div></div>
+      <div class="stat"><div class="stat-num" id="statConvos">0</div><div class="stat-lbl">Talks</div></div>
+    </div>
+    <div class="share-row">
+      <a id="waBtn" class="sbtn wa" href="#" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.3-.7-.5-.6-.7-.6h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1-1.1 2.5s1.1 2.9 1.3 3.1c.1.2 2.2 3.4 5.4 4.7.8.3 1.4.5 1.8.6.8.2 1.5.2 2 .1.6-.1 1.8-.7 2.1-1.4.3-.7.3-1.2.2-1.4l-.5-.2z"/></svg>
+        WhatsApp
+      </a>
+      <a id="liBtn" class="sbtn li" href="#" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        LinkedIn
+      </a>
+      <button class="sbtn" onclick="copyLink()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy link
+      </button>
+    </div>
+    <div class="name-form">
+      <input class="name-input" id="nameInput" type="text" placeholder="Your name for the leaderboard..." maxlength="50">
+      <button class="name-btn" onclick="saveName()">Save</button>
+    </div>
+  </div>
+
+  <div class="lb-card">
+    <div class="lb-header">
+      <span>Rank · Name</span>
+      <span>Points</span>
+    </div>
+    <div id="lbBody"><div class="loading">Loading leaderboard...</div></div>
+  </div>
+
+  <div class="cta"><a href="/otto">Talk to Otto →</a></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var BASE = 'https://app.contentscale.site';
+var myRef = localStorage.getItem('otto_ref') || '';
+var myLink = '';
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+function copyLink() {
+  if (!myLink) return;
+  navigator.clipboard.writeText(myLink).then(function(){
+    toast('Link copied!');
+  }).catch(function(){
+    var ta = document.createElement('textarea');
+    ta.value = myLink;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Link copied!');
+  });
+}
+
+function saveName() {
+  var name = document.getElementById('nameInput').value.trim();
+  if (!name || !myRef) return;
+  fetch(BASE + '/api/otto/ref-name', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ refCode: myRef, name: name })
+  }).then(function(){ toast('Name saved!'); loadLeaderboard(); });
+}
+
+function loadMyCard() {
+  fetch(BASE + '/api/otto/ref-code').then(function(r){ return r.json(); }).then(function(d) {
+    myRef = d.ref_code;
+    localStorage.setItem('otto_ref', myRef);
+    myLink = 'https://app.contentscale.site/otto?ref=' + myRef;
+    document.getElementById('refCodeDisplay').textContent = myLink;
+    document.getElementById('statPts').textContent = d.points || 0;
+    document.getElementById('statClicks').textContent = d.clicks || 0;
+    document.getElementById('statConvos').textContent = d.conversations || 0;
+    document.getElementById('waBtn').href = 'https://wa.me/?text=' + encodeURIComponent('Hey! Talk to Otto — ContentScale AI assistant. He explains how we help recover lost SEO traffic. Only 1 minute: ' + myLink);
+    document.getElementById('liBtn').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(myLink);
+    document.getElementById('yourCard').style.display = 'block';
+  });
+}
+
+function loadLeaderboard() {
+  fetch(BASE + '/api/otto/leaderboard').then(function(r){ return r.json(); }).then(function(d) {
+    var month = d.month || '';
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var mIdx = parseInt(month.slice(5,7)) - 1;
+    document.getElementById('monthBadge').textContent = monthNames[mIdx] + ' ' + month.slice(0,4) + ' · Resets monthly';
+    
+    var rows = d.leaderboard || [];
+    var maxPts = rows.length ? rows[0].points : 1;
+    var body = document.getElementById('lbBody');
+    
+    if (!rows.length) {
+      body.innerHTML = '<div class="empty">No entries yet this month.<br>Be the first to share!</div>';
+      return;
+    }
+
+    var medals = ['🥇','🥈','🥉'];
+    var medalClass = ['m1','m2','m3'];
+    body.innerHTML = rows.map(function(r, i) {
+      var pct = Math.round((r.points / maxPts) * 100);
+      var isMe = r.ref_code === myRef;
+      return '<div class="lb-row" style="' + (isMe ? 'background:rgba(74,222,128,.04);' : '') + '">' +
+        '<span class="rank">' + (i > 2 ? (i+1) : '') + '</span>' +
+        '<div class="medal ' + (i < 3 ? medalClass[i] : 'm-other') + '">' + (i < 3 ? medals[i] : (i+1)) + '</div>' +
+        '<div class="lb-info">' +
+          '<div class="lb-name">' + (r.name || 'Anonymous') + (isMe ? ' <span style="font-size:10px;color:#4ade80">(you)</span>' : '') + '</div>' +
+          '<div class="lb-meta"><span>' + r.clicks + ' clicks</span><span>' + r.conversations + ' talks</span></div>' +
+          '<div class="bar-wrap"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+        '<span class="lb-pts">' + r.points + '</span>' +
+      '</div>';
+    }).join('');
+  });
+}
+
+// Track ref click if came from a ref link
+var params = new URLSearchParams(location.search);
+var incomingRef = params.get('ref');
+if (incomingRef) {
+  fetch(BASE + '/api/otto/ref-click', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ refCode: incomingRef })
+  });
+}
+
+loadMyCard();
+loadLeaderboard();
+setInterval(loadLeaderboard, 30000);
+</script>
+</body>
+</html>
+`;
+
+app.get('/otto/leaderboard', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.send(_OTTO_LB_HTML);
 });
 
 
