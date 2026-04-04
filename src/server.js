@@ -4169,7 +4169,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson — you are helpful and transparent. As soon as the conversation starts, introduce yourself immediately without waiting. Follow this exact script: 1. Say immediately without waiting: Hey! I am Otto, an AI assistant of ContentScale. I have 1 minute for you — is that okay or would you rather I hang up? 2a. If they say hang up or no: say No problem, have a great day! Goodbye! Then STOP. 2b. If they say yes or okay: say Great! May I have your name? Wait for answer. 3. Say: Hey [name]! We noticed many businesses lose Google traffic without knowing why. ContentScale helps recover that with a free GRAAF Framework SEO content score scan, onpage seo, plus a PULSE and NEXUS SEO audit using your Google Search Console data, offpage seo. We can also do outbound calls and lead generation for you — so you never miss a client again. 4. Ask: Would that be interesting for you? Please answer yes or no. Wait for answer. 5a. If interested: say Wonderful! On what number can I call back? include your country code.  Wait for answer. Thanks and have a great day, goodbye! Then STOP. 5b. If not interested: say No worries at all! maybe another time. Have a great day, goodbye! Then STOP. Always say goodbye before stopping. Never continue after goodbye.";
+  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson. Follow this exact script: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. I have about 1 minute for you — is that okay or would you rather I hang up? 2a. If no or hang up: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes or okay: say Great! May I have your name? Wait for answer. 3. Say: Hey [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and PULSE+NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 4. Ask: Would that be interesting for you? Wait for answer. 5a. If not interested: say No worries, maybe another time. Have a great day, goodbye! Then STOP. 5b. If interested: say Wonderful! To receive your free scan and to be eligible for our monthly prize of 250 euros in free services, I need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch. Have a great day, goodbye! Then STOP. Always say goodbye before stopping. Never continue after goodbye.";
 
   function setStatus(msg) {
     if (window._ottoStatusOverride) { window._ottoStatusOverride(msg); return; }
@@ -4274,7 +4274,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
     // HARD KILL: 45 seconds max no matter what
     _killTimer = setTimeout(function() { hangup('60s max reached'); }, 60000);
-    console.log('[otto] session started — 90s hard limit');
+    console.log('[otto] session started — 75s hard limit');
   }
 
   async function startSession() {
@@ -4375,7 +4375,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v7 loaded — 90s hard limit + goodbye detection');
+    console.log('[otto] v7 loaded — 75s hard limit + goodbye detection');
   }
 
   document.readyState === 'loading'
@@ -4505,7 +4505,7 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
     font-size: 9px;
     letter-spacing: .18em;
     text-transform: uppercase;
-    color: #374151;
+    color: #9ca3af;
     margin-bottom: 20px;
   }
 
@@ -4561,7 +4561,7 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
     font-size: 9px;
     letter-spacing: .1em;
     text-transform: uppercase;
-    color: #1f2937;
+    color: #6b7280;
     line-height: 2;
     margin-bottom: 4px;
   }
@@ -4695,9 +4695,49 @@ window._ottoLimitOverride = function() {
   if (msg) msg.style.display = 'block';
 };
 </script>
+<style>
+#ow-consent{position:absolute;inset:0;background:rgba(6,9,16,.96);border-radius:24px;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
+#ow-consent h3{font-size:16px;font-weight:700;color:#f3f4f6;margin-bottom:8px}
+#ow-consent p{font-size:12px;color:#6b7280;line-height:1.7;margin-bottom:16px}
+#ow-consent a{color:#4ade80;text-decoration:none}
+#ow-ca{background:#4ade80;color:#000;border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px}
+#ow-cd{background:transparent;color:#4b5563;border:none;font-size:12px;cursor:pointer;padding:6px}
+</style>
+
 <script>
 // Get ref code from URL or localStorage
 var _ottRef = new URLSearchParams(location.search).get('ref') || '';
+
+// Cookie consent — check before allowing Otto
+var _consent = localStorage.getItem('cs_consent');
+if (!_consent) {
+  // Show consent screen inside widget
+  var consentEl = document.createElement('div');
+  consentEl.id = 'ow-consent';
+  consentEl.innerHTML = [
+    '<h3>Before we start</h3>',
+    '<p>Otto AI stores your conversation to improve our service and tracks referrals using local storage.',
+    ' <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a></p>',
+    '<button id="ow-ca">Accept & Talk to Otto</button>',
+    '<button id="ow-cd">Decline</button>'
+  ].join('');
+  document.addEventListener('DOMContentLoaded', function() {
+    var widget = document.querySelector('.widget');
+    if (widget) {
+      widget.style.position = 'relative';
+      widget.appendChild(consentEl);
+      document.getElementById('ow-ca').onclick = function() {
+        localStorage.setItem('cs_consent','accepted');
+        consentEl.remove();
+      };
+      document.getElementById('ow-cd').onclick = function() {
+        localStorage.setItem('cs_consent','denied');
+        document.getElementById('gl-status').textContent = 'Consent required to use Otto.';
+        consentEl.remove();
+      };
+    }
+  });
+}
 
 // Share screen override — shows after conversation ends
 window._ottoOnSessionEnd = function() {
@@ -4731,6 +4771,19 @@ fetch('https://app.contentscale.site/api/otto/ref-code')
   }).catch(function(){});
 </script>
 <script src="https://app.contentscale.site/otto-ai.js" defer></script>
+<div style="margin-top:20px;text-align:center;padding-bottom:8px">
+  <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;color:#374151;line-height:2.2">
+    <a href="https://contentscale.site" target="_blank" style="color:#4b5563;text-decoration:none">ContentScale.site</a>
+    &nbsp;·&nbsp;
+    <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:#4b5563;text-decoration:none">Privacy</a>
+    &nbsp;·&nbsp;
+    <a href="https://contentscale.site/terms/" target="_blank" style="color:#4b5563;text-decoration:none">Terms</a>
+  </div>
+  <div style="font-size:9px;color:#1f2937;margin-top:2px;font-family:'JetBrains Mono',monospace">
+    AI conversations may be recorded for quality purposes.
+    <a href="https://contentscale.site/privacy-policy/#data-requests" target="_blank" style="color:#374151;text-decoration:none">Data requests →</a>
+  </div>
+</div>
 </body>
 </html>
 `;
@@ -4914,6 +4967,9 @@ const _OTTO_LB_HTML = `<!DOCTYPE html>
     <h1>LEADERBOARD</h1>
     <div class="subtitle">Share Otto. Earn points. Win €250 in free services.</div>
     <div id="monthBadge" class="month-badge">Loading...</div>
+  <div style="margin-top:8px;font-size:11px;color:#4b5563;font-family:'JetBrains Mono',monospace">
+    Resets in <span id="countdown" style="color:#fbbf24;font-weight:700">--d --h --m</span>
+  </div>
   </div>
 
   <div class="prize-banner">
@@ -4921,6 +4977,17 @@ const _OTTO_LB_HTML = `<!DOCTYPE html>
     <div class="prize-text">
       <strong>Top 3 this month win €250</strong>
       Free ContentScale services — GRAAF scan, PULSE+NEXUS audit, or lead generation credits.
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+    <div style="background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px;text-align:center">
+      <div id="totalConvos" style="font-size:28px;font-weight:900;color:#4ade80;font-family:'JetBrains Mono',monospace">—</div>
+      <div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-top:4px">Conversations</div>
+    </div>
+    <div style="background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px;text-align:center">
+      <div id="totalReferrers" style="font-size:28px;font-weight:900;color:#60a5fa;font-family:'JetBrains Mono',monospace">—</div>
+      <div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-top:4px">Referrers</div>
     </div>
   </div>
 
@@ -5066,9 +5133,36 @@ if (incomingRef) {
   });
 }
 
+// Countdown to end of month
+function updateCountdown() {
+  var now = new Date();
+  var endOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 1, 0, 0, 0);
+  var diff = endOfMonth - now;
+  if (diff < 0) { document.getElementById('countdown').textContent = 'Resetting...'; return; }
+  var d = Math.floor(diff / 86400000);
+  var h = Math.floor((diff % 86400000) / 3600000);
+  var m = Math.floor((diff % 3600000) / 60000);
+  var s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('countdown').textContent = d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// Load stats
+function loadStats() {
+  fetch(BASE + '/api/otto/leaderboard').then(function(r){ return r.json(); }).then(function(d) {
+    var rows = d.leaderboard || [];
+    var totalConvos = rows.reduce(function(a,r){ return a + (r.conversations||0); }, 0);
+    document.getElementById('totalConvos').textContent = totalConvos;
+    document.getElementById('totalReferrers').textContent = rows.length;
+  });
+}
+
 loadMyCard();
 loadLeaderboard();
+loadStats();
 setInterval(loadLeaderboard, 30000);
+setInterval(loadStats, 30000);
 </script>
 </body>
 </html>
