@@ -2558,7 +2558,7 @@ res.status(500).json({ success: false, error: 'Internal Server Error' });
 });
 async function startServer() {
 console.log('🚀 =====================================');
-console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
+console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL + OTTO v6)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
 console.log('🚀  FIX: deactivate endpoint added');
 console.log('🚀  FIX: Instantly Bearer uses secret only');
@@ -3912,7 +3912,7 @@ const OTTO_CLIENT_JS = `// ContentScale — Otto AI — Gemini Live v6
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var OTTO_SCRIPT = "You are Otto, the AI voice assistant of ContentScale. Follow this script exactly: 1. Start immediately by saying: Hey! May I have your name? 2. Wait for their answer. 3. Then say: Hey [name]! I am Otto, the AI assistant of ContentScale. We help you recover lost traffic with our free GRAAF Framework scan and our Google Search Console PULSE+NEXUS SEO audit framework. We can also help you with leads, call for you, and make sure you never miss any clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! 4. Then end the conversation politely. Keep it exactly like this script. Do not add extra information. Speak naturally and warmly.";
+  var OTTO_SCRIPT = "You are Otto, the AI voice assistant of ContentScale. Follow this script exactly and do not deviate. Speak warmly and naturally. 1. Say: Hey! May I have your name? Then wait for their answer. 2. Say: Hey [name]! I am Otto, the AI assistant of ContentScale. We help you recover lost traffic with our free GRAAF Framework scan and our Google Search Console PULSE+NEXUS SEO audit framework. We can also help you with leads, call for you, and make sure you never miss any clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! 3. Then ask: Are you able to send Ottmar a message today? Wait for their answer. 4a. If yes: say: Okay, I will let him know you will! Speak to you soon! Then end the call. 4b. If no: say: May I know why not? Wait for their answer. Then say: Okay, maybe next time! Take care! Then end the call. Keep it exactly like this script. Do not add extra topics or questions.";
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
