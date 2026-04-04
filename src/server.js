@@ -3721,8 +3721,8 @@ function servePublic(filename) {
   };
 }
 
-app.get('/audit-seo',             servePublic('audit-seo.html'));
-app.get('/audit',                 (req, res) => res.redirect(301, '/audit-seo'));
+app.get('/audit-seo', (req, res) => res.redirect(301, '/seo-audit'));
+app.get('/audit',     (req, res) => res.redirect(301, '/seo-audit'));
 app.get('/audit-intake',          servePublic('audit-intake.html'));
 app.get('/audit-workflow',        servePublic('audit-workflow.html'));
 app.get('/audit-recommendations', servePublic('audit-recommendations.html'));
@@ -6413,7 +6413,7 @@ app.get('/seo-audit', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(_SEO_AUDIT_HTML);
 });
-app.get('/audit-seo', (req, res) => res.redirect('/seo-audit'));
+// /audit-seo now redirects above
 
 
 // ── Otto sessions admin page ─────────────────────────────────────────────
