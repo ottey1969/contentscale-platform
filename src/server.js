@@ -4175,7 +4175,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson. Follow this exact script: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. I have about 1 minute for you — is that okay or would you rather I hang up? 2a. If no or hang up: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes or okay: say Great! May I have your name? Wait for answer. 3. Say: Hey [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and PULSE+NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 4. Ask: Would that be interesting for you? Wait for answer. 5a. If not interested: say No worries, maybe another time. Have a great day, goodbye! Then STOP. 5b. If interested: say Wonderful! To receive your free scan and to be eligible for our monthly prize of 250 euros in free services, I need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch. Have a great day, goodbye! Then STOP. Always say goodbye before stopping. Never continue after goodbye.";
+  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson. Follow this exact script: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. Do you have about 1 minute for me? — is that okay or would you rather I hang up? 2a. If no or hang up: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes or okay: say Great! May I have your name? Wait for answer. 2c. Do you have a website? Wait for the answer. 2d. If no or hang up: say No problem, this offer is not for you, have a great day! Goodbye! Then STOP. 2e. If yes or okay: say perfect! 3. Say: Hey [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and our PULSE and NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 4. Ask: Would that be interesting for you? Wait for answer. 5a. If not interested: say No worries, maybe another time. Have a great day, goodbye! Then STOP. 5b. If interested: say Wonderful! Ottmar the founder will call you back but you can also opt to 250 euros in free SEO services, I need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch. Have a great day, goodbye! Then STOP. Always say goodbye before stopping. Never continue after goodbye.";
 
   function setStatus(msg) {
     if (window._ottoStatusOverride) { window._ottoStatusOverride(msg); return; }
@@ -4279,8 +4279,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     setStatus('Your turn — speak now...');
 
     // HARD KILL: 45 seconds max no matter what
-    _killTimer = setTimeout(function() { hangup('60s max reached'); }, 60000);
-    console.log('[otto] session started — 75s hard limit');
+    _killTimer = setTimeout(function() { hangup('s max reached'); }, 60000);
+    console.log('[otto] session started — 120s hard limit');
   }
 
   async function startSession() {
@@ -4385,7 +4385,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v7 loaded — 75s hard limit + goodbye detection');
+    console.log('[otto] v7 loaded — 120s hard limit + goodbye detection');
   }
 
   document.readyState === 'loading'
