@@ -4336,7 +4336,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     : attach();
 })();`;
 
-['gemini-live-client.js','gemini-live-client-v5.js','gemini-live-client-v6.js'].forEach(function(name) {
+// Serve Otto JS — all versioned names point to same embedded content
+['gemini-live-client.js','gemini-live-client-v5.js','gemini-live-client-v6.js','gemini-live-client-v7.js','otto-ai.js'].forEach(function(name) {
   app.get('/' + name, function(req, res) {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
