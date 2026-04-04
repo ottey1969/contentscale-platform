@@ -1,293 +1,2213 @@
-// ContentScale — Otto AI — Gemini Live v6
-// Male voice (Fenrir) + auto-hangup 3s after conversation ends
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Lead Crawler — ContentScale (Gemini)</title>
+      <meta name="description" content="Find 200–500 content writing leads in any city. 20 industries, AI-powered, bucketed by urgency. Free tool by ContentScale.">
+      <link rel="canonical" href="https://contentscale.site/lead-crawler">
+      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+      <style>
+         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+         :root{
+         --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+         --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+         --purple:#a78bfa;--purple2:#c4b5fd;--purple-glow:rgba(167,139,250,0.15);
+         --blue:#60a5fa;--blue2:#2563eb;--green:#4ade80;--green2:#22c55e;
+         --orange:#fb923c;--amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+         --gold-glow:rgba(251,191,36,0.1);
+         }
+         body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:100px;line-height:1.5;}
+         .wrap{max-width:1400px;margin:0 auto;padding:0 24px;}
+         /* ── Top Navigation ── */
+         .topnav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:40px;}
+         .topnav .brand{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,6vw,72px);letter-spacing:.06em;text-decoration:none;display:flex;align-items:center;gap:8px;line-height:1;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+         .topnav .brand .pro{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,6vw,72px);background:var(--purple);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.06em;}
+         .topnav .back{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);text-decoration:none;transition:all .2s;}
+         .topnav .back:hover{color:var(--gold);transform:translateX(-4px);}
+         header{padding:0 0 32px;border-bottom:1px solid var(--border);margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+         .logo-block{flex:1;}
+         .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+         .ldot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink 1.5s ease-in-out infinite;}
+         @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(0.8)}}
+         h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(50px,8vw,100px);line-height:.85;letter-spacing:.02em;}
+         h1 span{color:var(--gold);}
+         .tagline{font-size:15px;color:var(--muted);margin-top:14px;max-width:540px;line-height:1.6;}
+         .hbadges{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+         .hb{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:4px;border:1px solid;white-space:nowrap;background:rgba(0,0,0,0.3);}
+         .hb.g{color:var(--green);border-color:rgba(74,222,128,0.25);}
+         .hb.y{color:var(--gold);border-color:rgba(251,191,36,0.25);}
+         .hb.p{color:var(--purple);border-color:rgba(167,139,250,0.25);}
+         /* ── Strategy Buckets ── */
+         .strategy{background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:32px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+         .strategy-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,0.02);}
+         .strategy-head h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;flex:1;}
+         .strategy-head .tog{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--sub);}
+         .strategy-body{padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+         .sbucket{border-radius:6px;padding:16px;border:1px solid;transition:transform .2s;}
+         .sbucket:hover{transform:translateY(-2px);}
+         .sbucket .sb-range{font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1;margin-bottom:6px;}
+         .sbucket .sb-name{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;display:block;}
+         .sbucket .sb-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+         .sbucket .sb-pitch{font-size:11px;font-style:italic;line-height:1.45;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);}
+         .sbucket .sb-hot{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;display:inline-block;margin-top:8px;}
+         .sb-ghost{border-color:rgba(148,163,184,0.2);background:rgba(148,163,184,0.05);}
+         .sb-skeleton{border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.05);}
+         .sb-skeleton .sb-range, .sb-skeleton .sb-name{color:var(--blue);} .sb-skeleton .sb-hot{background:rgba(96,165,250,0.1);color:var(--blue);}
+         .sb-brochure{border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.05);}
+         .sb-brochure .sb-range, .sb-brochure .sb-name{color:var(--gold);} .sb-brochure .sb-hot{background:rgba(251,191,36,0.1);color:var(--gold);}
+         .sb-stale{border-color:rgba(251,146,60,0.3);background:rgba(251,146,60,0.05);}
+         .sb-active{border-color:rgba(244,63,63,0.3);background:rgba(244,63,63,0.05);}
+         .sb-estab{border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.05);}
+         /* ── License & Resume Banners ── */
+         #licenseActiveBar{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:8px;padding:12px 20px;margin-bottom:16px;display:none;align-items:center;gap:15px;}
+         #licenseActiveBar.show{display:flex;}
+         .resume-banner{background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:8px;padding:14px 20px;margin-bottom:20px;display:none;align-items:center;gap:16px;}
+         /* ── Search Panel ── */
+         .search-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:32px;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);}
+         .search-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));}
+         .panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--sub);margin-bottom:20px;display:block;}
+         .form-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:16px;align-items:end;margin-bottom:24px;}
+         @media(max-width:768px){.form-row{grid-template-columns:1fr 1fr;}}
+         .field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:8px;}
+         .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ink);outline:none;transition:all .2s;}
+         .field input:focus{border-color:var(--gold);background:rgba(255,255,255,0.02);box-shadow:0 0 0 3px rgba(251,191,36,0.1);}
+         .crawl-btn{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.05em;padding:0 36px;border-radius:6px;cursor:pointer;transition:all .2s;height:52px;display:flex;align-items:center;justify-content:center;}
+         .crawl-btn:hover{background:var(--ink);transform:translateY(-1px);}
+         .crawl-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+         .stop-btn{background:var(--surface);color:var(--red);border:1px solid rgba(244,63,63,0.3);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:0 24px;border-radius:6px;cursor:pointer;height:52px;display:none;transition:all .2s;}
+         .stop-btn:hover{background:var(--red);color:#fff;}
+         /* ── Live Search Chips ── */
+         .waves{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+         .wchip{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:10px;transition:all .3s;}
+         .wchip .wd{width:6px;height:6px;border-radius:50%;background:var(--dim);}
+         .wchip.running{color:var(--orange);border-color:rgba(251,146,60,0.3);background:rgba(251,146,60,0.05);}
+         .wchip.running .wd{background:var(--orange);box-shadow:0 0 10px var(--orange);animation:blink 1s infinite;}
+         .wchip.done{color:var(--green);border-color:rgba(74,222,128,0.25);background:rgba(74,222,128,0.02);}
+         .wchip.done .wd{background:var(--green);}
+         /* ── Voicebot Config Panel ── */
+         .vapi-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:24px;display:none;border-left:5px solid var(--gold);box-shadow:0 15px 35px rgba(0,0,0,0.6);}
+         .vapi-panel.visible{display:block;animation:fdown .3s ease-out;}
+         @keyframes fdown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+         .vapi-panel-head{display:flex;align-items:center;gap:15px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+         .vapi-panel-head h3{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;flex:1;}
+         .vapi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+         @media(max-width:640px){.vapi-grid{grid-template-columns:1fr;}}
+         .vapi-field label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--sub);display:block;margin-bottom:10px;}
+         .vapi-field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;transition:all .2s;}
+         .vapi-field input:focus{border-color:var(--purple);background:rgba(255,255,255,0.03);}
+         .vapi-save-btn{grid-column:1/-1;background:var(--green);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:15px;border-radius:6px;cursor:pointer;margin-top:10px;transition:all .2s;}
+         .vapi-save-btn:hover{background:var(--ink);transform:translateY(-1px);}
+         /* ── Results Display ── */
+         .toolbar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:24px;display:none;align-items:center;gap:15px;flex-wrap:wrap;box-shadow:0 4px 15px rgba(0,0,0,0.3);}
+         .tbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:4px;cursor:pointer;transition:all .2s;}
+         .tbtn:hover{color:var(--ink);border-color:var(--sub);}
+         .tbtn.on{background:var(--gold);color:#000;border-color:var(--gold);font-weight:700;}
+         .tbtn.gold-outline{border-color:var(--gold);color:var(--gold);}
+         .tbtn.gold-outline:hover{background:var(--gold);color:#000;}
+         .bucket{margin-bottom:48px;}
+         .bhead{padding:24px 28px;border-radius:8px;margin-bottom:20px;border:1px solid;display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:rgba(255,255,255,0.01);}
+         .bname{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:.05em;line-height:1;flex:1;}
+         .brange{font-family:'Bebas Neue',sans-serif;font-size:20px;padding:6px 16px;border-radius:4px;border:1px solid;background:rgba(0,0,0,0.2);}
+         .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;}
+         .lcard{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;transition:all .2s;position:relative;cursor:pointer;display:flex;flex-direction:column;gap:10px;}
+         .lcard:hover{border-color:var(--sub);transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.5);}
+         .lcard.sel{border-color:var(--gold);background:var(--gold-glow);box-shadow:0 0 20px rgba(251,191,36,0.05);}
+         .chk{position:absolute;top:15px;right:15px;width:18px;height:18px;border:2px solid var(--border);border-radius:4px;background:var(--bg);transition:all .2s;}
+         .chk.on{background:var(--gold);border-color:var(--gold);}
+         .chk.on::after{content:'✓';font-size:11px;color:#000;position:absolute;left:3px;top:-1px;font-weight:900;}
+         .cn{font-size:18px;font-weight:700;letter-spacing:-0.02em;padding-right:30px;}
+         .ct{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;color:var(--sub);letter-spacing:.1em;}
+         .pitch-banner{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:4px;padding:12px;font-size:12px;color:var(--gold);line-height:1.5;font-style:italic;}
+         .card-contact{display:flex;flex-direction:column;gap:6px;margin-top:5px;}
+         .contact-item{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;text-decoration:none;padding:8px 12px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);transition:all .2s;}
+         .contact-item.ph{color:var(--green);border-color:rgba(74,222,128,0.2);}
+         .contact-item.em{color:var(--purple);border-color:rgba(167,139,250,0.2);}
+         .contact-item:hover{background:rgba(255,255,255,0.08);transform:translateX(2px);}
+         .card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:15px;border-top:1px solid rgba(255,255,255,0.05);}
+         .call-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:var(--green);padding:8px 14px;border-radius:4px;cursor:pointer;transition:all .2s;font-weight:700;}
+         .call-btn:hover{background:var(--green);color:#000;}
+         .call-btn.calling{background:var(--orange);color:#000;border-color:var(--orange);animation:pulse-orange 1s infinite;}
+         /* ── Call Log & Persistence ── */
+         .calllog{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:32px;display:none;box-shadow:0 10px 25px rgba(0,0,0,0.4);}
+         .calllog.visible{display:block;}
+         .calllog-head{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
+         .calllog-item{display:grid;grid-template-columns:100px 1fr 100px;gap:20px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);align-items:center;}
+         .calllog-status{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 8px;border-radius:3px;text-align:center;font-weight:700;}
+         .cls-answered{background:rgba(74,222,128,0.15);color:var(--green);}
+         .cls-calling{background:rgba(251,146,60,0.15);color:var(--orange);}
+         /* ── Modals & Terms ── */
+         .terms-modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(10px);}
+         .terms-box{background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;border-top:6px solid var(--gold);box-shadow:0 0 100px rgba(0,0,0,1);}
+         .terms-body{padding:40px;font-size:14px;line-height:1.8;color:var(--muted);}
+         .terms-body h2{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);margin-bottom:20px;text-align:center;}
+         .terms-body strong{color:var(--ink);}
+         .terms-body ul{margin:20px 0;padding-left:20px;}
+         .terms-check{display:flex;align-items:flex-start;gap:12px;margin-top:30px;background:rgba(255,255,255,0.03);padding:20px;border-radius:8px;cursor:pointer;}
+         .terms-accept-btn{width:100%;background:var(--green);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:28px;padding:18px;border-radius:6px;cursor:pointer;margin-top:20px;opacity:0.3;pointer-events:none;transition:all .3s;}
+         .terms-accept-btn.ready{opacity:1;pointer-events:all;}
+         /* ── Toast ── */
+         .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:12px 24px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;box-shadow:0 10px 40px rgba(0,0,0,0.5);opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+         .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+         .selbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 28px;align-items:center;gap:12px;z-index:100;flex-wrap:wrap;}
+         .selbar.show{display:flex !important;}
+         .pro-tag{font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,2vw,28px);color:#7c3aed;vertical-align:middle;letter-spacing:.04em;-webkit-text-fill-color:#7c3aed;background:none;}
 
-(function() {
-  'use strict';
+         /* ══ PROGRESS CARD ══ */
+         .prog-wrap{margin-bottom:24px;}
+         .prog-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5);}
+         .prog-accent{height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));}
+         .prog-header{padding:16px 24px;border-bottom:1px solid var(--surface);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+         .prog-live{display:flex;align-items:center;gap:8px;}
+         .prog-liveDot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink 1s infinite;}
+         .prog-liveLabel{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);}
+         .prog-msg{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+         .prog-stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--surface);}
+         .prog-stat{background:var(--card);padding:20px;text-align:center;}
+         .prog-statNum{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;}
+         .prog-statNum.gold{background:linear-gradient(135deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+         .prog-statNum.purple{background:linear-gradient(135deg,var(--purple),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+         .prog-statNum.dim{color:var(--border);}
+         .prog-statLabel{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-top:4px;}
+         .prog-barWrap{padding:16px 24px 22px;}
+         .prog-barTop{display:flex;justify-content:space-between;margin-bottom:8px;}
+         .prog-barLabel{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;}
+         .prog-barPct{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);}
+         .prog-track{background:var(--surface);border-radius:4px;height:6px;overflow:hidden;}
+         .prog-fill{width:0%;height:100%;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));transition:width .4s ease;border-radius:4px;}
+         /* ══ STATS ROW ══ */
+         .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px;box-shadow:0 4px 16px rgba(0,0,0,0.3);}
+         .stat{background:var(--card);padding:16px;text-align:center;}
+         .stat.hi{background:rgba(251,191,36,0.04);}
+         .sn{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;color:var(--ink);}
+         .sl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:4px;}
+         /* ══ EMPTY STATE ══ */
+         .empty-state{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:60px 40px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.4);margin-top:8px;}
+         .ebig{font-family:'Bebas Neue',sans-serif;font-size:clamp(60px,10vw,120px);line-height:.85;letter-spacing:.04em;background:linear-gradient(135deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:24px;}
+         .empty-state p{font-size:15px;color:var(--muted);line-height:1.8;max-width:480px;margin:0 auto;}
+         /* ══ ERROR LOG ══ */
+         .err-log{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:8px;padding:16px 20px;margin-bottom:20px;}
+      </style>
+   </head>
+   </head>
+   <body>
+      <div class="wrap">
+         <nav class="topnav">
+            <a href="https://contentscale.site" class="brand">ContentScale<span class="pro-tag"> PRO</span></a>
+            <a href="/" class="back">← Back to ContentScale</a>
+         </nav>
+         <header>
+            <div class="logo-block">
+               <div class="eyebrow"><span class="ldot"></span> ContentScale — Powered by Google Gemini (Free)</div>
+               <h1>LEAD<br>CRAWLER <span class="pro-tag">PRO</span></h1>
+               <p class="tagline">Enter any city + country. 20 industries searched in parallel. Every lead bucketed by content desperation — with a pitch angle ready to copy.</p>
+            </div>
+            <div class="hbadges">
+               <div class="hb g">✓ 20 Parallel Searches</div>
+               <div class="hb g">✓ 200–500 Leads / Run</div>
+               <div class="hb y">✓ Pitch Angle Per Lead</div>
+               <div class="hb p">✓ 6 Smart Buckets</div>
+            </div>
+         </header>
+         <div class="strategy">
+            <div class="strategy-head" onclick="toggleStrategy()">
+               <h3>🎯 The 6 Buckets — What They Mean & How to Pitch Each</h3>
+               <span class="tog" id="togTxt">▲ collapse</span>
+            </div>
+            <div class="strategy-body" id="stratBody">
+               <div class="sbucket sb-ghost">
+                  <div class="sb-range">0–5</div>
+                  <div class="sb-name">Ghost Sites</div>
+                  <div class="sb-desc">Homepage only. Almost invisible online.</div>
+                  <div class="sb-pitch">"Let's build your site from scratch and get you found on Google."</div>
+                  <div class="sb-hot">⚠ Risky — verify budget</div>
+               </div>
+               <div class="sbucket sb-skeleton">
+                  <div class="sb-range">5–15</div>
+                  <div class="sb-name">Skeleton Sites</div>
+                  <div class="sb-desc">Real business, real money — website says almost nothing.</div>
+                  <div class="sb-pitch">"You're making sales but your site isn't. Let me write the pages that close clients."</div>
+                  <div class="sb-hot">🔥 GOLDMINE — easiest sell</div>
+               </div>
+               <div class="sbucket sb-brochure">
+                  <div class="sb-range">15–30</div>
+                  <div class="sb-name">Brochure Sites</div>
+                  <div class="sb-desc">Basic pages, zero blog, thin copy. Built and forgotten.</div>
+                  <div class="sb-pitch">"Your site looks fine but Google can't find it. Content strategy = double traffic."</div>
+                  <div class="sb-hot">🔥 GOLDMINE — high priority</div>
+               </div>
+               <div class="sbucket sb-stale">
+                  <div class="sb-range">30–60</div>
+                  <div class="sb-name">Stale Sites</div>
+                  <div class="sb-desc">Started a blog but stopped. Rankings dropping.</div>
+                  <div class="sb-pitch">"You started content marketing and stopped. Your competitors didn't."</div>
+                  <div class="sb-hot">✓ Great for retainers</div>
+               </div>
+               <div class="sbucket sb-active">
+                  <div class="sb-range">60–150</div>
+                  <div class="sb-name">Active Sites</div>
+                  <div class="sb-desc">Content exists but quality inconsistent.</div>
+                  <div class="sb-pitch">"Volume is there — quality and SEO structure are leaving traffic on the table."</div>
+                  <div class="sb-hot">✓ Good for audits + retainers</div>
+               </div>
+               <div class="sbucket sb-estab">
+                  <div class="sb-range">150+</div>
+                  <div class="sb-name">Established</div>
+                  <div class="sb-desc">Large library. Pitch content audits or refresh projects.</div>
+                  <div class="sb-pitch">"30% of your content is probably hurting rankings. An audit fixes that fast."</div>
+                  <div class="sb-hot">↗ Higher ticket, harder pitch</div>
+               </div>
+            </div>
+         </div>
+         <div class="resume-banner" id="resumeBanner">
+            <div class="resume-text" id="resumeText"></div>
+            <button class="rbtn load" onclick="resumeSession()">↩ Load Previous Session</button>
+            <button class="rbtn clear" onclick="clearSession()">✕ Clear &amp; Start Fresh</button>
+         </div>
+         <div class="search-panel">
+            <!-- ══ GEMINI KEY PANEL ══ -->
+            <div id="keyPanel" style="margin-bottom:18px;">
+               <!-- LOCKED: no key saved -->
+               <div id="keyEntryBlock" style="background:rgba(26,115,232,0.06);border:1.5px solid rgba(26,115,232,0.3);border-radius:8px;padding:20px 24px;">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                     <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#60a5fa;line-height:1;">🔑 YOUR GOOGLE GEMINI API KEY</span>
+                     <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"
+                        style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                        color:var(--gold);border:1px solid rgba(251,191,36,.35);border-radius:3px;padding:4px 10px;text-decoration:none;white-space:nowrap;">
+                        FREE KEY → aistudio.google.com
+                     </a>
+                  </div>
+                  <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.7;">
+                     <strong style="color:var(--green);">Free · No credit card · 1500 requests/day</strong><br>
+                     Go to <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--gold);">aistudio.google.com/apikey</a> → sign in with Google → "Create API key" → paste below.<br>
+                     <span style="color:var(--sub);font-size:11px;">⚠ Your key is stored locally in your browser only. If your key runs out or gets blocked, that's on you.</span>
+                  </div>
+                  <div style="background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.2);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.7;">
+                     <strong style="color:var(--gold);">🔒 Want better security? Use our server — €97 one-time</strong><br>
+                     Your key stays on our secure server — never stored in your browser. No setup needed.<br>
+                     <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20server-side%20Gemini%20access%20for%20the%20Lead%20Crawler." target="_blank" style="color:var(--gold);font-weight:700;">→ Contact Ottmar on WhatsApp</a>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
+                     <input type="password" id="geminiKeyInput"
+                        placeholder="AIzaSy..."
+                        autocomplete="off" spellcheck="false"
+                        onkeydown="if(event.key==='Enter')saveGeminiKey()"
+                        onfocus="this.style.borderColor='var(--gold)'"
+                        onblur="this.style.borderColor='rgba(26,115,232,.4)'"
+                        style="background:var(--bg);border:1.5px solid rgba(26,115,232,.4);border-radius:4px;
+                        padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+                        color:var(--ink);outline:none;width:100%;transition:border-color .2s;" />
+                     <button onclick="saveGeminiKey()"
+                        style="background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;
+                        font-size:18px;letter-spacing:.04em;padding:12px 22px;border-radius:4px;cursor:pointer;white-space:nowrap;height:46px;">
+                        SAVE
+                     </button>
+                     <button onclick="toggleGeminiKeyVisible()" id="geminiKeyToggle"
+                        style="background:var(--surface);color:var(--muted);border:1px solid var(--border);
+                        font-size:16px;padding:12px 14px;border-radius:4px;cursor:pointer;height:46px;">👁</button>
+                  </div>
+                  <div id="geminiKeyStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:16px;"></div>
+               </div>
+               <!-- SAVED: key exists -->
+               <div id="keySavedBar" style="display:none;background:rgba(74,222,128,0.07);border:1.5px solid rgba(74,222,128,0.3);border-radius:6px;padding:12px 18px;align-items:center;gap:12px;flex-wrap:wrap;">
+                  <span style="font-size:16px;">✅</span>
+                  <div style="flex:1;">
+                     <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700;">Gemini Key Actief</div>
+                     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;" id="geminiKeyMasked">AIzaSy···</div>
+                  </div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);">✓ OPGESLAGEN</span>
+                  <button onclick="removeGeminiKey()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">✎ Wijzig</button>
+               </div>
+            </div>
+            <!-- ══ END GEMINI KEY PANEL ══ -->
+            <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:2px;margin:28px 0;opacity:0.7;"></div>
+            <!-- ══ VAPI VOICEBOT CONFIG ══ -->
+            <!-- LICENSE SECTION -->
+            <div id="licenseLocked" style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
+               <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--purple);margin-bottom:10px;">🔒 Voicebot — Unlock Required</div>
+               <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+                  The voicebot outbound calling feature requires a ContentScale license.<br>
+                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20to%20unlock%20the%20Voicebot%20feature." target="_blank" style="color:var(--gold);font-weight:700;">→ Get your license key via WhatsApp</a>
+                  <span style="color:var(--muted);"> · From €297/month</span>
+               </div>
+               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <input id="licenseKeyInput" type="text" placeholder="CS-XXXX-XXXX-XXXX"
+                     style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;min-width:200px;">
+                  <button onclick="activateLicense()"
+                     style="background:var(--purple);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:18px;padding:10px 22px;border-radius:4px;cursor:pointer;white-space:nowrap;">
+                  ACTIVATE
+                  </button>
+               </div>
+               <div id="licenseStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:16px;"></div>
+            </div>
+            <div id="licenseActiveBar" style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);border-radius:6px;padding:12px 18px;margin-bottom:18px;display:none;align-items:center;gap:10px;">
+               <span style="font-size:16px;">✅</span>
+               <div>
+                  <div id="licensePlanLabel" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);">Voicebot Plan — Active</div>
+               </div>
+               <span id="licenseActiveBadge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);margin-left:auto;">✓ ACTIVE</span>
+               <button onclick="deactivateLicense()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">Remove</button>
+            </div>
+            <div id="vapiToggleRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+               <button onclick="toggleVapiPanel()" id="vapiToggleBtn"
+                  style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                  background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);
+                  padding:8px 16px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:8px;">
+               <span>🤖</span>
+               <span id="vapiToggleTxt">Configure Voicebot</span>
+               <span id="vapiConfigBadge" style="display:none;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);border-radius:3px;padding:1px 6px;font-size:8px;">✓ READY</span>
+               </button>
+               <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Vapi.ai outbound calling — configure once, call any lead with one click</span>
+            </div>
+            <div class="vapi-panel" id="vapiPanel">
+               <div class="vapi-panel-head">
+                  <span style="font-size:20px;">🤖</span>
+                  <h3>Voicebot Configuration — Vapi.ai</h3>
+                  <span id="vapiSavedBadge" class="vapi-saved" style="display:none;">✓ SAVED</span>
+               </div>
+               <div style="background:rgba(244,63,63,.08);border:1px solid rgba(244,63,63,.3);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red);line-height:1.6;">
+                  ⚠ Your previous API key was shared publicly — <strong>regenerate it</strong> at
+                  <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener" style="color:var(--red);text-decoration:underline;">dashboard.vapi.ai → API Keys</a>
+                  before entering it here. Phone Number ID, name, company and callback are already pre-filled.
+               </div>
+               <div class="vapi-grid">
+                  <div class="vapi-field">
+                     <label>Vapi API Key</label>
+                     <input type="password" id="vapiKey" placeholder="⚠ Paste your NEW Vapi key here (regenerate the old one!)" autocomplete="off" />
+                  </div>
+                  <div class="vapi-field">
+                     <label>Vapi Phone Number ID</label>
+                     <input type="text" id="vapiPhoneId" value="4a3b17c5-24f0-4e65-b64d-29e8e3f446a3" />
+                  </div>
+                  <div class="vapi-field">
+                     <label>Your Name (bot introduces as)</label>
+                     <input type="text" id="vapiCallerName" value="Ottmar from ContentScale" />
+                  </div>
+                  <div class="vapi-field">
+                     <label>Your Company / Website</label>
+                     <input type="text" id="vapiCompany" value="ContentScale" />
+                  </div>
+                  <div class="vapi-field" style="grid-column:1/-1">
+                     <label>Your Callback Number (mentioned in voicemail)</label>
+                     <input type="text" id="vapiCallbackNumber" value="+1 (279) 499 8736" />
+                  </div>
+                  <div class="vapi-field" style="grid-column:1/-1">
+                     <label>Opening Line — {name} {score} {pages} {city} are auto-filled per lead</label>
+                     <input type="text" id="vapiOpeningLine"
+                        value="Hi, is this {name}? My name is Ottmar from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?" />
+                  </div>
+               </div>
+               <!-- Compliance Mode Toggle -->
+               <div class="comp-mode" id="compModeRow" style="margin-top:14px;">
+                  <div>
+                     <div class="comp-mode-label on" id="compModeLabel">🛡 Compliance Mode</div>
+                     <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                        Blocks calls outside 8am–8pm · Forces AI disclosure · Logs every call with timestamp
+                     </div>
+                  </div>
+                  <label class="toggle" title="Toggle Compliance Mode">
+                  <input type="checkbox" id="compModeToggle" checked onchange="toggleComplianceMode()">
+                  <span class="toggle-slider"></span>
+                  </label>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;" id="compModeBadge">ON — Protected</span>
+               </div>
+               <!-- Liability reminder -->
+               <div class="liability-bar show" id="liabilityBar">
+                  ⚖ REMINDER: You are the caller of record. ContentScale has zero liability for your calls.
+                  You accepted this on <span id="termsDate">—</span>. All calls logged for your audit trail.
+               </div>
+               <button class="vapi-save-btn" onclick="saveVapiConfig()">SAVE VOICEBOT CONFIG</button>
+               <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;">
+                  Get your API key + Phone Number ID at
+                  <a href="https://vapi.ai" target="_blank" rel="noopener" style="color:var(--green);">vapi.ai</a>
+                  → Dashboard → Phone Numbers → copy the UUID · All stored locally in your browser.
+                  <br><br>
+                  <strong style="color:var(--gold)">⚖ Legal compliance built in:</strong>
+                  <span style="color:var(--muted)">
+                  Bot discloses AI identity at start of every call (EU AI Act Art. 50 + FCC 2024 rule) ·
+                  Instant opt-out on request · Calling hours warning (8am–8pm) ·
+                  B2B targeted only · Call log for audit trail · Email collected with permission only.
+                  </span>
+               </div>
+            </div>
+            <!-- ══ CALL LOG ══ -->
+            <div class="calllog" id="callLog">
+               <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                  <div class="calllog-head" style="margin:0;">📋 Call Log</div>
+                  <span id="callLogCount" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+                  <button onclick="clearCallLog()" style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;">Clear</button>
+                  <button onclick="exportCallLogCSV()" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);color:var(--green);padding:5px 10px;border-radius:3px;cursor:pointer;">↓ Export CSV</button>
+               </div>
+               <div id="callLogItems"></div>
+            </div>
+            <!-- ══ END VAPI ══ -->
 
-  var _ws          = null;
-  var _active      = false;
-  var _micCtx      = null;
-  var _stream      = null;
-  var _processor   = null;
-  var _playCtx     = null;
-  var _nextStart   = 0;
-  var _hangupTimer = null;
-  var _sessionId   = null;
-  var _sessionStart = null;
-  var _transcript  = [];
-  var _sessionModel = null;
+            <!-- ══ TEST CALL SECTION ══ -->
+            <div id="testCallSection" style="background:rgba(167,139,250,0.06);border:1.5px solid rgba(167,139,250,0.25);border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+               <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                  <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--purple);line-height:1;">🧪 TEST CALL — NO REAL LEAD NEEDED</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);border-radius:3px;padding:3px 8px;">Safe to test</span>
+                  <button onclick="toggleTestCall()" id="testCallToggleBtn"
+                     style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+                     background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:3px;cursor:pointer;">
+                     ▼ expand
+                  </button>
+               </div>
+               <div id="testCallBody" style="display:none;">
+                  <!-- Sample lead buttons -->
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                     <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);align-self:center;">Load sample:</span>
+                     <button onclick="loadSampleLead('skeleton')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:var(--blue);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">🔥 Skeleton Law Firm</button>
+                     <button onclick="loadSampleLead('brochure')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:var(--gold);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">📄 Brochure Dentist</button>
+                     <button onclick="loadSampleLead('ghost')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.3);color:var(--muted);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">👻 Ghost Site Gym</button>
+                     <button onclick="loadSampleLead('clear')"
+                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+                        background:var(--surface);border:1px solid var(--border);color:var(--sub);
+                        padding:5px 12px;border-radius:3px;cursor:pointer;">✕ Clear</button>
+                  </div>
+                  <!-- Manual lead form -->
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Business Name</label>
+                        <input type="text" id="tc_name" placeholder="e.g. Van der Berg Law Firm"
+                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                     </div>
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Website</label>
+                        <input type="text" id="tc_website" placeholder="https://vandenberg-law.nl"
+                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                     </div>
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">📞 Phone Number to Call</label>
+                        <input type="text" id="tc_phone" placeholder="+31628073996"
+                           style="width:100%;background:var(--bg);border:1px solid rgba(167,139,250,.4);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='rgba(167,139,250,.4)'"/>
+                     </div>
+                     <div>
+                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Est. Pages</label>
+                        <input type="number" id="tc_pages" placeholder="4" value="4"
+                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;"
+                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                     </div>
+                  </div>
+                  <!-- Opportunity / pitch angle -->
+                  <div style="margin-bottom:12px;">
+                     <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Content Gap / Opportunity (what Otto will mention)</label>
+                     <textarea id="tc_opportunity" rows="2"
+                        placeholder="Google Business Site only — no blog, no proper service pages, no FAQ, no case studies, and no location-specific content for family law, criminal, or probate services."
+                        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;resize:vertical;line-height:1.5;"
+                        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+                  </div>
+                  <div style="margin-bottom:16px;">
+                     <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Pitch Angle (Otto's hook)</label>
+                     <input type="text" id="tc_pitch" placeholder="Your website has almost no content — I can write the pages that get you found for family law in Amsterdam."
+                        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;"
+                        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
+                  </div>
+                  <!-- Call button -->
+                  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                     <button onclick="triggerTestCall()" id="testCallBtn"
+                        style="background:var(--purple);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;
+                        padding:14px 32px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;">
+                        📞 CALL THIS NUMBER NOW
+                     </button>
+                     <button onclick="previewPitch()" id="previewBtn"
+                        style="background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.4);color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;
+                        padding:14px 24px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;"
+                        title="No phone? Hear Otto's pitch on your speaker">
+                        🔊 HEAR PITCH ON SPEAKER
+                     </button>
+                  </div>
+                  <div id="testCallStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:16px;color:var(--muted);"></div>
+               </div>
+            </div>
+            <!-- ══ END TEST CALL ══ -->
+            <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:2px;margin:28px 0;opacity:0.7;"></div>
 
-  var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. Use a deep, warm, natural male voice. Follow this script exactly and do not deviate. 1. Say immediately: Hey! I am Otto, the AI assistant of ContentScale. May I have your name? 2. Wait for their answer. 3. Then say: Hey [name]! We help you recover lost SEO traffic with our free GRAAF Framework scan and our Google Search Console PULSE+NEXUS SEO audit framework. We can also help you with leads, call for you, and make sure you never miss any clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! 4. Then ask: Are you able to send Ottmar a message today? 5a. If yes: say: Okay, I will let him know! Speak to you soon! Then say goodbye and stop talking. 5b. If no: say: May I know why not? Wait for their answer. Then say: Okay, maybe next time! Take care! Then say goodbye and stop talking. Keep it exactly like this script. Do not add extra information.";
+            <div class="panel-title">Target Location — Fires 20 Industry Searches In Parallel</div>
+            <input type="hidden" id="apiKey" value="">
+            <div class="form-row">
+               <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Amsterdam" /></div>
+               <div class="field"><label>Country</label><input type="text" id="country" placeholder="e.g. Netherlands" /></div>
+               <button class="crawl-btn" id="crawlBtn" onclick="startCrawl()">FIND LEADS →</button>
+               <button class="stop-btn" id="stopBtn" onclick="stopCrawl()">■ STOP</button>
+            </div>
+            <div class="wave-label">20 Industry Searches — Live Status</div>
+            <div class="waves" id="waves"></div>
+         </div>
+         <div class="err-log" id="errLog" style="display:none;"></div>
+         <div id="rlBanner" style="display:none;background:rgba(244,63,63,.07);border:1px solid rgba(244,63,63,.3);border-radius:6px;padding:18px 22px;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+               <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);line-height:1;">⚠ 5-HOUR LIMIT HIT</div>
+               <div style="flex:1;">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red);margin-bottom:4px;">Gemini free tier rate limit hit. All searches paused — resets shortly.</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">Your leads so far are saved. Resets in: <strong id="rlCountdown" style="color:var(--gold);">calculating...</strong></div>
+               </div>
+               <div style="text-align:right;">
+                  <div style="font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--gold);line-height:1;" id="rlTimer">--:--</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);">until reset</div>
+               </div>
+            </div>
+            <div style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Session is auto-saved — hit FIND LEADS again after reset to resume.</div>
+         </div>
+         <div class="prog-wrap" id="progWrap" style="display:none;">
+            <div class="prog-card">
+               <div class="prog-accent"></div>
+               <div class="prog-header">
+                  <div class="prog-live">
+                     <div class="prog-liveDot"></div>
+                     <span class="prog-liveLabel">Live Crawl</span>
+                  </div>
+                  <div class="prog-msg" id="progMsg">Starting...</div>
+               </div>
+               <div class="prog-stats-grid">
+                  <div class="prog-stat">
+                     <div class="prog-statNum gold" id="bigCount">0</div>
+                     <div class="prog-statLabel">Leads Found</div>
+                  </div>
+                  <div class="prog-stat">
+                     <div class="prog-statNum purple" id="progPct">0 / 20</div>
+                     <div class="prog-statLabel">Industries</div>
+                  </div>
+                  <div class="prog-stat">
+                     <div class="prog-statNum dim" id="progErrCount">0</div>
+                     <div class="prog-statLabel">Errors</div>
+                  </div>
+               </div>
+               <div class="prog-barWrap">
+                  <div class="prog-barTop">
+                     <span class="prog-barLabel">Progress</span>
+                     <span class="prog-barPct" id="progPctLabel">0%</span>
+                  </div>
+                  <div class="prog-track">
+                     <div class="prog-fill" id="progFill"></div>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="stats" id="statsRow" style="display:none"></div>
+         <div class="toolbar" id="toolbar">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;">
+               <div class="tb-grp">
+                  <span class="tbl">Bucket:</span>
+                  <button class="tbtn on" data-bk="all" onclick="setBucket(this,'all')">All</button>
+                  <button class="tbtn" data-bk="ghost" onclick="setBucket(this,'ghost')">0–5</button>
+                  <button class="tbtn" data-bk="skeleton" onclick="setBucket(this,'skeleton')">5–15 🔥</button>
+                  <button class="tbtn" data-bk="brochure" onclick="setBucket(this,'brochure')">15–30 🔥</button>
+                  <button class="tbtn" data-bk="stale" onclick="setBucket(this,'stale')">30–60</button>
+                  <button class="tbtn" data-bk="active" onclick="setBucket(this,'active')">60–150</button>
+                  <button class="tbtn" data-bk="estab" onclick="setBucket(this,'estab')">150+</button>
+               </div>
+               <div class="tb-sep"></div>
+               <div class="tb-grp">
+                  <span class="tbl">Sort:</span>
+                  <button class="tbtn" onclick="doSort('score')">↓ Score</button>
+                  <button class="tbtn" onclick="doSort('pages')">↓ Pages</button>
+               </div>
+               <div class="tb-sep"></div>
+               <input class="srch" placeholder="Search leads..." oninput="doSearch(this.value)">
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;">
+               <span class="tbl">Export:</span>
+               <button class="tbtn gold" onclick="exportCSV()">↓ CSV (all)</button>
+               <button class="tbtn gold" onclick="exportJSON()">↓ JSON (all)</button>
+               <button class="tbtn" onclick="copyAll()">⧉ Copy All URLs</button>
+               <button class="tbtn" id="resolveBtn" onclick="sitemapResolutionActive=false;resolveSitemapsPhase2()" style="border-color:rgba(96,165,250,.35);color:var(--blue);">⟳ Resolve Sitemaps</button>
+               <div class="tb-sep"></div>
+               <span class="tbl">Select:</span>
+               <button class="tbtn" onclick="selAll()">Select All</button>
+               <button class="tbtn" onclick="clearSel()">Clear</button>
+               <button class="tbtn" onclick="exportSelCSV()">↓ CSV (selected)</button>
+            </div>
+         </div>
+         <div id="results"></div>
+         <div class="empty-state" id="emptyState">
+            <div class="ebig">FIND<br>LEADS</div>
+            <p>Enter any city + country and hit <strong>FIND LEADS</strong>.<br>
+               20 industry searches fire simultaneously — results stream in live.<br><br>
+               <strong style="color:var(--gold)">Focus on the 🔥 5–30 page buckets.</strong><br>
+               Real businesses, almost no web content — the easiest content writing pitch ever.
+            </p>
+         </div>
+      </div>
+      <div class="selbar" id="selbar" style="display:none;">
+         <div class="selinfo"><strong id="selCount">0</strong> leads selected</div>
+         <div class="selactions">
+            <button class="selbtn" onclick="exportSelCSV()">↓ CSV Selected</button>
+            <button class="selbtn" onclick="callSelected()" style="background:rgba(74,222,128,.12);color:var(--green);border-color:rgba(74,222,128,.35);">🤖 Call All Selected</button>
+            <button class="selbtn p" onclick="clearSel()">✕ Clear</button>
+         </div>
+      </div>
+      <div class="toast" id="toast"></div>
+      <script>
+         const INDUSTRIES=[
+         {id:'restaurants', label:'Restaurants / Cafes',   q:'restaurants cafes bars bistros'},
+         {id:'hotels',      label:'Hotels / B&Bs',         q:'hotels bed breakfast guesthouses'},
+         {id:'marketing',   label:'Marketing Agencies',    q:'marketing digital advertising agencies'},
+         {id:'law',         label:'Law Firms',             q:'law firms solicitors lawyers'},
+         {id:'realestate',  label:'Real Estate',           q:'real estate property estate agencies'},
+         {id:'dental',      label:'Dental / Medical',      q:'dental clinics doctors medical practices'},
+         {id:'gyms',        label:'Gyms / Fitness',        q:'gyms fitness studios personal trainers yoga'},
+         {id:'accounting',  label:'Accounting / Finance',  q:'accounting bookkeeping financial advisors'},
+         {id:'ecommerce',   label:'E-commerce / Retail',   q:'ecommerce online shops retail boutiques'},
+         {id:'construction',label:'Construction / Trades', q:'construction builders plumbers electricians'},
+         {id:'education',   label:'Education / Tutoring',  q:'tutoring schools education training centres'},
+         {id:'beauty',      label:'Beauty / Wellness',     q:'hair salons beauty spas nail studios wellness'},
+         {id:'tech',        label:'Tech / IT Services',    q:'IT services tech companies software development'},
+         {id:'events',      label:'Events / Venues',       q:'event venues wedding planners catering companies'},
+         {id:'automotive',  label:'Automotive',            q:'car dealerships auto repair garages mechanics'},
+         {id:'consulting',  label:'Consulting / HR',       q:'business consulting HR recruitment management'},
+         {id:'photography', label:'Photography / Video',   q:'photographers videographers creative studios'},
+         {id:'logistics',   label:'Logistics / Transport', q:'logistics transport courier delivery companies'},
+         {id:'architecture',label:'Architecture / Design', q:'architecture interior design landscape firms'},
+         {id:'nonprofit',   label:'Nonprofits / Charity',  q:'nonprofits charities community foundations'},
+         ];
+         const PITCH={
+         ghost:    'Your site has almost no content — I help businesses like yours get written up from scratch and start showing up on Google.',
+         skeleton: "You're running a real business but your website says almost nothing. Let me write the pages that actually close clients for you.",
+         brochure: "Your site covers the basics but there's no blog or case studies — the content that drives organic traffic. I can change that.",
+         stale:    "You started publishing content and stopped. Your competitors didn't. Let me get your content engine running again.",
+         active:   "You have content but the quality and SEO structure aren't converting. A refresh and ongoing strategy would make a big difference.",
+         estab:    'With a site this size, a content audit would likely uncover dozens of pages hurting your rankings.',
+         };
+         const BUCKET_DEFS=[
+         {key:'ghost',    label:'NEARLY EMPTY',   sublabel:'Ghost Sites',    range:'0 – 5 Pages',    cls:'bk-ghost',    icon:'👻', hot:'⚠ Verify Budget',   action:'Build from scratch',          desc:'Homepage only — almost nothing indexed. Verify they have budget before pitching.'},
+         {key:'skeleton', label:'BARE BONES',     sublabel:'Skeleton Sites', range:'5 – 15 Pages',   cls:'bk-skeleton', icon:'🔥', hot:'🔥 EASIEST SELL',   action:'Write all their missing pages', desc:'Real business making money — website says almost nothing. Lowest resistance pitch.'},
+         {key:'brochure', label:'BUILT & FORGOT', sublabel:'Brochure Sites', range:'15 – 30 Pages',  cls:'bk-brochure', icon:'🔥', hot:'🔥 HIGH PRIORITY',  action:'Blog + SEO content strategy',  desc:'Has all the basic pages but zero blog, no case studies, thin copy. Built once, ignored since.'},
+         {key:'stale',    label:'GONE QUIET',     sublabel:'Stale Sites',    range:'30 – 60 Pages',  cls:'bk-stale',    icon:'🕰', hot:'✓ Retainer Target', action:'Restart their content engine',  desc:'Started content marketing then stopped. Blog is months or years out of date.'},
+         {key:'active',   label:'NEEDS QUALITY',  sublabel:'Active Sites',   range:'60 – 150 Pages', cls:'bk-active',   icon:'⚡', hot:'✓ Audit + Retainer', action:'Content audit + rewrite plan',  desc:'Publishing but inconsistently. Quality is low, SEO structure is a mess.'},
+         {key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
+         ];
+         let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
+         // ══ TEST CALL FUNCTIONS ══════════════════════════════════════════
+         function toggleTestCall(){
+           const body = document.getElementById('testCallBody');
+           const btn  = document.getElementById('testCallToggleBtn');
+           const open = body.style.display === 'none';
+           body.style.display = open ? 'block' : 'none';
+           btn.textContent = open ? '▲ collapse' : '▼ expand';
+         }
 
-  function setStatus(msg) {
-    var el = document.getElementById('gl-status');
-    if (el) el.textContent = msg;
-  }
+         const SAMPLE_LEADS = {
+           skeleton: {
+             name: 'Van der Berg Law Firm',
+             website: 'https://vandenberg-law.nl',
+             pages: 4,
+             opportunity: 'Google Business Site only — no blog, no proper service pages, no FAQ, no case studies, and no location-specific content for family law, criminal, or probate services. No Blog · No FAQ · Zero Case Studies · Thin Service Pages · Not AI-Citation Ready · Poor SEO Copy · No How-To Content · Thin About Page',
+             pitch: 'Your website has almost no content — I can write the pages that get you found for family law, criminal defence, and probate in your area.'
+           },
+           brochure: {
+             name: 'Smile Perfect Dental',
+             website: 'https://smileperfect-dental.nl',
+             pages: 18,
+             opportunity: 'Basic homepage and 3 service pages — no blog, no patient FAQs, no before/after case studies, no local landing pages for surrounding cities.',
+             pitch: "Your site covers the basics but Google can't find you for \"dentist near me\" — a content strategy would double your new patient enquiries."
+           },
+           ghost: {
+             name: 'FitZone Gym',
+             website: 'https://fitzone-gym.nl',
+             pages: 2,
+             opportunity: 'Homepage and contact page only. No class schedules, no trainer bios, no membership info, no blog. Essentially invisible online.',
+             pitch: 'You have a great gym but your website says almost nothing — let me build the content that gets people through your door.'
+           },
+           clear: { name:'', website:'', pages:'', opportunity:'', pitch:'' }
+         };
 
-  function addTranscript(who, msg) {
-    var el = document.getElementById('gl-transcript');
-    if (!el) return;
-    el.style.display = 'block';
-    el.innerHTML += '<div style="color:' + (who === 'model' ? '#4ade80' : '#f9fafb') + ';margin-bottom:5px;line-height:1.6;"><strong>' + (who === 'model' ? 'Otto:' : 'You:') + '</strong> ' + msg + '</div>';
-    el.scrollTop = el.scrollHeight;
-  }
+         function loadSampleLead(type){
+           const s = SAMPLE_LEADS[type];
+           if(!s) return;
+           document.getElementById('tc_name').value        = s.name;
+           document.getElementById('tc_website').value     = s.website;
+           document.getElementById('tc_pages').value       = s.pages;
+           document.getElementById('tc_opportunity').value = s.opportunity;
+           document.getElementById('tc_pitch').value       = s.pitch;
+           if(type !== 'clear') toast('Sample loaded — add your phone number and call!');
+         }
 
-  function setBtnActive(on) {
-    var btn = document.getElementById('gl-call-btn');
-    var r1  = document.getElementById('gl-ring1');
-    if (!btn) return;
-    if (on) {
-      btn.style.background = 'linear-gradient(135deg,#dc2626,#f87171)';
-      btn.style.boxShadow  = '0 0 0 8px rgba(239,68,68,.2),0 0 32px rgba(239,68,68,.4)';
-      if (r1) r1.style.animation = 'rp 1s ease-in-out infinite';
-    } else {
-      btn.style.background = 'linear-gradient(135deg,#166534,#4ade80)';
-      btn.style.boxShadow  = '0 0 0 8px rgba(74,222,128,.15),0 0 32px rgba(74,222,128,.3)';
-      if (r1) r1.style.animation = '';
-    }
-  }
+         async function triggerTestCall(){
+           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+           const name        = document.getElementById('tc_name').value.trim();
+           const website     = document.getElementById('tc_website').value.trim();
+           const phone       = document.getElementById('tc_phone').value.trim();
+           const pages       = document.getElementById('tc_pages').value.trim() || '4';
+           const opportunity = document.getElementById('tc_opportunity').value.trim();
+           const pitch       = document.getElementById('tc_pitch').value.trim();
+           const statusEl    = document.getElementById('testCallStatus');
 
-  function scheduleHangup(delayMs) {
-    clearTimeout(_hangupTimer);
-    _hangupTimer = setTimeout(function() {
-      if (_active) {
-        setStatus('Call ended');
-        stopSession();
-      }
-    }, delayMs || 3000);
-  }
+           if(!phone){ toast('⚠ Enter a phone number first'); document.getElementById('tc_phone').focus(); return; }
+           if(!name) { toast('⚠ Enter a business name'); return; }
 
-  function cancelHangup() {
-    clearTimeout(_hangupTimer);
-    _hangupTimer = null;
-  }
+           const btn = document.getElementById('testCallBtn');
+           btn.textContent = '⏳ CONNECTING...';
+           btn.disabled = true;
+           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Initiating call...</span>';
 
-  function ensurePlayCtx() {
-    if (!_playCtx || _playCtx.state === 'closed') {
-      _playCtx  = new AudioContext({ sampleRate: 24000 });
-      _nextStart = 0;
-    }
-    if (_playCtx.state === 'suspended') _playCtx.resume();
-  }
+           const API_BASE = 'https://app.contentscale.site';
+           try {
+             const resp = await fetch(`${API_BASE}/api/cs-agent/call`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                 customerPhone:  phone,
+                 customerName:   name || 'there',
+                 customerDomain: website.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'your website',
+                 customerPages:  pages,
+                 customerCity:   document.getElementById('city')?.value || 'your city',
+                 customerType:   'business',
+                 pitchAngle:     pitch,
+                 opportunity:    opportunity,
+                 bucket:         getBucket(parseInt(pages)),
+                 leadId:         'test-' + Date.now(),
+               })
+             });
+             const data = await resp.json();
+             if(!resp.ok || !data.callId){
+               statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + (data.error||'Call failed — check Vapi config') + '</span>';
+               toast('❌ ' + (data.error || 'Call failed'));
+             } else {
+               statusEl.innerHTML = '<span style="color:var(--green)">✅ Call connected! ID: ' + data.callId + '</span>';
+               toast('📞 Calling ' + phone + '...');
+             }
+           } catch(e){
+             statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
+             toast('❌ ' + e.message);
+           } finally {
+             btn.textContent = '📞 CALL THIS NUMBER NOW';
+             btn.disabled = false;
+           }
+         }
+         // ── SPEAKER PREVIEW ──────────────────────────────────────────────────
+         var _previewWs = null;
+         var _previewAudioCtx = null;
+         var _previewNextStart = 0;
 
-  function scheduleAudioChunk(b64) {
-    ensurePlayCtx();
-    try {
-      var raw   = atob(b64);
-      var bytes = new Uint8Array(raw.length);
-      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-      var pcm16   = new Int16Array(bytes.buffer);
-      var float32 = new Float32Array(pcm16.length);
-      for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
-      var buf = _playCtx.createBuffer(1, float32.length, 24000);
-      buf.copyToChannel(float32, 0);
-      var src = _playCtx.createBufferSource();
-      src.buffer = buf;
-      src.connect(_playCtx.destination);
-      var now  = _playCtx.currentTime;
-      var when = Math.max(now, _nextStart);
-      src.start(when);
-      _nextStart = when + buf.duration;
-    } catch(e) { console.warn('[otto] audio error:', e.message); }
-  }
+         function previewPitch() {
+           const btn = document.getElementById('previewBtn');
+           const statusEl = document.getElementById('testCallStatus');
 
-  function saveSession() {
-    if (!_sessionId || !_transcript.length) return;
-    var duration = Math.round((Date.now() - _sessionStart) / 1000);
-    fetch('https://app.contentscale.site/api/otto/save-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: _sessionId,
-        transcript: _transcript,
-        durationSeconds: duration,
-        model: _sessionModel
-      })
-    }).then(function(r){ console.log('[otto] session saved, duration:', duration + 's'); })
-      .catch(function(e){ console.warn('[otto] save session error:', e.message); });
-  }
+           // If already playing, stop
+           if (_previewWs && _previewWs.readyState < 2) {
+             _previewWs.close();
+             _previewWs = null;
+             btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
+             statusEl.innerHTML = '';
+             return;
+           }
 
-  function stopSession() {
-    saveSession();
-    _active = false;
-    clearTimeout(_hangupTimer);
-    if (_processor) { try { _processor.disconnect(); } catch(e) {} _processor = null; }
-    if (_stream)    { _stream.getTracks().forEach(function(t) { t.stop(); }); _stream = null; }
-    if (_micCtx)    { try { _micCtx.close(); } catch(e) {} _micCtx = null; }
-    if (_playCtx)   { try { _playCtx.close(); } catch(e) {} _playCtx = null; }
-    if (_ws && _ws.readyState < 2) { try { _ws.close(); } catch(e) {} }
-    _ws = null;
-    _nextStart = 0;
-    setBtnActive(false);
-    setStatus('Click to start a live conversation');
-  }
+           const name = document.getElementById('tc_name')?.value.trim() || 'there';
+           const website = document.getElementById('tc_website')?.value.trim() || 'your website';
 
-  async function startMic() {
-    _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
-    _micCtx    = new AudioContext({ sampleRate: 16000 });
-    var src    = _micCtx.createMediaStreamSource(_stream);
-    _processor = _micCtx.createScriptProcessor(2048, 1, 1);
+           btn.textContent = '⏳ Connecting Otto...';
+           btn.disabled = true;
+           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Connecting to Otto AI...</span>';
 
-    _processor.onaudioprocess = function(e) {
-      if (!_ws || _ws.readyState !== 1 || !_active) return;
-      var input = e.inputBuffer.getChannelData(0);
-      var pcm   = new Int16Array(input.length);
-      for (var i = 0; i < input.length; i++) {
-        var s = Math.max(-1, Math.min(1, input[i]));
-        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-      var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
-      _ws.send(JSON.stringify({
-        realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm;rate=16000' } }
-      }));
-    };
+           fetch('https://app.contentscale.site/api/gemini-live-token')
+             .then(r => r.json())
+             .then(function(keyData) {
+               if (!keyData.key) throw new Error(keyData.error || 'No key');
+               var model = keyData.model || 'gemini-3.1-flash-live-preview';
+               var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + encodeURIComponent(keyData.key);
 
-    src.connect(_processor);
-    _processor.connect(_micCtx.destination);
-    setStatus('Listening...');
-  }
+               _previewWs = new WebSocket(wsUrl);
+               _previewWs.binaryType = 'arraybuffer';
+               _previewAudioCtx = new AudioContext({ sampleRate: 24000 });
+               _previewNextStart = 0;
 
-  async function startSession() {
-    if (_active) { stopSession(); return; }
-    setStatus('Getting key...');
-    _active = true;
-    setBtnActive(true);
-    _sessionId    = 'otto-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
-    _sessionStart = Date.now();
-    _transcript   = [];
+               _previewWs.onopen = function() {
+                 statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Otto is preparing pitch...</span>';
+                 _previewWs.send(JSON.stringify({
+                   setup: {
+                     model: 'models/' + model,
+                     generation_config: {
+                       response_modalities: ['AUDIO'],
+                       speech_config: { voice_config: { prebuilt_voice_config: { voice_name: 'Fenrir' } } }
+                     },
+                     system_instruction: {
+                       parts: [{ text: 'You are Otto, a male AI voice assistant of ContentScale. Deliver this pitch ONCE, naturally and warmly, then stop: "Hey ' + name + '! I am Otto from ContentScale. We help businesses like ' + website + ' recover lost SEO traffic with our free GRAAF Framework scan. We can also help with leads, outbound calls, and making sure you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers!" Say it once and then say goodbye.' }]
+                     }
+                   }
+                 }));
+               };
 
-    var keyData;
-    try {
-      var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
-      keyData = await r.json();
-      if (!r.ok || !keyData.key) {
-        setStatus('Error: ' + (keyData.error || 'No key returned'));
-        stopSession();
-        return;
-      }
-    } catch(e) {
-      setStatus('Server error: ' + e.message);
-      stopSession();
-      return;
-    }
+               _previewWs.onmessage = function(evt) {
+                 try {
+                   var raw = evt.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(evt.data)) : evt.data;
+                   var msg = JSON.parse(raw);
+                   if (msg.setupComplete) {
+                     statusEl.innerHTML = '<span style="color:var(--green)">🔊 Otto is speaking — listen on your speaker!</span>';
+                     btn.textContent = '⏹ STOP';
+                     btn.disabled = false;
+                     // Send empty audio to trigger Otto to start talking
+                     _previewWs.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'Please deliver your pitch now.' }] }], turnComplete: true } }));
+                   }
+                   if (msg.serverContent) {
+                     var sc = msg.serverContent;
+                     if (sc.modelTurn && sc.modelTurn.parts) {
+                       sc.modelTurn.parts.forEach(function(p) {
+                         if (p.inlineData && p.inlineData.data) {
+                           // Play audio chunk
+                           try {
+                             var raw2 = atob(p.inlineData.data);
+                             var bytes = new Uint8Array(raw2.length);
+                             for (var i = 0; i < raw2.length; i++) bytes[i] = raw2.charCodeAt(i);
+                             var pcm16 = new Int16Array(bytes.buffer);
+                             var float32 = new Float32Array(pcm16.length);
+                             for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
+                             var buf = _previewAudioCtx.createBuffer(1, float32.length, 24000);
+                             buf.copyToChannel(float32, 0);
+                             var src = _previewAudioCtx.createBufferSource();
+                             src.buffer = buf;
+                             src.connect(_previewAudioCtx.destination);
+                             var now = _previewAudioCtx.currentTime;
+                             var when = Math.max(now, _previewNextStart);
+                             src.start(when);
+                             _previewNextStart = when + buf.duration;
+                           } catch(e) {}
+                         }
+                       });
+                     }
+                     if (sc.turnComplete) {
+                       statusEl.innerHTML = '<span style="color:var(--green)">✅ Pitch complete!</span>';
+                       setTimeout(function() {
+                         if (_previewWs) { _previewWs.close(); _previewWs = null; }
+                         btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
+                         btn.disabled = false;
+                       }, 3000);
+                     }
+                   }
+                 } catch(e) {}
+               };
 
-    var model = keyData.model || 'gemini-3.1-flash-live-preview';
-    console.log('[otto] model:', model);
-    _sessionModel = model;
+               _previewWs.onerror = function() {
+                 statusEl.innerHTML = '<span style="color:var(--red)">❌ Connection error</span>';
+                 btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
+                 btn.disabled = false;
+               };
 
-    var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
-    setStatus('Connecting...');
+               _previewWs.onclose = function(evt) {
+                 if (evt.code !== 1000) {
+                   statusEl.innerHTML = '<span style="color:var(--red)">❌ Disconnected (code ' + evt.code + ')</span>';
+                 }
+                 btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
+                 btn.disabled = false;
+               };
+             })
+             .catch(function(e) {
+               statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
+               btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
+               btn.disabled = false;
+             });
+         }
+         // ══ END TEST CALL ═══════════════════════════════════════════════════
 
-    try {
-      _ws = new WebSocket(wsUrl);
-      _ws.binaryType = 'arraybuffer';
-    } catch(e) {
-      setStatus('WebSocket error: ' + e.message);
-      stopSession();
-      return;
-    }
+         function stopCrawl(){
+           stopped=true;
+           document.getElementById('crawlBtn').disabled=false;
+           document.getElementById('stopBtn').style.display='none';
+           document.getElementById('progWrap').style.display='none';
+           toast('⏹ Crawl gestopt');
+         }
+         let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
+         let completedIndustries=new Set();
+         // ── GEMINI KEY MANAGEMENT (BYOK — opgeslagen in localStorage gebruiker) ──
+         const LS_GEMINI_KEY = 'lc_gemini_key';
 
-    _ws.onopen = function() {
-      setStatus('Connected...');
-      var setupMsg = {
-        setup: {
-          model: 'models/' + model,
-          generation_config: {
-            response_modalities: ['AUDIO'],
-            speech_config: {
-              voice_config: {
-                prebuilt_voice_config: { voice_name: 'Fenrir' }
-              }
-            }
-          },
-          system_instruction: {
-            parts: [{ text: OTTO_SCRIPT }]
-          }
-        }
-      };
-      console.log('[otto] sending setup:', JSON.stringify(setupMsg));
-      _ws.send(JSON.stringify(setupMsg));
-    };
+         function maskGeminiKey(k) {
+           if (!k || k.length < 12) return 'AIzaSy···';
+           return k.slice(0, 8) + '···' + k.slice(-4);
+         }
 
-    _ws.onmessage = function(evt) {
-      try {
-        var rawData = evt.data;
-        if (rawData instanceof ArrayBuffer) {
-          rawData = new TextDecoder('utf-8').decode(new Uint8Array(rawData));
-        }
-        var msg = JSON.parse(rawData);
+         function saveGeminiKey() {
+           const key = document.getElementById('geminiKeyInput').value.trim();
+           const status = document.getElementById('geminiKeyStatus');
+           if (!key || !key.startsWith('AIza') || key.length < 20) {
+             status.innerHTML = '<span style="color:var(--red)">❌ Ongeldige key — moet beginnen met AIzaSy en minstens 20 tekens lang zijn</span>';
+             return;
+           }
+           localStorage.setItem(LS_GEMINI_KEY, key);
+           document.getElementById('geminiKeyInput').value = '';
+           status.innerHTML = '';
+           showGeminiSavedState(key);
+           toast('✅ Gemini key opgeslagen — je kunt nu crawlen!');
+         }
 
-        if (msg.setupComplete) {
-          setStatus('Otto is speaking...');
-          startMic().catch(function(e) {
-            setStatus('Mic error: ' + e.message);
-            stopSession();
-          });
-          return;
-        }
+         function showGeminiSavedState(key) {
+           document.getElementById('keyEntryBlock').style.display = 'none';
+           const bar = document.getElementById('keySavedBar');
+           bar.style.display = 'flex';
+           document.getElementById('geminiKeyMasked').textContent = maskGeminiKey(key);
+         }
 
-        if (msg.serverContent) {
-          var sc = msg.serverContent;
+         function showGeminiEntryState() {
+           document.getElementById('keySavedBar').style.display = 'none';
+           document.getElementById('keyEntryBlock').style.display = 'block';
+         }
 
-          // Play audio chunks
-          if (sc.modelTurn && sc.modelTurn.parts) {
-            sc.modelTurn.parts.forEach(function(p) {
-              if (p.inlineData && p.inlineData.data) {
-                scheduleAudioChunk(p.inlineData.data);
-              }
-            });
-          }
+         function removeGeminiKey() {
+           localStorage.removeItem(LS_GEMINI_KEY);
+           showGeminiEntryState();
+           toast('Key verwijderd');
+         }
 
-          // Show transcripts
-          if (sc.inputTranscription) {
-            cancelHangup(); // user spoke — cancel hangup
-            addTranscript('you', sc.inputTranscription.text);
-            _transcript.push({ role: 'user', text: sc.inputTranscription.text, t: Date.now() });
-          }
-          if (sc.outputTranscription) {
-            addTranscript('model', sc.outputTranscription.text);
-            _transcript.push({ role: 'otto', text: sc.outputTranscription.text, t: Date.now() });
-          }
+         function toggleGeminiKeyVisible() {
+           const inp = document.getElementById('geminiKeyInput');
+           const btn = document.getElementById('geminiKeyToggle');
+           inp.type = inp.type === 'password' ? 'text' : 'password';
+           btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+         }
 
-          // Turn complete — always schedule hangup 3s after Otto finishes speaking
-          if (sc.turnComplete) {
-            setStatus('Listening...');
-            scheduleHangup(3000);
-          }
-        }
-      } catch(e) { console.warn('[otto] parse error:', e.message); }
-    };
+         function getGeminiKey() {
+           return localStorage.getItem(LS_GEMINI_KEY) || null;
+         }
 
-    _ws.onerror = function(e) {
-      console.error('[otto] ws error', e);
-      setStatus('Connection error');
-      stopSession();
-    };
+         // Init op pagina load
+         document.addEventListener('DOMContentLoaded', () => {
+           const saved = localStorage.getItem(LS_GEMINI_KEY);
+           if (saved && saved.length >= 20) {
+             showGeminiSavedState(saved);
+           } else {
+             showGeminiEntryState();
+           }
+         });
+         
+         // ── Key management handled by Gemini BYOK functions above ──
+         
 
-    _ws.onclose = function(evt) {
-      console.log('[otto] closed code=' + evt.code);
-      if (_active) {
-        setStatus(evt.code === 1008 ? 'API key needs Gemini Live access' : 'Disconnected');
-        stopSession();
-      }
-    };
-  }
+         
 
-  window.Tawk_API = window.Tawk_API || {};
-  window.Tawk_API.triggerEvent    = window.Tawk_API.triggerEvent    || function() {};
-  window.Tawk_API.addQuickReplies = window.Tawk_API.addQuickReplies || function() {};
+         // ── PERSISTENCE ───────────────────────────────────────────────────────────
+         const LS_KEY='lc_session';
+         function saveSession(city,country){
+         try{
+         localStorage.setItem(LS_KEY,JSON.stringify({
+         city,country,
+         leads:allLeads,
+         completed:[...completedIndustries],
+         savedAt:Date.now()
+         }));
+         }catch(e){}
+         }
+         function loadSession(){
+         try{return JSON.parse(localStorage.getItem(LS_KEY)||'null');}
+         catch(e){return null;}
+         }
+         function clearSession(){
+         localStorage.removeItem(LS_KEY);
+         allLeads=[];completedIndustries=new Set();selected.clear();
+         document.getElementById('resumeBanner').style.display='none';
+         document.getElementById('results').innerHTML='';
+         document.getElementById('statsRow').style.display='none';
+         document.getElementById('toolbar').style.display='none';
+         document.getElementById('emptyState').style.display='block';
+         toast('Session cleared — ready for a fresh crawl');
+         }
+         function dedup(incoming){
+         const existing=new Set(allLeads.map(l=>(l.website||'').toLowerCase().replace(/\/+$/,'')));
+         return incoming.filter(l=>{
+         const k=(l.website||'').toLowerCase().replace(/\/+$/,'');
+         if(!k||existing.has(k))return false;
+         existing.add(k);
+         return true;
+         });
+         }
+         function resumeSession(){
+         const s=loadSession();
+         if(!s||!s.leads||!s.leads.length)return;
+         allLeads=s.leads;
+         completedIndustries=new Set(s.completed||[]);
+         document.getElementById('resumeBanner').style.display='none';
+         document.getElementById('emptyState').style.display='none';
+         renderAll();
+         toast('Session restored — '+allLeads.length+' leads loaded');
+         }
+         function lcInit(){
+         const s=loadSession();
+         if(!s||!s.leads||!s.leads.length)return;
+         const age=Math.round((Date.now()-s.savedAt)/60000);
+         const ageStr=age<60?age+'m ago':Math.round(age/60)+'h ago';
+         const done=(s.completed||[]).length;
+         const remaining=INDUSTRIES.length-done;
+         const banner=document.getElementById('resumeBanner');
+         banner.style.display='flex';
+         document.getElementById('resumeText').innerHTML=
+         '<strong>'+s.leads.length+' leads</strong> saved for <strong>'+s.city+', '+s.country+'</strong> — '+
+         done+'/20 industries done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
+         document.getElementById('city').value=s.city;
+         document.getElementById('country').value=s.country;
+         }
+         lcInit();
+         // ── WAVES ─────────────────────────────────────────────────────────────────
+         function initWaves(){
+         document.getElementById('waves').innerHTML=INDUSTRIES.map(i=>`
+         <div class="wchip" id="wc-${i.id}">
+         <span class="wd"></span><span class="wn">${i.label}</span><span class="wk" id="wk-${i.id}"></span>
+         </div>`).join('');
+         }
+         initWaves();
+         function setWave(id,state,n){
+         const el=document.getElementById('wc-'+id);
+         if(el)el.className='wchip '+state;
+         const wk=document.getElementById('wk-'+id);
+         if(wk&&n!==undefined)wk.textContent=n>0?'+'+n:(state==='error'?'ERR':'');
+         }
+         function toggleStrategy(){
+         stratOpen=!stratOpen;
+         document.getElementById('stratBody').style.display=stratOpen?'grid':'none';
+         document.getElementById('togTxt').textContent=stratOpen?'▲ collapse':'▼ expand';
+         }
+         function toast(msg){
+         const t=document.getElementById('toast');
+         t.textContent=msg;t.classList.add('show');
+         setTimeout(()=>t.classList.remove('show'),2500);
+         }
+         function getBucket(p){
+         p=p||0;
+         if(p<5)return 'ghost';
+         if(p<15)return 'skeleton';
+         if(p<30)return 'brochure';
+         if(p<60)return 'stale';
+         if(p<150)return 'active';
+         return 'estab';
+         }
+         // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — server key) ──────────────
+         async function callClaude(city, country, ind) {
+             const prompt = `You are a high-precision B2B Lead Scraper. Use Google Search to find REAL local businesses.
+MISSION: Find 15 real ${ind.q} businesses in ${city}, ${country} that need SEO content services.
+CRITICAL: Search for actual business names, phone numbers, and websites. A lead without a phone number is WORTHLESS.
+Look for businesses with simple/outdated websites (5-30 pages) — these are the best leads.
 
-  function attach() {
-    var btn = document.getElementById('gl-call-btn');
-    if (!btn) { setTimeout(attach, 150); return; }
-    btn.addEventListener('click', startSession);
-    console.log('[otto] v6 loaded — Gemini Live ready | Fenrir male voice');
-  }
+Search queries to use:
+- "${ind.q} ${city} ${country}"  
+- "${ind.q} ${city} contact phone"
+- "${ind.q} ${city} website"
 
-  document.readyState === 'loading'
-    ? document.addEventListener('DOMContentLoaded', attach)
-    : attach();
+For each business found, verify their website exists and estimate page count.
 
-})();
+Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
+[{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
+
+             try {
+                 const API_BASE = 'https://app.contentscale.site';
+                 const resp = await fetch(`${API_BASE}/api/gemini-proxy`,
+                 {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify({
+                         contents: [{ parts: [{ text: prompt }] }],
+                         generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
+                     })
+                 });
+
+                 if (!resp.ok) {
+                     const errorData = await resp.json().catch(() => ({}));
+                     const msg = errorData.error?.message || errorData.detail || ('HTTP ' + resp.status);
+                     if (resp.status === 429) throw new Error('429: ' + msg);
+                     if (resp.status === 401) throw new Error('401: GEMINI_KEY_LEADCRAWLER ontbreekt op de server — voeg toe in Railway Variables');
+                     throw new Error('Gemini Error (' + resp.status + '): ' + msg);
+                 }
+
+                 const data = await resp.json();
+                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+                 // Extract JSON array from response (strip any accidental markdown)
+                 const cleaned = text.match(/\[[\s\S]*\]/);
+                 return cleaned ? JSON.parse(cleaned[0]) : [];
+
+             } catch (err) {
+                 console.error('[Crawler][' + ind.label + '] Error:', err.message);
+                 throw err;
+             }
+         }
+           // ── MAIN CRAWL ────────────────────────────────────────────────────────────
+         async function startCrawl(){
+         const city=document.getElementById('city').value.trim();
+         const country=document.getElementById('country').value.trim();
+         if(!city||!country){toast('Enter a city and country first');return;}
+         const existingSession=loadSession();
+         const isSameTarget=existingSession&&
+         existingSession.city.toLowerCase().trim()===city.toLowerCase().trim()&&
+         existingSession.country.toLowerCase().trim()===country.toLowerCase().trim();
+         if(isSameTarget&&existingSession.leads&&existingSession.leads.length){
+         allLeads=existingSession.leads;
+         completedIndustries=new Set(existingSession.completed||[]);
+         toast('Resuming — '+completedIndustries.size+' industries already done, skipping duplicates');
+         } else {
+         allLeads=[];completedIndustries=new Set();
+         }
+         stopped=false;errors=[];selected.clear();
+         activeBucket='all';activeSearch='';
+         document.getElementById('crawlBtn').disabled=true;
+         document.getElementById('stopBtn').style.display='block';
+         document.getElementById('emptyState').style.display='none';
+         document.getElementById('results').innerHTML='';
+         document.getElementById('statsRow').style.display='none';
+         document.getElementById('toolbar').style.display='none';
+         document.getElementById('progWrap').style.display='block';
+         document.getElementById('errLog').style.display='none';
+         document.getElementById('rlBanner').style.display='none';
+         if(rlInterval){clearInterval(rlInterval);rlInterval=null;}
+         fiveHourHit=false;
+         document.getElementById('resumeBanner').style.display='none';
+         document.getElementById('selbar').classList.remove('show');
+         document.querySelector('.tbtn[data-bk="all"]').classList.add('on');
+         INDUSTRIES.forEach(i=>{
+         setWave(i.id, completedIndustries.has(i.id)?'done':'');
+         });
+         let done=completedIndustries.size;
+         updateProg(done,allLeads.length);
+         const CONCURRENCY = 1; // web_search uses ~20k tokens/call — sequential prevents 429
+         const pending = INDUSTRIES.filter(i => !completedIndustries.has(i.id));
+         fiveHourHit = false;
+         async function runOne(ind){
+         if(stopped || fiveHourHit) return;
+         setWave(ind.id,'running');
+         try{
+         const leads = await callClaude(city,country,ind);
+         if(stopped || fiveHourHit) return;
+         const valid = dedup((leads||[]).filter(l=>l?.name&&l?.website));
+         valid.forEach(l=>{ if(!l.sitemap) l.sitemap = l.website+'/sitemap.xml'; });
+         allLeads.push(...valid);
+         completedIndustries.add(ind.id);
+         saveSession(city,country);
+         setWave(ind.id,'done',valid.length);
+         done++; updateProg(done,allLeads.length);
+         appendLiveCards(valid);
+         } catch(err){
+         const msg = err.message || '';
+         if(msg.includes('five_hour') || (msg.includes('429') && msg.includes('resets_at'))){
+         fiveHourHit = true;
+         stopped = true;
+         let resetsAt = null;
+         try { resetsAt = JSON.parse(msg.slice(msg.indexOf('{'))).resetsAt || JSON.parse(msg.slice(msg.indexOf('{'))).windows?.['5h']?.resets_at; } catch{}
+         showRateLimitBanner(resetsAt);
+         setWave(ind.id,'error',0);
+         done++; updateProg(done,allLeads.length);
+         return;
+         }
+         if(msg.includes('429') && !msg.includes('five_hour')){
+         // Exponential backoff: 20s → 45s → 90s
+         const delays = [20000, 45000, 90000];
+         let lastErr = err;
+         for(let attempt = 0; attempt < delays.length; attempt++){
+           const wait = delays[attempt];
+           setWave(ind.id,'');
+           document.getElementById('progMsg').textContent = 
+             '⏳ Rate limit hit — waiting ' + Math.round(wait/1000) + 's before retry ' + (attempt+1) + '/3...';
+           await new Promise(r=>setTimeout(r, wait));
+           if(stopped || fiveHourHit) return;
+           try{
+             const leads = await callClaude(city,country,ind);
+             if(stopped || fiveHourHit) return;
+             const valid = dedup((leads||[]).filter(l=>l?.name&&l?.website));
+             valid.forEach(l=>{ if(!l.sitemap) l.sitemap = l.website+'/sitemap.xml'; });
+             allLeads.push(...valid);
+             completedIndustries.add(ind.id);
+             saveSession(city,country);
+             setWave(ind.id,'done',valid.length);
+             done++; updateProg(done,allLeads.length);
+             appendLiveCards(valid);
+             return; // success — exit retry loop
+           } catch(retryErr){
+             const retryMsg = retryErr.message || '';
+             if(retryMsg.includes('five_hour')){ fiveHourHit=true; stopped=true; showRateLimitBanner(null); setWave(ind.id,'error',0); done++; updateProg(done,allLeads.length); return; }
+             lastErr = retryErr;
+             // If still 429 on last attempt, fall through to error log
+             if(attempt < delays.length - 1) continue;
+           }
+         }
+         err = lastErr;
+         }
+         errors.push('['+ind.label+'] '+err.message);
+         console.error('[Crawler]['+ind.label+']', err);
+         setWave(ind.id,'error',0);
+         done++; updateProg(done,allLeads.length);
+         }
+         }
+         let idx = 0;
+         async function worker(){
+         while(idx < pending.length && !stopped && !fiveHourHit){
+         const ind = pending[idx++];
+         await runOne(ind);
+         // 3s cooldown between requests to stay well under token/min limit
+         if(idx < pending.length && !stopped && !fiveHourHit){
+           await new Promise(r=>setTimeout(r, 3000));
+         }
+         }
+         }
+         const workers = Array.from({length: Math.min(CONCURRENCY, pending.length)}, worker);
+         await Promise.all(workers);
+         document.getElementById('progWrap').style.display='none';
+         document.getElementById('stopBtn').style.display='none';
+         document.getElementById('crawlBtn').disabled=false;
+         if(errors.length){
+         const el=document.getElementById('errLog');
+         el.style.display='block';
+         el.innerHTML=`<strong>${errors.length} searches had errors:</strong><br>${errors.join('<br>')}`;
+         }
+         if(allLeads.length){
+         document.getElementById('results').innerHTML='';
+         renderAll();
+         setTimeout(()=>resolveSitemapsPhase2(), 800);
+         } else document.getElementById('emptyState').style.display='block';
+         }
+         // ── PHASE 2: SITEMAP RESOLUTION ─────────────
+         let sitemapResolutionActive = false;
+         async function resolveSitemapsPhase2(){
+         if(sitemapResolutionActive) return;
+         const unresolved = allLeads.filter(l => !l.sitemap_source || l.sitemap_source === 'fallback');
+         if(!unresolved.length){ toast('✓ All sitemaps already resolved'); return; }
+         sitemapResolutionActive = true;
+         updateResolveBtn(true, unresolved.length);
+         const BATCH = 6;
+         const batches = [];
+         for(let i=0; i<unresolved.length; i+=BATCH) batches.push(unresolved.slice(i,i+BATCH));
+         let resolved = 0;
+         const CONCURRENCY = 4;
+         for(let i=0; i<batches.length; i+=CONCURRENCY){
+         const chunk = batches.slice(i, i+CONCURRENCY);
+         await Promise.allSettled(chunk.map(async batch => {
+         try {
+         const results = await resolveBatch(batch);
+         results.forEach(r => {
+         const lead = allLeads.find(l => l.website === r.website);
+         if(lead && r.sitemap){
+         lead.sitemap = r.sitemap;
+         lead.sitemap_source = r.sitemap_source || 'verified';
+         lead.phone = lead.phone || r.phone || '';
+         lead.email = lead.email || r.email || '';
+         updateLeadCard(lead);
+         resolved++;
+         }
+         });
+         updateResolveBtn(true, unresolved.length - resolved);
+         } catch(e){ console.warn('Sitemap batch error:', e.message); }
+         }));
+         }
+         sitemapResolutionActive = false;
+         saveSession(document.getElementById('city').value, document.getElementById('country').value);
+         updateResolveBtn(false, 0);
+         toast('✓ Sitemaps resolved for ' + resolved + ' leads');
+         }
+         async function resolveBatch(leads){
+         const domains = leads.map(l => l.website).join('\n');
+         const prompt = [
+         'For each domain below, find the real sitemap URL by checking robots.txt.',
+         'Also grab phone and email from the homepage/contact page if easy to find.',
+         '',
+         'Domains:',
+         domains,
+         '',
+         'Return ONLY this JSON array — no markdown, no explanation:',
+         '[{"website":"https://domain.com","sitemap":"https://domain.com/sitemap_index.xml","sitemap_source":"robots.txt","phone":"+1 555 000","email":"info@domain.com"}]',
+         '',
+         'Rules:',
+         '- sitemap_source: "robots.txt" if from robots.txt, "verified" if confirmed live, "fallback" if guessed',
+         '- phone and email: real values or "" if not found',
+         '- Return ONLY the raw JSON array'
+         ].join('\n');
+         const API_BASE = 'https://app.contentscale.site';
+         const resp = await fetch(`${API_BASE}/api/gemini-proxy`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             contents: [{ parts: [{ text: prompt }] }],
+             generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
+           })
+         });
+         if(!resp.ok) throw new Error('HTTP '+resp.status);
+         const data = await resp.json();
+         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+         const cleaned = text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+         if(cleaned.startsWith('[')){ try{ return JSON.parse(cleaned); } catch{} }
+         const m = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
+         if(m){ try{ return JSON.parse(m[0]); } catch{} }
+         return [];
+         }
+         function updateLeadCard(lead){
+         const id = makeId(lead);
+         const card = document.getElementById('lc-'+id);
+         if(!card) return;
+         const url = lead.sitemap || (lead.website+'/sitemap.xml');
+         const srcMap={'robots.txt':['robots.txt','background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)'],'verified':['verified','background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)'],'fallback':['fallback','background:rgba(251,146,60,.12);color:#fb923c;border:1px solid rgba(251,146,60,.25)']};
+         const[srcLabel,srcStyle]=srcMap[lead.sitemap_source]||['?','background:rgba(82,82,110,.12);color:#52526e;border:1px solid rgba(82,82,110,.2)'];
+         const srow = card.querySelector('.srow');
+         if(srow){
+         srow.setAttribute('onclick','event.stopPropagation();window.open(\''+url+'\',\'_blank\',\'noopener\')');
+         srow.innerHTML=`<span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span><button class="cpy" data-url="${url}" onclick="event.stopPropagation();cpyBtn(this)" title="Copy URL">⧉</button>`;
+         }
+         if(lead.phone || lead.email){
+         let contactRow = card.querySelector('.contact-row');
+         if(!contactRow){
+         contactRow = document.createElement('div');
+         contactRow.className = 'contact-row';
+         contactRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;';
+         card.insertBefore(contactRow, card.querySelector('.srow'));
+         }
+         contactRow.innerHTML =
+         (lead.phone ? `<a href="tel:${lead.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">📞 ${lead.phone}</a>` : '') +
+         (lead.email ? `<a href="mailto:${lead.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">✉ ${lead.email}</a>` : '');
+         }
+         }
+         function updateResolveBtn(active, remaining){
+         const btn = document.getElementById('resolveBtn');
+         if(!btn) return;
+         if(active){
+         btn.textContent = '⟳ Resolving sitemaps... (' + remaining + ' left)';
+         btn.style.opacity = '0.6';
+         btn.disabled = true;
+         } else {
+         btn.textContent = '⟳ Re-Resolve Sitemaps';
+         btn.style.opacity = '1';
+         btn.disabled = false;
+         }
+         }
+         // ── RATE LIMIT BANNER + COUNTDOWN ────────────────────────────────────────────
+         let rlInterval = null;
+         function showRateLimitBanner(resetsAt){
+         const banner = document.getElementById('rlBanner');
+         if(banner) banner.style.display = 'block';
+         document.getElementById('progWrap').style.display = 'none';
+         document.getElementById('stopBtn').style.display = 'none';
+         document.getElementById('crawlBtn').disabled = false;
+         if(allLeads.length){ document.getElementById('results').innerHTML=''; renderAll(); }
+         if(!resetsAt){
+         document.getElementById('rlCountdown').textContent = 'check your Anthropic dashboard';
+         document.getElementById('rlTimer').textContent = '--:--';
+         return;
+         }
+         const resetMs = resetsAt * 1000;
+         if(rlInterval) clearInterval(rlInterval);
+         function tick(){
+         const diff = resetMs - Date.now();
+         if(diff <= 0){
+         clearInterval(rlInterval);
+         document.getElementById('rlTimer').textContent = '00:00';
+         document.getElementById('rlCountdown').textContent = 'ready — hit FIND LEADS to resume!';
+         document.getElementById('rlCountdown').style.color = 'var(--green)';
+         document.getElementById('crawlBtn').style.background = 'var(--green)';
+         return;
+         }
+         const h = Math.floor(diff/3600000);
+         const m = Math.floor((diff%3600000)/60000);
+         const s = Math.floor((diff%60000)/1000);
+         const hms = (h>0?h+'h ':'')+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
+         document.getElementById('rlTimer').textContent = (h>0?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+         document.getElementById('rlCountdown').textContent = hms;
+         }
+         tick();
+         rlInterval = setInterval(tick, 1000);
+         }
+         function updateProg(done,found){
+         const pct=Math.round(done/INDUSTRIES.length*100);
+         document.getElementById('progFill').style.width=pct+'%';
+         const _pl=document.getElementById('progPctLabel');if(_pl)_pl.textContent=pct+'%';
+         const _el=document.getElementById('progErrCount');if(_el)_el.textContent=errors.length;
+         document.getElementById('progPct').textContent=done+' / '+INDUSTRIES.length;
+         document.getElementById('progMsg').textContent=done<INDUSTRIES.length
+         ?'Searching '+done+'/'+INDUSTRIES.length+' industries (sequential — ~'+Math.round((INDUSTRIES.length-done)*12)+' seconds left)...'
+         :'✓ All searches complete — rendering results';
+         document.getElementById('bigCount').textContent=found;
+         }
+         function appendLiveCards(leads){
+         if(!leads.length)return;
+         let live=document.getElementById('liveStream');
+         if(!live){
+         live=document.createElement('div');live.id='liveStream';
+         live.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:9px;margin-bottom:20px;';
+         document.getElementById('results').appendChild(live);
+         }
+         leads.forEach(l=>{const d=document.createElement('div');d.innerHTML=cardHTML(l);live.appendChild(d.firstElementChild);});
+         }
+         function renderAll(){
+         document.getElementById('statsRow').style.display='grid';
+         document.getElementById('toolbar').style.display='flex';
+         updateStats();renderBuckets();updateSelbar();
+         }
+         function updateStats(){
+         const t=allLeads.length;
+         const c={};BUCKET_DEFS.forEach(b=>c[b.key]=0);
+         allLeads.forEach(l=>c[getBucket(l.estimated_pages)]++);
+         const g=c.skeleton+c.brochure;
+         const avg=t?Math.round(allLeads.reduce((a,l)=>a+(l.content_score||75),0)/t):0;
+         document.getElementById('statsRow').innerHTML=`
+         <div class="stat hi"><div class="sn">${t}</div><div class="sl">Total Leads</div></div>
+         <div class="stat"><div class="sn" style="color:var(--gold)">${g}</div><div class="sl">🔥 Goldmine (5–30)</div></div>
+         <div class="stat"><div class="sn" style="color:var(--muted)">${c.ghost}</div><div class="sl">Ghost (0–5)</div></div>
+         <div class="stat"><div class="sn" style="color:var(--blue)">${c.skeleton}</div><div class="sl">Skeleton (5–15)</div></div>
+         <div class="stat"><div class="sn" style="color:var(--gold)">${c.brochure}</div><div class="sl">Brochure (15–30)</div></div>
+         <div class="stat"><div class="sn" style="color:var(--orange)">${c.stale}</div><div class="sl">Stale (30–60)</div></div>
+         <div class="stat"><div class="sn" style="color:var(--red)">${c.active}</div><div class="sl">Active (60–150)</div></div>
+         <div class="stat"><div class="sn" style="color:var(--purple)">${c.estab}</div><div class="sl">Estab (150+)</div></div>
+         <div class="stat"><div class="sn">${avg}</div><div class="sl">Avg Score</div></div>`;
+         }
+         function getFiltered(){
+         let leads=[...allLeads];
+         if(activeBucket!=='all')leads=leads.filter(l=>getBucket(l.estimated_pages)===activeBucket);
+         if(activeSearch){const q=activeSearch.toLowerCase();leads=leads.filter(l=>(l.name||'').toLowerCase().includes(q)||(l.type||'').toLowerCase().includes(q)||(l.opportunity||'').toLowerCase().includes(q));}
+         if(sortField==='score')leads.sort((a,b)=>(b.content_score||0)-(a.content_score||0));
+         if(sortField==='pages')leads.sort((a,b)=>(b.estimated_pages||0)-(a.estimated_pages||0));
+         return leads;
+         }
+         function renderBuckets(){
+         const filtered=getFiltered();
+         const out=document.getElementById('results');
+         out.innerHTML='';let any=false;
+         BUCKET_DEFS.forEach(def=>{
+         const items=filtered.filter(l=>getBucket(l.estimated_pages)===def.key);
+         if(!items.length)return;
+         any=true;
+         const sec=document.createElement('div');
+         sec.className='bucket '+def.cls;
+         sec.innerHTML=`
+         <div class="bhead">
+           <div class="bhead-top">
+             <span class="bicon">${def.icon}</span>
+             <div>
+               <div class="bname">${def.label}</div>
+               <div class="bsublabel">${def.sublabel}</div>
+             </div>
+             <span class="brange">${def.range}</span>
+             <span class="bhot">${def.hot}</span>
+             <span class="bcnt">${items.length} lead${items.length!==1?'s':''}</span>
+           </div>
+           <div class="bhead-bottom">
+             <span class="baction">${def.action}</span>
+             <span class="bdesc">${def.desc}</span>
+           </div>
+         </div>
+         <div class="cards">${items.map(l=>cardHTML(l)).join('')}</div>`;
+         out.appendChild(sec);
+         });
+         if(!any)out.innerHTML='<div class="empty-state"><div class="ebig">NO<br>MATCH</div><p>No leads match that filter.</p></div>';
+         }
+         function makeId(l){return encodeURIComponent((l.name||'x')+(l.website||'y')).replace(/[^a-z0-9]/gi,'_');}
+         function cardHTML(l){
+         const id=makeId(l);
+         const bk=getBucket(l.estimated_pages);
+         const pitch=l.pitch_angle||PITCH[bk]||'';
+         const sc=l.content_score>=85?'csh':l.content_score>=72?'csm':'csl';
+         const isSel=selected.has(id);
+         const srcMap={'robots.txt':['robots.txt','background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)'],'verified':['verified','background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)'],'fallback':['fallback','background:rgba(251,146,60,.12);color:#fb923c;border:1px solid rgba(251,146,60,.25)']};
+         const[srcLabel,srcStyle]=srcMap[l.sitemap_source]||['?','background:rgba(82,82,110,.12);color:#52526e;border:1px solid rgba(82,82,110,.2)'];
+         const url=l.sitemap||(l.website?l.website+'/sitemap.xml':'#');
+         return `
+         <div class="lcard${isSel?' sel':''}" id="lc-${id}" onclick="toggleSel('${id}',event)">
+         <div class="chk${isSel?' on':''}" id="chk-${id}"></div>
+         <div class="cn">${l.name||'Unknown'}</div>
+         <div class="ct">${l.type||''}</div>
+         <div class="pitch-banner">${pitch}</div>
+         ${(l.phone||l.email)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+         ${l.phone?`<a href="tel:${l.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Call">📞 ${l.phone}</a>`:''}
+         ${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Send email">✉ ${l.email}</a>`:''}
+         </div>`:''}
+         <div class="srow" onclick="event.stopPropagation();window.open('${url}','_blank','noopener')" style="cursor:pointer" title="Open in new tab">
+         <span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span>
+         <span style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span>
+         <button class="cpy" data-url="${url.replace(/"/g,'&quot;')}" onclick="event.stopPropagation();cpyBtn(this)" title="Copy URL">⧉</button>
+         </div>
+         <div class="opp">${l.opportunity||''}</div>
+         <div class="ctags">${(l.tags||[]).map(t=>`<span class="ctag">${t}</span>`).join('')}</div>
+         <div class="cfoot">
+         <div class="cpages">~<strong>${l.estimated_pages||'?'}</strong> pages</div>
+         <div style="display:flex;align-items:center;gap:6px;">
+         ${l.phone?`<button class="call-btn ${getCallState(id)}" id="callbtn-${id}"
+           onclick="event.stopPropagation();triggerCall('${id}')"
+           title="Call ${l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
+         <div class="cscore ${sc}" title="Estimated content score — based on site type and page count">${l.content_score||'?'}<span style="font-size:7px;opacity:.5;margin-left:2px;">est</span></div>
+         </div>
+         </div>
+         <div class="call-status ${getCallStatusClass(id)} ${getCallStatusText(id)?'show':''}" id="callstatus-${id}">${getCallStatusText(id)}</div>
+         </div>`;
+         }
+         function toggleSel(id,e){
+         if(e.target.tagName==='A'||e.target.tagName==='BUTTON')return;
+         selected.has(id)?selected.delete(id):selected.add(id);
+         document.getElementById('lc-'+id)?.classList.toggle('sel');
+         document.getElementById('chk-'+id)?.classList.toggle('on');
+         updateSelbar();
+         }
+         function updateSelbar(){
+         document.getElementById('selCount').textContent=selected.size;
+         document.getElementById('selbar').classList.toggle('show',selected.size>0);
+         }
+         function selAll(){getFiltered().forEach(l=>selected.add(makeId(l)));renderBuckets();updateSelbar();toast('Selected '+selected.size+' leads');}
+         function clearSel(){selected.clear();renderBuckets();updateSelbar();}
+         function setBucket(btn,key){document.querySelectorAll('.tbtn[data-bk]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');activeBucket=key;renderBuckets();}
+         function doSort(f){sortField=f;renderBuckets();toast('Sorted by '+f);}
+         function doSearch(q){activeSearch=q;renderBuckets();}
+         function cpyBtn(btn){
+         const u=btn.getAttribute('data-url');
+         navigator.clipboard.writeText(u).then(()=>{
+         const orig=btn.textContent;
+         btn.textContent='✓';btn.style.color='var(--green)';
+         setTimeout(()=>{btn.textContent=orig;btn.style.color='';},1200);
+         toast('Copied!');
+         }).catch(()=>{
+         const ta=document.createElement('textarea');
+         ta.value=u;ta.style.position='fixed';ta.style.opacity='0';
+         document.body.appendChild(ta);ta.select();
+         document.execCommand('copy');document.body.removeChild(ta);
+         toast('Copied!');
+         });
+         }
+         function copyUrl(u){navigator.clipboard.writeText(u).then(()=>toast('Copied!'));}
+         function copyAll(){navigator.clipboard.writeText(allLeads.map(l=>l.sitemap||(l.website+'/sitemap.xml')).join('\n')).then(()=>toast('Copied '+allLeads.length+' URLs'));}
+         function getSelLeads(){return allLeads.filter(l=>selected.has(makeId(l)));}
+         function copySelUrls(){const s=getSelLeads();navigator.clipboard.writeText(s.map(l=>l.sitemap||(l.website+'/sitemap.xml')).join('\n')).then(()=>toast('Copied '+s.length+' URLs'));}
+         function toCSV(leads){
+         const h=['Name','Type','Website','Phone','Email','Sitemap','Est Pages','Bucket','Content Score','Pitch Angle','Opportunity','Tags'];
+         const rows=leads.map(l=>[`"${(l.name||'').replace(/"/g,"'")}"`,`"${(l.type||'').replace(/"/g,"'")}"`,`"${l.website||''}"`,`"${l.phone||''}"`,`"${l.email||''}"`,`"${l.sitemap||''}"`,l.estimated_pages||0,`"${getBucket(l.estimated_pages)}"`,l.content_score||0,`"${(l.pitch_angle||'').replace(/"/g,"'")}"`,`"${(l.opportunity||'').replace(/"/g,"'")}"`,`"${(l.tags||[]).join('; ')}"`]);
+         return[h.join(','),...rows.map(r=>r.join(','))].join('\n');
+         }
+         function dl(content,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
+         function exportCSV(){dl(toCSV(allLeads),'leads-'+document.getElementById('city').value+'-'+Date.now()+'.csv','text/csv');toast('Exported '+allLeads.length+' leads');}
+         function exportJSON(){dl(JSON.stringify(allLeads,null,2),'leads-'+document.getElementById('city').value+'-'+Date.now()+'.json','application/json');toast('Exported '+allLeads.length+' leads');}
+         function exportSelCSV(){const s=getSelLeads();dl(toCSV(s),'selected-leads-'+Date.now()+'.csv','text/csv');toast('Exported '+s.length+' leads');}
+         
+         // ════════════════════════════════════════════════════════
+         // VAPI VOICEBOT SYSTEM
+         // ════════════════════════════════════════════════════════
+         const LS_VAPI = 'lc_vapi_config';
+         const LS_CALLLOG = 'lc_call_log';
+         
+         // callStates: Map of leadId → {state, callId, label, statusText, startedAt}
+         const callStates = new Map();
+         let callLog = [];
+         const pollIntervals = new Map();
+         
+         // ── Helper: get state info for a lead id ────────────────
+         function saveVapiConfig(){
+           const cfg={
+             vapiKey:     document.getElementById('vapiKey').value.trim(),
+             phoneId:     document.getElementById('vapiPhoneId').value.trim(),
+             callerName:  document.getElementById('vapiCallerName').value.trim(),
+             company:     document.getElementById('vapiCompany').value.trim(),
+             callback:    document.getElementById('vapiCallbackNumber').value.trim(),
+             openingLine: document.getElementById('vapiOpeningLine').value.trim(),
+           };
+           if(!cfg.vapiKey||!cfg.phoneId||!cfg.callerName){
+             toast('⚠ Fill in API Key, Phone Number ID and your name');return;
+           }
+           localStorage.setItem(LS_VAPI, JSON.stringify(cfg));
+           document.getElementById('vapiSavedBadge').style.display='inline-block';
+           document.getElementById('vapiConfigBadge').style.display='inline-block';
+           document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
+           toast('✅ Voicebot config saved!');
+         }
+         
+         function loadVapiConfig(){
+           try{
+             const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+             if(!cfg) return null;
+             document.getElementById('vapiKey').value=cfg.vapiKey||'';
+             document.getElementById('vapiPhoneId').value=cfg.phoneId||'';
+             document.getElementById('vapiCallerName').value=cfg.callerName||'';
+             document.getElementById('vapiCompany').value=cfg.company||'';
+             document.getElementById('vapiCallbackNumber').value=cfg.callback||'';
+             document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? My name is Ottmar from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
+             document.getElementById('vapiSavedBadge').style.display='inline-block';
+             document.getElementById('vapiConfigBadge').style.display='inline-block';
+             document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
+             return cfg;
+           }catch(e){return null;}
+         }
+         
+         function toggleVapiPanel(){
+           const p=document.getElementById('vapiPanel');
+           p.classList.toggle('visible');
+           document.getElementById('vapiToggleBtn').style.background=
+             p.classList.contains('visible')?'rgba(74,222,128,.18)':'rgba(74,222,128,.08)';
+         }
+         
+         // ── Build dynamic Vapi assistant for a lead ────────────
+         function buildAssistant(lead, cfg){
+           const name    = lead.name||'there';
+           const domain  = (lead.website||'').replace(/^https?:\/\//,'').replace(/\/$/,'');
+           const score   = lead.content_score||'?';
+           const pages   = lead.estimated_pages||'?';
+           const city    = document.getElementById('city').value||'your city';
+           const type    = lead.type||'business';
+           const pitch   = lead.pitch_angle||`Your website only has about ${pages} pages and could use more content to rank on Google.`;
+         
+           const opening = (cfg.openingLine||`Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`)
+             .replace('{name}',name).replace('{score}',score).replace('{pages}',pages).replace('{city}',city);
+         
+           const systemPrompt=`You are an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company||'ContentScale'}.
+         
+         LEGAL COMPLIANCE — MANDATORY:
+         - ALWAYS start with: "Hi, just to be transparent — I'm an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}."
+         - ALWAYS offer opt-out early: "If you'd prefer not to be called, just say 'stop' and I'll remove you immediately."
+         - NEVER pretend to be human if asked directly
+         - NEVER call outside 8am–8pm local time
+         - If they say stop/not interested/remove me: confirm removal, end call immediately, log as opt-out
+         
+         You are calling ${name}, a ${type} in ${city}.
+         Their website: ${domain}
+         Pages found: ~${pages}
+         Key gap: ${pitch}
+         
+         YOUR GOAL: Have a genuine conversation. Qualify them. Get their email with permission.
+         
+         CALL FLOW:
+         
+         1. OPENING (always start with AI disclosure):
+         "Hi, just to be transparent — I'm an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. Is this ${name}? I just did a quick scan of ${domain} and found that your website has about ${pages} pages — most businesses your size in ${city} that rank well on Google have 3 to 4 times more content. I can share exactly what's missing. Do you have 2 minutes?"
+         
+         2. IF THEY ENGAGE — discovery questions (pick naturally, don't interrogate):
+         - "Are you currently getting clients from Google, or mostly referrals?"
+         - "Have you tried blogging or content marketing before?"
+         - "What's the biggest challenge with your online visibility right now?"
+         - "Is growing your client base from search something you're focused on this year?"
+         
+         3. PITCH — based on what they said:
+         - If no blog: "The good news is you have a clean site — adding a blog with the right content could get you showing up for searches your competitors own right now."
+         - If outdated content: "A lot of your existing pages could be refreshed to meet what Google and AI assistants like ChatGPT now look for — that's exactly what we do."
+         - If interested: "I'd love to send you a free 1-page audit showing exactly what to fix first. What's the best email to send it to?" [GET EMAIL WITH PERMISSION]
+         
+         4. CLOSING:
+         - "Great — I'll have Ottmar send that over today. Is there a good time this week for a quick 15-minute call with Ottmar to go through it?"
+         - Log their email and preferred call time
+         
+         5. IF BUSY/HESITANT:
+         - "Totally understand — I can send a quick summary by email instead, no call needed. What email works best?" 
+         - Or: "No problem at all. I'll let Ottmar know you're not the right fit right now."
+         
+         6. IF NO ANSWER — voicemail:
+         "Hi ${name}, this is an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. I scanned ${domain} and found some specific ways to help you rank better on Google and get found by AI assistants like ChatGPT. Call ${cfg.callback} to speak with ${cfg.callerName} directly, or I can send the details by email — just call back and leave your email. Have a great day!"
+         
+         RULES:
+         - Warm, conversational, human-feeling — not robotic or salesy
+         - Short — max 3-4 minutes, respect their time
+         - If they ask "are you a real person?" — be honest: "I'm an AI assistant, yes — but the audit and follow-up call are with a real person."
+         - Opt-out is immediate — no pushback ever
+         - EMAIL COLLECTION: Only ask for email after they show interest. Always frame it as "I'll send you something useful" not "sign up for marketing"`;
+         
+           return {
+             firstMessage: opening,
+             model:{
+               provider:'openai',
+               model:'gpt-4o',
+               systemPrompt,
+               temperature:0.7,
+             },
+             voice:{
+               provider:'11labs',
+               voiceId:'pNInz6obpgDQGcFmaJgB', // Adam — natural, professional
+             },
+             endCallMessage:'Thanks for your time, have a great day!',
+             voicemailMessage:`Hi, this is ${cfg.callerName} from ${cfg.company||'ContentScale'}. I analysed ${domain} and found some great opportunities to help with your online visibility. Call me back on ${cfg.callback||'our website'} — have a great day!`,
+             maxDurationSeconds:240,
+             backgroundSound:'off',
+             backchannelingEnabled:true,
+             endCallFunctionEnabled:true,
+           };
+         }
+         
+         // ── Trigger a single call ────────────────────────────────
+         async function triggerCall(leadId){
+           // ── Gate 1: Terms must be accepted first ─────────────────
+           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+         
+           const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+           if(!cfg||!cfg.vapiKey||!cfg.phoneId){
+             toast('⚠ Configure your Voicebot first — click "Configure Voicebot" above');
+             document.getElementById('vapiPanel').classList.add('visible');return;
+           }
+         
+           const lead=allLeads.find(l=>makeId(l)===leadId);
+           if(!lead){toast('Lead not found');return;}
+           if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
+         
+           // ── Gate 2: Calling hours + Compliance Mode ───────────────
+           const now=new Date();
+           const hour=now.getHours();
+           if(hour<8||hour>=20){
+             if(isComplianceModeOn()){
+               toast('🛡 Compliance Mode: calls blocked outside 8am–8pm. It is currently '+now.toLocaleTimeString());
+               return; // HARD BLOCK — cannot override in compliance mode
+             } else {
+               const proceed=confirm('⚠ Outside Legal Calling Hours\n\nIt is '+now.toLocaleTimeString()+' your local time.\nLegal hours: 8am–8pm in the recipient\'s time zone.\n\nCompliance Mode is OFF — you bear full legal risk.\nContinue anyway?');
+               if(!proceed)return;
+             }
+           }
+         
+           const existing=callStates.get(leadId);
+           if(existing&&existing.state==='calling'){toast('Already calling this lead');return;}
+         
+           setCallState(leadId,'calling','Connecting...');
+         
+           // CS-Agent mode: use server-side call (no user Vapi key needed) — for Ottmar
+           const csAgentMode = !cfg || !cfg.vapiKey || cfg.vapiKey.length < 10;
+           const callEndpoint = csAgentMode ? '/api/cs-agent/call' : '/api/voicebot/call';
+           const finalBody = csAgentMode ? {
+             customerPhone:  lead.phone,
+             customerName:   lead.name||'',
+             customerDomain: (lead.website||'').replace(/^https?:\/\//,'').replace(/\/$/,''),
+             customerPages:  lead.estimated_pages||'?',
+             customerCity:   document.getElementById('city')?.value||'',
+             customerType:   lead.type||'',
+             pitchAngle:     lead.pitch_angle||'',
+             opportunity:    lead.opportunity||'',
+             bucket:         getBucket(lead.estimated_pages),
+             leadId,
+           } : callBody;
+         
+           try{
+             const resp=await fetch(callEndpoint,{
+               method:'POST',
+               headers:{'Content-Type':'application/json'},
+               body:JSON.stringify(finalBody)
+             });
+             const data=await resp.json();
+             if(!resp.ok||!data.callId){
+               const err=data.error||('HTTP '+resp.status);
+               setCallState(leadId,'failed','Failed: '+err);
+               toast('❌ Call failed: '+err);return;
+             }
+         
+             setCallState(leadId,'calling','Ringing...',data.callId);
+             addCallLog(lead,leadId,data.callId,'calling');
+             toast('📞 Calling '+lead.name+'...');
+         
+             // Start polling for outcome
+             startPolling(leadId,lead,data.callId,csAgentMode ? '' : cfg.vapiKey);
+         
+           }catch(e){
+             setCallState(leadId,'failed','Error: '+e.message);
+             toast('❌ '+e.message);
+           }
+         }
+         
+         // ── Set call state + update card button ─────────────────
+         function setCallState(id, state, statusText, callId){
+           callStates.set(id,{state,statusText:statusText||'',callId:callId||callStates.get(id)?.callId});
+           const btn=document.getElementById('callbtn-'+id);
+           const statusEl=document.getElementById('callstatus-'+id);
+           if(btn){
+             btn.className='call-btn '+state;
+             btn.innerHTML=getCallLabel(id);
+           }
+           if(statusEl){
+             statusEl.textContent=statusText||'';
+             statusEl.className='call-status '+state+(statusText?' show':'');
+           }
+         }
+         
+         // ── Poll Vapi for call outcome ───────────────────────────
+         function startPolling(leadId,lead,callId,vapiKey){
+           if(pollIntervals.has(leadId)) clearInterval(pollIntervals.get(leadId));
+           let attempts=0;
+           const iv=setInterval(async()=>{
+             attempts++;
+             if(attempts>60){clearInterval(iv);pollIntervals.delete(leadId);return;}
+             try{
+               const useCSAgent = !vapiKey || vapiKey.length < 10;
+               const statusUrl = useCSAgent ? '/api/cs-agent/status/'+callId : '/api/voicebot/status/'+callId;
+               const pollHeaders = useCSAgent ? {} : {'x-vapi-key':vapiKey};
+               const resp=await fetch(statusUrl,{headers:pollHeaders});
+               if(!resp.ok)return;
+               const data=await resp.json();
+               const status=data.status||'';
+               const endedReason=data.endedReason||'';
+         
+               if(status==='ended'||status==='failed'){
+                 clearInterval(iv);pollIntervals.delete(leadId);
+         
+                 let finalState='failed';
+                 let statusText='';
+                 if(endedReason==='voicemail'){finalState='voicemail';statusText='Voicemail left';}
+                 else if(endedReason==='assistant-said-end-call-phrase'||endedReason==='customer-ended-call'){
+                   finalState='answered';statusText='Call completed ✓';
+                 }
+                 else if(endedReason==='no-answer'){finalState='no-answer';statusText='No answer';}
+                 else if(endedReason==='busy'){finalState='busy';statusText='Line busy';}
+                 else if(endedReason==='failed'||endedReason==='phone-call-provider-failed'){finalState='failed';statusText='Call failed';}
+                 else{finalState='answered';statusText=endedReason||'Ended';}
+         
+                 setCallState(leadId,finalState,statusText);
+                 updateCallLog(callId,finalState,statusText,data.summary||data.transcript||'');
+         
+                 // Store outcome in lead object
+                 const l=allLeads.find(x=>makeId(x)===leadId);
+                 if(l){l.callStatus=finalState;l.callNote=statusText;l.callId=callId;}
+         
+                 toast((finalState==='answered'?'✅ ':finalState==='voicemail'?'📬 ':'📵 ')+(lead.name||'Lead')+': '+statusText);
+               }
+             }catch(e){}
+           },5000);
+           pollIntervals.set(leadId,iv);
+         }
+         
+         // ── Bulk call selected leads ─────────────────────────────
+         async function callSelected(){
+           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+           const sel=getSelLeads().filter(l=>l.phone);
+           if(!sel.length){toast('No selected leads with phone numbers');return;}
+           const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+           if(!cfg||!cfg.vapiKey){
+             toast('⚠ Configure Voicebot first');
+             document.getElementById('vapiPanel').classList.add('visible');return;
+           }
+           toast('📞 Queuing '+sel.length+' calls...');
+           for(let i=0;i<sel.length;i++){
+             const l=sel[i];
+             const id=makeId(l);
+             // Stagger calls 3 seconds apart to avoid hammering
+             await new Promise(r=>setTimeout(r,i*3000));
+             if(!callStates.get(id)||callStates.get(id).state==='ready'||callStates.get(id).state==='failed'){
+               triggerCall(id);
+             }
+           }
+         }
+         
+         // ── Call Log ─────────────────────────────────────────────
+         function loadCallLog(){
+           try{callLog=JSON.parse(localStorage.getItem(LS_CALLLOG)||'[]');}catch(e){callLog=[];}
+           renderCallLog();
+         }
+         function addCallLog(lead,leadId,callId,state){
+           const entry={leadId,callId,name:lead.name||'Unknown',phone:lead.phone||'',
+             type:lead.type||'',state,statusText:'Calling...',summary:'',ts:Date.now()};
+           callLog.unshift(entry);
+           if(callLog.length>100)callLog.splice(100);
+           persistCallLog();
+           renderCallLog();
+           document.getElementById('callLog').classList.add('visible');
+         }
+         function updateCallLog(callId,state,statusText,summary){
+           const e=callLog.find(x=>x.callId===callId);
+           if(e){e.state=state;e.statusText=statusText;e.summary=summary;persistCallLog();renderCallLog();}
+         }
+         function persistCallLog(){
+           try{localStorage.setItem(LS_CALLLOG,JSON.stringify(callLog));}catch(e){}
+         }
+         function renderCallLog(){
+           const items=document.getElementById('callLogItems');
+           if(!items)return;
+           document.getElementById('callLogCount').textContent=callLog.length+' calls';
+           if(!callLog.length){items.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No calls yet.</div>';return;}
+           items.innerHTML=callLog.map(e=>{
+             const t=new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+             return`<div class="calllog-item">
+               <span class="calllog-status cls-${e.state}">${e.state}</span>
+               <div><div class="calllog-name">${e.name}</div><div class="calllog-phone">${e.phone} · ${e.type}</div>${e.summary?`<div style="font-size:10px;color:var(--muted);margin-top:2px;">${e.summary.slice(0,100)}</div>`:''}</div>
+               <span class="calllog-time">${t}</span>
+             </div>`;
+           }).join('');
+         }
+         function clearCallLog(){callLog=[];persistCallLog();renderCallLog();document.getElementById('callLog').classList.remove('visible');}
+         function exportCallLogCSV(){
+           const h=['Name','Phone','Type','Status','Note','Summary','Time'];
+           const rows=callLog.map(e=>[`"${e.name}"`,`"${e.phone}"`,`"${e.type}"`,`"${e.state}"`,`"${e.statusText}"`,`"${(e.summary||'').replace(/"/g,"'").slice(0,200)}"`,`"${new Date(e.ts).toLocaleString()}"`]);
+           dl([h.join(','),...rows.map(r=>r.join(','))].join('\n'),'call-log-'+Date.now()+'.csv','text/csv');
+           toast('Exported '+callLog.length+' call records');
+         }
+         
+         // ── Copy helpers ─────────────────────────────────────────
+         function copySelEmails(){
+           const s=getSelLeads().filter(l=>l.email);
+           if(!s.length){toast('No emails in selection');return;}
+           navigator.clipboard.writeText(s.map(l=>l.email).join('\n')).then(()=>toast('Copied '+s.length+' emails'));
+         }
+         function copySelPhones(){
+           const s=getSelLeads().filter(l=>l.phone);
+           if(!s.length){toast('No phone numbers in selection');return;}
+           navigator.clipboard.writeText(s.map(l=>l.phone).join('\n')).then(()=>toast('Copied '+s.length+' phones'));
+         }
+         
+         
+         
+         // ════════════════════════════════════════════════════════════════
+         // TERMS + COMPLIANCE SYSTEM
+         // ════════════════════════════════════════════════════════════════
+         const LS_TERMS     = 'lc_terms_accepted';
+         const LS_COMP_MODE = 'lc_compliance_mode';
+         
+         function hasAcceptedTerms(){
+           try{const t=JSON.parse(localStorage.getItem(LS_TERMS)||'null');return t&&t.accepted===true;}
+           catch(e){return false;}
+         }
+         function isComplianceModeOn(){
+           const v=localStorage.getItem(LS_COMP_MODE);
+           return v===null?true:v==='true'; // default ON
+         }
+         function showTermsModal(){
+           document.getElementById('termsModal').style.display='flex';
+           ['c1','c2','c3'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
+           checkTermsReady();
+         }
+         function toggleTermsCheck(id){
+           const el=document.getElementById(id);
+           if(el){el.checked=!el.checked;checkTermsReady();}
+         }
+         function checkTermsReady(){
+           const all=['c1','c2','c3'].every(id=>document.getElementById(id)?.checked);
+           const btn=document.getElementById('termsAcceptBtn');
+           if(btn){btn.disabled=!all;btn.classList.toggle('ready',all);}
+         }
+         function acceptTerms(){
+           if(!['c1','c2','c3'].every(id=>document.getElementById(id)?.checked))return;
+           const record={accepted:true,timestamp:Date.now(),date:new Date().toISOString()};
+           localStorage.setItem(LS_TERMS,JSON.stringify(record));
+           document.getElementById('termsModal').style.display='none';
+           renderTermsState();
+           toast('✅ Terms accepted — voicebot unlocked');
+         }
+         function toggleComplianceMode(){
+           const toggle=document.getElementById('compModeToggle');
+           const isOn=toggle?toggle.checked:true;
+           if(!isOn){
+             const ok=confirm('⚠ Turn off Compliance Mode?\n\nWith Compliance Mode OFF:\n• Calls outside 8am–8pm are NOT blocked\n• You bear full legal risk for every call\n\nContentScale recommends keeping this ON.\n\nAre you sure?');
+             if(!ok){if(toggle)toggle.checked=true;return;}
+           }
+           localStorage.setItem(LS_COMP_MODE,String(isOn));
+           renderComplianceMode();
+           toast(isOn?'🛡 Compliance Mode ON — protected':'⚠ Compliance Mode OFF — you own all risk');
+         }
+         function renderComplianceMode(){
+           const isOn=isComplianceModeOn();
+           const toggle=document.getElementById('compModeToggle');
+           const label=document.getElementById('compModeLabel');
+           const badge=document.getElementById('compModeBadge');
+           if(toggle)toggle.checked=isOn;
+           if(label){label.textContent=isOn?'🛡 Compliance Mode':'⚠ Compliance Mode';label.style.color=isOn?'var(--green)':'var(--red)';}
+           if(badge){badge.textContent=isOn?'ON — Protected':'OFF — At Risk';badge.style.background=isOn?'rgba(74,222,128,.12)':'rgba(244,63,63,.12)';badge.style.color=isOn?'var(--green)':'var(--red)';badge.style.border=isOn?'1px solid rgba(74,222,128,.3)':'1px solid rgba(244,63,63,.3)';}
+         }
+         function renderTermsState(){
+           try{
+             const t=JSON.parse(localStorage.getItem(LS_TERMS)||'null');
+             const dateEl=document.getElementById('termsDate');
+             const bar=document.getElementById('liabilityBar');
+             if(t&&t.accepted&&dateEl)dateEl.textContent=new Date(t.date||t.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+             if(bar)bar.classList.toggle('show',!!(t&&t.accepted));
+           }catch(e){}
+         }
+         
+         // ════════════════════════════════════════════════════════════════
+         // LICENSE SYSTEM
+         // ════════════════════════════════════════════════════════════════
+         const LS_LICENSE='lc_license';
+         
+         function isVoicebotUnlocked(){
+           const lic=getLicense();return lic&&lic.valid===true;
+         }
+         function getLicense(){
+           try{return JSON.parse(localStorage.getItem(LS_LICENSE)||'null');}catch(e){return null;}
+         }
+         function showLicensePrompt(){
+           document.getElementById('licenseLocked')?.scrollIntoView({behavior:'smooth',block:'center'});
+           document.getElementById('licenseKeyInput')?.focus();
+           const s=document.getElementById('licenseStatus');
+           if(s)s.innerHTML='<span style="color:var(--gold)">👆 Enter your license key above to unlock</span>';
+         }
+         async function activateLicense(){
+           const key=(document.getElementById('licenseKeyInput')?.value||'').trim().toUpperCase();
+           const statusEl=document.getElementById('licenseStatus');
+           // Owner bypass — CS-OWNER skips ALL checks including terms
+           if(key==='CS-OWNER'||key.startsWith('CS-OWNER')){
+             localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:'pro',activatedAt:Date.now(),email:'owner@contentscale.site'}));
+             // Also auto-accept terms for owner
+             localStorage.setItem('lc_terms',JSON.stringify({accepted:true,acceptedAt:Date.now(),version:'1.0'}));
+             renderLicenseState();
+             toast('👑 Owner mode — full access unlocked');
+             renderBuckets();
+             return;
+           }
+           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
+           if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⟳ Validating...</span>';
+           try{
+             const resp=await fetch('/api/license/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+             const data=await resp.json();
+             if(resp.ok&&data.valid){
+               localStorage.setItem(LS_LICENSE,JSON.stringify({key,valid:true,plan:data.plan||'voicebot',activatedAt:Date.now(),email:data.email||''}));
+               renderLicenseState();
+               toast('🎉 License activated! Voicebot unlocked.');
+               renderBuckets();
+             } else {
+               if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ '+(data.error||'Invalid key')+'</span>';
+             }
+           }catch(e){
+             if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">❌ Server error: '+e.message+'</span>';
+           }
+         }
+         function deactivateLicense(){
+           if(!confirm('Remove your license key? You can re-activate anytime.'))return;
+           localStorage.removeItem(LS_LICENSE);
+           renderLicenseState();renderBuckets();
+           toast('License removed');
+         }
+         function renderLicenseState(){
+           const lic=getLicense();
+           const locked=document.getElementById('licenseLocked');
+           const bar=document.getElementById('licenseActiveBar');
+           if(lic&&lic.valid){
+             if(locked)locked.style.display='none';
+             if(bar)bar.classList.add('show');
+             const lbl=document.getElementById('licensePlanLabel');
+             if(lbl)lbl.textContent=lic.plan==='pro'?'Pro Plan — €97/month':'Voicebot Plan — €297/month';
+             const badge=document.getElementById('licenseActiveBadge');
+             if(badge)badge.textContent=lic.plan==='pro'?'★ PRO ACTIVE':'✓ ACTIVE';
+           } else {
+             if(locked)locked.style.display='block';
+             if(bar)bar.classList.remove('show');
+           }
+         }
+         
+         // ════════════════════════════════════════════════════════════════
+         // CALL STATE HELPERS
+         // ════════════════════════════════════════════════════════════════
+         function getCallState(id){return(callStates.get(id)||{}).state||'ready';}
+         function getCallLabel(id){
+           const s=callStates.get(id);
+           if(!s||s.state==='ready')return '🤖 Call';
+           if(s.state==='calling')  return '⟳ Calling...';
+           if(s.state==='answered') return '✅ Answered';
+           if(s.state==='voicemail')return '📬 Voicemail';
+           if(s.state==='busy')     return '🔴 Busy';
+           if(s.state==='no-answer')return '📵 No Answer';
+           if(s.state==='failed')   return '❌ Failed';
+           return '🤖 Call';
+         }
+         function getCallIcon(id){return '';}
+         function getCallStatusClass(id){const s=callStates.get(id);return s?s.state:'';}
+         function getCallStatusText(id){const s=callStates.get(id);return s?s.statusText||'':'';}
+         
+         // ── Init on load ─────────────────────────────────────────
+         document.addEventListener('DOMContentLoaded',()=>{
+           renderTermsState();
+           renderComplianceMode();
+           renderLicenseState();
+           // Pre-fill Vapi defaults if nothing saved yet
+           if(!localStorage.getItem(LS_VAPI)){
+             document.getElementById('vapiPhoneId').value       = '4a3b17c5-24f0-4e65-b64d-29e8e3f446a3';
+             document.getElementById('vapiCallerName').value    = 'Ottmar from ContentScale';
+             document.getElementById('vapiCompany').value       = 'ContentScale';
+             document.getElementById('vapiCallbackNumber').value= '+1 (279) 499 8736';
+             document.getElementById('vapiOpeningLine').value   = `Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`;
+           } else {
+             loadVapiConfig();
+           }
+           loadCallLog();
+         });
+      </script>
+      <!-- ══ TERMS OF SERVICE MODAL ══ -->
+      <div class="terms-modal" id="termsModal" style="display:none;">
+         <div class="terms-box">
+            <div class="terms-head">
+               <h2>⚖ Operator Compliance Agreement</h2>
+               <div class="sub">Read carefully before using the voicebot feature</div>
+            </div>
+            <div class="terms-body">
+               <div class="warn">
+                  ⚠ This agreement establishes that <strong>YOU, the operator</strong>, are solely responsible
+                  for how you use the voicebot feature — not ContentScale.
+               </div>
+               <h4>1. Your Responsibility as Operator</h4>
+               You understand and agree that ContentScale is a <strong>software tool provider only.</strong>
+               All calls are made using <strong>your own Vapi API key and phone number.</strong>
+               ContentScale never originates, controls, or stores your calls.
+               You are the "caller of record" under all applicable telecommunications laws.
+               <h4>2. Legal Calling Requirements You Must Follow</h4>
+               By using this tool you confirm you will comply with all applicable laws including:
+               <br>• <strong>USA:</strong> TCPA — calls only 8am–9pm local time, DNC list compliance, AI disclosure required (FCC 2024 ruling). Penalty: up to $1,500 per illegal call.
+               <br>• <strong>EU:</strong> GDPR + EU AI Act Article 50 — AI must be disclosed at start of call. Fines up to €20 million or 4% of global revenue.
+               <br>• <strong>UK:</strong> PECR — legitimate interest required, TPS list respected, AI disclosed.
+               <br>• <strong>All regions:</strong> B2B only. Never call consumers. Always honor immediate opt-out requests.
+               <h4>3. AI Disclosure is Mandatory Everywhere</h4>
+               <strong>You must not remove or bypass the AI disclosure</strong> from the voicebot opening script.
+               Calling without disclosing AI identity is illegal in the US, EU, and UK.
+               ContentScale has built disclosure into the default script — <strong>do not remove it.</strong>
+               <h4>4. ContentScale's Liability is Zero</h4>
+               ContentScale provides software tools only. ContentScale has no access to your calls,
+               your Vapi account, or your leads. Any fines, lawsuits, or regulatory actions resulting
+               from your use of this tool are <strong>entirely your responsibility.</strong>
+               By activating the voicebot you indemnify ContentScale against all claims arising from your use.
+               <h4>5. You Are Not Calling on Behalf of ContentScale</h4>
+               You call as yourself or your own business. ContentScale is not your employer,
+               partner, or co-caller. Do not represent ContentScale when making calls
+               unless you have a specific written reseller agreement.
+               <h4>6. Compliance Mode Recommendation</h4>
+               We strongly recommend keeping <strong>Compliance Mode ON</strong> at all times.
+               With Compliance Mode ON: calls outside 8am–8pm are hard-blocked (not just warned),
+               AI disclosure cannot be removed from the script, and every call is logged with timestamp.
+               This creates an audit trail that protects you if you are ever investigated.
+            </div>
+            <div class="terms-footer">
+               <div class="terms-check" onclick="toggleTermsCheck('c1')">
+                  <input type="checkbox" id="c1" onchange="checkTermsReady()">
+                  <label for="c1">I understand that <strong>I am the caller of record</strong> — ContentScale has no liability for my calls. I am responsible for compliance with TCPA, GDPR, EU AI Act, and all applicable laws in my jurisdiction.</label>
+               </div>
+               <div class="terms-check" onclick="toggleTermsCheck('c2')">
+                  <input type="checkbox" id="c2" onchange="checkTermsReady()">
+                  <label for="c2">I will <strong>only call during legal hours (8am–8pm local time)</strong>, only target B2B businesses, always disclose AI identity, and immediately honor any opt-out request.</label>
+               </div>
+               <div class="terms-check" onclick="toggleTermsCheck('c3')">
+                  <input type="checkbox" id="c3" onchange="checkTermsReady()">
+                  <label for="c3">I have read and agree to ContentScale's <strong>Operator Terms of Service</strong>. I accept full legal responsibility for my use of the voicebot feature.</label>
+               </div>
+               <button class="terms-accept-btn" id="termsAcceptBtn" onclick="acceptTerms()" disabled>
+               I AGREE — UNLOCK VOICEBOT
+               </button>
+               <div style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center;">
+                  Acceptance recorded with timestamp · Stored locally in your browser
+               </div>
+            </div>
+         </div>
+      </div>
+      <!-- ══ END TERMS MODAL ══ -->
+      <!-- FOOTER -->
+      <footer style="background:linear-gradient(135deg,#111827,#1f2937);border-top:2px solid #374151;padding:52px 28px 24px;margin-top:60px;">
+         <div style="max-width:1200px;margin:0 auto;">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px;">
+               <div>
+                  <a href="https://contentscale.site" style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:inline-block;margin-bottom:10px;">ContentScale</a>
+                  <p style="font-size:12.5px;color:#6b7280;line-height:1.7;max-width:260px;">AI-powered content intelligence platform. GRAAF Framework · Lead Crawler · Otto Voice AI. Built in Amsterdam.</p>
+               </div>
+               <div>
+                  <h4 style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;">Tools</h4>
+                  <a href="https://app.contentscale.site" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f97316;text-decoration:none;margin-bottom:10px;transition:color .15s;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f97316'">Content Scanner</a>
+                  <a href="https://app.contentscale.site/lead-crawler" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a78bfa;text-decoration:none;margin-bottom:10px;transition:color .15s;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#a78bfa'">Lead Crawler Pro</a>
+                  <a href="https://app.contentscale.site/#leaderboard" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:#f9fafb;text-decoration:none;margin-bottom:10px;transition:color .15s;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f9fafb'">Leaderboard</a>
+                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20access%20to%20the%20Lead%20Biz%20Crawler%20for%20my%20business." target="_blank" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#60a5fa;text-decoration:none;margin-bottom:10px;transition:color .15s;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#60a5fa'">Lead Biz Crawler</a>
+                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20access%20to%20the%20Google%20Guaranteed%20AI%20Receptionist%20for%20my%20business." target="_blank" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#f59e0b;text-decoration:none;margin-bottom:10px;transition:color .15s;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#f59e0b'">Google Guaranteed AI</a>
+               </div>
+               <div>
+                  <h4 style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;">Company</h4>
+                  <a href="https://contentscale.site/about" style="display:block;font-size:13px;color:#6b7280;text-decoration:none;margin-bottom:8px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">About</a>
+                  <a href="https://contentscale.site/services" style="display:block;font-size:13px;color:#6b7280;text-decoration:none;margin-bottom:8px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Services</a>
+                  <a href="https://contentscale.site/contact" style="display:block;font-size:13px;color:#6b7280;text-decoration:none;margin-bottom:8px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Contact</a>
+                  <a href="https://contentscale.site/resources" style="display:block;font-size:13px;color:#6b7280;text-decoration:none;margin-bottom:8px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Resources</a>
+               </div>
+               <div>
+                  <h4 style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin-bottom:14px;">Legal</h4>
+                  <a href="https://contentscale.site/privacy-policy" style="display:block;font-size:13px;color:#6b7280;text-decoration:none;margin-bottom:8px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Privacy Policy</a>
+                  <a href="https://contentscale.site/terms" style="display:block;font-size:13px;color:#6b7280;text-decoration:none;margin-bottom:8px;" onmouseover="this.style.color='#d1d5db'" onmouseout="this.style.color='#6b7280'">Terms of Service</a>
+                  <a href="https://wa.me/31628073996" target="_blank" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#16a34a;font-weight:700;text-decoration:none;margin-bottom:10px;" onmouseover="this.style.color='#4ade80'" onmouseout="this.style.color='#16a34a'">💬 WhatsApp</a>
+               </div>
+            </div>
+            <div style="padding-top:20px;border-top:1px solid #374151;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+               <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7280;letter-spacing:.05em;">© 2026 ContentScale.site · Ottmar J.G. Francisca · Amsterdam, Netherlands</div>
+               <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">🤖 Powered by Gemini Flash (Free)</span>
+                  <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">⚖ EU AI Act Compliant</span>
+                  <span style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:#6b7280;">🇳🇱 Made in Amsterdam</span>
+               </div>
+            </div>
+         </div>
+      </footer>
+   </body>
+</html>
