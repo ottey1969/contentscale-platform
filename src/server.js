@@ -3885,6 +3885,12 @@ app.get('/gemini-live-client.js', (req, res) => {
 const _ottoIpMap = new Map(); // ip -> { count, date }
 
 function checkOttoLimit(req, res) {
+  // Admin bypass
+  if (req.query.admin === 'ottmar2024') {
+    console.log('[otto-limit] admin bypass');
+    return true;
+  }
+
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const entry = _ottoIpMap.get(ip);
@@ -4285,8 +4291,12 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
     var keyData;
     try {
-      var refParam = window._ottoRefCode ? '?ref=' + encodeURIComponent(window._ottoRefCode) : '';
-    var r = await fetch('https://app.contentscale.site/api/gemini-live-token' + refParam);
+      var params = new URLSearchParams();
+    if (window._ottoRefCode) params.set('ref', window._ottoRefCode);
+    var adminKey = new URLSearchParams(location.search).get('admin');
+    if (adminKey) params.set('admin', adminKey);
+    var paramStr = params.toString() ? '?' + params.toString() : '';
+    var r = await fetch('https://app.contentscale.site/api/gemini-live-token' + paramStr);
       keyData = await r.json();
       if (r.status === 429) {
         setStatus('Daily limit reached — come back tomorrow!');
