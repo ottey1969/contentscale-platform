@@ -831,11 +831,10 @@
                    setup: {
                      model: 'models/' + model,
                      generation_config: {
-                       response_modalities: ['AUDIO'],
-                       speech_config: { voice_config: { prebuilt_voice_config: { voice_name: 'Fenrir' } } }
+                       response_modalities: ['AUDIO']
                      },
                      system_instruction: {
-                       parts: [{ text: 'You are Otto, a male AI voice assistant of ContentScale. Deliver this pitch ONCE, naturally and warmly, then stop: "Hey ' + name + '! I am Otto from ContentScale. We help businesses like ' + website + ' recover lost SEO traffic with our free GRAAF Framework scan. We can also help with leads, outbound calls, and making sure you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers!" Say it once and then say goodbye.' }]
+                       parts: [{ text: 'You are Otto, a male AI voice assistant of ContentScale. Deliver this pitch ONCE, naturally and warmly, in a conversational tone. Say: Hey ' + name + '! I am Otto from ContentScale. We help businesses like yours recover lost SEO traffic with our free GRAAF Framework scan. We can also help with leads, outbound calls, and making sure you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! Then say goodbye and stop.' }]
                      }
                    }
                  }));
