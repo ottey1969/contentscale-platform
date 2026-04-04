@@ -648,7 +648,7 @@ function renderPages(){
       +'<button class="btn btn-purple btn-sm" onclick="openInAudit(\''+p.id+'\')">🔬 Open in PULSE+NEXUS</button>'
       +'<button class="btn btn-green btn-sm" onclick="markDone(\''+p.id+'\')">✓ Mark Done</button>'
       +'<a href="'+p.url+'" target="_blank" class="btn btn-blue btn-sm">↗ Open Page</a>'
-      +'<button class="btn btn-muted btn-sm" onclick="scanOnePage('"+p.id+"')">📊 Scan Score</button>'
+      +'<button class="btn btn-muted btn-sm" onclick="scanOnePage(\''+p.id+'\')">📊 Scan Score</button>'
       +'<a href="https://app.contentscale.site/?url='+encodeURIComponent(p.url)+'" target="_blank" class="btn btn-blue btn-sm">↗ ContentScale</a>'
       +'<button class="btn btn-red btn-sm" onclick="deletePage(\''+p.id+'\')">✕ Delete</button>'
       +'</div>'
