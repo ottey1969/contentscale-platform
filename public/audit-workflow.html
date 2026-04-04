@@ -261,7 +261,7 @@ img,table,iframe{max-width:100%;}
     <textarea class="bulk-area" id="bulkArea" placeholder="Plak meerdere URLs (één per regel) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
     <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
       <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
-      <span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--dim);">Eén URL per regel</span>
+      <span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--dim);">One URL per regel</span>
     </div>
   </div>
 </div>
@@ -303,9 +303,9 @@ var project = {};
 // points: true = adds ContentScore points, false = UX/CTR only (no score change)
 var CL = [
   // ── PHASE 1: Pre-audit (geen score impact)
-  {id:'scan_before', label:'① Pre-scan done (start score recorded)',    cat:'phase1', points:false, phase:1},
-  {id:'gsc_check',   label:'① GSC data gerecorded',                        cat:'phase1', points:false, phase:1},
-  {id:'pulse',       label:'① PULSE+NEXUS audit gedaan',                  cat:'phase1', points:false, phase:1},
+  {id:'scan_before', label:'① Step 1 — Pre-scan done (Scan Score recorded)',    cat:'phase1', points:false, phase:1, tip:'FIRST: Click the 📊 Scan Score button below — this records your starting score before any changes'},
+  {id:'pulse',       label:'② Step 2 — PULSE+NEXUS audit done',                  cat:'phase1', points:false, phase:1, tip:'Click 🔬 Open in PULSE+NEXUS → run the full SEO audit → note all findings before making changes'},
+  {id:'gsc_check',   label:'③ Step 3 — GSC data recorded',                        cat:'phase1', points:false, phase:1, tip:'Import your Google Search Console CSV via the 📊 Import GSC CSV button at the top of the page'},
 
   // ── PHASE 2: Implementatie — PUNTEN (score gaat omhoog)
   {id:'wordcount',   label:'② Words added (min 1500)',             cat:'phase2', points:true,  phase:2},
@@ -315,28 +315,28 @@ var CL = [
   {id:'casestudy',   label:'② Case study with metrics added',         cat:'phase2', points:true,  phase:2},
   {id:'direct_ans',  label:'② Direct Answer (40-80w) after H1 added',  cat:'phase2', points:true,  phase:2},
   {id:'tldr',        label:'② Key Takeaways / TL;DR added',          cat:'phase2', points:true,  phase:2},
-  {id:'listcount',   label:'② Bullet/genummerde lijsten uitgebreid (15+)',cat:'phase2', points:true,  phase:2},
+  {id:'listcount',   label:'② Bullet/numbered lists expanded (15+)',cat:'phase2', points:true,  phase:2},
   {id:'authorbio',   label:'② Author bio with credentials added',     cat:'phase2', points:true,  phase:2},
   {id:'schema_a',    label:'② Article schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
   {id:'schema_f',    label:'② FAQPage schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
   {id:'intlinks',    label:'② Internal links added (3-5)',             cat:'phase2', points:true,  phase:2},
   {id:'extlinks',    label:'② Externe links autoritatief (2-3)',           cat:'phase2', points:true,  phase:2},
-  {id:'eeat',        label:'② E-E-A-T signalen versterkt',                cat:'phase2', points:true,  phase:2},
+  {id:'eeat',        label:'② E-E-A-T signals strengthened',                cat:'phase2', points:true,  phase:2},
 
   // ── PHASE 2: UX/CTR fixes — NO score points, but important
-  {id:'h1',          label:'② H1 geoptimaliseerd',                        cat:'phase2_ctr', points:false, phase:2},
-  {id:'h2',          label:'② H2 structuur herzien',                      cat:'phase2_ctr', points:false, phase:2},
+  {id:'h1',          label:'② H1 optimised',                        cat:'phase2_ctr', points:false, phase:2},
+  {id:'h2',          label:'② H2 structure revised',                      cat:'phase2_ctr', points:false, phase:2},
   {id:'title',       label:'② SEO title herschreven (50-60 chars)',       cat:'phase2_ctr', points:false, phase:2},
   {id:'meta',        label:'② Meta description herschreven (150-160)',    cat:'phase2_ctr', points:false, phase:2},
-  {id:'canonical',   label:'② Canonical tag gecontroleerd',               cat:'phase2_ctr', points:false, phase:2},
-  {id:'alt',         label:'② Afbeelding alt tekst compleet',             cat:'phase2_ctr', points:false, phase:2},
-  {id:'cta',         label:'② CTA geoptimaliseerd voor conversiedoel',    cat:'phase2_ctr', points:false, phase:2},
+  {id:'canonical',   label:'② Canonical tag checked',               cat:'phase2_ctr', points:false, phase:2},
+  {id:'alt',         label:'② Image alt text complete',             cat:'phase2_ctr', points:false, phase:2},
+  {id:'cta',         label:'② CTA optimised for conversion goal',    cat:'phase2_ctr', points:false, phase:2},
 
   // ── PHASE 3: Live zetten + nascan
-  {id:'publish',     label:'③ Pagina gepubliceerd + timestamp vernieuwd', cat:'phase3', points:false, phase:3},
-  {id:'reindex',     label:'③ GSC reindex aangevraagd',                   cat:'phase3', points:false, phase:3},
+  {id:'publish',     label:'③ Page published + timestamp refreshed', cat:'phase3', points:false, phase:3},
+  {id:'reindex',     label:'③ GSC reindex requested',                   cat:'phase3', points:false, phase:3},
   {id:'scan_after',  label:'③ Post-scan done (final score recorded)',      cat:'phase3', points:false, phase:3},
-  {id:'recheck',     label:'③ GSC recheck ingepland (14 dagen)',          cat:'phase3', points:false, phase:3},
+  {id:'recheck',     label:'③ GSC recheck scheduled (14 days)',          cat:'phase3', points:false, phase:3},
 ];
 
 var STATUS_ORDER = ['notstarted','inprogress','followup','blocked','done'];
@@ -565,9 +565,9 @@ function renderPages(){
         : (c.phase===2&&!c.points)
         ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
         : '';
-      return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\''+p.id+'\',\''+c.id+'\')">'
+      return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\''+p.id+'\',\''+c.id+'\')"'+(c.tip?' title="'+c.tip+'"':'')+'>'
         +'<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();toggleCheck(\''+p.id+'\',\''+c.id+'\')">'
-        +'<label>'+c.label+'</label>'
+        +'<label>'+c.label+(c.tip?' <span style="font-size:9px;color:var(--dim);cursor:help;" title="'+c.tip+'">ⓘ</span>':'')+'</label>'
         +badge
         +'</div>';
     }).join('');
@@ -1257,12 +1257,18 @@ var _scanRunning = false;
 
 async function scanAllScores() {
   var unscored = pages.filter(function(p){ return !p.scoreBefore && p.url; });
-  if (!unscored.length) { toast('✓ All pages already have a score'); return; }
-  if (_scanRunning) { toast('⏳ Scan al bezig...'); return; }
+  var all = pages.filter(function(p){ return p.url; });
+  // If all have scores, ask if they want to rescan
+  if (!unscored.length && all.length) {
+    if (!confirm('All pages already have a score. Re-scan all ' + all.length + ' pages?')) return;
+    unscored = all; // rescan all
+  }
+  if (!unscored.length) { toast('No pages with URLs found'); return; }
+  if (_scanRunning) { toast('⏳ Scan already running...'); return; }
   _scanQueue = unscored.slice();
   _scanRunning = true;
   toast('⏳ Scanning ' + _scanQueue.length + ' pages...');
-  setSyncStatus('⏳ Auto-scan bezig: 0/' + _scanQueue.length, 'var(--gold)');
+  setSyncStatus('⏳ Auto-scan running: 0/' + _scanQueue.length + ' pages', 'var(--gold)');
 
   var done = 0;
   for (var i = 0; i < _scanQueue.length; i++) {
@@ -1276,7 +1282,7 @@ async function scanAllScores() {
       var d = await r.json();
       if (d.score) { p.scoreBefore = d.score; done++; }
     } catch(e) {}
-    setSyncStatus('⏳ Auto-scan: ' + (i+1) + '/' + _scanQueue.length + ' (' + done + ' scores geladen)', 'var(--gold)');
+    setSyncStatus('⏳ Scanning ' + (i+1) + '/' + _scanQueue.length + ' — ' + done + ' scores found', 'var(--gold)');
     save();
     await new Promise(function(res){ setTimeout(res, 2000); }); // 2s between scans
   }
