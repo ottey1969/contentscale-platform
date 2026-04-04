@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1032,7 +1031,7 @@ async function fetchSitemap() {
 
   try {
     // Use Railway server as proxy to avoid CORS
-    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/sitemap/urls', {
+    var r = await fetch('https://app.contentscale.site/api/sitemap/urls', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({url: url})
@@ -1164,7 +1163,7 @@ async function syncToServer(silent){
   var payload = { key, project, pages, savedAt: new Date().toISOString() };
 
   try {
-    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/workflow/save', {
+    var r = await fetch('https://app.contentscale.site/api/workflow/save', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
@@ -1194,7 +1193,7 @@ async function loadFromServer(){
   }
   if(!key){ toast('⚠ Geen key gevonden'); return; }
   try {
-    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/workflow/load?key='+encodeURIComponent(key));
+    var r = await fetch('https://app.contentscale.site/api/workflow/load?key='+encodeURIComponent(key));
     var d = await r.json();
     if(d.success && d.data){
       if(!confirm('Workflow "'+key+'" laden? Vervangt huidige data.')) return;
@@ -1228,7 +1227,7 @@ async function scanOnePage(pageId) {
   if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
 
   try {
-    var r = await fetch('https://contentscale-platform-production.up.railway.app/api/scan', {
+    var r = await fetch('https://app.contentscale.site/api/scan', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({url: p.url})
@@ -1269,7 +1268,7 @@ async function scanAllScores() {
   for (var i = 0; i < _scanQueue.length; i++) {
     var p = _scanQueue[i];
     try {
-      var r = await fetch('https://contentscale-platform-production.up.railway.app/api/scan', {
+      var r = await fetch('https://app.contentscale.site/api/scan', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({url: p.url})
