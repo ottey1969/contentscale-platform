@@ -426,7 +426,7 @@ img,table,iframe{max-width:100%;}
 let gscPages = [];
 let gscQueries = [];
 
-const RAILWAY = 'https://contentscale-platform-production.up.railway.app';
+const RAILWAY = 'https://app.contentscale.site';
 
 
 // ── META CONSISTENCY CHECKER ─────────────────────────────────
@@ -434,7 +434,7 @@ function runMetaCheck() {
   var html = document.getElementById('dHtml').value.trim();
   if (!html) {
     document.getElementById('metaCheckerInfo').style.display = 'block';
-    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ Plak eerst je pagina HTML in veld ③ hierboven.</strong>';
+    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ First paste your page HTML in field ③ above.</strong>';
     return;
   }
   document.getElementById('metaCheckerInfo').style.display = 'none';
@@ -629,7 +629,7 @@ function runMetaCheck() {
       + '<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
       + '<div style="flex:1;">'
       + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
-      + '<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
       + (r.fix ? '<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>' : '')
       + (r.note ? '<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>' : '')
       + '</div></div></div>';
