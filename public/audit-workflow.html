@@ -230,7 +230,7 @@ img,table,iframe{max-width:100%;}
 
   <!-- Sitemap fetch -->
   <div style="margin-top:12px;padding:14px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">
-    <div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Sitemap Importeren</div>
+    <div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Import Sitemap</div>
     <div class="add-row" style="flex-wrap:wrap;">
       <input id="sitemapUrl" placeholder="https://contentscale.site/sitemap.xml" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;" onkeydown="if(event.key==='Enter')fetchSitemap()">
       <button class="btn btn-blue" onclick="fetchSitemap()" id="sitemapBtn">↓ Fetch Sitemap</button>
@@ -240,17 +240,17 @@ img,table,iframe{max-width:100%;}
     <!-- Sitemap preview + filter -->
     <div id="sitemapPreview" style="display:none;margin-top:12px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-        <input id="sitemapFilter" placeholder="Filter op pad... bijv. /blog of /services" oninput="filterSitemapUrls()"
+        <input id="sitemapFilter" placeholder="Filter by path... e.g. /blog or /services" oninput="filterSitemapUrls()"
           style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
-        <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Toon alleen sitemap URLs die ook in je GSC data staan">🔗 Filter op GSC</button>
-        <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ Alles</button>
-        <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ Niets</button>
+        <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Show only sitemap URLs that are also in your GSC data">🔗 Filter by GSC</button>
+        <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ All</button>
+        <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ None</button>
         <span id="sitemapSelCount" style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);"></span>
       </div>
       <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="btn btn-gold" onclick="addSelectedSitemapUrls()">+ Voeg geselecteerde toe aan queue</button>
-        <button class="btn btn-muted" onclick="document.getElementById('sitemapPreview').style.display='none'">✕ Sluiten</button>
+        <button class="btn btn-gold" onclick="addSelectedSitemapUrls()">+ Add selected to queue</button>
+        <button class="btn btn-muted" onclick="document.getElementById('sitemapPreview').style.display='none'">✕ Close</button>
       </div>
     </div>
   </div>
@@ -302,41 +302,41 @@ var project = {};
 
 // points: true = adds ContentScore points, false = UX/CTR only (no score change)
 var CL = [
-  // ── FASE 1: Pre-audit (geen score impact)
-  {id:'scan_before', label:'① Pre-scan gedaan (startscore genoteerd)',    cat:'fase1', points:false, fase:1},
-  {id:'gsc_check',   label:'① GSC data genoteerd',                        cat:'fase1', points:false, fase:1},
-  {id:'pulse',       label:'① PULSE+NEXUS audit gedaan',                  cat:'fase1', points:false, fase:1},
+  // ── PHASE 1: Pre-audit (geen score impact)
+  {id:'scan_before', label:'① Pre-scan done (start score recorded)',    cat:'phase1', points:false, phase:1},
+  {id:'gsc_check',   label:'① GSC data gerecorded',                        cat:'phase1', points:false, phase:1},
+  {id:'pulse',       label:'① PULSE+NEXUS audit gedaan',                  cat:'phase1', points:false, phase:1},
 
-  // ── FASE 2: Implementatie — PUNTEN (score gaat omhoog)
-  {id:'wordcount',   label:'② Woorden toegevoegd (min 1500)',             cat:'fase2', points:true,  fase:2},
-  {id:'stats',       label:'② Stats toegevoegd (2025-2026, 8+)',          cat:'fase2', points:true,  fase:2},
-  {id:'expert',      label:'② Expert quotes toegevoegd (3-5)',            cat:'fase2', points:true,  fase:2},
-  {id:'faq',         label:'② FAQ sectie toegevoegd/uitgebreid',          cat:'fase2', points:true,  fase:2},
-  {id:'casestudy',   label:'② Case study met metrics toegevoegd',         cat:'fase2', points:true,  fase:2},
-  {id:'direct_ans',  label:'② Direct Answer (40-80w) na H1 toegevoegd',  cat:'fase2', points:true,  fase:2},
-  {id:'tldr',        label:'② Key Takeaways / TL;DR toegevoegd',          cat:'fase2', points:true,  fase:2},
-  {id:'listcount',   label:'② Bullet/genummerde lijsten uitgebreid (15+)',cat:'fase2', points:true,  fase:2},
-  {id:'authorbio',   label:'② Auteursbio met credentials toegevoegd',     cat:'fase2', points:true,  fase:2},
-  {id:'schema_a',    label:'② Article schema JSON-LD toegevoegd',         cat:'fase2', points:true,  fase:2},
-  {id:'schema_f',    label:'② FAQPage schema JSON-LD toegevoegd',         cat:'fase2', points:true,  fase:2},
-  {id:'intlinks',    label:'② Interne links toegevoegd (3-5)',             cat:'fase2', points:true,  fase:2},
-  {id:'extlinks',    label:'② Externe links autoritatief (2-3)',           cat:'fase2', points:true,  fase:2},
-  {id:'eeat',        label:'② E-E-A-T signalen versterkt',                cat:'fase2', points:true,  fase:2},
+  // ── PHASE 2: Implementatie — PUNTEN (score gaat omhoog)
+  {id:'wordcount',   label:'② Words added (min 1500)',             cat:'phase2', points:true,  phase:2},
+  {id:'stats',       label:'② Stats added (2025-2026, 8+)',          cat:'phase2', points:true,  phase:2},
+  {id:'expert',      label:'② Expert quotes added (3-5)',            cat:'phase2', points:true,  phase:2},
+  {id:'faq',         label:'② FAQ section added/expanded',          cat:'phase2', points:true,  phase:2},
+  {id:'casestudy',   label:'② Case study with metrics added',         cat:'phase2', points:true,  phase:2},
+  {id:'direct_ans',  label:'② Direct Answer (40-80w) after H1 added',  cat:'phase2', points:true,  phase:2},
+  {id:'tldr',        label:'② Key Takeaways / TL;DR added',          cat:'phase2', points:true,  phase:2},
+  {id:'listcount',   label:'② Bullet/genummerde lijsten uitgebreid (15+)',cat:'phase2', points:true,  phase:2},
+  {id:'authorbio',   label:'② Author bio with credentials added',     cat:'phase2', points:true,  phase:2},
+  {id:'schema_a',    label:'② Article schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
+  {id:'schema_f',    label:'② FAQPage schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
+  {id:'intlinks',    label:'② Internal links added (3-5)',             cat:'phase2', points:true,  phase:2},
+  {id:'extlinks',    label:'② Externe links autoritatief (2-3)',           cat:'phase2', points:true,  phase:2},
+  {id:'eeat',        label:'② E-E-A-T signalen versterkt',                cat:'phase2', points:true,  phase:2},
 
-  // ── FASE 2: UX/CTR fixes — GEEN punten, wel belangrijk
-  {id:'h1',          label:'② H1 geoptimaliseerd',                        cat:'fase2_ctr', points:false, fase:2},
-  {id:'h2',          label:'② H2 structuur herzien',                      cat:'fase2_ctr', points:false, fase:2},
-  {id:'title',       label:'② SEO title herschreven (50-60 chars)',       cat:'fase2_ctr', points:false, fase:2},
-  {id:'meta',        label:'② Meta description herschreven (150-160)',    cat:'fase2_ctr', points:false, fase:2},
-  {id:'canonical',   label:'② Canonical tag gecontroleerd',               cat:'fase2_ctr', points:false, fase:2},
-  {id:'alt',         label:'② Afbeelding alt tekst compleet',             cat:'fase2_ctr', points:false, fase:2},
-  {id:'cta',         label:'② CTA geoptimaliseerd voor conversiedoel',    cat:'fase2_ctr', points:false, fase:2},
+  // ── PHASE 2: UX/CTR fixes — NO score points, but important
+  {id:'h1',          label:'② H1 geoptimaliseerd',                        cat:'phase2_ctr', points:false, phase:2},
+  {id:'h2',          label:'② H2 structuur herzien',                      cat:'phase2_ctr', points:false, phase:2},
+  {id:'title',       label:'② SEO title herschreven (50-60 chars)',       cat:'phase2_ctr', points:false, phase:2},
+  {id:'meta',        label:'② Meta description herschreven (150-160)',    cat:'phase2_ctr', points:false, phase:2},
+  {id:'canonical',   label:'② Canonical tag gecontroleerd',               cat:'phase2_ctr', points:false, phase:2},
+  {id:'alt',         label:'② Afbeelding alt tekst compleet',             cat:'phase2_ctr', points:false, phase:2},
+  {id:'cta',         label:'② CTA geoptimaliseerd voor conversiedoel',    cat:'phase2_ctr', points:false, phase:2},
 
-  // ── FASE 3: Live zetten + nascan
-  {id:'publish',     label:'③ Pagina gepubliceerd + timestamp vernieuwd', cat:'fase3', points:false, fase:3},
-  {id:'reindex',     label:'③ GSC reindex aangevraagd',                   cat:'fase3', points:false, fase:3},
-  {id:'scan_after',  label:'③ Na-scan gedaan (eindscore genoteerd)',      cat:'fase3', points:false, fase:3},
-  {id:'recheck',     label:'③ GSC recheck ingepland (14 dagen)',          cat:'fase3', points:false, fase:3},
+  // ── PHASE 3: Live zetten + nascan
+  {id:'publish',     label:'③ Pagina gepubliceerd + timestamp vernieuwd', cat:'phase3', points:false, phase:3},
+  {id:'reindex',     label:'③ GSC reindex aangevraagd',                   cat:'phase3', points:false, phase:3},
+  {id:'scan_after',  label:'③ Post-scan done (final score recorded)',      cat:'phase3', points:false, phase:3},
+  {id:'recheck',     label:'③ GSC recheck ingepland (14 dagen)',          cat:'phase3', points:false, phase:3},
 ];
 
 var STATUS_ORDER = ['notstarted','inprogress','followup','blocked','done'];
@@ -556,13 +556,13 @@ function renderPages(){
     try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
     if(shortUrl.length>55)shortUrl=shortUrl.slice(0,55)+'…';
 
-    // Grouped checklist by fase
+    // Grouped checklist by phase
   function renderClItems(items){
     return items.map(function(c){
       var checked = p.checks[c.id];
-      var badge = (c.fase===2&&c.points)
+      var badge = (c.phase===2&&c.points)
         ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(74,222,128,.12);color:var(--green);flex-shrink:0;">+score</span>'
-        : (c.fase===2&&!c.points)
+        : (c.phase===2&&!c.points)
         ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
         : '';
       return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\''+p.id+'\',\''+c.id+'\')">'
@@ -572,22 +572,22 @@ function renderPages(){
         +'</div>';
     }).join('');
   }
-  var f1 = CL.filter(function(c){return c.fase===1;});
-  var f2p = CL.filter(function(c){return c.fase===2&&c.points;});
-  var f2c = CL.filter(function(c){return c.fase===2&&!c.points;});
-  var f3 = CL.filter(function(c){return c.fase===3;});
+  var f1 = CL.filter(function(c){return c.phase===1;});
+  var f2p = CL.filter(function(c){return c.phase===2&&c.points;});
+  var f2c = CL.filter(function(c){return c.phase===2&&!c.points;});
+  var f3 = CL.filter(function(c){return c.phase===3;});
   var ph = function(label,color,border){
     return '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:'+color+';padding:8px 0 4px;border-bottom:1px solid '+border+';margin-bottom:4px;margin-top:6px;">'+label+'</div>';
   };
   var cl = ph('① Pre-audit','var(--blue)','rgba(96,165,250,.2)')
     + '<div class="cl-grid">'+renderClItems(f1)+'</div>'
-    + ph('② Implementatie — verbetert ContentScore','var(--green)','rgba(74,222,128,.2)')
-    + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Voeg échte content toe → score gaat omhoog. Meta/title alleen = geen punten.</div>'
+    + ph('② Implementation — improves ContentScore','var(--green)','rgba(74,222,128,.2)')
+    + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Add real content → score goes up. Meta/title only = no points.</div>'
     + '<div class="cl-grid">'+renderClItems(f2p)+'</div>'
-    + ph('② UX & CTR fixes — geen score impact','var(--blue)','rgba(96,165,250,.15)')
+    + ph('② UX & CTR fixes — no score impact','var(--blue)','rgba(96,165,250,.15)')
     + '<div class="cl-grid">'+renderClItems(f2c)+'</div>'
-    + ph('③ Live zetten + na-scan','var(--gold)','rgba(251,191,36,.2)')
-    + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Scan pas opnieuw NADAT pagina live staat en punten-items zijn gedaan.</div>'
+    + ph('③ Go live + re-scan','var(--gold)','rgba(251,191,36,.2)')
+    + '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Re-scan only AFTER the page is live and point items are completed.</div>'
     + '<div class="cl-grid">'+renderClItems(f3)+'</div>';
 
     return '<div class="page-card s-'+p.status+'" id="card-'+p.id+'">'
@@ -616,14 +616,14 @@ function renderPages(){
       +[['high','🔴 High'],['med','🟡 Medium'],['low','🟢 Low']].map(function(x){return '<option value="'+x[0]+'"'+(p.priority===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('')
       +'</select></div>'
       +'<div class="cb-field">'
-      +'<label style="color:var(--blue)">① Pre-scan Score (VOOR audit)</label>'
-      +'<input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="Scan EERST, noteer hier" data-score-before="'+p.id+'" onchange="updateField(\''+p.id+'\',\'scoreBefore\',this.value)">'
-      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score knop — doe dit VÓÓR de audit</div>'
+      +'<label style="color:var(--blue)">① Pre-scan Score (BEFORE audit)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="Scan first, enter here" data-score-before="'+p.id+'" onchange="updateField(\''+p.id+'\',\'scoreBefore\',this.value)">'
+      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score button — do this BEFORE the audit</div>'
       +'</div>'
       +'<div class="cb-field">'
-      +'<label style="color:'+(scoreAfterLocked(p)?'var(--dim)':'var(--green)')+'">③ Na-scan Score (NA implementatie)</label>'
-      +'<input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="'+(scoreAfterLocked(p)?'Implementeer punten eerst':'Scan NADAT pagina live staat')+'" '+(scoreAfterLocked(p)?'disabled style="opacity:.4;cursor:not-allowed"':'')+' onchange="updateField(\''+p.id+'\',\'scoreAfter\',this.value)">'
-      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Voer eerst punten-items (②) in — meta/title alleen verandert de score niet':'✓ Scan opnieuw NADAT je de pagina live hebt gezet')+'</div>'
+      +'<label style="color:'+(scoreAfterLocked(p)?'var(--dim)':'var(--green)')+'">③ Post-scan Score (AFTER implementation)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="'+(scoreAfterLocked(p)?'Complete point items first':'Scan after page is live')+'" '+(scoreAfterLocked(p)?'disabled style="opacity:.4;cursor:not-allowed"':'')+' onchange="updateField(\''+p.id+'\',\'scoreAfter\',this.value)">'
+      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Complete point items (②) first — meta/title alone does not change the score':'✓ Re-scan AFTER you have published the page')+'</div>'
       +'</div>'
       +'<div class="cb-field"><label>GSC Position</label><input type="number" value="'+p.position+'" placeholder="34" onchange="updateField(\''+p.id+'\',\'position\',this.value)"></div>'
       +'<div class="cb-field"><label>Impressions</label><input type="number" value="'+p.impressions+'" placeholder="12400" onchange="updateField(\''+p.id+'\',\'impressions\',this.value)"></div>'
@@ -635,7 +635,7 @@ function renderPages(){
       +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea onchange="updateField(\''+p.id+'\',\'notes\',this.value)">'+p.notes+'</textarea></div>'
 
       // Checklist
-      +'<div class="cl-header"><span>Audit Checklist — 3 fasen</span>'
+      +'<div class="cl-header"><span>Audit Checklist — 3 phases</span>'
       +'<span id="cl-prog-'+p.id+'" style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;display:flex;gap:10px;">'
       +'<span style="color:var(--green)">+pts: '+pointsDone(p)+'/'+pointsTotal()+'</span>'
       +'<span style="color:var(--muted)">totaal: '+prog.done+'/'+prog.total+'</span>'
@@ -834,8 +834,8 @@ function importGSC(input){
       pending--;
       if(pending === 0){
         save(); renderPages(); renderOverview();
-        var msg = '✅ GSC: ' + totalAdded + ' toegevoegd, ' + totalUpdated + ' bijgewerkt';
-        if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries geladen';
+        var msg = '✅ GSC: ' + totalAdded + ' added, ' + totalUpdated + ' updated';
+        if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries loaded';
         toast(msg);
       }
     };
@@ -906,11 +906,11 @@ function parseGSCFile(raw){
   return {type:'pages', added:added, updated:updated};
 }
 
-// ── Sitemap + GSC — groeperen in: in GSC / niet in GSC ─────
+// ── Sitemap + GSC — group into: in GSC / not in GSC ───────────
 
 function addSelectedSitemapUrls(){
   var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
-  if(!selected.length){ toast('⚠ Geen URLs geselecteerd'); return; }
+  if(!selected.length){ toast('⚠ No URLs selected'); return; }
   var added=0, skipped=0;
   selected.forEach(function(url){
     if(pages.find(function(p){ return p.url===url; })){ skipped++; return; }
@@ -930,7 +930,7 @@ function addSelectedSitemapUrls(){
   document.getElementById('sitemapUrl').value='';
   _sitemapUrls=[]; _sitemapFiltered=[];
   document.getElementById('sitemapStatus').textContent='';
-  toast('✅ '+added+' toegevoegd'+(skipped?' · '+skipped+' al aanwezig':''));
+  toast('✅ '+added+' pages added'+(skipped?' · '+skipped+' already present':''));
 }
 
 // Global GSC data map for cross-referencing
@@ -960,7 +960,7 @@ function filterSitemapByGSC(){
   renderSitemapGrouped(inGSC, notInGSC);
   document.getElementById('sitemapStatus').innerHTML =
     '<span style="color:var(--green)">🟢 '+inGSC.length+' in GSC</span>'
-    +' &nbsp; <span style="color:var(--gold)">🟡 '+notInGSC.length+' niet in GSC (niet geïndexeerd / nieuw)</span>'
+    +' &nbsp; <span style="color:var(--gold)">🟡 '+notInGSC.length+' not in GSC (not indexed / new)</span>'
     +' &nbsp; <span style="color:var(--sub)">'+_sitemapUrls.length+' totaal</span>';
 }
 
@@ -972,12 +972,12 @@ function renderSitemapGrouped(inGSC, notInGSC){
     var shortUrl = u.replace(/^https?:\/\/[^/]+/,'') || '/';
     var gscInfo = gscData
       ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--green);margin-left:6px;">pos '+Math.round(gscData.pos)+(gscData.impr?' · '+gscData.impr.toLocaleString()+' impr':'')+'</span>'
-      : '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">niet in GSC</span>';
+      : '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">not in GSC</span>';
     return '<div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(\'input\').click()">'
       +'<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(defaultChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
       +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
       +gscInfo
-      +'<button onclick="event.stopPropagation();removeSitemapUrl(\''+u+'\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
+      +'<button onclick="event.stopPropagation();removeSitemapUrl(\''+u+'\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
       +'</div>';
   }
 
@@ -994,7 +994,7 @@ function renderSitemapGrouped(inGSC, notInGSC){
       return scoreA-scoreB || pa-pb;
     });
     html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);padding:8px 8px 4px;border-bottom:1px solid rgba(74,222,128,.2);margin-bottom:4px;">'
-      +'🟢 In GSC — '+inGSC.length+' paginas (gesorteerd op kans)'
+      +'🟢 In GSC — '+inGSC.length+' pages (sorted by opportunity)'
       +'</div>';
     html += inGSC.map(function(u){ return rowHtml(u, true, _gscDataMap[u]); }).join('');
   }
@@ -1002,13 +1002,13 @@ function renderSitemapGrouped(inGSC, notInGSC){
   // Group 2 — not in GSC
   if(notInGSC.length){
     html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:12px 8px 4px;border-bottom:1px solid rgba(251,191,36,.2);margin-bottom:4px;margin-top:8px;">'
-      +'🟡 Niet in GSC — '+notInGSC.length+' paginas (niet geïndexeerd of nieuw)'
+      +'🟡 Not in GSC — '+notInGSC.length+' pages (not indexed or new)'
       +'</div>'
-      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Deze paginas kent Google nog niet. Voeg toe om te onderzoeken waarom.</div>';
+      +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Google does not know these pages yet. Add them to investigate why.</div>';
     html += notInGSC.map(function(u){ return rowHtml(u, false, null); }).join('');
   }
 
-  list.innerHTML = html || '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden.</div>';
+  list.innerHTML = html || '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--dim);padding:8px;">No URLs found.</div>';
   updateSitemapCount();
 }
 
@@ -1026,7 +1026,7 @@ async function fetchSitemap() {
   var status = document.getElementById('sitemapStatus');
   btn.textContent = '⏳ Fetching...';
   btn.disabled = true;
-  status.textContent = 'Sitemap ophalen via server...';
+  status.textContent = 'Fetching sitemap via server...';
   status.style.color = 'var(--muted)';
 
   try {
@@ -1047,7 +1047,7 @@ async function fetchSitemap() {
     status.innerHTML = '<span style="color:var(--green)">✓ ' + d.total + ' URLs gevonden</span>';
     document.getElementById('sitemapPreview').style.display = 'block';
     renderSitemapList(_sitemapFiltered, true);
-    toast('✅ ' + d.total + ' URLs geladen uit sitemap');
+    toast('✅ ' + d.total + ' URLs loaded from sitemap');
 
   } catch(e) {
     status.innerHTML = '<span style="color:var(--red)">⚠ ' + e.message + '</span>';
@@ -1091,7 +1091,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(&quot;input&quot;).click()">'
       + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
       + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
-      + '<button onclick="event.stopPropagation();removeSitemapUrl(\''+u+'\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
+      + '<button onclick="event.stopPropagation();removeSitemapUrl(\''+u+'\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
       + '</div>';
   }).join('');
 
@@ -1101,7 +1101,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
 function updateSitemapCount() {
   var all = document.querySelectorAll('.sitemap-cb');
   var checked = document.querySelectorAll('.sitemap-cb:checked');
-  document.getElementById('sitemapSelCount').textContent = checked.length + '/' + all.length + ' geselecteerd';
+  document.getElementById('sitemapSelCount').textContent = checked.length + '/' + all.length + ' selected';
 }
 
 function selectAllSitemap() {
@@ -1127,7 +1127,7 @@ function removeSitemapUrl(url) {
 
 function addSelectedSitemapUrls() {
   var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
-  if (!selected.length) { toast('⚠ Geen URLs geselecteerd'); return; }
+  if (!selected.length) { toast('⚠ No URLs selected'); return; }
   var added = 0;
   selected.forEach(function(url){
     var exists = pages.find(function(p){ return p.url === url; });
@@ -1139,7 +1139,7 @@ function addSelectedSitemapUrls() {
   _sitemapUrls = [];
   _sitemapFiltered = [];
   document.getElementById('sitemapStatus').textContent = '';
-  toast('✅ ' + added + ' pagina's toegevoegd (' + (selected.length - added) + ' al aanwezig)');
+  toast('✅ ' + added + ' pages added (' + (selected.length - added) + ' already present)');
 }
 
 // ── Server sync + auto-save ─────────────────────────────────
@@ -1206,7 +1206,7 @@ async function loadFromServer(){
       save(); renderPages(); renderOverview();
       var ts = new Date(d.data.savedAt||Date.now()).toLocaleString('nl-NL');
       setSyncStatus('☁ Geladen van server (opgeslagen: '+ts+')', 'var(--green)');
-      toast('✅ '+pages.length+' paginas geladen van server');
+      toast('✅ '+pages.length+' pages loaded from server');
     } else {
       toast('⚠ Niet gevonden: '+key);
     }
@@ -1219,7 +1219,7 @@ function setSyncStatus(msg, color){
 }
 
 
-// ── ContentScore scan per pagina ─────────────────────────────
+// ── ContentScore scan per page ──────────────────────────────────
 async function scanOnePage(pageId) {
   var p = pages.find(function(pg){ return pg.id === pageId; });
   if (!p) return;
@@ -1257,11 +1257,11 @@ var _scanRunning = false;
 
 async function scanAllScores() {
   var unscored = pages.filter(function(p){ return !p.scoreBefore && p.url; });
-  if (!unscored.length) { toast('✓ Alle paginas hebben al een score'); return; }
+  if (!unscored.length) { toast('✓ All pages already have a score'); return; }
   if (_scanRunning) { toast('⏳ Scan al bezig...'); return; }
   _scanQueue = unscored.slice();
   _scanRunning = true;
-  toast('⏳ Scannen ' + _scanQueue.length + ' paginas...');
+  toast('⏳ Scanning ' + _scanQueue.length + ' pages...');
   setSyncStatus('⏳ Auto-scan bezig: 0/' + _scanQueue.length, 'var(--gold)');
 
   var done = 0;
@@ -1278,13 +1278,13 @@ async function scanAllScores() {
     } catch(e) {}
     setSyncStatus('⏳ Auto-scan: ' + (i+1) + '/' + _scanQueue.length + ' (' + done + ' scores geladen)', 'var(--gold)');
     save();
-    await new Promise(function(res){ setTimeout(res, 2000); }); // 2s tussen scans
+    await new Promise(function(res){ setTimeout(res, 2000); }); // 2s between scans
   }
 
   _scanRunning = false;
   renderPages(); renderOverview();
-  setSyncStatus('✅ Auto-scan klaar — ' + done + ' scores geladen', 'var(--green)');
-  toast('✅ ' + done + '/' + _scanQueue.length + ' paginas gescand');
+  setSyncStatus('✅ Auto-scan complete — ' + done + ' scores loaded', 'var(--green)');
+  toast('✅ ' + done + '/' + _scanQueue.length + ' pages scanned');
 }
 
 function startAutoSave(){
