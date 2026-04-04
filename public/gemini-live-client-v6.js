@@ -1,6 +1,4 @@
-// ContentScale — Otto AI — Gemini Live
-// Direct WebSocket to Google using API key via server relay
-// Correct message format per official docs
+// ContentScale — Otto AI — Gemini Live v6
 
 (function() {
   'use strict';
@@ -13,8 +11,9 @@
   var _playCtx   = null;
   var _nextStart = 0;
 
-  // v1beta direct connection with API key
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+
+  var OTTO_SCRIPT = "You are Otto, the AI voice assistant of ContentScale. Follow this script exactly: 1. Start immediately by saying: Hey! May I have your name? 2. Wait for their answer. 3. Then say: Hey [name]! I am Otto, the AI assistant of ContentScale. We help you recover lost traffic with our free GRAAF Framework scan and our Google Search Console PULSE+NEXUS SEO audit framework. We can also help you with leads, call for you, and make sure you never miss any clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! 4. Then end the conversation politely. Keep it exactly like this script. Do not add extra information. Speak naturally and warmly.";
 
   function setStatus(msg) {
     var el = document.getElementById('gl-status');
@@ -101,7 +100,6 @@
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
       var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
-      // Correct audio format per official docs
       _ws.send(JSON.stringify({
         realtimeInput: {
           audio: { data: b64, mimeType: 'audio/pcm;rate=16000' }
@@ -111,7 +109,7 @@
 
     src.connect(_processor);
     _processor.connect(_micCtx.destination);
-    setStatus('Listening — speak now');
+    setStatus('Listening...');
   }
 
   async function startSession() {
@@ -120,7 +118,6 @@
     _active = true;
     setBtnActive(true);
 
-    // Get API key + best model from server
     var keyData;
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
@@ -136,10 +133,9 @@
       return;
     }
 
-    var model = keyData.model || 'gemini-2.0-flash-exp';
+    var model = keyData.model || 'gemini-3.1-flash-live-preview';
     console.log('[otto] model:', model, '| available:', keyData.availableModels);
 
-    // Connect directly to Google with API key
     var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
     setStatus('Connecting...');
     console.log('[otto] connecting to Google Live API...');
@@ -155,7 +151,6 @@
 
     _ws.onopen = function() {
       setStatus('Connected — sending setup...');
-      // setup + camelCase = correct for raw JS WebSocket to Gemini Live
       var setupMsg = {
         setup: {
           model: 'models/' + model,
@@ -163,14 +158,7 @@
             response_modalities: ['AUDIO']
           },
           system_instruction: {
-            parts: [{ text: 'You are Otto, the AI voice assistant of ContentScale. Follow this script exactly:
-
-1. Start immediately: 'Hey! May I have your name?'
-2. Wait for their answer.
-3. Then say: 'Hey [name]! I am Otto, the AI assistant of ContentScale. We help you recover lost traffic with our free GRAAF Framework scan and our Google Search Console PULSE+NEXUS SEO audit framework. We can also help you with leads, call for you, and make sure you never miss any clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers!'
-4. Then end the conversation politely.
-
-Keep it exactly like this script. Do not add extra information. Speak naturally and warmly.' }]
+            parts: [{ text: OTTO_SCRIPT }]
           }
         }
       };
@@ -180,12 +168,12 @@ Keep it exactly like this script. Do not add extra information. Speak naturally 
 
     _ws.onmessage = function(evt) {
       try {
-        // Handle both text and binary (arraybuffer) messages
         var rawData = evt.data;
         if (rawData instanceof ArrayBuffer) {
           rawData = new TextDecoder('utf-8').decode(new Uint8Array(rawData));
         }
         var msg = JSON.parse(rawData);
+
         if (msg.setupComplete) {
           setStatus('Ready — speak now');
           startMic().catch(function(e) {
@@ -194,6 +182,7 @@ Keep it exactly like this script. Do not add extra information. Speak naturally 
           });
           return;
         }
+
         if (msg.serverContent) {
           var sc = msg.serverContent;
           if (sc.modelTurn && sc.modelTurn.parts) {
@@ -217,17 +206,12 @@ Keep it exactly like this script. Do not add extra information. Speak naturally 
     _ws.onclose = function(evt) {
       console.log('[otto] closed code=' + evt.code + ' reason=' + evt.reason);
       if (_active) {
-        if (evt.code === 1008) {
-          setStatus('API key needs Gemini Live access — visit aistudio.google.com');
-        } else {
-          setStatus('Disconnected (code ' + evt.code + ')');
-        }
+        setStatus(evt.code === 1008 ? 'API key needs Gemini Live access' : 'Disconnected (code ' + evt.code + ')');
         stopSession();
       }
     };
   }
 
-  // Safety shims
   window.Tawk_API = window.Tawk_API || {};
   window.Tawk_API.triggerEvent    = window.Tawk_API.triggerEvent    || function() {};
   window.Tawk_API.addQuickReplies = window.Tawk_API.addQuickReplies || function() {};
@@ -236,7 +220,7 @@ Keep it exactly like this script. Do not add extra information. Speak naturally 
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v5 loaded — Gemini Live ready | voice: Fenrir');
+    console.log('[otto] v6 loaded — Gemini Live ready');
   }
 
   document.readyState === 'loading'
