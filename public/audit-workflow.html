@@ -1091,7 +1091,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(&quot;input&quot;).click()">'
       + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
       + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
-      + '<button onclick="event.stopPropagation();removeSitemapUrl('"+u+"')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
+      + '<button onclick="event.stopPropagation();removeSitemapUrl(\''+u+'\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
       + '</div>';
   }).join('');
 
