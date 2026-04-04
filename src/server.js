@@ -4347,4 +4347,120 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 });
 
 
+// ── Otto widget standalone page & embed ──────────────────────────────────
+const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Otto AI — ContentScale</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .widget {
+    background: linear-gradient(135deg, #0a0a0f 0%, #111118 100%);
+    border: 1px solid rgba(74,222,128,.25);
+    border-radius: 16px;
+    padding: 32px 24px;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(74,222,128,.08), 0 20px 60px rgba(0,0,0,.6);
+  }
+  .avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,rgba(74,222,128,.15),rgba(96,165,250,.08));
+    border: 1.5px solid rgba(74,222,128,.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  #gl-ring1 {
+    position: absolute; inset: -8px; border-radius: 50%;
+    border: 1px solid rgba(74,222,128,.2);
+  }
+  .name {
+    font-size: 22px; font-weight: 900; letter-spacing: .05em;
+    background: linear-gradient(90deg,#4ade80,#60a5fa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 2px;
+  }
+  .sub {
+    font-size: 8px; letter-spacing: .12em; text-transform: uppercase;
+    color: #4b5563; margin-bottom: 18px;
+  }
+  #gl-status {
+    font-size: 10px; color: #6b7280; margin-bottom: 18px;
+    min-height: 16px;
+  }
+  #gl-call-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg,#166534,#4ade80);
+    border: 2px solid rgba(255,255,255,.15);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+    box-shadow: 0 0 0 8px rgba(74,222,128,.12), 0 0 24px rgba(74,222,128,.25);
+    transition: all .2s;
+  }
+  #gl-call-btn:hover { transform: scale(1.08); }
+  #gl-call-btn svg { width: 28px; height: 28px; }
+  .hint {
+    font-size: 8px; letter-spacing: .08em; text-transform: uppercase;
+    color: #374151; line-height: 1.8;
+  }
+  #gl-transcript {
+    margin-top: 12px; width: 100%;
+    background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.06);
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 10px; color: #9ca3af; line-height: 1.7;
+    max-height: 100px; overflow-y: auto; text-align: left;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="widget">
+  <div class="avatar">
+    <div id="gl-ring1"></div>
+    🎙
+  </div>
+  <div class="name">OTTO</div>
+  <div class="sub">ContentScale AI · Gemini Live</div>
+  <div id="gl-status">Click to talk to Otto</div>
+  <button id="gl-call-btn" title="Talk to Otto">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/>
+      <line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+  </button>
+  <div class="hint">Microphone · No phone needed<br>End anytime</div>
+  <div id="gl-transcript"></div>
+</div>
+<script src="https://app.contentscale.site/otto-ai.js" defer></script>
+</body>
+</html>
+`;
+
+app.get('/otto', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.send(_OTTO_WIDGET_HTML);
+});
+
+
 startServer();
