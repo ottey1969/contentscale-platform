@@ -198,7 +198,7 @@ img,table,iframe{max-width:100%;}
   </div>
 </div>
 
-<div id="syncStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
+<div id="syncStatus" style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
 <div class="project-bar">
   <div class="pf"><label>Client / Project</label><input id="pClient" placeholder="ContentScale.site" oninput="save()"></div>
   <div class="pf" style="flex:2"><label>Website</label><input id="pSite" placeholder="https://contentscale.site" oninput="save()"></div>
@@ -230,12 +230,12 @@ img,table,iframe{max-width:100%;}
 
   <!-- Sitemap fetch -->
   <div style="margin-top:12px;padding:14px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Sitemap Importeren</div>
+    <div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Sitemap Importeren</div>
     <div class="add-row" style="flex-wrap:wrap;">
       <input id="sitemapUrl" placeholder="https://contentscale.site/sitemap.xml" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;" onkeydown="if(event.key==='Enter')fetchSitemap()">
       <button class="btn btn-blue" onclick="fetchSitemap()" id="sitemapBtn">↓ Fetch Sitemap</button>
     </div>
-    <div id="sitemapStatus" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
+    <div id="sitemapStatus" style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
 
     <!-- Sitemap preview + filter -->
     <div id="sitemapPreview" style="display:none;margin-top:12px;">
@@ -245,7 +245,7 @@ img,table,iframe{max-width:100%;}
         <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Toon alleen sitemap URLs die ook in je GSC data staan">🔗 Filter op GSC</button>
         <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ Alles</button>
         <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ Niets</button>
-        <span id="sitemapSelCount" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+        <span id="sitemapSelCount" style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);"></span>
       </div>
       <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
       <div style="display:flex;gap:8px;margin-top:10px;">
@@ -257,11 +257,11 @@ img,table,iframe{max-width:100%;}
 
   <!-- Bulk paste -->
   <div style="margin-top:10px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Plakken</div>
+    <div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Plakken</div>
     <textarea class="bulk-area" id="bulkArea" placeholder="Plak meerdere URLs (één per regel) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
     <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
       <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);">Eén URL per regel</span>
+      <span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--dim);">Eén URL per regel</span>
     </div>
   </div>
 </div>
@@ -598,7 +598,7 @@ function renderPages(){
       +'<span class="pri-dot '+priClass+'"></span>'
       +'<span class="card-url">'+shortUrl+'<span class="card-kw">'+( p.keyword?' — '+p.keyword:'')+'</span></span>'
       +(p.position?'<span class="card-gsc">pos '+Math.round(p.position)+(p.impressions?' · '+p.impressions.toLocaleString()+' impr':'')+'</span>':'')
-      +(p.scoreBefore?'<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
+      +(p.scoreBefore?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
       +'<span class="card-chk" id="chk-'+p.id+'">'+prog.pct+'%</span>'
       +'<button class="status-btn" onclick="event.stopPropagation();cycleStatus(\''+p.id+'\')">'+STATUS_LABELS[p.status]+'</button>'
       +'<span class="chevron" id="chev-'+p.id+'">▾</span>'
@@ -1077,7 +1077,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
   var selCount = document.getElementById('sitemapSelCount');
 
   if (!urls.length) {
-    list.innerHTML = '<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
+    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
     selCount.textContent = '';
     return;
   }
@@ -1090,7 +1090,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
     if (skip) isChecked = false;
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(&quot;input&quot;).click()">'
       + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
-      + '<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
       + '<button onclick="event.stopPropagation();removeSitemapUrl('"+u+"')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Verwijder">✕</button>'
       + '</div>';
   }).join('');
