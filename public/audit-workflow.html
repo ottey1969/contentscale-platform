@@ -194,6 +194,7 @@ img,table,iframe{max-width:100%;}
     <a href="/audit-recommendations" class="btn btn-gold">🎯 Recommendations</a>
     <button class="btn btn-red" onclick="clearAll()">✕ Clear</button>
     <button class="btn btn-muted" onclick="cleanBadPages()" title="Remove invalid entries (queries, keywords) from the list">🧹 Clean up</button>
+    <button class="btn btn-muted" onclick="mergeDuplicatePages()" title="Merge duplicate URLs into one entry">🔀 Merge dupes</button>
     <button class="btn btn-red btn-sm" id="bulkDeleteBtn" onclick="bulkDeleteSelected()" style="display:none">🗑 Delete selected (<span id="bulkCount">0</span>)</button>
     <button class="btn btn-muted btn-sm" id="bulkSelectAllBtn" onclick="bulkSelectAll()" style="display:none">✓ Select all</button>
     <button class="btn btn-muted" onclick="selectAllPages()" title="Select all visible pages for bulk actions">☑ Select all</button>
@@ -390,9 +391,10 @@ function makePage(url,kw,pri,pos,impr){
     checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
 }
 
-function updateBulkBar(){
-  var checked = document.querySelectorAll('.page-cb:checked');
+function updateBulkCount(){
+  var checked = document.querySelectorAll('.page-bulk-cb:checked');
   var bar = document.getElementById('bulkBar');
+  if (!bar) return;
   if(checked.length > 0){
     bar.style.display = 'flex';
     document.getElementById('bulkCount').textContent = checked.length + ' selected';
@@ -402,17 +404,17 @@ function updateBulkBar(){
 }
 
 function selectAllPages(){
-  document.querySelectorAll('.page-cb').forEach(function(cb){ cb.checked = true; });
-  updateBulkBar();
+  document.querySelectorAll('.page-bulk-cb').forEach(function(cb){ cb.checked = true; });
+  updateBulkCount();
 }
 
 function deselectAllPages(){
-  document.querySelectorAll('.page-cb').forEach(function(cb){ cb.checked = false; });
-  updateBulkBar();
+  document.querySelectorAll('.page-bulk-cb').forEach(function(cb){ cb.checked = false; });
+  updateBulkCount();
 }
 
 function deleteSelectedPages(){
-  var ids = Array.from(document.querySelectorAll('.page-cb:checked')).map(function(cb){ return cb.dataset.id; });
+  var ids = Array.from(document.querySelectorAll('.page-bulk-cb:checked')).map(function(cb){ return cb.dataset.id; });
   if(!ids.length){ toast('No pages selected'); return; }
   if(!confirm('Delete ' + ids.length + ' selected pages?')) return;
   pages = pages.filter(function(p){ return !ids.includes(p.id); });
@@ -421,17 +423,7 @@ function deleteSelectedPages(){
   toast('🗑 ' + ids.length + ' pages deleted');
 }
 
-function updateBulkCount(){
-  var checked = document.querySelectorAll('.page-bulk-cb:checked').length;
-  var total = document.querySelectorAll('.page-bulk-cb').length;
-  var btn = document.getElementById('bulkDeleteBtn');
-  var selBtn = document.getElementById('bulkSelectAllBtn');
-  if(btn){
-    btn.style.display = total > 0 ? 'inline-flex' : 'none';
-    document.getElementById('bulkCount').textContent = checked;
-  }
-  if(selBtn) selBtn.style.display = total > 0 ? 'inline-flex' : 'none';
-}
+
 
 function bulkSelectAll(){
   var cbs = document.querySelectorAll('.page-bulk-cb');
@@ -933,8 +925,29 @@ function importGSC(input){
       }
       pending--;
       if(pending === 0){
+        // Auto-merge duplicates after import
+        var beforeMerge = pages.length;
+        var seen = {}, cnts = {};
+        pages.forEach(function(p) {
+          var key = (p.url||'').trim().toLowerCase().replace(/\/+$/, '');
+          if (seen[key]) {
+            var ex = seen[key];
+            ex.impressions = (ex.impressions||0) + (p.impressions||0);
+            ex._ps = (ex._ps||ex.position||0) + (p.position||0);
+            cnts[key]++;
+            p._dup = true;
+          } else { seen[key] = p; p._ps = p.position||0; cnts[key] = 1; }
+        });
+        Object.keys(seen).forEach(function(k){
+          var p = seen[k];
+          if(cnts[k]>1){ p.position=Math.round((p._ps/cnts[k])*10)/10; }
+          delete p._ps;
+        });
+        pages = pages.filter(function(p){ return !p._dup; });
+        var mergedCount = beforeMerge - pages.length;
         save(); renderPages(); renderOverview();
         var msg = '✅ GSC: ' + totalAdded + ' added, ' + totalUpdated + ' updated';
+        if (mergedCount > 0) msg += ' · ' + mergedCount + ' duplicates merged';
         if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries loaded';
         toast(msg);
       }
@@ -1010,6 +1023,52 @@ function parseGSCFile(raw){
     }
   }
   return {type:'pages', added:added, updated:updated};
+}
+
+function mergeDuplicatePages() {
+  var seen = {};    // key -> primary page object
+  var counts = {};  // key -> count for averaging position
+  var merged = 0;
+
+  pages.forEach(function(p) {
+    var key = (p.url || '').trim().toLowerCase().replace(/\/+$/, '');
+    if (seen[key]) {
+      var ex = seen[key];
+      // Sum impressions
+      ex.impressions = (ex.impressions || 0) + (p.impressions || 0);
+      // Running average for position
+      ex._posSum = (ex._posSum || ex.position || 0) + (p.position || 0);
+      counts[key]++;
+      p._duplicate = true;
+      merged++;
+    } else {
+      seen[key] = p;
+      p._posSum = p.position || 0;
+      counts[key] = 1;
+    }
+  });
+
+  // Finalize averages
+  Object.keys(seen).forEach(function(key) {
+    var p = seen[key];
+    if (counts[key] > 1) {
+      p.position = Math.round((p._posSum / counts[key]) * 10) / 10;
+      // Recalculate priority from avg position
+      if (p.position >= 11 && p.position <= 30) p.priority = 'high';
+      else if (p.position >= 1 && p.position <= 10) p.priority = 'high';
+      else if (p.position > 30 && p.position <= 60) p.priority = 'med';
+      else p.priority = 'low';
+    }
+    delete p._posSum;
+  });
+
+  if (merged > 0) {
+    pages = pages.filter(function(p){ return !p._duplicate; });
+    save(); renderPages(); renderOverview();
+    toast('🔀 Merged ' + merged + ' duplicates — avg position, summed impressions');
+  } else {
+    toast('✓ No duplicates found');
+  }
 }
 
 // ── Sitemap + GSC — group into: in GSC / not in GSC ───────────
