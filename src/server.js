@@ -7002,13 +7002,14 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
   var _processor    = null;
   var _playCtx      = null;
   var _nextStart    = 0;
-  var _killTimer    = null;
-  var _audioChunks  = [];
-  var _hasPhone     = false;
-  var _sessionId    = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  var _sessionStart = Date.now();
-  var _sessionModel = null;
-  var _transcript   = [];
+  var _killTimer        = null;
+  var _audioChunks      = [];
+  var _hasPhone         = false;
+  var _hangupScheduled  = false;
+  var _sessionId        = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  var _sessionStart     = Date.now();
+  var _sessionModel     = null;
+  var _transcript       = [];
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
@@ -7179,6 +7180,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     _sessionStart = Date.now();
     _transcript = [];
     window._ottTurnCount = 0;  // reset per session
+    _hangupScheduled = false;
     console.log('[otto] model:', model);
 
     var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
@@ -7226,9 +7228,10 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
               if (p.text) {
                 var ptxt = p.text || '';
                 addTranscript('model', ptxt);
-                if (/goodbye|cheers|take care|speak to you soon|bye/i.test(ptxt)) {
+                if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(ptxt)) {
+                  _hangupScheduled = true;
                   console.log('[otto] goodbye detected in text part: ' + ptxt);
-                  setTimeout(function() { hangup('goodbye detected'); }, 3000);
+                  setTimeout(function() { hangup('goodbye detected'); }, 4000);
                 }
               }
             });
@@ -7237,9 +7240,10 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
           if (sc.outputTranscription) {
             var txt = sc.outputTranscription.text || '';
             addTranscript('model', txt);
-            if (/goodbye|cheers|take care|speak to you soon|bye/i.test(txt)) {
+            if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(txt)) {
+              _hangupScheduled = true;
               console.log('[otto] goodbye detected in transcription: ' + txt);
-              setTimeout(function() { hangup('goodbye detected'); }, 3000);
+              setTimeout(function() { hangup('goodbye detected'); }, 4000);
             }
           }
           if (sc.turnComplete) {
@@ -7248,7 +7252,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
             setStatus('Your turn — speak now...');
             console.log('[otto] turnComplete #' + _turnCount);
             // After 5 turns (full script done), schedule hangup if no goodbye detected yet
-            if (_turnCount >= 10) {
+            if (_turnCount >= 10 && !_hangupScheduled) {
+              _hangupScheduled = true;
               clearTimeout(_killTimer);
               _killTimer = setTimeout(function() { hangup('script complete'); }, 15000);
             }
