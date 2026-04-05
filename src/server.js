@@ -4193,6 +4193,18 @@ function save(){
   project.auditor  = document.getElementById('pAuditor').value;
   try{localStorage.setItem('cs_wf_proj',JSON.stringify(project));}catch(e){}
   try{localStorage.setItem('cs_wf_pages',JSON.stringify(pages));}catch(e){}
+  // Always keep shared GSC in sync for PULSE+NEXUS
+  try{
+    var sharedGsc = {
+      pages: pages.filter(function(p){ return p.url && p.url.startsWith('http'); })
+                  .map(function(p){ return {page:p.url, impressions:p.impressions||0, clicks:0, ctr:p.ctr||0, position:p.position||0, score:p.scoreBefore||0}; }),
+      queries: []
+    };
+    if(typeof _gscQueryMap !== 'undefined'){
+      sharedGsc.queries = Object.keys(_gscQueryMap).map(function(q){ return {query:q, position:_gscQueryMap[q]}; });
+    }
+    localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
+  }catch(e){}
 }
 
 function load(){
@@ -7195,7 +7207,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
         setup: {
           model: 'models/' + model,
           generation_config: {
-            response_modalities: ['AUDIO']
+            response_modalities: ['AUDIO'],
+            output_audio_transcription: {}
           },
           system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
         }
@@ -8507,29 +8520,29 @@ let gscPages = [];
 let gscQueries = [];
 
 // ── Auto-load GSC data shared from Audit Workflow Manager ──
-(function() {
+function loadSharedGSC() {
   try {
     const shared = localStorage.getItem('cs_shared_gsc');
-    if (shared) {
-      const data = JSON.parse(shared);
-      if (data.pages && data.pages.length) {
-        gscPages = data.pages;
-        setTimeout(function() {
-          const el = document.getElementById('pagesStatus');
-          if (el) el.innerHTML = '<span style="color:var(--green)">✓ ' + gscPages.length + ' pages loaded from Workflow Manager</span>';
-        }, 500);
-        console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC data');
-      }
-      if (data.queries && data.queries.length) {
-        gscQueries = data.queries;
-        setTimeout(function() {
-          const el = document.getElementById('queriesStatus');
-          if (el) el.innerHTML = '<span style="color:var(--green)">✓ ' + gscQueries.length + ' queries loaded from Workflow Manager</span>';
-        }, 500);
-      }
+    if (!shared) { console.log('[PULSE+NEXUS] No shared GSC data found'); return false; }
+    const data = JSON.parse(shared);
+    if (data.pages && data.pages.length) {
+      // Normalise: support both {page:url} and {url:url} formats
+      gscPages = data.pages.map(function(p) {
+        return { page: p.page || p.url || '', impressions: p.impressions || 0, clicks: p.clicks || 0, ctr: p.ctr || 0, position: p.position || 0, score: p.score || 0 };
+      }).filter(function(p) { return p.page && p.page.includes('.'); });
+      const el = document.getElementById('pagesStatus');
+      if (el) el.innerHTML = '<span style="color:var(--green)">✓ ' + gscPages.length + ' pages from Workflow Manager</span>';
+      console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC');
     }
-  } catch(e) { console.warn('[PULSE+NEXUS] Could not load shared GSC:', e.message); }
-})();
+    if (data.queries && data.queries.length) {
+      gscQueries = data.queries;
+      const el = document.getElementById('queriesStatus');
+      if (el) el.innerHTML = '<span style="color:var(--green)">✓ ' + gscQueries.length + ' queries from Workflow Manager</span>';
+    }
+    return gscPages.length > 0;
+  } catch(e) { console.warn('[PULSE+NEXUS] Could not load shared GSC:', e.message); return false; }
+}
+setTimeout(loadSharedGSC, 300);
 
 const RAILWAY = 'https://app.contentscale.site';
 
@@ -8859,6 +8872,8 @@ function handlePagesCSV(input) {
     });
     gscPages.sort((a,b)=>b.score-a.score);
     document.getElementById('pagesStatus').innerHTML=\`<span style="color:var(--green)">✓ \${gscPages.length} pages loaded</span>\`;
+    // Save to shared storage so workflow manager stays in sync
+    try { localStorage.setItem('cs_shared_gsc', JSON.stringify({pages: gscPages, queries: gscQueries})); } catch(e) {}
     document.getElementById('filterPanel').style.display='block';
     document.getElementById('opportunityTable').style.display='block';
     renderTable();
