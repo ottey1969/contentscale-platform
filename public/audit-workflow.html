@@ -945,6 +945,12 @@ function importGSC(input){
         });
         pages = pages.filter(function(p){ return !p._dup; });
         var mergedCount = beforeMerge - pages.length;
+        // Save GSC data to shared storage for PULSE+NEXUS
+        try {
+          var sharedGsc = { pages: pages.map(function(p){ return {page:p.url, impressions:p.impressions||0, clicks:0, ctr:p.ctr||0, position:p.position||0, score:0}; }), queries: [] };
+          if (typeof _gscQueryMap !== 'undefined') { sharedGsc.queries = Object.keys(_gscQueryMap).map(function(q){ return {query:q, position:_gscQueryMap[q]}; }); }
+          localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
+        } catch(e) {}
         save(); renderPages(); renderOverview();
         var msg = '✅ GSC: ' + totalAdded + ' added, ' + totalUpdated + ' updated';
         if (mergedCount > 0) msg += ' · ' + mergedCount + ' duplicates merged';
