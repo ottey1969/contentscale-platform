@@ -222,6 +222,60 @@ app.get('/favicon.ico', (req, res) => {
 app.get('/favicon-32x32.png', (req, res) => res.redirect(302, '/favicon.svg'));
 app.get('/favicon-16x16.png', (req, res) => res.redirect(302, '/favicon.svg'));
 
+// JS served before static
+
+// All JS filenames → always serve _OTTO_JS inline (never from public/ file)
+const _serveOttoJs = (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.send(_OTTO_JS);
+};
+['gemini-live-client.js','gemini-live-client-v5.js','gemini-live-client-v6.js',
+ 'gemini-live-client-v7.js','otto-ai.js'].forEach(name => {
+  app.get('/' + name, _serveOttoJs);
+});
+
+// ── Gemini Live ephemeral token ─────────────────────────────
+// Browser calls this → gets short-lived token → connects DIRECTLY to Google
+// No audio proxy needed — lower latency, Google recommended approach
+// Gemini Live — relay API key securely to client for direct WS connection
+// Rate limit: max 2 sessions per IP per day
+const _ottoIpMap = new Map(); // ip -> { count, date }
+
+function checkOttoLimit(req, res) {
+  // Admin bypass
+  if (req.query.admin === 'ottmar2024') {
+    console.log('[otto-limit] admin bypass');
+    return true;
+  }
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const entry = _ottoIpMap.get(ip);
+
+  if (entry && entry.date === today) {
+    if (entry.count >= 1) {
+      console.log('[otto-limit] blocked:', ip, 'count:', entry.count);
+      res.status(429).json({ error: 'Daily limit reached — max 1 conversation per day per visitor. Come back tomorrow!' });
+      return false;
+    }
+    entry.count++;
+  } else {
+    _ottoIpMap.set(ip, { count: 1, date: today });
+  }
+
+  // Clean old entries every 1000 requests
+  if (_ottoIpMap.size > 1000) {
+    for (const [k, v] of _ottoIpMap.entries()) {
+      if (v.date !== today) _ottoIpMap.delete(k);
+    }
+  }
+  return true;
+}
+
 app.use(express.static('public', { maxAge: '1y', etag: true }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
@@ -6669,58 +6723,6 @@ const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai
 const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // v1alpha Live model
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
-app.get('/gemini-live-client.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  const candidates = [
-    require('path').join(__dirname, 'public', 'gemini-live-client.js'),
-    require('path').join(__dirname, '..', 'public', 'gemini-live-client.js'),
-  ];
-  const found = candidates.find(p => require('fs').existsSync(p));
-  if (found) return res.sendFile(found);
-  res.status(404).send('// gemini-live-client.js not found');
-});
-
-// ── Gemini Live ephemeral token ─────────────────────────────
-// Browser calls this → gets short-lived token → connects DIRECTLY to Google
-// No audio proxy needed — lower latency, Google recommended approach
-// Gemini Live — relay API key securely to client for direct WS connection
-// Rate limit: max 2 sessions per IP per day
-const _ottoIpMap = new Map(); // ip -> { count, date }
-
-function checkOttoLimit(req, res) {
-  // Admin bypass
-  if (req.query.admin === 'ottmar2024') {
-    console.log('[otto-limit] admin bypass');
-    return true;
-  }
-
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  const entry = _ottoIpMap.get(ip);
-
-  if (entry && entry.date === today) {
-    if (entry.count >= 1) {
-      console.log('[otto-limit] blocked:', ip, 'count:', entry.count);
-      res.status(429).json({ error: 'Daily limit reached — max 1 conversation per day per visitor. Come back tomorrow!' });
-      return false;
-    }
-    entry.count++;
-  } else {
-    _ottoIpMap.set(ip, { count: 1, date: today });
-  }
-
-  // Clean old entries every 1000 requests
-  if (_ottoIpMap.size > 1000) {
-    for (const [k, v] of _ottoIpMap.entries()) {
-      if (v.date !== today) _ottoIpMap.delete(k);
-    }
-  }
-  return true;
-}
 
 app.get('/api/gemini-live-token', async (req, res) => {
   if (!checkOttoLimit(req, res)) return; // IP rate limit check
@@ -7271,14 +7273,6 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 })();`;
 
 // Serve Otto JS — all versioned names point to same embedded content
-['gemini-live-client.js','gemini-live-client-v5.js','gemini-live-client-v6.js','gemini-live-client-v7.js','otto-ai.js'].forEach(function(name) {
-  app.get('/' + name, function(req, res) {
-    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(_OTTO_JS);
-  });
-});
 
 
 // ── Otto widget standalone page & embed ──────────────────────────────────
