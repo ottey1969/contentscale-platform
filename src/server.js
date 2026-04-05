@@ -208,6 +208,20 @@ res.setHeader('Content-Type', 'text/html; charset=utf-8');
 res.setHeader('Cache-Control', 'no-cache');
 return res.send(html); // goes through middleware → badge-loader injected
 });
+// Favicon routes — must be BEFORE express.static to override public/ files
+app.get('/favicon.svg', (req, res) => {
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(_FAVICON_SVG);
+});
+app.get('/favicon.ico', (req, res) => {
+  res.setHeader('Content-Type', 'image/x-icon');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.redirect(302, '/favicon.svg');
+});
+app.get('/favicon-32x32.png', (req, res) => res.redirect(302, '/favicon.svg'));
+app.get('/favicon-16x16.png', (req, res) => res.redirect(302, '/favicon.svg'));
+
 app.use(express.static('public', { maxAge: '1y', etag: true }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
@@ -2244,7 +2258,7 @@ app.post('/api/claude-proxy', async (req, res) => {
 app.post('/api/gemini-proxy', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || GEMINI_MODEL;
+  const model  = req.query.model || GEMINI_MODEL || 'gemini-2.5-flash';
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2298,7 +2312,7 @@ app.post('/api/gemini-proxy', async (req, res) => {
 app.post('/api/gemini-voicebot', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_VOICEBOT;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || GEMINI_MODEL;
+  const model  = req.query.model || GEMINI_MODEL || 'gemini-2.5-flash';
 
   if (!apiKey) {
     return res.status(500).json({
@@ -2356,7 +2370,7 @@ app.post('/api/gemini-voicebot', async (req, res) => {
 app.post('/api/gemini-paid', async (req, res) => {
   const apiKey = process.env.GEMINI_KEY_LEADCRAWLER;
   const userId = req.headers['x-user-id'] || 'anonymous';
-  const model  = req.query.model || GEMINI_MODEL;
+  const model  = req.query.model || GEMINI_MODEL || 'gemini-2.5-flash';
 
   if (!apiKey) {
     return res.status(500).json({
@@ -3749,9 +3763,2777 @@ function servePublic(filename) {
 app.get('/audit-seo', (req, res) => res.redirect(301, '/seo-audit'));
 app.get('/audit',     (req, res) => res.redirect(301, '/seo-audit'));
 app.get('/audit-intake',          servePublic('audit-intake.html'));
-app.get('/audit-workflow',        servePublic('audit-workflow.html'));
-app.get('/audit-recommendations', servePublic('audit-recommendations.html'));
-app.get('/handleiding',           servePublic('handleiding.html'));
+app.get('/audit-workflow', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Audit Workflow Manager | ContentScale</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
+  --amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1300px;margin:0 auto;padding:0 20px 80px;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-right{display:flex;gap:7px;flex-wrap:wrap;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;}
+.btn-gold{background:var(--gold)!important;color:#000!important;border-color:var(--gold)!important;}
+.btn-gold:hover{opacity:.85;}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple);}
+.btn-purple:hover{background:var(--purple);color:#000;}
+.btn-red{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.25);color:var(--red);}
+.btn-red:hover{background:var(--red);color:#fff;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-sm{padding:4px 10px;font-size:8px;}
+
+/* Project bar */
+.project-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.pf{flex:1;min-width:130px;}
+.pf label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:5px;}
+.pf input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;}
+.pf input:focus{border-color:var(--gold);}
+
+/* Overview */
+.overview{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px;}
+@media(max-width:700px){.overview{grid-template-columns:repeat(3,1fr);}}
+.ov{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;}
+.ov-n{font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;margin-bottom:3px;}
+.ov-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+.prog-wrap{background:var(--surface);border-radius:3px;height:4px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--green));border-radius:3px;transition:width .4s;}
+
+/* Add panel */
+.add-panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;}
+.add-panel-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin-bottom:10px;}
+.add-row{display:flex;gap:7px;flex-wrap:wrap;}
+.add-row input,.add-row select{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;}
+.add-row input:focus,.add-row select:focus{border-color:var(--gold);}
+.add-row select option{background:var(--card);}
+.ai-url{flex:3;min-width:180px;}
+.ai-kw{flex:2;min-width:140px;}
+.ai-pos{width:90px;}
+.ai-impr{width:90px;}
+.bulk-area{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;min-height:60px;resize:vertical;margin-top:8px;}
+.bulk-area:focus{border-color:var(--gold);}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+.filter-bar select,.filter-bar input{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--muted);outline:none;}
+.filter-bar input{text-transform:none;font-size:12px;}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
+
+/* Page cards */
+.pages-list{display:flex;flex-direction:column;gap:8px;}
+.page-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.page-card.s-done{border-left:3px solid var(--green);}
+.page-card.s-inprogress{border-left:3px solid var(--gold);}
+.page-card.s-notstarted{border-left:3px solid var(--dim);}
+.page-card.s-followup{border-left:3px solid var(--purple);}
+.page-card.s-blocked{border-left:3px solid var(--red);}
+
+.card-head{display:flex;align-items:center;gap:9px;padding:11px 15px;cursor:pointer;user-select:none;}
+.card-head:hover{background:rgba(255,255,255,.02);}
+.card-rank{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--dim);width:26px;text-align:center;flex-shrink:0;}
+.pri-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pri-high{background:var(--red);}
+.pri-med{background:var(--gold);}
+.pri-low{background:var(--green);}
+.card-url{flex:1;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);word-break:break-all;line-height:1.4;}
+.card-kw{font-size:11px;color:var(--muted);margin-left:4px;}
+.card-gsc{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);white-space:nowrap;}
+.card-chk{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);white-space:nowrap;}
+.status-btn{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer;border:1px solid;white-space:nowrap;}
+.s-notstarted .status-btn{background:rgba(71,85,105,.2);color:var(--sub);border-color:var(--border);}
+.s-inprogress .status-btn{background:rgba(251,191,36,.1);color:var(--gold);border-color:rgba(251,191,36,.3);}
+.s-done .status-btn{background:rgba(74,222,128,.1);color:var(--green);border-color:rgba(74,222,128,.3);}
+.s-followup .status-btn{background:rgba(167,139,250,.1);color:var(--purple);border-color:rgba(167,139,250,.3);}
+.s-blocked .status-btn{background:rgba(244,63,63,.1);color:var(--red);border-color:rgba(244,63,63,.3);}
+.chevron{color:var(--dim);font-size:11px;transition:transform .2s;flex-shrink:0;}
+.chevron.open{transform:rotate(180deg);}
+
+.card-body{display:none;padding:14px 15px;border-top:1px solid var(--border);}
+.card-body.open{display:block;}
+.cb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:600px){.cb-grid{grid-template-columns:1fr;}}
+.cb-field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:5px;}
+.cb-field input,.cb-field select,.cb-field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;resize:vertical;}
+.cb-field textarea{min-height:60px;font-size:12px;}
+.cb-field input:focus,.cb-field select:focus,.cb-field textarea:focus{border-color:var(--gold);}
+.cb-field select option{background:var(--card);}
+
+/* Checklist */
+.cl-header{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.cl-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:12px;}
+@media(max-width:600px){.cl-grid{grid-template-columns:1fr;}}
+.cl-item{display:flex;align-items:center;gap:7px;padding:6px 9px;background:rgba(255,255,255,.015);border-radius:4px;cursor:pointer;user-select:none;}
+.cl-item:hover{background:rgba(255,255,255,.04);}
+.cl-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.cl-item label{font-size:11px;color:var(--muted);cursor:pointer;flex:1;line-height:1.3;}
+.cl-item.checked label{color:var(--green);text-decoration:line-through;opacity:.55;}
+.cl-cat{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.05em;text-transform:uppercase;padding:1px 5px;border-radius:3px;flex-shrink:0;}
+.cat-audit{background:rgba(251,191,36,.12);color:var(--gold);}
+.cat-content{background:rgba(167,139,250,.12);color:var(--purple);}
+.cat-technical{background:rgba(96,165,250,.12);color:var(--blue);}
+.cat-authority{background:rgba(74,222,128,.12);color:var(--green);}
+
+.card-actions{display:flex;gap:5px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border);}
+
+/* Empty */
+.empty{text-align:center;padding:50px 20px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;margin-bottom:6px;color:var(--sub);}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#importInput{display:none;}
+
+/* ── MOBILE RESPONSIVE ─────────────────────────── */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .topbar-right{gap:5px;}
+  .btn{font-size:8px;padding:6px 10px;}
+  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
+  .add-row{flex-direction:column;}
+  .add-row input,.add-row select{width:100%!important;}
+  .filter-bar{flex-direction:column;gap:6px;}
+  .filter-bar select,.filter-bar input{width:100%!important;}
+  .card-head{flex-wrap:wrap;gap:6px;}
+  .rec-head{flex-direction:column;}
+  .prefill-box{max-width:100%;width:100%;}
+  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
+  .project-bar{flex-direction:column;}
+  .pf{min-width:100%!important;}
+  .steps{flex-direction:column!important;}
+  .step{border-right:none!important;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .how-step{flex-direction:column;}
+  .flow-step{gap:10px;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
+  .modes{grid-template-columns:1fr!important;}
+  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+}
+@media(max-width:480px){
+  .overview,.summary{grid-template-columns:1fr 1fr!important;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .topbar-right{flex-wrap:wrap;}
+  .card-meta{flex-wrap:wrap;gap:4px;}
+  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
+  h1,h2,.tool-name{word-break:break-word;}
+  .panel{padding:16px!important;}
+  .section{padding:14px 16px!important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO AUDIT WORKFLOW MANAGER</div>
+  <div class="topbar-right">
+    <button class="btn btn-gold" onclick="document.getElementById('gscImportInput').click()">📊 Import GSC CSV (Pages + Queries)</button>
+    <button class="btn btn-purple" onclick="scanAllScores()">⚡ Auto-Score All</button>
+    <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
+    <button class="btn btn-purple" onclick="syncToServer()" id="syncBtn" title="Save to server — accessible from any device">☁ Save to Server</button>
+    <button class="btn btn-muted" onclick="loadFromServer()" title="Load from server">↓ Load from Server</button>
+    <button class="btn btn-blue" onclick="document.getElementById('importInput').click()">↑ Import Progress</button>
+    <button class="btn btn-purple" onclick="exportClientReport()">📄 Client Report</button>
+    <a href="/audit-recommendations" class="btn btn-gold">🎯 Recommendations</a>
+    <button class="btn btn-red" onclick="clearAll()">✕ Clear</button>
+    <button class="btn btn-muted" onclick="cleanBadPages()" title="Remove invalid entries (queries, keywords) from the list">🧹 Clean up</button>
+    <button class="btn btn-muted" onclick="mergeDuplicatePages()" title="Merge duplicate URLs into one entry">🔀 Merge dupes</button>
+    <button class="btn btn-red btn-sm" id="bulkDeleteBtn" onclick="bulkDeleteSelected()" style="display:none">🗑 Delete selected (<span id="bulkCount">0</span>)</button>
+    <button class="btn btn-muted btn-sm" id="bulkSelectAllBtn" onclick="bulkSelectAll()" style="display:none">✓ Select all</button>
+    <button class="btn btn-muted" onclick="selectAllPages()" title="Select all visible pages for bulk actions">☑ Select all</button>
+    <input type="file" id="importInput" accept=".csv" onchange="importCSV(this)">
+    <input type="file" id="gscImportInput" accept=".csv" multiple onchange="importGSC(this)">
+  </div>
+</div>
+
+<div id="syncStatus" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
+<div class="project-bar">
+  <div class="pf"><label>Client / Project</label><input id="pClient" placeholder="ContentScale.site" oninput="save()"></div>
+  <div class="pf" style="flex:2"><label>Website</label><input id="pSite" placeholder="https://contentscale.site" oninput="save()"></div>
+  <div class="pf"><label>Deadline</label><input type="date" id="pDeadline" oninput="save()"></div>
+  <div class="pf"><label>Auditor</label><input id="pAuditor" placeholder="Ottmar" oninput="save()"></div>
+</div>
+
+<div class="overview">
+  <div class="ov"><div class="ov-n" id="ovTotal" style="color:var(--blue)">0</div><div class="ov-l">Total</div></div>
+  <div class="ov"><div class="ov-n" id="ovNotStarted" style="color:var(--dim)">0</div><div class="ov-l">Not Started</div></div>
+  <div class="ov"><div class="ov-n" id="ovInProgress" style="color:var(--gold)">0</div><div class="ov-l">In Progress</div></div>
+  <div class="ov"><div class="ov-n" id="ovDone" style="color:var(--green)">0</div><div class="ov-l">Done</div></div>
+  <div class="ov"><div class="ov-n" id="ovFollowup" style="color:var(--purple)">0</div><div class="ov-l">Follow-up</div></div>
+  <div class="ov"><div class="ov-n" id="ovPct" style="color:var(--gold)">0%</div><div class="ov-l">Complete</div><div class="prog-wrap"><div class="prog-fill" id="ovBar" style="width:0%"></div></div></div>
+</div>
+
+<div class="add-panel">
+  <div class="add-panel-title">Add Pages to Audit Queue</div>
+
+  <!-- Single URL row -->
+  <div class="add-row">
+    <input class="ai-url" id="newUrl" placeholder="https://site.com/page" onkeydown="if(event.key==='Enter')addPage()">
+    <input class="ai-kw" id="newKw" placeholder="Primary keyword" onkeydown="if(event.key==='Enter')addPage()">
+    <select id="newPri"><option value="high">🔴 High</option><option value="med" selected>🟡 Medium</option><option value="low">🟢 Low</option></select>
+    <input class="ai-pos" id="newPos" type="number" placeholder="Position" min="1" max="200">
+    <input class="ai-impr" id="newImpr" type="number" placeholder="Impressions">
+    <button class="btn btn-gold" onclick="addPage()">+ Add</button>
+  </div>
+
+  <!-- Sitemap fetch -->
+  <div style="margin-top:12px;padding:14px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">
+    <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Import Sitemap</div>
+    <div class="add-row" style="flex-wrap:wrap;">
+      <input id="sitemapUrl" placeholder="https://contentscale.site/sitemap.xml" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;" onkeydown="if(event.key==='Enter')fetchSitemap()">
+      <button class="btn btn-blue" onclick="fetchSitemap()" id="sitemapBtn">↓ Fetch Sitemap</button>
+    </div>
+    <div id="sitemapStatus" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
+
+    <!-- Sitemap preview + filter -->
+    <div id="sitemapPreview" style="display:none;margin-top:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <input id="sitemapFilter" placeholder="Filter by path... e.g. /blog or /services" oninput="filterSitemapUrls()"
+          style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
+        <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Show only sitemap URLs that are also in your GSC data">🔗 Filter by GSC</button>
+        <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ All</button>
+        <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ None</button>
+        <span id="sitemapSelCount" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);"></span>
+      </div>
+      <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-gold" onclick="addSelectedSitemapUrls()">+ Add selected to queue</button>
+        <button class="btn btn-red btn-sm" onclick="deleteSelectedSitemapUrls()" title="Remove selected URLs from list">🗑 Delete selected</button>
+        <button class="btn btn-muted btn-sm" onclick="clearAllSitemapUrls()" title="Remove all URLs from list">✕ Clear all</button>
+        <button class="btn btn-muted" onclick="document.getElementById('sitemapPreview').style.display='none'">✕ Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk paste -->
+  <div style="margin-top:10px;">
+    <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Paste</div>
+    <textarea class="bulk-area" id="bulkArea" placeholder="Paste multiple URLs (één per line) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
+    <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
+      <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
+      <span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--dim);">One URL per line</span>
+    </div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <select id="fStatus" onchange="renderPages()">
+    <option value="all">All statuses</option>
+    <option value="notstarted">Not Started</option>
+    <option value="inprogress">In Progress</option>
+    <option value="done">Done</option>
+    <option value="followup">Follow-up</option>
+    <option value="blocked">Blocked</option>
+  </select>
+  <select id="fPri" onchange="renderPages()">
+    <option value="all">All priorities</option>
+    <option value="high">🔴 High</option>
+    <option value="med">🟡 Medium</option>
+    <option value="low">🟢 Low</option>
+  </select>
+  <select id="fSort" onchange="renderPages()">
+    <option value="priority">Sort: Priority</option>
+    <option value="position">Sort: GSC Position</option>
+    <option value="impressions">Sort: Impressions</option>
+    <option value="checklist">Sort: Checklist %</option>
+    <option value="status">Sort: Status</option>
+  </select>
+  <input id="fSearch" placeholder="Search URL or keyword..." oninput="renderPages()" style="flex:1;min-width:150px;">
+</div>
+
+<div id="bulkBar" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 14px;margin-bottom:8px;display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+  <span id="bulkCount" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red);font-weight:700;">0 selected</span>
+  <button class="btn btn-red btn-sm" onclick="deleteSelectedPages()">🗑 Delete selected</button>
+  <button class="btn btn-muted btn-sm" onclick="deselectAllPages()">✕ Deselect all</button>
+</div>
+
+<div class="pages-list" id="pagesList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var AUDIT_URL = 'https://app.contentscale.site/audit-seo';
+var pages = [];
+var project = {};
+
+// points: true = adds ContentScore points, false = UX/CTR only (no score change)
+var CL = [
+  // ── PHASE 1: Pre-audit (geen score impact)
+  {id:'scan_before', label:'① Step 1 — Pre-scan done (Scan Score recorded)',    cat:'phase1', points:false, phase:1, tip:'FIRST: Click the 📊 Scan Score button below — this records your starting score before any changes'},
+  {id:'pulse',       label:'② Step 2 — PULSE+NEXUS audit done',                  cat:'phase1', points:false, phase:1, tip:'Click 🔬 Open in PULSE+NEXUS → run the full SEO audit → note all findings before making changes'},
+  {id:'gsc_check',   label:'③ Step 3 — GSC data recorded',                        cat:'phase1', points:false, phase:1, tip:'Import your Google Search Console CSV via the 📊 Import GSC CSV button at the top of the page'},
+
+  // ── PHASE 2: Implementatie — PUNTEN (score gaat omhoog)
+  {id:'wordcount',   label:'② Words added (min 1500)',             cat:'phase2', points:true,  phase:2},
+  {id:'stats',       label:'② Stats added (2025-2026, 8+)',          cat:'phase2', points:true,  phase:2},
+  {id:'expert',      label:'② Expert quotes added (3-5)',            cat:'phase2', points:true,  phase:2},
+  {id:'faq',         label:'② FAQ section added/expanded',          cat:'phase2', points:true,  phase:2},
+  {id:'casestudy',   label:'② Case study with metrics added',         cat:'phase2', points:true,  phase:2},
+  {id:'direct_ans',  label:'② Direct Answer (40-80w) after H1 added',  cat:'phase2', points:true,  phase:2},
+  {id:'tldr',        label:'② Key Takeaways / TL;DR added',          cat:'phase2', points:true,  phase:2},
+  {id:'listcount',   label:'② Bullet/numbered lists expanded (15+)',cat:'phase2', points:true,  phase:2},
+  {id:'authorbio',   label:'② Author bio with credentials added',     cat:'phase2', points:true,  phase:2},
+  {id:'schema_a',    label:'② Article schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
+  {id:'schema_f',    label:'② FAQPage schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
+  {id:'intlinks',    label:'② Internal links added (3-5)',             cat:'phase2', points:true,  phase:2},
+  {id:'extlinks',    label:'② Externe links autoritatief (2-3)',           cat:'phase2', points:true,  phase:2},
+  {id:'eeat',        label:'② E-E-A-T signals strengthened',                cat:'phase2', points:true,  phase:2},
+
+  // ── PHASE 2: UX/CTR fixes — NO score points, but important
+  {id:'h1',          label:'② H1 optimised',                        cat:'phase2_ctr', points:false, phase:2},
+  {id:'h2',          label:'② H2 structure revised',                      cat:'phase2_ctr', points:false, phase:2},
+  {id:'title',       label:'② SEO title herschreven (50-60 chars)',       cat:'phase2_ctr', points:false, phase:2},
+  {id:'meta',        label:'② Meta description herschreven (150-160)',    cat:'phase2_ctr', points:false, phase:2},
+  {id:'canonical',   label:'② Canonical tag checked',               cat:'phase2_ctr', points:false, phase:2},
+  {id:'alt',         label:'② Image alt text complete',             cat:'phase2_ctr', points:false, phase:2},
+  {id:'cta',         label:'② CTA optimised for conversion goal',    cat:'phase2_ctr', points:false, phase:2},
+
+  // ── PHASE 3: Live zetten + nascan
+  {id:'publish',     label:'③ Page published + timestamp refreshed', cat:'phase3', points:false, phase:3},
+  {id:'reindex',     label:'③ GSC reindex requested',                   cat:'phase3', points:false, phase:3},
+  {id:'scan_after',  label:'③ Post-scan done (final score recorded)',      cat:'phase3', points:false, phase:3},
+  {id:'recheck',     label:'③ GSC recheck scheduled (14 days)',          cat:'phase3', points:false, phase:3},
+];
+
+var STATUS_ORDER = ['notstarted','inprogress','followup','blocked','done'];
+var STATUS_LABELS = {notstarted:'Not Started',inprogress:'In Progress',done:'Done',followup:'Follow-up',blocked:'Blocked'};
+var PRI_ORDER = {high:0,med:1,low:2};
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+
+function toast(msg,dur){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},dur||2500);
+}
+
+function save(){
+  project.client   = document.getElementById('pClient').value;
+  project.site     = document.getElementById('pSite').value;
+  project.deadline = document.getElementById('pDeadline').value;
+  project.auditor  = document.getElementById('pAuditor').value;
+  try{localStorage.setItem('cs_wf_proj',JSON.stringify(project));}catch(e){}
+  try{localStorage.setItem('cs_wf_pages',JSON.stringify(pages));}catch(e){}
+}
+
+function load(){
+  try{var p=localStorage.getItem('cs_wf_proj');if(p)project=JSON.parse(p);}catch(e){}
+  try{var pg=localStorage.getItem('cs_wf_pages');if(pg)pages=JSON.parse(pg);}catch(e){}
+  if(project.client)  document.getElementById('pClient').value=project.client;
+  if(project.site)    document.getElementById('pSite').value=project.site;
+  if(project.deadline)document.getElementById('pDeadline').value=project.deadline;
+  if(project.auditor) document.getElementById('pAuditor').value=project.auditor;
+}
+
+function makePage(url,kw,pri,pos,impr){
+  var checks={};
+  CL.forEach(function(c){checks[c.id]=false;});
+  return {id:uid(),url:url,keyword:kw||'',priority:pri||'med',
+    position:parseFloat(pos)||0,impressions:parseInt(impr)||0,
+    status:'notstarted',scoreBefore:'',scoreAfter:'',notes:'',deadline:'',
+    checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
+}
+
+function updateBulkCount(){
+  var checked = document.querySelectorAll('.page-bulk-cb:checked');
+  var bar = document.getElementById('bulkBar');
+  if (!bar) return;
+  if(checked.length > 0){
+    bar.style.display = 'flex';
+    document.getElementById('bulkCount').textContent = checked.length + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function selectAllPages(){
+  document.querySelectorAll('.page-bulk-cb').forEach(function(cb){ cb.checked = true; });
+  updateBulkCount();
+}
+
+function deselectAllPages(){
+  document.querySelectorAll('.page-bulk-cb').forEach(function(cb){ cb.checked = false; });
+  updateBulkCount();
+}
+
+function deleteSelectedPages(){
+  var ids = Array.from(document.querySelectorAll('.page-bulk-cb:checked')).map(function(cb){ return cb.dataset.id; });
+  if(!ids.length){ toast('No pages selected'); return; }
+  if(!confirm('Delete ' + ids.length + ' selected pages?')) return;
+  pages = pages.filter(function(p){ return !ids.includes(p.id); });
+  save(); renderPages(); renderOverview();
+  document.getElementById('bulkBar').style.display = 'none';
+  toast('🗑 ' + ids.length + ' pages deleted');
+}
+
+
+
+function bulkSelectAll(){
+  var cbs = document.querySelectorAll('.page-bulk-cb');
+  var allChecked = Array.from(cbs).every(function(cb){ return cb.checked; });
+  cbs.forEach(function(cb){ cb.checked = !allChecked; });
+  updateBulkCount();
+}
+
+function bulkDeleteSelected(){
+  var selected = Array.from(document.querySelectorAll('.page-bulk-cb:checked')).map(function(cb){ return cb.dataset.id; });
+  if(!selected.length){ toast('⚠ No pages selected'); return; }
+  if(!confirm('Delete ' + selected.length + ' selected pages from the queue?')) return;
+  pages = pages.filter(function(p){ return !selected.includes(p.id); });
+  save(); renderPages(); renderOverview();
+  updateBulkCount();
+  toast('🗑 ' + selected.length + ' pages deleted');
+}
+
+function cleanBadPages(){
+  var before = pages.length;
+  // Remove invalid URLs
+  pages = pages.filter(function(p){
+    if(!p.url) return false;
+    if(!p.url.startsWith('http') && !p.url.startsWith('/')) return false;
+    if(p.url.includes('-site:') || p.url.includes(' ')) return false;
+    return true;
+  });
+  // Remove duplicates — keep first occurrence per URL
+  var seen = {};
+  pages = pages.filter(function(p){
+    if(seen[p.url]) return false;
+    seen[p.url] = true;
+    return true;
+  });
+  var removed = before - pages.length;
+  if(removed > 0){
+    save(); renderPages(); renderOverview();
+    toast('🧹 Removed ' + removed + ' invalid/duplicate entries');
+  } else {
+    toast('✓ No invalid or duplicate entries found');
+  }
+}
+
+function addPage(){
+  var url=document.getElementById('newUrl').value.trim();
+  if(!url){toast('⚠ Enter a URL');return;}
+  if(!url.startsWith('http'))url='https://'+url;
+  pages.push(makePage(url,
+    document.getElementById('newKw').value.trim(),
+    document.getElementById('newPri').value,
+    document.getElementById('newPos').value,
+    document.getElementById('newImpr').value));
+  document.getElementById('newUrl').value='';
+  document.getElementById('newKw').value='';
+  document.getElementById('newPos').value='';
+  document.getElementById('newImpr').value='';
+  save();renderPages();renderOverview();toast('✅ Page added');
+}
+
+function bulkAdd(){
+  var raw=document.getElementById('bulkArea').value.trim();
+  if(!raw){toast('⚠ Paste URLs first');return;}
+  var lines=raw.split('\\n').map(function(l){return l.trim();}).filter(function(l){return l.includes('.');});
+  var added=0;
+  lines.forEach(function(l){
+    var url=l.startsWith('http')?l:'https://'+l;
+    pages.push(makePage(url,'','med',0,0));added++;
+  });
+  document.getElementById('bulkArea').value='';
+  save();renderPages();renderOverview();toast('✅ '+added+' pages added');
+}
+
+function deletePage(id){
+  if(!confirm('Delete this page?'))return;
+  pages=pages.filter(function(p){return p.id!==id;});
+  save();renderPages();renderOverview();toast('Deleted');
+}
+
+function clearAll(){
+  if(!confirm('Clear ALL pages? Cannot be undone.'))return;
+  pages=[];save();renderPages();renderOverview();
+}
+
+function cycleStatus(id){
+  var p=pages.find(function(p){return p.id===id;});if(!p)return;
+  var i=STATUS_ORDER.indexOf(p.status);
+  p.status=STATUS_ORDER[(i+1)%STATUS_ORDER.length];
+  p.updated=new Date().toISOString();
+  save();renderPages();renderOverview();
+}
+
+function updateField(id,field,val){
+  var p=pages.find(function(p){return p.id===id;});if(!p)return;
+  p[field]=val;p.updated=new Date().toISOString();save();
+  if(field==='status'){renderPages();renderOverview();}
+}
+
+function toggleCheck(pageId,checkId){
+  var p=pages.find(function(p){return p.id===pageId;});if(!p)return;
+  p.checks[checkId]=!p.checks[checkId];
+  p.updated=new Date().toISOString();
+  save();
+  // Update checklist progress display
+  var done=Object.values(p.checks).filter(Boolean).length;
+  var total=CL.length;
+  var pct=Math.round(done/total*100);
+  var el=document.getElementById('cl-prog-'+pageId);
+  if(el){
+    var pts=pointsDone(p);
+    el.innerHTML='<span style="color:var(--green)">+score: '+pts+'/'+pointsTotal()+'</span>'
+      +' <span style="color:var(--muted);margin-left:8px;">totaal: '+done+'/'+total+'</span>';
+  }
+  var chkEl=document.getElementById('chk-'+pageId);
+  if(chkEl)chkEl.textContent=pct+'%';
+  // Update class on item
+  var item=document.getElementById('cli-'+pageId+'-'+checkId);
+  if(item)item.className='cl-item'+(p.checks[checkId]?' checked':'');
+  renderOverview();
+}
+
+function openInAudit(id){
+  var p=pages.find(function(pg){return pg.id===id;});if(!p)return;
+  var params='?url='+encodeURIComponent(p.url)
+    +(p.keyword?'&kw='+encodeURIComponent(p.keyword):'')
+    +(p.position?'&pos='+p.position:'')
+    +(p.impressions?'&impr='+p.impressions:'')
+    +'&wf='+id; // workflow ID for callback
+  window.open(AUDIT_URL+params,'_blank');
+  // Auto-set to inprogress
+  if(p.status==='notstarted'){
+    p.status='inprogress';p.updated=new Date().toISOString();
+    save();renderPages();renderOverview();toast('🔬 Opened in PULSE+NEXUS — status → In Progress');
+  }
+}
+
+function markDone(id){
+  var p=pages.find(function(pg){return pg.id===id;});if(!p)return;
+  p.status='done';p.updated=new Date().toISOString();
+  // Auto-check pulse
+  p.checks['pulse']=true;
+  save();renderPages();renderOverview();toast('✅ Marked as Done');
+}
+
+function checkProgress(p){
+  var done=Object.values(p.checks).filter(Boolean).length;
+  return {done:done,total:CL.length,pct:Math.round(done/CL.length*100)};
+}
+
+// Returns true if the "after score" field should be locked
+// Locked until at least 3 points-giving items are checked
+function scoreAfterLocked(p){
+  var pointsDone = CL.filter(function(c){ return c.points && p.checks[c.id]; }).length;
+  return pointsDone < 3;
+}
+
+// Count points items done
+function pointsDone(p){
+  return CL.filter(function(c){ return c.points && p.checks[c.id]; }).length;
+}
+function pointsTotal(){
+  return CL.filter(function(c){ return c.points; }).length;
+}
+
+function renderOverview(){
+  var total=pages.length;
+  var done=pages.filter(function(p){return p.status==='done';}).length;
+  var inp=pages.filter(function(p){return p.status==='inprogress';}).length;
+  var ns=pages.filter(function(p){return p.status==='notstarted';}).length;
+  var fu=pages.filter(function(p){return p.status==='followup';}).length;
+  var pct=total?Math.round(done/total*100):0;
+  document.getElementById('ovTotal').textContent=total;
+  document.getElementById('ovDone').textContent=done;
+  document.getElementById('ovInProgress').textContent=inp;
+  document.getElementById('ovNotStarted').textContent=ns;
+  document.getElementById('ovFollowup').textContent=fu;
+  document.getElementById('ovPct').textContent=pct+'%';
+  document.getElementById('ovBar').style.width=pct+'%';
+}
+
+function getSorted(){
+  var sort=document.getElementById('fSort').value;
+  var arr=pages.slice();
+  if(sort==='priority')arr.sort(function(a,b){return PRI_ORDER[a.priority]-PRI_ORDER[b.priority];});
+  else if(sort==='position')arr.sort(function(a,b){
+    var ap=a.position||999,bp=b.position||999;
+    // Position 11-30 = most valuable (closest to page 1)
+    var as=ap>=11&&ap<=30?0:ap>30?1:2;
+    var bs=bp>=11&&bp<=30?0:bp>30?1:2;
+    return as-bs||(ap-bp);
+  });
+  else if(sort==='impressions')arr.sort(function(a,b){return b.impressions-a.impressions;});
+  else if(sort==='checklist')arr.sort(function(a,b){return checkProgress(a).pct-checkProgress(b).pct;});
+  else if(sort==='status')arr.sort(function(a,b){return STATUS_ORDER.indexOf(a.status)-STATUS_ORDER.indexOf(b.status);});
+  return arr;
+}
+
+function renderPages(){
+  var fStatus=document.getElementById('fStatus').value;
+  var fPri=document.getElementById('fPri').value;
+  var fSearch=document.getElementById('fSearch').value.toLowerCase();
+  var list=document.getElementById('pagesList');
+
+  var arr=getSorted().filter(function(p){
+    if(fStatus!=='all'&&p.status!==fStatus)return false;
+    if(fPri!=='all'&&p.priority!==fPri)return false;
+    if(fSearch&&!p.url.toLowerCase().includes(fSearch)&&!p.keyword.toLowerCase().includes(fSearch))return false;
+    return true;
+  });
+
+  if(!arr.length){
+    list.innerHTML='<div class="empty"><h3>'+(pages.length?'No pages match filters':'No Pages Yet')+'</h3><p>'+(pages.length?'Adjust filters above.':'Add URLs above or import a CSV.')+'</p></div>';
+    return;
+  }
+
+  list.innerHTML=arr.map(function(p,i){
+    var prog=checkProgress(p);
+    var priClass='pri-'+p.priority;
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
+    if(shortUrl.length>55)shortUrl=shortUrl.slice(0,55)+'…';
+
+    // Grouped checklist by phase
+  function renderClItems(items){
+    return items.map(function(c){
+      var checked = p.checks[c.id];
+      var badge = (c.phase===2&&c.points)
+        ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(74,222,128,.12);color:var(--green);flex-shrink:0;">+score</span>'
+        : (c.phase===2&&!c.points)
+        ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
+        : '';
+      return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\\''+p.id+'\\',\\''+c.id+'\\')"'+(c.tip?' title="'+c.tip+'"':'')+'>'
+        +'<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();toggleCheck(\\''+p.id+'\\',\\''+c.id+'\\')">'
+        +'<label>'+c.label+(c.tip?' <span style="font-size:9px;color:var(--dim);cursor:help;" title="'+c.tip+'">ⓘ</span>':'')+'</label>'
+        +badge
+        +'</div>';
+    }).join('');
+  }
+  var f1 = CL.filter(function(c){return c.phase===1;});
+  var f2p = CL.filter(function(c){return c.phase===2&&c.points;});
+  var f2c = CL.filter(function(c){return c.phase===2&&!c.points;});
+  var f3 = CL.filter(function(c){return c.phase===3;});
+  var ph = function(label,color,border){
+    return '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:'+color+';padding:8px 0 4px;border-bottom:1px solid '+border+';margin-bottom:4px;margin-top:6px;">'+label+'</div>';
+  };
+  var cl = ph('① Pre-audit','var(--blue)','rgba(96,165,250,.2)')
+    + '<div class="cl-grid">'+renderClItems(f1)+'</div>'
+    + ph('② Implementation — improves ContentScore','var(--green)','rgba(74,222,128,.2)')
+    + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Add real content → score goes up. Meta/title only = no points.</div>'
+    + '<div class="cl-grid">'+renderClItems(f2p)+'</div>'
+    + ph('② UX & CTR fixes — no score impact','var(--blue)','rgba(96,165,250,.15)')
+    + '<div class="cl-grid">'+renderClItems(f2c)+'</div>'
+    + ph('③ Go live + re-scan','var(--gold)','rgba(251,191,36,.2)')
+    + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Re-scan only AFTER the page is live and point items are completed.</div>'
+    + '<div class="cl-grid">'+renderClItems(f3)+'</div>';
+
+    return '<div class="page-card s-'+p.status+'" id="card-'+p.id+'">'
+
+      // Header
+      +'<div class="card-head" style="display:flex;align-items:center;gap:6px;">'
+      +'<input type="checkbox" class="page-bulk-cb" data-id="'+p.id+'" onclick="event.stopPropagation();updateBulkCount()" style="width:14px;height:14px;accent-color:var(--red);flex-shrink:0;cursor:pointer;">'
+      +'<div style="flex:1;display:flex;align-items:center;gap:6px;" onclick="toggleCard(\\''+p.id+'\\')">'
+      +'<span class="card-rank">#'+(i+1)+'</span>'
+      +'<span class="pri-dot '+priClass+'"></span>'
+      +'<span class="card-url">'+shortUrl+'<span class="card-kw">'+( p.keyword?' — '+p.keyword:'')+'</span></span>'
+      +(p.position?'<span class="card-gsc">pos '+Math.round(p.position)+(p.impressions?' · '+p.impressions.toLocaleString()+' impr':'')+'</span>':'')
+      +(p.scoreBefore?'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
+      +'<span class="card-chk" id="chk-'+p.id+'">'+prog.pct+'%</span>'
+      +'<button class="status-btn" onclick="event.stopPropagation();cycleStatus(\\''+p.id+'\\')">'+STATUS_LABELS[p.status]+'</button>'
+      +'<span class="chevron" id="chev-'+p.id+'">▾</span>'
+      +'</div>'  // close inner clickable div
+      +'</div>'
+
+      // Body
+      +'<div class="card-body" id="body-'+p.id+'">'
+
+      // Fields
+      +'<div class="cb-grid">'
+      +'<div class="cb-field"><label>Status</label><select onchange="updateField(\\''+p.id+'\\',\\'status\\',this.value)">'
+      +['notstarted','inprogress','done','followup','blocked'].map(function(s){return '<option value="'+s+'"'+(p.status===s?' selected':'')+'>'+STATUS_LABELS[s]+'</option>';}).join('')
+      +'</select></div>'
+      +'<div class="cb-field"><label>Priority</label><select onchange="updateField(\\''+p.id+'\\',\\'priority\\',this.value)">'
+      +[['high','🔴 High'],['med','🟡 Medium'],['low','🟢 Low']].map(function(x){return '<option value="'+x[0]+'"'+(p.priority===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('')
+      +'</select></div>'
+      +'<div class="cb-field">'
+      +'<label style="color:var(--blue)">① Pre-scan Score (BEFORE audit)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="Scan first, enter here" data-score-before="'+p.id+'" onchange="updateField(\\''+p.id+'\\',\\'scoreBefore\\',this.value)">'
+      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score button — do this BEFORE the audit</div>'
+      +'</div>'
+      +'<div class="cb-field">'
+      +'<label style="color:'+(scoreAfterLocked(p)?'var(--dim)':'var(--green)')+'">③ Post-scan Score (AFTER implementation)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="'+(scoreAfterLocked(p)?'Complete point items first':'Scan after page is live')+'" '+(scoreAfterLocked(p)?'disabled style="opacity:.4;cursor:not-allowed"':'')+' onchange="updateField(\\''+p.id+'\\',\\'scoreAfter\\',this.value)">'
+      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Complete point items (②) first — meta/title alone does not change the score':'✓ Re-scan AFTER you have published the page')+'</div>'
+      +'</div>'
+      +'<div class="cb-field"><label>GSC Position</label><input type="number" value="'+p.position+'" placeholder="34" onchange="updateField(\\''+p.id+'\\',\\'position\\',this.value)"></div>'
+      +'<div class="cb-field"><label>Impressions</label><input type="number" value="'+p.impressions+'" placeholder="12400" onchange="updateField(\\''+p.id+'\\',\\'impressions\\',this.value)"></div>'
+      +'<div class="cb-field"><label>Deadline</label><input type="date" value="'+p.deadline+'" onchange="updateField(\\''+p.id+'\\',\\'deadline\\',this.value)"></div>'
+      +'<div class="cb-field"><label>Primary Keyword</label><input type="text" value="'+p.keyword+'" onchange="updateField(\\''+p.id+'\\',\\'keyword\\',this.value)"></div>'
+      +'</div>'
+
+      // Notes
+      +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea onchange="updateField(\\''+p.id+'\\',\\'notes\\',this.value)">'+p.notes+'</textarea></div>'
+
+      // Checklist
+      +'<div class="cl-header"><span>Audit Checklist — 3 phases</span>'
+      +'<span id="cl-prog-'+p.id+'" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;display:flex;gap:10px;">'
+      +'<span style="color:var(--green)">+pts: '+pointsDone(p)+'/'+pointsTotal()+'</span>'
+      +'<span style="color:var(--muted)">totaal: '+prog.done+'/'+prog.total+'</span>'
+      +'</span>'
+      +'</div>'
+      +'<div class="cl-grid">'+cl+'</div>'
+
+      // Actions
+      +'<div class="card-actions">'
+      +'<button class="btn btn-purple btn-sm" onclick="openInAudit(\\''+p.id+'\\')">🔬 Open in PULSE+NEXUS</button>'
+      +'<button class="btn btn-green btn-sm" onclick="markDone(\\''+p.id+'\\')">✓ Mark Done</button>'
+      +'<a href="'+p.url+'" target="_blank" class="btn btn-blue btn-sm">↗ Open Page</a>'
+      +'<button class="btn btn-muted btn-sm" onclick="scanOnePage(\\''+p.id+'\\')">📊 Scan Score</button>'
+      +'<a href="https://app.contentscale.site/?url='+encodeURIComponent(p.url)+'" target="_blank" class="btn btn-blue btn-sm">↗ ContentScale</a>'
+      +'<button class="btn btn-red btn-sm" onclick="deletePage(\\''+p.id+'\\')">✕ Delete</button>'
+      +'</div>'
+
+      +'</div></div>';
+  }).join('');
+}
+
+function toggleCard(id){
+  var body=document.getElementById('body-'+id);
+  var chev=document.getElementById('chev-'+id);
+  if(!body)return;
+  var open=body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open',open);
+}
+
+// ── Export CSV ──
+function exportCSV(){
+  if(!pages.length){toast('⚠ No pages to export');return;}
+  var headers=['URL','Keyword','Priority','Status','Position','Impressions','ScoreBefore','ScoreAfter','Deadline','Notes','ChecklistPct','Updated'];
+  CL.forEach(function(c){headers.push('chk_'+c.id);});
+  var rows=[headers.join(',')];
+  pages.forEach(function(p){
+    var prog=checkProgress(p);
+    var base=[
+      '"'+p.url+'"','"'+(p.keyword||'')+'"',p.priority,p.status,
+      p.position||'',p.impressions||'',p.scoreBefore||'',p.scoreAfter||'',
+      p.deadline||'','"'+(p.notes||'').replace(/"/g,"''")+'"',
+      prog.pct+'%',p.updated||''
+    ];
+    CL.forEach(function(c){base.push(p.checks[c.id]?'1':'0');});
+    rows.push(base.join(','));
+  });
+  // Project info as first comment line
+  var meta='# Client: '+(project.client||'')+' | Site: '+(project.site||'')+' | Auditor: '+(project.auditor||'')+' | Exported: '+new Date().toISOString();
+  var csv=meta+'\\n'+rows.join('\\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='seo-audit-workflow-'+(project.client||'export').replace(/\\s+/g,'-').toLowerCase()+'-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('✅ CSV exported');
+}
+
+// ── Import CSV ──
+function importCSV(input){
+  var file=input.files[0];if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    var lines=e.target.result.split('\\n').filter(function(l){return l&&!l.startsWith('#');});
+    if(lines.length<2){toast('⚠ Invalid CSV');return;}
+    var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'');});
+    var imported=0;
+    for(var i=1;i<lines.length;i++){
+      var cols=lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||lines[i].split(',');
+      cols=cols.map(function(c){return (c||'').replace(/^"|"$/g,'').trim();});
+      var url=cols[headers.indexOf('URL')]||'';
+      if(!url||!url.includes('.'))continue;
+      // Check if already exists
+      var exists=pages.find(function(p){return p.url===url;});
+      if(!exists){
+        var np=makePage(url,
+          cols[headers.indexOf('Keyword')]||'',
+          cols[headers.indexOf('Priority')]||'med',
+          cols[headers.indexOf('Position')]||0,
+          cols[headers.indexOf('Impressions')]||0);
+        np.status=cols[headers.indexOf('Status')]||'notstarted';
+        np.scoreBefore=cols[headers.indexOf('ScoreBefore')]||'';
+        np.scoreAfter=cols[headers.indexOf('ScoreAfter')]||'';
+        np.deadline=cols[headers.indexOf('Deadline')]||'';
+        np.notes=cols[headers.indexOf('Notes')]||'';
+        // Restore checklist
+        CL.forEach(function(c){
+          var ci=headers.indexOf('chk_'+c.id);
+          if(ci>=0)np.checks[c.id]=cols[ci]==='1';
+        });
+        pages.push(np);imported++;
+      } else {
+        // Update existing
+        exists.status=cols[headers.indexOf('Status')]||exists.status;
+        exists.notes=cols[headers.indexOf('Notes')]||exists.notes;
+        exists.scoreBefore=cols[headers.indexOf('ScoreBefore')]||exists.scoreBefore;
+        exists.scoreAfter=cols[headers.indexOf('ScoreAfter')]||exists.scoreAfter;
+        CL.forEach(function(c){
+          var ci=headers.indexOf('chk_'+c.id);
+          if(ci>=0)exists.checks[c.id]=cols[ci]==='1';
+        });
+        imported++;
+      }
+    }
+    save();renderPages();renderOverview();
+    toast('✅ '+imported+' pages imported/updated');
+  };
+  r.readAsText(file);
+  input.value='';
+}
+
+function makePage(url,kw,pri,pos,impr){
+  var checks={};
+  CL.forEach(function(c){checks[c.id]=false;});
+  return {id:uid(),url:url,keyword:kw||'',priority:pri||'med',
+    position:parseFloat(pos)||0,impressions:parseInt(impr)||0,
+    status:'notstarted',scoreBefore:'',scoreAfter:'',notes:'',deadline:'',
+    checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
+}
+
+// ── Client report export ──
+function exportClientReport(){
+  if(!pages.length){toast('⚠ No pages');return;}
+  var done=pages.filter(function(p){return p.status==='done';});
+  var inp=pages.filter(function(p){return p.status==='inprogress';});
+  var fu=pages.filter(function(p){return p.status==='followup';});
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SEO Audit Report — '+(project.client||'Client')+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;color:#1f2937;padding:0 20px;}'
+    +'h1{color:#6d28d9;font-size:28px;margin-bottom:4px;}h2{color:#4b5563;font-size:18px;margin:24px 0 10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px;}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;}'
+    +'th{background:#f3f4f6;padding:8px 10px;text-align:left;border:1px solid #e5e7eb;color:#6b7280;}'
+    +'td{padding:8px 10px;border:1px solid #e5e7eb;}'
+    +'.done{color:#16a34a;font-weight:700;}.inp{color:#b45309;}.fu{color:#7c3aed;}'
+    +'</style></head><body>'
+    +'<h1>SEO Audit Report</h1>'
+    +'<p><strong>Client:</strong> '+(project.client||'—')+' &nbsp; <strong>Site:</strong> '+(project.site||'—')
+    +' &nbsp; <strong>Auditor:</strong> '+(project.auditor||'—')+' &nbsp; <strong>Date:</strong> '+new Date().toLocaleDateString()+'</p>'
+    +'<p><strong>Progress:</strong> '+done.length+'/'+pages.length+' pages completed ('+Math.round(done.length/pages.length*100)+'%)</p>';
+
+  function pageRows(arr){
+    return arr.map(function(p){
+      var prog=checkProgress(p);
+      return '<tr><td><a href="'+p.url+'">'+p.url+'</a></td><td>'+p.keyword+'</td>'
+        +'<td>'+(p.scoreBefore||'—')+' → '+(p.scoreAfter||'—')+'</td>'
+        +'<td>'+prog.pct+'%</td><td>'+(p.notes||'—')+'</td></tr>';
+    }).join('');
+  }
+
+  if(done.length){html+='<h2>✅ Completed Pages ('+done.length+')</h2><table><tr><th>URL</th><th>Keyword</th><th>Score Before→After</th><th>Checklist</th><th>Notes</th></tr>'+pageRows(done)+'</table>';}
+  if(inp.length){html+='<h2>🔄 In Progress ('+inp.length+')</h2><table><tr><th>URL</th><th>Keyword</th><th>Score Before→After</th><th>Checklist</th><th>Notes</th></tr>'+pageRows(inp)+'</table>';}
+  if(fu.length){html+='<h2>📌 Follow-up Required ('+fu.length+')</h2><table><tr><th>URL</th><th>Keyword</th><th>Score Before→After</th><th>Checklist</th><th>Notes</th></tr>'+pageRows(fu)+'</table>';}
+
+  html+='</body></html>';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='seo-report-'+(project.client||'client').replace(/\\s+/g,'-').toLowerCase()+'-'+new Date().toISOString().slice(0,10)+'.html';
+  a.click();
+  toast('✅ Client report exported');
+}
+
+// ── Check for PULSE+NEXUS callback ──
+// When audit tool marks a page done, it can set ?done=pageId in URL
+(function checkCallback(){
+  var params=new URLSearchParams(window.location.search);
+  var doneId=params.get('done');
+  if(doneId){
+    var p=pages.find(function(pg){return pg.id===doneId;});
+    if(p){
+      p.status='done';p.checks['pulse']=true;p.updated=new Date().toISOString();
+      save();toast('✅ Page marked done from PULSE+NEXUS');
+    }
+    history.replaceState(null,'',window.location.pathname);
+  }
+})();
+
+// ── Import GSC CSV → auto-populate pages ──────────────────
+// GSC export: Performance → Pages tab → Export CSV
+// ── GSC import — Pages CSV + Queries CSV beide tegelijk ────
+var _gscQueryMap = {}; // url → [query, query, ...]
+
+function importGSC(input){
+  var files = Array.from(input.files);
+  if(!files.length) return;
+
+  var totalAdded = 0, totalUpdated = 0, queriesLoaded = 0;
+  var pending = files.length;
+
+  files.forEach(function(file){
+    var r = new FileReader();
+    r.onload = function(e){
+      var result = parseGSCFile(e.target.result);
+      if(result.type === 'pages'){
+        totalAdded += result.added;
+        totalUpdated += result.updated;
+      } else if(result.type === 'queries'){
+        queriesLoaded = result.count;
+      }
+      pending--;
+      if(pending === 0){
+        // Auto-merge duplicates after import
+        var beforeMerge = pages.length;
+        var seen = {}, cnts = {};
+        pages.forEach(function(p) {
+          var key = (p.url||'').trim().toLowerCase().replace(/\\/+$/, '');
+          if (seen[key]) {
+            var ex = seen[key];
+            ex.impressions = (ex.impressions||0) + (p.impressions||0);
+            ex._ps = (ex._ps||ex.position||0) + (p.position||0);
+            cnts[key]++;
+            p._dup = true;
+          } else { seen[key] = p; p._ps = p.position||0; cnts[key] = 1; }
+        });
+        Object.keys(seen).forEach(function(k){
+          var p = seen[k];
+          if(cnts[k]>1){ p.position=Math.round((p._ps/cnts[k])*10)/10; }
+          delete p._ps;
+        });
+        pages = pages.filter(function(p){ return !p._dup; });
+        var mergedCount = beforeMerge - pages.length;
+        // Save GSC data to shared storage for PULSE+NEXUS
+        try {
+          var sharedGsc = { pages: pages.map(function(p){ return {page:p.url, impressions:p.impressions||0, clicks:0, ctr:p.ctr||0, position:p.position||0, score:0}; }), queries: [] };
+          if (typeof _gscQueryMap !== 'undefined') { sharedGsc.queries = Object.keys(_gscQueryMap).map(function(q){ return {query:q, position:_gscQueryMap[q]}; }); }
+          localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
+        } catch(e) {}
+        save(); renderPages(); renderOverview();
+        var msg = '✅ GSC: ' + totalAdded + ' added, ' + totalUpdated + ' updated';
+        if (mergedCount > 0) msg += ' · ' + mergedCount + ' duplicates merged';
+        if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries loaded';
+        toast(msg);
+      }
+    };
+    r.readAsText(file);
+  });
+  input.value = '';
+}
+
+function parseGSCFile(raw){
+  var lines = raw.trim().split('\\n');
+  if(lines.length < 2) return {type:'unknown'};
+  var header = lines[0].toLowerCase().replace(/"/g,'').split(',');
+
+  // Detect if this is a Queries CSV or Pages CSV
+  var isQueries = header.some(function(h){ return h.includes('query') || h.includes('search term'); });
+
+  if(isQueries){
+    // Queries CSV — build a query list (not linked to pages directly here)
+    // Store globally for use in PULSE+NEXUS
+    _gscQueryMap = {};
+    var iQuery = header.findIndex(function(h){ return h.includes('query')||h.includes('search term'); });
+    var iPos   = header.findIndex(function(h){ return h.includes('position'); });
+    var count  = 0;
+    for(var i=1;i<lines.length;i++){
+      var cols = lines[i].replace(/"/g,'').split(',');
+      var q = (cols[iQuery]||'').trim();
+      var pos = parseFloat(cols[iPos])||0;
+      if(q){ _gscQueryMap[q] = pos; count++; }
+    }
+    try{ localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap)); }catch(e){}
+    return {type:'queries', count:count};
+  }
+
+  // Pages CSV
+  var iUrl  = header.findIndex(function(h){ return h.includes('page')||h.includes('url')||h.includes('top page'); });
+  var iImpr = header.findIndex(function(h){ return h.includes('impression'); });
+  var iCtr  = header.findIndex(function(h){ return h.includes('ctr'); });
+  var iPos  = header.findIndex(function(h){ return h.includes('position')||h.includes('pos'); });
+  if(iUrl<0)iUrl=0; if(iImpr<0)iImpr=2; if(iPos<0)iPos=4;
+
+  var added=0, updated=0;
+  for(var i=1;i<lines.length;i++){
+    var cols = lines[i].replace(/"/g,'').split(',');
+    var url = (cols[iUrl]||'').trim();
+    // Only accept real page URLs — must start with http or /
+    if(!url) continue;
+    if(!url.startsWith('http') && !url.startsWith('/')) continue;
+    // Reject query strings masquerading as URLs
+    if(url.includes('-site:') || url.includes(' ') || url.includes('?q=')) continue;
+    var impr = parseInt(cols[iImpr])||0;
+    var pos  = parseFloat(cols[iPos])||0;
+    var ctr  = parseFloat((cols[iCtr]||'0').replace('%',''))||0;
+    var pri;
+    if(pos>=11&&pos<=30) pri='high';
+    else if(pos>=1&&pos<=10&&ctr<2) pri='high';
+    else if(pos>30&&pos<=60) pri='med';
+    else if(pos>60) pri='low';
+    else pri='low';
+    var existing = pages.find(function(p){ return p.url===url; });
+    if(existing){
+      // Merge: keep highest impressions, best position
+      if(impr > (existing.impressions||0)) existing.impressions = impr;
+      if(pos > 0 && (existing.position===0 || pos < existing.position)) existing.position = pos;
+      existing.priority=pri; existing.ctr=ctr;
+      existing.updated=new Date().toISOString();
+      updated++;
+    } else {
+      var np = makePage(url,'',pri,pos,impr);
+      np.ctr = ctr;
+      pages.push(np);
+      added++;
+    }
+  }
+  return {type:'pages', added:added, updated:updated};
+}
+
+function mergeDuplicatePages() {
+  var seen = {};    // key -> primary page object
+  var counts = {};  // key -> count for averaging position
+  var merged = 0;
+
+  pages.forEach(function(p) {
+    var key = (p.url || '').trim().toLowerCase().replace(/\\/+$/, '');
+    if (seen[key]) {
+      var ex = seen[key];
+      // Sum impressions
+      ex.impressions = (ex.impressions || 0) + (p.impressions || 0);
+      // Running average for position
+      ex._posSum = (ex._posSum || ex.position || 0) + (p.position || 0);
+      counts[key]++;
+      p._duplicate = true;
+      merged++;
+    } else {
+      seen[key] = p;
+      p._posSum = p.position || 0;
+      counts[key] = 1;
+    }
+  });
+
+  // Finalize averages
+  Object.keys(seen).forEach(function(key) {
+    var p = seen[key];
+    if (counts[key] > 1) {
+      p.position = Math.round((p._posSum / counts[key]) * 10) / 10;
+      // Recalculate priority from avg position
+      if (p.position >= 11 && p.position <= 30) p.priority = 'high';
+      else if (p.position >= 1 && p.position <= 10) p.priority = 'high';
+      else if (p.position > 30 && p.position <= 60) p.priority = 'med';
+      else p.priority = 'low';
+    }
+    delete p._posSum;
+  });
+
+  if (merged > 0) {
+    pages = pages.filter(function(p){ return !p._duplicate; });
+    save(); renderPages(); renderOverview();
+    toast('🔀 Merged ' + merged + ' duplicates — avg position, summed impressions');
+  } else {
+    toast('✓ No duplicates found');
+  }
+}
+
+// ── Sitemap + GSC — group into: in GSC / not in GSC ───────────
+
+function addSelectedSitemapUrls(){
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if(!selected.length){ toast('⚠ No URLs selected'); return; }
+  var added=0, skipped=0;
+  selected.forEach(function(url){
+    if(pages.find(function(p){ return p.url===url; })){ skipped++; return; }
+    // Check if GSC data available from pages already imported
+    var gscEntry = _gscDataMap && _gscDataMap[url];
+    if(gscEntry){
+      var np = makePage(url,'',gscEntry.pri,gscEntry.pos,gscEntry.impr);
+      np.ctr = gscEntry.ctr;
+      pages.push(np);
+    } else {
+      pages.push(makePage(url,'','low',0,0));
+    }
+    added++;
+  });
+  save(); renderPages(); renderOverview();
+  document.getElementById('sitemapPreview').style.display='none';
+  document.getElementById('sitemapUrl').value='';
+  _sitemapUrls=[]; _sitemapFiltered=[];
+  document.getElementById('sitemapStatus').textContent='';
+  toast('✅ '+added+' pages added'+(skipped?' · '+skipped+' already present':''));
+}
+
+// Global GSC data map for cross-referencing
+var _gscDataMap = {};
+
+// Build GSC map from imported pages
+function buildGscMap(){
+  _gscDataMap = {};
+  pages.forEach(function(p){
+    if(p.position>0 || p.impressions>0){
+      _gscDataMap[p.url] = {pos:p.position, impr:p.impressions, ctr:p.ctr||0, pri:p.priority};
+    }
+  });
+}
+
+// ── Main filter: show sitemap URLs in two groups ─────────────
+function filterSitemapByGSC(){
+  buildGscMap();
+  var gscUrls = Object.keys(_gscDataMap);
+  if(!gscUrls.length){
+    toast('⚠ Importeer eerst je GSC CSV — dan wordt de vergelijking gemaakt');
+    return;
+  }
+  var inGSC    = _sitemapUrls.filter(function(u){ return _gscDataMap[u]; });
+  var notInGSC = _sitemapUrls.filter(function(u){ return !_gscDataMap[u]; });
+
+  renderSitemapGrouped(inGSC, notInGSC);
+  document.getElementById('sitemapStatus').innerHTML =
+    '<span style="color:var(--green)">🟢 '+inGSC.length+' in GSC</span>'
+    +' &nbsp; <span style="color:var(--gold)">🟡 '+notInGSC.length+' not in GSC (not indexed / new)</span>'
+    +' &nbsp; <span style="color:var(--sub)">'+_sitemapUrls.length+' totaal</span>';
+}
+
+function renderSitemapGrouped(inGSC, notInGSC){
+  var list = document.getElementById('sitemapUrlList');
+  var selCount = document.getElementById('sitemapSelCount');
+
+  function rowHtml(u, defaultChecked, gscData){
+    var shortUrl = u.replace(/^https?:\\/\\/[^/]+/,'') || '/';
+    var gscInfo = gscData
+      ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);margin-left:6px;">pos '+Math.round(gscData.pos)+(gscData.impr?' · '+gscData.impr.toLocaleString()+' impr':'')+'</span>'
+      : '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">not in GSC</span>';
+    return '<div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(\\'input\\').click()">'
+      +'<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(defaultChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
+      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      +gscInfo
+      +'<button onclick="event.stopPropagation();removeSitemapUrl(\\''+u+'\\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
+      +'</div>';
+  }
+
+  var html = '';
+
+  // Group 1 — in GSC
+  if(inGSC.length){
+    // Sort by opportunity: pos 11-30 first
+    inGSC.sort(function(a,b){
+      var pa = _gscDataMap[a]?.pos || 999;
+      var pb = _gscDataMap[b]?.pos || 999;
+      var scoreA = (pa>=11&&pa<=30)?0:(pa>=1&&pa<=10)?1:(pa>30&&pa<=60)?2:3;
+      var scoreB = (pb>=11&&pb<=30)?0:(pb>=1&&pb<=10)?1:(pb>30&&pb<=60)?2:3;
+      return scoreA-scoreB || pa-pb;
+    });
+    html += '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);padding:8px 8px 4px;border-bottom:1px solid rgba(74,222,128,.2);margin-bottom:4px;">'
+      +'🟢 In GSC — '+inGSC.length+' pages (sorted by opportunity)'
+      +'</div>';
+    html += inGSC.map(function(u){ return rowHtml(u, true, _gscDataMap[u]); }).join('');
+  }
+
+  // Group 2 — not in GSC
+  if(notInGSC.length){
+    html += '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:12px 8px 4px;border-bottom:1px solid rgba(251,191,36,.2);margin-bottom:4px;margin-top:8px;">'
+      +'🟡 Not in GSC — '+notInGSC.length+' pages (not indexed or new)'
+      +'</div>'
+      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Google does not know these pages yet. Add them to investigate why.</div>';
+    html += notInGSC.map(function(u){ return rowHtml(u, false, null); }).join('');
+  }
+
+  list.innerHTML = html || '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">No URLs found.</div>';
+  updateSitemapCount();
+}
+
+
+// ── Sitemap fetch + preview ─────────────────────────────────
+var _sitemapUrls = []; // all fetched URLs
+var _sitemapFiltered = []; // after filter
+
+async function fetchSitemap() {
+  var url = document.getElementById('sitemapUrl').value.trim();
+  if (!url) { toast('⚠ Voer een sitemap URL in'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+
+  var btn = document.getElementById('sitemapBtn');
+  var status = document.getElementById('sitemapStatus');
+  btn.textContent = '⏳ Fetching...';
+  btn.disabled = true;
+  status.textContent = 'Fetching sitemap via server...';
+  status.style.color = 'var(--muted)';
+
+  try {
+    // Use Railway server as proxy to avoid CORS
+    var r = await fetch('https://app.contentscale.site/api/sitemap/urls', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: url})
+    });
+    var d = await r.json();
+
+    if (!d.success || !d.urls || !d.urls.length) {
+      throw new Error(d.error || 'Geen URLs gevonden in sitemap');
+    }
+
+    _sitemapUrls = d.urls;
+    _sitemapFiltered = d.urls.slice();
+    status.innerHTML = '<span style="color:var(--green)">✓ ' + d.total + ' URLs gevonden</span>';
+    document.getElementById('sitemapPreview').style.display = 'block';
+    renderSitemapList(_sitemapFiltered, true);
+    toast('✅ ' + d.total + ' URLs loaded from sitemap');
+
+  } catch(e) {
+    status.innerHTML = '<span style="color:var(--red)">⚠ ' + e.message + '</span>';
+    toast('⚠ Sitemap fetch mislukt: ' + e.message);
+  }
+
+  btn.textContent = '↓ Fetch Sitemap';
+  btn.disabled = false;
+}
+
+function filterSitemapUrls() {
+  var q = document.getElementById('sitemapFilter').value.trim().toLowerCase();
+  _sitemapFiltered = q
+    ? _sitemapUrls.filter(function(u){ return u.toLowerCase().includes(q); })
+    : _sitemapUrls.slice();
+
+  // Preserve checked state
+  var checked = {};
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){
+    checked[cb.dataset.url] = cb.checked;
+  });
+  renderSitemapList(_sitemapFiltered, false, checked);
+}
+
+function renderSitemapList(urls, selectAll, preserveChecked) {
+  var list = document.getElementById('sitemapUrlList');
+  var selCount = document.getElementById('sitemapSelCount');
+
+  if (!urls.length) {
+    list.innerHTML = '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
+    selCount.textContent = '';
+    return;
+  }
+
+  list.innerHTML = urls.map(function(u) {
+    var shortUrl = u.replace(/^https?:\\/\\/[^/]+/, '') || '/';
+    var isChecked = preserveChecked ? (preserveChecked[u] !== false) : (selectAll !== false);
+    // Skip homepage, XML, images by default
+    var skip = u.endsWith('.xml') || u.endsWith('.jpg') || u.endsWith('.png') || u.endsWith('.pdf');
+    if (skip) isChecked = false;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(&quot;input&quot;).click()">'
+      + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
+      + '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      + '<button onclick="event.stopPropagation();removeSitemapUrl(\\''+u+'\\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
+      + '</div>';
+  }).join('');
+
+  updateSitemapCount();
+}
+
+function updateSitemapCount() {
+  var all = document.querySelectorAll('.sitemap-cb');
+  var checked = document.querySelectorAll('.sitemap-cb:checked');
+  document.getElementById('sitemapSelCount').textContent = checked.length + '/' + all.length + ' selected';
+}
+
+function deleteSelectedSitemapUrls() {
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if (!selected.length) { toast('⚠ No URLs selected'); return; }
+  if (!confirm('Delete ' + selected.length + ' selected URLs from the list?')) return;
+  _sitemapUrls = _sitemapUrls.filter(function(u){ return !selected.includes(u); });
+  _sitemapFiltered = _sitemapFiltered.filter(function(u){ return !selected.includes(u); });
+  renderSitemapList(_sitemapFiltered, false);
+  document.getElementById('sitemapStatus').innerHTML = '<span style="color:var(--green)">✓ ' + _sitemapUrls.length + ' URLs remaining</span>';
+  toast('🗑 ' + selected.length + ' URLs removed');
+  if (!_sitemapUrls.length) document.getElementById('sitemapPreview').style.display = 'none';
+}
+
+function clearAllSitemapUrls() {
+  if (!_sitemapUrls.length) return;
+  if (!confirm('Clear all ' + _sitemapUrls.length + ' URLs from the list?')) return;
+  _sitemapUrls = []; _sitemapFiltered = [];
+  document.getElementById('sitemapPreview').style.display = 'none';
+  document.getElementById('sitemapUrl').value = '';
+  document.getElementById('sitemapStatus').textContent = '';
+  toast('✕ Sitemap cleared');
+}
+
+function selectAllSitemap() {
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){ cb.checked = true; });
+  updateSitemapCount();
+}
+
+function deselectAllSitemap() {
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){ cb.checked = false; });
+  updateSitemapCount();
+}
+
+function removeSitemapUrl(url) {
+  _sitemapUrls = _sitemapUrls.filter(function(u){ return u !== url; });
+  _sitemapFiltered = _sitemapFiltered.filter(function(u){ return u !== url; });
+  var preserved = {};
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){
+    preserved[cb.dataset.url] = cb.checked;
+  });
+  renderSitemapList(_sitemapFiltered, false, preserved);
+  document.getElementById('sitemapStatus').innerHTML = '<span style="color:var(--muted)">' + _sitemapUrls.length + ' URLs resterend</span>';
+}
+
+function addSelectedSitemapUrls() {
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if (!selected.length) { toast('⚠ No URLs selected'); return; }
+  var added = 0;
+  selected.forEach(function(url){
+    var exists = pages.find(function(p){ return p.url === url; });
+    if (!exists) { pages.push(makePage(url,'','med',0,0)); added++; }
+  });
+  save(); renderPages(); renderOverview();
+  document.getElementById('sitemapPreview').style.display = 'none';
+  document.getElementById('sitemapUrl').value = '';
+  _sitemapUrls = [];
+  _sitemapFiltered = [];
+  document.getElementById('sitemapStatus').textContent = '';
+  toast('✅ ' + added + ' pages added (' + (selected.length - added) + ' already present)');
+}
+
+// ── Server sync + auto-save ─────────────────────────────────
+var _autoSaveTimer = null;
+var _lastSavedHash = '';
+
+function _dataHash(){
+  // Simple hash to detect changes
+  return pages.length + '_' + (pages[0]?.updated||'') + '_' + (pages[pages.length-1]?.updated||'');
+}
+
+async function syncToServer(silent){
+  if(!pages.length) return;
+  var btn = document.getElementById('syncBtn');
+  if(btn && !silent){ btn.textContent='☁ Saving...'; btn.disabled=true; }
+
+  var key = (project.client||'default').replace(/\\s+/g,'-').toLowerCase()
+    + '-' + (project.site||'').replace(/https?:\\/\\//,'').split('/')[0].replace(/\\s+/g,'-');
+  if(!key || key === '-') key = 'workflow-' + Date.now();
+
+  var payload = { key, project, pages, savedAt: new Date().toISOString() };
+
+  try {
+    var r = await fetch('https://app.contentscale.site/api/workflow/save', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if(d.success){
+      _lastSavedHash = _dataHash();
+      var ts = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      setSyncStatus('☁ Opgeslagen om ' + ts + ' — key: ' + key, 'var(--green)');
+      try{ localStorage.setItem('cs_wf_sync_key', key); }catch(e){}
+      if(!silent) toast('☁ Opgeslagen op server');
+    } else {
+      setSyncStatus('⚠ Server save mislukt — data staat in browser', 'var(--gold)');
+    }
+  } catch(e) {
+    setSyncStatus('⚠ Server niet bereikbaar — data staat in browser', 'var(--gold)');
+    if(!silent) toast('⚠ Server offline — browser backup actief');
+  }
+  if(btn && !silent){ btn.textContent='☁ Save to Server'; btn.disabled=false; }
+}
+
+async function loadFromServer(){
+  var key = prompt('Project key (leeg = laatste opgeslagen):');
+  if(key === null) return;
+  if(!key){
+    try{ key = localStorage.getItem('cs_wf_sync_key')||''; }catch(e){}
+  }
+  if(!key){ toast('⚠ Geen key gevonden'); return; }
+  try {
+    var r = await fetch('https://app.contentscale.site/api/workflow/load?key='+encodeURIComponent(key));
+    var d = await r.json();
+    if(d.success && d.data){
+      if(!confirm('Workflow "'+key+'" laden? Vervangt huidige data.')) return;
+      if(d.data.project) project = d.data.project;
+      if(d.data.pages)   pages   = d.data.pages;
+      if(project.client)   document.getElementById('pClient').value   = project.client;
+      if(project.site)     document.getElementById('pSite').value     = project.site;
+      if(project.deadline) document.getElementById('pDeadline').value = project.deadline;
+      if(project.auditor)  document.getElementById('pAuditor').value  = project.auditor;
+      save(); renderPages(); renderOverview();
+      var ts = new Date(d.data.savedAt||Date.now()).toLocaleString('nl-NL');
+      setSyncStatus('☁ Geladen van server (opgeslagen: '+ts+')', 'var(--green)');
+      toast('✅ '+pages.length+' pages loaded from server');
+    } else {
+      toast('⚠ Niet gevonden: '+key);
+    }
+  } catch(e){ toast('⚠ Server niet bereikbaar'); }
+}
+
+function setSyncStatus(msg, color){
+  var el = document.getElementById('syncStatus');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--dim)'; }
+}
+
+
+// ── ContentScore scan per page ──────────────────────────────────
+async function scanOnePage(pageId) {
+  var p = pages.find(function(pg){ return pg.id === pageId; });
+  if (!p) return;
+  var btn = document.querySelector('[onclick="scanOnePage(\\'' + pageId + '\\')"]');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+  try {
+    var r = await fetch('https://app.contentscale.site/api/scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: p.url})
+    });
+    var d = await r.json();
+    if (d.score) {
+      if (!p.scoreBefore) {
+        p.scoreBefore = d.score;
+        toast('✅ Pre-scan: ' + d.score + '/100 — ' + p.url.split('/').pop());
+      } else {
+        p.scoreAfter = d.score;
+        toast('✅ Na-scan: ' + d.score + '/100 — verschil: ' + (d.score - p.scoreBefore));
+      }
+      save(); renderPages();
+    } else {
+      toast('⚠ Scan mislukt: ' + (d.error || 'onbekende fout'));
+    }
+  } catch(e) {
+    toast('⚠ Server niet bereikbaar: ' + e.message);
+  }
+  if (btn) { btn.textContent = '📊 Scan Score'; btn.disabled = false; }
+}
+
+// ── Scan alle paginas zonder score ───────────────────────────
+var _scanQueue = [];
+var _scanRunning = false;
+
+async function scanAllScores() {
+  var unscored = pages.filter(function(p){ return !p.scoreBefore && p.url; });
+  var all = pages.filter(function(p){ return p.url; });
+  // If all have scores, ask if they want to rescan
+  if (!unscored.length && all.length) {
+    if (!confirm('All pages already have a score. Re-scan all ' + all.length + ' pages?')) return;
+    unscored = all; // rescan all
+  }
+  if (!unscored.length) { toast('No pages with URLs found'); return; }
+  if (_scanRunning) { toast('⏳ Scan already running...'); return; }
+  _scanQueue = unscored.slice();
+  _scanRunning = true;
+  toast('⏳ Scanning ' + _scanQueue.length + ' pages...');
+  setSyncStatus('⏳ Auto-scan running: 0/' + _scanQueue.length + ' pages', 'var(--gold)');
+
+  var done = 0;
+  for (var i = 0; i < _scanQueue.length; i++) {
+    var p = _scanQueue[i];
+    try {
+      var r = await fetch('https://app.contentscale.site/api/scan', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: p.url})
+      });
+      var d = await r.json();
+      if (d.score) { p.scoreBefore = d.score; done++; }
+    } catch(e) {}
+    setSyncStatus('⏳ Scanning ' + (i+1) + '/' + _scanQueue.length + ' — ' + done + ' scores found', 'var(--gold)');
+    save();
+    await new Promise(function(res){ setTimeout(res, 2000); }); // 2s between scans
+  }
+
+  _scanRunning = false;
+  renderPages(); renderOverview();
+  setSyncStatus('✅ Auto-scan complete — ' + done + ' scores loaded', 'var(--green)');
+  toast('✅ ' + done + '/' + _scanQueue.length + ' pages scanned');
+}
+
+function startAutoSave(){
+  if(_autoSaveTimer) clearInterval(_autoSaveTimer);
+  // Auto-save every 3 minutes IF data has changed
+  _autoSaveTimer = setInterval(function(){
+    if(pages.length > 0 && _dataHash() !== _lastSavedHash){
+      syncToServer(true); // silent = no toast
+    }
+  }, 3 * 60 * 1000);
+  // Also save on page unload
+  window.addEventListener('beforeunload', function(){
+    if(pages.length > 0 && _dataHash() !== _lastSavedHash){
+      syncToServer(true);
+    }
+  });
+}
+
+// ── Init ──
+load();
+renderPages();
+renderOverview();
+startAutoSave();
+if(pages.length>0) setSyncStatus('Data in browser — click ☁ Save to Server to backup', 'var(--dim)');
+</script>
+</body>
+</html>
+`);
+});
+app.get('/audit-recommendations', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Recommendations | ContentScale</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px 80px;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+
+/* Summary bar */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+@media(max-width:600px){.summary{grid-template-columns:1fr 1fr;}}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center;}
+.sum-n{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-bottom:3px;}
+.sum-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Filter */
+.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.filter-bar select{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 11px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--muted);outline:none;cursor:pointer;}
+.filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
+
+/* Recommendation cards */
+.rec-list{display:flex;flex-direction:column;gap:12px;}
+
+.rec-card{border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.rec-card.type-quickwin{border-left:4px solid var(--green);}
+.rec-card.type-ctr{border-left:4px solid var(--blue);}
+.rec-card.type-content{border-left:4px solid var(--gold);}
+.rec-card.type-rewrite{border-left:4px solid var(--orange);}
+.rec-card.type-authority{border-left:4px solid var(--purple);}
+.rec-card.type-build{border-left:4px solid var(--dim);}
+
+.rec-head{background:var(--card);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+.rec-badge{flex-shrink:0;padding:4px 10px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;white-space:nowrap;margin-top:2px;}
+.badge-quickwin{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.badge-ctr{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.badge-content{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.badge-rewrite{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
+.badge-authority{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
+.badge-build{background:rgba(71,85,105,.15);color:var(--dim);border:1px solid rgba(71,85,105,.3);}
+
+.rec-main{flex:1;min-width:200px;}
+.rec-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-bottom:5px;word-break:break-all;}
+.rec-kw{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.rec-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.03em;color:var(--ink);margin-bottom:5px;}
+.rec-why{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;}
+.rec-action{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:flex-start;gap:6px;}
+.rec-action::before{content:'→';color:var(--gold);flex-shrink:0;}
+
+.rec-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.meta-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:4px;border:1px solid var(--border);color:var(--dim);}
+.meta-chip strong{color:var(--muted);}
+
+/* Pre-filled info */
+.prefill-box{background:var(--surface);border-radius:8px;padding:12px 16px;margin:0 20px 0 0;min-width:200px;max-width:280px;flex-shrink:0;}
+@media(max-width:700px){.prefill-box{max-width:100%;margin:0;}}
+.prefill-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;}
+.prefill-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:11px;}
+.prefill-row.auto{color:var(--green);}
+.prefill-row.manual{color:var(--dim);}
+.prefill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-auto{background:var(--green);}
+.dot-manual{background:var(--dim);}
+
+/* Action button */
+.rec-foot{background:rgba(255,255,255,.02);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.action-btn{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;padding:10px 28px;border-radius:7px;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .18s;}
+.action-btn-gold{background:var(--gold);color:#000;}
+.action-btn-gold:hover{background:#e6b020;transform:translateY(-1px);}
+.action-btn-blue{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.action-btn-blue:hover{background:var(--blue);color:#000;}
+.time-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:5px;}
+
+.empty{text-align:center;padding:60px 20px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--sub);margin-bottom:8px;}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── MOBILE RESPONSIVE ─────────────────────────── */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .topbar-right{gap:5px;}
+  .btn{font-size:8px;padding:6px 10px;}
+  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
+  .add-row{flex-direction:column;}
+  .add-row input,.add-row select{width:100%!important;}
+  .filter-bar{flex-direction:column;gap:6px;}
+  .filter-bar select,.filter-bar input{width:100%!important;}
+  .card-head{flex-wrap:wrap;gap:6px;}
+  .rec-head{flex-direction:column;}
+  .prefill-box{max-width:100%;width:100%;}
+  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
+  .project-bar{flex-direction:column;}
+  .pf{min-width:100%!important;}
+  .steps{flex-direction:column!important;}
+  .step{border-right:none!important;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .how-step{flex-direction:column;}
+  .flow-step{gap:10px;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
+  .modes{grid-template-columns:1fr!important;}
+  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+}
+@media(max-width:480px){
+  .overview,.summary{grid-template-columns:1fr 1fr!important;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .topbar-right{flex-wrap:wrap;}
+  .card-meta{flex-wrap:wrap;gap:4px;}
+  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
+  h1,h2,.tool-name{word-break:break-word;}
+  .panel{padding:16px!important;}
+  .section{padding:14px 16px!important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO RECOMMENDATIONS ENGINE</div>
+  <div style="display:flex;gap:8px;">
+    <a href="/audit-workflow" class="btn btn-muted">← Workflow Manager</a>
+    <a href="/audit-seo" class="btn btn-muted">🔬 PULSE+NEXUS</a>
+    <button class="btn btn-muted" onclick="location.reload()">↺ Refresh</button>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="summary" id="summary"></div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <select id="fType" onchange="render()">
+    <option value="all">All recommendations</option>
+    <option value="quickwin">⚡ Quick Wins</option>
+    <option value="ctr">📈 CTR Fix</option>
+    <option value="content">📝 Content Upgrade</option>
+    <option value="rewrite">✏️ Rewrite</option>
+    <option value="authority">🔗 Authority</option>
+  </select>
+  <select id="fPri" onchange="render()">
+    <option value="all">All priorities</option>
+    <option value="high">🔴 High</option>
+    <option value="med">🟡 Medium</option>
+    <option value="low">🟢 Low</option>
+  </select>
+  <select id="fStatus" onchange="render()">
+    <option value="active">Not done</option>
+    <option value="all">All pages</option>
+    <option value="done">Done only</option>
+  </select>
+  <select id="fSort" onchange="render()">
+    <option value="impact">Sort: Impact</option>
+    <option value="position">Sort: Position</option>
+    <option value="impressions">Sort: Impressions</option>
+  </select>
+</div>
+
+<div class="rec-list" id="recList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var AUDIT_URL = '/audit-seo';
+var pages = [];
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+function load(){
+  try{ var p=localStorage.getItem('cs_wf_pages'); if(p) pages=JSON.parse(p); }catch(e){}
+}
+
+// ── Recommendation engine ─────────────────────────────────
+var RECS = {
+  quickwin: {
+    label:'Quick Win', badgeClass:'badge-quickwin', cardClass:'type-quickwin',
+    title:'Title & Meta — 30 Minute Win',
+    icon:'⚡',
+  },
+  ctr: {
+    label:'CTR Fix', badgeClass:'badge-ctr', cardClass:'type-ctr',
+    title:'CTR Surgery Needed',
+    icon:'📈',
+  },
+  content: {
+    label:'Content Upgrade', badgeClass:'badge-content', cardClass:'type-content',
+    title:'Content Upgrade — Full Audit',
+    icon:'📝',
+  },
+  rewrite: {
+    label:'Rewrite + Audit', badgeClass:'badge-rewrite', cardClass:'type-rewrite',
+    title:'Page Rewrite Required',
+    icon:'✏️',
+  },
+  authority: {
+    label:'Authority Gap', badgeClass:'badge-authority', cardClass:'type-authority',
+    title:'Content Good — Build Authority',
+    icon:'🔗',
+  },
+  build: {
+    label:'Build Content', badgeClass:'badge-build', cardClass:'type-build',
+    title:'Content Needs Building First',
+    icon:'🏗️',
+  },
+};
+
+function getRecommendation(p){
+  var pos   = p.position   || 0;
+  var ctr   = parseFloat(p.ctr) || 0;
+  var impr  = p.impressions || 0;
+  var score = parseFloat(p.scoreBefore) || 0;
+  var hasScore = p.scoreBefore !== '' && p.scoreBefore !== undefined;
+
+  // ── SCENARIO 1: Page 1 but low CTR ─────────────────────
+  if(pos>=1 && pos<=10 && ctr<2){
+    return {
+      type:'quickwin',
+      impactScore: 95,
+      why: 'Je staat op pagina 1 (positie '+Math.round(pos)+') maar CTR is slechts '+ctr.toFixed(1)+'%. '
+          +'Searchers zien je maar klikken niet. De title of meta description trekt niet genoeg aan.',
+      action: 'Herschrijf de title tag (≤60 chars) en meta description (≤155 chars). '
+             +'Voeg een getal, power word of urgentie-trigger toe.',
+      auditFocus: 'CTR Surgery — Stap 2 in PULSE+NEXUS',
+      time: '30 min',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML (voor werkelijke title)','Competitor HTML'],
+      quickWin:  true,
+    };
+  }
+
+  // ── SCENARIO 2: Page 1, CTR ok — already winning ───────
+  if(pos>=1 && pos<=10 && ctr>=2){
+    if(hasScore && score>=85){
+      return {
+        type:'authority',
+        impactScore: 40,
+        why: 'Positie '+Math.round(pos)+', CTR '+ctr.toFixed(1)+'%, score '+score+'/100. '
+            +'Pagina presteert goed. Verdere groei komt via linkbuilding en autoriteit.',
+        action: 'Focus op interne links en externe backlinks. '
+               +'Voeg expertcitaten en fresh data toe (2026).',
+        auditFocus: 'NEXUS Signals — Stap 6 in PULSE+NEXUS',
+        time: '1-2 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Sitemap URLs (voor interne links)','Competitor HTML'],
+      };
+    }
+    return null; // Already performing well, no urgent action
+  }
+
+  // ── SCENARIO 3: Position 11-20 — closest to page 1 ─────
+  if(pos>=11 && pos<=20){
+    if(ctr<1.5){
+      return {
+        type:'ctr',
+        impactScore: 92,
+        why: 'Positie '+Math.round(pos)+' met CTR '+ctr.toFixed(1)+'%. '
+            +'Je staat bijna op pagina 1 maar de CTR is laag. '
+            +'Twee problemen: title trekt niet aan EN content net niet sterk genoeg.',
+        action: 'Stap 1: title + meta herschrijven (30 min). '
+               +'Stap 2: volledige PULSE+NEXUS audit voor de laatste push naar pagina 1.',
+        auditFocus: 'Start met Stap 2 (CTR Surgery) dan Stap 1 (Priority Actions)',
+        time: '1-3 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
+        quickWin:  true,
+      };
+    }
+    if(hasScore && score<70){
+      return {
+        type:'content',
+        impactScore: 90,
+        why: 'Positie '+Math.round(pos)+', score '+score+'/100. '
+            +'Bijna pagina 1 maar de content is te zwak. '
+            +'Met een score boven 80 heb je grote kans om naar de top te stijgen.',
+        action: 'Volledige PULSE+NEXUS audit. Focus op content gaps, PULSE rewrites en schema.',
+        auditFocus: 'Alle 10 stappen — Priority Actions eerst',
+        time: '2-4 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML','Competitor HTML (Surfer SEO + MarketMuse als default)','Sitemap URLs'],
+      };
+    }
+    return {
+      type:'content',
+      impactScore: 88,
+      why: 'Positie '+Math.round(pos)+' — één sterke audit verwijderd van pagina 1. '
+          +( impr>2000 ? impr.toLocaleString()+' impressies betekent veel te winnen. ' : '')
+          +(hasScore ? 'Score: '+score+'/100.' : 'ContentScore nog onbekend — scan eerst.'),
+      action: 'Volledige PULSE+NEXUS audit — focus op content gaps en interne links.',
+      auditFocus: 'Alle 10 stappen — Priority Actions eerst',
+      time: '2-3 uur',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
+    };
+  }
+
+  // ── SCENARIO 4: Position 21-30 ──────────────────────────
+  if(pos>=21 && pos<=30){
+    if(hasScore && score<70){
+      return {
+        type:'rewrite',
+        impactScore: 82,
+        why: 'Positie '+Math.round(pos)+', score '+score+'/100. '
+            +'Content moet herschreven worden én de pagina heeft een volledige audit nodig. '
+            +(impr>1000 ? 'Met '+impr.toLocaleString()+' impressies is de potentie er.' : ''),
+        action: 'Pagina herschrijven op basis van PULSE+NEXUS aanbevelingen. '
+               +'Daarna opnieuw scannen en score vergelijken.',
+        auditFocus: 'Stap 5 (PULSE rewrites) + Stap 4 (Content Gap) zijn prioriteit',
+        time: '3-5 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML (verplicht voor rewrite analyse)','Competitor HTML','Sitemap URLs'],
+      };
+    }
+    return {
+      type:'content',
+      impactScore: 78,
+      why: 'Positie '+Math.round(pos)+'. Pagina heeft potentie maar mist autoriteit of content diepte. '
+          +(impr>500 ? impr.toLocaleString()+' impressies — het onderwerp heeft vraag.' : ''),
+      action: 'Volledige audit — focus op NEXUS signals, interne links en schema.',
+      auditFocus: 'Alle 10 stappen',
+      time: '2-3 uur',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
+    };
+  }
+
+  // ── SCENARIO 5: Position 31-60 ──────────────────────────
+  if(pos>=31 && pos<=60){
+    if(impr>1000){
+      return {
+        type:'rewrite',
+        impactScore: 70,
+        why: 'Positie '+Math.round(pos)+' met '+impr.toLocaleString()+' impressies. '
+            +'Veel zoekvolume maar Google vindt de pagina niet sterk genoeg voor pagina 1-3. '
+            +'Diepgaande audit + content rewrite is de enige weg omhoog.',
+        action: 'Diepgaande PULSE+NEXUS audit. Alle 10 stappen doorlopen. '
+               +'Daarna content rewrite en schema toevoegen.',
+        auditFocus: 'Alle 10 stappen — focus Stap 3 (Competitor Diff) en Stap 5 (PULSE rewrites)',
+        time: '4-6 uur',
+        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+        manual:    ['Pagina HTML (kritiek)','Competitor HTML','Sitemap URLs'],
+      };
+    }
+    return {
+      type:'content',
+      impactScore: 55,
+      why: 'Positie '+Math.round(pos)+(impr<200?' met weinig impressies':'')+'. '
+          +'Content is te zwak of het onderwerp heeft weinig vraag. '
+          +'Audit geeft duidelijkheid welke richting het beste werkt.',
+      action: 'Audit om te bepalen of herschrijven of nieuwe aanpak nodig is.',
+      auditFocus: 'Stap 1 (Intent) en Stap 4 (Content Gap) eerst',
+      time: '1-3 uur',
+      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
+      manual:    ['Pagina HTML','Competitor HTML'],
+    };
+  }
+
+  // ── SCENARIO 6: Position 60+ ────────────────────────────
+  if(pos>60){
+    if(impr>500){
+      return {
+        type:'build',
+        impactScore: 40,
+        why: 'Positie '+Math.round(pos)+' maar '+impr.toLocaleString()+' impressies — er is vraag. '
+            +'Google beoordeelt deze pagina als te zwak. Fundamentele content rebuild nodig.',
+        action: 'Content volledig opnieuw schrijven met PULSE+NEXUS als briefing. '
+               +'Focus op E-E-A-T, schema en content diepte.',
+        auditFocus: 'Alle 10 stappen als content brief gebruiken',
+        time: '5+ uur',
+        prefilled: ['URL','Keyword'],
+        manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs','GSC queries'],
+      };
+    }
+    return {
+      type:'build',
+      impactScore: 25,
+      why: 'Positie '+Math.round(pos)+' met laag zoekvolume. '
+          +'Eerst bepalen of dit zoekwoord de moeite waard is.',
+      action: 'Keyword research eerst. Dan beslissen: rewrite of nieuw artikel.',
+      auditFocus: 'Stap 1 (Intent analyse) als startpunt',
+      time: 'Nader te bepalen',
+      prefilled: ['URL','Keyword'],
+      manual:    ['Alles — pagina heeft weinig data'],
+    };
+  }
+
+  // No position data
+  return {
+    type:'content',
+    impactScore: 50,
+    why: 'Geen GSC data beschikbaar. Voeg positie en impressies toe vanuit GSC voor een betere aanbeveling.',
+    action: 'Voeg GSC data toe, scan ContentScore, dan volledige audit.',
+    auditFocus: 'Alle 10 stappen',
+    time: 'Onbekend',
+    prefilled: ['URL','Keyword'],
+    manual:    ['GSC data','Pagina HTML','Competitor HTML'],
+  };
+}
+
+function buildAuditUrl(p){
+  var params = new URLSearchParams();
+  params.set('url', p.url);
+  if(p.keyword)     params.set('kw',   p.keyword);
+  if(p.position)    params.set('pos',  p.position);
+  if(p.impressions) params.set('impr', p.impressions);
+  if(p.ctr)         params.set('ctr',  p.ctr);
+  if(p.id)          params.set('wf',   p.id); // workflow callback
+  return AUDIT_URL + '?' + params.toString();
+}
+
+function render(){
+  var fType   = document.getElementById('fType').value;
+  var fPri    = document.getElementById('fPri').value;
+  var fStatus = document.getElementById('fStatus').value;
+  var fSort   = document.getElementById('fSort').value;
+
+  var arr = pages.filter(function(p){
+    if(fStatus==='active' && p.status==='done') return false;
+    if(fStatus==='done'   && p.status!=='done') return false;
+    if(fPri!=='all' && p.priority!==fPri) return false;
+    return true;
+  }).map(function(p){
+    return { page:p, rec:getRecommendation(p) };
+  }).filter(function(x){
+    if(!x.rec) return false;
+    if(fType!=='all' && x.rec.type!==fType) return false;
+    return true;
+  });
+
+  // Sort
+  if(fSort==='impact')      arr.sort(function(a,b){ return b.rec.impactScore - a.rec.impactScore; });
+  else if(fSort==='position') arr.sort(function(a,b){ return (a.page.position||999)-(b.page.position||999); });
+  else if(fSort==='impressions') arr.sort(function(a,b){ return b.page.impressions-a.page.impressions; });
+
+  // Summary
+  var types = {};
+  arr.forEach(function(x){ types[x.rec.type]=(types[x.rec.type]||0)+1; });
+  var quickwins = arr.filter(function(x){ return x.rec.quickWin; }).length;
+  document.getElementById('summary').innerHTML =
+    '<div class="sum-card"><div class="sum-n" style="color:var(--blue)">'+arr.length+'</div><div class="sum-l">Total pages</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--green)">'+quickwins+'</div><div class="sum-l">Quick wins</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--gold)">'+(types.content||0)+'</div><div class="sum-l">Need audit</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--orange)">'+(types.rewrite||0)+'</div><div class="sum-l">Need rewrite</div></div>';
+
+  if(!arr.length){
+    document.getElementById('recList').innerHTML='<div class="empty"><h3>No Pages</h3><p>Add pages in the Workflow Manager first, or adjust filters.</p></div>';
+    return;
+  }
+
+  document.getElementById('recList').innerHTML = arr.map(function(x,i){
+    var p   = x.page;
+    var rec = x.rec;
+    var R   = RECS[rec.type] || RECS.content;
+    var auditUrl = buildAuditUrl(p);
+
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
+    if(shortUrl.length>60) shortUrl=shortUrl.slice(0,60)+'…';
+
+    var gscChips = '';
+    if(p.position)    gscChips+='<span class="meta-chip"><strong>Pos</strong> '+Math.round(p.position)+'</span>';
+    if(p.impressions) gscChips+='<span class="meta-chip"><strong>Impr</strong> '+p.impressions.toLocaleString()+'</span>';
+    if(p.ctr)         gscChips+='<span class="meta-chip"><strong>CTR</strong> '+parseFloat(p.ctr).toFixed(1)+'%</span>';
+    if(p.scoreBefore) gscChips+='<span class="meta-chip"><strong>Score</strong> '+p.scoreBefore+'/100</span>';
+
+    var prefillHtml = rec.prefilled.map(function(item){
+      return '<div class="prefill-row auto"><span class="prefill-dot dot-auto"></span>'+item+'</div>';
+    }).join('');
+    var manualHtml = rec.manual.map(function(item){
+      return '<div class="prefill-row manual"><span class="prefill-dot dot-manual"></span>'+item+'</div>';
+    }).join('');
+
+    return '<div class="rec-card '+R.cardClass+'">'
+
+      // Head
+      +'<div class="rec-head">'
+      +'<div><span class="rec-badge '+R.badgeClass+'">'+R.icon+' '+R.label+'</span></div>'
+      +'<div class="rec-main">'
+      +'<div class="rec-url">'+shortUrl+'</div>'
+      +(p.keyword?'<div class="rec-kw">'+p.keyword+'</div>':'')
+      +'<div class="rec-title">'+rec.title+'</div>'
+      +'<div class="rec-why">'+rec.why+'</div>'
+      +'<div class="rec-action">'+rec.action+'</div>'
+      +(gscChips?'<div class="rec-meta">'+gscChips+'</div>':'')
+      +'</div>'
+
+      // Pre-fill info
+      +'<div class="prefill-box">'
+      +'<div class="prefill-title">In PULSE+NEXUS</div>'
+      +(prefillHtml?'<div style="margin-bottom:6px;font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;letter-spacing:.08em;color:var(--green);text-transform:uppercase;">✓ Auto-ingevuld</div>'+prefillHtml:'')
+      +(manualHtml?'<div style="margin:8px 0 4px;font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;">✎ Handmatig</div>'+manualHtml:'')
+      +'</div>'
+      +'</div>'
+
+      // Footer with action
+      +'<div class="rec-foot">'
+      +'<a href="'+auditUrl+'" target="_blank" class="action-btn action-btn-gold">🔬 Open in PULSE+NEXUS →</a>'
+      +'<a href="'+p.url+'" target="_blank" class="action-btn action-btn-blue">↗ Open pagina</a>'
+      +'<span class="time-chip">⏱ '+rec.time+'</span>'
+      +(rec.auditFocus?'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);letter-spacing:.06em;">'+rec.auditFocus+'</span>':'')
+      +'</div>'
+
+      +'</div>';
+  }).join('');
+}
+
+load();
+render();
+</script>
+</body>
+</html>
+`);
+});
+app.get('/handleiding',           (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="nl" id="htmlRoot">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>ContentScale SEO Audit System — Handleiding / User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.7;}
+.wrap{max-width:900px;margin:0 auto;padding:40px 24px 100px;}
+
+/* Header */
+.header{text-align:center;padding:48px 0 40px;border-bottom:1px solid var(--border);margin-bottom:48px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:inline-block;margin-bottom:16px;}
+.header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,5vw,52px);letter-spacing:.04em;line-height:1.05;margin-bottom:12px;background:linear-gradient(135deg,var(--gold),var(--ink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header p{color:var(--muted);font-size:15px;max-width:600px;margin:0 auto;}
+
+/* Nav */
+.toc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;margin-bottom:48px;}
+.toc-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:14px;}
+.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.03);transition:color .15s;}
+.toc a:hover{color:var(--gold);}
+.toc a span{color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:11px;margin-right:10px;}
+
+/* Sections */
+.section{margin-bottom:56px;}
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;}
+.section h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,4vw,38px);letter-spacing:.04em;margin-bottom:16px;color:var(--gold);}
+.section h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;margin:28px 0 10px;color:var(--ink);}
+.section p{color:var(--muted);font-size:14px;margin-bottom:14px;line-height:1.75;}
+.section p strong{color:var(--ink);}
+
+/* Tool cards */
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden;}
+.tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.tool-card.gold::before{background:var(--gold);}
+.tool-card.purple::before{background:var(--purple);}
+.tool-card.blue::before{background:var(--blue);}
+.tool-card.green::before{background:var(--green);}
+.tool-card.orange::before{background:var(--orange);}
+.tool-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;margin-bottom:4px;}
+.tool-url{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);margin-bottom:10px;}
+.tool-desc{font-size:13px;color:var(--muted);line-height:1.7;}
+.tool-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:10px;}
+.badge-internal{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.badge-client{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.badge-noindex{background:rgba(244,63,63,.12);color:var(--red);border:1px solid rgba(244,63,63,.3);}
+
+/* Flow diagram */
+.flow{display:flex;flex-direction:column;gap:0;margin:24px 0;}
+.flow-step{display:flex;gap:16px;align-items:flex-start;}
+.flow-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:40px;}
+.flow-num{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;flex-shrink:0;}
+.flow-line{width:2px;flex:1;min-height:24px;background:var(--border);margin:2px 0;}
+.flow-body{flex:1;padding-bottom:24px;}
+.flow-title{font-weight:700;font-size:15px;color:var(--ink);margin-bottom:4px;}
+.flow-sub{font-size:13px;color:var(--muted);line-height:1.65;}
+.flow-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-top:4px;}
+
+/* Steps */
+.steps-list{counter-reset:step;}
+.step-item{display:flex;gap:14px;margin-bottom:20px;padding:16px 18px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;}
+.step-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
+.step-body strong{color:var(--ink);display:block;margin-bottom:4px;font-size:14px;}
+.step-body span{font-size:13px;color:var(--muted);line-height:1.65;}
+.step-body code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--surface);padding:1px 6px;border-radius:3px;color:var(--blue);}
+
+/* Info boxes */
+.info-box{border-radius:8px;padding:14px 18px;margin:16px 0;font-size:13px;line-height:1.7;}
+.info-box.gold{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);color:var(--muted);}
+.info-box.gold strong{color:var(--gold);}
+.info-box.blue{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);color:var(--muted);}
+.info-box.blue strong{color:var(--blue);}
+.info-box.green{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);color:var(--muted);}
+.info-box.green strong{color:var(--green);}
+.info-box.red{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);color:var(--muted);}
+.info-box.red strong{color:var(--red);}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;}
+.data-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 12px;text-align:left;border:1px solid var(--border);}
+.data-table td{padding:9px 12px;border:1px solid var(--border);color:var(--muted);vertical-align:top;}
+.data-table td strong{color:var(--ink);}
+.data-table tr:hover td{background:rgba(255,255,255,.02);}
+
+/* Scenario boxes */
+.scenario{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 18px;margin-bottom:10px;}
+.scenario-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.scenario-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;}
+.scenario-title{font-weight:700;font-size:14px;color:var(--ink);}
+.scenario p{font-size:13px;color:var(--muted);margin:0;}
+.scenario .action{font-size:13px;color:var(--ink);font-weight:600;margin-top:6px;display:flex;align-items:flex-start;gap:6px;}
+.scenario .action::before{content:'→';color:var(--gold);flex-shrink:0;}
+
+/* Divider */
+hr{border:none;border-top:1px solid var(--border);margin:40px 0;}
+.nl{}.en{display:none;}
+body.lang-en .nl{display:none !important;}
+body.lang-en .en{display:block !important;}
+body.lang-en span.en{display:inline !important;}
+body.lang-en span.nl{display:none !important;}
+
+/* ── MOBILE RESPONSIVE ─────────────────────────── */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .topbar-right{gap:5px;}
+  .btn{font-size:8px;padding:6px 10px;}
+  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
+  .add-row{flex-direction:column;}
+  .add-row input,.add-row select{width:100%!important;}
+  .filter-bar{flex-direction:column;gap:6px;}
+  .filter-bar select,.filter-bar input{width:100%!important;}
+  .card-head{flex-wrap:wrap;gap:6px;}
+  .rec-head{flex-direction:column;}
+  .prefill-box{max-width:100%;width:100%;}
+  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
+  .project-bar{flex-direction:column;}
+  .pf{min-width:100%!important;}
+  .steps{flex-direction:column!important;}
+  .step{border-right:none!important;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .how-step{flex-direction:column;}
+  .flow-step{gap:10px;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
+  .modes{grid-template-columns:1fr!important;}
+  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+}
+@media(max-width:480px){
+  .overview,.summary{grid-template-columns:1fr 1fr!important;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .topbar-right{flex-wrap:wrap;}
+  .card-meta{flex-wrap:wrap;gap:4px;}
+  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
+  h1,h2,.tool-name{word-break:break-word;}
+  .panel{padding:16px!important;}
+  .section{padding:14px 16px!important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- Header -->
+<div class="header">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <h1>SEO Audit System Handleiding</h1>
+  <p class="nl">Stap-voor-stap uitleg van het volledige systeem — van GSC data tot afgehandelde audit. Voor intern gebruik.</p>
+  <p class="en" style="display:none;">Step-by-step explanation of the complete system — from GSC data to completed audit. For internal use.</p>
+  <div style="margin-top:20px;">
+    <button onclick="setLang('nl')" id="btnNL" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:5px 0 0 5px;border:1px solid var(--gold);background:var(--gold);color:#000;cursor:pointer;font-weight:700;">🇳🇱 NL</button>
+    <button onclick="setLang('en')" id="btnEN" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:0 5px 5px 0;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">🇺🇸 EN</button>
+  </div>
+</div>
+
+<!-- Inhoud -->
+<div class="toc">
+  <div class="toc-title"><span class="nl">Inhoud</span><span class="en" style="display:none;">Contents</span></div>
+  <a href="#overzicht"><span>01</span><span class="nl">Overzicht — wat is het systeem?</span><span class="en" style="display:none;">Overview — what is the system?</span></a>
+  <a href="#tools"><span>02</span><span class="nl">De 5 tools — wat doet elke pagina?</span><span class="en" style="display:none;">The 5 tools — what does each page do?</span></a>
+  <a href="#flow"><span>03</span><span class="nl">De volledige flow — stap voor stap</span><span class="en" style="display:none;">The complete flow — step by step</span></a>
+  <a href="#gsc"><span>04</span><span class="nl">GSC uitleg — impressies, CTR, positie</span><span class="en" style="display:none;">GSC explained — impressions, CTR, position</span></a>
+  <a href="#scenarios"><span>05</span><span class="nl">Aanbevelingen — wanneer doe je wat?</span><span class="en" style="display:none;">Recommendations — when to do what?</span></a>
+  <a href="#audit"><span>06</span><span class="nl">PULSE+NEXUS uitvoeren — hoe werkt het?</span><span class="en" style="display:none;">Running PULSE+NEXUS — how does it work?</span></a>
+  <a href="#checklist"><span>07</span><span class="nl">Checklist — wat doe je per pagina?</span><span class="en" style="display:none;">Checklist — what to do per page?</span></a>
+  <a href="#deploy"><span>08</span><span class="nl">Deployen — bestanden en routes</span><span class="en" style="display:none;">Deploy — files and routes</span></a>
+</div>
+
+<!-- 01 Overzicht -->
+<div class="section" id="overzicht">
+  <div class="section-label"><span class="nl">Sectie 01</span><span class="en" style="display:none;">Section 01</span></div>
+  <h2><span class="nl">Wat is het systeem?</span><span class="en" style="display:none;">What is the system?</span></h2>
+  <p><span class="nl">Het ContentScale SEO Audit System bestaat uit <strong>5 gekoppelde tools</strong> waarmee je systematisch pagina's van een website kunt auditen, verbeteren en bijhouden. Alles werkt samen — data stroomt automatisch van de ene tool naar de andere.</span><span class="en" style="display:none;">The ContentScale SEO Audit System consists of <strong>5 connected tools</strong> for systematically auditing, improving, and tracking pages of a website. Everything works together — data flows automatically from one tool to the next.</span></p>
+
+  <div class="info-box gold">
+    <span class="nl"><strong>Het doel:</strong> Pagina's die bijna op pagina 1 staan (positie 11-30) identificeren, auditen met PULSE+NEXUS, fixes doorvoeren, en het resultaat meten met de ContentScore. Zo herstel je systematisch verloren Google traffic.</span><span class="en" style="display:none;"><strong>The goal:</strong> Identify pages close to page 1 (position 11-30), audit with PULSE+NEXUS, implement fixes, and measure the result with ContentScore. This is how you systematically recover lost Google traffic.</span>
+  </div>
+
+  <p><span class="nl">Het systeem is <strong>intern</strong> — niet zichtbaar voor Google (noindex) en niet voor klanten. Er is één uitzondering: de Audit Intake Form, die is voor klanten die een audit willen aanvragen.</span><span class="en" style="display:none;">The system is <strong>internal</strong> — not visible to Google (noindex) and not to clients. One exception: the Audit Intake Form, which is for clients who want to request an audit.</span></p>
+</div>
+
+<!-- 02 De tools -->
+<div class="section" id="tools">
+  <div class="section-label"><span class="nl">Sectie 02</span><span class="en" style="display:none;">Section 02</span></div>
+  <h2><span class="nl">De 5 tools</span><span class="en" style="display:none;">The 5 tools</span></h2>
+
+  <div class="tool-card gold">
+    <span class="tool-badge badge-internal">Intern</span>
+    <span class="tool-badge badge-noindex" style="margin-left:6px;">Noindex</span>
+    <div class="tool-name">1 — Workflow Manager</div>
+    <div class="tool-url">app.contentscale.site/audit-workflow</div>
+    <div class="tool-desc">
+      <span class="nl">Je cockpit. Hier beheer je alle pagina's van een client. Je importeert GSC data, ziet welke pagina's prioriteit hebben, vinkt taken af per pagina en houdt de voortgang bij.<br><br>
+      <strong>Wat je hier doet:</strong> GSC CSV importeren → pagina's krijgen automatisch prioriteit → doorsturen naar Recommendations voor aanbevelingen → afvinken als gedaan.<br><br>
+      <strong>Data blijft bewaard</strong> in de browser (localStorage) — je kunt de sessie afsluiten en later verdergaan.</span>
+      <span class="en" style="display:none;">Your cockpit. Manage all client pages here. Import GSC data, see which pages have priority, check off tasks per page and track progress.<br><br>
+      <strong>What you do here:</strong> Import GSC CSV → pages get priority automatically → send to Recommendations for advice → check off when done.<br><br>
+      <strong>Data is saved</strong> in the browser (localStorage) — you can close the session and continue later.</span>
+    </div>
+  </div>
+
+  <div class="tool-card orange">
+    <span class="tool-badge badge-internal">Intern</span>
+    <span class="tool-badge badge-noindex" style="margin-left:6px;">Noindex</span>
+    <div class="tool-name">2 — Recommendations Engine</div>
+    <div class="tool-url">app.contentscale.site/audit-recommendations</div>
+    <div class="tool-desc">
+      <span class="nl">Leest de data uit de Workflow Manager en geeft per pagina automatisch de beste aanbeveling. Je ziet in één oogopslag: wat is het probleem, wat is de actie, hoeveel tijd kost het, en wat wordt automatisch ingevuld in PULSE+NEXUS.<br><br>
+      <strong>Wat je hier doet:</strong> Kijken welke pagina's quick wins zijn → klikken op "Open in PULSE+NEXUS" → audit uitvoeren.</span>
+      <span class="en" style="display:none;">Reads data from the Workflow Manager and automatically gives the best recommendation per page. At a glance: what is the problem, what is the action, how long will it take, and what gets pre-filled in PULSE+NEXUS.<br><br>
+      <strong>What you do here:</strong> See which pages are quick wins → click "Open in PULSE+NEXUS" → run the audit.</span>
+    </div>
+  </div>
+
+  <div class="tool-card purple">
+    <span class="tool-badge badge-internal">Intern</span>
+    <span class="tool-badge badge-noindex" style="margin-left:6px;">Noindex</span>
+    <div class="tool-name">3 — PULSE + NEXUS Audit Engine</div>
+    <div class="tool-url">app.contentscale.site/audit-seo</div>
+    <div class="tool-desc">
+      Het analysetools. Voert een 10-stappen audit uit op één specifieke pagina. Gebruikt Gemini AI om de werkelijke content te analyseren en geeft concrete aanbevelingen met priority actions bovenaan.<br><br>
+      <strong>Twee modi:</strong><br>
+      — <strong>Bulk Scan:</strong> Upload GSC CSV → alle pagina's gerangschikt op kans<br>
+      — <strong>Deep Dive:</strong> Één pagina volledig analyseren — dit is de kern<br><br>
+      <strong>Wordt automatisch ingevuld</strong> als je vanuit Recommendations klikt: URL, keyword, positie, impressies, CTR staan al klaar. Jij plakt alleen nog de pagina HTML en eventueel competitor HTML.
+    </div>
+  </div>
+
+  <div class="tool-card blue">
+    <span class="tool-badge badge-internal">Intern</span>
+    <div class="tool-name">4 — ContentScore Scanner</div>
+    <div class="tool-url">app.contentscale.site</div>
+    <div class="tool-desc">
+      De gratis scanner. Plak een URL en krijg een score van 0-100 op basis van GRAAF (50pt) + CRAFT (30pt) + Technical SEO (20pt).<br><br>
+      <strong>Gebruik in het audit systeem:</strong> Scan een pagina VOOR je begint met auditen → noteer de score in de Workflow Manager → doe de audit → fix de pagina → scan opnieuw → noteer de nieuwe score. Het verschil is je bewijs dat het werkt.
+    </div>
+  </div>
+
+  <div class="tool-card green">
+    <span class="tool-badge badge-client">Voor klanten</span>
+    <div class="tool-name">5 — Audit Intake Form</div>
+    <div class="tool-url">app.contentscale.site/audit-intake</div>
+    <div class="tool-desc">
+      Het formulier dat klanten invullen als ze een audit willen aanvragen. Ze uploaden hun GSC CSV, geven de pagina URL en keyword op, en het formulier stuurt alles automatisch per email naar <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8be2e5ede4cbe8e4e5ffeee5fff8e8eae7eea5f8e2ffee">[email&#160;protected]</a></strong>.<br><br>
+      <strong>Jij ontvangt:</strong> Email met alle data + bijlagen + directe link om de pagina in PULSE+NEXUS te openen.
+    </div>
+  </div>
+</div>
+
+<!-- 03 Flow -->
+<div class="section" id="flow">
+  <div class="section-label"><span class="nl">Sectie 03</span><span class="en" style="display:none;">Section 03</span></div>
+  <h2><span class="nl">De volledige flow</span><span class="en" style="display:none;">The complete flow</span></h2>
+  <p><span class="nl">Zo gebruik je het systeem van begin tot eind voor één client:</span><span class="en" style="display:none;">This is how you use the system from start to finish for one client:</span></p>
+
+  <div class="flow">
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">1</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">GSC CSV exporteren</div>
+        <div class="flow-sub">Ga naar <strong>Google Search Console</strong> van de client. Klik op <strong>Performance</strong> → <strong>Pages tab</strong> → rechtsboven op <strong>Export → Download CSV</strong>. Doe hetzelfde voor de <strong>Queries tab</strong> (optioneel maar nuttig). Sla de bestanden op.</div>
+        <div class="flow-url">search.google.com/search-console</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">2</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">Workflow Manager openen + GSC importeren</div>
+        <div class="flow-sub">Open de Workflow Manager. Vul bovenaan de clientnaam, website en deadline in. Klik op <strong>📊 Import GSC CSV</strong> en upload het Pages CSV bestand. Alle pagina's laden automatisch met hun positie, impressies en prioriteit.</div>
+        <div class="flow-url">app.contentscale.site/audit-workflow</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">3</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">Prioriteiten bekijken</div>
+        <div class="flow-sub">De manager sorteert automatisch op kans. <strong>Rood (High)</strong> = positie 11-30 of pagina 1 met lage CTR — dit zijn de meest waardevolle pagina's. <strong>Geel (Medium)</strong> = positie 31-60. <strong>Groen (Low)</strong> = al goed of weinig volume. Filter op High Priority om te beginnen.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">4</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">ContentScore scannen (voor)</div>
+        <div class="flow-sub">Klik per pagina op <strong>📊 Scan Score</strong>. De huidige ContentScore wordt opgehaald en opgeslagen als "Score Before". Dit is je nulmeting. De prioriteit verandert NIET op basis van de score — alleen GSC data bepaalt prioriteit.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">5</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">Recommendations openen</div>
+        <div class="flow-sub">Klik bovenaan op <strong>🎯 Recommendations</strong>. Je ziet nu per pagina de exacte aanbeveling: wat is het probleem, wat is de actie, hoeveel tijd kost het. Sorteer op Impact voor de beste quick wins bovenaan.</div>
+        <div class="flow-url">app.contentscale.site/audit-recommendations</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">6</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">PULSE+NEXUS audit uitvoeren</div>
+        <div class="flow-sub">Klik op <strong>🔬 Open in PULSE+NEXUS</strong>. URL, keyword, positie, impressies en CTR staan automatisch ingevuld. Je hoeft alleen nog te plakken:<br>
+        — <strong>Pagina HTML:</strong> open de pagina → rechtsklik → Paginabron weergeven → Ctrl+A → Ctrl+C → plak<br>
+        — <strong>Competitor HTML:</strong> optioneel — als je leeg laat vergelijkt het tool met Surfer SEO + MarketMuse benchmark<br>
+        — <strong>Sitemap URLs:</strong> optioneel — voor interne link aanbevelingen<br><br>
+        Klik dan op <strong>Run Full Audit</strong>. De Priority Actions verschijnen als eerste.</div>
+        <div class="flow-url">app.contentscale.site/audit-seo</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">7</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">Fixes doorvoeren</div>
+        <div class="flow-sub">Voer de Priority Actions uit op de pagina. Minimaal: title tag, meta description, H1, FAQ schema. Daarna de content fixes. Exporteer de aanbevelingen met de Copy knop per sectie.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">8</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">Afvinken + score meten</div>
+        <div class="flow-sub">Ga terug naar de Workflow Manager (← Terug naar Workflow knop). Vink de checklist items af die je hebt gedaan. Scan de pagina opnieuw voor de "Score After". Klik op <strong>✓ Mark Done</strong> als de pagina klaar is.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num" style="background:rgba(74,222,128,.15);color:var(--green);">9</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">Exporteren + volgende pagina</div>
+        <div class="flow-sub">Klik op <strong>↓ Export CSV</strong> om je voortgang op te slaan. Volgende sessie: <strong>↑ Import Progress</strong> om verder te gaan. Klik op <strong>📄 Client Report</strong> voor een nette overzichtspagina voor de klant.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 04 GSC -->
+<div class="section" id="gsc">
+  <div class="section-label"><span class="nl">Sectie 04</span><span class="en" style="display:none;">Section 04</span></div>
+  <h2><span class="nl">GSC uitleg — impressies, CTR en positie</span><span class="en" style="display:none;">GSC explained — impressions, CTR and position</span></h2>
+
+  <table class="data-table">
+    <thead>
+      <tr><th><span class="nl">Begrip</span><span class="en" style="display:none;">Term</span></th><th><span class="nl">Wat betekent het?</span><span class="en" style="display:none;">What does it mean?</span></th><th><span class="nl">Wat zegt het je?</span><span class="en" style="display:none;">What does it tell you?</span></th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Impressies</strong></td>
+        <td>Hoe vaak jouw pagina verschijnt in de zoekresultaten — ook als niemand klikt. Dit is het zoekvolume voor jouw pagina.</td>
+        <td>Hoge impressies = mensen zoeken ernaar. Er is vraag. De pagina heeft potentie.</td>
+      </tr>
+      <tr>
+        <td><strong>Clicks</strong></td>
+        <td>Hoe vaak iemand op jouw pagina klikt in de zoekresultaten.</td>
+        <td>Lage clicks bij hoge impressies = mensen zien je maar kiezen je niet.</td>
+      </tr>
+      <tr>
+        <td><strong>CTR %</strong></td>
+        <td>Click-Through Rate. Percentage van impressies dat resulteert in een klik. Clicks ÷ Impressies × 100.</td>
+        <td>CTR onder 2% = title/meta niet aantrekkelijk genoeg. CTR boven 5% = goed.</td>
+      </tr>
+      <tr>
+        <td><strong>Positie</strong></td>
+        <td>De gemiddelde ranking van jouw pagina in Google. Positie 1 = bovenaan. Positie 11 = begin van pagina 2.</td>
+        <td>Positie 11-30 = meest kansrijk voor verbetering. Eén goede audit kan je naar pagina 1 brengen.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box gold">
+    <strong>De gouden combinatie:</strong> Hoge impressies (veel zoekvolume) + positie 11-30 (net niet pagina 1) = de pagina waar je het meeste te winnen hebt. Dat is waar je mee begint.
+  </div>
+
+  <h3>Wat doe je in elk scenario?</h3>
+
+  <table class="data-table">
+    <thead>
+      <tr><th><span class="nl">Situatie</span><span class="en" style="display:none;">Situation</span></th><th><span class="nl">Probleem</span><span class="en" style="display:none;">Problem</span></th><th><span class="nl">Oplossing</span><span class="en" style="display:none;">Solution</span></th><th><span class="nl">Tijd</span><span class="en" style="display:none;">Time</span></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Pos 1-10 + CTR &lt; 2%</td><td>Staat bovenaan maar trekt niet aan</td><td>Title + meta herschrijven</td><td>30 min</td></tr>
+      <tr><td>Pos 11-20 + hoge impressies</td><td>Net niet pagina 1</td><td>Volledige PULSE+NEXUS audit</td><td>2-3 uur</td></tr>
+      <tr><td>Pos 21-30 + score &lt; 70</td><td>Content te zwak</td><td>Audit + herschrijven</td><td>3-5 uur</td></tr>
+      <tr><td>Pos 31-60 + hoge impressies</td><td>Content veel te zwak voor pagina 1</td><td>Diepgaande audit</td><td>4-6 uur</td></tr>
+      <tr><td>Pos 60+ + lage impressies</td><td>Weinig vraag of pagina te zwak</td><td>Keyword research eerst</td><td>Nader bepalen</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 05 Scenarios -->
+<div class="section" id="scenarios">
+  <div class="section-label"><span class="nl">Sectie 05</span><span class="en" style="display:none;">Section 05</span></div>
+  <h2><span class="nl">Aanbevelingen — wanneer doe je wat?</span><span class="en" style="display:none;">Recommendations — when to do what?</span></h2>
+  <p><span class="nl">De Recommendations Engine berekent dit automatisch. Dit is de logica erachter:</span><span class="en" style="display:none;">The Recommendations Engine calculates this automatically. Here is the logic behind it:</span></p>
+
+  <div class="scenario">
+    <div class="scenario-head">
+      <span class="scenario-badge" style="background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.3);">⚡ Quick Win</span>
+      <span class="scenario-title">Positie 1-10 + CTR onder 2%</span>
+    </div>
+    <p>Je staat al op pagina 1 maar searchers klikken niet. De title tag of meta description trekt niet genoeg aan.</p>
+    <div class="action">Herschrijf title (max 60 tekens) + meta description (max 155 tekens) met power words, getallen of urgentie. Dit kan in 30 minuten. Geen volledige audit nodig.</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-head">
+      <span class="scenario-badge" style="background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);">📈 CTR Fix</span>
+      <span class="scenario-title">Positie 11-20 + CTR onder 1.5%</span>
+    </div>
+    <p>Bijna pagina 1, maar twee problemen tegelijk: title trekt niet aan EN content is nog niet sterk genoeg.</p>
+    <div class="action">Stap 1: title + meta herschrijven (30 min). Stap 2: volledige audit voor de push naar pagina 1 (2-3 uur).</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-head">
+      <span class="scenario-badge" style="background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.3);">📝 Content Upgrade</span>
+      <span class="scenario-title">Positie 11-30 + score onder 70</span>
+    </div>
+    <p>Content is te zwak voor pagina 1. Met betere content en schema kun je de sprong maken.</p>
+    <div class="action">Volledige PULSE+NEXUS audit. Focus op Priority Actions (stap 0), Content Gap (stap 4) en PULSE Rewrites (stap 5).</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-head">
+      <span class="scenario-badge" style="background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3);">✏️ Rewrite</span>
+      <span class="scenario-title">Positie 31-60 + hoge impressies</span>
+    </div>
+    <p>Veel zoekvolume maar Google beoordeelt de pagina als te zwak voor de top. Fundamentele verbetering nodig.</p>
+    <div class="action">Alle 10 stappen van PULSE+NEXUS doorlopen. Daarna pagina volledig herschrijven op basis van de aanbevelingen.</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-head">
+      <span class="scenario-badge" style="background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);">🔗 Authority</span>
+      <span class="scenario-title">Positie 1-10 + score boven 85</span>
+    </div>
+    <p>Pagina presteert al goed. Content en techniek zijn op orde.</p>
+    <div class="action">Focus op interne links, backlinks en gezaghebbende bronnen. NEXUS stap 6 in PULSE+NEXUS.</div>
+  </div>
+</div>
+
+<!-- 06 Audit -->
+<div class="section" id="audit">
+  <div class="section-label"><span class="nl">Sectie 06</span><span class="en" style="display:none;">Section 06</span></div>
+  <h2><span class="nl">PULSE+NEXUS uitvoeren</span><span class="en" style="display:none;">Running PULSE+NEXUS</span></h2>
+
+  <div class="info-box blue">
+    <strong>Tip:</strong> Als je vanuit Recommendations klikt op "Open in PULSE+NEXUS" staan URL, keyword, positie, impressies en CTR al ingevuld. Je hoeft alleen nog de HTML toe te voegen.
+  </div>
+
+  <h3>Wat vul je handmatig in?</h3>
+
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Pagina HTML (stap ③) — bijna altijd verplicht</strong>
+        <span>Open de pagina in Chrome → rechtsklik → <code>Paginabron weergeven</code> → <code>Ctrl+A</code> → <code>Ctrl+C</code> → plak in het veld. Het systeem leest dan de werkelijke H1, H2s, schema en word count — niet een gok op basis van de URL.</span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Competitor HTML (stap ④) — optioneel</strong>
+        <span>Bezoek een competitor pagina → Paginabron → kopieer → plak. Als je dit leeg laat vergelijkt het systeem automatisch met wat bekend is over Surfer SEO en MarketMuse. Voor de meest nauwkeurige analyse: plak echte competitor HTML.</span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Sitemap URLs (stap ⑤) — optioneel maar waardevol</strong>
+        <span>Plak de URLs van de website (één per regel). Het systeem zoekt dan de 5 beste pagina's om intern naar te linken — met exacte anchor tekst. Zonder dit geeft het alleen algemene adviezen.</span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Klik op Run Full Audit</strong>
+        <span>De audit draait 10 stappen. <strong>Priority Actions (stap 0) verschijnen als eerste</strong> — dit zijn de 7 meest impactvolle acties. Begin altijd hier. De rest van de stappen geven diepere analyse.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>De 10 stappen van PULSE+NEXUS</h3>
+  <table class="data-table">
+    <thead><tr><th><span class="nl">Stap</span><span class="en" style="display:none;">Step</span></th><th><span class="nl">Wat het doet</span><span class="en" style="display:none;">What it does</span></th><th><span class="nl">Wanneer belangrijk?</span><span class="en" style="display:none;">When important?</span></th></tr></thead>
+    <tbody>
+      <tr><td><strong>0 — Priority Actions</strong></td><td>7 concrete acties, gerangschikt op impact. Altijd als eerste lezen.</td><td>Altijd</td></tr>
+      <tr><td><strong>1 — Intent analyse</strong></td><td>Klopt de zoekintentie? AI Overview risico?</td><td>Bij lage CTR</td></tr>
+      <tr><td><strong>2 — CTR Surgery</strong></td><td>Nieuwe title + meta description</td><td>CTR onder 2%</td></tr>
+      <tr><td><strong>3 — Competitor Diff</strong></td><td>Jouw pagina vs competitors</td><td>Altijd</td></tr>
+      <tr><td><strong>4 — Content Gap</strong></td><td>Wat mis je dat competitors wel hebben?</td><td>Score onder 70</td></tr>
+      <tr><td><strong>5 — PULSE Rewrites</strong></td><td>Voor/na herschrijvingen van intro, CTA, structuur</td><td>Bij rewrite</td></tr>
+      <tr><td><strong>6 — NEXUS + interne links</strong></td><td>Welke pagina's linken naar elkaar?</td><td>Altijd</td></tr>
+      <tr><td><strong>7 — Architecture</strong></td><td>H1-H3 structuur optimaliseren</td><td>Bij herschrijven</td></tr>
+      <tr><td><strong>8 — Technical + Schema</strong></td><td>FAQPage JSON-LD, alt tekst, canonical</td><td>Altijd</td></tr>
+      <tr><td><strong>9 — Score projectie</strong></td><td>Verwachte score en traffic na fixes</td><td>Voor rapportage</td></tr>
+      <tr><td><strong>10 — 90-dagen plan</strong></td><td>Week-voor-week actieplan</td><td>Bij oplevering aan client</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 07 Checklist -->
+<div class="section" id="checklist">
+  <div class="section-label"><span class="nl">Sectie 07</span><span class="en" style="display:none;">Section 07</span></div>
+  <h2><span class="nl">Checklist per pagina</span><span class="en" style="display:none;">Checklist per page</span></h2>
+  <p><span class="nl">In de Workflow Manager heeft elke pagina een checklist van 23 items. Dit zijn de standaard taken per audit:</span><span class="en" style="display:none;">In the Workflow Manager, each page has a checklist of 23 items. These are the standard tasks per audit:</span></p>
+
+  <h3><span class="nl">Audit (starten en afronden)</span><span class="en" style="display:none;">Audit (start and finish)</span></h3>
+  <table class="data-table">
+    <thead><tr><th>Item</th><th>Wat doe je?</th></tr></thead>
+    <tbody>
+      <tr><td>ContentScore scan gedaan</td><td>Score Before invullen via 📊 Scan Score knop</td></tr>
+      <tr><td>PULSE+NEXUS audit gedaan</td><td>10 stappen doorlopen en Priority Actions gelezen</td></tr>
+      <tr><td>GSC data genoteerd</td><td>Positie, impressies en CTR ingevuld in manager</td></tr>
+      <tr><td>Pagina herpubliceerd</td><td>Timestamp vernieuwd na fixes</td></tr>
+      <tr><td>GSC reindex aangevraagd</td><td>Via GSC → URL inspectie → Indexering aanvragen</td></tr>
+      <tr><td>GSC recheck ingepland</td><td>14 dagen later controleren in GSC</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Content fixes</h3>
+  <table class="data-table">
+    <thead><tr><th>Item</th><th>Norm</th></tr></thead>
+    <tbody>
+      <tr><td>H1 geoptimaliseerd</td><td>Primair keyword erin, duidelijk en aantrekkelijk</td></tr>
+      <tr><td>H2 structuur herzien</td><td>Logische volgorde, keywords in kopjes</td></tr>
+      <tr><td>SEO title bijgewerkt</td><td>50-60 tekens, keyword vooraan</td></tr>
+      <tr><td>Meta description bijgewerkt</td><td>150-160 tekens, call-to-action erin</td></tr>
+      <tr><td>Content gaps gevuld</td><td>Ontbrekende subtopics toegevoegd</td></tr>
+      <tr><td>Word count voldoende</td><td>Minimaal 1500 woorden voor informatieve pagina's</td></tr>
+      <tr><td>Stats bijgewerkt</td><td>Alle cijfers zijn van 2025-2026</td></tr>
+      <tr><td>FAQ sectie toegevoegd</td><td>Minimaal 3-5 vragen met volledige antwoorden</td></tr>
+      <tr><td>Expertcitaten toegevoegd</td><td>Naam + functie + bron erbij</td></tr>
+      <tr><td>E-E-A-T versterkt</td><td>Wie schreef dit, wanneer, waarom betrouwbaar?</td></tr>
+      <tr><td>CTA geoptimaliseerd</td><td>Aansluitend bij het conversiedoel</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="nl">Technische fixes</span><span class="en" style="display:none;">Technical fixes</span></h3>
+  <table class="data-table">
+    <thead><tr><th>Item</th><th>Norm</th></tr></thead>
+    <tbody>
+      <tr><td>Article schema toegevoegd</td><td>JSON-LD in de &lt;head&gt;</td></tr>
+      <tr><td>FAQPage schema toegevoegd</td><td>Elke FAQ als Question + Answer in JSON-LD</td></tr>
+      <tr><td>Canonical tag gecontroleerd</td><td>Verwijst naar de juiste URL</td></tr>
+      <tr><td>Afbeelding alt tekst compleet</td><td>Elke afbeelding heeft een beschrijvende alt</td></tr>
+      <tr><td>Interne links toegevoegd</td><td>3-5 relevante interne links met goede anchor tekst</td></tr>
+      <tr><td>Externe links toegevoegd</td><td>2-3 gezaghebbende bronnen</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 08 Deploy -->
+<div class="section" id="deploy">
+  <div class="section-label"><span class="nl">Sectie 08</span><span class="en" style="display:none;">Section 08</span></div>
+  <h2><span class="nl">Deployen op Railway</span><span class="en" style="display:none;">Deploying on Railway</span></h2>
+  <p><span class="nl">Alle bestanden gaan naar de <code>public/</code> map op Railway. De routes staan in <code>server.js</code>.</span><span class="en" style="display:none;">All files go into the <code>public/</code> folder on Railway. The routes are in <code>server.js</code>.</span></p>
+
+  <h3><span class="nl">Bestanden hernoemen en uploaden</span><span class="en" style="display:none;">Rename and upload files</span></h3>
+  <table class="data-table">
+    <thead><tr><th><span class="nl">Bestand</span><span class="en" style="display:none;">File</span></th><th><span class="nl">Hernoemen naar</span><span class="en" style="display:none;">Rename to</span></th><th>URL</th></tr></thead>
+    <tbody>
+      <tr><td>pulse-nexus-audit-v4.html</td><td>public/audit-seo.html</td><td>/audit-seo</td></tr>
+      <tr><td>audit-intake-form.html</td><td>public/audit-intake.html</td><td>/audit-intake</td></tr>
+      <tr><td>seo-workflow-manager.html</td><td>public/audit-workflow.html</td><td>/audit-workflow</td></tr>
+      <tr><td>audit-recommendations.html</td><td>public/audit-recommendations.html</td><td>/audit-recommendations</td></tr>
+    </tbody>
+  </table>
+
+  <h3><span class="nl">Server.js aanpassen</span><span class="en" style="display:none;">Update server.js</span></h3>
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong><span class="nl">server-additions.js plakken</span><span class="en" style="display:none;">Paste server-additions.js</span></strong>
+        <span class="nl">Open <code>server.js</code>. Zoek de headshot redirect routes. Plak de volledige inhoud van <code>server-additions.js</code> direct erboven, vóór <code>startServer()</code>.</span><span class="en" style="display:none;">Open <code>server.js</code>. Find the headshot redirect routes. Paste the full contents of <code>server-additions.js</code> directly above, before <code>startServer()</code>.</span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong><span class="nl">Multer toevoegen aan package.json</span><span class="en" style="display:none;">Add multer to package.json</span></strong>
+        <span class="nl">Voeg <code>"multer": "^1.4.5-lts.1"</code> toe aan de dependencies. Railway installeert het automatisch bij de volgende deploy.</span><span class="en" style="display:none;">Add <code>"multer": "^1.4.5-lts.1"</code> to the dependencies. Railway will install it automatically on the next deploy.</span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong><span class="nl">Deployen</span><span class="en" style="display:none;">Deploy</span></strong>
+        <span class="nl">Push naar GitHub → Railway deploy automatisch. Check de logs op fouten. Test daarna: <code>app.contentscale.site/audit-seo</code> moet laden.</span><span class="en" style="display:none;">Push to GitHub → Railway deploys automatically. Check the logs for errors. Then test: <code>app.contentscale.site/audit-seo</code> should load.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box red">
+    <span class="nl"><strong>Noindex:</strong> De Workflow Manager, Recommendations en PULSE+NEXUS hebben allemaal <code>noindex, nofollow</code> in de meta tags. Google indexeert ze niet. De Audit Intake Form is wél openbaar.</span><span class="en" style="display:none;"><strong>Noindex:</strong> The Workflow Manager, Recommendations and PULSE+NEXUS all have <code>noindex, nofollow</code> in their meta tags. Google does not index them. The Audit Intake Form is public.</span>
+  </div>
+
+  <div class="info-box green">
+    <span class="nl"><strong>Data opslag:</strong> De Workflow Manager slaat data op in de browser (localStorage). Dit is per browser/computer. Export regelmatig met de CSV knop als backup, en gebruik Import om op een andere computer verder te gaan.</span><span class="en" style="display:none;"><strong>Data storage:</strong> The Workflow Manager stores data in the browser (localStorage). This is per browser/computer. Export regularly with the CSV button as backup, and use Import to continue on another computer.</span>
+  </div>
+</div>
+
+<hr>
+
+<!-- CTA Section -->
+<div style="background:linear-gradient(135deg,rgba(147,51,234,.12),rgba(96,165,250,.06));border:1px solid rgba(147,51,234,.25);border-radius:14px;padding:40px;margin-bottom:40px;text-align:center;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:10px;">
+    <span class="nl">Hulp nodig met jouw website?</span>
+    <span class="en" style="display:none;">Need help with your website?</span>
+  </div>
+  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,44px);letter-spacing:.04em;line-height:1.05;margin-bottom:12px;background:linear-gradient(135deg,var(--gold),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+    <span class="nl">Vraag een gratis SEO audit aan</span>
+    <span class="en" style="display:none;">Request a free SEO audit</span>
+  </h2>
+  <p style="color:var(--muted);font-size:14px;max-width:520px;margin:0 auto 24px;line-height:1.7;">
+    <span class="nl">Upload je GSC CSV, geef de pagina URL op en je ontvangt binnen 15 minuten een geprioriteerde actielijst. Geen jargon. GDPR-compliant. Gratis.</span>
+    <span class="en" style="display:none;">Upload your GSC CSV, provide the page URL and you will receive a prioritised action plan within 15 minutes. No jargon. GDPR-compliant. Free.</span>
+  </p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
+    <a href="/audit-intake" style="display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#000;text-decoration:none;padding:14px 32px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;">
+      🔍 <span class="nl">Audit Aanvragen →</span><span class="en" style="display:none;">Request Audit →</span>
+    </a>
+    <a href="https://calendly.com/aioeditors" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:rgba(147,51,234,.15);color:var(--purple);text-decoration:none;padding:14px 32px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;border:1px solid rgba(147,51,234,.3);">
+      📅 <span class="nl">Gratis Strategiegesprek</span><span class="en" style="display:none;">Free Strategy Call</span>
+    </a>
+  </div>
+  <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ <span class="nl">Binnen 15 minuten</span><span class="en" style="display:none;">Within 15 min</span></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ GDPR compliant</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ <span class="nl">Geen verplichtingen</span><span class="en" style="display:none;">No obligations</span></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ Amsterdam</span>
+  </div>
+</div>
+
+<hr>
+<div style="text-align:center;padding:20px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;c
+  ContentScale · Amsterdam · contentscale.site · info@contentscale.site
+</div>
+
+</div>
+
+<script>
+function setLang(lang) {
+  var html = document.getElementById('htmlRoot');
+  var btnNL = document.getElementById('btnNL');
+  var btnEN = document.getElementById('btnEN');
+  if (lang === 'en') {
+    html.setAttribute('lang', 'en');
+    document.body.classList.add('lang-en');
+    btnNL.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:5px 0 0 5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;';
+    btnEN.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:0 5px 5px 0;border:1px solid var(--gold);background:var(--gold);color:#000;cursor:pointer;font-weight:700;';
+    try{localStorage.setItem('cs_guide_lang','en');}catch(e){}
+  } else {
+    html.setAttribute('lang', 'nl');
+    document.body.classList.remove('lang-en');
+    btnNL.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:5px 0 0 5px;border:1px solid var(--gold);background:var(--gold);color:#000;cursor:pointer;font-weight:700;';
+    btnEN.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:0 5px 5px 0;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;';
+    try{localStorage.setItem('cs_guide_lang','nl');}catch(e){}
+  }
+}
+(function(){
+  try{var s=localStorage.getItem('cs_guide_lang');if(s==='en')setLang('en');}catch(e){}
+})();
+</script>
+</body>
+</html>`);
+});
 
 // ── Workflow Manager — save/load to server ──────────────────
 const wfCache = new Map(); // in-memory fallback if no DB
@@ -4224,7 +7006,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson — you are helpful and honest. Follow this exact script step by step: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. Do you have about 1 minute for me? 2a. If no: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes: say Great! May I have your name? Wait for answer. 3. Ask: And do you have a website? or do you know someone with a website? Wait for answer. 4a. If no website: say No problem, this is not for you then. Have a great day! Goodbye! Then STOP. 4b. If yes: say Perfect, [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and our PULSE and NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 5. Ask: Would that be interesting to hear more about? Wait for answer. 6a. If not interested: say No worries at all, maybe another time. Have a great day! Goodbye! Then STOP. 6b. If interested: say Wonderful! Ottmar, our founder, will personally call you back. And as a bonus, you are eligible to win 250 euros in free SEO services this month. To register, I just need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch soon. Have a great day! Goodbye! Then STOP. Always say goodbye before stopping. Never add extra information. Never continue after goodbye.";
+  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson — you are helpful and honest. Follow this exact script step by step: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. I have about 1 minute for you — is that okay or would you rather I hang up? 2a. If no: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes: say Great! And great timing — this month you can win 250 euros in free SEO services just by sharing this conversation. But first, may I have your name? Wait for answer. 3. Say: Hey [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and PULSE+NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 4. Ask: Would that be interesting for you? Wait for answer. 5a. If not interested: say No worries, maybe another time. Have a great day! Goodbye! Then STOP. 5b. If interested: say Wonderful! Ottmar, our founder, will personally call you back. And to be eligible for our 250 euro prize this month, I just need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch soon. Have a great day! Goodbye! Then STOP. Always say goodbye before stopping. Never add extra information. Never continue after goodbye.";
 
   function setStatus(msg) {
     if (window._ottoStatusOverride) { window._ottoStatusOverride(msg); return; }
@@ -4422,27 +7204,43 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 
         if (msg.serverContent) {
           var sc = msg.serverContent;
+          var _turnCount = window._ottTurnCount || 0;
           if (sc.modelTurn && sc.modelTurn.parts) {
             sc.modelTurn.parts.forEach(function(p) {
               if (p.inlineData && p.inlineData.data) {
                 scheduleAudioChunk(p.inlineData.data);
-                _audioChunks.push(p.inlineData.data); // collect for storage
+                _audioChunks.push(p.inlineData.data);
+              }
+              // Check text parts for goodbye keywords (when transcription is off)
+              if (p.text) {
+                var ptxt = p.text || '';
+                addTranscript('model', ptxt);
+                if (/goodbye|cheers|take care|speak to you soon|bye/i.test(ptxt)) {
+                  console.log('[otto] goodbye detected in text part: ' + ptxt);
+                  setTimeout(function() { hangup('goodbye detected'); }, 3000);
+                }
               }
             });
           }
-          if (sc.inputTranscription)  addTranscript('you',   sc.inputTranscription.text);
+          if (sc.inputTranscription) addTranscript('you', sc.inputTranscription.text);
           if (sc.outputTranscription) {
             var txt = sc.outputTranscription.text || '';
             addTranscript('model', txt);
-            // Goodbye detection → hang up 3s after Otto says bye
             if (/goodbye|cheers|take care|speak to you soon|bye/i.test(txt)) {
-              console.log('[otto] goodbye detected in: ' + txt);
+              console.log('[otto] goodbye detected in transcription: ' + txt);
               setTimeout(function() { hangup('goodbye detected'); }, 3000);
             }
           }
           if (sc.turnComplete) {
+            _turnCount++;
+            window._ottTurnCount = _turnCount;
             setStatus('Your turn — speak now...');
-            console.log('[otto] turnComplete');
+            console.log('[otto] turnComplete #' + _turnCount);
+            // After 5 turns (full script done), schedule hangup if no goodbye detected yet
+            if (_turnCount >= 5) {
+              clearTimeout(_killTimer);
+              _killTimer = setTimeout(function() { hangup('script complete'); }, 5000);
+            }
           }
         }
       } catch(e) { console.warn('[otto] parse:', e.message); }
@@ -7111,31 +9909,7 @@ app.get('/api/otto/prize-claims', async (req, res) => {
 // ── Favicon — served inline, no file needed ───────────────────────────────
 const _FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#060910"/><text x="16" y="22" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="18" font-weight="900" fill="#4ade80">CS</text></svg>`;
 
-app.get('/favicon.svg', (req, res) => {
-  res.setHeader('Content-Type', 'image/svg+xml');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.send(_FAVICON_SVG);
-});
-
-app.get('/favicon.ico', (req, res) => {
-  res.redirect(301, '/favicon.svg');
-});
-
-app.get('/favicon-32x32.png', (req, res) => {
-  res.redirect(301, '/favicon.svg');
-});
-
-// Middleware: inject favicon into ALL inline HTML responses that are missing it
-app.use((req, res, next) => {
-  const originalSend = res.send.bind(res);
-  res.send = function(body) {
-    if (typeof body === 'string' && body.includes('<html') && body.includes('<head') && !body.includes('favicon')) {
-      body = body.replace('</head>', '<link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="shortcut icon" href="/favicon.ico"></head>');
-    }
-    return originalSend(body);
-  };
-  next();
-});
+// favicon routes moved above express.static
 
 
 startServer();
