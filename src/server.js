@@ -3814,7 +3814,10 @@ function servePublic(filename) {
   };
 }
 
-app.get('/audit-seo', (req, res) => res.redirect(301, '/seo-audit'));
+app.get('/audit-seo', (req, res) => {
+  const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+  res.redirect(301, '/seo-audit' + qs);
+});
 app.get('/audit',     (req, res) => res.redirect(301, '/seo-audit'));
 app.get('/audit-intake',          servePublic('audit-intake.html'));
 app.get('/audit-workflow', (req, res) => {
@@ -5535,7 +5538,7 @@ img,table,iframe{max-width:100%;}
 <div class="toast" id="toast"></div>
 
 <script>
-var AUDIT_URL = '/audit-seo';
+var AUDIT_URL = '/seo-audit';
 var pages = [];
 
 function toast(msg){
