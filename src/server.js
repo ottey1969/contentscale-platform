@@ -6958,6 +6958,32 @@ body{background:#060910;font-family:'Inter',sans-serif;color:#f3f4f6;min-height:
 
 </div>
 
+<div style="background:#0d1117;border-top:1px solid rgba(255,255,255,.06);padding:32px 24px;text-align:center">
+  <div style="max-width:800px;margin:0 auto">
+    <a href="https://contentscale.site" style="text-decoration:none">
+      <div style="font-size:18px;font-weight:900;letter-spacing:.06em;background:linear-gradient(90deg,#4ade80,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">ContentScale</div>
+    </a>
+    <div style="font-size:12px;color:#374151;margin-bottom:16px">Search Architecture · SEO Systems · AI Workflows · Amsterdam</div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px">
+      <a href="https://contentscale.site" style="font-size:12px;color:#4b5563;text-decoration:none">ContentScale.site</a>
+      <span style="color:#1f2937">·</span>
+      <a href="https://contentscale.site/privacy-policy/" style="font-size:12px;color:#4b5563;text-decoration:none">Privacy Policy</a>
+      <span style="color:#1f2937">·</span>
+      <a href="https://contentscale.site/terms/" style="font-size:12px;color:#4b5563;text-decoration:none">Terms</a>
+      <span style="color:#1f2937">·</span>
+      <a href="https://contentscale.site/privacy-policy/#data-requests" style="font-size:12px;color:#4b5563;text-decoration:none">Data Requests</a>
+    </div>
+    <a href="https://wa.me/31628073996?text=Hi Ottmar! I have a question about the ContentScale prize." target="_blank"
+      style="display:inline-flex;align-items:center;gap:8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.25);color:#25d366;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.3-.7-.5-.6-.7-.6h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1-1.1 2.5s1.1 2.9 1.3 3.1c.1.2 2.2 3.4 5.4 4.7.8.3 1.4.5 1.8.6.8.2 1.5.2 2 .1.6-.1 1.8-.7 2.1-1.4.3-.7.3-1.2.2-1.4l-.5-.2z"/></svg>
+      Questions? WhatsApp Ottmar
+    </a>
+    <div style="font-size:10px;color:#1f2937;margin-top:20px">
+      © 2026 ContentScale · Prizes are awarded monthly to top 3 referrers · No purchase necessary · ContentScale reserves the right to modify or cancel the prize program at any time.
+    </div>
+  </div>
+</div>
+
 <script>
 // Countdown
 function updateCountdown() {
@@ -7045,10 +7071,41 @@ app.post('/api/otto/claim-prize', async (req, res) => {
 });
 
 app.get('/api/otto/prize-claims', async (req, res) => {
+  if (req.query.token !== 'ottmar2024') return res.status(403).json({ error: 'Forbidden' });
   try {
     const r = await pool.query('SELECT * FROM prize_claims ORDER BY created_at DESC');
     res.json(r.rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ── Favicon — served inline, no file needed ───────────────────────────────
+const _FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#060910"/><text x="16" y="22" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="18" font-weight="900" fill="#4ade80">CS</text></svg>`;
+
+app.get('/favicon.svg', (req, res) => {
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(_FAVICON_SVG);
+});
+
+app.get('/favicon.ico', (req, res) => {
+  res.redirect(301, '/favicon.svg');
+});
+
+app.get('/favicon-32x32.png', (req, res) => {
+  res.redirect(301, '/favicon.svg');
+});
+
+// Middleware: inject favicon into ALL inline HTML responses that are missing it
+app.use((req, res, next) => {
+  const originalSend = res.send.bind(res);
+  res.send = function(body) {
+    if (typeof body === 'string' && body.includes('<html') && body.includes('<head') && !body.includes('favicon')) {
+      body = body.replace('</head>', '<link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="shortcut icon" href="/favicon.ico"></head>');
+    }
+    return originalSend(body);
+  };
+  next();
 });
 
 
