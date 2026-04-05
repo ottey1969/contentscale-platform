@@ -332,9 +332,34 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    }
    if (!browserInstance) {
    console.log('🚀 Launching Puppeteer...');
+   // Try to find Chromium executable
+   const chromiumPaths = [
+     process.env.PUPPETEER_EXECUTABLE_PATH,
+     '/usr/bin/chromium-browser',
+     '/usr/bin/chromium',
+     '/usr/bin/google-chrome',
+     '/usr/bin/google-chrome-stable',
+   ].filter(Boolean);
+   let executablePath = undefined;
+   const fs = require('fs');
+   for (const p of chromiumPaths) {
+     if (fs.existsSync(p)) { executablePath = p; break; }
+   }
+   if (executablePath) console.log('🌐 Using Chromium at:', executablePath);
+   else console.log('⚠️ No custom Chromium path found — using Puppeteer bundled Chrome');
+
    browserInstance = await puppeteer.launch({
-   headless: 'new',
-   args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--memory-pressure-off']
+     headless: true,
+     executablePath: executablePath || undefined,
+     args: [
+       '--no-sandbox',
+       '--disable-setuid-sandbox',
+       '--disable-dev-shm-usage',
+       '--disable-gpu',
+       '--no-zygote',
+       '--single-process',
+       '--memory-pressure-off'
+     ]
    }).catch(err => { console.error('❌ Puppeteer error:', err.message); return null; });
    }
    return browserInstance;
@@ -6615,6 +6640,415 @@ setInterval(loadSessions, 30000);
 app.get('/otto/sessions', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(_OTTO_SESSIONS_HTML);
+});
+
+
+// ── Prize page + claim endpoint ───────────────────────────────────────────
+const _PRIZE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Win €250 in Free SEO Services — ContentScale</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060910;font-family:'Inter',sans-serif;color:#f3f4f6;min-height:100vh}
+
+.hero{background:linear-gradient(160deg,#0d1117 0%,#060910 100%);border-bottom:1px solid rgba(74,222,128,.15);padding:60px 24px 48px;text-align:center}
+.badge{display:inline-block;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:6px 16px;border-radius:20px;margin-bottom:20px}
+.hero h1{font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.02em;line-height:1.15;margin-bottom:16px}
+.hero h1 span{background:linear-gradient(90deg,#4ade80,#86efac,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:16px;color:#9ca3af;max-width:560px;margin:0 auto 28px;line-height:1.7}
+
+.prize-banner{display:inline-flex;align-items:center;gap:16px;background:linear-gradient(135deg,#1a1206,#2a1d08);border:1px solid rgba(251,191,36,.25);border-radius:16px;padding:20px 32px;margin-top:8px}
+.prize-amount{font-size:48px;font-weight:900;color:#fcd34d;font-family:'JetBrains Mono',monospace;line-height:1}
+.prize-label{text-align:left}
+.prize-label strong{display:block;font-size:15px;color:#fbbf24;font-weight:700}
+.prize-label span{font-size:12px;color:#92400e}
+
+.page{max-width:800px;margin:0 auto;padding:48px 24px}
+
+/* What you get */
+.section-title{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#4ade80;font-family:'JetBrains Mono',monospace;margin-bottom:16px}
+.what-you-get{background:#0d1117;border:1px solid rgba(74,222,128,.15);border-radius:20px;padding:32px;margin-bottom:40px}
+.what-you-get h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.what-you-get .sub{font-size:14px;color:#6b7280;margin-bottom:28px}
+
+.deliverable{display:flex;gap:16px;padding:18px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.deliverable:last-child{border-bottom:none;padding-bottom:0}
+.del-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;margin-top:2px}
+.del-icon.green{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2)}
+.del-icon.blue{background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.2)}
+.del-icon.purple{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.2)}
+.del-icon.amber{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.2)}
+.del-body h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.del-body p{font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:6px}
+.del-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#9ca3af;padding:3px 8px;border-radius:4px}
+.value-badge{font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);padding:3px 10px;border-radius:20px;margin-left:auto;flex-shrink:0;align-self:flex-start;margin-top:2px}
+
+/* Total value bar */
+.total-bar{background:linear-gradient(135deg,#0d2e1a,#0a1520);border:1px solid rgba(74,222,128,.2);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;flex-wrap:wrap;gap:12px}
+.total-bar .lbl{font-size:13px;color:#6b7280}
+.total-bar .val{font-size:24px;font-weight:900;color:#4ade80;font-family:'JetBrains Mono',monospace}
+.total-bar .free{font-size:13px;color:#fbbf24;font-weight:600}
+
+/* How to win */
+.how-to-win{margin-bottom:40px}
+.steps{display:grid;gap:12px}
+.step-card{background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:18px;display:flex;align-items:center;gap:16px}
+.step-num{width:36px;height:36px;border-radius:50%;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#4ade80;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.step-text strong{font-size:14px;display:block;margin-bottom:2px}
+.step-text span{font-size:12px;color:#6b7280}
+
+/* Points */
+.points-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:40px}
+.pt-card{background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;text-align:center}
+.pt-card .num{font-size:26px;font-weight:900;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+.pt-card .lbl{font-size:11px;color:#4b5563}
+.pt-card.c1 .num{color:#60a5fa}
+.pt-card.c2 .num{color:#4ade80}
+.pt-card.c3 .num{color:#fbbf24}
+.pt-card.c4 .num{color:#a78bfa}
+
+/* Form */
+.form-section{background:#0d1117;border:1px solid rgba(74,222,128,.2);border-radius:20px;padding:32px;margin-bottom:40px}
+.form-section h2{font-size:20px;font-weight:700;margin-bottom:6px}
+.form-section .sub{font-size:13px;color:#6b7280;margin-bottom:24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6b7280;margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;background:#060910;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:11px 14px;font-size:13px;color:#f3f4f6;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:rgba(74,222,128,.4)}
+.field textarea{height:80px;resize:none}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.submit-btn{width:100%;background:linear-gradient(135deg,#16a34a,#4ade80);border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;color:#000;cursor:pointer;transition:opacity .2s;margin-top:8px}
+.submit-btn:hover{opacity:.9}
+.form-note{font-size:11px;color:#374151;text-align:center;margin-top:10px;line-height:1.6}
+.success-msg{display:none;text-align:center;padding:20px;color:#4ade80;font-size:14px;font-weight:600}
+
+/* Countdown */
+.countdown-wrap{text-align:center;margin-bottom:40px}
+.countdown-title{font-size:12px;color:#6b7280;margin-bottom:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
+.countdown{display:inline-flex;gap:12px}
+.cd-unit{text-align:center}
+.cd-num{font-size:32px;font-weight:900;color:#fcd34d;font-family:'JetBrains Mono',monospace;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:8px 14px;min-width:60px}
+.cd-lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+.cd-sep{font-size:28px;color:#374151;align-self:center;margin-top:-10px}
+
+@media(max-width:480px){
+.points-grid{grid-template-columns:1fr 1fr}
+.field-row{grid-template-columns:1fr}
+.prize-banner{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">Monthly Prize — Top 3 Referrers Win</div>
+  <h1>Share Otto AI.<br><span>Win €250 in free SEO services.</span></h1>
+  <p>Talk to Otto, share your link, climb the leaderboard. The top 3 referrers this month win a complete SEO audit package — delivered personally by Ottmar.</p>
+  <div class="prize-banner">
+    <div class="prize-amount">€250</div>
+    <div class="prize-label">
+      <strong>Free SEO Audit Package</strong>
+      <span>Valued at €250 · Delivered within 5 business days</span>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Countdown -->
+  <div class="countdown-wrap">
+    <div class="countdown-title">Resets in</div>
+    <div class="countdown">
+      <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-lbl">Days</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><div class="cd-num" id="cd-h">--</div><div class="cd-lbl">Hours</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><div class="cd-num" id="cd-m">--</div><div class="cd-lbl">Min</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><div class="cd-num" id="cd-s">--</div><div class="cd-lbl">Sec</div></div>
+    </div>
+  </div>
+
+  <!-- What you get -->
+  <div class="what-you-get">
+    <div class="section-title">What winners receive</div>
+    <h2>The Complete SEO Audit Package</h2>
+    <p class="sub">Everything you need to recover lost traffic and understand exactly what Google — and AI — thinks of your content.</p>
+
+    <div class="deliverable">
+      <div class="del-icon green">📊</div>
+      <div class="del-body">
+        <h3>GSC Data Analysis + Opportunity Report</h3>
+        <p>Your Google Search Console data analyzed by the PULSE+NEXUS audit framework. We identify pages losing traffic, pages close to ranking, and untapped keyword opportunities hiding in your data.</p>
+        <div class="del-tags">
+          <span class="tag">Google Search Console</span>
+          <span class="tag">PULSE Framework</span>
+          <span class="tag">NEXUS Framework</span>
+          <span class="tag">Traffic Recovery Map</span>
+        </div>
+      </div>
+      <span class="value-badge">€75 value</span>
+    </div>
+
+    <div class="deliverable">
+      <div class="del-icon blue">🔬</div>
+      <div class="del-body">
+        <h3>Full SEO Content Scan — GRAAF Framework</h3>
+        <p>Your top-performing page scanned against the GRAAF Framework: Genuinely Credible, Relevant, Actionable, Accurate, Fresh. You receive a ContentScore (0–100) with a breakdown of exactly what's missing and why Google or AI may be ignoring your content.</p>
+        <div class="del-tags">
+          <span class="tag">GRAAF Framework</span>
+          <span class="tag">ContentScore 0–100</span>
+          <span class="tag">E-E-A-T Analysis</span>
+          <span class="tag">AI Visibility Check</span>
+        </div>
+      </div>
+      <span class="value-badge">€75 value</span>
+    </div>
+
+    <div class="deliverable">
+      <div class="del-icon purple">✍️</div>
+      <div class="del-body">
+        <h3>2 Pages Fully Rewritten to 90+ ContentScore</h3>
+        <p>Two of your pages rewritten using GRAAF principles — adding credibility signals, direct answers, stats, expert structure, and schema-ready content. Delivered with before/after ContentScore comparison so you can see the measurable improvement.</p>
+        <div class="del-tags">
+          <span class="tag">2 Full Page Rewrites</span>
+          <span class="tag">Before / After Score</span>
+          <span class="tag">Schema-ready</span>
+          <span class="tag">90+ Target Score</span>
+        </div>
+      </div>
+      <span class="value-badge">€80 value</span>
+    </div>
+
+    <div class="deliverable">
+      <div class="del-icon amber">🗺️</div>
+      <div class="del-body">
+        <h3>Priority Action Plan + Audit Workflow Export</h3>
+        <p>A prioritized list of every page that needs attention, ranked by traffic potential. Includes a full audit workflow export you can use immediately — covering pre-scan, implementation checklist, and post-scan tracking.</p>
+        <div class="del-tags">
+          <span class="tag">Audit Workflow</span>
+          <span class="tag">Priority Ranking</span>
+          <span class="tag">90-Day Roadmap</span>
+          <span class="tag">Implementation Checklist</span>
+        </div>
+      </div>
+      <span class="value-badge">€20 value</span>
+    </div>
+  </div>
+
+  <!-- Total bar -->
+  <div class="total-bar">
+    <div>
+      <div class="lbl">Total package value</div>
+      <div class="val">€250</div>
+    </div>
+    <div style="text-align:right">
+      <div class="free">You pay: €0</div>
+      <div class="lbl" style="margin-top:2px">Delivered within 5 business days of winning</div>
+    </div>
+  </div>
+
+  <!-- How to win -->
+  <div class="how-to-win">
+    <div class="section-title">How to win</div>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <strong>Talk to Otto</strong>
+          <span>Open the Otto AI widget and have a conversation — app.contentscale.site/otto</span>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <strong>Get your referral link</strong>
+          <span>After the conversation your personal link appears — share it to earn points</span>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <strong>Share with your network</strong>
+          <span>WhatsApp, LinkedIn, email — every click and conversation earns you points</span>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <strong>Climb the leaderboard</strong>
+          <span>Top 3 at end of month win the €250 package — leaderboard resets monthly</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Points -->
+  <div class="section-title">Points per action</div>
+  <div class="points-grid" style="margin-bottom:40px">
+    <div class="pt-card c1"><div class="num">+1</div><div class="lbl">Someone clicks your link</div></div>
+    <div class="pt-card c2"><div class="num">+3</div><div class="lbl">They talk to Otto</div></div>
+    <div class="pt-card c3"><div class="num">+5</div><div class="lbl">They share further</div></div>
+    <div class="pt-card c4"><div class="num">+10</div><div class="lbl">They become a client</div></div>
+  </div>
+
+  <!-- Claim form -->
+  <div class="form-section" id="claimForm">
+    <div class="section-title">Already a winner?</div>
+    <h2>Claim your prize</h2>
+    <p class="sub">Fill in your details so Ottmar can deliver your audit package within 5 business days.</p>
+
+    <div class="field-row">
+      <div class="field">
+        <label>First name</label>
+        <input type="text" id="f-name" placeholder="Your name" required>
+      </div>
+      <div class="field">
+        <label>Email address</label>
+        <input type="email" id="f-email" placeholder="you@company.com" required>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Website URL</label>
+        <input type="url" id="f-url" placeholder="https://yoursite.com">
+      </div>
+      <div class="field">
+        <label>Your referral code</label>
+        <input type="text" id="f-ref" placeholder="REF-ABC123">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Which page should we audit first?</label>
+      <input type="url" id="f-page" placeholder="https://yoursite.com/your-best-page">
+    </div>
+
+    <div class="field">
+      <label>Do you have Google Search Console access?</label>
+      <select id="f-gsc">
+        <option value="">Select...</option>
+        <option value="yes">Yes — I can export GSC data</option>
+        <option value="no">No — but I want to learn how</option>
+        <option value="help">I need help setting it up</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Anything specific you want us to focus on?</label>
+      <textarea id="f-notes" placeholder="E.g. traffic dropped after March 2025 update, or we lost rankings for our main keyword..."></textarea>
+    </div>
+
+    <button class="submit-btn" onclick="submitClaim()">Claim My €250 Prize Package</button>
+    <div class="success-msg" id="successMsg">Your claim has been submitted! Ottmar will contact you within 24 hours to get started.</div>
+    <p class="form-note">By submitting you agree that ContentScale may contact you regarding your audit.<br>Your data is never shared with third parties.</p>
+  </div>
+
+  <div style="text-align:center;padding-bottom:40px">
+    <a href="https://app.contentscale.site/otto" style="display:inline-block;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:12px">Talk to Otto — Start Earning Points</a>
+    <br>
+    <a href="https://app.contentscale.site/otto/leaderboard" style="font-size:12px;color:#6b7280;text-decoration:none">View the leaderboard →</a>
+  </div>
+
+</div>
+
+<script>
+// Countdown
+function updateCountdown() {
+  var now = new Date();
+  var end = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  var diff = end - now;
+  if (diff < 0) return;
+  var d = Math.floor(diff/86400000);
+  var h = Math.floor((diff%86400000)/3600000);
+  var m = Math.floor((diff%3600000)/60000);
+  var sec = Math.floor((diff%60000)/1000);
+  document.getElementById('cd-d').textContent = String(d).padStart(2,'0');
+  document.getElementById('cd-h').textContent = String(h).padStart(2,'0');
+  document.getElementById('cd-m').textContent = String(m).padStart(2,'0');
+  document.getElementById('cd-s').textContent = String(sec).padStart(2,'0');
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// Pre-fill ref code from URL
+var refParam = new URLSearchParams(location.search).get('ref');
+if (refParam) document.getElementById('f-ref').value = refParam;
+
+// Submit
+function submitClaim() {
+  var name = document.getElementById('f-name').value.trim();
+  var email = document.getElementById('f-email').value.trim();
+  var url = document.getElementById('f-url').value.trim();
+  var ref = document.getElementById('f-ref').value.trim();
+  if (!name || !email) { alert('Please fill in your name and email.'); return; }
+
+  // Send to server
+  fetch('https://app.contentscale.site/api/otto/claim-prize', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name, email,
+      website: url,
+      refCode: ref,
+      page: document.getElementById('f-page').value.trim(),
+      gscAccess: document.getElementById('f-gsc').value,
+      notes: document.getElementById('f-notes').value.trim()
+    })
+  }).then(function(r) { return r.json(); }).then(function() {
+    document.getElementById('claimForm').style.opacity = '.4';
+    document.getElementById('claimForm').style.pointerEvents = 'none';
+    document.getElementById('successMsg').style.display = 'block';
+  }).catch(function() {
+    // Fallback — still show success (email via mailto)
+    window.location.href = 'mailto:ottmar@contentscale.site?subject=Prize Claim - ' + ref + '&body=Name: ' + name + '%0AEmail: ' + email + '%0AWebsite: ' + url;
+  });
+}
+</script>
+</body>
+</html>
+`;
+
+app.get('/prize', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(_PRIZE_HTML);
+});
+
+app.post('/api/otto/claim-prize', async (req, res) => {
+  const { name, email, website, refCode, page, gscAccess, notes } = req.body;
+  if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
+  try {
+    // Save claim to DB
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS prize_claims (
+        id SERIAL PRIMARY KEY, name VARCHAR(255), email VARCHAR(255),
+        website TEXT, ref_code VARCHAR(50), page_to_audit TEXT,
+        gsc_access VARCHAR(50), notes TEXT, created_at TIMESTAMP DEFAULT NOW()
+      )`
+    );
+    await pool.query(
+      'INSERT INTO prize_claims (name, email, website, ref_code, page_to_audit, gsc_access, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [name, email, website||'', refCode||'', page||'', gscAccess||'', notes||'']
+    );
+    console.log('[prize] New claim:', name, email, refCode);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('[prize] claim error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/otto/prize-claims', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM prize_claims ORDER BY created_at DESC');
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 
