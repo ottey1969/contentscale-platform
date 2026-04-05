@@ -6995,16 +6995,20 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
 (function() {
   'use strict';
 
-  var _ws        = null;
-  var _active    = false;
-  var _micCtx    = null;
-  var _stream    = null;
-  var _processor = null;
-  var _playCtx   = null;
-  var _nextStart = 0;
+  var _ws           = null;
+  var _active       = false;
+  var _micCtx       = null;
+  var _stream       = null;
+  var _processor    = null;
+  var _playCtx      = null;
+  var _nextStart    = 0;
   var _killTimer    = null;
-  var _audioChunks  = [];   // collect raw PCM chunks
-  var _hasPhone     = false; // flag when phone detected
+  var _audioChunks  = [];
+  var _hasPhone     = false;
+  var _sessionId    = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  var _sessionStart = Date.now();
+  var _sessionModel = null;
+  var _transcript   = [];
 
   var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
@@ -7170,6 +7174,10 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     } catch(e) { setStatus('Server error: ' + e.message); stopSession(); return; }
 
     var model = keyData.model || 'gemini-3.1-flash-live-preview';
+    _sessionModel = model;
+    _sessionId = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    _sessionStart = Date.now();
+    _transcript = [];
     console.log('[otto] model:', model);
 
     var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
