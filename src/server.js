@@ -5696,6 +5696,31 @@ img,table,iframe{max-width:100%;}
 let gscPages = [];
 let gscQueries = [];
 
+// ── Auto-load GSC data shared from Audit Workflow Manager ──
+(function() {
+  try {
+    const shared = localStorage.getItem('cs_shared_gsc');
+    if (shared) {
+      const data = JSON.parse(shared);
+      if (data.pages && data.pages.length) {
+        gscPages = data.pages;
+        setTimeout(function() {
+          const el = document.getElementById('pagesStatus');
+          if (el) el.innerHTML = '<span style="color:var(--green)">✓ ' + gscPages.length + ' pages loaded from Workflow Manager</span>';
+        }, 500);
+        console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC data');
+      }
+      if (data.queries && data.queries.length) {
+        gscQueries = data.queries;
+        setTimeout(function() {
+          const el = document.getElementById('queriesStatus');
+          if (el) el.innerHTML = '<span style="color:var(--green)">✓ ' + gscQueries.length + ' queries loaded from Workflow Manager</span>';
+        }, 500);
+      }
+    }
+  } catch(e) { console.warn('[PULSE+NEXUS] Could not load shared GSC:', e.message); }
+})();
+
 const RAILWAY = 'https://app.contentscale.site';
 
 
@@ -5931,8 +5956,8 @@ function runMetaCheck() {
     if(!deepView) return;
     const banner = document.createElement('div');
     banner.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:12px 18px;margin-bottom:14px;font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;color:#fbbf24;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
-    banner.innerHTML = '<span>✓ Pre-filled vanuit Workflow Manager — paste Pagina HTML hieronder voor beste resultaat. Competitor HTML is optioneel (defaultt naar Surfer SEO + MarketMuse benchmark).</span>'
-      + (p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;margin-left:auto;white-space:nowrap;">← Terug naar Workflow</a>' : '');
+    banner.innerHTML = '<span>✓ Pre-filled vanuit Workflow Manager — Paste page HTML below for best results. Competitor HTML is optional.</span>'
+      + (p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;margin-left:auto;white-space:nowrap;">← Back to Workflow</a>' : '');
     deepView.insertBefore(banner, deepView.firstChild);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
