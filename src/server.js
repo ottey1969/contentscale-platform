@@ -7178,6 +7178,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     _sessionId = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     _sessionStart = Date.now();
     _transcript = [];
+    window._ottTurnCount = 0;  // reset per session
     console.log('[otto] model:', model);
 
     var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
@@ -7247,9 +7248,9 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
             setStatus('Your turn — speak now...');
             console.log('[otto] turnComplete #' + _turnCount);
             // After 5 turns (full script done), schedule hangup if no goodbye detected yet
-            if (_turnCount >= 5) {
+            if (_turnCount >= 10) {
               clearTimeout(_killTimer);
-              _killTimer = setTimeout(function() { hangup('script complete'); }, 5000);
+              _killTimer = setTimeout(function() { hangup('script complete'); }, 15000);
             }
           }
         }
