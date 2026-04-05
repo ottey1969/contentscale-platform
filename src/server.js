@@ -4144,6 +4144,12 @@ wss.on('connection', (clientWs) => {
 
 
 // ── Otto sessions ──────────────────────────────────────────────────────────
+pool.query(`CREATE TABLE IF NOT EXISTS prize_claims (
+  id SERIAL PRIMARY KEY, name VARCHAR(255), email VARCHAR(255),
+  website TEXT, ref_code VARCHAR(50), page_to_audit TEXT,
+  gsc_access VARCHAR(50), notes TEXT, created_at TIMESTAMP DEFAULT NOW()
+)`).catch(e => console.warn('[prize_claims]', e.message));
+
 pool.query(`CREATE TABLE IF NOT EXISTS otto_sessions (
   id SERIAL PRIMARY KEY, session_id VARCHAR(100) UNIQUE NOT NULL,
   lead_name VARCHAR(255), lead_website VARCHAR(255), lead_phone VARCHAR(100),
@@ -4200,7 +4206,7 @@ app.get('/api/otto-version', (req, res) => res.json({ version: 'v6', model: 'gem
 
 // ── Otto AI client JS — embedded inline ──────────────────────────────────
 const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
-// Hangup: 45s max session OR goodbye word detected
+// Hangup: 2 min max session OR goodbye word detected
 
 (function() {
   'use strict';
@@ -4347,8 +4353,8 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     setStatus('Your turn — speak now...');
 
     // HARD KILL: 45 seconds max no matter what
-    _killTimer = setTimeout(function() { hangup('2.5 min limit reached'); }, 150000);
-    console.log('[otto] session started — 2.5 min hard limit');
+    _killTimer = setTimeout(function() { hangup('2 min limit reached'); }, 120000);
+    console.log('[otto] session started — 2 min hard limit');
   }
 
   async function startSession() {
@@ -4394,9 +4400,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
         setup: {
           model: 'models/' + model,
           generation_config: {
-            response_modalities: ['AUDIO'],
-            output_audio_transcription: {},
-            input_audio_transcription: {}
+            response_modalities: ['AUDIO']
           },
           system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
         }
@@ -4460,7 +4464,7 @@ const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
     var btn = document.getElementById('gl-call-btn');
     if (!btn) { setTimeout(attach, 150); return; }
     btn.addEventListener('click', startSession);
-    console.log('[otto] v7 loaded — 75s hard limit + goodbye detection');
+    console.log('[otto] v7 loaded — 2 min hard limit + goodbye detection');
   }
 
   document.readyState === 'loading'
