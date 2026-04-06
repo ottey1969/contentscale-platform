@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="nl" id="htmlRoot">
+<html lang="nl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
-<title>ContentScale SEO Audit System — Handleiding / User Guide</title>
+<title>ContentScale SEO Audit System — Complete User Guide / Volledige Handleiding</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -14,29 +14,28 @@
   --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
   --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
 }
-body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.7;}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line-height:1.7;padding:0;margin:0;}
 .wrap{max-width:900px;margin:0 auto;padding:40px 24px 100px;}
 
 /* Header */
 .header{text-align:center;padding:48px 0 40px;border-bottom:1px solid var(--border);margin-bottom:48px;}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:inline-block;margin-bottom:16px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px;}
 .header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,5vw,52px);letter-spacing:.04em;line-height:1.05;margin-bottom:12px;background:linear-gradient(135deg,var(--gold),var(--ink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.header p{color:var(--muted);font-size:15px;max-width:600px;margin:0 auto;}
-
-/* Nav */
-.toc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;margin-bottom:48px;}
-.toc-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:14px;}
-.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,.03);transition:color .15s;}
-.toc a:hover{color:var(--gold);}
-.toc a span{color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:11px;margin-right:10px;}
+.header p{color:var(--muted);font-size:15px;max-width:600px;margin:0 auto 24px;}
+.lang-toggle{display:flex;gap:8px;justify-content:center;margin-top:24px;}
+.lang-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:8px 20px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.1em;transition:all .2s;}
+.lang-btn:hover{border-color:var(--gold);color:var(--gold);}
+.lang-btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold);}
 
 /* Sections */
 .section{margin-bottom:56px;}
+.section[lang="en"]{display:none;}
 .section-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;}
 .section h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,4vw,38px);letter-spacing:.04em;margin-bottom:16px;color:var(--gold);}
 .section h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;margin:28px 0 10px;color:var(--ink);}
 .section p{color:var(--muted);font-size:14px;margin-bottom:14px;line-height:1.75;}
-.section p strong{color:var(--ink);}
+.section ul{color:var(--muted);font-size:14px;margin:10px 0 14px 24px;line-height:1.75;}
+.section li{margin-bottom:8px;}
 
 /* Tool cards */
 .tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden;}
@@ -45,33 +44,20 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line
 .tool-card.purple::before{background:var(--purple);}
 .tool-card.blue::before{background:var(--blue);}
 .tool-card.green::before{background:var(--green);}
-.tool-card.orange::before{background:var(--orange);}
 .tool-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;margin-bottom:4px;}
 .tool-url{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);margin-bottom:10px;}
-.tool-desc{font-size:13px;color:var(--muted);line-height:1.7;}
-.tool-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:10px;}
-.badge-internal{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
-.badge-client{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.3);}
-.badge-noindex{background:rgba(244,63,63,.12);color:var(--red);border:1px solid rgba(244,63,63,.3);}
+.tool-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:10px;}
 
 /* Flow diagram */
-.flow{display:flex;flex-direction:column;gap:0;margin:24px 0;}
+.flow{display:flex;flex-direction:column;gap:0;margin:32px 0;}
 .flow-step{display:flex;gap:16px;align-items:flex-start;}
 .flow-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:40px;}
-.flow-num{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;flex-shrink:0;}
+.flow-num{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;flex-shrink:0;background:var(--gold);color:var(--bg);}
 .flow-line{width:2px;flex:1;min-height:24px;background:var(--border);margin:2px 0;}
 .flow-body{flex:1;padding-bottom:24px;}
 .flow-title{font-weight:700;font-size:15px;color:var(--ink);margin-bottom:4px;}
 .flow-sub{font-size:13px;color:var(--muted);line-height:1.65;}
 .flow-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-top:4px;}
-
-/* Steps */
-.steps-list{counter-reset:step;}
-.step-item{display:flex;gap:14px;margin-bottom:20px;padding:16px 18px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;}
-.step-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
-.step-body strong{color:var(--ink);display:block;margin-bottom:4px;font-size:14px;}
-.step-body span{font-size:13px;color:var(--muted);line-height:1.65;}
-.step-body code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--surface);padding:1px 6px;border-radius:3px;color:var(--blue);}
 
 /* Info boxes */
 .info-box{border-radius:8px;padding:14px 18px;margin:16px 0;font-size:13px;line-height:1.7;}
@@ -81,629 +67,759 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;line
 .info-box.blue strong{color:var(--blue);}
 .info-box.green{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);color:var(--muted);}
 .info-box.green strong{color:var(--green);}
-.info-box.red{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);color:var(--muted);}
-.info-box.red strong{color:var(--red);}
+
+/* Steps */
+.steps-list{counter-reset:step;}
+.step-item{display:flex;gap:14px;margin-bottom:20px;padding:16px 18px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;}
+.step-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
+.step-body strong{color:var(--ink);display:block;margin-bottom:4px;font-size:14px;}
+.step-body span{font-size:13px;color:var(--muted);line-height:1.65;}
+.step-body code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--surface);padding:2px 6px;border-radius:3px;color:var(--blue);}
 
 /* Table */
 .data-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;}
 .data-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 12px;text-align:left;border:1px solid var(--border);}
 .data-table td{padding:9px 12px;border:1px solid var(--border);color:var(--muted);vertical-align:top;}
 .data-table td strong{color:var(--ink);}
-.data-table tr:hover td{background:rgba(255,255,255,.02);}
+.data-table code{font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--surface);padding:2px 6px;border-radius:3px;color:var(--blue);}
 
-/* Scenario boxes */
-.scenario{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 18px;margin-bottom:10px;}
-.scenario-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.scenario-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;}
-.scenario-title{font-weight:700;font-size:14px;color:var(--ink);}
-.scenario p{font-size:13px;color:var(--muted);margin:0;}
-.scenario .action{font-size:13px;color:var(--ink);font-weight:600;margin-top:6px;display:flex;align-items:flex-start;gap:6px;}
-.scenario .action::before{content:'→';color:var(--gold);flex-shrink:0;}
-
-/* Divider */
-hr{border:none;border-top:1px solid var(--border);margin:40px 0;}
-.nl{}.en{display:none;}
-body.lang-en .nl{display:none !important;}
-body.lang-en .en{display:block !important;}
-body.lang-en span.en{display:inline !important;}
-body.lang-en span.nl{display:none !important;}
-
-/* ── MOBILE RESPONSIVE ─────────────────────────── */
-html,body{max-width:100%;overflow-x:hidden;}
-img,table,iframe{max-width:100%;}
-@media(max-width:768px){
-  .wrap{padding:0 14px 60px!important;}
-  .topbar{padding:12px 0;gap:8px;}
-  .topbar-right{gap:5px;}
-  .btn{font-size:8px;padding:6px 10px;}
-  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
-  .add-row{flex-direction:column;}
-  .add-row input,.add-row select{width:100%!important;}
-  .filter-bar{flex-direction:column;gap:6px;}
-  .filter-bar select,.filter-bar input{width:100%!important;}
-  .card-head{flex-wrap:wrap;gap:6px;}
-  .rec-head{flex-direction:column;}
-  .prefill-box{max-width:100%;width:100%;}
-  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
-  .project-bar{flex-direction:column;}
-  .pf{min-width:100%!important;}
-  .steps{flex-direction:column!important;}
-  .step{border-right:none!important;border-bottom:1px solid var(--border);}
-  .step:last-child{border-bottom:none;}
-  .how-step{flex-direction:column;}
-  .flow-step{gap:10px;}
-  .rec-foot{flex-direction:column;gap:8px;}
-  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
-  .modes{grid-template-columns:1fr!important;}
-  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
-}
-@media(max-width:480px){
-  .overview,.summary{grid-template-columns:1fr 1fr!important;}
-  .topbar{flex-direction:column;align-items:flex-start;}
-  .topbar-right{flex-wrap:wrap;}
-  .card-meta{flex-wrap:wrap;gap:4px;}
-  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
-  h1,h2,.tool-name{word-break:break-word;}
-  .panel{padding:16px!important;}
-  .section{padding:14px 16px!important;}
-}
+/* Code blocks */
+pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;margin:16px 0;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.6;color:var(--muted);}
+code{font-family:'IBM Plex Mono',monospace;background:var(--surface);padding:2px 6px;border-radius:3px;color:var(--blue);font-size:11px;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<!-- Header -->
 <div class="header">
-  <a href="https://contentscale.site" class="brand">ContentScale</a>
-  <h1>SEO Audit System Handleiding</h1>
-  <p class="nl">Stap-voor-stap uitleg van het volledige systeem — van GSC data tot afgehandelde audit. Voor intern gebruik.</p>
-  <p class="en" style="display:none;">Step-by-step explanation of the complete system — from GSC data to completed audit. For internal use.</p>
-  <div style="margin-top:20px;">
-    <button onclick="setLang('nl')" id="btnNL" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:5px 0 0 5px;border:1px solid var(--gold);background:var(--gold);color:#000;cursor:pointer;font-weight:700;">🇳🇱 NL</button>
-    <button onclick="setLang('en')" id="btnEN" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:0 5px 5px 0;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">🇺🇸 EN</button>
+  <div class="brand">CONTENTSCALE</div>
+  <h1>Complete User Guide</h1>
+  <p>Everything you need to know about the AI-Powered SEO Audit System</p>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('nl')">🇳🇱 Nederlands</button>
+    <button class="lang-btn" onclick="setLang('en')">🇬🇧 English</button>
   </div>
 </div>
 
-<!-- Inhoud -->
-<div class="toc">
-  <div class="toc-title"><span class="nl">Inhoud</span><span class="en" style="display:none;">Contents</span></div>
-  <a href="#overzicht"><span>01</span><span class="nl">Overzicht — wat is het systeem?</span><span class="en" style="display:none;">Overview — what is the system?</span></a>
-  <a href="#tools"><span>02</span><span class="nl">De 5 tools — wat doet elke pagina?</span><span class="en" style="display:none;">The 5 tools — what does each page do?</span></a>
-  <a href="#flow"><span>03</span><span class="nl">De volledige flow — stap voor stap</span><span class="en" style="display:none;">The complete flow — step by step</span></a>
-  <a href="#gsc"><span>04</span><span class="nl">GSC uitleg — impressies, CTR, positie</span><span class="en" style="display:none;">GSC explained — impressions, CTR, position</span></a>
-  <a href="#scenarios"><span>05</span><span class="nl">Aanbevelingen — wanneer doe je wat?</span><span class="en" style="display:none;">Recommendations — when to do what?</span></a>
-  <a href="#audit"><span>06</span><span class="nl">PULSE+NEXUS uitvoeren — hoe werkt het?</span><span class="en" style="display:none;">Running PULSE+NEXUS — how does it work?</span></a>
-  <a href="#checklist"><span>07</span><span class="nl">Checklist — wat doe je per pagina?</span><span class="en" style="display:none;">Checklist — what to do per page?</span></a>
-  <a href="#deploy"><span>08</span><span class="nl">Deployen — bestanden en routes</span><span class="en" style="display:none;">Deploy — files and routes</span></a>
+<!-- ============================================ -->
+<!-- NEDERLANDS (DUTCH) -->
+<!-- ============================================ -->
+
+<div class="section" lang="nl">
+  <div class="section-label">OVERZICHT</div>
+  <h2>Wat is dit systeem?</h2>
+  <p>ContentScale is een <strong>AI-aangedreven SEO audit systeem</strong> dat je helpt om pagina's te optimaliseren voor hogere posities in Google. Het systeem combineert:</p>
+  <ul>
+    <li><strong>Bulk Scan</strong> — Importeer Google Search Console data en zie alle pagina's met automatische prioritering</li>
+    <li><strong>Workflow Manager</strong> — Organiseer en prioriteer welke pagina's je eerst optimaliseert</li>
+    <li><strong>Deep Dive (PULSE+NEXUS)</strong> — Gedetailleerde analyse van een enkele pagina met AI-aangedreven concurrent analyse</li>
+    <li><strong>AI Competitor Analysis</strong> — Upload HTML van concurrenten en laat AI zwakheden vinden</li>
+    <li><strong>Surgical Recommendations</strong> — Exacte content voorbeelden die je direct kunt copy-pasten</li>
+  </ul>
 </div>
 
-<!-- 01 Overzicht -->
-<div class="section" id="overzicht">
-  <div class="section-label"><span class="nl">Sectie 01</span><span class="en" style="display:none;">Section 01</span></div>
-  <h2><span class="nl">Wat is het systeem?</span><span class="en" style="display:none;">What is the system?</span></h2>
-  <p><span class="nl">Het ContentScale SEO Audit System bestaat uit <strong>5 gekoppelde tools</strong> waarmee je systematisch pagina's van een website kunt auditen, verbeteren en bijhouden. Alles werkt samen — data stroomt automatisch van de ene tool naar de andere.</span><span class="en" style="display:none;">The ContentScale SEO Audit System consists of <strong>5 connected tools</strong> for systematically auditing, improving, and tracking pages of a website. Everything works together — data flows automatically from one tool to the next.</span></p>
+<div class="section" lang="nl">
+  <div class="section-label">HET COMPLETE PROCES</div>
+  <h2>6 Stappen van Start tot Finish</h2>
+  
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">1</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">BULK SCAN — Importeer GSC Data</div>
+        <div class="flow-sub">
+          Upload je Google Search Console CSV bestanden (Pages + Queries). Het systeem berekent automatisch een prioriteitsscore voor elke pagina op basis van positie (11-30 = quick wins), impressies (hoge vraag) en CTR (makkelijk te verbeteren).
+        </div>
+        <div class="flow-url">/audit-workflow → Import GSC CSV</div>
+      </div>
+    </div>
 
-  <div class="info-box gold">
-    <span class="nl"><strong>Het doel:</strong> Pagina's die bijna op pagina 1 staan (positie 11-30) identificeren, auditen met PULSE+NEXUS, fixes doorvoeren, en het resultaat meten met de ContentScore. Zo herstel je systematisch verloren Google traffic.</span><span class="en" style="display:none;"><strong>The goal:</strong> Identify pages close to page 1 (position 11-30), audit with PULSE+NEXUS, implement fixes, and measure the result with ContentScore. This is how you systematically recover lost Google traffic.</span>
-  </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">2</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">WORKFLOW MANAGER — Organiseer & Prioriteer</div>
+        <div class="flow-sub">
+          Zie alle geïmporteerde pagina's met hun scores. Filter op prioriteit (🔥 CRITICAL, ⚡ HIGH, 📊 MEDIUM). Selecteer een pagina en klik op "🔬 Open in PULSE+NEXUS" om de deep dive analyse te starten. Alle data (URL, keyword, GSC metrics) gaat automatisch mee.
+        </div>
+        <div class="flow-url">/audit-workflow → Pagina lijst</div>
+      </div>
+    </div>
 
-  <p><span class="nl">Het systeem is <strong>intern</strong> — niet zichtbaar voor Google (noindex) en niet voor klanten. Er is één uitzondering: de Audit Intake Form, die is voor klanten die een audit willen aanvragen.</span><span class="en" style="display:none;">The system is <strong>internal</strong> — not visible to Google (noindex) and not to clients. One exception: the Audit Intake Form, which is for clients who want to request an audit.</span></p>
-</div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">3</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">DEEP DIVE — Gedetailleerde SEO Analyse</div>
+        <div class="flow-sub">
+          Het SEO Audit scherm opent met automatisch ingevulde velden. <strong>Verifieer handmatig het primary keyword</strong> (AI vindt mogelijk niet het beste). Zoek de top 3 concurrenten in Google, open hun pagina's, klik rechts → "Paginabron bekijken" (Ctrl+U) → Alles selecteren (Ctrl+A) → Kopiëren (Ctrl+C) → Plakken in de 3 tekstgebieden.
+        </div>
+        <div class="flow-url">/seo-audit (via workflow)</div>
+      </div>
+    </div>
 
-<!-- 02 De tools -->
-<div class="section" id="tools">
-  <div class="section-label"><span class="nl">Sectie 02</span><span class="en" style="display:none;">Section 02</span></div>
-  <h2><span class="nl">De 5 tools</span><span class="en" style="display:none;">The 5 tools</span></h2>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">4</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">AI COMPETITOR ANALYSIS — HTML Verificatie</div>
+        <div class="flow-sub">
+          Klik "🤖 Analyze Competitors + Generate Recommendations". AI analyseert de HTML code van concurrenten en vindt: FAQ schema errors, meerdere H1 tags, ontbrekende alt text, tabellen, expert quotes. Je ziet exact wat zij fout doen en hoe jij het beter kunt. Duurt 30-60 seconden.
+        </div>
+        <div class="flow-url">POST /api/audit/analyze-competitors</div>
+      </div>
+    </div>
 
-  <div class="tool-card gold">
-    <span class="tool-badge badge-internal">Intern</span>
-    <span class="tool-badge badge-noindex" style="margin-left:6px;">Noindex</span>
-    <div class="tool-name">1 — Workflow Manager</div>
-    <div class="tool-url">app.contentscale.site/audit-workflow</div>
-    <div class="tool-desc">
-      <span class="nl">Je cockpit. Hier beheer je alle pagina's van een client. Je importeert GSC data, ziet welke pagina's prioriteit hebben, vinkt taken af per pagina en houdt de voortgang bij.<br><br>
-      <strong>Wat je hier doet:</strong> GSC CSV importeren → pagina's krijgen automatisch prioriteit → doorsturen naar Recommendations voor aanbevelingen → afvinken als gedaan.<br><br>
-      <strong>Data blijft bewaard</strong> in de browser (localStorage) — je kunt de sessie afsluiten en later verdergaan.</span>
-      <span class="en" style="display:none;">Your cockpit. Manage all client pages here. Import GSC data, see which pages have priority, check off tasks per page and track progress.<br><br>
-      <strong>What you do here:</strong> Import GSC CSV → pages get priority automatically → send to Recommendations for advice → check off when done.<br><br>
-      <strong>Data is saved</strong> in the browser (localStorage) — you can close the session and continue later.</span>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">5</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">SURGICAL RECOMMENDATIONS — Exacte Content</div>
+        <div class="flow-sub">
+          AI genereert EXACTE voorbeelden die je direct kunt gebruiken: perfecte title (62 tekens), meta description (158 tekens), H1, FAQ schema (compleet JSON-LD), comparison table (HTML), expert quotes, statistieken. Elke sectie heeft een [📋 Copy] knop. Geen vage suggesties — kant-en-klare content.
+        </div>
+        <div class="flow-url">POST /api/audit/generate-recommendations</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">6</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">TRACKING — Monitor Resultaten</div>
+        <div class="flow-sub">
+          Klik "← Return to Workflow" om terug te gaan. De pagina wordt automatisch gemarkeerd als "Done" ✅. Importeer elke 7-14 dagen nieuwe GSC data om vooruitgang te zien: positie verandering, clicks verandering, CTR verbetering. Maak screenshots van GSC voor klanten als bewijs.
+        </div>
+        <div class="flow-url">/audit-workflow → Status tracking</div>
+      </div>
     </div>
   </div>
+</div>
 
-  <div class="tool-card orange">
-    <span class="tool-badge badge-internal">Intern</span>
-    <span class="tool-badge badge-noindex" style="margin-left:6px;">Noindex</span>
-    <div class="tool-name">2 — Recommendations Engine</div>
-    <div class="tool-url">app.contentscale.site/audit-recommendations</div>
+<div class="section" lang="nl">
+  <div class="section-label">TOOLS OVERVIEW</div>
+  <h2>De 3 Hoofd Componenten</h2>
+
+  <div class="tool-card gold">
+    <div class="tool-name">1. Workflow Manager (Bulk Scan)</div>
+    <div class="tool-url">/audit-workflow</div>
     <div class="tool-desc">
-      <span class="nl">Leest de data uit de Workflow Manager en geeft per pagina automatisch de beste aanbeveling. Je ziet in één oogopslag: wat is het probleem, wat is de actie, hoeveel tijd kost het, en wat wordt automatisch ingevuld in PULSE+NEXUS.<br><br>
-      <strong>Wat je hier doet:</strong> Kijken welke pagina's quick wins zijn → klikken op "Open in PULSE+NEXUS" → audit uitvoeren.</span>
-      <span class="en" style="display:none;">Reads data from the Workflow Manager and automatically gives the best recommendation per page. At a glance: what is the problem, what is the action, how long will it take, and what gets pre-filled in PULSE+NEXUS.<br><br>
-      <strong>What you do here:</strong> See which pages are quick wins → click "Open in PULSE+NEXUS" → run the audit.</span>
+      <strong>Doel:</strong> Importeer Google Search Console data en zie alle pagina's met automatische prioritering.<br><br>
+      <strong>Wat het doet:</strong><br>
+      • Upload Pages CSV (Google → Performance → Pages → Export CSV)<br>
+      • Upload Queries CSV (Google → Performance → Queries → Export CSV)<br>
+      • Systeem berekent score per pagina (0-100)<br>
+      • Score = positie kans (40pt) + zoekvolume (30pt) + CTR potentieel (20pt) + commercial intent (10pt)<br>
+      • Filter op 🔥 CRITICAL (90+), ⚡ HIGH (60-89), 📊 MEDIUM (40-59)<br>
+      • Klik "🔬 Open in PULSE+NEXUS" om deep dive te starten<br><br>
+      <strong>Data flow:</strong> URL, keyword, positie, impressies, clicks, CTR gaan automatisch mee naar SEO Audit.
     </div>
   </div>
 
   <div class="tool-card purple">
-    <span class="tool-badge badge-internal">Intern</span>
-    <span class="tool-badge badge-noindex" style="margin-left:6px;">Noindex</span>
-    <div class="tool-name">3 — PULSE + NEXUS Audit Engine</div>
-    <div class="tool-url">app.contentscale.site/audit-seo</div>
+    <div class="tool-name">2. PULSE+NEXUS (Deep Dive)</div>
+    <div class="tool-url">/seo-audit</div>
     <div class="tool-desc">
-      Het analysetools. Voert een 10-stappen audit uit op één specifieke pagina. Gebruikt Gemini AI om de werkelijke content te analyseren en geeft concrete aanbevelingen met priority actions bovenaan.<br><br>
-      <strong>Twee modi:</strong><br>
-      — <strong>Bulk Scan:</strong> Upload GSC CSV → alle pagina's gerangschikt op kans<br>
-      — <strong>Deep Dive:</strong> Één pagina volledig analyseren — dit is de kern<br><br>
-      <strong>Wordt automatisch ingevuld</strong> als je vanuit Recommendations klikt: URL, keyword, positie, impressies, CTR staan al klaar. Jij plakt alleen nog de pagina HTML en eventueel competitor HTML.
+      <strong>Doel:</strong> Gedetailleerde analyse van één pagina met AI-aangedreven concurrent analyse.<br><br>
+      <strong>3 Modi:</strong><br>
+      • <strong>DEEP DIVE MODE</strong> — Vanuit Workflow (single page focus)<br>
+      • <strong>BULK SCAN MODE</strong> — Direct CSV import (multiple pages)<br>
+      • <strong>MANUAL MODE</strong> — Direct bezoek aan /seo-audit<br><br>
+      <strong>Hoe het werkt:</strong><br>
+      1. Pagina opent met auto-gevulde velden (als vanuit Workflow)<br>
+      2. Notificatie: "✅ Workflow Data Loaded! 📊 X pages, Y queries"<br>
+      3. <strong>Verifieer/update handmatig het primary keyword</strong><br>
+      4. Plak HTML van 3 concurrenten (View Source → Ctrl+A → Ctrl+C → Ctrl+V)<br>
+      5. Klik "🤖 Analyze Competitors"<br>
+      6. Wacht 30-60 seconden terwijl AI analyseert<br>
+      7. Zie resultaten: concurrent zwakheden, HTML errors, kansen<br>
+      8. Klik "← Return to Workflow" (auto-marks done)<br><br>
+      <strong>Waarom handmatige HTML input?</strong> Automatische parsers zijn niet perfect. Door zelf HTML te kopiëren krijg je exacte analyse van wat Google ziet.
     </div>
   </div>
 
   <div class="tool-card blue">
-    <span class="tool-badge badge-internal">Intern</span>
-    <div class="tool-name">4 — ContentScore Scanner</div>
-    <div class="tool-url">app.contentscale.site</div>
+    <div class="tool-name">3. AI Recommendations</div>
+    <div class="tool-url">POST /api/audit/generate-recommendations</div>
     <div class="tool-desc">
-      De gratis scanner. Plak een URL en krijg een score van 0-100 op basis van GRAAF (50pt) + CRAFT (30pt) + Technical SEO (20pt).<br><br>
-      <strong>Gebruik in het audit systeem:</strong> Scan een pagina VOOR je begint met auditen → noteer de score in de Workflow Manager → doe de audit → fix de pagina → scan opnieuw → noteer de nieuwe score. Het verschil is je bewijs dat het werkt.
-    </div>
-  </div>
-
-  <div class="tool-card green">
-    <span class="tool-badge badge-client">Voor klanten</span>
-    <div class="tool-name">5 — Audit Intake Form</div>
-    <div class="tool-url">app.contentscale.site/audit-intake</div>
-    <div class="tool-desc">
-      Het formulier dat klanten invullen als ze een audit willen aanvragen. Ze uploaden hun GSC CSV, geven de pagina URL en keyword op, en het formulier stuurt alles automatisch per email naar <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8be2e5ede4cbe8e4e5ffeee5fff8e8eae7eea5f8e2ffee">[email&#160;protected]</a></strong>.<br><br>
-      <strong>Jij ontvangt:</strong> Email met alle data + bijlagen + directe link om de pagina in PULSE+NEXUS te openen.
+      <strong>Doel:</strong> Genereer chirurgisch precisie content voorbeelden die direct bruikbaar zijn.<br><br>
+      <strong>Wat je krijgt:</strong><br>
+      • <strong>Title</strong> (60-65 tekens) — Met keyword en 2024/2025<br>
+      • <strong>Meta Description</strong> (150-160 tekens) — Value prop + CTA<br>
+      • <strong>H1</strong> — Single, keyword-rijk<br>
+      • <strong>H2 Structuur</strong> — 5-7 koppen in logische volgorde<br>
+      • <strong>Introductie</strong> (60-80 woorden) — Direct answer format<br>
+      • <strong>FAQ Schema</strong> — Complete JSON-LD code<br>
+      • <strong>Comparison Table</strong> — HTML &lt;table&gt; code<br>
+      • <strong>Expert Quotes</strong> — 2-3 quotes met credentials<br>
+      • <strong>Statistieken</strong> — 5-7 data points (2023-2024)<br>
+      • <strong>AI Overview Optimalisatie</strong> — Hoe je cited wordt<br>
+      • <strong>Action Plan</strong> — Genummerde stappen (1, 2, 3...)<br><br>
+      <strong>Elke sectie heeft een [📋 Copy] knop!</strong>
     </div>
   </div>
 </div>
 
-<!-- 03 Flow -->
-<div class="section" id="flow">
-  <div class="section-label"><span class="nl">Sectie 03</span><span class="en" style="display:none;">Section 03</span></div>
-  <h2><span class="nl">De volledige flow</span><span class="en" style="display:none;">The complete flow</span></h2>
-  <p><span class="nl">Zo gebruik je het systeem van begin tot eind voor één client:</span><span class="en" style="display:none;">This is how you use the system from start to finish for one client:</span></p>
-
-  <div class="flow">
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">1</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">GSC CSV exporteren</div>
-        <div class="flow-sub">Ga naar <strong>Google Search Console</strong> van de client. Klik op <strong>Performance</strong> → <strong>Pages tab</strong> → rechtsboven op <strong>Export → Download CSV</strong>. Doe hetzelfde voor de <strong>Queries tab</strong> (optioneel maar nuttig). Sla de bestanden op.</div>
-        <div class="flow-url">search.google.com/search-console</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">2</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">Workflow Manager openen + GSC importeren</div>
-        <div class="flow-sub">Open de Workflow Manager. Vul bovenaan de clientnaam, website en deadline in. Klik op <strong>📊 Import GSC CSV</strong> en upload het Pages CSV bestand. Alle pagina's laden automatisch met hun positie, impressies en prioriteit.</div>
-        <div class="flow-url">app.contentscale.site/audit-workflow</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">3</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">Prioriteiten bekijken</div>
-        <div class="flow-sub">De manager sorteert automatisch op kans. <strong>Rood (High)</strong> = positie 11-30 of pagina 1 met lage CTR — dit zijn de meest waardevolle pagina's. <strong>Geel (Medium)</strong> = positie 31-60. <strong>Groen (Low)</strong> = al goed of weinig volume. Filter op High Priority om te beginnen.</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">4</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">ContentScore scannen (voor)</div>
-        <div class="flow-sub">Klik per pagina op <strong>📊 Scan Score</strong>. De huidige ContentScore wordt opgehaald en opgeslagen als "Score Before". Dit is je nulmeting. De prioriteit verandert NIET op basis van de score — alleen GSC data bepaalt prioriteit.</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">5</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">Recommendations openen</div>
-        <div class="flow-sub">Klik bovenaan op <strong>🎯 Recommendations</strong>. Je ziet nu per pagina de exacte aanbeveling: wat is het probleem, wat is de actie, hoeveel tijd kost het. Sorteer op Impact voor de beste quick wins bovenaan.</div>
-        <div class="flow-url">app.contentscale.site/audit-recommendations</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">6</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">PULSE+NEXUS audit uitvoeren</div>
-        <div class="flow-sub">Klik op <strong>🔬 Open in PULSE+NEXUS</strong>. URL, keyword, positie, impressies en CTR staan automatisch ingevuld. Je hoeft alleen nog te plakken:<br>
-        — <strong>Pagina HTML:</strong> open de pagina → rechtsklik → Paginabron weergeven → Ctrl+A → Ctrl+C → plak<br>
-        — <strong>Competitor HTML:</strong> optioneel — als je leeg laat vergelijkt het tool met Surfer SEO + MarketMuse benchmark<br>
-        — <strong>Sitemap URLs:</strong> optioneel — voor interne link aanbevelingen<br><br>
-        Klik dan op <strong>Run Full Audit</strong>. De Priority Actions verschijnen als eerste.</div>
-        <div class="flow-url">app.contentscale.site/audit-seo</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">7</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">Fixes doorvoeren</div>
-        <div class="flow-sub">Voer de Priority Actions uit op de pagina. Minimaal: title tag, meta description, H1, FAQ schema. Daarna de content fixes. Exporteer de aanbevelingen met de Copy knop per sectie.</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(251,191,36,.15);color:var(--gold);">8</div>
-        <div class="flow-line"></div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">Afvinken + score meten</div>
-        <div class="flow-sub">Ga terug naar de Workflow Manager (← Terug naar Workflow knop). Vink de checklist items af die je hebt gedaan. Scan de pagina opnieuw voor de "Score After". Klik op <strong>✓ Mark Done</strong> als de pagina klaar is.</div>
-      </div>
-    </div>
-
-    <div class="flow-step">
-      <div class="flow-left">
-        <div class="flow-num" style="background:rgba(74,222,128,.15);color:var(--green);">9</div>
-      </div>
-      <div class="flow-body">
-        <div class="flow-title">Exporteren + volgende pagina</div>
-        <div class="flow-sub">Klik op <strong>↓ Export CSV</strong> om je voortgang op te slaan. Volgende sessie: <strong>↑ Import Progress</strong> om verder te gaan. Klik op <strong>📄 Client Report</strong> voor een nette overzichtspagina voor de klant.</div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- 04 GSC -->
-<div class="section" id="gsc">
-  <div class="section-label"><span class="nl">Sectie 04</span><span class="en" style="display:none;">Section 04</span></div>
-  <h2><span class="nl">GSC uitleg — impressies, CTR en positie</span><span class="en" style="display:none;">GSC explained — impressions, CTR and position</span></h2>
-
-  <table class="data-table">
-    <thead>
-      <tr><th><span class="nl">Begrip</span><span class="en" style="display:none;">Term</span></th><th><span class="nl">Wat betekent het?</span><span class="en" style="display:none;">What does it mean?</span></th><th><span class="nl">Wat zegt het je?</span><span class="en" style="display:none;">What does it tell you?</span></th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>Impressies</strong></td>
-        <td>Hoe vaak jouw pagina verschijnt in de zoekresultaten — ook als niemand klikt. Dit is het zoekvolume voor jouw pagina.</td>
-        <td>Hoge impressies = mensen zoeken ernaar. Er is vraag. De pagina heeft potentie.</td>
-      </tr>
-      <tr>
-        <td><strong>Clicks</strong></td>
-        <td>Hoe vaak iemand op jouw pagina klikt in de zoekresultaten.</td>
-        <td>Lage clicks bij hoge impressies = mensen zien je maar kiezen je niet.</td>
-      </tr>
-      <tr>
-        <td><strong>CTR %</strong></td>
-        <td>Click-Through Rate. Percentage van impressies dat resulteert in een klik. Clicks ÷ Impressies × 100.</td>
-        <td>CTR onder 2% = title/meta niet aantrekkelijk genoeg. CTR boven 5% = goed.</td>
-      </tr>
-      <tr>
-        <td><strong>Positie</strong></td>
-        <td>De gemiddelde ranking van jouw pagina in Google. Positie 1 = bovenaan. Positie 11 = begin van pagina 2.</td>
-        <td>Positie 11-30 = meest kansrijk voor verbetering. Eén goede audit kan je naar pagina 1 brengen.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="info-box gold">
-    <strong>De gouden combinatie:</strong> Hoge impressies (veel zoekvolume) + positie 11-30 (net niet pagina 1) = de pagina waar je het meeste te winnen hebt. Dat is waar je mee begint.
-  </div>
-
-  <h3>Wat doe je in elk scenario?</h3>
-
-  <table class="data-table">
-    <thead>
-      <tr><th><span class="nl">Situatie</span><span class="en" style="display:none;">Situation</span></th><th><span class="nl">Probleem</span><span class="en" style="display:none;">Problem</span></th><th><span class="nl">Oplossing</span><span class="en" style="display:none;">Solution</span></th><th><span class="nl">Tijd</span><span class="en" style="display:none;">Time</span></th></tr>
-    </thead>
-    <tbody>
-      <tr><td>Pos 1-10 + CTR &lt; 2%</td><td>Staat bovenaan maar trekt niet aan</td><td>Title + meta herschrijven</td><td>30 min</td></tr>
-      <tr><td>Pos 11-20 + hoge impressies</td><td>Net niet pagina 1</td><td>Volledige PULSE+NEXUS audit</td><td>2-3 uur</td></tr>
-      <tr><td>Pos 21-30 + score &lt; 70</td><td>Content te zwak</td><td>Audit + herschrijven</td><td>3-5 uur</td></tr>
-      <tr><td>Pos 31-60 + hoge impressies</td><td>Content veel te zwak voor pagina 1</td><td>Diepgaande audit</td><td>4-6 uur</td></tr>
-      <tr><td>Pos 60+ + lage impressies</td><td>Weinig vraag of pagina te zwak</td><td>Keyword research eerst</td><td>Nader bepalen</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- 05 Scenarios -->
-<div class="section" id="scenarios">
-  <div class="section-label"><span class="nl">Sectie 05</span><span class="en" style="display:none;">Section 05</span></div>
-  <h2><span class="nl">Aanbevelingen — wanneer doe je wat?</span><span class="en" style="display:none;">Recommendations — when to do what?</span></h2>
-  <p><span class="nl">De Recommendations Engine berekent dit automatisch. Dit is de logica erachter:</span><span class="en" style="display:none;">The Recommendations Engine calculates this automatically. Here is the logic behind it:</span></p>
-
-  <div class="scenario">
-    <div class="scenario-head">
-      <span class="scenario-badge" style="background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.3);">⚡ Quick Win</span>
-      <span class="scenario-title">Positie 1-10 + CTR onder 2%</span>
-    </div>
-    <p>Je staat al op pagina 1 maar searchers klikken niet. De title tag of meta description trekt niet genoeg aan.</p>
-    <div class="action">Herschrijf title (max 60 tekens) + meta description (max 155 tekens) met power words, getallen of urgentie. Dit kan in 30 minuten. Geen volledige audit nodig.</div>
-  </div>
-
-  <div class="scenario">
-    <div class="scenario-head">
-      <span class="scenario-badge" style="background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);">📈 CTR Fix</span>
-      <span class="scenario-title">Positie 11-20 + CTR onder 1.5%</span>
-    </div>
-    <p>Bijna pagina 1, maar twee problemen tegelijk: title trekt niet aan EN content is nog niet sterk genoeg.</p>
-    <div class="action">Stap 1: title + meta herschrijven (30 min). Stap 2: volledige audit voor de push naar pagina 1 (2-3 uur).</div>
-  </div>
-
-  <div class="scenario">
-    <div class="scenario-head">
-      <span class="scenario-badge" style="background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.3);">📝 Content Upgrade</span>
-      <span class="scenario-title">Positie 11-30 + score onder 70</span>
-    </div>
-    <p>Content is te zwak voor pagina 1. Met betere content en schema kun je de sprong maken.</p>
-    <div class="action">Volledige PULSE+NEXUS audit. Focus op Priority Actions (stap 0), Content Gap (stap 4) en PULSE Rewrites (stap 5).</div>
-  </div>
-
-  <div class="scenario">
-    <div class="scenario-head">
-      <span class="scenario-badge" style="background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3);">✏️ Rewrite</span>
-      <span class="scenario-title">Positie 31-60 + hoge impressies</span>
-    </div>
-    <p>Veel zoekvolume maar Google beoordeelt de pagina als te zwak voor de top. Fundamentele verbetering nodig.</p>
-    <div class="action">Alle 10 stappen van PULSE+NEXUS doorlopen. Daarna pagina volledig herschrijven op basis van de aanbevelingen.</div>
-  </div>
-
-  <div class="scenario">
-    <div class="scenario-head">
-      <span class="scenario-badge" style="background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);">🔗 Authority</span>
-      <span class="scenario-title">Positie 1-10 + score boven 85</span>
-    </div>
-    <p>Pagina presteert al goed. Content en techniek zijn op orde.</p>
-    <div class="action">Focus op interne links, backlinks en gezaghebbende bronnen. NEXUS stap 6 in PULSE+NEXUS.</div>
-  </div>
-</div>
-
-<!-- 06 Audit -->
-<div class="section" id="audit">
-  <div class="section-label"><span class="nl">Sectie 06</span><span class="en" style="display:none;">Section 06</span></div>
-  <h2><span class="nl">PULSE+NEXUS uitvoeren</span><span class="en" style="display:none;">Running PULSE+NEXUS</span></h2>
-
-  <div class="info-box blue">
-    <strong>Tip:</strong> Als je vanuit Recommendations klikt op "Open in PULSE+NEXUS" staan URL, keyword, positie, impressies en CTR al ingevuld. Je hoeft alleen nog de HTML toe te voegen.
-  </div>
-
-  <h3>Wat vul je handmatig in?</h3>
-
-  <div class="steps-list">
-    <div class="step-item">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <strong>Pagina HTML (stap ③) — bijna altijd verplicht</strong>
-        <span>Open de pagina in Chrome → rechtsklik → <code>Paginabron weergeven</code> → <code>Ctrl+A</code> → <code>Ctrl+C</code> → plak in het veld. Het systeem leest dan de werkelijke H1, H2s, schema en word count — niet een gok op basis van de URL.</span>
-      </div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <strong>Competitor HTML (stap ④) — optioneel</strong>
-        <span>Bezoek een competitor pagina → Paginabron → kopieer → plak. Als je dit leeg laat vergelijkt het systeem automatisch met wat bekend is over Surfer SEO en MarketMuse. Voor de meest nauwkeurige analyse: plak echte competitor HTML.</span>
-      </div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <strong>Sitemap URLs (stap ⑤) — optioneel maar waardevol</strong>
-        <span>Plak de URLs van de website (één per regel). Het systeem zoekt dan de 5 beste pagina's om intern naar te linken — met exacte anchor tekst. Zonder dit geeft het alleen algemene adviezen.</span>
-      </div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">4</div>
-      <div class="step-body">
-        <strong>Klik op Run Full Audit</strong>
-        <span>De audit draait 10 stappen. <strong>Priority Actions (stap 0) verschijnen als eerste</strong> — dit zijn de 7 meest impactvolle acties. Begin altijd hier. De rest van de stappen geven diepere analyse.</span>
-      </div>
-    </div>
-  </div>
-
-  <h3>De 10 stappen van PULSE+NEXUS</h3>
-  <table class="data-table">
-    <thead><tr><th><span class="nl">Stap</span><span class="en" style="display:none;">Step</span></th><th><span class="nl">Wat het doet</span><span class="en" style="display:none;">What it does</span></th><th><span class="nl">Wanneer belangrijk?</span><span class="en" style="display:none;">When important?</span></th></tr></thead>
-    <tbody>
-      <tr><td><strong>0 — Priority Actions</strong></td><td>7 concrete acties, gerangschikt op impact. Altijd als eerste lezen.</td><td>Altijd</td></tr>
-      <tr><td><strong>1 — Intent analyse</strong></td><td>Klopt de zoekintentie? AI Overview risico?</td><td>Bij lage CTR</td></tr>
-      <tr><td><strong>2 — CTR Surgery</strong></td><td>Nieuwe title + meta description</td><td>CTR onder 2%</td></tr>
-      <tr><td><strong>3 — Competitor Diff</strong></td><td>Jouw pagina vs competitors</td><td>Altijd</td></tr>
-      <tr><td><strong>4 — Content Gap</strong></td><td>Wat mis je dat competitors wel hebben?</td><td>Score onder 70</td></tr>
-      <tr><td><strong>5 — PULSE Rewrites</strong></td><td>Voor/na herschrijvingen van intro, CTA, structuur</td><td>Bij rewrite</td></tr>
-      <tr><td><strong>6 — NEXUS + interne links</strong></td><td>Welke pagina's linken naar elkaar?</td><td>Altijd</td></tr>
-      <tr><td><strong>7 — Architecture</strong></td><td>H1-H3 structuur optimaliseren</td><td>Bij herschrijven</td></tr>
-      <tr><td><strong>8 — Technical + Schema</strong></td><td>FAQPage JSON-LD, alt tekst, canonical</td><td>Altijd</td></tr>
-      <tr><td><strong>9 — Score projectie</strong></td><td>Verwachte score en traffic na fixes</td><td>Voor rapportage</td></tr>
-      <tr><td><strong>10 — 90-dagen plan</strong></td><td>Week-voor-week actieplan</td><td>Bij oplevering aan client</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- 07 Checklist -->
-<div class="section" id="checklist">
-  <div class="section-label"><span class="nl">Sectie 07</span><span class="en" style="display:none;">Section 07</span></div>
-  <h2><span class="nl">Checklist per pagina</span><span class="en" style="display:none;">Checklist per page</span></h2>
-  <p><span class="nl">In de Workflow Manager heeft elke pagina een checklist van 23 items. Dit zijn de standaard taken per audit:</span><span class="en" style="display:none;">In the Workflow Manager, each page has a checklist of 23 items. These are the standard tasks per audit:</span></p>
-
-  <h3><span class="nl">Audit (starten en afronden)</span><span class="en" style="display:none;">Audit (start and finish)</span></h3>
-  <table class="data-table">
-    <thead><tr><th>Item</th><th>Wat doe je?</th></tr></thead>
-    <tbody>
-      <tr><td>ContentScore scan gedaan</td><td>Score Before invullen via 📊 Scan Score knop</td></tr>
-      <tr><td>PULSE+NEXUS audit gedaan</td><td>10 stappen doorlopen en Priority Actions gelezen</td></tr>
-      <tr><td>GSC data genoteerd</td><td>Positie, impressies en CTR ingevuld in manager</td></tr>
-      <tr><td>Pagina herpubliceerd</td><td>Timestamp vernieuwd na fixes</td></tr>
-      <tr><td>GSC reindex aangevraagd</td><td>Via GSC → URL inspectie → Indexering aanvragen</td></tr>
-      <tr><td>GSC recheck ingepland</td><td>14 dagen later controleren in GSC</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Content fixes</h3>
-  <table class="data-table">
-    <thead><tr><th>Item</th><th>Norm</th></tr></thead>
-    <tbody>
-      <tr><td>H1 geoptimaliseerd</td><td>Primair keyword erin, duidelijk en aantrekkelijk</td></tr>
-      <tr><td>H2 structuur herzien</td><td>Logische volgorde, keywords in kopjes</td></tr>
-      <tr><td>SEO title bijgewerkt</td><td>50-60 tekens, keyword vooraan</td></tr>
-      <tr><td>Meta description bijgewerkt</td><td>150-160 tekens, call-to-action erin</td></tr>
-      <tr><td>Content gaps gevuld</td><td>Ontbrekende subtopics toegevoegd</td></tr>
-      <tr><td>Word count voldoende</td><td>Minimaal 1500 woorden voor informatieve pagina's</td></tr>
-      <tr><td>Stats bijgewerkt</td><td>Alle cijfers zijn van 2025-2026</td></tr>
-      <tr><td>FAQ sectie toegevoegd</td><td>Minimaal 3-5 vragen met volledige antwoorden</td></tr>
-      <tr><td>Expertcitaten toegevoegd</td><td>Naam + functie + bron erbij</td></tr>
-      <tr><td>E-E-A-T versterkt</td><td>Wie schreef dit, wanneer, waarom betrouwbaar?</td></tr>
-      <tr><td>CTA geoptimaliseerd</td><td>Aansluitend bij het conversiedoel</td></tr>
-    </tbody>
-  </table>
-
-  <h3><span class="nl">Technische fixes</span><span class="en" style="display:none;">Technical fixes</span></h3>
-  <table class="data-table">
-    <thead><tr><th>Item</th><th>Norm</th></tr></thead>
-    <tbody>
-      <tr><td>Article schema toegevoegd</td><td>JSON-LD in de &lt;head&gt;</td></tr>
-      <tr><td>FAQPage schema toegevoegd</td><td>Elke FAQ als Question + Answer in JSON-LD</td></tr>
-      <tr><td>Canonical tag gecontroleerd</td><td>Verwijst naar de juiste URL</td></tr>
-      <tr><td>Afbeelding alt tekst compleet</td><td>Elke afbeelding heeft een beschrijvende alt</td></tr>
-      <tr><td>Interne links toegevoegd</td><td>3-5 relevante interne links met goede anchor tekst</td></tr>
-      <tr><td>Externe links toegevoegd</td><td>2-3 gezaghebbende bronnen</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- 08 Deploy -->
-<div class="section" id="deploy">
-  <div class="section-label"><span class="nl">Sectie 08</span><span class="en" style="display:none;">Section 08</span></div>
-  <h2><span class="nl">Deployen op Railway</span><span class="en" style="display:none;">Deploying on Railway</span></h2>
-  <p><span class="nl">Alle bestanden gaan naar de <code>public/</code> map op Railway. De routes staan in <code>server.js</code>.</span><span class="en" style="display:none;">All files go into the <code>public/</code> folder on Railway. The routes are in <code>server.js</code>.</span></p>
-
-  <h3><span class="nl">Bestanden hernoemen en uploaden</span><span class="en" style="display:none;">Rename and upload files</span></h3>
-  <table class="data-table">
-    <thead><tr><th><span class="nl">Bestand</span><span class="en" style="display:none;">File</span></th><th><span class="nl">Hernoemen naar</span><span class="en" style="display:none;">Rename to</span></th><th>URL</th></tr></thead>
-    <tbody>
-      <tr><td>pulse-nexus-audit-v4.html</td><td>public/audit-seo.html</td><td>/audit-seo</td></tr>
-      <tr><td>audit-intake-form.html</td><td>public/audit-intake.html</td><td>/audit-intake</td></tr>
-      <tr><td>seo-workflow-manager.html</td><td>public/audit-workflow.html</td><td>/audit-workflow</td></tr>
-      <tr><td>audit-recommendations.html</td><td>public/audit-recommendations.html</td><td>/audit-recommendations</td></tr>
-    </tbody>
-  </table>
-
-  <h3><span class="nl">Server.js aanpassen</span><span class="en" style="display:none;">Update server.js</span></h3>
-  <div class="steps-list">
-    <div class="step-item">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <strong><span class="nl">server-additions.js plakken</span><span class="en" style="display:none;">Paste server-additions.js</span></strong>
-        <span class="nl">Open <code>server.js</code>. Zoek de headshot redirect routes. Plak de volledige inhoud van <code>server-additions.js</code> direct erboven, vóór <code>startServer()</code>.</span><span class="en" style="display:none;">Open <code>server.js</code>. Find the headshot redirect routes. Paste the full contents of <code>server-additions.js</code> directly above, before <code>startServer()</code>.</span>
-      </div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <strong><span class="nl">Multer toevoegen aan package.json</span><span class="en" style="display:none;">Add multer to package.json</span></strong>
-        <span class="nl">Voeg <code>"multer": "^1.4.5-lts.1"</code> toe aan de dependencies. Railway installeert het automatisch bij de volgende deploy.</span><span class="en" style="display:none;">Add <code>"multer": "^1.4.5-lts.1"</code> to the dependencies. Railway will install it automatically on the next deploy.</span>
-      </div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <strong><span class="nl">Deployen</span><span class="en" style="display:none;">Deploy</span></strong>
-        <span class="nl">Push naar GitHub → Railway deploy automatisch. Check de logs op fouten. Test daarna: <code>app.contentscale.site/audit-seo</code> moet laden.</span><span class="en" style="display:none;">Push to GitHub → Railway deploys automatically. Check the logs for errors. Then test: <code>app.contentscale.site/audit-seo</code> should load.</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="info-box red">
-    <span class="nl"><strong>Noindex:</strong> De Workflow Manager, Recommendations en PULSE+NEXUS hebben allemaal <code>noindex, nofollow</code> in de meta tags. Google indexeert ze niet. De Audit Intake Form is wél openbaar.</span><span class="en" style="display:none;"><strong>Noindex:</strong> The Workflow Manager, Recommendations and PULSE+NEXUS all have <code>noindex, nofollow</code> in their meta tags. Google does not index them. The Audit Intake Form is public.</span>
-  </div>
+<div class="section" lang="nl">
+  <div class="section-label">GEBRUIK SCENARIO'S</div>
+  <h2>Veelvoorkomende Situaties</h2>
 
   <div class="info-box green">
-    <span class="nl"><strong>Data opslag:</strong> De Workflow Manager slaat data op in de browser (localStorage). Dit is per browser/computer. Export regelmatig met de CSV knop als backup, en gebruik Import om op een andere computer verder te gaan.</span><span class="en" style="display:none;"><strong>Data storage:</strong> The Workflow Manager stores data in the browser (localStorage). This is per browser/computer. Export regularly with the CSV button as backup, and use Import to continue on another computer.</span>
+    <strong>Scenario 1: Nieuwe klant onboarding</strong><br>
+    1. Vraag GSC toegang<br>
+    2. Export Pages + Queries CSV<br>
+    3. Import in Workflow Manager<br>
+    4. Laat klant top 3 prioriteiten zien<br>
+    5. Start met hoogste score pagina<br>
+    6. Toon resultaten na 30 dagen
+  </div>
+
+  <div class="info-box blue">
+    <strong>Scenario 2: Pagina optimalisatie</strong><br>
+    1. Selecteer pagina in Workflow<br>
+    2. Open in PULSE+NEXUS<br>
+    3. Google de keyword, open top 3<br>
+    4. Copy HTML van alle 3 concurrenten<br>
+    5. Plak in tekstgebieden<br>
+    6. Run AI analyse<br>
+    7. Copy recommendations<br>
+    8. Implementeer in CMS<br>
+    9. Return to Workflow (auto-marks done)
+  </div>
+
+  <div class="info-box gold">
+    <strong>Scenario 3: Content audit voor bestaande site</strong><br>
+    1. Import alle GSC data (100+ pagina's)<br>
+    2. Filter op position 11-30 (page 2-3 = quick wins)<br>
+    3. Sorteer op impressions (high demand)<br>
+    4. Start met top 10 hoogste scores<br>
+    5. Optimaliseer 2-3 pagina's per week<br>
+    6. Track monthly met nieuwe GSC import
   </div>
 </div>
 
-<hr>
+<div class="section" lang="nl">
+  <div class="section-label">API ROUTES</div>
+  <h2>Technische Documentatie</h2>
 
-<!-- CTA Section -->
-<div style="background:linear-gradient(135deg,rgba(147,51,234,.12),rgba(96,165,250,.06));border:1px solid rgba(147,51,234,.25);border-radius:14px;padding:40px;margin-bottom:40px;text-align:center;">
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:10px;">
-    <span class="nl">Hulp nodig met jouw website?</span>
-    <span class="en" style="display:none;">Need help with your website?</span>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Route</th>
+        <th>Method</th>
+        <th>Doel</th>
+        <th>Input</th>
+        <th>Output</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>/api/audit/analyze-competitors</code></td>
+        <td>POST</td>
+        <td>Analyseer concurrent HTML</td>
+        <td><code>keyword</code>, <code>competitors[{url, html}]</code></td>
+        <td>Analyse van schema, headings, content gaps</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/generate-recommendations</code></td>
+        <td>POST</td>
+        <td>Genereer exacte content</td>
+        <td><code>keyword</code>, <code>competitorAnalysis</code></td>
+        <td>Title, meta, FAQ, table, quotes, stats</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/analyze-html</code></td>
+        <td>POST</td>
+        <td>Analyseer enkele HTML</td>
+        <td><code>html</code>, <code>url</code></td>
+        <td>Schema check, heading structure, meta tags</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/save-workflow-data</code></td>
+        <td>POST</td>
+        <td>Save workflow data</td>
+        <td><code>pageUrl</code>, <code>keyword</code>, <code>gscData</code></td>
+        <td>Success/error</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/get-workflow-data</code></td>
+        <td>GET</td>
+        <td>Load workflow data</td>
+        <td><code>workflowId</code></td>
+        <td>Cached audit data</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" lang="nl">
+  <div class="section-label">SETUP & CONFIGURATIE</div>
+  <h2>Hoe het te installeren</h2>
+
+  <h3>1. Server Deployment</h3>
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Upload server-COMPLETE.js</strong>
+        <span>
+          Backup je huidige server.js eerst: <code>cp server.js server.js.backup</code><br>
+          Upload dan server-COMPLETE.js naar je server (Railway, Heroku, VPS)
+        </span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Add GEMINI_API_KEY</strong>
+        <span>
+          Railway dashboard → Variables tab → Add variable<br>
+          Name: <code>GEMINI_API_KEY</code><br>
+          Value: Je API key van https://aistudio.google.com/app/apikey<br>
+          <strong>Kosten:</strong> GRATIS (60 requests/min)
+        </span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Verify Deployment</strong>
+        <span>
+          Check logs voor: <code>✅ AI-powered SEO analysis routes loaded</code><br>
+          Moet 3 routes tonen: analyze-competitors, generate-recommendations, analyze-html
+        </span>
+      </div>
+    </div>
   </div>
-  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,44px);letter-spacing:.04em;line-height:1.05;margin-bottom:12px;background:linear-gradient(135deg,var(--gold),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-    <span class="nl">Vraag een gratis SEO audit aan</span>
-    <span class="en" style="display:none;">Request a free SEO audit</span>
-  </h2>
-  <p style="color:var(--muted);font-size:14px;max-width:520px;margin:0 auto 24px;line-height:1.7;">
-    <span class="nl">Upload je GSC CSV, geef de pagina URL op en je ontvangt binnen 15 minuten een geprioriteerde actielijst. Geen jargon. GDPR-compliant. Gratis.</span>
-    <span class="en" style="display:none;">Upload your GSC CSV, provide the page URL and you will receive a prioritised action plan within 15 minutes. No jargon. GDPR-compliant. Free.</span>
-  </p>
-  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
-    <a href="/audit-intake" style="display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#000;text-decoration:none;padding:14px 32px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;">
-      🔍 <span class="nl">Audit Aanvragen →</span><span class="en" style="display:none;">Request Audit →</span>
-    </a>
-    <a href="https://calendly.com/aioeditors" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:rgba(147,51,234,.15);color:var(--purple);text-decoration:none;padding:14px 32px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em;border:1px solid rgba(147,51,234,.3);">
-      📅 <span class="nl">Gratis Strategiegesprek</span><span class="en" style="display:none;">Free Strategy Call</span>
-    </a>
-  </div>
-  <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;">
-    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ <span class="nl">Binnen 15 minuten</span><span class="en" style="display:none;">Within 15 min</span></span>
-    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ GDPR compliant</span>
-    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ <span class="nl">Geen verplichtingen</span><span class="en" style="display:none;">No obligations</span></span>
-    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);">✓ Amsterdam</span>
+
+  <h3>2. Testing (Optioneel)</h3>
+  <p>Test elk van de 3 API routes met curl:</p>
+  <pre>curl -X POST https://jouw-domein.com/api/audit/analyze-html \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "html": "&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;title&gt;Test&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Heading&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;"
+  }'</pre>
+
+  <p>Verwachte response:</p>
+  <pre>{
+  "success": true,
+  "analysis": {
+    "schema": {...},
+    "headings": {...},
+    "content": {...}
+  }
+}</pre>
+</div>
+
+<div class="section" lang="nl">
+  <div class="section-label">VEELGESTELDE VRAGEN</div>
+  <h2>FAQ</h2>
+
+  <h3>Waarom handmatige HTML input?</h3>
+  <p>Automatische HTML parsers zijn niet 100% betrouwbaar. Door zelf HTML te kopiëren (View Source), krijg je de EXACTE code die Google ziet. AI kan dan schema errors, heading fouten, en andere technische problemen precies identificeren.</p>
+
+  <h3>Waarom moet ik het primary keyword handmatig verifiëren?</h3>
+  <p>AI kan keywords vinden in GSC data, maar weet niet altijd welk keyword jij wilt targeten. Soms wil je een variant of long-tail keyword. Daarom: altijd handmatig verifiëren/aanpassen.</p>
+
+  <h3>Wat is het verschil tussen BULK SCAN en DEEP DIVE?</h3>
+  <p><strong>BULK SCAN:</strong> Importeer CSV, zie alle pagina's (50-200+), quick priority scores.<br>
+  <strong>DEEP DIVE:</strong> Focus op 1 pagina, concurrent analyse, surgical recommendations.</p>
+
+  <h3>Hoe werkt multi-country targeting?</h3>
+  <p>Systeem ondersteunt meerdere landen. Jij stelt in: <code>primaryCountry: "nl"</code>, <code>secondaryCountries: ["be", "lu"]</code>, <code>globalCountries: ["us"]</code>. Google gebruikt dit via hreflang tags, domain (.nl), en content language.</p>
+
+  <h3>Wat kost dit?</h3>
+  <p><strong>Gemini API:</strong> GRATIS (60 requests/min)<br>
+  <strong>Server hosting:</strong> Afhankelijk van je provider (Railway ~$5/maand)<br>
+  <strong>Totaal:</strong> ~$5/maand voor onbeperkt gebruik</p>
+
+  <h3>Hoe track ik resultaten?</h3>
+  <p>Importeer elke 7-14 dagen nieuwe GSC data. Workflow Manager toont automatisch: oude vs nieuwe positie, clicks verandering, CTR verbetering. Maak screenshots voor klanten als bewijs.</p>
+
+  <h3>Wat als AI geen JSON teruggeeft?</h3>
+  <p>Soms retourneert AI invalid JSON. System logt de raw response in console. Check server logs, zie wat AI zei, debug. Meestal: prompt te complex → simplify of probeer minder competitors tegelijk.</p>
+</div>
+
+<!-- ============================================ -->
+<!-- ENGLISH -->
+<!-- ============================================ -->
+
+<div class="section" lang="en">
+  <div class="section-label">OVERVIEW</div>
+  <h2>What is this system?</h2>
+  <p>ContentScale is an <strong>AI-powered SEO audit system</strong> that helps you optimize pages for higher Google rankings. The system combines:</p>
+  <ul>
+    <li><strong>Bulk Scan</strong> — Import Google Search Console data and see all pages with automatic prioritization</li>
+    <li><strong>Workflow Manager</strong> — Organize and prioritize which pages to optimize first</li>
+    <li><strong>Deep Dive (PULSE+NEXUS)</strong> — Detailed analysis of a single page with AI-powered competitor analysis</li>
+    <li><strong>AI Competitor Analysis</strong> — Upload competitor HTML and let AI find weaknesses</li>
+    <li><strong>Surgical Recommendations</strong> — Exact content examples you can copy-paste directly</li>
+  </ul>
+</div>
+
+<div class="section" lang="en">
+  <div class="section-label">THE COMPLETE PROCESS</div>
+  <h2>6 Steps from Start to Finish</h2>
+  
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">1</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">BULK SCAN — Import GSC Data</div>
+        <div class="flow-sub">
+          Upload your Google Search Console CSV files (Pages + Queries). The system automatically calculates a priority score for each page based on position (11-30 = quick wins), impressions (high demand), and CTR (easy to improve).
+        </div>
+        <div class="flow-url">/audit-workflow → Import GSC CSV</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">2</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">WORKFLOW MANAGER — Organize & Prioritize</div>
+        <div class="flow-sub">
+          See all imported pages with their scores. Filter by priority (🔥 CRITICAL, ⚡ HIGH, 📊 MEDIUM). Select a page and click "🔬 Open in PULSE+NEXUS" to start the deep dive analysis. All data (URL, keyword, GSC metrics) flows automatically.
+        </div>
+        <div class="flow-url">/audit-workflow → Page list</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">3</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">DEEP DIVE — Detailed SEO Analysis</div>
+        <div class="flow-sub">
+          The SEO Audit screen opens with auto-filled fields. <strong>Manually verify the primary keyword</strong> (AI may not find the best one). Search Google for top 3 competitors, open their pages, right-click → "View Page Source" (Ctrl+U) → Select All (Ctrl+A) → Copy (Ctrl+C) → Paste into the 3 text areas.
+        </div>
+        <div class="flow-url">/seo-audit (via workflow)</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">4</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">AI COMPETITOR ANALYSIS — HTML Verification</div>
+        <div class="flow-sub">
+          Click "🤖 Analyze Competitors + Generate Recommendations". AI analyzes competitor HTML code and finds: FAQ schema errors, multiple H1 tags, missing alt text, tables, expert quotes. You see exactly what they're doing wrong and how you can do better. Takes 30-60 seconds.
+        </div>
+        <div class="flow-url">POST /api/audit/analyze-competitors</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">5</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">SURGICAL RECOMMENDATIONS — Exact Content</div>
+        <div class="flow-sub">
+          AI generates EXACT examples you can use immediately: perfect title (62 chars), meta description (158 chars), H1, FAQ schema (complete JSON-LD), comparison table (HTML), expert quotes, statistics. Each section has a [📋 Copy] button. No vague suggestions — ready-to-use content.
+        </div>
+        <div class="flow-url">POST /api/audit/generate-recommendations</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-num">6</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-title">TRACKING — Monitor Results</div>
+        <div class="flow-sub">
+          Click "← Return to Workflow" to go back. The page is automatically marked as "Done" ✅. Import new GSC data every 7-14 days to see progress: position change, clicks change, CTR improvement. Take GSC screenshots for clients as proof.
+        </div>
+        <div class="flow-url">/audit-workflow → Status tracking</div>
+      </div>
+    </div>
   </div>
 </div>
 
-<hr>
-<div style="text-align:center;padding:20px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;c
-  ContentScale · Amsterdam · contentscale.site · info@contentscale.site
+<div class="section" lang="en">
+  <div class="section-label">TOOLS OVERVIEW</div>
+  <h2>The 3 Main Components</h2>
+
+  <div class="tool-card gold">
+    <div class="tool-name">1. Workflow Manager (Bulk Scan)</div>
+    <div class="tool-url">/audit-workflow</div>
+    <div class="tool-desc">
+      <strong>Purpose:</strong> Import Google Search Console data and see all pages with automatic prioritization.<br><br>
+      <strong>What it does:</strong><br>
+      • Upload Pages CSV (Google → Performance → Pages → Export CSV)<br>
+      • Upload Queries CSV (Google → Performance → Queries → Export CSV)<br>
+      • System calculates score per page (0-100)<br>
+      • Score = position opportunity (40pt) + search volume (30pt) + CTR potential (20pt) + commercial intent (10pt)<br>
+      • Filter by 🔥 CRITICAL (90+), ⚡ HIGH (60-89), 📊 MEDIUM (40-59)<br>
+      • Click "🔬 Open in PULSE+NEXUS" to start deep dive<br><br>
+      <strong>Data flow:</strong> URL, keyword, position, impressions, clicks, CTR automatically flow to SEO Audit.
+    </div>
+  </div>
+
+  <div class="tool-card purple">
+    <div class="tool-name">2. PULSE+NEXUS (Deep Dive)</div>
+    <div class="tool-url">/seo-audit</div>
+    <div class="tool-desc">
+      <strong>Purpose:</strong> Detailed analysis of one page with AI-powered competitor analysis.<br><br>
+      <strong>3 Modes:</strong><br>
+      • <strong>DEEP DIVE MODE</strong> — From Workflow (single page focus)<br>
+      • <strong>BULK SCAN MODE</strong> — Direct CSV import (multiple pages)<br>
+      • <strong>MANUAL MODE</strong> — Direct visit to /seo-audit<br><br>
+      <strong>How it works:</strong><br>
+      1. Page opens with auto-filled fields (if from Workflow)<br>
+      2. Notification: "✅ Workflow Data Loaded! 📊 X pages, Y queries"<br>
+      3. <strong>Manually verify/update the primary keyword</strong><br>
+      4. Paste HTML from 3 competitors (View Source → Ctrl+A → Ctrl+C → Ctrl+V)<br>
+      5. Click "🤖 Analyze Competitors"<br>
+      6. Wait 30-60 seconds while AI analyzes<br>
+      7. See results: competitor weaknesses, HTML errors, opportunities<br>
+      8. Click "← Return to Workflow" (auto-marks done)<br><br>
+      <strong>Why manual HTML input?</strong> Automatic parsers aren't perfect. By copying HTML yourself, you get exact analysis of what Google sees.
+    </div>
+  </div>
+
+  <div class="tool-card blue">
+    <div class="tool-name">3. AI Recommendations</div>
+    <div class="tool-url">POST /api/audit/generate-recommendations</div>
+    <div class="tool-desc">
+      <strong>Purpose:</strong> Generate surgical precision content examples that are immediately usable.<br><br>
+      <strong>What you get:</strong><br>
+      • <strong>Title</strong> (60-65 chars) — With keyword and 2024/2025<br>
+      • <strong>Meta Description</strong> (150-160 chars) — Value prop + CTA<br>
+      • <strong>H1</strong> — Single, keyword-rich<br>
+      • <strong>H2 Structure</strong> — 5-7 headings in logical order<br>
+      • <strong>Introduction</strong> (60-80 words) — Direct answer format<br>
+      • <strong>FAQ Schema</strong> — Complete JSON-LD code<br>
+      • <strong>Comparison Table</strong> — HTML &lt;table&gt; code<br>
+      • <strong>Expert Quotes</strong> — 2-3 quotes with credentials<br>
+      • <strong>Statistics</strong> — 5-7 data points (2023-2024)<br>
+      • <strong>AI Overview Optimization</strong> — How to get cited<br>
+      • <strong>Action Plan</strong> — Numbered steps (1, 2, 3...)<br><br>
+      <strong>Each section has a [📋 Copy] button!</strong>
+    </div>
+  </div>
+</div>
+
+<div class="section" lang="en">
+  <div class="section-label">USE CASES</div>
+  <h2>Common Scenarios</h2>
+
+  <div class="info-box green">
+    <strong>Scenario 1: New client onboarding</strong><br>
+    1. Request GSC access<br>
+    2. Export Pages + Queries CSV<br>
+    3. Import into Workflow Manager<br>
+    4. Show client top 3 priorities<br>
+    5. Start with highest score page<br>
+    6. Show results after 30 days
+  </div>
+
+  <div class="info-box blue">
+    <strong>Scenario 2: Page optimization</strong><br>
+    1. Select page in Workflow<br>
+    2. Open in PULSE+NEXUS<br>
+    3. Google the keyword, open top 3<br>
+    4. Copy HTML from all 3 competitors<br>
+    5. Paste into text areas<br>
+    6. Run AI analysis<br>
+    7. Copy recommendations<br>
+    8. Implement in CMS<br>
+    9. Return to Workflow (auto-marks done)
+  </div>
+
+  <div class="info-box gold">
+    <strong>Scenario 3: Content audit for existing site</strong><br>
+    1. Import all GSC data (100+ pages)<br>
+    2. Filter by position 11-30 (page 2-3 = quick wins)<br>
+    3. Sort by impressions (high demand)<br>
+    4. Start with top 10 highest scores<br>
+    5. Optimize 2-3 pages per week<br>
+    6. Track monthly with new GSC import
+  </div>
+</div>
+
+<div class="section" lang="en">
+  <div class="section-label">API ROUTES</div>
+  <h2>Technical Documentation</h2>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Route</th>
+        <th>Method</th>
+        <th>Purpose</th>
+        <th>Input</th>
+        <th>Output</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>/api/audit/analyze-competitors</code></td>
+        <td>POST</td>
+        <td>Analyze competitor HTML</td>
+        <td><code>keyword</code>, <code>competitors[{url, html}]</code></td>
+        <td>Analysis of schema, headings, content gaps</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/generate-recommendations</code></td>
+        <td>POST</td>
+        <td>Generate exact content</td>
+        <td><code>keyword</code>, <code>competitorAnalysis</code></td>
+        <td>Title, meta, FAQ, table, quotes, stats</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/analyze-html</code></td>
+        <td>POST</td>
+        <td>Analyze single HTML</td>
+        <td><code>html</code>, <code>url</code></td>
+        <td>Schema check, heading structure, meta tags</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/save-workflow-data</code></td>
+        <td>POST</td>
+        <td>Save workflow data</td>
+        <td><code>pageUrl</code>, <code>keyword</code>, <code>gscData</code></td>
+        <td>Success/error</td>
+      </tr>
+      <tr>
+        <td><code>/api/audit/get-workflow-data</code></td>
+        <td>GET</td>
+        <td>Load workflow data</td>
+        <td><code>workflowId</code></td>
+        <td>Cached audit data</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" lang="en">
+  <div class="section-label">SETUP & CONFIGURATION</div>
+  <h2>How to Install</h2>
+
+  <h3>1. Server Deployment</h3>
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Upload server-COMPLETE.js</strong>
+        <span>
+          Backup your current server.js first: <code>cp server.js server.js.backup</code><br>
+          Then upload server-COMPLETE.js to your server (Railway, Heroku, VPS)
+        </span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Add GEMINI_API_KEY</strong>
+        <span>
+          Railway dashboard → Variables tab → Add variable<br>
+          Name: <code>GEMINI_API_KEY</code><br>
+          Value: Your API key from https://aistudio.google.com/app/apikey<br>
+          <strong>Cost:</strong> FREE (60 requests/min)
+        </span>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Verify Deployment</strong>
+        <span>
+          Check logs for: <code>✅ AI-powered SEO analysis routes loaded</code><br>
+          Should show 3 routes: analyze-competitors, generate-recommendations, analyze-html
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <h3>2. Testing (Optional)</h3>
+  <p>Test each of the 3 API routes with curl:</p>
+  <pre>curl -X POST https://your-domain.com/api/audit/analyze-html \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "html": "&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;title&gt;Test&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Heading&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;"
+  }'</pre>
+
+  <p>Expected response:</p>
+  <pre>{
+  "success": true,
+  "analysis": {
+    "schema": {...},
+    "headings": {...},
+    "content": {...}
+  }
+}</pre>
+</div>
+
+<div class="section" lang="en">
+  <div class="section-label">FREQUENTLY ASKED QUESTIONS</div>
+  <h2>FAQ</h2>
+
+  <h3>Why manual HTML input?</h3>
+  <p>Automatic HTML parsers aren't 100% reliable. By copying HTML yourself (View Source), you get the EXACT code that Google sees. AI can then precisely identify schema errors, heading mistakes, and other technical issues.</p>
+
+  <h3>Why must I manually verify the primary keyword?</h3>
+  <p>AI can find keywords in GSC data, but doesn't always know which keyword you want to target. Sometimes you want a variant or long-tail keyword. That's why: always manually verify/adjust.</p>
+
+  <h3>What's the difference between BULK SCAN and DEEP DIVE?</h3>
+  <p><strong>BULK SCAN:</strong> Import CSV, see all pages (50-200+), quick priority scores.<br>
+  <strong>DEEP DIVE:</strong> Focus on 1 page, competitor analysis, surgical recommendations.</p>
+
+  <h3>How does multi-country targeting work?</h3>
+  <p>System supports multiple countries. You set: <code>primaryCountry: "nl"</code>, <code>secondaryCountries: ["be", "lu"]</code>, <code>globalCountries: ["us"]</code>. Google uses this via hreflang tags, domain (.nl), and content language.</p>
+
+  <h3>What does this cost?</h3>
+  <p><strong>Gemini API:</strong> FREE (60 requests/min)<br>
+  <strong>Server hosting:</strong> Depends on your provider (Railway ~$5/month)<br>
+  <strong>Total:</strong> ~$5/month for unlimited use</p>
+
+  <h3>How do I track results?</h3>
+  <p>Import new GSC data every 7-14 days. Workflow Manager automatically shows: old vs new position, clicks change, CTR improvement. Take screenshots for clients as proof.</p>
+
+  <h3>What if AI doesn't return JSON?</h3>
+  <p>Sometimes AI returns invalid JSON. System logs the raw response in console. Check server logs, see what AI said, debug. Usually: prompt too complex → simplify or try fewer competitors at once.</p>
 </div>
 
 </div>
 
 <script>
 function setLang(lang) {
-  var html = document.getElementById('htmlRoot');
-  var btnNL = document.getElementById('btnNL');
-  var btnEN = document.getElementById('btnEN');
-  if (lang === 'en') {
-    html.setAttribute('lang', 'en');
-    document.body.classList.add('lang-en');
-    btnNL.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:5px 0 0 5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;';
-    btnEN.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:0 5px 5px 0;border:1px solid var(--gold);background:var(--gold);color:#000;cursor:pointer;font-weight:700;';
-    try{localStorage.setItem('cs_guide_lang','en');}catch(e){}
-  } else {
-    html.setAttribute('lang', 'nl');
-    document.body.classList.remove('lang-en');
-    btnNL.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:5px 0 0 5px;border:1px solid var(--gold);background:var(--gold);color:#000;cursor:pointer;font-weight:700;';
-    btnEN.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:0 5px 5px 0;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;';
-    try{localStorage.setItem('cs_guide_lang','nl');}catch(e){}
-  }
+  // Hide all sections
+  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+  // Show selected language
+  document.querySelectorAll(`.section[lang="${lang}"]`).forEach(s => s.style.display = 'block');
+  // Update buttons
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  // Update HTML lang attribute
+  document.documentElement.lang = lang;
 }
-(function(){
-  try{var s=localStorage.getItem('cs_guide_lang');if(s==='en')setLang('en');}catch(e){}
-})();
 </script>
+
 </body>
 </html>
