@@ -3906,6 +3906,414 @@ console.log('✅ Audit data bridge API loaded');
 console.log('   📊 POST /api/audit/save-workflow-data - Save data from Workflow');
 console.log('   📥 GET /api/audit/get-workflow-data - Load data in SEO Audit');
 
+// ============================================
+// 🤖 AI-POWERED COMPETITOR ANALYSIS ROUTES
+// ============================================
+
+// Helper function to call Gemini (uses existing GEMINI_MODEL from server)
+async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY not configured');
+  }
+  
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192,
+          }
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error('Invalid response from Gemini API');
+    }
+    
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('❌ Gemini API call failed:', error.message);
+    throw error;
+  }
+}
+
+// ============================================
+// 1. ANALYZE COMPETITORS (with Manual HTML)
+// ============================================
+app.post('/api/audit/analyze-competitors', async (req, res) => {
+  const { 
+    keyword, 
+    targetUrl, 
+    country = 'nl', 
+    language = 'nl',
+    competitors // Array of {url, html}
+  } = req.body;
+  
+  if (!keyword) {
+    return res.status(400).json({ error: 'Keyword required' });
+  }
+  
+  if (!competitors || competitors.length === 0) {
+    return res.status(400).json({ error: 'At least one competitor required' });
+  }
+  
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ error: 'AI service not configured. Add GEMINI_API_KEY to environment variables' });
+  }
+
+  try {
+    console.log(`🤖 Analyzing ${competitors.length} competitors for: "${keyword}"`);
+    
+    // Build AI prompt
+    const prompt = `You are an expert SEO analyst. Analyze these competitor pages and provide surgical recommendations.
+
+KEYWORD: "${keyword}"
+TARGET COUNTRY: ${country} (${language})
+MY PAGE: ${targetUrl || 'Not ranking yet'}
+
+COMPETITORS:
+${competitors.map((c, i) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMPETITOR ${i + 1}:
+URL: ${c.url}
+HTML SOURCE (first 25,000 chars):
+${c.html ? c.html.substring(0, 25000) : 'No HTML provided'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`).join('\n')}
+
+Analyze each competitor and provide:
+
+1. COMPETITOR STRENGTHS & WEAKNESSES
+2. HTML/SCHEMA VERIFICATION (FAQ schema, Article schema, Heading structure)
+3. AI OVERVIEW OPPORTUNITY
+4. CONTENT GAPS
+5. RANKING DIFFICULTY
+
+Respond in valid JSON format:
+{
+  "competitors": [
+    {
+      "url": "competitor.com",
+      "position": 1,
+      "strengths": ["strength 1", "strength 2"],
+      "weaknesses": ["weakness 1", "weakness 2"],
+      "wordCount": 2500,
+      "schema": {
+        "faq": {"present": true, "valid": false, "error": "Missing acceptedAnswer field"},
+        "article": {"present": true, "valid": true}
+      },
+      "headingStructure": {
+        "h1Count": 3,
+        "h1Text": ["Heading 1", "Heading 2", "Heading 3"],
+        "isValid": false,
+        "issues": ["Multiple H1 tags"]
+      },
+      "contentElements": {
+        "hasTable": true,
+        "hasFAQ": true,
+        "hasExpertQuotes": false,
+        "hasStatistics": false
+      },
+      "opportunities": ["Fix their broken schema", "Use single H1", "Add expert quotes"]
+    }
+  ],
+  "aiOverview": {
+    "likelyShown": true,
+    "preferredFormat": "FAQ + comparison table",
+    "howToGetCited": ["Add FAQ schema", "Create comparison table"],
+    "citationProbability": "75%"
+  },
+  "contentGaps": ["Missing expert quotes", "No 2024 statistics"],
+  "difficulty": {
+    "level": "Medium",
+    "reasoning": "Good competitors but exploitable weaknesses",
+    "timeToRank": "2-3 months",
+    "effortHours": 8,
+    "confidence": "High"
+  },
+  "priority": "HIGH",
+  "actionPlan": ["Write 2,500+ words", "Add FAQ schema", "Create comparison table"]
+}`;
+
+    // Call Gemini AI
+    const aiResponse = await callGeminiAPI(prompt);
+    
+    // Parse JSON response
+    let analysis;
+    try {
+      // Remove markdown code fences if present
+      const cleaned = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Extract JSON object
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        analysis = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch (e) {
+      console.error('❌ JSON parse error:', e.message);
+      console.log('Raw AI response preview:', aiResponse.substring(0, 500));
+      analysis = {
+        error: 'Could not parse AI response as JSON',
+        rawResponse: aiResponse.substring(0, 1000),
+        message: 'AI returned invalid JSON format. This usually means the response was too complex. Try with fewer competitors or shorter HTML.'
+      };
+    }
+    
+    console.log(`✅ Competitor analysis complete for "${keyword}"`);
+    
+    res.json({
+      success: true,
+      keyword,
+      country,
+      language,
+      competitorCount: competitors.length,
+      analysis,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Competitor analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// ============================================
+// 2. GENERATE SURGICAL RECOMMENDATIONS
+// ============================================
+app.post('/api/audit/generate-recommendations', async (req, res) => {
+  const { 
+    keyword, 
+    targetUrl, 
+    country = 'nl',
+    language = 'nl',
+    competitorAnalysis 
+  } = req.body;
+  
+  if (!keyword) {
+    return res.status(400).json({ error: 'Keyword required' });
+  }
+  
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ error: 'AI service not configured. Add GEMINI_API_KEY to environment variables' });
+  }
+
+  try {
+    console.log(`✍️ Generating surgical recommendations for: "${keyword}"`);
+    
+    const languageName = language === 'nl' ? 'Dutch' : language === 'en' ? 'English' : language;
+    
+    const prompt = `You are an expert SEO content writer. Create EXACT, ready-to-use content recommendations in ${languageName}.
+
+KEYWORD: "${keyword}"
+TARGET COUNTRY: ${country}
+LANGUAGE: ${languageName}
+TARGET URL: ${targetUrl || 'New page'}
+
+COMPETITOR ANALYSIS:
+${JSON.stringify(competitorAnalysis, null, 2)}
+
+Generate SURGICAL CONTENT RECOMMENDATIONS (exact examples, ready to copy-paste):
+
+CRITICAL: All content MUST be in ${languageName} language. All examples must be COMPLETE and READY TO USE.
+
+Respond in valid JSON format:
+{
+  "title": "Exact 60-char title in ${languageName}",
+  "titleLength": 60,
+  "metaDescription": "Exact 155-char meta description in ${languageName}",
+  "metaLength": 155,
+  "h1": "Exact H1 in ${languageName}",
+  "h2Structure": ["H2 1", "H2 2", "H2 3", "H2 4", "H2 5"],
+  "introduction": "Complete 80-word introduction in ${languageName}...",
+  "introductionWordCount": 80,
+  "faqSchema": "<script type='application/ld+json'>{\\"@context\\":\\"https://schema.org\\",\\"@type\\":\\"FAQPage\\",\\"mainEntity\\":[{\\"@type\\":\\"Question\\",\\"name\\":\\"Question?\\",\\"acceptedAnswer\\":{\\"@type\\":\\"Answer\\",\\"text\\":\\"Answer\\"}}]}</script>",
+  "faqQuestions": [
+    {"question": "Q1 in ${languageName}?", "answer": "Complete answer..."}
+  ],
+  "comparisonTable": "<table><thead><tr><th>Tool</th><th>Price</th></tr></thead><tbody><tr><td>Tool 1</td><td>€99</td></tr></tbody></table>",
+  "expertQuotes": [
+    {"quote": "Quote in ${languageName}", "author": "Name", "credentials": "Title, Company"}
+  ],
+  "statistics": ["Stat 1", "Stat 2"],
+  "aiOverview": {
+    "recommendedFormat": "FAQ + table",
+    "citationProbability": "75%",
+    "requiredElements": ["FAQ schema", "Comparison table"]
+  },
+  "actionPlan": ["Step 1", "Step 2", "Step 3"]
+}`;
+
+    // Call Gemini AI
+    const aiResponse = await callGeminiAPI(prompt);
+    
+    // Parse JSON response
+    let recommendations;
+    try {
+      const cleaned = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        recommendations = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch (e) {
+      console.error('❌ JSON parse error:', e.message);
+      console.log('Raw AI response preview:', aiResponse.substring(0, 500));
+      recommendations = {
+        error: 'Could not parse AI response as JSON',
+        rawResponse: aiResponse.substring(0, 1000),
+        message: 'AI returned invalid JSON format. Try simplifying the request.'
+      };
+    }
+    
+    console.log(`✅ Surgical recommendations generated for "${keyword}"`);
+    
+    res.json({
+      success: true,
+      keyword,
+      country,
+      language,
+      recommendations,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Recommendations error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// ============================================
+// 3. ANALYZE MANUALLY UPLOADED HTML
+// ============================================
+app.post('/api/audit/analyze-html', async (req, res) => {
+  const { html, url } = req.body;
+  
+  if (!html) {
+    return res.status(400).json({ error: 'HTML content required' });
+  }
+  
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ error: 'AI service not configured. Add GEMINI_API_KEY to environment variables' });
+  }
+
+  try {
+    console.log(`🔍 Analyzing HTML from: ${url || 'manual input'} (${html.length} chars)`);
+    
+    const prompt = `Analyze this HTML and extract SEO-relevant information:
+
+URL: ${url || 'Unknown'}
+HTML (first 50,000 chars):
+${html.substring(0, 50000)}
+
+Extract and analyze:
+1. SCHEMA MARKUP (FAQ, Article, Breadcrumb)
+2. HEADING STRUCTURE (H1 count, H2 structure)
+3. CONTENT ELEMENTS (word count, tables, FAQ, images)
+4. META TAGS (title, description, canonical)
+5. TECHNICAL ISSUES
+
+Respond in valid JSON format:
+{
+  "schema": {
+    "faq": {"present": true, "valid": false, "code": "...", "error": "..."},
+    "article": {"present": true, "valid": true}
+  },
+  "headings": {
+    "h1": {"count": 1, "text": ["Main Heading"]},
+    "h2": {"count": 5, "text": ["H2 1", "H2 2"]},
+    "issues": []
+  },
+  "content": {
+    "wordCount": 2500,
+    "hasTable": true,
+    "hasFAQ": true,
+    "imageCount": 12,
+    "imagesWithAlt": 10
+  },
+  "meta": {
+    "title": "Page Title",
+    "titleLength": 58,
+    "description": "Meta description",
+    "descriptionLength": 155
+  },
+  "issues": ["Multiple H1 tags", "FAQ schema error"],
+  "opportunities": ["Fix schema", "Use single H1"]
+}`;
+
+    // Call Gemini AI
+    const aiResponse = await callGeminiAPI(prompt);
+    
+    // Parse JSON response
+    let analysis;
+    try {
+      const cleaned = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        analysis = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch (e) {
+      console.error('❌ JSON parse error:', e.message);
+      analysis = {
+        error: 'Could not parse AI response as JSON',
+        rawResponse: aiResponse.substring(0, 1000)
+      };
+    }
+    
+    console.log(`✅ HTML analysis complete for ${url || 'manual input'}`);
+    
+    res.json({
+      success: true,
+      url: url || 'manual input',
+      htmlLength: html.length,
+      analysis,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ HTML analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+console.log('✅ AI-powered SEO analysis routes loaded:');
+console.log('   🤖 POST /api/audit/analyze-competitors');
+console.log('   ✍️ POST /api/audit/generate-recommendations');
+console.log('   🔍 POST /api/audit/analyze-html');
+
+// ============================================
+// END OF AI ANALYSIS ROUTES
+// ============================================
+
 app.get('/audit-seo', (req, res) => {
   const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
   res.redirect(301, '/seo-audit' + qs);
