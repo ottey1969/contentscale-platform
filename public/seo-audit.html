@@ -423,10 +423,173 @@ img,table,iframe{max-width:100%;}
 <div class="toast" id="toast"></div>
 
 <script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AUTO-LOAD DATA FROM RECOMMENDATIONS PAGE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(function autoLoadFromRecommendations() {
+  console.log('🔍 [PULSE+NEXUS] Checking for Recommendations data...');
+  
+  let transferData = null;
+  
+  // Method 1: Try localStorage first
+  try {
+    const stored = localStorage.getItem('cs_audit_transfer');
+    if (stored) {
+      transferData = JSON.parse(stored);
+      console.log('✅ [PULSE+NEXUS] Found data in localStorage:', transferData);
+    }
+  } catch (e) {
+    console.warn('⚠️ [PULSE+NEXUS] localStorage read error:', e);
+  }
+  
+  // Method 2: Try sessionStorage as backup
+  if (!transferData) {
+    try {
+      const stored = sessionStorage.getItem('cs_audit_transfer');
+      if (stored) {
+        transferData = JSON.parse(stored);
+        console.log('✅ [PULSE+NEXUS] Found data in sessionStorage:', transferData);
+      }
+    } catch (e) {}
+  }
+  
+  // Method 3: Check URL parameters
+  if (!transferData) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlData = {
+      pageUrl: urlParams.get('url'),
+      keyword: urlParams.get('kw'),
+      position: urlParams.get('pos'),
+      impressions: urlParams.get('impr'),
+      ctr: urlParams.get('ctr'),
+      source: urlParams.get('source')
+    };
+    
+    if (urlData.pageUrl) {
+      transferData = urlData;
+      console.log('✅ [PULSE+NEXUS] Found data in URL params:', transferData);
+    }
+  }
+  
+  // If we have data, auto-fill the form
+  if (transferData && transferData.pageUrl) {
+    console.log('📝 [PULSE+NEXUS] Auto-filling form with:', transferData);
+    
+    const fillForm = () => {
+      try {
+        // Fill URL field
+        const urlField = document.querySelector('input#dUrl, input[name="url"], input[type="url"]');
+        if (urlField && transferData.pageUrl) {
+          urlField.value = transferData.pageUrl;
+          console.log('✅ URL filled:', transferData.pageUrl);
+        }
+        
+        // Fill Primary Keyword field
+        const kwField = document.querySelector('input#dKw, input[name="keyword"]');
+        if (kwField && transferData.keyword) {
+          kwField.value = transferData.keyword;
+          console.log('✅ Keyword filled:', transferData.keyword);
+        }
+        
+        // Fill GSC data fields
+        if (transferData.position) {
+          const posField = document.getElementById('dPos');
+          if (posField) {
+            posField.value = transferData.position;
+            console.log('✅ Position filled:', transferData.position);
+          }
+        }
+        
+        if (transferData.impressions) {
+          const imprField = document.getElementById('dImpr');
+          if (imprField) {
+            imprField.value = transferData.impressions;
+            console.log('✅ Impressions filled:', transferData.impressions);
+          }
+        }
+        
+        if (transferData.ctr) {
+          const ctrField = document.getElementById('dCtr');
+          if (ctrField) {
+            ctrField.value = transferData.ctr;
+            console.log('✅ CTR filled:', transferData.ctr);
+          }
+        }
+        
+        // Switch to Deep Dive mode
+        if (typeof setMode === 'function') {
+          setMode('deep');
+          console.log('✅ Switched to Deep Dive mode');
+        }
+        
+        // Store globally for later use
+        window._recommendationsData = transferData;
+        
+        // Show success notification
+        const notif = document.createElement('div');
+        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:IBM Plex Mono,monospace;font-size:13px;';
+        notif.style.cssText = notifStyle;
+        notif.innerHTML = '✅ Workflow Data Loaded! 📊';
+        document.body.appendChild(notif);
+        
+        setTimeout(() => {
+          notif.style.transition = 'opacity 0.3s';
+          notif.style.opacity = '0';
+          setTimeout(() => notif.remove(), 300);
+        }, 4000);
+        
+        console.log('✅ [PULSE+NEXUS] Form filled successfully!');
+      } catch (e) {
+        console.error('❌ [PULSE+NEXUS] Error filling form:', e);
+      }
+    };
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fillForm);
+    } else {
+      setTimeout(fillForm, 100);
+    }
+  } else {
+    console.log('ℹ️ [PULSE+NEXUS] No Recommendations data found - manual mode');
+  }
+})();
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
 let gscPages = [];
 let gscQueries = [];
 
 const RAILWAY = 'https://app.contentscale.site';
+
+// ── Auto-load GSC from Workflow Manager localStorage ──────────
+function loadSharedGSC() {
+  try {
+    const raw = localStorage.getItem('cs_shared_gsc');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.pages && data.pages.length) {
+      gscPages = data.pages.map(p => ({
+        page: p.page || p.url || '',
+        impressions: p.impressions || 0,
+        clicks: p.clicks || 0,
+        ctr: p.ctr || 0,
+        position: p.position || 0,
+        score: p.score || 0
+      })).filter(p => p.page && p.page.includes('.'));
+      const el = document.getElementById('pagesStatus');
+      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscPages.length} pages from Workflow Manager</span>`;
+      console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC');
+    }
+    if (data.queries && data.queries.length) {
+      gscQueries = data.queries.map(q => ({query: q.query || '', position: q.position || 0})).filter(q => q.query);
+      const el = document.getElementById('queriesStatus');
+      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscQueries.length} queries from Workflow Manager</span>`;
+    }
+    return gscPages.length > 0;
+  } catch(e) { console.warn('[PULSE+NEXUS] loadSharedGSC error:', e.message); return false; }
+}
+setTimeout(loadSharedGSC, 200);
 
 
 // ── META CONSISTENCY CHECKER ─────────────────────────────────
@@ -659,10 +822,24 @@ function runMetaCheck() {
     if(p.get('wf'))   window._wfId = p.get('wf');
     const deepView = document.getElementById('deepView');
     if(!deepView) return;
+    // Load GSC from localStorage now that URL params are known
+    loadSharedGSC();
+    // Build connection banner
+    const chips = [];
+    if(p.get('pos'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ${parseFloat(p.get('pos')).toFixed(1)}</span>`);
+    if(p.get('impr')) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${parseInt(p.get('impr')).toLocaleString()} impr</span>`);
+    if(p.get('ctr'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${p.get('ctr')}% CTR</span>`);
+    const gscBadge = gscPages.length
+      ? `<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">✓ ${gscPages.length} GSC pages</span>`
+      : `<span style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:4px;padding:2px 8px;font-size:10px;color:#fbbf24;">⚠ No GSC — upload CSV above</span>`;
     const banner = document.createElement('div');
-    banner.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:12px 18px;margin-bottom:14px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:#fbbf24;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
-    banner.innerHTML = '<span>✓ Pre-filled vanuit Workflow Manager — paste Pagina HTML hieronder voor beste resultaat. Competitor HTML is optioneel (defaultt naar Surfer SEO + MarketMuse benchmark).</span>'
-      + (p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;margin-left:auto;white-space:nowrap;">← Terug naar Workflow</a>' : '');
+    banner.style.cssText = 'background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:11px;color:#fbbf24;';
+    banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;">Connected from Workflow Manager</strong>
+      ${p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;">← Back to Workflow</a>' : ''}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips.join('')} ${gscBadge}</div>
+    <div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);">Paste page HTML below → Run Full Audit</div>`;
     deepView.insertBefore(banner, deepView.firstChild);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
@@ -754,6 +931,7 @@ function handlePagesCSV(input) {
     });
     gscPages.sort((a,b)=>b.score-a.score);
     document.getElementById('pagesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscPages.length} pages loaded</span>`;
+    try { localStorage.setItem('cs_shared_gsc', JSON.stringify({pages:gscPages, queries:gscQueries})); } catch(e) {}
     document.getElementById('filterPanel').style.display='block';
     document.getElementById('opportunityTable').style.display='block';
     renderTable();
