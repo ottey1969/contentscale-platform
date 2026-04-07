@@ -260,6 +260,18 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
       </div>
     </div>
 
+    <!-- Auto-Fill GSC knop -->
+    <div style="margin-bottom:18px;background:linear-gradient(135deg,rgba(74,222,128,.08),rgba(96,165,250,.05));border:1px solid rgba(74,222,128,.25);border-radius:10px;padding:18px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#4ade80;margin-bottom:5px;">🤖 Auto-Fill via GSC</div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.5;">Vul de Page URL in en klik — impressies, CTR, positie en top queries worden automatisch opgehaald uit Google Search Console.</div>
+      </div>
+      <button id="gscAutoFillBtn" onclick="gscAutoFill()" style="background:#4ade80;color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;padding:12px 28px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0;">
+        🤖 Auto-Fill GSC Data
+      </button>
+    </div>
+    <div id="gscAutoFillStatus" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;"></div>
+
     <div class="panel">
       <div class="panel-title">② GSC Data</div>
       <div class="g4" style="margin-bottom:14px;">
@@ -889,6 +901,70 @@ function renderMd(t) {
     else handleQueriesCSV({ files: [file] });
   });
 });
+
+// GSC Auto-Fill
+function gscAutoFill() {
+  var url = document.getElementById('dUrl').value.trim();
+  if (!url) {
+    alert('Vul eerst een Page URL in (veld ①)');
+    return;
+  }
+  if (!url.startsWith('http')) {
+    alert('Voer een volledige URL in (bijv. https://contentscale.site/pagina)');
+    return;
+  }
+
+  var btn = document.getElementById('gscAutoFillBtn');
+  var status = document.getElementById('gscAutoFillStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ GSC data ophalen...';
+  status.style.display = 'block';
+  status.style.background = 'rgba(251,191,36,.08)';
+  status.style.border = '1px solid rgba(251,191,36,.25)';
+  status.style.color = '#fbbf24';
+  status.textContent = '⏳ Verbinding maken met Google Search Console...';
+
+  fetch(RAILWAY + '/api/gsc/auto-fill', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pageUrl: url })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(json) {
+    if (json.success) {
+      var d = json.data;
+      if (d.impressions) document.getElementById('dImpr').value = d.impressions;
+      if (d.ctr) document.getElementById('dCtr').value = d.ctr;
+      if (d.position) document.getElementById('dPos').value = d.position;
+      if (d.topQueries) document.getElementById('dQueries').value = d.topQueries;
+
+      status.style.background = 'rgba(74,222,128,.08)';
+      status.style.border = '1px solid rgba(74,222,128,.25)';
+      status.style.color = '#4ade80';
+      status.innerHTML = '✅ GSC data ingevuld! &nbsp;·&nbsp; ' +
+        d.impressions.toLocaleString() + ' impr &nbsp;·&nbsp; ' +
+        d.ctr + '% CTR &nbsp;·&nbsp; pos ' + d.position +
+        ' &nbsp;·&nbsp; ' + d.queryCount + ' queries &nbsp;·&nbsp; ' + d.dateRange;
+      toast('✅ GSC data ingevuld!');
+    } else {
+      status.style.background = 'rgba(244,63,63,.08)';
+      status.style.border = '1px solid rgba(244,63,63,.25)';
+      status.style.color = '#f87171';
+      status.textContent = '❌ ' + json.error;
+    }
+  })
+  .catch(function(e) {
+    status.style.background = 'rgba(244,63,63,.08)';
+    status.style.border = '1px solid rgba(244,63,63,.25)';
+    status.style.color = '#f87171';
+    status.textContent = '❌ Fout: ' + e.message;
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = '🤖 Auto-Fill GSC Data';
+  });
+}
+
 </script>
 </body>
 </html>
