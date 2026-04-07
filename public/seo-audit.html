@@ -527,10 +527,25 @@ img,table,iframe{max-width:100%;}
         
         // Show success notification
         const notif = document.createElement('div');
-        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:13px;';
+        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:IBM Plex Mono,monospace;font-size:13px;';
         notif.style.cssText = notifStyle;
         notif.innerHTML = '✅ Workflow Data Loaded! 📊';
         document.body.appendChild(notif);
+        
+        // AUTO-START DEEP DIVE
+        if (transferData.source === 'recommendations' || transferData.source === 'recs') {
+          console.log('🚀 Auto-starting Deep Dive from Recommendations...');
+          setTimeout(function() {
+            var runBtn = document.querySelector('#deepRunBtn, button[onclick*="runDeepAudit"]');
+            if (runBtn && !runBtn.disabled) {
+              console.log('🎯 Clicking Run Audit button...');
+              setTimeout(function() { 
+                runBtn.click(); 
+                console.log('✅ Deep Dive started automatically!');
+              }, 2000);
+            }
+          }, 1500);
+        }
         
         setTimeout(() => {
           notif.style.transition = 'opacity 0.3s';
@@ -775,7 +790,7 @@ function runMetaCheck() {
   var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : 'var(--red)';
 
   var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;">'
-    + '<div><span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
+    + '<div><span style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
     + '<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
     + '<div style="font-size:13px;color:var(--muted);">'
     + '<span style="color:var(--red);">'+errs.length+' fouten</span> · '
@@ -798,10 +813,10 @@ function runMetaCheck() {
       + '</div></div></div>';
   }
 
-  if (errs.length) html_out += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
-  if (warns.length) html_out += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
+  if (errs.length) html_out += '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
   if (oks.length) {
-    html_out += '<details style="margin-top:10px;"><summary style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
+    html_out += '<details style="margin-top:10px;"><summary style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
   }
 
   document.getElementById('metaCheckResults').innerHTML = html_out;
@@ -810,43 +825,16 @@ function runMetaCheck() {
 // ── Pre-fill from Workflow Manager URL params ──────────────
 (function(){
   const p = new URLSearchParams(window.location.search);
-  if(!p.get('url')) return;
+  if(!p.get('url') && !p.get('kw')) return;
   function fill(){
     setMode('deep');
     if(p.get('url'))  document.getElementById('dUrl').value  = p.get('url');
     if(p.get('kw'))   document.getElementById('dKw').value   = p.get('kw');
-    if(p.get('kw2'))  document.getElementById('dKw2') && (document.getElementById('dKw2').value = p.get('kw2'));
     if(p.get('pos'))  document.getElementById('dPos').value  = p.get('pos');
     if(p.get('impr')) document.getElementById('dImpr').value = p.get('impr');
     if(p.get('ctr'))  document.getElementById('dCtr').value  = p.get('ctr');
     if(p.get('mob'))  document.getElementById('dMob').value  = p.get('mob');
-    if(p.get('geo'))  document.getElementById('dGeo') && (document.getElementById('dGeo').value = p.get('geo'));
-    if(p.get('goal')) document.getElementById('dGoal') && (document.getElementById('dGoal').value = p.get('goal'));
     if(p.get('wf'))   window._wfId = p.get('wf');
-    // Auto-load GSC queries from localStorage
-    try {
-      var storedPageQ = localStorage.getItem('cs_page_queries_' + p.get('url'));
-      if (storedPageQ) {
-        document.getElementById('dQueries').value = storedPageQ;
-      } else {
-        var globalQ = localStorage.getItem('cs_gsc_queries');
-        if (globalQ) {
-          var qmap = JSON.parse(globalQ);
-          var topQ = Object.entries(qmap)
-            .map(function(e){ var pos = typeof e[1]==='object' ? e[1].pos : e[1]; return {q:e[0], pos:pos}; })
-            .sort(function(a,b){ return a.pos - b.pos; })
-            .slice(0,10)
-            .map(function(e){ return e.q + ' (pos ' + e.pos.toFixed(1) + ')'; })
-            .join('\n');
-          if (topQ) document.getElementById('dQueries').value = topQ;
-        }
-      }
-    } catch(e) {}
-    // Auto-load sitemap URLs from localStorage
-    try {
-      var storedSitemap = localStorage.getItem('cs_sitemap_urls');
-      if (storedSitemap) document.getElementById('dSiteUrls').value = storedSitemap;
-    } catch(e) {}
     const deepView = document.getElementById('deepView');
     if(!deepView) return;
     // Load GSC from localStorage now that URL params are known
