@@ -40,6 +40,20 @@ const multer = require('multer');
 const http   = require('http');
 const WebSocket = require('ws');
 const app = express();
+
+// ── Google Search Console API ──────────────────────────────────────────────
+let _gscServiceAccount = null;
+try {
+  const raw = process.env.GSC_SERVICE_ACCOUNT_JSON;
+  if (raw) {
+    _gscServiceAccount = JSON.parse(raw);
+    console.log('✅ GSC Service Account loaded from env');
+  } else {
+    console.log('⚠️ GSC_SERVICE_ACCOUNT_JSON not set — /api/gsc/auto-fill disabled');
+  }
+} catch(e) {
+  console.error('❌ GSC Service Account parse error:', e.message);
+}
 const PORT = process.env.PORT || 3000;
 
 // ============================================
@@ -7868,6 +7882,109 @@ app.get('/api/otto/prize-claims', async (req, res) => {
 const _FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#060910"/><text x="16" y="22" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="18" font-weight="900" fill="#4ade80">CS</text></svg>`;
 
 // favicon routes moved above express.static
+
+// ══════════════════════════════════════════════════════════════════════
+// GSC AUTO-FILL — /api/gsc/auto-fill
+// Haalt GSC data op voor een specifieke pagina via Service Account
+// Vereist: GSC_SERVICE_ACCOUNT_JSON env var in Railway
+// ══════════════════════════════════════════════════════════════════════
+app.post('/api/gsc/auto-fill', async (req, res) => {
+  if (!_gscServiceAccount) {
+    return res.status(503).json({
+      success: false,
+      error: 'GSC_SERVICE_ACCOUNT_JSON niet geconfigureerd in Railway Variables'
+    });
+  }
+
+  const { pageUrl } = req.body;
+  if (!pageUrl) return res.status(400).json({ success: false, error: 'pageUrl required' });
+
+  try {
+    const urlObj = new URL(pageUrl);
+    const siteUrl = `https://${urlObj.hostname}/`;
+
+    const now = Math.floor(Date.now() / 1000);
+    const { createSign } = require('crypto');
+    const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      iss: _gscServiceAccount.client_email,
+      scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now
+    })).toString('base64url');
+
+    const sign = createSign('RSA-SHA256');
+    sign.update(`${header}.${payload}`);
+    const signature = sign.sign(_gscServiceAccount.private_key, 'base64url');
+    const jwt = `${header}.${payload}.${signature}`;
+
+    const tokenResp = await axios.post('https://oauth2.googleapis.com/token',
+      new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const accessToken = tokenResp.data.access_token;
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const pageResp = await axios.post(
+      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+      {
+        startDate, endDate,
+        dimensions: ['page'],
+        dimensionFilterGroups: [{ filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }] }],
+        rowLimit: 1
+      },
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    const queryResp = await axios.post(
+      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+      {
+        startDate, endDate,
+        dimensions: ['query'],
+        dimensionFilterGroups: [{ filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }] }],
+        rowLimit: 20
+      },
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    const pageRows = pageResp.data.rows || [];
+    const queryRows = queryResp.data.rows || [];
+
+    let impressions = 0, clicks = 0, ctr = 0, position = 0;
+    if (pageRows.length > 0) {
+      impressions = Math.round(pageRows[0].impressions || 0);
+      clicks = Math.round(pageRows[0].clicks || 0);
+      ctr = parseFloat(((pageRows[0].ctr || 0) * 100).toFixed(2));
+      position = parseFloat((pageRows[0].position || 0).toFixed(1));
+    }
+
+    const topQueries = queryRows.slice(0, 15).map(r => r.keys[0]).join('\n');
+
+    console.log(`[gsc] ${pageUrl} => ${impressions} impr ${ctr}% CTR pos ${position}`);
+
+    res.json({
+      success: true,
+      data: { impressions, clicks, ctr, position, topQueries, queryCount: queryRows.length, dateRange: `${startDate} => ${endDate}` }
+    });
+
+  } catch(e) {
+    const msg = e.response && e.response.data && e.response.data.error
+      ? (e.response.data.error.message || e.response.data.error)
+      : e.message;
+    console.error('[gsc] error:', msg);
+    let hint = '';
+    if (msg.includes('403') || msg.includes('Forbidden')) {
+      hint = ' — Voeg service account toe aan GSC: seo-audit-tool-service-account@pure-heuristic-473710-t1.iam.gserviceaccount.com';
+    }
+    res.status(500).json({ success: false, error: msg + hint });
+  }
+});
 
 
 startServer();
