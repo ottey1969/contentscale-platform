@@ -810,16 +810,43 @@ function runMetaCheck() {
 // ── Pre-fill from Workflow Manager URL params ──────────────
 (function(){
   const p = new URLSearchParams(window.location.search);
-  if(!p.get('url') && !p.get('kw')) return;
+  if(!p.get('url')) return;
   function fill(){
     setMode('deep');
     if(p.get('url'))  document.getElementById('dUrl').value  = p.get('url');
     if(p.get('kw'))   document.getElementById('dKw').value   = p.get('kw');
+    if(p.get('kw2'))  document.getElementById('dKw2') && (document.getElementById('dKw2').value = p.get('kw2'));
     if(p.get('pos'))  document.getElementById('dPos').value  = p.get('pos');
     if(p.get('impr')) document.getElementById('dImpr').value = p.get('impr');
     if(p.get('ctr'))  document.getElementById('dCtr').value  = p.get('ctr');
     if(p.get('mob'))  document.getElementById('dMob').value  = p.get('mob');
+    if(p.get('geo'))  document.getElementById('dGeo') && (document.getElementById('dGeo').value = p.get('geo'));
+    if(p.get('goal')) document.getElementById('dGoal') && (document.getElementById('dGoal').value = p.get('goal'));
     if(p.get('wf'))   window._wfId = p.get('wf');
+    // Auto-load GSC queries from localStorage
+    try {
+      var storedPageQ = localStorage.getItem('cs_page_queries_' + p.get('url'));
+      if (storedPageQ) {
+        document.getElementById('dQueries').value = storedPageQ;
+      } else {
+        var globalQ = localStorage.getItem('cs_gsc_queries');
+        if (globalQ) {
+          var qmap = JSON.parse(globalQ);
+          var topQ = Object.entries(qmap)
+            .map(function(e){ var pos = typeof e[1]==='object' ? e[1].pos : e[1]; return {q:e[0], pos:pos}; })
+            .sort(function(a,b){ return a.pos - b.pos; })
+            .slice(0,10)
+            .map(function(e){ return e.q + ' (pos ' + e.pos.toFixed(1) + ')'; })
+            .join('\n');
+          if (topQ) document.getElementById('dQueries').value = topQ;
+        }
+      }
+    } catch(e) {}
+    // Auto-load sitemap URLs from localStorage
+    try {
+      var storedSitemap = localStorage.getItem('cs_sitemap_urls');
+      if (storedSitemap) document.getElementById('dSiteUrls').value = storedSitemap;
+    } catch(e) {}
     const deepView = document.getElementById('deepView');
     if(!deepView) return;
     // Load GSC from localStorage now that URL params are known
