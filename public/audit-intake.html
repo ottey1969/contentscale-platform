@@ -58,6 +58,24 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .no-gsc-toggle small{font-size:11px;color:var(--sub);}
 .no-gsc-panel{display:none;margin-top:12px;padding:18px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;}
 .no-gsc-panel.open{display:block;}
+.gsc-options{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.gsc-opt{flex:1;min-width:200px;border:2px solid var(--border);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .2s;background:var(--bg);}
+.gsc-opt:hover{border-color:var(--gold);}
+.gsc-opt.active{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.gsc-opt-icon{font-size:22px;margin-bottom:6px;}
+.gsc-opt-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.04em;margin-bottom:3px;}
+.gsc-opt-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+.gsc-panel{display:none;}.gsc-panel.active{display:block;}
+.sa-email{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;word-break:break-all;color:var(--blue);margin:10px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.sa-copy{font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;background:var(--gold);color:#000;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0;}
+.sa-steps{counter-reset:sa;margin:12px 0;}
+.sa-step{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:var(--muted);}
+.sa-step:last-child{border:none;}
+.sa-step::before{counter-increment:sa;content:counter(sa);font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);line-height:1;flex-shrink:0;width:20px;}
+.sa-step strong{color:var(--ink);}
+.confirm-check{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.2);border-radius:8px;margin-top:12px;cursor:pointer;}
+.confirm-check input{width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.confirm-check label{font-size:13px;font-weight:500;cursor:pointer;color:var(--ink);}
 .panel-note{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;color:var(--sub);margin-bottom:14px;padding:8px 12px;background:rgba(251,191,36,.05);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;}
 .emergency-wrap{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:8px;margin-bottom:18px;cursor:pointer;user-select:none;}
 .emergency-wrap input{width:18px;height:18px;accent-color:var(--red);cursor:pointer;flex-shrink:0;}
@@ -79,15 +97,6 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .success p{color:var(--muted);font-size:14px;max-width:400px;margin:0 auto 20px;}
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:10px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.nl{}.en{display:none;}
-body.lang-en .nl{display:none!important;}
-body.lang-en .en{display:block!important;}
-body.lang-en span.en{display:inline!important;}
-body.lang-en span.nl{display:none!important;}
-.lang-toggle{display:flex;justify-content:center;gap:0;margin-bottom:20px;}
-.lang-btn{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:7px 16px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .15s;}
-.lang-btn:first-child{border-radius:5px 0 0 5px;}
-.lang-btn:last-child{border-radius:0 5px 5px 0;}
 .lang-btn.active{background:var(--gold);color:#000;border-color:var(--gold);font-weight:700;}
 
 /* ── MOBILE RESPONSIVE ─────────────────────────── */
@@ -137,18 +146,14 @@ img,table,iframe{max-width:100%;}
   <div class="header">
     <a href="https://contentscale.site" class="brand">ContentScale</a>
     <h1>
-      <span class="nl">Vraag je SEO Audit aan</span>
-      <span class="en" style="display:none;">Request Your SEO Audit</span>
+      
+      Request Your SEO Audit
     </h1>
     <p>
-      <span class="nl">Upload je GSC CSV voor de snelste resultaten. Ottmar stuurt je geprioriteerde actielijst binnen 15 minuten. Benelux &amp; US focus.</span>
-      <span class="en" style="display:none;">Upload your GSC CSV for the fastest results. Ottmar sends your priority action plan within 15 minutes. Works globally — Benelux &amp; US focus.</span>
+      
+      Upload your GSC CSV for the fastest results. Ottmar sends your priority action plan within 15 minutes. Works globally — Benelux &amp; US focus.
     </p>
-    <div class="lang-toggle">
-      <button class="lang-btn active" id="btnNL" onclick="setLang('nl')">🇳🇱 NL</button>
-      <button class="lang-btn" id="btnEN" onclick="setLang('en')">🇺🇸 EN</button>
-    </div>
-  </div>
+</div>
 
   <div class="steps">
     <div class="step">
@@ -156,37 +161,37 @@ img,table,iframe{max-width:100%;}
     </div>
     <div class="step">
       <div class="step-num">02</div>
-      <div class="step-lbl"><span class="nl">Formulier + GSC CSV</span><span class="en" style="display:none;">Submit Form + GSC CSV</span></div>
+      <div class="step-lbl">Submit Form + GSC CSV</div>
     </div>
     <div class="step">
       <div class="step-num">03</div>
-      <div class="step-lbl">PULSE + NEXUS Audit<br><span class="nl">Probleem opgelost ✓</span><span class="en" style="display:none;">Problem solved ✓</span></div>
+      <div class="step-lbl">PULSE + NEXUS Audit<br>Problem solved ✓</div>
     </div>
   </div>
 
   <div class="form" id="auditForm">
 
     <div class="section">
-      <div class="section-title"><span class="section-num">01</span> <span class="nl">Pagina &amp; Doel</span><span class="en" style="display:none;">Page &amp; Goal</span></div>
+      <div class="section-title"><span class="section-num">01</span> Page &amp; Goal</div>
       <div class="field">
-        <label><span class="nl">Pagina URL om te auditen</span><span class="en" style="display:none;">Page URL to audit</span> <span class="req">*</span></label>
+        <label>Page URL to audit <span class="req">*</span></label>
         <input type="url" id="f-url" placeholder="https://yoursite.com/target-page" required>
       </div>
       <div class="g2">
         <div class="field">
-          <label><span class="nl">Primair zoekwoord</span><span class="en" style="display:none;">Primary Keyword</span> <span class="req">*</span></label>
+          <label>Primary Keyword <span class="req">*</span></label>
           <input type="text" id="f-kw" placeholder="e.g. SEO recovery Netherlands" required>
         </div>
         <div class="field">
-          <label><span class="nl">Secundair zoekwoord</span><span class="en" style="display:none;">Secondary Keyword</span></label>
+          <label>Secondary Keyword</label>
           <input type="text" id="f-kw2" placeholder="e.g. EEAT content score">
         </div>
       </div>
       <div class="g2">
         <div class="field">
-          <label><span class="nl">Doelmarkt</span><span class="en" style="display:none;">Target Market</span> <span class="req">*</span></label>
+          <label>Target Market <span class="req">*</span></label>
           <select id="f-geo" required>
-            <option value=""><span class="nl">Kies...</span><span class="en">Select...</span></option>
+            <option value="">Select...</option>
             <option value="Netherlands">Netherlands 🇳🇱</option>
             <option value="Belgium">Belgium 🇧🇪</option>
             <option value="Luxembourg">Luxembourg 🇱🇺</option>
@@ -198,13 +203,13 @@ img,table,iframe{max-width:100%;}
           </select>
         </div>
         <div class="field">
-          <label><span class="nl">Conversiedoel</span><span class="en" style="display:none;">Conversion Goal</span> <span class="req">*</span></label>
+          <label>Conversion Goal <span class="req">*</span></label>
           <select id="f-goal" required>
-            <option value=""><span class="nl">Kies...</span><span class="en">Select...</span></option>
-            <option value="lead"><span class="nl">Leads genereren</span><span class="en">Generate leads</span></option>
-            <option value="sale"><span class="nl">Verkoop stimuleren</span><span class="en">Drive sales</span></option>
-            <option value="demo"><span class="nl">Consultaties boeken</span><span class="en">Book consultations</span></option>
-            <option value="awareness"><span class="nl">Merkbekendheid</span><span class="en">Brand awareness</span></option>
+            <option value="">Select...</option>
+            <option value="lead">Generate leads</option>
+            <option value="sale">Drive sales</option>
+            <option value="demo">Book consultations</option>
+            <option value="awareness">Brand awareness</option>
           </select>
         </div>
       </div>
@@ -212,68 +217,109 @@ img,table,iframe{max-width:100%;}
 
     <div class="section">
       <div class="section-title"><span class="section-num">02</span> Google Search Console Data</div>
-      <div class="gsc-info">
-        <span class="nl"><strong>Hoe exporteren:</strong> GSC → Performance → <strong>Pages tab</strong> → Export → Download CSV &nbsp;·&nbsp; Ook <strong>Queries tab</strong> exporteren voor diepere analyse.<br>
-        <a href="https://search.google.com/search-console" target="_blank" rel="noopener">→ Open Google Search Console</a></span>
-        <span class="en" style="display:none;"><strong>How to export:</strong> GSC → Performance → <strong>Pages tab</strong> → Export → Download CSV &nbsp;·&nbsp; Also export <strong>Queries tab</strong> for deeper analysis.<br>
-        <a href="https://search.google.com/search-console" target="_blank" rel="noopener">→ Open Google Search Console</a></span>
-      </div>
-      <div class="field">
-        <label><span class="nl">Upload GSC CSV — slepen of klikken (laatste 28-90 dagen)</span><span class="en" style="display:none;">Upload GSC CSV — drag &amp; drop or click (last 28–90 days)</span></label>
-        <div class="file-zone" id="gscZone">
-          <input type="file" id="f-gsc" accept=".csv" multiple onchange="handleFiles(this,'gsc')">
-          <div class="fz-icon">📊</div>
-          <div class="fz-title">GSC Performance CSV</div>
-          <div class="fz-hint"><span class="nl">Pages CSV · Queries CSV · Beide geaccepteerd</span><span class="en" style="display:none;">Pages CSV · Queries CSV · Both accepted</span></div>
-          <div class="file-list" id="gsc-list"></div>
+
+      <!-- Keuze: CSV of Toegang geven -->
+      <div class="gsc-options">
+        <div class="gsc-opt active" id="opt-csv" onclick="setGscOption('csv')">
+          <div class="gsc-opt-icon">📊</div>
+          <div class="gsc-opt-title">Upload CSV</div>
+          <div class="gsc-opt-desc">Export your data from GSC and upload here. Fast and always available.</div>
+        </div>
+        <div class="gsc-opt" id="opt-access" onclick="setGscOption('access')">
+          <div class="gsc-opt-icon">🔑</div>
+          <div class="gsc-opt-title">Give Access</div>
+          <div class="gsc-opt-desc">Add us as a user in GSC — 2 minutes, auto-fill always available.</div>
+        </div>
+        <div class="gsc-opt" id="opt-none" onclick="setGscOption('none')">
+          <div class="gsc-opt-icon">✍️</div>
+          <div class="gsc-opt-title">No GSC Yet</div>
+          <div class="gsc-opt-desc">Fill in manually or we set up GSC together during the audit.</div>
         </div>
       </div>
 
-      <label class="no-gsc-toggle" for="no-gsc-cb">
-        <input type="checkbox" id="no-gsc-cb" onchange="document.getElementById('no-gsc-panel').classList.toggle('open',this.checked)">
-        <span><span class="nl">Ik heb nog geen GSC toegang</span><span class="en" style="display:none;">I don't have GSC access yet</span></span>
-        <small><span class="nl">handmatig invullen →</span><span class="en" style="display:none;">enter manually →</span></small>
-      </label>
+      <!-- Panel A: CSV Upload -->
+      <div class="gsc-panel active" id="panel-csv">
+        <div class="gsc-info">
+          
+          <strong>How to export:</strong> GSC → Performance → <strong>Pages tab</strong> → Export → Download CSV &nbsp;·&nbsp; Also export <strong>Queries tab</strong> for deeper analysis.<br>
+          <a href="https://search.google.com/search-console" target="_blank" rel="noopener">→ Open Google Search Console</a>
+        </div>
+        <div class="field">
+          <label>Upload GSC CSV — drag &amp; drop or click (last 28–90 days)</label>
+          <div class="file-zone" id="gscZone">
+            <input type="file" id="f-gsc" accept=".csv" multiple onchange="handleFiles(this,'gsc')">
+            <div class="fz-icon">📊</div>
+            <div class="fz-title">GSC Performance CSV</div>
+            <div class="fz-hint">Pages CSV · Queries CSV · Both accepted</div>
+            <div class="file-list" id="gsc-list"></div>
+          </div>
+        </div>
+      </div>
 
-      <div class="no-gsc-panel" id="no-gsc-panel">
-        <div class="panel-note">💡 <span class="nl">Nog geen GSC? Vul in wat je weet — schattingen zijn prima. Ottmar kan je ook helpen GSC gratis in te stellen.</span><span class="en" style="display:none;">No GSC yet? Enter what you know — estimates are fine. Ottmar can also help you set up GSC for free.</span></div>
+      <!-- Panel B: Toegang geven -->
+      <div class="gsc-panel" id="panel-access">
+        <div class="gsc-info" style="border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.04);">
+          
+          <strong style="color:var(--green);">2 minutes work</strong> — add this email as a user in your GSC property. After that we can automatically fetch data for all your page audits.
+        </div>
+        <div class="sa-email">
+          <span id="saEmailText">seo-audit-tool-service-account@pure-heuristic-473710-t1.iam.gserviceaccount.com</span>
+          <button class="sa-copy" onclick="copySaEmail()">Copy</button>
+        </div>
+        <div class="sa-steps">
+          <div class="sa-step"><div><strong>Open Google Search Console</strong><br><a href="https://search.google.com/search-console" target="_blank" style="color:var(--blue);font-size:11px;">search.google.com/search-console →</a></div></div>
+          <div class="sa-step"><div><strong>Go to Settings → Users and permissions</strong></div></div>
+          <div class="sa-step"><div><strong>Click "Add user" → paste the email above → Permission: Full</strong></div></div>
+          <div class="sa-step"><div><strong>Done! Check the box below and submit the form.</strong></div></div>
+        </div>
+        <label class="confirm-check" for="f-access-confirmed">
+          <input type="checkbox" id="f-access-confirmed">
+          <label for="f-access-confirmed">✅ I have added the email as a user in my GSC property</label>
+        </label>
+      </div>
+
+      <!-- Panel C: Geen GSC -->
+      <div class="gsc-panel" id="panel-none">
+        <div class="panel-note">💡 No GSC? No problem. Enter what you know — estimates are fine. Ottmar can also help you set up GSC for free during the audit.</div>
         <div class="g2">
-          <div class="field"><label><span class="nl">Impressies (laatste 30 dagen)</span><span class="en" style="display:none;">Impressions (last 30 days)</span></label><input type="number" id="f-impr" placeholder="e.g. 12500"></div>
+          <div class="field"><label>Impressions (last 30 days)</label><input type="number" id="f-impr" placeholder="e.g. 12500"></div>
           <div class="field"><label>CTR %</label><input type="text" id="f-ctr" placeholder="e.g. 2.4"></div>
         </div>
         <div class="g2">
-          <div class="field"><label><span class="nl">Gemiddelde Positie</span><span class="en" style="display:none;">Average Position</span></label><input type="number" id="f-pos" placeholder="e.g. 34"></div>
-          <div class="field"><label><span class="nl">Mobiel verkeer %</span><span class="en" style="display:none;">Mobile traffic %</span></label><input type="text" id="f-mob" placeholder="e.g. 68"></div>
+          <div class="field"><label>Average Position</label><input type="number" id="f-pos" placeholder="e.g. 34"></div>
+          <div class="field"><label>Mobile traffic %</label><input type="text" id="f-mob" placeholder="e.g. 68"></div>
         </div>
         <div class="field">
-          <label><span class="nl">Top zoekopdrachten voor deze pagina (één per regel)</span><span class="en" style="display:none;">Top queries triggering this page (one per line)</span></label>
+          <label>Top queries triggering this page (one per line)</label>
           <textarea id="f-queries" placeholder="seo specialist nederland&#10;emergency seo recovery&#10;graaf framework seo"></textarea>
         </div>
       </div>
+
+      <input type="hidden" id="f-gsc-method" value="csv">
     </div>
 
     <div class="section">
-      <div class="section-title"><span class="section-num">03</span> <span class="nl">Jouw Pagina</span><span class="en" style="display:none;">Your Page</span></div>
+      <div class="section-title"><span class="section-num">03</span> Your Page</div>
       <div class="field">
-        <label><span class="nl">Plak pagina HTML (optioneel — versnelt analyse)</span><span class="en" style="display:none;">Paste page HTML (optional — speeds up analysis)</span></label>
+        <label>Paste page HTML (optional — speeds up analysis)</label>
         <textarea id="f-html" style="min-height:90px;font-size:12px;" placeholder="View Page Source → Ctrl+A → Ctrl+C → hier plakken. Of leeg laten. / Or leave empty."></textarea>
       </div>
       <div class="field">
-        <label><span class="nl">Upload screenshots, PDFs of andere bestanden (optioneel)</span><span class="en" style="display:none;">Upload screenshots, PDFs or other files (optional)</span></label>
+        <label>Upload screenshots, PDFs or other files (optional)</label>
         <div class="file-zone" id="filesZone">
           <input type="file" id="f-files" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.csv,.txt" multiple onchange="handleFiles(this,'files')">
           <div class="fz-icon">📎</div>
           <div class="fz-title">Supporting files</div>
-          <div class="fz-hint"><span class="nl">Screenshots · PDFs · Documenten · Max 10MB per bestand</span><span class="en" style="display:none;">Screenshots · PDFs · Docs · Max 10MB per file</span></div>
+          <div class="fz-hint">Screenshots · PDFs · Docs · Max 10MB per file</div>
           <div class="file-list" id="files-list"></div>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title"><span class="section-num">04</span> <span class="nl">Concurrenten (optioneel)</span><span class="en" style="display:none;">Competitors (optional)</span></div>
+      <div class="section-title"><span class="section-num">04</span> Competitors (optional)</div>
       <div class="field">
-        <label><span class="nl">Concurrent URLs die je wil verslaan (één per regel)</span><span class="en" style="display:none;">Competitor URLs you want to outrank (one per line)</span></label>
+        <label>Competitor URLs you want to outrank (one per line)</label>
         <textarea id="f-comps" placeholder="https://surferseo.com/...&#10;https://marketmuse.com/..."></textarea>
       </div>
     </div>
@@ -282,7 +328,7 @@ img,table,iframe{max-width:100%;}
       <div class="section-title"><span class="section-num">05</span> Contact</div>
       <div class="g2">
         <div class="field">
-          <label><span class="nl">Jouw naam</span><span class="en" style="display:none;">Your name</span> <span class="req">*</span></label>
+          <label>Your name <span class="req">*</span></label>
           <input type="text" id="f-name" placeholder="Your full name" required>
         </div>
         <div class="field">
@@ -292,7 +338,7 @@ img,table,iframe{max-width:100%;}
       </div>
       <div class="g2">
         <div class="field">
-          <label>WhatsApp / <span class="nl">Telefoon</span><span class="en" style="display:none;">Phone</span></label>
+          <label>WhatsApp / Phone</label>
           <input type="tel" id="f-phone" placeholder="+31 6 1234 5678">
         </div>
         <div class="field">
@@ -306,29 +352,29 @@ img,table,iframe{max-width:100%;}
       <label class="emergency-wrap" for="f-emergency">
         <input type="checkbox" id="f-emergency">
         <label for="f-emergency">
-          ⚡ <span class="nl">Urgent — traffic sterk gedaald</span><span class="en" style="display:none;">Emergency — traffic dropped significantly</span>
-          <small><span class="nl">Prioriteitsbehandeling binnen 2 uur · Kantooruren CET / EST</span><span class="en" style="display:none;">Priority review within 2 hours · Business hours CET / EST</span></small>
+          ⚡ Emergency — traffic dropped significantly
+          <small>Priority review within 2 hours · Business hours CET / EST</small>
         </label>
       </label>
       <div class="consent-wrap">
         <input type="checkbox" id="f-consent" required>
-        <label for="f-consent"><span class="nl">Ik ga akkoord met GDPR-conforme verwerking. Data alleen gebruikt voor beantwoorden van dit verzoek. Geen data verkocht. <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacybeleid</a></span><span class="en" style="display:none;">I agree to GDPR-compliant processing. Data used only to answer this request. No data sold. <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a></span> <span class="req">*</span></label>
+        <label for="f-consent">I agree to GDPR-compliant processing. Data used only to answer this request. No data sold. <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a> <span class="req">*</span></label>
       </div>
-      <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">🔍 <span class="nl">STUUR MIJN AUDITAANVRAAG →</span><span class="en" style="display:none;">SEND MY AUDIT REQUEST →</span></button>
-      <p class="microcopy"><span class="nl">Geprioriteerde actielijst ~15 min · Geen spam · Direct contact via email of WhatsApp</span><span class="en" style="display:none;">Priority action plan ~15 min · No spam · Direct contact via email or WhatsApp</span></p>
+      <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">🔍 SEND MY AUDIT REQUEST →</button>
+      <p class="microcopy">Priority action plan ~15 min · No spam · Direct contact via email or WhatsApp</p>
       <div class="trust">
         <span class="trust-item">✓ GDPR compliant</span>
         <span class="trust-item">✓ Benelux + US</span>
-        <span class="trust-item">✓ <span class="nl">Geen data verkoop</span><span class="en" style="display:none;">No data sold</span></span>
+        <span class="trust-item">✓ No data sold</span>
         <span class="trust-item">✓ Amsterdam</span>
       </div>
     </div>
 
     <div class="success" id="successState">
       <div style="font-size:56px;margin-bottom:14px;">✅</div>
-      <h2><span class="nl">Auditaanvraag Verzonden!</span><span class="en" style="display:none;">Audit Request Sent!</span></h2>
-      <p><span class="nl">Ottmar beoordeelt jouw pagina en stuurt een geprioriteerde actielijst. Check je email — en WhatsApp als je je nummer hebt opgegeven.</span><span class="en" style="display:none;">Ottmar will review your page and send a prioritised action plan. Check your email — and WhatsApp if you shared your number.</span></p>
-      <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20just%20submitted%20an%20audit%20request." target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#16a34a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;margin-top:8px;">💬 <span class="nl">Ook een WhatsApp sturen</span><span class="en" style="display:none;">Also ping on WhatsApp</span></a>
+      <h2>Audit Request Sent!</h2>
+      <p>Ottmar will review your page and send a prioritised action plan. Check your email — and WhatsApp if you shared your number.</p>
+      <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20just%20submitted%20an%20audit%20request." target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#16a34a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;margin-top:8px;">💬 Also ping on WhatsApp</a>
     </div>
 
   </div>
@@ -375,7 +421,8 @@ async function submitForm(){
   var fields={url:'f-url',keyword:'f-kw',keyword2:'f-kw2',geo:'f-geo',goal:'f-goal',impressions:'f-impr',ctr:'f-ctr',position:'f-pos',mobile:'f-mob',queries:'f-queries',page_html:'f-html',competitors:'f-comps',name:'f-name',email:'f-email',phone:'f-phone',website:'f-site'};
   Object.keys(fields).forEach(function(k){var el=document.getElementById(fields[k]);if(el)fd.append(k,el.value);});
   fd.append('emergency',document.getElementById('f-emergency').checked?'yes':'no');
-  fd.append('no_gsc',document.getElementById('no-gsc-cb').checked?'yes':'no');
+  fd.append('gsc_method',document.getElementById('f-gsc-method').value);
+  var accessConfirmed=document.getElementById('f-access-confirmed');fd.append('gsc_access_confirmed',accessConfirmed&&accessConfirmed.checked?'yes':'no');
   fd.append('source','contentscale_audit_form');
   fd.append('timestamp',new Date().toISOString());
   uploadedFiles.gsc.forEach(function(f){fd.append('gsc_files',f);});
@@ -399,24 +446,25 @@ function showSuccess(){
 }
 </script>
 <script>
-function setLang(lang){
-  var btnNL=document.getElementById('btnNL');
-  var btnEN=document.getElementById('btnEN');
-  if(lang==='en'){
-    document.body.classList.add('lang-en');
-    btnNL.classList.remove('active');
-    btnEN.classList.add('active');
-    document.getElementById('htmlRoot')&&document.getElementById('htmlRoot').setAttribute('lang','en');
-  } else {
-    document.body.classList.remove('lang-en');
-    btnNL.classList.add('active');
-    btnEN.classList.remove('active');
-  }
-  try{localStorage.setItem('cs_intake_lang',lang);}catch(e){}
+function setGscOption(opt) {
+  // Update option buttons
+  ['csv','access','none'].forEach(function(o) {
+    document.getElementById('opt-'+o).classList.toggle('active', o === opt);
+    document.getElementById('panel-'+o).classList.toggle('active', o === opt);
+  });
+  document.getElementById('f-gsc-method').value = opt;
 }
-(function(){
-  try{var s=localStorage.getItem('cs_intake_lang');if(s==='en')setLang('en');}catch(e){}
-})();
+
+function copySaEmail() {
+  var email = document.getElementById('saEmailText').textContent;
+  navigator.clipboard.writeText(email).then(function() {
+    toast('✅ Email gekopieerd!');
+    document.querySelector('.sa-copy').textContent = 'Copied!';
+    setTimeout(function() { document.querySelector('.sa-copy').textContent = 'Copy'; }, 2000);
+  });
+}
+
+
 </script>
 </body>
 </html>
