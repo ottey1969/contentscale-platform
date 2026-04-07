@@ -4722,23 +4722,53 @@ pool.query(`CREATE TABLE IF NOT EXISTS otto_sessions (
   lead_name VARCHAR(255), lead_website VARCHAR(255), lead_phone VARCHAR(100),
   transcript JSONB DEFAULT '[]', duration_seconds INTEGER DEFAULT 0,
   model VARCHAR(100), has_phone BOOLEAN DEFAULT FALSE,
-  audio_chunks JSONB DEFAULT '[]', created_at TIMESTAMP DEFAULT NOW()
+  audio_b64 TEXT DEFAULT NULL,
+  audio_chunks JSONB DEFAULT '[]', created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '14 days')
 )`).catch(e => console.warn('[otto_sessions]', e.message));
 
-// Save audio chunk (only called when phone number detected in transcript)
+// Auto-delete expired sessions (audio + transcript older than 14 days)
+// Runs once at startup and then every 6 hours
+async function cleanupExpiredSessions() {
+  try {
+    const r = await pool.query(
+      "DELETE FROM otto_sessions WHERE expires_at < NOW() RETURNING session_id"
+    );
+    if (r.rowCount > 0) console.log('[otto] cleanup: deleted', r.rowCount, 'expired sessions');
+  } catch(e) { console.warn('[otto] cleanup error:', e.message); }
+}
+cleanupExpiredSessions();
+setInterval(cleanupExpiredSessions, 6 * 60 * 60 * 1000);
+
+// Save audio — always saved, stored as single compact base64 string
 app.post('/api/otto/save-audio', async (req, res) => {
   const { sessionId, audioChunks } = req.body;
   if (!sessionId || !audioChunks) return res.status(400).json({ error: 'sessionId and audioChunks required' });
   try {
+    // Merge all chunks into one compact b64 string instead of JSON array
+    const merged = Array.isArray(audioChunks) ? audioChunks.join('') : audioChunks;
+    const sizeKB = Math.round(Buffer.byteLength(merged, 'base64') / 1024);
     await pool.query(
-      'UPDATE otto_sessions SET audio_chunks=$1, has_phone=true WHERE session_id=$2',
-      [JSON.stringify(audioChunks), sessionId]
+      'UPDATE otto_sessions SET audio_b64=$1, audio_chunks=$2 WHERE session_id=$3',
+      [merged, JSON.stringify([]), sessionId]
     );
-    console.log('[otto] audio saved for session:', sessionId, 'chunks:', audioChunks.length);
-    res.json({ ok: true });
+    console.log('[otto] audio saved:', sessionId, sizeKB + 'KB');
+    res.json({ ok: true, sizeKB });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// Download audio for a session as WAV-like PCM file
+app.get('/api/otto/sessions/:id/audio', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT session_id, audio_b64, duration_seconds FROM otto_sessions WHERE session_id=$1 OR id::text=$1', [req.params.id]);
+    if (!r.rows.length || !r.rows[0].audio_b64) return res.status(404).json({ error: 'No audio found' });
+    const buf = Buffer.from(r.rows[0].audio_b64, 'base64');
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Content-Disposition', 'attachment; filename="otto-' + r.rows[0].session_id + '.pcm"');
+    res.send(buf);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 app.post('/api/otto/save-session', async (req, res) => {
   const { sessionId, leadName, leadWebsite, leadPhone, transcript, durationSeconds, model } = req.body;
@@ -4772,308 +4802,315 @@ app.get('/api/otto-version', (req, res) => res.json({ version: 'v6', model: 'gem
 
 
 // ── Otto AI client JS — embedded inline ──────────────────────────────────
-const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6
+const _OTTO_JS = `// ContentScale — Otto AI — Gemini Live v6 (FIXED)
 // Hangup: 2 min max session OR goodbye word detected
-
 (function() {
-  'use strict';
+'use strict';
+var _ws           = null;
+var _active       = false;
+var _micCtx       = null;
+var _stream       = null;
+var _processor    = null;
+var _playCtx      = null;
+var _nextStart    = 0;
+var _killTimer    = null;
+var _audioChunks  = [];
+var _hasPhone     = false;
+var _hangupScheduled = false;
+var _sessionId    = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+var _sessionStart = Date.now();
+var _sessionModel = null;
+var _transcript   = [];
 
-  var _ws           = null;
-  var _active       = false;
-  var _micCtx       = null;
-  var _stream       = null;
-  var _processor    = null;
-  var _playCtx      = null;
-  var _nextStart    = 0;
-  var _killTimer        = null;
-  var _audioChunks      = [];
-  var _hasPhone         = false;
-  var _hangupScheduled  = false;
-  var _sessionId        = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  var _sessionStart     = Date.now();
-  var _sessionModel     = null;
-  var _transcript       = [];
+var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
-  var WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson — you are helpful and honest. Follow this exact script step by step: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. I have about 1 minute for you — is that okay or would you rather I hang up? 2a. If no: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes: say Great! And great timing — this month you can win 250 euros in free SEO services just by sharing this conversation. But first, may I have your name? Wait for answer. 3. Say: Hey [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and PULSE+NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 4. Ask: Would that be interesting for you? Wait for answer. 5a. If not interested: say No worries, maybe another time. Have a great day! Goodbye! Then STOP. 5b. If interested: say Wonderful! Ottmar, our founder, will personally call you back. And to be eligible for our 250 euro prize this month, I just need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch soon. Have a great day! Goodbye! Then STOP. Always say goodbye before stopping. Never add extra information. Never continue after goodbye.";
 
-  var OTTO_SCRIPT = "You are Otto, a male AI voice assistant of ContentScale. You are NOT a salesperson — you are helpful and honest. Follow this exact script step by step: 1. Say: Hey! I am Otto, an AI assistant of ContentScale. I have about 1 minute for you — is that okay or would you rather I hang up? 2a. If no: say No problem, have a great day! Goodbye! Then STOP. 2b. If yes: say Great! And great timing — this month you can win 250 euros in free SEO services just by sharing this conversation. But first, may I have your name? Wait for answer. 3. Say: Hey [name]! We help businesses recover lost Google traffic with a free GRAAF Framework scan and PULSE+NEXUS SEO audit. We also do outbound calls and lead generation so you never miss a client again. 4. Ask: Would that be interesting for you? Wait for answer. 5a. If not interested: say No worries, maybe another time. Have a great day! Goodbye! Then STOP. 5b. If interested: say Wonderful! Ottmar, our founder, will personally call you back. And to be eligible for our 250 euro prize this month, I just need your mobile number with country code. What is it? Wait for answer. Repeat the number back digit by digit to confirm. Then say: Perfect! Ottmar will be in touch soon. Have a great day! Goodbye! Then STOP. Always say goodbye before stopping. Never add extra information. Never continue after goodbye.";
-
-  function setStatus(msg) {
-    if (window._ottoStatusOverride) { window._ottoStatusOverride(msg); return; }
-    var el = document.getElementById('gl-status');
-    if (el) el.textContent = msg;
+function setStatus(msg) {
+  if (window._ottoStatusOverride) { window._ottoStatusOverride(msg); return; }
+  var el = document.getElementById('gl-status');
+  if (el) {
+    el.textContent = msg;
+    el.className = '';
+    if (/speaking|praat|saying/i.test(msg)) el.className = 'speaking';
+    else if (/listen|speak now|your turn|hallo|ready|connecting/i.test(msg)) el.className = 'listening';
+    else if (/error|denied|limit|disconnect|failed|timeout|blocked/i.test(msg)) el.className = 'error';
   }
+}
 
-  function addTranscript(who, msg) {
-    if (window._ottoTranscriptOverride) { window._ottoTranscriptOverride(who, msg); return; }
-    var el = document.getElementById('gl-transcript');
-    if (!el) return;
-    el.style.display = 'block';
-    el.innerHTML += '<div style="color:' + (who === 'model' ? '#4ade80' : '#f9fafb') + ';margin-bottom:5px;line-height:1.6;"><strong>' + (who === 'model' ? 'Otto:' : 'You:') + '</strong> ' + msg + '</div>';
-    el.scrollTop = el.scrollHeight;
-  }
+function addTranscript(who, msg) {
+  if (window._ottoTranscriptOverride) { window._ottoTranscriptOverride(who, msg); return; }
+  var el = document.getElementById('gl-transcript');
+  if (!el) return;
+  el.style.display = 'block';
+  var cls = who === 'model' ? 't-otto' : 't-you';
+  var label = who === 'model' ? 'Otto' : 'You';
+  el.innerHTML += '<div class="' + cls + '"><span class="t-label">' + label + '&nbsp;</span><span class="t-text">' + msg + '</span></div>';
+  el.scrollTop = el.scrollHeight;
+}
 
-  function setBtnActive(on) {
-    if (window._ottoActiveOverride) { window._ottoActiveOverride(on); }
-    var btn = document.getElementById('gl-call-btn');
-    var r1  = document.getElementById('gl-ring1');
-    if (!btn) return;
-    if (on) {
-      btn.style.background = 'linear-gradient(135deg,#dc2626,#f87171)';
-      btn.style.boxShadow  = '0 0 0 8px rgba(239,68,68,.2),0 0 32px rgba(239,68,68,.4)';
-      if (r1) r1.style.animation = 'rp 1s ease-in-out infinite';
-    } else {
-      btn.style.background = 'linear-gradient(135deg,#166534,#4ade80)';
-      btn.style.boxShadow  = '0 0 0 8px rgba(74,222,128,.15),0 0 32px rgba(74,222,128,.3)';
-      if (r1) r1.style.animation = '';
-    }
-  }
+function setBtnActive(on) {
+  if (window._ottoActiveOverride) { window._ottoActiveOverride(on); }
+  var btn = document.getElementById('gl-call-btn');
+  var wrap = document.getElementById('avatarWrap');
+  if (btn) btn.classList.toggle('active', on);
+  if (wrap) wrap.classList.toggle('active', on);
+}
 
-  function saveAndHangup() {
-    // Save session transcript
-    if (_sessionId && (_transcript.length || _sessionModel)) {
-      var duration = Math.round((Date.now() - (_sessionStart||Date.now())) / 1000);
-      fetch('https://app.contentscale.site/api/otto/save-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: _sessionId, transcript: _transcript, durationSeconds: duration, model: _sessionModel })
-      }).then(function() {
-        console.log('[otto] session saved');
-        // Save audio only if phone number detected
-        if (_hasPhone && _audioChunks.length > 0) {
-          return fetch('https://app.contentscale.site/api/otto/save-audio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: _sessionId, audioChunks: _audioChunks })
-          });
-        }
-      }).then(function(){ if (_hasPhone) console.log('[otto] audio saved — phone detected'); })
-        .catch(function(e){ console.warn('[otto] save error:', e.message); });
-    }
-    _audioChunks = [];
-  }
+function forceCleanup() {
+  _active = false;
+  clearTimeout(_killTimer);
+  if (_ws && _ws.readyState < 2) { try { _ws.close(); } catch(e) {} }
+  _ws = null;
+  setBtnActive(false);
+  setStatus('Click to start a live conversation');
+}
 
-  function hangup(reason) {
-    if (!_active) return;
-    console.log('[otto] hanging up:', reason);
-    setStatus('Call ended');
-    saveAndHangup();
-    stopSession();
-  }
+function hangup(reason) {
+  if (!_active) return;
+  console.log('[otto] hanging up:', reason);
+  if (window._ottoOnSessionEnd) window._ottoOnSessionEnd();
+  forceCleanup();
+  saveAndHangup();
+}
 
-  function ensurePlayCtx() {
-    if (!_playCtx || _playCtx.state === 'closed') {
-      _playCtx  = new AudioContext({ sampleRate: 24000 });
-      _nextStart = 0;
-    }
-    if (_playCtx.state === 'suspended') _playCtx.resume();
-  }
-
-  function scheduleAudioChunk(b64) {
-    ensurePlayCtx();
-    try {
-      var raw   = atob(b64);
-      var bytes = new Uint8Array(raw.length);
-      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-      var pcm16   = new Int16Array(bytes.buffer);
-      var float32 = new Float32Array(pcm16.length);
-      for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
-      var buf = _playCtx.createBuffer(1, float32.length, 24000);
-      buf.copyToChannel(float32, 0);
-      var src = _playCtx.createBufferSource();
-      src.buffer = buf;
-      src.connect(_playCtx.destination);
-      var now  = _playCtx.currentTime;
-      var when = Math.max(now, _nextStart);
-      src.start(when);
-      _nextStart = when + buf.duration;
-    } catch(e) {}
-  }
-
-  function stopSession() {
-    _active = false;
-    clearTimeout(_killTimer);
-    if (_processor) { try { _processor.disconnect(); } catch(e) {} _processor = null; }
-    if (_stream)    { _stream.getTracks().forEach(function(t) { t.stop(); }); _stream = null; }
-    if (_micCtx)    { try { _micCtx.close(); } catch(e) {} _micCtx = null; }
-    if (_playCtx)   { try { _playCtx.close(); } catch(e) {} _playCtx = null; }
-    if (_ws && _ws.readyState < 2) { try { _ws.close(); } catch(e) {} }
-    _ws = null;
-    _nextStart = 0;
-    setBtnActive(false);
-    setStatus('Click to start a live conversation');
-  }
-
-  async function startMic() {
-    _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
-    _micCtx    = new AudioContext({ sampleRate: 16000 });
-    var src    = _micCtx.createMediaStreamSource(_stream);
-    _processor = _micCtx.createScriptProcessor(2048, 1, 1);
-    _processor.onaudioprocess = function(e) {
-      if (!_ws || _ws.readyState !== 1 || !_active) return;
-      var input = e.inputBuffer.getChannelData(0);
-      var pcm   = new Int16Array(input.length);
-      for (var i = 0; i < input.length; i++) {
-        var s = Math.max(-1, Math.min(1, input[i]));
-        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+function saveAndHangup() {
+  if (_sessionId && (_transcript.length || _sessionModel)) {
+    var duration = Math.round((Date.now() - (_sessionStart||Date.now())) / 1000);
+    fetch('https://app.contentscale.site/api/otto/save-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: _sessionId, transcript: _transcript, durationSeconds: duration, model: _sessionModel })
+    }).then(function() {
+      if (_audioChunks.length > 0) {
+        return fetch('https://app.contentscale.site/api/otto/save-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: _sessionId, audioChunks: _audioChunks })
+        });
       }
-      var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
-      _ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm;rate=16000' } } }));
-    };
-    src.connect(_processor);
-    _processor.connect(_micCtx.destination);
-    setStatus('Your turn — speak now...');
-
-    // HARD KILL: 45 seconds max no matter what
-    _killTimer = setTimeout(function() { hangup('2 min limit reached'); }, 120000);
-    console.log('[otto] session started — 2 min hard limit');
+    }).then(function(){ console.log('[otto] audio saved, chunks:', _audioChunks.length); })
+    .catch(function(e){ console.warn('[otto] save error:', e.message); });
   }
+  _audioChunks = [];
+}
 
-  async function startSession() {
-    if (_active) { stopSession(); return; }
-    setStatus('Getting key...');
-    _active = true;
-    setBtnActive(true);
+function ensurePlayCtx() {
+  if (!_playCtx || _playCtx.state === 'closed') {
+    _playCtx  = new AudioContext({ sampleRate: 24000 });
+    _nextStart = 0;
+  }
+  if (_playCtx.state === 'suspended') _playCtx.resume();
+}
 
-    var keyData;
-    try {
-      var params = new URLSearchParams();
+function scheduleAudioChunk(b64) {
+  ensurePlayCtx();
+  try {
+    var raw   = atob(b64);
+    var bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    var pcm16   = new Int16Array(bytes.buffer);
+    var float32 = new Float32Array(pcm16.length);
+    for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
+    var buf = _playCtx.createBuffer(1, float32.length, 24000);
+    buf.copyToChannel(float32, 0);
+    var src = _playCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(_playCtx.destination);
+    var now  = _playCtx.currentTime;
+    var when = Math.max(now, _nextStart);
+    src.start(when);
+    _nextStart = when + buf.duration;
+  } catch(e) {}
+}
+
+function stopSession() {
+  forceCleanup();
+  if (_processor) { try { _processor.disconnect(); } catch(e) {} _processor = null; }
+  if (_stream)    { _stream.getTracks().forEach(function(t) { t.stop(); }); _stream = null; }
+  if (_micCtx)    { try { _micCtx.close(); } catch(e) {} _micCtx = null; }
+  if (_playCtx)   { try { _playCtx.close(); } catch(e) {} _playCtx = null; }
+  _nextStart = 0;
+}
+
+async function startMic() {
+  _stream    = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+  _micCtx    = new AudioContext({ sampleRate: 16000 });
+  var src    = _micCtx.createMediaStreamSource(_stream);
+  _processor = _micCtx.createScriptProcessor(2048, 1, 1);
+  _processor.onaudioprocess = function(e) {
+    if (!_ws || _ws.readyState !== 1 || !_active) return;
+    var input = e.inputBuffer.getChannelData(0);
+    var pcm   = new Int16Array(input.length);
+    for (var i = 0; i < input.length; i++) {
+      var s = Math.max(-1, Math.min(1, input[i]));
+      pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm.buffer)));
+    _ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64, mimeType: 'audio/pcm;rate=16000' } } }));
+  };
+  src.connect(_processor);
+  _processor.connect(_micCtx.destination);
+  setStatus('Your turn — speak now...');
+
+  // HARD KILL: 120 seconds max
+  _killTimer = setTimeout(function() { hangup('2 min limit reached'); }, 120000);
+}
+
+async function startSession() {
+  if (_active) { stopSession(); return; }
+  setStatus('Getting key...');
+  _active = true;
+  setBtnActive(true);
+
+  var keyData;
+  try {
+    var params = new URLSearchParams();
     if (window._ottoRefCode) params.set('ref', window._ottoRefCode);
     var adminKey = new URLSearchParams(location.search).get('admin');
     if (adminKey) params.set('admin', adminKey);
     var paramStr = params.toString() ? '?' + params.toString() : '';
+
     var r = await fetch('https://app.contentscale.site/api/gemini-live-token' + paramStr);
-      keyData = await r.json();
-      if (r.status === 429) {
-        setStatus('Daily limit reached — come back tomorrow!');
-        if (window._ottoLimitOverride) window._ottoLimitOverride();
-        setBtnActive(false);
-        _active = false;
+    keyData = await r.json();
+
+    if (r.status === 429) {
+      setStatus('Daily limit reached — come back tomorrow!');
+      if (window._ottoLimitOverride) window._ottoLimitOverride();
+      setBtnActive(false);
+      _active = false;
+      return;
+    }
+
+    if (!r.ok || !keyData.key) {
+      setStatus('Error: ' + (keyData.error || 'No key'));
+      stopSession(); return;
+    }
+  } catch(e) {
+    setStatus('Server error: ' + e.message);
+    setBtnActive(false);
+    _active = false;
+    return;
+  }
+
+  var model = keyData.model || 'gemini-3.1-flash-live-preview';
+  _sessionModel = model;
+  _sessionId = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  _sessionStart = Date.now();
+  _transcript = [];
+  window._ottTurnCount = 0;
+  _hangupScheduled = false;
+
+  console.log('[otto] model:', model);
+  var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
+  setStatus('Connecting...');
+
+  try { _ws = new WebSocket(wsUrl); _ws.binaryType = 'arraybuffer'; }
+  catch(e) { setStatus('WS error: ' + e.message); stopSession(); return; }
+
+  _ws.onopen = function() {
+    setStatus('Connected...');
+    var setup = {
+      setup: {
+        model: 'models/' + model,
+        generation_config: { response_modalities: ['AUDIO'], output_audio_transcription: {} },
+        system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
+      }
+    };
+    console.log('[otto] sending setup');
+    _ws.send(JSON.stringify(setup));
+  };
+
+  _ws.onmessage = function(evt) {
+    try {
+      var raw = evt.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(evt.data)) : evt.data;
+      var msg = JSON.parse(raw);
+
+      if (msg.setupComplete) {
+        setStatus('Say hello to Otto...');
+        startMic().catch(function(e) { setStatus('Mic: ' + e.message); stopSession(); });
         return;
       }
-      if (!r.ok || !keyData.key) {
-        setStatus('Error: ' + (keyData.error || 'No key'));
-        stopSession(); return;
+
+      if (msg.serverContent) {
+        var sc = msg.serverContent;
+        var _turnCount = window._ottTurnCount || 0;
+
+        if (sc.modelTurn && sc.modelTurn.parts) {
+          sc.modelTurn.parts.forEach(function(p) {
+            if (p.inlineData && p.inlineData.data) {
+              scheduleAudioChunk(p.inlineData.data);
+              _audioChunks.push(p.inlineData.data);
+            }
+            if (p.text) {
+              var ptxt = p.text || '';
+              addTranscript('model', ptxt);
+              if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(ptxt)) {
+                _hangupScheduled = true;
+                console.log('[otto] goodbye detected in text');
+                setTimeout(function() { hangup('goodbye detected'); }, 4000);
+              }
+            }
+          });
+        }
+
+        if (sc.inputTranscription) addTranscript('you', sc.inputTranscription.text);
+
+        if (sc.outputTranscription) {
+          var txt = sc.outputTranscription.text || '';
+          addTranscript('model', txt);
+          if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(txt)) {
+            _hangupScheduled = true;
+            console.log('[otto] goodbye detected in transcription');
+            setTimeout(function() { hangup('goodbye detected'); }, 4000);
+          }
+        }
+
+        if (sc.turnComplete) {
+          _turnCount++;
+          window._ottTurnCount = _turnCount;
+          setStatus('Your turn — speak now...');
+          if (_turnCount >= 10 && !_hangupScheduled) {
+            _hangupScheduled = true;
+            clearTimeout(_killTimer);
+            _killTimer = setTimeout(function() { hangup('script complete'); }, 15000);
+          }
+        }
       }
-    } catch(e) { setStatus('Server error: ' + e.message); stopSession(); return; }
+    } catch(e) { console.warn('[otto] parse:', e.message); }
+  };
 
-    var model = keyData.model || 'gemini-3.1-flash-live-preview';
-    _sessionModel = model;
-    _sessionId = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    _sessionStart = Date.now();
-    _transcript = [];
-    window._ottTurnCount = 0;  // reset per session
-    _hangupScheduled = false;
-    console.log('[otto] model:', model);
+  _ws.onerror = function() {
+    setStatus('Connection error');
+    stopSession();
+  };
 
-    var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
-    setStatus('Connecting...');
+  _ws.onclose = function(evt) {
+    console.log('[otto] closed code=' + evt.code);
+    if (_active) {
+      setStatus('Disconnected');
+      stopSession();
+    }
+  };
+}
 
-    try { _ws = new WebSocket(wsUrl); _ws.binaryType = 'arraybuffer'; }
-    catch(e) { setStatus('WS error: ' + e.message); stopSession(); return; }
+window.Tawk_API = window.Tawk_API || {};
+function attach() {
+  var btn = document.getElementById('gl-call-btn');
+  if (!btn) { setTimeout(attach, 150); return; }
+  btn.addEventListener('click', startSession);
+  console.log('[otto] v6 fixed loaded');
+}
 
-    _ws.onopen = function() {
-      setStatus('Connected...');
-      var setup = {
-        setup: {
-          model: 'models/' + model,
-          generation_config: {
-            response_modalities: ['AUDIO'],
-            output_audio_transcription: {}
-          },
-          system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
-        }
-      };
-      console.log('[otto] sending setup');
-      _ws.send(JSON.stringify(setup));
-    };
-
-    _ws.onmessage = function(evt) {
-      try {
-        var raw = evt.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(evt.data)) : evt.data;
-        var msg = JSON.parse(raw);
-
-        if (msg.setupComplete) {
-          setStatus('Say hello to Otto...');
-          startMic().catch(function(e) { setStatus('Mic: ' + e.message); stopSession(); });
-          return;
-        }
-
-        if (msg.serverContent) {
-          var sc = msg.serverContent;
-          var _turnCount = window._ottTurnCount || 0;
-          if (sc.modelTurn && sc.modelTurn.parts) {
-            sc.modelTurn.parts.forEach(function(p) {
-              if (p.inlineData && p.inlineData.data) {
-                scheduleAudioChunk(p.inlineData.data);
-                _audioChunks.push(p.inlineData.data);
-              }
-              // Check text parts for goodbye keywords (when transcription is off)
-              if (p.text) {
-                var ptxt = p.text || '';
-                addTranscript('model', ptxt);
-                if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(ptxt)) {
-                  _hangupScheduled = true;
-                  console.log('[otto] goodbye detected in text part: ' + ptxt);
-                  setTimeout(function() { hangup('goodbye detected'); }, 4000);
-                }
-              }
-            });
-          }
-          if (sc.inputTranscription) addTranscript('you', sc.inputTranscription.text);
-          if (sc.outputTranscription) {
-            var txt = sc.outputTranscription.text || '';
-            addTranscript('model', txt);
-            if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(txt)) {
-              _hangupScheduled = true;
-              console.log('[otto] goodbye detected in transcription: ' + txt);
-              setTimeout(function() { hangup('goodbye detected'); }, 4000);
-            }
-          }
-          if (sc.turnComplete) {
-            _turnCount++;
-            window._ottTurnCount = _turnCount;
-            setStatus('Your turn — speak now...');
-            console.log('[otto] turnComplete #' + _turnCount);
-            // After 5 turns (full script done), schedule hangup if no goodbye detected yet
-            if (_turnCount >= 10 && !_hangupScheduled) {
-              _hangupScheduled = true;
-              clearTimeout(_killTimer);
-              _killTimer = setTimeout(function() { hangup('script complete'); }, 15000);
-            }
-          }
-        }
-      } catch(e) { console.warn('[otto] parse:', e.message); }
-    };
-
-    _ws.onerror = function() { setStatus('Connection error'); stopSession(); };
-
-    _ws.onclose = function(evt) {
-      console.log('[otto] closed code=' + evt.code);
-      if (_active) { setStatus('Disconnected (code ' + evt.code + ')'); stopSession(); }
-    };
-  }
-
-  window.Tawk_API = window.Tawk_API || {};
-  window.Tawk_API.triggerEvent    = window.Tawk_API.triggerEvent    || function() {};
-  window.Tawk_API.addQuickReplies = window.Tawk_API.addQuickReplies || function() {};
-
-  function attach() {
-    var btn = document.getElementById('gl-call-btn');
-    if (!btn) { setTimeout(attach, 150); return; }
-    btn.addEventListener('click', startSession);
-    console.log('[otto] v7 loaded — 2 min hard limit + goodbye detection');
-  }
-
-  document.readyState === 'loading'
-    ? document.addEventListener('DOMContentLoaded', attach)
-    : attach();
-})();`;
+document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', attach) : attach();
+})();
+`;
 
 // Serve Otto JS — all versioned names point to same embedded content
 
 
 // ── Otto widget standalone page & embed ──────────────────────────────────
+// -- Otto widget standalone page & embed --
 const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5081,205 +5118,40 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Otto AI — ContentScale</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: #060910;
-    font-family: 'Inter', sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 16px;
-  }
-
-  .widget {
-    background: linear-gradient(160deg, #0d1117 0%, #0a0f1a 100%);
-    border: 1px solid rgba(74,222,128,.2);
-    border-radius: 24px;
-    padding: 36px 28px 28px;
-    width: 100%;
-    max-width: 340px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    box-shadow:
-      0 0 0 1px rgba(74,222,128,.05),
-      0 0 60px rgba(74,222,128,.06),
-      0 30px 80px rgba(0,0,0,.7);
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Subtle glow top */
-  .widget::before {
-    content: '';
-    position: absolute;
-    top: -60px; left: 50%;
-    transform: translateX(-50%);
-    width: 200px; height: 120px;
-    background: radial-gradient(ellipse, rgba(74,222,128,.12) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  /* Avatar */
-  .avatar-wrap {
-    position: relative;
-    width: 96px; height: 96px;
-    margin-bottom: 20px;
-  }
-
-  .avatar {
-    width: 96px; height: 96px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0d2e1a 0%, #0a1f12 100%);
-    border: 2px solid rgba(74,222,128,.4);
-    display: flex; align-items: center; justify-content: center;
-    position: relative;
-    z-index: 2;
-  }
-
-  .avatar svg {
-    width: 42px; height: 42px;
-    opacity: .85;
-  }
-
-  /* Pulse rings */
-  .ring {
-    position: absolute;
-    border-radius: 50%;
-    border: 1.5px solid rgba(74,222,128,.18);
-    top: 50%; left: 50%;
-    transform: translate(-50%,-50%);
-    pointer-events: none;
-  }
-  .ring-1 { width: 120px; height: 120px; }
-  .ring-2 { width: 148px; height: 148px; border-color: rgba(74,222,128,.08); }
-
-  @keyframes pulse-ring {
-    0%   { transform: translate(-50%,-50%) scale(1); opacity: .6; }
-    100% { transform: translate(-50%,-50%) scale(1.15); opacity: 0; }
-  }
-  .active .ring-1 { animation: pulse-ring 1.4s ease-out infinite; }
-  .active .ring-2 { animation: pulse-ring 1.4s ease-out .5s infinite; }
-
-  /* Name */
-  .name {
-    font-family: 'Inter', sans-serif;
-    font-size: 28px;
-    font-weight: 900;
-    letter-spacing: .12em;
-    background: linear-gradient(90deg, #4ade80 0%, #86efac 50%, #60a5fa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 4px;
-  }
-
-  .sub {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: #9ca3af;
-    margin-bottom: 20px;
-  }
-
-  /* Status */
-  #gl-status {
-    font-size: 13px;
-    font-weight: 500;
-    color: #6b7280;
-    margin-bottom: 24px;
-    min-height: 20px;
-    line-height: 1.4;
-    transition: color .3s;
-  }
-  #gl-status.speaking { color: #4ade80; }
-  #gl-status.listening { color: #60a5fa; }
-  #gl-status.error { color: #f87171; }
-
-  /* Call button */
-  #gl-call-btn {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #16a34a, #4ade80);
-    border: none;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 16px;
-    box-shadow:
-      0 0 0 10px rgba(74,222,128,.1),
-      0 0 30px rgba(74,222,128,.3),
-      inset 0 1px 0 rgba(255,255,255,.15);
-    transition: all .2s ease;
-    position: relative;
-    z-index: 2;
-  }
-
-  #gl-call-btn:hover {
-    transform: scale(1.06);
-    box-shadow: 0 0 0 14px rgba(74,222,128,.12), 0 0 40px rgba(74,222,128,.4);
-  }
-
-  #gl-call-btn.active {
-    background: linear-gradient(145deg, #991b1b, #f87171);
-    box-shadow: 0 0 0 10px rgba(239,68,68,.12), 0 0 30px rgba(239,68,68,.3);
-  }
-
-  #gl-call-btn svg {
-    width: 32px; height: 32px;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
-  }
-
-  .hint {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: #6b7280;
-    line-height: 2;
-    margin-bottom: 4px;
-  }
-
-  /* Transcript */
-  #gl-transcript {
-    margin-top: 16px;
-    width: 100%;
-    background: #0a0d12;
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 12px;
-    padding: 14px 16px;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    line-height: 1.7;
-    max-height: 140px;
-    overflow-y: auto;
-    text-align: left;
-    display: none;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(74,222,128,.2) transparent;
-  }
-  #gl-transcript::-webkit-scrollbar { width: 4px; }
-  #gl-transcript::-webkit-scrollbar-track { background: transparent; }
-  #gl-transcript::-webkit-scrollbar-thumb { background: rgba(74,222,128,.2); border-radius: 2px; }
-
-  .t-otto { color: #4ade80; margin-bottom: 6px; }
-  .t-you  { color: #93c5fd; margin-bottom: 6px; }
-  .t-label { font-weight: 700; font-size: 11px; letter-spacing: .05em; }
-  .t-text  { font-weight: 400; }
-
-  /* Limit message */
-  .limit-msg {
-    margin-top: 14px;
-    font-size: 12px;
-    color: #f87171;
-    line-height: 1.5;
-    display: none;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060910; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+.widget { background: linear-gradient(160deg, #0d1117 0%, #0a0f1a 100%); border: 1px solid rgba(74,222,128,.2); border-radius: 24px; padding: 36px 28px 28px; width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 0 0 1px rgba(74,222,128,.05), 0 0 60px rgba(74,222,128,.06), 0 30px 80px rgba(0,0,0,.7); position: relative; overflow: hidden; }
+.widget::before { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 200px; height: 120px; background: radial-gradient(ellipse, rgba(74,222,128,.12) 0%, transparent 70%); pointer-events: none; }
+.avatar-wrap { position: relative; width: 96px; height: 96px; margin-bottom: 20px; }
+.avatar { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #0d2e1a 0%, #0a1f12 100%); border: 2px solid rgba(74,222,128,.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2; }
+.avatar svg { width: 42px; height: 42px; opacity: .85; }
+.ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(74,222,128,.18); top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+.ring-1 { width: 120px; height: 120px; }
+.ring-2 { width: 148px; height: 148px; border-color: rgba(74,222,128,.08); }
+@keyframes pulse-ring { 0% { transform: translate(-50%,-50%) scale(1); opacity: .6; } 100% { transform: translate(-50%,-50%) scale(1.15); opacity: 0; } }
+.active .ring-1 { animation: pulse-ring 1.4s ease-out infinite; }
+.active .ring-2 { animation: pulse-ring 1.4s ease-out .5s infinite; }
+.name { font-family: 'Inter', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: .12em; background: linear-gradient(90deg, #4ade80 0%, #86efac 50%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; }
+.sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: #9ca3af; margin-bottom: 20px; }
+#gl-status { font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 24px; min-height: 20px; line-height: 1.4; transition: color .3s; }
+#gl-status.speaking { color: #4ade80; }
+#gl-status.listening { color: #60a5fa; }
+#gl-status.error { color: #f87171; }
+#gl-call-btn { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(145deg, #16a34a, #4ade80); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 0 0 10px rgba(74,222,128,.1), 0 0 30px rgba(74,222,128,.3), inset 0 1px 0 rgba(255,255,255,.15); transition: all .2s ease; position: relative; z-index: 2; }
+#gl-call-btn:hover { transform: scale(1.06); box-shadow: 0 0 0 14px rgba(74,222,128,.12), 0 0 40px rgba(74,222,128,.4); }
+#gl-call-btn.active { background: linear-gradient(145deg, #991b1b, #f87171); box-shadow: 0 0 0 10px rgba(239,68,68,.12), 0 0 30px rgba(239,68,68,.3); }
+#gl-call-btn svg { width: 32px; height: 32px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+.hint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: #6b7280; line-height: 2; margin-bottom: 4px; }
+#gl-transcript { margin-top: 16px; width: 100%; background: #0a0d12; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 16px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.7; max-height: 140px; overflow-y: auto; text-align: left; display: none; scrollbar-width: thin; scrollbar-color: rgba(74,222,128,.2) transparent; }
+#gl-transcript::-webkit-scrollbar { width: 4px; }
+#gl-transcript::-webkit-scrollbar-track { background: transparent; }
+#gl-transcript::-webkit-scrollbar-thumb { background: rgba(74,222,128,.2); border-radius: 2px; }
+.t-otto { color: #4ade80; margin-bottom: 6px; }
+.t-you  { color: #93c5fd; margin-bottom: 6px; }
+.t-label { font-weight: 700; font-size: 11px; letter-spacing: .05em; }
+.t-text  { font-weight: 400; }
+.limit-msg { margin-top: 14px; font-size: 12px; color: #f87171; line-height: 1.5; display: none; }
 </style>
 </head>
 <body>
@@ -5288,7 +5160,6 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
     <div class="ring ring-1"></div>
     <div class="ring ring-2"></div>
     <div class="avatar">
-      <!-- Brain/AI icon -->
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9.5 2C7.57 2 6 3.57 6 5.5c0 .28.03.55.09.81C4.27 6.97 3 8.59 3 10.5c0 1.45.64 2.75 1.65 3.65C4.24 14.72 4 15.35 4 16c0 1.86 1.28 3.42 3 3.87V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-.13c1.72-.45 3-2.01 3-3.87 0-.65-.24-1.28-.65-1.85C20.36 13.25 21 11.95 21 10.5c0-1.91-1.27-3.53-3.09-4.19.06-.26.09-.53.09-.81C18 3.57 16.43 2 14.5 2c-.98 0-1.87.39-2.5 1.02C11.37 2.39 10.48 2 9.5 2z" fill="rgba(74,222,128,.15)" stroke="rgba(74,222,128,.6)" stroke-width="1.2"/>
         <circle cx="9" cy="10" r="1.2" fill="#4ade80"/>
@@ -5298,16 +5169,13 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
       </svg>
     </div>
   </div>
-
   <div class="name">OTTO</div>
-  <div class="sub">ContentScale AI &nbsp;·&nbsp; Gemini Live</div>
+  <div class="sub">ContentScale AI &nbsp;&middot;&nbsp; Gemini Live</div>
   <div style="font-size:12px;color:#9ca3af;margin-bottom:4px;line-height:1.6;text-align:center">Do you have a website?<br>Then this is for you.</div>
   <div style="font-size:10px;color:#4ade80;margin-bottom:14px;text-align:center;font-family:'JetBrains Mono',monospace;letter-spacing:.04em">
-    🏆 Share &amp; win €250 in free services — <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="color:#4ade80;text-decoration:underline">see leaderboard</a>
+    Share &amp; win &euro;250 in free services &mdash; <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="color:#4ade80;text-decoration:underline">see leaderboard</a>
   </div>
-
   <div id="gl-status">Click to talk to Otto</div>
-
   <button id="gl-call-btn" title="Talk to Otto">
     <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="rgba(255,255,255,.15)"/>
@@ -5316,12 +5184,11 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
       <line x1="8" y1="23" x2="16" y2="23"/>
     </svg>
   </button>
-
-  <div class="hint">Microphone &nbsp;·&nbsp; No phone needed<br>Click again to end</div>
+  <div class="hint">Microphone &nbsp;&middot;&nbsp; No phone needed<br>Click again to end</div>
   <div id="shareScreen" style="display:none;flex-direction:column;align-items:center;width:100%;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);">
-    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;font-family:'JetBrains Mono',monospace;margin-bottom:8px">Share & win</div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;font-family:'JetBrains Mono',monospace;margin-bottom:8px">Share &amp; win</div>
     <div style="font-size:15px;font-weight:700;color:#f3f4f6;margin-bottom:4px">You have <span id="myPts" style="color:#4ade80">0</span> points</div>
-    <div style="font-size:12px;color:#6b7280;margin-bottom:12px;text-align:center">Share Otto. Top 3 this month wins €250 in free services.</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:12px;text-align:center">Share Otto. Top 3 this month wins &euro;250 in free services.</div>
     <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;width:100%;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="myRefLink">Loading...</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px">
       <a id="waShareBtn" href="#" target="_blank" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(37,211,102,.3);background:rgba(37,211,102,.08);color:#25d366;text-decoration:none;display:flex;align-items:center;gap:6px">
@@ -5334,18 +5201,18 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
       </a>
       <button id="copyShareBtn" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#d1d5db;cursor:pointer">Copy link</button>
     </div>
-    <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="font-size:12px;color:#4ade80;text-decoration:none">View leaderboard →</a>
+    <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="font-size:12px;color:#4ade80;text-decoration:none">View leaderboard &rarr;</a>
   </div>
   <div class="limit-msg" id="limitMsg">You've already spoken with Otto today.<br>Come back tomorrow for another conversation.</div>
   <div id="gl-transcript"></div>
   <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05);width:100%;text-align:center">
     <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;color:#4b5563;line-height:2.2">
       <a href="https://contentscale.site" target="_blank" style="color:#4b5563;text-decoration:none">ContentScale.site</a>
-      &nbsp;·&nbsp;
+      &nbsp;&middot;&nbsp;
       <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:#4b5563;text-decoration:none">Privacy</a>
-      &nbsp;·&nbsp;
+      &nbsp;&middot;&nbsp;
       <a href="https://contentscale.site/terms/" target="_blank" style="color:#4b5563;text-decoration:none">Terms</a>
-      &nbsp;·&nbsp;
+      &nbsp;&middot;&nbsp;
       <a href="https://contentscale.site/privacy-policy/#data-requests" target="_blank" style="color:#4b5563;text-decoration:none">Data requests</a>
     </div>
     <div style="font-size:8px;color:#374151;margin-top:2px;font-family:'JetBrains Mono',monospace">
@@ -5353,9 +5220,7 @@ const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
     </div>
   </div>
 </div>
-
 <script>
-// Override addTranscript for better styling
 window._ottoTranscriptOverride = function(who, msg) {
   var el = document.getElementById('gl-transcript');
   if (!el) return;
@@ -5365,31 +5230,34 @@ window._ottoTranscriptOverride = function(who, msg) {
   el.innerHTML += '<div class="' + cls + '"><span class="t-label">' + label + '&nbsp;</span><span class="t-text">' + msg + '</span></div>';
   el.scrollTop = el.scrollHeight;
 };
-
-// Override setStatus for colored states
 window._ottoStatusOverride = function(msg) {
   var el = document.getElementById('gl-status');
   if (!el) return;
   el.textContent = msg;
   el.className = '';
-  if (/speaking|praat/i.test(msg)) el.className = 'speaking';
-  else if (/listen|speak now|your turn|hallo/i.test(msg)) el.className = 'listening';
-  else if (/error|denied|limit|disconnected/i.test(msg)) el.className = 'error';
+  if (/speaking|praat|saying/i.test(msg)) el.className = 'speaking';
+  else if (/listen|speak now|your turn|hallo|ready|connecting/i.test(msg)) el.className = 'listening';
+  else if (/error|denied|limit|disconnect|failed|timeout|blocked/i.test(msg)) el.className = 'error';
 };
-
-// Active state on button + avatar
 window._ottoActiveOverride = function(on) {
   var btn = document.getElementById('gl-call-btn');
   var wrap = document.getElementById('avatarWrap');
-  var widget = document.getElementById('widget');
   if (btn) btn.classList.toggle('active', on);
   if (wrap) wrap.classList.toggle('active', on);
 };
-
-// Handle limit message
 window._ottoLimitOverride = function() {
   var msg = document.getElementById('limitMsg');
   if (msg) msg.style.display = 'block';
+  var status = document.getElementById('gl-status');
+  if (status) { status.textContent = 'Daily limit reached. Try again tomorrow.'; status.className = 'error'; }
+  document.getElementById('gl-call-btn').classList.remove('active');
+};
+window._ottoOnSessionEnd = function() {
+  console.log('[otto] Session ended. Showing share screen.');
+  document.getElementById('gl-call-btn').classList.remove('active');
+  var status = document.getElementById('gl-status');
+  if (status) { status.textContent = 'Conversation ended. Share to win!'; status.className = ''; }
+  document.getElementById('shareScreen').style.display = 'flex';
 };
 </script>
 <style>
@@ -5400,52 +5268,24 @@ window._ottoLimitOverride = function() {
 #ow-ca{background:#4ade80;color:#000;border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px}
 #ow-cd{background:transparent;color:#4b5563;border:none;font-size:12px;cursor:pointer;padding:6px}
 </style>
-
 <script>
-// Get ref code from URL or localStorage
 var _ottRef = new URLSearchParams(location.search).get('ref') || '';
-
-// Cookie consent — check before allowing Otto
+window._ottoRefCode = _ottRef;
 var _consent = localStorage.getItem('cs_consent');
 if (!_consent) {
-  // Show consent screen inside widget
   var consentEl = document.createElement('div');
   consentEl.id = 'ow-consent';
-  consentEl.innerHTML = [
-    '<h3>Before we start</h3>',
-    '<p>Otto AI stores your conversation to improve our service and tracks referrals using local storage.',
-    ' <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a></p>',
-    '<button id="ow-ca">Accept & Talk to Otto</button>',
-    '<button id="ow-cd">Decline</button>'
-  ].join('');
+  consentEl.innerHTML = '<h3>Before we start</h3><p>Otto AI stores your conversation to improve our service and tracks referrals using local storage. <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a></p><button id="ow-ca">Accept &amp; Talk to Otto</button><button id="ow-cd">Decline</button>';
   document.addEventListener('DOMContentLoaded', function() {
     var widget = document.querySelector('.widget');
     if (widget) {
       widget.style.position = 'relative';
       widget.appendChild(consentEl);
-      document.getElementById('ow-ca').onclick = function() {
-        localStorage.setItem('cs_consent','accepted');
-        consentEl.remove();
-      };
-      document.getElementById('ow-cd').onclick = function() {
-        localStorage.setItem('cs_consent','denied');
-        document.getElementById('gl-status').textContent = 'Consent required to use Otto.';
-        consentEl.remove();
-      };
+      document.getElementById('ow-ca').onclick = function() { localStorage.setItem('cs_consent','accepted'); consentEl.remove(); };
+      document.getElementById('ow-cd').onclick = function() { localStorage.setItem('cs_consent','denied'); document.getElementById('gl-status').textContent = 'Consent required to use Otto.'; consentEl.remove(); };
     }
   });
 }
-
-// Share screen override — shows after conversation ends
-window._ottoOnSessionEnd = function() {
-  var shareEl = document.getElementById('shareScreen');
-  if (shareEl) shareEl.style.display = 'flex';
-};
-
-// Pass ref to token request
-window._ottoRefCode = _ottRef;
-
-// Load user's own ref code
 fetch('https://app.contentscale.site/api/otto/ref-code')
   .then(function(r){ return r.json(); })
   .then(function(d) {
@@ -5468,7 +5308,7 @@ fetch('https://app.contentscale.site/api/otto/ref-code')
   }).catch(function(){});
 </script>
 <script src="https://app.contentscale.site/otto-ai.js" defer></script>
-
+<script src="https://app.contentscale.site/badge-loader.js?v=3"></script>
 </body>
 </html>
 `;
