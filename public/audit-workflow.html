@@ -550,7 +550,17 @@ function openInAudit(id){
     +(p.keyword?'&kw='+encodeURIComponent(p.keyword):'')
     +(p.position?'&pos='+p.position:'')
     +(p.impressions?'&impr='+p.impressions:'')
-    +'&wf='+id; // workflow ID for callback
+    +(p.ctr?'&ctr='+p.ctr:'')
+    +'&wf='+id;
+  // Save all GSC page URLs as sitemap so audit can auto-load them
+  try {
+    var siteUrls = pages.map(function(pg){ return pg.url; }).filter(function(u){ return u && u.startsWith('http'); }).join('\n');
+    if (siteUrls) localStorage.setItem('cs_sitemap_urls', siteUrls);
+    // Save queries if available
+    if (typeof _gscQueryMap !== 'undefined' && Object.keys(_gscQueryMap).length) {
+      localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap));
+    }
+  } catch(e) {}
   window.open(AUDIT_URL+params,'_blank');
   // Auto-set to inprogress
   if(p.status==='notstarted'){
@@ -950,8 +960,21 @@ function importGSC(input){
           var sharedGsc = { pages: pages.map(function(p){ return {page:p.url, impressions:p.impressions||0, clicks:0, ctr:p.ctr||0, position:p.position||0, score:0}; }), queries: [] };
           if (typeof _gscQueryMap !== 'undefined') { sharedGsc.queries = Object.keys(_gscQueryMap).map(function(q){ return {query:q, position:_gscQueryMap[q]}; }); }
           localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
+          // Also save sitemap URLs if available
+          if (typeof _sitemapUrls !== 'undefined' && _sitemapUrls.length) {
+            localStorage.setItem('cs_sitemap_urls', _sitemapUrls.join('\n'));
+          }
+          // Save per-page queries if query map available
+          if (typeof _gscQueryMap !== 'undefined') {
+            // Save full query map for global fallback
+            localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap));
+          }
         } catch(e) {}
         save(); renderPages(); renderOverview();
+        // Auto-assign keywords from queries CSV if available
+        if(Object.keys(_gscQueryMap).length && pages.length){
+          autoAssignKeywords();
+        }
         var msg = '✅ GSC: ' + totalAdded + ' added, ' + totalUpdated + ' updated';
         if (mergedCount > 0) msg += ' · ' + mergedCount + ' duplicates merged';
         if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries loaded';
@@ -963,6 +986,70 @@ function importGSC(input){
   input.value = '';
 }
 
+// ── Auto-assign best keyword per page from queries CSV ───────
+function autoAssignKeywords(){
+  var queries = Object.entries(_gscQueryMap);
+  if(!queries.length) return;
+
+  var assigned = 0;
+  pages.forEach(function(p){
+    // Only assign if keyword is empty or was never set
+    if(p.keyword && p.keyword.trim()) return;
+
+    // Get the URL path segments to match against queries
+    var urlPath = '';
+    try { urlPath = new URL(p.url).pathname.toLowerCase().replace(/[-_/]/g,' ').trim(); } catch(e) { urlPath = p.url.toLowerCase(); }
+    var urlWords = urlPath.split(/\s+/).filter(function(w){ return w.length > 2; });
+
+    var bestQuery = null;
+    var bestScore = -1;
+
+    queries.forEach(function(entry){
+      var q = entry[0].toLowerCase();
+      var data = entry[1];
+      var pos = typeof data === 'object' ? data.pos : data;
+      var impr = typeof data === 'object' ? data.impr : 0;
+
+      // Score: how many URL words appear in the query, weighted by impressions and position
+      var wordMatches = urlWords.filter(function(w){ return q.includes(w); }).length;
+      var posScore = pos > 0 ? Math.max(0, 100 - pos) : 0;
+      var imprScore = Math.min(impr / 100, 10);
+      var totalScore = (wordMatches * 50) + posScore + imprScore;
+
+      if(totalScore > bestScore){
+        bestScore = totalScore;
+        bestQuery = entry[0];
+      }
+    });
+
+    // Fallback: if no URL-word match, use the query closest to page's own position
+    if(!bestQuery || bestScore < 10){
+      var pagePos = p.position || 99;
+      var closest = queries.reduce(function(best, entry){
+        var pos = typeof entry[1] === 'object' ? entry[1].pos : entry[1];
+        var impr = typeof entry[1] === 'object' ? entry[1].impr : 0;
+        var diff = Math.abs(pos - pagePos);
+        if(!best || diff < best.diff || (diff === best.diff && impr > best.impr)){
+          return {query: entry[0], diff: diff, impr: impr};
+        }
+        return best;
+      }, null);
+      if(closest) bestQuery = closest.query;
+    }
+
+    if(bestQuery){
+      p.keyword = bestQuery;
+      p.updated = new Date().toISOString();
+      assigned++;
+    }
+  });
+
+  if(assigned > 0){
+    save(); renderPages();
+    toast('🔑 ' + assigned + ' keywords auto-assigned from GSC queries');
+  }
+}
+
 function parseGSCFile(raw){
   var lines = raw.trim().split('\n');
   if(lines.length < 2) return {type:'unknown'};
@@ -972,17 +1059,19 @@ function parseGSCFile(raw){
   var isQueries = header.some(function(h){ return h.includes('query') || h.includes('search term'); });
 
   if(isQueries){
-    // Queries CSV — build a query list (not linked to pages directly here)
-    // Store globally for use in PULSE+NEXUS
     _gscQueryMap = {};
     var iQuery = header.findIndex(function(h){ return h.includes('query')||h.includes('search term'); });
     var iPos   = header.findIndex(function(h){ return h.includes('position'); });
+    var iImprQ = header.findIndex(function(h){ return h.includes('impression'); });
+    var iCtrQ  = header.findIndex(function(h){ return h.includes('ctr'); });
     var count  = 0;
     for(var i=1;i<lines.length;i++){
       var cols = lines[i].replace(/"/g,'').split(',');
-      var q = (cols[iQuery]||'').trim();
-      var pos = parseFloat(cols[iPos])||0;
-      if(q){ _gscQueryMap[q] = pos; count++; }
+      var q    = (cols[iQuery]||'').trim();
+      var pos  = parseFloat(cols[iPos])||0;
+      var impr = parseInt(cols[iImprQ])||0;
+      var ctr  = parseFloat((cols[iCtrQ]||'0').replace('%',''))||0;
+      if(q){ _gscQueryMap[q] = {pos:pos, impr:impr, ctr:ctr}; count++; }
     }
     try{ localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap)); }catch(e){}
     return {type:'queries', count:count};
