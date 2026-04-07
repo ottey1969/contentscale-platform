@@ -4529,9 +4529,9 @@ app.get('/api/gemini-live-token', async (req, res) => {
     const allModels = (modelsData.models || []).map(m => m.name.replace('models/', ''));
 
     const LIVE_PRIORITY = [
-      'gemini-3.1-flash-live-preview',
       'gemini-2.0-flash-live-001',
       'gemini-live-001',
+      'gemini-2.5-flash-preview-native-audio-dialog',
       'gemini-2.0-flash-exp',
     ];
     const bestModel = LIVE_PRIORITY.find(m => allModels.includes(m)) || 'gemini-2.0-flash-exp';
@@ -4798,7 +4798,7 @@ app.get('/api/otto/sessions/:id', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/otto-version', (req, res) => res.json({ version: 'v6', model: 'gemini-3.1-flash-live-preview', voice: 'Fenrir' }));
+app.get('/api/otto-version', (req, res) => res.json({ version: 'v6', model: 'gemini-2.0-flash-live-001', voice: 'Fenrir' }));
 
 
 // ── Otto AI client JS — embedded inline ──────────────────────────────────
@@ -4993,7 +4993,7 @@ async function startSession() {
     return;
   }
 
-  var model = keyData.model || 'gemini-3.1-flash-live-preview';
+  var model = keyData.model || 'gemini-2.0-flash-live-001';
   _sessionModel = model;
   _sessionId = 'otto-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
   _sessionStart = Date.now();
