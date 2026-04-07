@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PULSE + NEXUS v4 | ContentScale Elite SEO Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
+  --amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+  --pulse:#f43f3f;--nexus:#a78bfa;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;background:linear-gradient(90deg,var(--pulse),var(--nexus));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:28px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.mode-btn{padding:16px 20px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.05em;background:none;border:none;border-right:1px solid var(--border);color:var(--sub);cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:12px;}
+.mode-btn:last-child{border-right:none;}
+.mode-btn.active{background:rgba(255,255,255,.04);color:var(--ink);}
+.mode-btn .mi{font-size:22px;}
+.mode-btn .ms{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:block;margin-top:3px;}
+.mode-btn.active .ms{color:var(--muted);}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:26px;margin-bottom:18px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));}
+.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.panel-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+.field{margin-bottom:0;}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:all .2s;resize:vertical;}
+.field textarea{min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.07);}
+.field select option{background:var(--card);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+
+.btn-gold{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:16px 36px;border-radius:6px;cursor:pointer;transition:all .2s;width:100%;margin-top:6px;}
+.btn-gold:hover{background:var(--ink);transform:translateY(-1px);}
+.btn-gold:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.btn-sm{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid;white-space:nowrap;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple);}
+.btn-purple:hover{background:var(--purple);color:#000;}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+
+.opp-table{width:100%;border-collapse:collapse;font-size:12px;}
+.opp-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
+.opp-table td{padding:9px 11px;border:1px solid var(--border);vertical-align:middle;}
+.opp-table tr:hover td{background:rgba(255,255,255,.02);}
+.opp-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--pulse),var(--gold));margin-top:3px;}
+
+.cann-card{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:14px;margin-bottom:10px;}
+.cann-card h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+
+.progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
+.progress.show{display:block;}
+.prog-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.prog-step{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;color:var(--dim);}
+.prog-step:last-child{border:none;}
+.prog-step.active{color:var(--gold);}
+.prog-step.done{color:var(--green);}
+.prog-step.error{color:var(--red);}
+.prog-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.prog-bar-wrap{background:var(--surface);border-radius:4px;height:4px;overflow:hidden;margin-top:12px;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));transition:width .5s ease;border-radius:4px;width:0%;}
+
+.output{display:none;}
+.output.show{display:block;}
+.sec-card{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.02);}
+.sec-head:hover{background:rgba(255,255,255,.04);}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;flex:1;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;}
+.b-pulse{background:rgba(244,63,63,.15);color:var(--pulse);border:1px solid rgba(244,63,63,.3);}
+.b-nexus{background:rgba(167,139,250,.15);color:var(--nexus);border:1px solid rgba(167,139,250,.3);}
+.b-tech{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.b-win{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.b-gold{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.sec-body{padding:20px;}
+.sec-body.hidden{display:none;}
+
+.md{font-size:13px;line-height:1.8;color:var(--muted);}
+.md h1,.md h2,.md h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--ink);margin:16px 0 7px;}
+.md h1{font-size:25px;}
+.md h2{font-size:20px;color:var(--gold);}
+.md h3{font-size:15px;color:var(--purple);}
+.md p{margin-bottom:9px;}
+.md ul,.md ol{margin:7px 0 13px 16px;}
+.md li{margin-bottom:4px;}
+.md strong{color:var(--ink);font-weight:700;}
+.md em{color:var(--amber);}
+.md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
+.md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
+.md pre code{background:none;border:none;padding:0;font-size:11px;}
+.md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
+.md th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;text-align:left;border:1px solid var(--border);}
+.md td{padding:7px 10px;border:1px solid var(--border);}
+.md tr:hover td{background:rgba(255,255,255,.02);}
+.md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
+.md hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+.info{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+.info strong{color:var(--blue);}
+
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#bulkView,#deepView{display:none;}
+#bulkView.active,#deepView.active{display:block;}
+
+@media(max-width:720px){
+  .g2,.g3,.g4,.modes{grid-template-columns:1fr;}
+  .wrap{padding:0 16px 60px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topbar">
+    <a href="https://contentscale.site" class="brand">ContentScale</a>
+    <div style="text-align:right;">
+      <div class="topbar-title">PULSE + NEXUS v4</div>
+      <div class="topbar-sub">Elite SEO Audit Engine</div>
+    </div>
+  </nav>
+
+  <div class="modes">
+    <button class="mode-btn active" onclick="setMode('bulk')" id="modeBulk">
+      <span class="mi">📊</span>
+      <span>BULK SCAN<span class="ms">Upload GSC CSV → rank pages → quick wins</span></span>
+    </button>
+    <button class="mode-btn" onclick="setMode('deep')" id="modeDeep">
+      <span class="mi">🔬</span>
+      <span>DEEP DIVE<span class="ms">Paste HTML → full 10-step audit + competitor diff</span></span>
+    </button>
+  </div>
+
+  <!-- BULK SCAN -->
+  <div id="bulkView" class="active">
+    <div class="panel">
+      <div class="panel-title">① Upload GSC CSV Files <span class="panel-badge">DRAG & DROP</span></div>
+      <div class="info">
+        <strong>Pages CSV:</strong> GSC → Performance → Pages → Export CSV &nbsp;·&nbsp;
+        <strong>Queries CSV:</strong> GSC → Performance → Queries → Export CSV
+      </div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Pages CSV (required)</div>
+          <div class="upload-zone" id="pagesZone">
+            <input type="file" id="pagesFile" accept=".csv" onchange="handlePagesCSV(this)">
+            <div style="font-size:28px;margin-bottom:8px;">📄</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Pages Performance</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Page · Clicks · Impressions · CTR · Position</div>
+          </div>
+          <div id="pagesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional)</div>
+          <div class="upload-zone" id="queriesZone">
+            <input type="file" id="queriesFile" accept=".csv" onchange="handleQueriesCSV(this)">
+            <div style="font-size:28px;margin-bottom:8px;">🔍</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Queries Performance</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Query · Clicks · Impressions · CTR · Position</div>
+          </div>
+          <div id="queriesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="filterPanel" style="display:none;">
+      <div class="panel-title">② Filter & Focus</div>
+      <div class="g4">
+        <div class="field"><label>Min Impressions</label><input type="number" id="minImpr" value="100" onchange="renderTable()"></div>
+        <div class="field"><label>Min Position</label><input type="number" id="minPos" value="5" onchange="renderTable()"></div>
+        <div class="field"><label>Max Position</label><input type="number" id="maxPos" value="50" onchange="renderTable()"></div>
+        <div class="field"><label>Max CTR %</label><input type="number" id="maxCtr" step="0.1" value="10" onchange="renderTable()"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="tableCount"></span>
+        <button class="btn-sm btn-muted" onclick="exportOpps()">↓ Export CSV</button>
+        <button class="btn-sm btn-green" onclick="showCannibalization()">🔍 Cannibalization Report</button>
+      </div>
+    </div>
+
+    <div id="cannReport" style="display:none;" class="panel">
+      <div class="panel-title">🔍 Keyword Cannibalization Detection <span class="panel-badge">AUTO-DETECTED</span></div>
+      <div id="cannBody"></div>
+    </div>
+
+    <div id="opportunityTable" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;">🎯 Pages Ranked by Opportunity</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="opp-table">
+          <thead>
+            <tr><th>#</th><th>Page</th><th>Impr</th><th>CTR</th><th>Pos</th><th>Score</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="progress" id="quickProgress">
+      <div class="prog-label" id="quickProgLabel">Quick Audit Running...</div>
+      <div id="quickSteps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="quickBar"></div></div>
+    </div>
+    <div class="output" id="quickOutput"></div>
+  </div>
+
+  <!-- DEEP DIVE -->
+  <div id="deepView">
+    <div class="panel">
+      <div class="panel-title">① Page Details</div>
+      <div class="g2" style="margin-bottom:14px;">
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework"></div>
+        <div class="field"><label>Primary Keyword *</label><input type="text" id="dKw" placeholder="GRAAF framework SEO 2026"></div>
+      </div>
+      <div class="g3">
+        <div class="field"><label>Secondary Keyword</label><input type="text" id="dKw2" placeholder="EEAT content score"></div>
+        <div class="field">
+          <label>Geo</label>
+          <select id="dGeo">
+            <option value="Netherlands">Netherlands 🇳🇱</option>
+            <option value="Belgium">Belgium 🇧🇪</option>
+            <option value="Global">Global</option>
+            <option value="UK">UK</option>
+            <option value="USA">USA</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Conversion Goal</label>
+          <select id="dGoal">
+            <option>Lead generation</option>
+            <option>Sale / purchase</option>
+            <option>Demo / consultation</option>
+            <option>Brand awareness</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">② GSC Data</div>
+      <div class="g4" style="margin-bottom:14px;">
+        <div class="field"><label>Impressions</label><input type="number" id="dImpr" placeholder="12400"></div>
+        <div class="field"><label>CTR %</label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
+        <div class="field"><label>Avg Position</label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
+        <div class="field"><label>Mobile %</label><input type="number" id="dMob" placeholder="62"></div>
+      </div>
+      <div class="field">
+        <label>Top Triggering Queries (one per line)</label>
+        <textarea id="dQueries" placeholder="graaf framework seo&#10;eeat content score"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER</span></div>
+      <div class="info">
+        <strong>Chrome:</strong> Open page → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below.
+      </div>
+      <div class="field">
+        <label>Raw HTML (full page source)</label>
+        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="Paste full page source here..." oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
+      </div>
+      <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">④ Competitor HTML <span class="panel-badge">OPTIONAL</span></div>
+      <div class="info">
+        Leave empty → uses Surfer SEO &amp; MarketMuse benchmark. Paste HTML → real diff.
+      </div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL</label><input type="url" id="dComp1url" placeholder="https://surferseo.com/..."></div>
+          <div class="field">
+            <label>Competitor 1 HTML (optional)</label>
+            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
+          </div>
+          <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+        <div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL</label><input type="url" id="dComp2url" placeholder="https://marketmuse.com/..."></div>
+          <div class="field">
+            <label>Competitor 2 HTML (optional)</label>
+            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
+          </div>
+          <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">OPTIONAL</span></div>
+      <div class="field">
+        <label>Your Site URLs (one per line)</label>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework"></textarea>
+      </div>
+      <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⑥ Optional</div>
+      <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict"></div>
+    </div>
+
+    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
+
+    <div class="progress" id="deepProgress">
+      <div class="prog-label">Full Audit Running — 10 Steps · Do Not Close</div>
+      <div id="deepSteps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="deepBar"></div></div>
+    </div>
+    <div class="output" id="deepOutput"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var gscPages = [];
+var gscQueries = [];
+var RAILWAY = 'https://app.contentscale.site';
+
+// Auto-load from Workflow Manager
+(function autoLoad() {
+  var transferData = null;
+  try {
+    var stored = localStorage.getItem('cs_audit_transfer');
+    if (stored) transferData = JSON.parse(stored);
+  } catch(e) {}
+
+  if (!transferData) {
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('url')) {
+      transferData = {
+        pageUrl: urlParams.get('url'),
+        keyword: urlParams.get('kw'),
+        position: urlParams.get('pos'),
+        impressions: urlParams.get('impr'),
+        ctr: urlParams.get('ctr')
+      };
+    }
+  }
+
+  if (transferData && transferData.pageUrl) {
+    setTimeout(function() {
+      setMode('deep');
+      var f = document.getElementById('dUrl');
+      if (f) f.value = transferData.pageUrl;
+      f = document.getElementById('dKw');
+      if (f && transferData.keyword) f.value = transferData.keyword;
+      f = document.getElementById('dPos');
+      if (f && transferData.position) f.value = transferData.position;
+      f = document.getElementById('dImpr');
+      if (f && transferData.impressions) f.value = transferData.impressions;
+      f = document.getElementById('dCtr');
+      if (f && transferData.ctr) f.value = transferData.ctr;
+    }, 200);
+  }
+
+  // Also check URL params directly
+  var p = new URLSearchParams(window.location.search);
+  if (p.get('url')) {
+    setTimeout(function() {
+      setMode('deep');
+      if (p.get('url')) document.getElementById('dUrl').value = p.get('url');
+      if (p.get('kw')) document.getElementById('dKw').value = p.get('kw');
+      if (p.get('pos')) document.getElementById('dPos').value = p.get('pos');
+      if (p.get('impr')) document.getElementById('dImpr').value = p.get('impr');
+      if (p.get('ctr')) document.getElementById('dCtr').value = p.get('ctr');
+    }, 300);
+  }
+})();
+
+function setMode(m) {
+  document.getElementById('bulkView').className = m === 'bulk' ? 'active' : '';
+  document.getElementById('deepView').className = m === 'deep' ? 'active' : '';
+  document.getElementById('modeBulk').className = 'mode-btn' + (m === 'bulk' ? ' active' : '');
+  document.getElementById('modeDeep').className = 'mode-btn' + (m === 'deep' ? ' active' : '');
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
+
+function updateHtmlStats(inputId, statsId) {
+  var html = document.getElementById(inputId).value.trim();
+  var el = document.getElementById(statsId);
+  if (!html) { el.textContent = ''; return; }
+  try {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var words = (doc.body ? doc.body.innerText : '').split(/\s+/).filter(Boolean).length;
+    var h1 = doc.querySelectorAll('h1').length;
+    var h2 = doc.querySelectorAll('h2').length;
+    var schema = (html.match(/application\/ld\+json/gi) || []).length;
+    var imgs = doc.querySelectorAll('img').length;
+    var alts = doc.querySelectorAll('img[alt]').length;
+    el.textContent = '~' + words.toLocaleString() + ' words · ' + h1 + ' H1 · ' + h2 + ' H2s · ' + schema + ' schema · ' + imgs + ' imgs (' + alts + ' with alt)';
+  } catch(e) { el.textContent = 'Could not parse HTML'; }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var su = document.getElementById('dSiteUrls');
+  if (su) su.addEventListener('input', function() {
+    var urls = this.value.trim().split('\n').filter(function(l) { return l.trim().startsWith('http'); });
+    document.getElementById('urlCount').textContent = urls.length ? urls.length + ' URLs loaded' : '';
+  });
+});
+
+// CSV parsing
+function parseGSCCsv(raw) {
+  var lines = raw.trim().split('\n');
+  if (lines.length < 2) return [];
+  var header = lines[0].toLowerCase().replace(/"/g, '').split(',');
+  var idx = {
+    page: header.findIndex(function(h) { return h.includes('page') || h.includes('url') || h.includes('top page'); }),
+    clicks: header.findIndex(function(h) { return h.includes('click'); }),
+    impressions: header.findIndex(function(h) { return h.includes('impression'); }),
+    ctr: header.findIndex(function(h) { return h.includes('ctr'); }),
+    position: header.findIndex(function(h) { return h.includes('position') || h.includes('pos'); })
+  };
+  if (idx.page < 0) idx.page = 0;
+  if (idx.clicks < 0) idx.clicks = 1;
+  if (idx.impressions < 0) idx.impressions = 2;
+  if (idx.ctr < 0) idx.ctr = 3;
+  if (idx.position < 0) idx.position = 4;
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].replace(/"/g, '').split(',');
+    if (cols.length < 3) continue;
+    var page = cols[idx.page] ? cols[idx.page].trim() : '';
+    if (!page) continue;
+    var impressions = parseFloat(cols[idx.impressions]) || 0;
+    if (impressions < 1) continue;
+    rows.push({
+      page: page,
+      clicks: parseFloat(cols[idx.clicks]) || 0,
+      impressions: impressions,
+      ctr: parseFloat((cols[idx.ctr] || '0').replace('%', '')) || 0,
+      position: parseFloat(cols[idx.position]) || 0
+    });
+  }
+  return rows;
+}
+
+function handlePagesCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var r = new FileReader();
+  r.onload = function(e) {
+    gscPages = parseGSCCsv(e.target.result);
+    gscPages.forEach(function(p) {
+      var posScore = p.position > 10 ? Math.min((p.position - 10) / 40, 1) : 0;
+      var ctrGap = Math.max(0, 3 - p.ctr) / 3;
+      var imprW = Math.min(Math.log10(Math.max(p.impressions, 10)) / 5, 1);
+      p.score = Math.round((posScore * 0.45 + ctrGap * 0.35 + imprW * 0.2) * 100);
+    });
+    gscPages.sort(function(a, b) { return b.score - a.score; });
+    document.getElementById('pagesStatus').innerHTML = '<span style="color:var(--green)">✓ ' + gscPages.length + ' pages loaded</span>';
+    document.getElementById('filterPanel').style.display = 'block';
+    document.getElementById('opportunityTable').style.display = 'block';
+    renderTable();
+    toast('✅ ' + gscPages.length + ' pages loaded');
+  };
+  r.readAsText(file);
+}
+
+function handleQueriesCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var r = new FileReader();
+  r.onload = function(e) {
+    gscQueries = parseGSCCsv(e.target.result);
+    gscQueries.forEach(function(q) { q.query = q.page; delete q.page; });
+    document.getElementById('queriesStatus').innerHTML = '<span style="color:var(--green)">✓ ' + gscQueries.length + ' queries loaded</span>';
+    toast('✅ ' + gscQueries.length + ' queries loaded');
+  };
+  r.readAsText(file);
+}
+
+function showCannibalization() {
+  if (!gscPages.length) { toast('Upload pages CSV first'); return; }
+  var report = document.getElementById('cannReport');
+  var body = document.getElementById('cannBody');
+  report.style.display = 'block';
+  var groups = {};
+  gscPages.forEach(function(p) {
+    try {
+      var url = new URL(p.page);
+      var segs = url.pathname.split('/').filter(Boolean);
+      segs.forEach(function(seg) {
+        if (seg.length < 4) return;
+        if (!groups[seg]) groups[seg] = [];
+        groups[seg].push(p);
+      });
+    } catch(e) {}
+  });
+  var canns = Object.entries(groups).filter(function(x) { return x[1].length >= 2; })
+    .sort(function(a, b) { return b[1].length - a[1].length; }).slice(0, 15);
+  if (!canns.length) {
+    body.innerHTML = '<p style="color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    return;
+  }
+  body.innerHTML = canns.map(function(item) {
+    var seg = item[0], pages = item[1];
+    return '<div class="cann-card"><h4>⚠ Conflict: "' + seg + '" appears in ' + pages.length + ' pages</h4>' +
+      pages.map(function(p) {
+        return '<div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">' +
+          '<span style="font-family:\'IBM Plex Mono\',monospace;color:var(--blue);flex:1;word-break:break-all;">' + p.page.replace(/^https?:\/\//, '').slice(0, 60) + '</span>' +
+          '<span style="color:var(--muted);">' + p.impressions.toLocaleString() + ' impr</span>' +
+          '<span style="color:var(--amber);">' + p.ctr.toFixed(1) + '% CTR</span>' +
+          '<span style="color:var(--orange);">pos ' + Math.round(p.position) + '</span>' +
+          '<button class="btn-sm btn-purple" onclick="loadToDeep(\'' + encodeURIComponent(p.page) + '\',\'' + p.impressions + '\',\'' + p.ctr + '\',\'' + p.position + '\')">🔬 Audit</button>' +
+          '</div>';
+      }).join('') + '</div>';
+  }).join('');
+  report.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderTable() {
+  var minI = parseFloat(document.getElementById('minImpr').value) || 0;
+  var minP = parseFloat(document.getElementById('minPos').value) || 0;
+  var maxP = parseFloat(document.getElementById('maxPos').value) || 999;
+  var maxC = parseFloat(document.getElementById('maxCtr').value) || 100;
+  var filtered = gscPages.filter(function(r) {
+    return r.impressions >= minI && r.position >= minP && r.position <= maxP && r.ctr <= maxC;
+  });
+  document.getElementById('tableCount').textContent = filtered.length + ' pages';
+  var maxScore = filtered[0] ? filtered[0].score : 1;
+  var rows = filtered.slice(0, 100).map(function(r, i) {
+    var short = '';
+    try { short = new URL(r.page).pathname.slice(0, 45) || '/'; } catch(e) { short = r.page.slice(0, 45); }
+    var posColor = r.position < 20 ? 'var(--amber)' : r.position < 35 ? 'var(--orange)' : 'var(--red)';
+    var ctrColor = r.ctr < 1 ? 'var(--red)' : r.ctr < 3 ? 'var(--amber)' : 'var(--green)';
+    var barW = Math.round((r.score / maxScore) * 100);
+    var enc = encodeURIComponent(r.page);
+    return '<tr>' +
+      '<td style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:' + (i < 3 ? 'var(--gold)' : 'var(--muted)') + ';">#' + (i+1) + '</td>' +
+      '<td>' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--blue);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + r.page + '">' + short + '</div>' +
+        '<div style="font-size:10px;color:var(--dim);margin-top:2px;">' + r.impressions.toLocaleString() + ' impr · ' + r.clicks + ' clicks</div>' +
+      '</td>' +
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;">' + r.impressions.toLocaleString() + '</td>' +
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:' + ctrColor + ';">' + r.ctr.toFixed(1) + '%</td>' +
+      '<td style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:' + posColor + ';">' + Math.round(r.position) + '</td>' +
+      '<td style="min-width:90px;">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--gold);">' + r.score + '/100</div>' +
+        '<div class="opp-bar" style="width:' + barW + '%;"></div>' +
+      '</td>' +
+      '<td>' +
+        '<div style="display:flex;gap:5px;flex-wrap:wrap;">' +
+          '<button class="btn-sm btn-blue" onclick="quickAudit(\'' + enc + '\',\'' + r.impressions + '\',\'' + r.ctr + '\',\'' + r.position + '\')">⚡ Quick</button>' +
+          '<button class="btn-sm btn-purple" onclick="loadToDeep(\'' + enc + '\',\'' + r.impressions + '\',\'' + r.ctr + '\',\'' + r.position + '\')">🔬 Deep</button>' +
+        '</div>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('tableBody').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No pages match filters</td></tr>';
+}
+
+function loadToDeep(enc, impr, ctr, pos) {
+  document.getElementById('dUrl').value = decodeURIComponent(enc);
+  document.getElementById('dImpr').value = impr;
+  document.getElementById('dCtr').value = ctr;
+  document.getElementById('dPos').value = pos;
+  setMode('deep');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('Loaded → paste your HTML and run Deep Dive!');
+}
+
+function exportOpps() {
+  var rows = ['Page,Impressions,Clicks,CTR,Position,Score'];
+  gscPages.forEach(function(r) {
+    rows.push('"' + r.page + '",' + r.impressions + ',' + r.clicks + ',' + r.ctr + ',' + r.position + ',' + r.score);
+  });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
+  a.download = 'seo-opportunities.csv';
+  a.click();
+}
+
+// Gemini API
+function callGemini(prompt, maxTokens) {
+  maxTokens = maxTokens || 4000;
+  return fetch(RAILWAY + '/api/gemini-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.25, maxOutputTokens: maxTokens }
+    })
+  }).then(function(resp) {
+    if (!resp.ok) return resp.json().catch(function() { return {}; }).then(function(err) {
+      throw new Error(err.error && err.error.message ? err.error.message : 'HTTP ' + resp.status);
+    });
+    return resp.json();
+  }).then(function(data) {
+    return data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] ? data.candidates[0].content.parts[0].text : '';
+  });
+}
+
+function extractContent(html, label) {
+  label = label || 'page';
+  if (!html) return null;
+  try {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var title = doc.querySelector('title') ? doc.querySelector('title').textContent : '';
+    var desc = doc.querySelector('meta[name="description"]') ? doc.querySelector('meta[name="description"]').getAttribute('content') : '';
+    var h1 = Array.from(doc.querySelectorAll('h1')).map(function(e) { return e.textContent.trim(); }).join(' | ');
+    var h2s = Array.from(doc.querySelectorAll('h2')).map(function(e) { return e.textContent.trim(); }).join(' · ');
+    var body = (doc.body ? doc.body.innerText : '').replace(/\s+/g, ' ').slice(0, 3000);
+    var wordCount = (doc.body ? doc.body.innerText : '').split(/\s+/).filter(Boolean).length;
+    var schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(function(s) { return s.textContent.slice(0, 200); }).join('\n');
+    return '=== ' + label.toUpperCase() + ' ===\nTitle (' + title.length + ' chars): ' + title + '\nMeta desc: ' + desc + '\nH1: ' + (h1 || 'MISSING') + '\nH2s: ' + (h2s || 'none') + '\nWord count: ~' + wordCount + '\nSchema: ' + (schemas || 'none') + '\nBody: ' + body;
+  } catch(e) { return '[Error parsing ' + label + ' HTML: ' + e.message + ']'; }
+}
+
+function extractTitle(html) {
+  if (!html) return 'not provided';
+  var m = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  return m ? m[1].trim() : 'not found';
+}
+
+function extractMeta(html) {
+  if (!html) return 'not provided';
+  var m = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
+          html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+  return m ? m[1].trim() : 'not found';
+}
+
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+// Quick Audit
+var QSTEPS = [
+  { id: 'q0', icon: '🔥', label: 'PRIORITY ACTIONS — Top 5 right now' },
+  { id: 'q1', icon: '⚡', label: 'CTR Surgery — new title + meta' },
+  { id: 'q2', icon: '📈', label: 'Position 11–20 query opportunities' }
+];
+
+function quickAudit(enc, impr, ctr, pos) {
+  var url = decodeURIComponent(enc);
+  var prog = document.getElementById('quickProgress');
+  var out = document.getElementById('quickOutput');
+  prog.className = 'progress show';
+  out.innerHTML = '';
+  out.className = 'output show';
+  document.getElementById('quickSteps').innerHTML = QSTEPS.map(function(s) {
+    return '<div class="prog-step" id="step-' + s.id + '"><span class="prog-icon">' + s.icon + '</span><span>' + s.label + '</span></div>';
+  }).join('');
+  var bar = document.getElementById('quickBar');
+  var ctx = 'URL: ' + url + '\nImpressions: ' + impr + '\nCTR: ' + ctr + '%\nPosition: ' + pos;
+
+  var prompts = {
+    q0: 'You are an elite SEO strategist.\n' + ctx + '\n\nList EXACTLY 5 priority actions for this page. Each must be specific and actionable.\n\nFormat:\n🔥 **[Action title]**\nDo: [exact what to do]\nExpect: [metric improvement]\n\nStart highest-impact first.',
+    q1: 'You are an elite SEO strategist.\n' + ctx + '\nWrite a new title (max 60 chars) and meta description (max 155 chars).\n\n**New Title**: [text]\n**New Meta Description**: [text]\n**Why**: [rationale]',
+    q2: 'You are an elite SEO strategist.\n' + ctx + '\nIdentify 3 queries ranking position 11-20 — fastest wins to page 1.\nFor each: **Query** | Current pos | ONE specific change | Expected result.'
+  };
+
+  var chain = Promise.resolve();
+  QSTEPS.forEach(function(s, i) {
+    chain = chain.then(function() {
+      setStep(s.id, 'active');
+      return callGemini(prompts[s.id], 1500).then(function(result) {
+        addSection(out, s.id, s.icon, s.label, i === 0 ? 'b-gold' : i === 1 ? 'b-win' : 'b-pulse', result);
+        setStep(s.id, 'done');
+        bar.style.width = ((i + 1) / QSTEPS.length * 100) + '%';
+        return sleep(1200);
+      }).catch(function(e) {
+        setStep(s.id, 'error');
+        addSection(out, s.id, s.icon, s.label, 'b-tech', '**Error:** ' + e.message);
+        bar.style.width = ((i + 1) / QSTEPS.length * 100) + '%';
+      });
+    });
+  });
+
+  chain.then(function() {
+    prog.className = 'progress';
+    toast('✅ Quick audit done');
+    out.scrollIntoView({ behavior: 'smooth' });
+  });
+}
+
+// Deep Audit
+var DEEP_STEPS = [
+  { id: 'd0', icon: '🔥', label: 'PRIORITY ACTIONS — Do These First (top 7)', badge: 'b-gold' },
+  { id: 'd1', icon: '🔍', label: 'Intent + AI Overview Eligibility', badge: 'b-tech' },
+  { id: 'd2', icon: '⚡', label: 'CTR Surgery — real title/meta rewrite', badge: 'b-win' },
+  { id: 'd3', icon: '🕵️', label: 'Competitor Diff — Surfer SEO & MarketMuse benchmark', badge: 'b-pulse' },
+  { id: 'd4', icon: '🕳️', label: 'Content Gap Matrix — what you are missing', badge: 'b-pulse' },
+  { id: 'd5', icon: '🫀', label: 'PULSE Optimization — before/after rewrites', badge: 'b-pulse' },
+  { id: 'd6', icon: '🔗', label: 'NEXUS Signals + Internal Link Finder', badge: 'b-nexus' },
+  { id: 'd7', icon: '🏗️', label: 'Architecture Blueprint — H1-H3 restructure', badge: 'b-nexus' },
+  { id: 'd8', icon: '🛠️', label: 'Technical Checklist + Schema JSON-LD', badge: 'b-tech' },
+  { id: 'd9', icon: '📊', label: 'Before/After Score + Traffic Projection', badge: 'b-gold' },
+  { id: 'd10', icon: '📈', label: '90-Day Ranking Plan — by week', badge: 'b-win' }
+];
+
+function runDeepAudit() {
+  var url = document.getElementById('dUrl').value.trim();
+  var kw = document.getElementById('dKw').value.trim();
+  if (!url || !kw) { toast('Enter URL and keyword first'); return; }
+
+  var inp = {
+    url: url, kw: kw,
+    kw2: document.getElementById('dKw2').value.trim(),
+    geo: document.getElementById('dGeo').value,
+    goal: document.getElementById('dGoal').value,
+    impr: document.getElementById('dImpr').value || 'unknown',
+    ctr: document.getElementById('dCtr').value || 'unknown',
+    pos: document.getElementById('dPos').value || 'unknown',
+    mob: document.getElementById('dMob').value || 'unknown',
+    queries: document.getElementById('dQueries').value.trim(),
+    html: document.getElementById('dHtml').value.trim(),
+    comp1url: document.getElementById('dComp1url').value.trim() || 'https://surferseo.com',
+    comp1html: document.getElementById('dComp1html').value.trim(),
+    comp2url: document.getElementById('dComp2url').value.trim() || 'https://marketmuse.com',
+    comp2html: document.getElementById('dComp2html').value.trim(),
+    siteUrls: document.getElementById('dSiteUrls').value.trim(),
+    constraints: document.getElementById('dConstraints').value.trim()
+  };
+
+  var myContentStr = extractContent(inp.html, 'YOUR PAGE') || '[No HTML provided — URL: ' + inp.url + ']';
+
+  var compContext = '';
+  if (inp.comp1html || inp.comp2html) {
+    compContext = '\n' + extractContent(inp.comp1html, 'COMPETITOR 1 (' + inp.comp1url + ')') + '\n\n' + extractContent(inp.comp2html, 'COMPETITOR 2 (' + inp.comp2url + ')');
+  } else {
+    compContext = '\n[No competitor HTML pasted. Use trained knowledge of Surfer SEO (' + inp.comp1url + ') and MarketMuse (' + inp.comp2url + ') patterns.]';
+  }
+
+  var siteUrlList = inp.siteUrls.split('\n').filter(function(l) { return l.trim().startsWith('http'); }).slice(0, 50).join('\n');
+
+  document.getElementById('deepRunBtn').disabled = true;
+  var prog = document.getElementById('deepProgress');
+  var out = document.getElementById('deepOutput');
+  prog.className = 'progress show';
+  out.innerHTML = '';
+  out.className = 'output show';
+
+  document.getElementById('deepSteps').innerHTML = DEEP_STEPS.map(function(s) {
+    return '<div class="prog-step" id="step-' + s.id + '"><span class="prog-icon">' + s.icon + '</span><span>' + s.label + '</span></div>';
+  }).join('');
+
+  var bar = document.getElementById('deepBar');
+
+  var base = 'You are an elite SEO strategist for ContentScale.site using PULSE + NEXUS frameworks.\n\n' +
+    'PAGE: ' + inp.url + '\nPRIMARY KEYWORD: ' + inp.kw + '\nSECONDARY KEYWORD: ' + (inp.kw2 || 'none') + '\n' +
+    'GEO: ' + inp.geo + ' | GOAL: ' + inp.goal + ' | CONSTRAINTS: ' + (inp.constraints || 'none') + '\n' +
+    'GSC: ' + inp.impr + ' impressions · ' + inp.ctr + '% CTR · position ' + inp.pos + ' · ' + inp.mob + '% mobile\n' +
+    'TOP QUERIES: ' + (inp.queries || 'not provided') + '\n\n' + myContentStr;
+
+  var prompts = {
+    d0: base + '\n\nSTEP 0 — PRIORITY ACTIONS (show first):\n\nList EXACTLY 7 priority actions ordered by impact. Be specific.\n\nFormat:\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change]\nWhere: [Exact location]\nExpect: [Specific metric improvement]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with 3 fastest wins under 30 min.',
+    d1: base + '\n\nSTEP 1 — INTENT DECODING:\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not?',
+    d2: base + '\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "' + extractTitle(inp.html) + '"\nCURRENT META: "' + extractMeta(inp.html) + '"\n\nRewrite both. New title max 60 chars, meta max 155 chars.\n\n**New Title**: [your version]\n**New Meta Description**: [your version]\n**Uplift rationale**: [specific CTR psychology]',
+    d3: base + compContext + '\n\nSTEP 3 — COMPETITOR DIFF:\nCreate a comparison table: Feature | Your Page | Competitor 1 | Competitor 2 | Winner\nRows: Word count · H2 count · FAQ section · Schema types · Images with alt · CTA clarity · Data/stats count · Internal links\n\nThen: List 5 SPECIFIC things competitors do that your page does not.',
+    d4: base + compContext + '\n\nSTEP 4 — CONTENT GAP MATRIX:\nScore each dimension 0-3:\n| Dimension | Your Score | Gap | Specific Fix |\n|---|---|---|---|\n| Subtopic coverage | | | |\n| Data & proof | | | |\n| Commercial signals | | | |\n| Media & UX | | | |\n| Freshness 2025-2026 | | | |\n| FAQ depth | | | |\n| E-E-A-T signals | | | |\n\nTop 5 content additions with severity.',
+    d5: base + '\n\nSTEP 5 — PULSE REWRITES:\n\nP — Purpose (intro rewrite):\nIMPROVED intro: [rewrite — lead with benefit, include keyword, add a stat]\n\nU — Urgency signal:\nNew sentence to add: [write it]\n\nL — Legitimacy:\n3 missing proof elements: [list]\n\nS — Structure:\nPick ONE section. Show Before/After conversion to table or bullets.\n\nE — Engagement (CTA rewrite):\nCurrent CTA → Improved CTA aligned to ' + inp.goal,
+    d6: base + '\n\nSITE URLS:\n' + (siteUrlList || '[No URLs provided]') + '\n\nSTEP 6 — NEXUS + INTERNAL LINKS:\n1. TOP 5 pages to link FROM to this page:\n   - URL | Anchor text (exact) | Why\n\n2. TOP 5 pages this page should link TO:\n   - URL | Anchor text (exact) | Why\n\n3. Missing semantic entities for "' + inp.kw + '" (10 terms)\n\n4. Complete FAQPage JSON-LD with 5 Q&As optimized for AI Overviews',
+    d7: base + '\n\nSTEP 7 — ARCHITECTURE BLUEPRINT:\nRECOMMENDED heading structure for intent + AI Overview extraction:\n[show H1 → H2 → H3 hierarchy]\n\nFor each change: Old heading → New heading → Why this order wins',
+    d8: base + '\n\nSTEP 8 — TECHNICAL CHECKLIST:\n1. Keyword "' + inp.kw + '" placement audit:\n   In H1? First 100 words? URL? Meta title? Image alt?\n\n2. Missing LSI/semantic keywords (8 terms)\n\n3. Technical issues found in HTML\n\n4. Mobile optimization gaps (' + inp.mob + '% mobile)\n\n5. Core Web Vitals recommendations',
+    d9: base + '\n\nSTEP 9 — BEFORE/AFTER SCORE:\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\n\nCURRENT estimated score:\n- GRAAF: [score]/50\n- CRAFT: [score]/30\n- Technical: [score]/20\n- TOTAL: [score]/100\n\nAFTER implementing recommendations:\n- TOTAL: [new score]/100\n\nTraffic projection:\n- Position ' + inp.pos + ' → Expected: [X]\n- CTR ' + inp.ctr + '% → Expected: [X]%',
+    d10: base + '\n\nSTEP 10 — 90-DAY PLAN:\n\nWEEK 1 — Quick Wins:\n[5 changes under 30 min each]\n\nWEEK 2-3 — Content Upgrades:\n[3-4 content additions]\n\nWEEK 4 — Technical + Schema:\n[Schema, internal links, fixes]\n\nMONTH 2 — Authority Building\n\nMONTH 3 — Measurement\n\nGSC Checkpoints:\n- Day 7: [metric to check]\n- Day 30: [target]\n- Day 90: [end goal for "' + inp.kw + '"]'
+  };
+
+  var chain = Promise.resolve();
+  DEEP_STEPS.forEach(function(s, i) {
+    chain = chain.then(function() {
+      setStep(s.id, 'active');
+      return callGemini(prompts[s.id], 4000).then(function(result) {
+        addSection(out, s.id, s.icon, s.label, s.badge, result);
+        setStep(s.id, 'done');
+        bar.style.width = ((i + 1) / DEEP_STEPS.length * 100) + '%';
+        return sleep(1500);
+      }).catch(function(e) {
+        setStep(s.id, 'error');
+        addSection(out, s.id, s.icon, s.label, s.badge, '**Error:** ' + e.message);
+        bar.style.width = ((i + 1) / DEEP_STEPS.length * 100) + '%';
+      });
+    });
+  });
+
+  chain.then(function() {
+    prog.className = 'progress';
+    document.getElementById('deepRunBtn').disabled = false;
+    toast('✅ Full audit complete');
+    out.scrollIntoView({ behavior: 'smooth' });
+  });
+}
+
+function setStep(id, state) {
+  var el = document.getElementById('step-' + id);
+  if (!el) return;
+  el.className = 'prog-step ' + state;
+  var icon = el.querySelector('.prog-icon');
+  if (state === 'active') icon.textContent = '⟳';
+  else if (state === 'done') icon.textContent = '✓';
+  else if (state === 'error') icon.textContent = '✗';
+}
+
+function addSection(container, id, icon, title, badge, content) {
+  var div = document.createElement('div');
+  div.className = 'sec-card';
+  if (id === 'd0' || id === 'q0') div.style.border = '1px solid rgba(251,191,36,.4)';
+  div.innerHTML =
+    '<div class="sec-head" onclick="toggleBody(\'' + id + '\')">' +
+      '<span style="font-size:17px;">' + icon + '</span>' +
+      '<span class="sec-title">' + title + '</span>' +
+      '<span class="badge ' + badge + '">' + id.toUpperCase() + '</span>' +
+      '<button class="btn-sm btn-muted" style="margin-left:8px;" onclick="event.stopPropagation();copyMd(\'md-' + id + '\')">⧉ Copy</button>' +
+    '</div>' +
+    '<div class="sec-body" id="body-' + id + '">' +
+      '<div class="md" id="md-' + id + '">' + renderMd(content) + '</div>' +
+    '</div>';
+  container.appendChild(div);
+}
+
+function toggleBody(id) {
+  var el = document.getElementById('body-' + id);
+  if (el) el.classList.toggle('hidden');
+}
+
+function copyMd(id) {
+  var el = document.getElementById(id);
+  navigator.clipboard.writeText(el ? el.innerText : '').then(function() { toast('Copied!'); });
+}
+
+function renderMd(t) {
+  if (!t) return '';
+  return t
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/^\|(.+)\|$/gm, function(m) {
+      var cells = m.split('|').slice(1, -1);
+      if (cells.every(function(c) { return /^[\s\-:]+$/.test(c); })) return '';
+      return '<tr>' + cells.map(function(c) { return '<td>' + c.trim() + '</td>'; }).join('') + '</tr>';
+    })
+    .replace(/(<tr>[\s\S]*?<\/tr>)+/g, function(m) { return '<table>' + m + '</table>'; })
+    .replace(/^[\-\*•] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)+/g, function(m) { return '<ul>' + m + '</ul>'; })
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+}
+
+// Drag & drop
+['pagesZone', 'queriesZone'].forEach(function(zoneId) {
+  var z = document.getElementById(zoneId);
+  z.addEventListener('dragover', function(e) { e.preventDefault(); z.classList.add('drag'); });
+  z.addEventListener('dragleave', function() { z.classList.remove('drag'); });
+  z.addEventListener('drop', function(e) {
+    e.preventDefault();
+    z.classList.remove('drag');
+    var file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (zoneId === 'pagesZone') handlePagesCSV({ files: [file] });
+    else handleQueriesCSV({ files: [file] });
+  });
+});
+</script>
+</body>
+</html>
