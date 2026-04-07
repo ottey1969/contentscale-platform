@@ -527,7 +527,7 @@ img,table,iframe{max-width:100%;}
         
         // Show success notification
         const notif = document.createElement('div');
-        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:IBM Plex Mono,monospace;font-size:13px;';
+        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:13px;';
         notif.style.cssText = notifStyle;
         notif.innerHTML = '✅ Workflow Data Loaded! 📊';
         document.body.appendChild(notif);
@@ -775,7 +775,7 @@ function runMetaCheck() {
   var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : 'var(--red)';
 
   var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;">'
-    + '<div><span style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
+    + '<div><span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
     + '<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
     + '<div style="font-size:13px;color:var(--muted);">'
     + '<span style="color:var(--red);">'+errs.length+' fouten</span> · '
@@ -798,10 +798,10 @@ function runMetaCheck() {
       + '</div></div></div>';
   }
 
-  if (errs.length) html_out += '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
-  if (warns.length) html_out += '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
+  if (errs.length) html_out += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
   if (oks.length) {
-    html_out += '<details style="margin-top:10px;"><summary style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
+    html_out += '<details style="margin-top:10px;"><summary style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
   }
 
   document.getElementById('metaCheckResults').innerHTML = html_out;
