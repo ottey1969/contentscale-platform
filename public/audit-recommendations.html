@@ -430,7 +430,24 @@ function buildAuditUrl(p){
   if(p.position)    params.set('pos',  p.position);
   if(p.impressions) params.set('impr', p.impressions);
   if(p.ctr)         params.set('ctr',  p.ctr);
-  if(p.id)          params.set('wf',   p.id); // workflow callback
+  if(p.id)          params.set('wf',   p.id);
+  // Save top queries for this page to localStorage so audit auto-loads them
+  try {
+    var allQueries = localStorage.getItem('cs_gsc_queries');
+    if (allQueries) {
+      // Store global queries tagged to this URL so audit can pick them up
+      localStorage.setItem('cs_page_queries_' + p.url, '');
+    }
+    // Also ensure sitemap is saved
+    var sharedGsc = localStorage.getItem('cs_shared_gsc');
+    if (sharedGsc) {
+      var gscData = JSON.parse(sharedGsc);
+      if (gscData.pages && gscData.pages.length) {
+        var siteUrls = gscData.pages.map(function(pg){ return pg.page; }).join('\n');
+        localStorage.setItem('cs_sitemap_urls', siteUrls);
+      }
+    }
+  } catch(e) {}
   return AUDIT_URL + '?' + params.toString();
 }
 
