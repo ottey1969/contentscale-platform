@@ -1,3 +1,4 @@
+console.log('✅ CONTENTSCALE SERVER v3.0 - FINAL FIX - 1775546405');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ Database Migration: country VARCHAR(100) (Fixes "value too long" error)
 // ✅ Bulk Delete Routes Added (Users, Leaderboard, Freelancers)
