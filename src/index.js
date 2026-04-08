@@ -2663,6 +2663,18 @@ app.use((err, req, res, next) => {
 console.error('Server Error:', err.message);
 res.status(500).json({ success: false, error: 'Internal Server Error' });
 });
+// WebSocket proxy
+const httpServer = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+httpServer.on('upgrade', (req, socket, head) => {
+  if (req.url === '/api/gemini-live-ws') {
+    wss.handleUpgrade(req, socket, head, (ws) => { wss.emit('connection', ws, req); });
+  } else {
+    socket.destroy();
+  }
+});
+
 async function startServer() {
 console.log('🚀 =====================================');
 console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
@@ -4626,17 +4638,7 @@ app.get('/api/gemini-live-status', async (req, res) => {
   }
 });
 
-// WebSocket proxy
-const httpServer = http.createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
-
-httpServer.on('upgrade', (req, socket, head) => {
-  if (req.url === '/api/gemini-live-ws') {
-    wss.handleUpgrade(req, socket, head, (ws) => { wss.emit('connection', ws, req); });
-  } else {
-    socket.destroy();
-  }
-});
+// WebSocket proxy (server created above, near top of startServer)
 
 wss.on('connection', (clientWs) => {
   const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
