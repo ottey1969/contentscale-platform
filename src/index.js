@@ -4501,13 +4501,14 @@ function openInPulseNexus(url, keyword, pos, impr, ctr) {
 // Key: GEMINI_KEY_LIVE or GEMINI_KEY_LEADCRAWLER
 // ══════════════════════════════════════════════════════════════════════
 
-// Gemini Live WebSocket URL (v1alpha has better availability)
+// ✅ FIX: Use v1alpha — v1beta doesn't support Live features and causes 1007 errors
 const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
 const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // v1alpha Live model
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
 
 // ── Gemini Live ephemeral token endpoint (FIXED) ─────────────────────────────
+// ── Gemini Live ephemeral token endpoint (FIXED for 1007 error) ──────────────
 app.get('/api/gemini-live-token', async (req, res) => {
   try {
     // Admin bypass for testing
@@ -4542,7 +4543,7 @@ app.get('/api/gemini-live-token', async (req, res) => {
       }
     }
     
-    // Build WebSocket URL for Gemini Live
+    // Build WebSocket URL for Gemini Live — USE v1alpha NOT v1beta
     const apiKey = process.env.GEMINI_KEY_LEADCRAWLER || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error('[otto] GEMINI_KEY_LEADCRAWLER not set');
@@ -4550,7 +4551,8 @@ app.get('/api/gemini-live-token', async (req, res) => {
     }
     
     const model = 'gemini-2.0-flash-live-001';
-    const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey)}`;
+    // ✅ FIX: Use v1alpha endpoint — v1beta causes 1007 errors
+    const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey)}`;
     
     console.log(`[otto] token issued for ${ip} — model: ${model}`);
     
