@@ -5469,7 +5469,7 @@ async function startSession() {
 
 // ── Otto widget standalone page & embed ──────────────────────────────────
 // -- Otto widget standalone page & embed --
-const _OTTO_WIDGET_HTML =  `<!DOCTYPE html>`
+const _OTTO_WIDGET_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
