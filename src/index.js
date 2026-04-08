@@ -4747,9 +4747,11 @@ pool.query(`CREATE TABLE IF NOT EXISTS otto_sessions (
 )`).catch(e => console.warn('[otto_sessions]', e.message));
 
 // ── MIGRATION: Ensure audio columns exist for older deployments ─────────────
-await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
-await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
-await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days')`).catch(()=>{});
+(async () => {
+  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
+  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days')`).catch(()=>{});
+})();
 // ────────────────────────────────────────────────────────────────────────────
 
 // Auto-delete expired sessions (audio + transcript older than 14 days)
