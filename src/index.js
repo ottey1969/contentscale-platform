@@ -271,9 +271,9 @@ function checkOttoLimit(req, res) {
   const entry = _ottoIpMap.get(ip);
 
   if (entry && entry.date === today) {
-    if (entry.count >= 1) {
+    if (entry.count >= 10) {
       console.log('[otto-limit] blocked:', ip, 'count:', entry.count);
-      res.status(429).json({ error: 'Daily limit reached — max 1 conversation per day per visitor. Come back tomorrow!' });
+      res.status(429).json({ error: 'Daily limit reached — max 10 conversations per day per visitor. Come back tomorrow!' });
       return false;
     }
     entry.count++;
@@ -4539,9 +4539,11 @@ app.get('/api/gemini-live-token', async (req, res) => {
 
     console.log('[gemini-live-token] bestModel:', bestModel, '| live models:', liveModels);
 
-    // Return key + model — browser connects directly to Google WS
+    // Return wsUrl + model only — NEVER send the API key to the browser
+    // Browser connects via our Railway WebSocket proxy (/api/gemini-live-ws)
+    const host = req.headers.host || 'app.contentscale.site';
     res.json({
-      key: apiKey,
+      wsUrl: `wss://${host}/api/gemini-live-ws`,
       model: bestModel,
       availableModels: liveModels
     });
