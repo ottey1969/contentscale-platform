@@ -2,10 +2,11 @@
   "name": "contentscale-server",
   "version": "1.0.0",
   "description": "ContentScale GRAAF scoring platform backend",
-  "main": "index.js",
+  "type": "commonjs",
+  "main": "index.cjs",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node index.cjs",
+    "dev": "nodemon index.cjs",
     "lint": "eslint .",
     "test": "jest --detectOpenHandles",
     "postinstall": "puppeteer browsers install chrome"
