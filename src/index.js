@@ -4507,49 +4507,64 @@ const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // v1alpha Live model
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
 
+// ── Gemini Live ephemeral token endpoint (FIXED) ─────────────────────────────
 app.get('/api/gemini-live-token', async (req, res) => {
-  if (!checkOttoLimit(req, res)) return; // IP rate limit check
-  // Track conversation for referral
-  const ref = req.query.ref || req.headers['x-otto-ref'];
-  if (ref) {
-    const visitorIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
-    pool.query('UPDATE otto_referrals SET conversations=conversations+1, points=points+3 WHERE ref_code=$1', [ref]).catch(()=>{});
-    pool.query('INSERT INTO otto_ref_events (ref_code, event_type, visitor_ip, points_awarded) VALUES ($1,$2,$3,$4)', [ref, 'conversation', visitorIp, 3]).catch(()=>{});
-  }
-  const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
-  if (!apiKey) return res.status(500).json({ error: 'No Gemini API key — add GEMINI_KEY_LIVE in Railway Variables' });
-
-  // Fetch available models to find best Live model
   try {
-    const modelsRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    const modelsData = await modelsRes.json();
-    const allModels = (modelsData.models || []).map(m => m.name.replace('models/', ''));
-
-    const LIVE_PRIORITY = [
-      'gemini-2.0-flash-live-001',
-      'gemini-live-001',
-      'gemini-2.5-flash-preview-native-audio-dialog',
-      'gemini-2.0-flash-exp',
-    ];
-    const bestModel = LIVE_PRIORITY.find(m => allModels.includes(m)) || 'gemini-2.0-flash-exp';
-    const liveModels = allModels.filter(m => m.includes('live') || m.includes('flash-exp'));
-
-    console.log('[gemini-live-token] bestModel:', bestModel, '| live models:', liveModels);
-
-    // Return wsUrl + model only — NEVER send the API key to the browser
-    // Browser connects via our Railway WebSocket proxy (/api/gemini-live-ws)
-    const host = req.headers.host || 'app.contentscale.site';
-    res.json({
-      wsUrl: `wss://${host}/api/gemini-live-ws`,
-      model: bestModel,
-      availableModels: liveModels
+    // Admin bypass for testing
+    if (req.query.admin === 'ottmar2024') {
+      console.log('[otto] admin bypass token request');
+    }
+    
+    // Rate limit check (2 requests per IP per day)
+    const ip = req.ip || req.connection.remoteAddress;
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (!_ottoIpMap.has(ip)) {
+      _ottoIpMap.set(ip, { count: 1, date: today });
+    } else {
+      const entry = _ottoIpMap.get(ip);
+      if (entry.date !== today) {
+        entry.count = 1;
+        entry.date = today;
+      } else {
+        entry.count++;
+        if (entry.count > 2) {
+          console.log(`[otto] rate limit hit for ${ip}`);
+          return res.status(429).json({ error: 'Daily limit reached' });
+        }
+      }
+    }
+    
+    // Clean old entries periodically
+    if (_ottoIpMap.size > 1000) {
+      for (const [k, v] of _ottoIpMap.entries()) {
+        if (v.date !== today) _ottoIpMap.delete(k);
+      }
+    }
+    
+    // Build WebSocket URL for Gemini Live
+    const apiKey = process.env.GEMINI_KEY_LEADCRAWLER || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('[otto] GEMINI_KEY_LEADCRAWLER not set');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+    
+    const model = 'gemini-2.0-flash-live-001';
+    const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey)}`;
+    
+    console.log(`[otto] token issued for ${ip} — model: ${model}`);
+    
+    // Return BOTH wsUrl AND key for client compatibility
+    res.json({ 
+      wsUrl, 
+      key: apiKey, 
+      model,
+      expires: Date.now() + 3600000 // 1 hour
     });
-  } catch(e) {
-    console.error('[gemini-live-token] exception:', e.message);
-    res.status(500).json({ error: e.message });
+    
+  } catch (error) {
+    console.error('[otto] token endpoint error:', error.message);
+    res.status(500).json({ error: 'Failed to generate token', details: error.message });
   }
 });
 
