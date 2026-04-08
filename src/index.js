@@ -4747,15 +4747,6 @@ pool.query(`CREATE TABLE IF NOT EXISTS otto_sessions (
 )`).catch(e => console.warn('[otto_sessions]', e.message));
 
 // ── MIGRATION: Ensure audio columns exist for older deployments ─────────────
-(async () => {
-  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
-  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days')`).catch(()=>{});
-})();
-// ────────────────────────────────────────────────────────────────────────────
-
-// Auto-delete expired sessions (audio + transcript older than 14 days)
-// Runs once at startup and then every 6 hours
 async function cleanupExpiredSessions() {
   try {
     const r = await pool.query(
@@ -4764,8 +4755,15 @@ async function cleanupExpiredSessions() {
     if (r.rowCount > 0) console.log('[otto] cleanup: deleted', r.rowCount, 'expired sessions');
   } catch(e) { console.warn('[otto] cleanup error:', e.message); }
 }
-cleanupExpiredSessions();
-setInterval(cleanupExpiredSessions, 6 * 60 * 60 * 1000);
+(async () => {
+  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
+  await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days')`).catch(()=>{});
+  // Run cleanup only after migrations complete so expires_at is guaranteed to exist
+  cleanupExpiredSessions();
+  setInterval(cleanupExpiredSessions, 6 * 60 * 60 * 1000);
+})();
+// ────────────────────────────────────────────────────────────────────────────
 
 // Save audio — always saved, stored as single compact base64 string
 app.post('/api/otto/save-audio', async (req, res) => {
