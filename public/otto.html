@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Otto AI — ContentScale</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060910; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+.widget { background: linear-gradient(160deg, #0d1117 0%, #0a0f1a 100%); border: 1px solid rgba(74,222,128,.2); border-radius: 24px; padding: 36px 28px 28px; width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 0 0 1px rgba(74,222,128,.05), 0 0 60px rgba(74,222,128,.06), 0 30px 80px rgba(0,0,0,.7); position: relative; overflow: hidden; }
+.widget::before { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 200px; height: 120px; background: radial-gradient(ellipse, rgba(74,222,128,.12) 0%, transparent 70%); pointer-events: none; }
+.avatar-wrap { position: relative; width: 96px; height: 96px; margin-bottom: 20px; }
+.avatar { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #0d2e1a 0%, #0a1f12 100%); border: 2px solid rgba(74,222,128,.4); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2; }
+.avatar svg { width: 42px; height: 42px; opacity: .85; }
+.ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(74,222,128,.18); top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+.ring-1 { width: 120px; height: 120px; }
+.ring-2 { width: 148px; height: 148px; border-color: rgba(74,222,128,.08); }
+@keyframes pulse-ring { 0% { transform: translate(-50%,-50%) scale(1); opacity: .6; } 100% { transform: translate(-50%,-50%) scale(1.15); opacity: 0; } }
+.active .ring-1 { animation: pulse-ring 1.4s ease-out infinite; }
+.active .ring-2 { animation: pulse-ring 1.4s ease-out .5s infinite; }
+.name { font-family: 'Inter', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: .12em; background: linear-gradient(90deg, #4ade80 0%, #86efac 50%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; }
+.sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: #9ca3af; margin-bottom: 20px; }
+#gl-status { font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 24px; min-height: 20px; line-height: 1.4; transition: color .3s; }
+#gl-status.speaking { color: #4ade80; }
+#gl-status.listening { color: #60a5fa; }
+#gl-status.error { color: #f87171; }
+#gl-call-btn { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(145deg, #16a34a, #4ade80); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 0 0 10px rgba(74,222,128,.1), 0 0 30px rgba(74,222,128,.3), inset 0 1px 0 rgba(255,255,255,.15); transition: all .2s ease; position: relative; z-index: 2; }
+#gl-call-btn:hover { transform: scale(1.06); box-shadow: 0 0 0 14px rgba(74,222,128,.12), 0 0 40px rgba(74,222,128,.4); }
+#gl-call-btn.active { background: linear-gradient(145deg, #991b1b, #f87171); box-shadow: 0 0 0 10px rgba(239,68,68,.12), 0 0 30px rgba(239,68,68,.3); }
+#gl-call-btn svg { width: 32px; height: 32px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+.hint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: #6b7280; line-height: 2; margin-bottom: 4px; }
+#gl-transcript { margin-top: 16px; width: 100%; background: #0a0d12; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 16px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.7; max-height: 140px; overflow-y: auto; text-align: left; display: none; scrollbar-width: thin; scrollbar-color: rgba(74,222,128,.2) transparent; }
+#gl-transcript::-webkit-scrollbar { width: 4px; }
+#gl-transcript::-webkit-scrollbar-track { background: transparent; }
+#gl-transcript::-webkit-scrollbar-thumb { background: rgba(74,222,128,.2); border-radius: 2px; }
+.t-otto { color: #4ade80; margin-bottom: 6px; }
+.t-you { color: #93c5fd; margin-bottom: 6px; }
+.t-label { font-weight: 700; font-size: 11px; letter-spacing: .05em; }
+.t-text { font-weight: 400; }
+.limit-msg { margin-top: 14px; font-size: 12px; color: #f87171; line-height: 1.5; display: none; }
+</style>
+</head>
+<body>
+<div class="widget" id="widget">
+  <div class="avatar-wrap" id="avatarWrap">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="avatar">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.5 2C7.57 2 6 3.57 6 5.5c0 .28.03.55.09.81C4.27 6.97 3 8.59 3 10.5c0 1.45.64 2.75 1.65 3.65C4.24 14.72 4 15.35 4 16c0 1.86 1.28 3.42 3 3.87V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-.13c1.72-.45 3-2.01 3-3.87 0-.65-.24-1.28-.65-1.85C20.36 13.25 21 11.95 21 10.5c0-1.91-1.27-3.53-3.09-4.19.06-.26.09-.53.09-.81C18 3.57 16.43 2 14.5 2c-.98 0-1.87.39-2.5 1.02C11.37 2.39 10.48 2 9.5 2z" fill="rgba(74,222,128,.15)" stroke="rgba(74,222,128,.6)" stroke-width="1.2"/>
+        <circle cx="9" cy="10" r="1.2" fill="#4ade80"/>
+        <circle cx="15" cy="10" r="1.2" fill="#4ade80"/>
+        <path d="M9 14s1 1.5 3 1.5 3-1.5 3-1.5" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M12 2v2M7 3.5l1 1.5M17 3.5l-1 1.5" stroke="rgba(74,222,128,.4)" stroke-width="1" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="name">OTTO</div>
+  <div class="sub">ContentScale AI &nbsp;&middot;&nbsp; Gemini Live</div>
+  <div style="font-size:12px;color:#9ca3af;margin-bottom:4px;line-height:1.6;text-align:center">Do you have a website?<br>Then this is for you.</div>
+  <div style="font-size:10px;color:#4ade80;margin-bottom:14px;text-align:center;font-family:'JetBrains Mono',monospace;letter-spacing:.04em">
+    Share &amp; win &euro;250 in free services &mdash; <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="color:#4ade80;text-decoration:underline">see leaderboard</a>
+  </div>
+  <div id="gl-status">Click to talk to Otto</div>
+  <button id="gl-call-btn" title="Talk to Otto">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="rgba(255,255,255,.15)"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/>
+      <line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+  </button>
+  <div class="hint">Microphone &nbsp;&middot;&nbsp; No phone needed<br>Click again to end</div>
+  <div id="shareScreen" style="display:none;flex-direction:column;align-items:center;width:100%;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);">
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;font-family:'JetBrains Mono',monospace;margin-bottom:8px">Share &amp; win</div>
+    <div style="font-size:15px;font-weight:700;color:#f3f4f6;margin-bottom:4px">You have <span id="myPts" style="color:#4ade80">0</span> points</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:12px;text-align:center">Share Otto. Top 3 this month wins &euro;250 in free services.</div>
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280;width:100%;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="myRefLink">Loading...</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px">
+      <a id="waShareBtn" href="#" target="_blank" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(37,211,102,.3);background:rgba(37,211,102,.08);color:#25d366;text-decoration:none;display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.3-.7-.5-.6-.7-.6h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1-1.1 2.5s1.1 2.9 1.3 3.1c.1.2 2.2 3.4 5.4 4.7.8.3 1.4.5 1.8.6.8.2 1.5.2 2 .1.6-.1 1.8-.7 2.1-1.4.3-.7.3-1.2.2-1.4l-.5-.2z"/></svg>
+        WhatsApp
+      </a>
+      <a id="liShareBtn" href="#" target="_blank" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(96,165,250,.3);background:rgba(96,165,250,.08);color:#60a5fa;text-decoration:none;display:flex;align-items:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        LinkedIn
+      </a>
+      <button id="copyShareBtn" style="font-size:12px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#d1d5db;cursor:pointer">Copy link</button>
+    </div>
+    <a href="https://app.contentscale.site/otto/leaderboard" target="_blank" style="font-size:12px;color:#4ade80;text-decoration:none">View leaderboard &rarr;</a>
+  </div>
+  <div class="limit-msg" id="limitMsg">You've already spoken with Otto today.<br>Come back tomorrow for another conversation.</div>
+  <div id="gl-transcript"></div>
+  <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05);width:100%;text-align:center">
+    <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;color:#4b5563;line-height:2.2">
+      <a href="https://contentscale.site" target="_blank" style="color:#4b5563;text-decoration:none">ContentScale.site</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:#4b5563;text-decoration:none">Privacy</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://contentscale.site/terms/" target="_blank" style="color:#4b5563;text-decoration:none">Terms</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://contentscale.site/privacy-policy/#data-requests" target="_blank" style="color:#4b5563;text-decoration:none">Data requests</a>
+    </div>
+    <div style="font-size:8px;color:#374151;margin-top:2px;font-family:'JetBrains Mono',monospace">
+      AI conversations may be recorded for quality purposes
+    </div>
+  </div>
+</div>
+<script>
+window._ottoTranscriptOverride = function(who, msg) {
+  var el = document.getElementById('gl-transcript');
+  if (!el) return;
+  el.style.display = 'block';
+  var cls = who === 'model' ? 't-otto' : 't-you';
+  var label = who === 'model' ? 'Otto' : 'You';
+  el.innerHTML += '<div class="' + cls + '"><span class="t-label">' + label + '&nbsp;</span><span class="t-text">' + msg + '</span></div>';
+  el.scrollTop = el.scrollHeight;
+};
+window._ottoStatusOverride = function(msg) {
+  var el = document.getElementById('gl-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = '';
+  if (/speaking|praat|saying/i.test(msg)) el.className = 'speaking';
+  else if (/listen|speak now|your turn|hallo|ready|connecting/i.test(msg)) el.className = 'listening';
+  else if (/error|denied|limit|disconnect|failed|timeout|blocked/i.test(msg)) el.className = 'error';
+};
+window._ottoActiveOverride = function(on) {
+  var btn = document.getElementById('gl-call-btn');
+  var wrap = document.getElementById('avatarWrap');
+  if (btn) btn.classList.toggle('active', on);
+  if (wrap) wrap.classList.toggle('active', on);
+};
+window._ottoLimitOverride = function() {
+  var msg = document.getElementById('limitMsg');
+  if (msg) msg.style.display = 'block';
+  var status = document.getElementById('gl-status');
+  if (status) { status.textContent = 'Daily limit reached. Try again tomorrow.'; status.className = 'error'; }
+  document.getElementById('gl-call-btn').classList.remove('active');
+};
+window._ottoOnSessionEnd = function() {
+  console.log('[otto] Session ended. Showing share screen.');
+  document.getElementById('gl-call-btn').classList.remove('active');
+  var status = document.getElementById('gl-status');
+  if (status) { status.textContent = 'Conversation ended. Share to win!'; status.className = ''; }
+  document.getElementById('shareScreen').style.display = 'flex';
+};
+</script>
+<style>
+#ow-consent{position:absolute;inset:0;background:rgba(6,9,16,.96);border-radius:24px;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
+#ow-consent h3{font-size:16px;font-weight:700;color:#f3f4f6;margin-bottom:8px}
+#ow-consent p{font-size:12px;color:#6b7280;line-height:1.7;margin-bottom:16px}
+#ow-consent a{color:#4ade80;text-decoration:none}
+#ow-ca{background:#4ade80;color:#000;border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px}
+#ow-cd{background:transparent;color:#4b5563;border:none;font-size:12px;cursor:pointer;padding:6px}
+</style>
+<script>
+var _ottRef = new URLSearchParams(location.search).get('ref') || '';
+window._ottoRefCode = _ottRef;
+var _consent = localStorage.getItem('cs_consent');
+if (!_consent) {
+  var consentEl = document.createElement('div');
+  consentEl.id = 'ow-consent';
+  consentEl.innerHTML = '<h3>Before we start</h3><p>Otto AI stores your conversation to improve our service and tracks referrals using local storage. <a href="https://contentscale.site/privacy-policy/" target="_blank">Privacy Policy</a></p><button id="ow-ca">Accept &amp; Talk to Otto</button><button id="ow-cd">Decline</button>';
+  document.addEventListener('DOMContentLoaded', function() {
+    var widget = document.querySelector('.widget');
+    if (widget) {
+      widget.style.position = 'relative';
+      widget.appendChild(consentEl);
+      document.getElementById('ow-ca').onclick = function() { localStorage.setItem('cs_consent','accepted'); consentEl.remove(); };
+      document.getElementById('ow-cd').onclick = function() { localStorage.setItem('cs_consent','denied'); document.getElementById('gl-status').textContent = 'Consent required to use Otto.'; consentEl.remove(); };
+    }
+  });
+}
+fetch('https://app.contentscale.site/api/otto/ref-code')
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    var myRef = d.ref_code;
+    localStorage.setItem('otto_ref', myRef);
+    var myLink = 'https://app.contentscale.site/otto?ref=' + myRef;
+    var box = document.getElementById('myRefLink');
+    if (box) box.textContent = myLink;
+    document.getElementById('waShareBtn').href = 'https://wa.me/?text=' + encodeURIComponent('Hey! Talk to Otto from ContentScale — he explains in 1 minute how we help recover lost SEO traffic: ' + myLink);
+    document.getElementById('liShareBtn').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(myLink);
+    document.getElementById('copyShareBtn').onclick = function() {
+      navigator.clipboard.writeText(myLink).catch(function(){
+        var ta = document.createElement('textarea'); ta.value = myLink;
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      });
+      document.getElementById('copyShareBtn').textContent = 'Copied!';
+      setTimeout(function(){ document.getElementById('copyShareBtn').textContent = 'Copy link'; }, 2000);
+    };
+    document.getElementById('myPts').textContent = d.points || 0;
+  }).catch(function(){});
+</script>
+<script src="https://app.contentscale.site/otto-ai.js" defer></script>
+<script src="https://app.contentscale.site/badge-loader.js?v=3"></script>
+</body>
+</html>
