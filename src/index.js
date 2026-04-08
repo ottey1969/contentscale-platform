@@ -5001,7 +5001,7 @@ async function startSession() {
       return;
     }
 
-    if (!r.ok || !keyData.key) {
+    if (!r.ok || (!keyData.key && !keyData.wsUrl)) {
       setStatus('Error: ' + (keyData.error || 'No key'));
       stopSession(); return;
     }
@@ -5021,7 +5021,8 @@ async function startSession() {
   _hangupScheduled = false;
 
   console.log('[otto] model:', model);
-  var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
+  // ✅ Use v1alpha wsUrl from server — v1beta causes 1007 errors
+  var wsUrl = keyData.wsUrl || ('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=' + encodeURIComponent(keyData.key));
   setStatus('Connecting...');
 
   try { _ws = new WebSocket(wsUrl); _ws.binaryType = 'arraybuffer'; }
@@ -5032,7 +5033,16 @@ async function startSession() {
     var setup = {
       setup: {
         model: 'models/' + model,
-        generation_config: { response_modalities: ['AUDIO'], output_audio_transcription: {} },
+        generation_config: {
+          response_modalities: ['AUDIO'],
+          output_audio_transcription: {},
+          speech_config: {
+            voice_config: {
+              prebuilt_voice_config: { voice_name: 'Fenrir' }
+            }
+          }
+        },
+        input_audio_transcription: {},
         system_instruction: { parts: [{ text: OTTO_SCRIPT }] }
       }
     };
@@ -5064,10 +5074,10 @@ async function startSession() {
             if (p.text) {
               var ptxt = p.text || '';
               addTranscript('model', ptxt);
-              if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(ptxt)) {
+              if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon|take care|cheers|bye)\b/i.test(ptxt)) {
                 _hangupScheduled = true;
                 console.log('[otto] goodbye detected in text');
-                setTimeout(function() { hangup('goodbye detected'); }, 4000);
+                setTimeout(function() { hangup('goodbye detected'); }, 2000);
               }
             }
           });
@@ -5078,10 +5088,10 @@ async function startSession() {
         if (sc.outputTranscription) {
           var txt = sc.outputTranscription.text || '';
           addTranscript('model', txt);
-          if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon)\b/i.test(txt)) {
+          if (!_hangupScheduled && /\b(goodbye|have a great day|speak to you soon|talk soon|take care|cheers|bye)\b/i.test(txt)) {
             _hangupScheduled = true;
             console.log('[otto] goodbye detected in transcription');
-            setTimeout(function() { hangup('goodbye detected'); }, 4000);
+            setTimeout(function() { hangup('goodbye detected'); }, 2000);
           }
         }
 
@@ -5118,7 +5128,7 @@ function attach() {
   var btn = document.getElementById('gl-call-btn');
   if (!btn) { setTimeout(attach, 150); return; }
   btn.addEventListener('click', startSession);
-  console.log('[otto] v6 fixed loaded');
+  console.log('[otto] v6 FIXED — v1alpha + Fenrir + goodbye 2s');
 }
 
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', attach) : attach();
