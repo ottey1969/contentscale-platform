@@ -166,8 +166,8 @@
     try {
       var r = await fetch('https://app.contentscale.site/api/gemini-live-token');
       keyData = await r.json();
-      if (!r.ok || !keyData.key) {
-        setStatus('Error: ' + (keyData.error || 'No key returned'));
+      if (!r.ok || (!keyData.wsUrl && !keyData.key)) {
+        setStatus('Error: ' + (keyData.error || 'No connection details returned'));
         stopSession();
         return;
       }
@@ -177,11 +177,13 @@
       return;
     }
 
-    var model = keyData.model || 'gemini-3.1-flash-live-preview';
+    var model = keyData.model || 'gemini-2.0-flash-exp';
     console.log('[otto] model:', model);
     _sessionModel = model;
 
-    var wsUrl = WS_BASE + '?key=' + encodeURIComponent(keyData.key);
+    // Use Railway proxy wsUrl — API key stays on server, never exposed to browser
+    // Falls back to direct key if server still sends key (backwards compat)
+    var wsUrl = keyData.wsUrl || (WS_BASE + '?key=' + encodeURIComponent(keyData.key));
     setStatus('Connecting...');
 
     try {
