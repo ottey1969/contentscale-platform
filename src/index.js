@@ -7643,4 +7643,22 @@ app.get('/campaigns', (req, res) => {
   res.send(_CAMPAIGNS_HTML);
 });
 
+// GET /api/admin/ip-geo?ip=x.x.x.x — geolocate IP for admin users panel
+app.get('/api/admin/ip-geo', verifyAdmin, async (req, res) => {
+  const ip = req.query.ip;
+  if (!ip) return res.status(400).json({ error: 'ip required' });
+  // Private/local IPs — skip lookup
+  if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|::1)/.test(ip))
+    return res.json({ country: 'Local', city: 'Local', countryCode: '', flag: '🏠' });
+  try {
+    const r = await fetch('http://ip-api.com/json/' + ip + '?fields=country,countryCode,city,status');
+    const d = await r.json();
+    if (d.status !== 'success') return res.json({ country: '?', city: '?', countryCode: '', flag: '🌐' });
+    const flags = {'NL':'🇳🇱','US':'🇺🇸','DE':'🇩🇪','GB':'🇬🇧','FR':'🇫🇷','BE':'🇧🇪','AU':'🇦🇺','CA':'🇨🇦','PH':'🇵🇭','SG':'🇸🇬','IN':'🇮🇳','BR':'🇧🇷','ES':'🇪🇸','IT':'🇮🇹','PL':'🇵🇱','SE':'🇸🇪','NO':'🇳🇴','DK':'🇩🇰','FI':'🇫🇮','ZA':'🇿🇦'};
+    res.json({ country: d.country, city: d.city, countryCode: d.countryCode, flag: flags[d.countryCode] || '🌐' });
+  } catch(e) {
+    res.json({ country: '?', city: '?', countryCode: '', flag: '🌐' });
+  }
+});
+
 startServer();
