@@ -7348,16 +7348,29 @@ app.get('/api/fetch-sitemap', async (req, res) => {
   try {
     const resp = await axios.get(url, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
     const xml = resp.data;
-    // Extract all <loc> URLs
-    const urls = [];
     const locRegex = /<loc>(.*?)<\/loc>/gi;
+    const urls = [], subSitemaps = [];
     let match;
     while ((match = locRegex.exec(xml)) !== null) {
       const u = match[1].trim();
-      if (u && !u.endsWith('.xml')) urls.push(u); // skip sub-sitemaps
+      if (!u) continue;
+      if (u.endsWith('.xml')) subSitemaps.push(u); // sitemap index
+      else urls.push(u);
     }
-    console.log(`[sitemap] ${url} => ${urls.length} URLs`);
-    res.json({ success: true, urls, count: urls.length });
+    console.log(`[sitemap] ${url} => ${urls.length} URLs, ${subSitemaps.length} sub-sitemaps`);
+    // If sitemap index with no direct URLs, auto-fetch first sub-sitemap
+    if (urls.length === 0 && subSitemaps.length > 0) {
+      const sub = await axios.get(subSitemaps[0], { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+      const subXml = sub.data;
+      const subRegex = /<loc>(.*?)<\/loc>/gi;
+      let sm;
+      while ((sm = subRegex.exec(subXml)) !== null) {
+        const u = sm[1].trim();
+        if (u && !u.endsWith('.xml')) urls.push(u);
+      }
+      console.log(`[sitemap] auto-fetched sub-sitemap ${subSitemaps[0]} => ${urls.length} URLs`);
+    }
+    res.json({ success: true, urls, subSitemaps, count: urls.length });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -7453,6 +7466,17 @@ app.post('/api/gsc/auto-fill', async (req, res) => {
       position = parseFloat((pageRows[0].position || 0).toFixed(1));
     }
 
+    // Mobile % — query by device dimension
+    let mobilePct = null;
+    try {
+      const mobileRows = await tryGscQuery(accessToken, usedSiteUrl, ['device'], true, startDate, endDate);
+      if (mobileRows.length) {
+        const total = mobileRows.reduce((a, r) => a + (r.clicks || 0), 0);
+        const mRow = mobileRows.find(r => (r.keys[0]||'').toUpperCase() === 'MOBILE');
+        if (mRow && total > 0) mobilePct = Math.round((mRow.clicks / total) * 100);
+      }
+    } catch(e) { /* mobile is optional */ }
+
     // Sort by impressions descending — highest volume query first
     const sortedByImpr = [...queryRows].sort((a, b) => (b.impressions||0) - (a.impressions||0));
     const topQueries = sortedByImpr.slice(0, 15).map(r => r.keys[0]).join('\n');
@@ -7464,7 +7488,7 @@ app.post('/api/gsc/auto-fill', async (req, res) => {
     res.json({
       success: true,
       data: { impressions, clicks, ctr, position, topQueries, topKeyword, topKeywordImpr,
-              queryCount: queryRows.length, dateRange: `${startDate} => ${endDate}` }
+              mobilePct, queryCount: queryRows.length, dateRange: `${startDate} => ${endDate}` }
     });
 
   } catch(e) {
