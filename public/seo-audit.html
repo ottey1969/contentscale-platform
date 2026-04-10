@@ -1094,6 +1094,16 @@ ${myContentStr}`;
   prog.className='progress';
   document.getElementById('deepRunBtn').disabled=false;
   toast('✅ Full audit complete — scroll up for Priority Actions');
+
+  // ── Add Recommendations CTA at bottom of results ──
+  const recBanner = document.createElement('div');
+  recBanner.style.cssText = 'margin-top:32px;padding:24px 28px;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(167,139,250,.1));border:2px solid rgba(251,191,36,.4);border-radius:14px;text-align:center;';
+  recBanner.innerHTML = '<div style="font-family:monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;">✅ Audit complete — next step</div>'
+    + '<div style="font-size:18px;font-weight:800;color:#f9fafb;margin-bottom:6px;">Turn this analysis into a full content plan</div>'
+    + '<div style="font-size:13px;color:#94a3b8;margin-bottom:18px;">The Recommendations engine uses all 10 steps above to write your rewrite plan, FAQ schema, internal link map and 90-day roadmap.</div>'
+    + '<a href="/audit-recommendations" style="display:inline-block;background:#fbbf24;color:#000;font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:12px 32px;border-radius:8px;text-decoration:none;">🎯 GO TO RECOMMENDATIONS →</a>';
+  out.appendChild(recBanner);
+
   // Scroll to start of output to show Priority Actions first
   out.scrollIntoView({behavior:'smooth'});
 }
@@ -1267,68 +1277,88 @@ function aiSuggestGoal(url, kw) {
 // ══ AI COMPETITOR FINDER ══════════════════════════════════════════
 async function aiDetectCompetitors() {
   const kw = document.getElementById('dKw')?.value || '';
-  const geo = document.getElementById('dGeo')?.value || 'USA';
+  const geo = document.getElementById('dGeo')?.value || '';
+  const url = document.getElementById('dUrl')?.value || '';
   if (!kw) { alert('Enter Primary Keyword first'); return; }
+
   const btn = document.getElementById('aiCompBtn');
   const status = document.getElementById('aiCompStatus');
   btn.textContent = '⏳ Searching...'; btn.disabled = true;
   status.textContent = '';
-  try {
-    const resp = await fetch('/api/gemini-proxy', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ contents: [{ parts: [{ text: `You are an SEO expert. Search Google right now for: "${kw}" in ${geo}. Find the 2 best real competitor pages currently ranking on page 1. Return ONLY valid JSON, no markdown: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why"}` }] }] })
-    });
-    const d = await resp.json();
-    const text = (d.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(text);
-    if (parsed.comp1) {
-      const c1 = document.getElementById('dComp1url');
-      const c2 = document.getElementById('dComp2url');
-      if (c1) c1.value = parsed.comp1;
-      if (c2) c2.value = parsed.comp2 || '';
-      status.textContent = '✅ Found! Edit if needed.';
-      status.style.color = '#4ade80';
+
+  // Detect if local service business
+  const localSignals = ['roofing','plumbing','hvac','electrician','dentist','lawyer','attorney',
+    'contractor','repair','installation','service','cleaning','landscaping','pest control',
+    'moving','storage','garage','fence','deck','siding','window','door','floor'];
+  const isLocal = localSignals.some(s => (kw + ' ' + url).toLowerCase().includes(s));
+
+  // Extract location from geo field or URL
+  let location = geo || '';
+  if (!location && url) {
+    try {
+      const path = new URL(url).pathname.toLowerCase();
+      const stateMap = {'-nj-':'New Jersey','-nj/':'New Jersey','new-jersey':'New Jersey',
+        '-ny-':'New York','-fl-':'Florida','-tx-':'Texas','-ca-':'California',
+        '-pa-':'Pennsylvania','-il-':'Illinois','-ma-':'Massachusetts'};
+      for (const [k,v] of Object.entries(stateMap)) {
+        if (path.includes(k) || url.toLowerCase().includes(k)) { location = v; break; }
+      }
+    } catch(e) {}
+  }
+
+  // Build search strategy based on local vs national
+  const searchQuery = isLocal && location
+    ? `"${kw}" ${location}` // local: add geo to search
+    : kw;
+
+  const prompt = isLocal
+    ? `You are an SEO expert specializing in local businesses. Search Google for: "${searchQuery}".
+Find the TOP 2 LOCAL competitor pages ranking on page 1 in ${location || 'this area'}.
+IMPORTANT: These must be LOCAL businesses (not national chains like HomeAdvisor, Angi, Thumbtack, Yelp, HomeDepot).
+Look for local/regional service companies actually operating in ${location || 'the target area'}.
+For each competitor analyze: their service area, why Google ranks them locally, what local SEO signals they have.
+Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why this local competitor ranks","reason2":"why this local competitor ranks","isLocal":true,"location":"${location}"}`
+    : `You are an SEO expert. Search Google for: "${searchQuery}".
+Find the TOP 2 competitor pages currently ranking on page 1.
+Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why","isLocal":false}`;
+
+  // Retry up to 2 times for 503
+  let resp, d;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      resp = await fetch('/api/gemini-proxy', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      if (resp.status === 503 && attempt < 2) {
+        status.textContent = '⏳ Retrying...';
+        await new Promise(r => setTimeout(r, 3000));
+        continue;
+      }
+      d = await resp.json();
+      break;
+    } catch(e) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      throw e;
     }
-  } catch(e) { status.textContent = '❌ ' + e.message; status.style.color = '#f43f5e'; }
+  }
+
+  const text = (d?.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
+  const parsed = JSON.parse(text);
+
+  if (parsed.comp1) {
+    const c1 = document.getElementById('dComp1url');
+    const c2 = document.getElementById('dComp2url');
+    if (c1) c1.value = parsed.comp1;
+    if (c2) c2.value = parsed.comp2 || '';
+    const localNote = parsed.isLocal ? ` (local ${parsed.location || geo})` : '';
+    status.textContent = `✅ Found local competitors${localNote} — edit if needed`;
+    status.style.color = '#4ade80';
+  }
   btn.textContent = '🤖 AI FIND BEST COMPETITORS'; btn.disabled = false;
 }
 
-// ══ SITEMAP LOADER ════════════════════════════════════════════════
-async function loadSitemapUrls() {
-  const urlField = document.getElementById('dUrl');
-  const pageUrl = urlField?.value || '';
-  let sitemapUrl = '';
-  if (pageUrl) {
-    try { sitemapUrl = new URL(pageUrl).origin + '/sitemap.xml'; } catch(e) {}
-  }
-  if (!sitemapUrl) {
-    sitemapUrl = prompt('Enter sitemap URL:', 'https://yoursite.com/sitemap.xml');
-    if (!sitemapUrl) return;
-  }
-  const ta = document.getElementById('dSiteUrls');
-  ta.value = '⏳ Loading sitemap from ' + sitemapUrl + '...';
-  try {
-    const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
-    const d = await r.json();
-    if (d.urls && d.urls.length) {
-      ta.value = d.urls.join('\n');
-      const cnt = document.getElementById('urlCount');
-      if (cnt) cnt.textContent = d.urls.length + ' URLs loaded from sitemap';
-    } else if (d.subSitemaps && d.subSitemaps.length) {
-      // It's a sitemap index — load first sub-sitemap
-      const sub = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(d.subSitemaps[0]));
-      const sd = await sub.json();
-      ta.value = (sd.urls || []).join('\n');
-      const cnt = document.getElementById('urlCount');
-      if (cnt) cnt.textContent = (sd.urls||[]).length + ' URLs from ' + d.subSitemaps[0];
-    } else {
-      ta.value = '';
-      alert('No URLs found in sitemap at:\n' + sitemapUrl + '\n\nTry: ' + sitemapUrl.replace('/sitemap.xml','/sitemap_index.xml') + '\nOr paste URLs manually.');
-    }
-  } catch(e) { ta.value = ''; alert('Could not fetch sitemap: ' + e.message); }
-}
 
-// ══ AI CONSTRAINTS DETECT ═════════════════════════════════════════
 async function aiDetectConstraints() {
   const urlField = document.getElementById('dUrl');
   const url = urlField?.value || '';
