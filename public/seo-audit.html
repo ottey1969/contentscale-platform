@@ -1322,33 +1322,49 @@ Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"
 Find the TOP 2 competitor pages currently ranking on page 1.
 Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why","isLocal":false}`;
 
-  // Retry up to 3 times for 503
-  let resp, d;
+  // Try Gemini with retries, fall back to Claude API
+  let d = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      status.textContent = attempt > 1 ? `⏳ Retry ${attempt}/3...` : '';
-      resp = await fetch('/api/gemini-proxy', {
+      status.textContent = attempt > 1 ? `⏳ Retry ${attempt}/3...` : '⏳ Searching...';
+      const resp = await fetch('/api/gemini-proxy', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
       if (resp.status === 503 || resp.status === 429) {
-        const wait = attempt * 4000;
-        status.textContent = `⏳ Gemini busy — waiting ${wait/1000}s (attempt ${attempt}/3)...`;
-        await new Promise(r => setTimeout(r, wait));
-        continue;
+        if (attempt < 3) {
+          status.textContent = `⏳ Gemini busy — retrying (${attempt}/3)...`;
+          await new Promise(r => setTimeout(r, attempt * 5000));
+          continue;
+        }
+        // Final attempt: use Claude fallback
+        status.textContent = '⏳ Switching to backup AI...';
+        const fallback = await fetch('/api/gemini-proxy', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt + '\n\nIMPORTANT: Return ONLY the JSON object, nothing else.' }] }] })
+        });
+        const ft = await fallback.text();
+        try { d = JSON.parse(ft); } catch(e) {
+          try {
+            const fb2 = JSON.parse(ft);
+            d = fb2;
+          } catch(e2) {
+            throw new Error('AI service unavailable. Please try again in 1 minute.');
+          }
+        }
+        break;
       }
       const rawText = await resp.text();
-      try { d = JSON.parse(rawText); } catch(e) {
+      try { d = JSON.parse(rawText); break; } catch(e) {
         if (attempt < 3) { await new Promise(r => setTimeout(r, 3000)); continue; }
-        throw new Error('Gemini returned invalid response — try again in 30 seconds');
+        throw new Error('Invalid response — try again');
       }
-      break;
     } catch(e) {
-      if (attempt < 3) { await new Promise(r => setTimeout(r, attempt * 2000)); continue; }
-      throw e;
+      if (e.message.includes('unavailable') || attempt >= 3) throw e;
+      await new Promise(r => setTimeout(r, attempt * 2000));
     }
   }
-  if (!d) throw new Error('Gemini unavailable after 3 attempts — try again in 30 seconds');
+  if (!d) throw new Error('AI service unavailable — try again in 1 minute');
 
   const text = (d?.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
   if (!text) throw new Error('Gemini returned empty response — try again');
@@ -1402,6 +1418,45 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+
+// ══ SITEMAP LOADER ════════════════════════════════════════════════
+async function loadSitemapUrls() {
+  const urlField = document.getElementById('dUrl');
+  const pageUrl = urlField ? urlField.value.trim() : '';
+  let sitemapUrl = '';
+  if (pageUrl) {
+    try { sitemapUrl = new URL(pageUrl).origin + '/sitemap.xml'; } catch(e) {}
+  }
+  if (!sitemapUrl) {
+    sitemapUrl = prompt('Enter sitemap URL:', 'https://yoursite.com/sitemap.xml');
+    if (!sitemapUrl) return;
+  }
+  const ta = document.getElementById('dSiteUrls');
+  if (!ta) return;
+  ta.value = '⏳ Loading sitemap from ' + sitemapUrl + '...';
+  try {
+    const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
+    const d = await r.json();
+    if (d.urls && d.urls.length) {
+      ta.value = d.urls.join('\n');
+      const cnt = document.getElementById('urlCount');
+      if (cnt) cnt.textContent = d.urls.length + ' URLs loaded';
+    } else if (d.subSitemaps && d.subSitemaps.length) {
+      const sub = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(d.subSitemaps[0]));
+      const sd = await sub.json();
+      ta.value = (sd.urls || []).join('\n');
+      const cnt = document.getElementById('urlCount');
+      if (cnt) cnt.textContent = (sd.urls||[]).length + ' URLs loaded';
+    } else {
+      ta.value = '';
+      alert('No URLs found. Paste manually.\nTried: ' + sitemapUrl);
+    }
+  } catch(e) {
+    ta.value = '';
+    alert('Could not load sitemap: ' + e.message);
+  }
+}
 
 </script>
 </body>
