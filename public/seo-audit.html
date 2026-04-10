@@ -327,7 +327,7 @@ img,table,iframe{max-width:100%;}
       <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:4px;">
         <div>
           <div style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:4px;">⇄ AUTO-FILL VIA GSC</div>
-          <div style="font-size:11px;color:var(--muted);">Vul de Page URL in en klik — impressies, CTR, positie en top queries worden automatisch opgehaald uit Google Search Console.</div>
+          <div style="font-size:11px;color:var(--muted);">Enter the Page URL and click — impressions, CTR, position and top queries are automatically fetched from Google Search Console.</div>
         </div>
         <button onclick="autoFillGSC()" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 AUTO-FILL GSC DATA</button>
       </div>
@@ -624,7 +624,7 @@ function runMetaCheck() {
   var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : 'var(--red)';
 
   var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;">'
-    + '<div><span style="font-family:monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
+    + '<div><span style="font-family:monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistency</span>'
     + '<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
     + '<div style="font-size:13px;color:var(--muted);">'
     + '<span style="color:var(--red);">'+errs.length+' fouten</span> · '
@@ -1201,6 +1201,11 @@ async function autoFillGSC() {
     // Fill position
     const posEl = document.getElementById('dPos');
     if (posEl && data.position) posEl.value = data.position;
+    // Fill mobile % (fetched separately)
+    if (data.mobilePct !== undefined) {
+      const mobEl = document.getElementById('dMob');
+      if (mobEl) mobEl.value = data.mobilePct;
+    }
     // Fill top queries
     const qEl = document.getElementById('dQueries');
     if (qEl && data.topQueries) qEl.value = data.topQueries;
@@ -1271,10 +1276,10 @@ async function aiDetectCompetitors() {
   try {
     const resp = await fetch('/api/gemini-proxy', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt: `You are an SEO expert. Search Google right now for: "${kw}" in ${geo}. Find the 2 best real competitor pages currently ranking on page 1. Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why"}. Use real ranking URLs only.` })
+      body: JSON.stringify({ contents: [{ parts: [{ text: `You are an SEO expert. Search Google right now for: "${kw}" in ${geo}. Find the 2 best real competitor pages currently ranking on page 1. Return ONLY valid JSON, no markdown: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why"}` }] }] })
     });
     const d = await resp.json();
-    const text = (d.text || d.result || '').replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const text = (d.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(text);
     if (parsed.comp1) {
       const c1 = document.getElementById('dComp1url');
@@ -1301,14 +1306,26 @@ async function loadSitemapUrls() {
     if (!sitemapUrl) return;
   }
   const ta = document.getElementById('dSiteUrls');
-  ta.value = '⏳ Loading sitemap...';
+  ta.value = '⏳ Loading sitemap from ' + sitemapUrl + '...';
   try {
     const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
     const d = await r.json();
     if (d.urls && d.urls.length) {
       ta.value = d.urls.join('\n');
-    } else { ta.value = ''; alert('No URLs found. Paste manually.'); }
-  } catch(e) { ta.value = ''; alert('Could not fetch: ' + e.message); }
+      const cnt = document.getElementById('urlCount');
+      if (cnt) cnt.textContent = d.urls.length + ' URLs loaded from sitemap';
+    } else if (d.subSitemaps && d.subSitemaps.length) {
+      // It's a sitemap index — load first sub-sitemap
+      const sub = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(d.subSitemaps[0]));
+      const sd = await sub.json();
+      ta.value = (sd.urls || []).join('\n');
+      const cnt = document.getElementById('urlCount');
+      if (cnt) cnt.textContent = (sd.urls||[]).length + ' URLs from ' + d.subSitemaps[0];
+    } else {
+      ta.value = '';
+      alert('No URLs found in sitemap at:\n' + sitemapUrl + '\n\nTry: ' + sitemapUrl.replace('/sitemap.xml','/sitemap_index.xml') + '\nOr paste URLs manually.');
+    }
+  } catch(e) { ta.value = ''; alert('Could not fetch sitemap: ' + e.message); }
 }
 
 // ══ AI CONSTRAINTS DETECT ═════════════════════════════════════════
@@ -1318,12 +1335,13 @@ async function aiDetectConstraints() {
   if (!url) { alert('Enter Page URL first'); return; }
   try {
     const hostname = new URL(url).hostname;
+    const _conPrompt = `For website ${hostname}, what CMS and technical constraints apply? Return ONLY a short comma-separated list, no explanation. Examples: WordPress, Yoast SEO, no JS injection, GDPR-strict, AMP, Shopify, multilingual. Max 6 items.`;
     const r = await fetch('/api/gemini-proxy', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt: `For website ${hostname}, what CMS and technical constraints apply? Return ONLY a short comma-separated list. Examples: WordPress, no JS injection, GDPR-strict, AMP, Shopify, multilingual. Be concise, max 6 items.` })
+      body: JSON.stringify({ contents: [{ parts: [{ text: _conPrompt }] }] })
     });
     const d = await r.json();
-    const constraints = (d.text || d.result || '').trim();
+    const constraints = (d.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
     const f = document.getElementById('dConstraints');
     if (f && constraints) f.value = constraints;
   } catch(e) { console.error(e); }
