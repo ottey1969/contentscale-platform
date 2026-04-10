@@ -7338,6 +7338,31 @@ const _FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32
 // favicon routes moved above express.static
 
 // ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// SITEMAP FETCH — /api/fetch-sitemap?url=
+// Fetches a sitemap.xml and returns all page URLs
+// ══════════════════════════════════════════════════════════════════════
+app.get('/api/fetch-sitemap', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'url required' });
+  try {
+    const resp = await axios.get(url, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+    const xml = resp.data;
+    // Extract all <loc> URLs
+    const urls = [];
+    const locRegex = /<loc>(.*?)<\/loc>/gi;
+    let match;
+    while ((match = locRegex.exec(xml)) !== null) {
+      const u = match[1].trim();
+      if (u && !u.endsWith('.xml')) urls.push(u); // skip sub-sitemaps
+    }
+    console.log(`[sitemap] ${url} => ${urls.length} URLs`);
+    res.json({ success: true, urls, count: urls.length });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // GSC AUTO-FILL — /api/gsc/auto-fill
 // Haalt GSC data op voor een specifieke pagina via Service Account
 // Vereist: GSC_SERVICE_ACCOUNT_JSON env var in Railway
