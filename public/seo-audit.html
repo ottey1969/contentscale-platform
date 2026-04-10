@@ -422,7 +422,11 @@ img,table,iframe{max-width:100%;}
           <div style="margin-top:5px;"><button onclick="aiDetectConstraints()" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);color:#a78bfa;border-radius:4px;padding:3px 10px;font-size:9px;font-family:monospace;cursor:pointer;">🤖 AI detect from URL</button></div>
     </div>
 
-    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
+    <div id="restoreNotice" style="display:none;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:6px;padding:8px 14px;font-family:monospace;font-size:10px;color:#4ade80;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+  <span>✅ Previous session restored from browser storage</span>
+  <button onclick="clearSavedForm()" style="background:none;border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:4px;padding:2px 8px;font-size:9px;font-family:monospace;cursor:pointer;">✕ Clear</button>
+</div>
+<button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
 
     <div class="progress" id="deepProgress">
       <div class="prog-label">Full Audit Running — 10 Steps · Do Not Close</div>
@@ -1505,4 +1509,65 @@ async function loadSitemapUrls() {
   if (cnt) cnt.textContent = '';
   alert('Could not find sitemap automatically.\n\nTried:\n' + sitemapCandidates.join('\n') + '\n\nPaste URLs manually.');
 }
+
+// ══ LOCALSTORAGE PERSISTENCE ═════════════════════════════════════
+const _LS_KEY = 'pulse_nexus_form_v1';
+const _LS_FIELDS = ['dUrl','dKw','dKw2','dGeo','dImpr','dCtr','dPos','dMob',
+  'dQueries','dHtml','dComp1url','dComp2url','dComp1html','dComp2html','dSiteUrls','dConstraints'];
+
+function _lsSave(id, val) {
+  try {
+    const d = JSON.parse(localStorage.getItem(_LS_KEY)||'{}');
+    d[id] = val;
+    localStorage.setItem(_LS_KEY, JSON.stringify(d));
+  } catch(e) {}
+}
+
+function _lsRestore() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(_LS_KEY)||'{}');
+    if (!Object.keys(saved).length) return;
+    _LS_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && saved[id] !== undefined) el.value = saved[id];
+    });
+    // Show restore notice
+    const notice = document.getElementById('restoreNotice');
+    if (notice) notice.style.display = 'flex';
+  } catch(e) {}
+}
+
+function clearSavedForm() {
+  try { localStorage.removeItem(_LS_KEY); } catch(e) {}
+  _LS_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const notice = document.getElementById('restoreNotice');
+  if (notice) notice.style.display = 'none';
+  toast('✓ Form cleared');
+}
+
+// Hook all fields to auto-save
+(function attachSaveListeners() {
+  _LS_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, function() { _lsSave(id, this.value); });
+  });
+  // Also hook Geo text input which may not be in FIELDS as select
+  const geoEl = document.getElementById('dGeo');
+  if (geoEl) geoEl.addEventListener('input', function() { _lsSave('dGeo', this.value); });
+  const goalEl = document.getElementById('dGoal');
+  if (goalEl) goalEl.addEventListener('change', function() { _lsSave('dGoal', this.value); });
+})();
+
+// Restore on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _lsRestore);
+} else {
+  _lsRestore();
+}
+
 
