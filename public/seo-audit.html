@@ -1392,72 +1392,117 @@ Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"
 
 async function aiDetectConstraints() {
   const urlField = document.getElementById('dUrl');
-  const url = urlField?.value || '';
+  const url = urlField ? urlField.value.trim() : '';
   if (!url) { alert('Enter Page URL first'); return; }
+
+  const btn = document.querySelector('[onclick="aiDetectConstraints()"]');
+  const field = document.getElementById('dConstraints');
+  if (btn) { btn.textContent = '⏳ Detecting...'; btn.disabled = true; }
+
   try {
     const hostname = new URL(url).hostname;
-    const _conPrompt = `For website ${hostname}, what CMS and technical constraints apply? Return ONLY a short comma-separated list, no explanation. Examples: WordPress, Yoast SEO, no JS injection, GDPR-strict, AMP, Shopify, multilingual. Max 6 items.`;
-    const r = await fetch('/api/gemini-proxy', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ contents: [{ parts: [{ text: _conPrompt }] }] })
-    });
-    const d = await r.json();
-    const constraints = (d.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-    const f = document.getElementById('dConstraints');
-    if (f && constraints) f.value = constraints;
-  } catch(e) { console.error(e); }
+    const prompt = `For website ${hostname}, identify the CMS and technical constraints. Return ONLY a comma-separated list, max 6 items, no explanation. Examples: WordPress, Yoast SEO, Elementor, no JS injection, GDPR-strict, Wix, Shopify, multilingual, AMP.`;
+
+    let d = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const r = await fetch('/api/gemini-proxy', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        if (r.status === 503 || r.status === 429) {
+          if (attempt < 3) {
+            if (btn) btn.textContent = '⏳ Retrying ' + attempt + '/3...';
+            await new Promise(res => setTimeout(res, attempt * 4000));
+            continue;
+          }
+          throw new Error('AI busy — try again in 30s');
+        }
+        d = await r.json();
+        break;
+      } catch(e) {
+        if (attempt >= 3) throw e;
+        await new Promise(res => setTimeout(res, 2000));
+      }
+    }
+
+    const result = (d?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    if (result && field) {
+      field.value = result;
+      if (btn) { btn.textContent = '✅ Done'; btn.disabled = false; }
+      setTimeout(() => { if(btn) btn.textContent = '🤖 AI detect from URL'; }, 2000);
+    } else {
+      throw new Error('No result returned');
+    }
+  } catch(e) {
+    if (btn) { btn.textContent = '❌ ' + e.message; btn.disabled = false; }
+    setTimeout(() => { if(btn) btn.textContent = '🤖 AI detect from URL'; }, 3000);
+  }
 }
 
-// Hook URL field to auto-suggest geo + goal on blur
-document.addEventListener('DOMContentLoaded', function() {
-  const urlField = document.getElementById('dUrl');
-  if (urlField) {
-    urlField.addEventListener('blur', function() {
-      inferGeoFromContext(this.value, '');
-      aiSuggestGoal(this.value, document.getElementById('dKw')?.value || '');
-    });
-  }
-});
-
-
-// ══ SITEMAP LOADER ════════════════════════════════════════════════
 async function loadSitemapUrls() {
   const urlField = document.getElementById('dUrl');
   const pageUrl = urlField ? urlField.value.trim() : '';
-  let sitemapUrl = '';
+  let baseUrl = '';
   if (pageUrl) {
-    try { sitemapUrl = new URL(pageUrl).origin + '/sitemap.xml'; } catch(e) {}
+    try { baseUrl = new URL(pageUrl).origin; } catch(e) {}
   }
-  if (!sitemapUrl) {
-    sitemapUrl = prompt('Enter sitemap URL:', 'https://yoursite.com/sitemap.xml');
-    if (!sitemapUrl) return;
+  if (!baseUrl) {
+    const entered = prompt('Enter site URL or sitemap URL:', 'https://yoursite.com');
+    if (!entered) return;
+    try { baseUrl = new URL(entered).origin; } catch(e) { baseUrl = entered; }
   }
+
   const ta = document.getElementById('dSiteUrls');
+  const cnt = document.getElementById('urlCount');
   if (!ta) return;
-  ta.value = '⏳ Loading sitemap from ' + sitemapUrl + '...';
-  try {
-    const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
-    const d = await r.json();
-    if (d.urls && d.urls.length) {
-      ta.value = d.urls.join('\n');
-      const cnt = document.getElementById('urlCount');
-      if (cnt) cnt.textContent = d.urls.length + ' URLs loaded';
-    } else if (d.subSitemaps && d.subSitemaps.length) {
-      const sub = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(d.subSitemaps[0]));
-      const sd = await sub.json();
-      ta.value = (sd.urls || []).join('\n');
-      const cnt = document.getElementById('urlCount');
-      if (cnt) cnt.textContent = (sd.urls||[]).length + ' URLs loaded';
-    } else {
-      ta.value = '';
-      alert('No URLs found. Paste manually.\nTried: ' + sitemapUrl);
+
+  // Try multiple sitemap formats in order
+  const sitemapCandidates = [
+    baseUrl + '/sitemap_index.xml',
+    baseUrl + '/sitemap.xml',
+    baseUrl + '/wp-sitemap.xml',
+    baseUrl + '/page-sitemap.xml',
+  ];
+
+  ta.value = '⏳ Detecting sitemap...';
+
+  for (const sitemapUrl of sitemapCandidates) {
+    try {
+      ta.value = '⏳ Trying ' + sitemapUrl + '...';
+      const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
+      const d = await r.json();
+
+      // If it's a sitemap index (has subSitemaps), fetch the pages sub-sitemap
+      if ((!d.urls || !d.urls.length) && d.subSitemaps && d.subSitemaps.length) {
+        // Prefer page-sitemap, then first available
+        const pageSitemap = d.subSitemaps.find(u => u.includes('page')) || d.subSitemaps[0];
+        ta.value = '⏳ Loading pages from ' + pageSitemap + '...';
+        const sub = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(pageSitemap));
+        const sd = await sub.json();
+        if (sd.urls && sd.urls.length) {
+          ta.value = sd.urls.join('\n');
+          if (cnt) cnt.textContent = '✅ ' + sd.urls.length + ' URLs loaded from ' + pageSitemap;
+          return;
+        }
+      }
+
+      // Direct URLs found
+      if (d.urls && d.urls.length) {
+        ta.value = d.urls.join('\n');
+        if (cnt) cnt.textContent = '✅ ' + d.urls.length + ' URLs loaded from ' + sitemapUrl;
+        return;
+      }
+
+    } catch(e) {
+      // Try next candidate
+      continue;
     }
-  } catch(e) {
-    ta.value = '';
-    alert('Could not load sitemap: ' + e.message);
   }
+
+  // Nothing found
+  ta.value = '';
+  if (cnt) cnt.textContent = '';
+  alert('Could not find sitemap automatically.\n\nTried:\n' + sitemapCandidates.join('\n') + '\n\nPaste URLs manually.');
 }
 
-</script>
-</body>
-</html>
