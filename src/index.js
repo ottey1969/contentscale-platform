@@ -2496,6 +2496,38 @@ app.post('/api/gemini-proxy', async (req, res) => {
         });
       }
 
+      // 503 overload on final attempt — try Claude as fallback
+      if (upstream.status === 503 && attempt >= MAX_RETRIES) {
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        if (anthropicKey) {
+          try {
+            console.log('[gemini-proxy] Gemini 503 — falling back to Claude');
+            const userText = req.body?.contents?.[0]?.parts?.[0]?.text || '';
+            const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': anthropicKey,
+                'anthropic-version': '2023-06-01'
+              },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1024,
+                messages: [{ role: 'user', content: userText }]
+              })
+            });
+            const claudeData = await claudeResp.json();
+            const claudeText = claudeData.content?.[0]?.text || '';
+            // Return in Gemini-compatible format so client code works unchanged
+            return res.json({
+              candidates: [{ content: { parts: [{ text: claudeText }] } }],
+              _fallback: 'claude'
+            });
+          } catch(claudeErr) {
+            console.error('[gemini-proxy] Claude fallback also failed:', claudeErr.message);
+          }
+        }
+      }
       // Other error — return immediately
       return res.status(upstream.status).json(data);
 
@@ -7346,7 +7378,21 @@ app.get('/api/fetch-sitemap', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'url required' });
   try {
-    const resp = await axios.get(url, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+    // Normalize: ensure https, handle www
+    let fetchUrl = url;
+    if (fetchUrl.startsWith('http://')) fetchUrl = fetchUrl.replace('http://', 'https://');
+    const resp = await axios.get(fetchUrl, { 
+      timeout: 10000, 
+      headers: { 'User-Agent': 'ContentScaleBot/1.0' }, 
+      responseType: 'text',
+      maxRedirects: 5
+    }).catch(async (e) => {
+      // Try www variant if non-www fails (or vice versa)
+      const alt = fetchUrl.includes('://www.') 
+        ? fetchUrl.replace('://www.', '://') 
+        : fetchUrl.replace('://', '://www.');
+      return axios.get(alt, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text', maxRedirects: 5 });
+    });
     const xml = resp.data;
     const locRegex = /<loc>(.*?)<\/loc>/gi;
     const urls = [], subSitemaps = [];
@@ -7358,9 +7404,11 @@ app.get('/api/fetch-sitemap', async (req, res) => {
       else urls.push(u);
     }
     console.log(`[sitemap] ${url} => ${urls.length} URLs, ${subSitemaps.length} sub-sitemaps`);
-    // If sitemap index with no direct URLs, auto-fetch first sub-sitemap
+    // If sitemap index with no direct URLs, auto-fetch best sub-sitemap
     if (urls.length === 0 && subSitemaps.length > 0) {
-      const sub = await axios.get(subSitemaps[0], { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+      // Prefer page-sitemap over post/category sitemaps
+      const preferred = subSitemaps.find(u => u.includes('page')) || subSitemaps[0];
+      const sub = await axios.get(preferred, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
       const subXml = sub.data;
       const subRegex = /<loc>(.*?)<\/loc>/gi;
       let sm;
