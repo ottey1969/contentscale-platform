@@ -21,7 +21,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap;gap:12px;}
 .brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
 .topbar-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;background:linear-gradient(90deg,var(--pulse),var(--nexus));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.topbar-sub{font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+.topbar-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
 
 /* Modes */
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:28px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
@@ -29,14 +29,14 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .mode-btn:last-child{border-right:none;}
 .mode-btn.active{background:rgba(255,255,255,.04);color:var(--ink);}
 .mode-btn .mi{font-size:22px;}
-.mode-btn .ms{font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:block;margin-top:3px;}
+.mode-btn .ms{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:block;margin-top:3px;}
 .mode-btn.active .ms{color:var(--muted);}
 
 /* Panel */
 .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:26px;margin-bottom:18px;position:relative;overflow:hidden;}
 .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));}
-.panel-title{font-family:monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.panel-badge{font-family:monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.panel-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
 
 /* Upload */
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
@@ -45,9 +45,9 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 
 /* Fields */
 .field{margin-bottom:0;}
-.field label{font-family:monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
 .field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:all .2s;resize:vertical;}
-.field textarea{min-height:90px;font-family:monospace;font-size:11px;}
+.field textarea{min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.07);}
 .field select option{background:var(--card);}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -58,7 +58,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .btn-gold{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:16px 36px;border-radius:6px;cursor:pointer;transition:all .2s;width:100%;margin-top:6px;}
 .btn-gold:hover{background:var(--ink);transform:translateY(-1px);}
 .btn-gold:disabled{opacity:.35;cursor:not-allowed;transform:none;}
-.btn-sm{font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid;white-space:nowrap;}
+.btn-sm{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid;white-space:nowrap;}
 .btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
 .btn-blue:hover{background:var(--blue);color:#000;}
 .btn-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple);}
@@ -74,7 +74,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 
 /* Opportunity table */
 .opp-table{width:100%;border-collapse:collapse;font-size:12px;}
-.opp-table th{background:var(--surface);color:var(--muted);font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
+.opp-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
 .opp-table td{padding:9px 11px;border:1px solid var(--border);vertical-align:middle;}
 .opp-table tr:hover td{background:rgba(255,255,255,.02);}
 .opp-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--pulse),var(--gold));margin-top:3px;}
@@ -84,12 +84,12 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 
 /* Cannibalization */
 .cann-card{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:14px;margin-bottom:10px;}
-.cann-card h4{font-family:monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.cann-card h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
 
 /* Progress */
 .progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
 .progress.show{display:block;}
-.prog-label{font-family:monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.prog-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
 .prog-step{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;color:var(--dim);}
 .prog-step:last-child{border:none;}
 .prog-step.active{color:var(--gold);}
@@ -106,7 +106,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .sec-head{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.02);}
 .sec-head:hover{background:rgba(255,255,255,.04);}
 .sec-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;flex:1;}
-.badge{font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;}
 .b-pulse{background:rgba(244,63,63,.15);color:var(--pulse);border:1px solid rgba(244,63,63,.3);}
 .b-nexus{background:rgba(167,139,250,.15);color:var(--nexus);border:1px solid rgba(167,139,250,.3);}
 .b-tech{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
@@ -126,11 +126,11 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .md li{margin-bottom:4px;}
 .md strong{color:var(--ink);font-weight:700;}
 .md em{color:var(--amber);}
-.md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:monospace;font-size:11px;color:var(--blue);}
+.md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
 .md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
 .md pre code{background:none;border:none;padding:0;font-size:11px;}
 .md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
-.md th{background:var(--surface);color:var(--muted);font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;text-align:left;border:1px solid var(--border);}
+.md th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;text-align:left;border:1px solid var(--border);}
 .md td{padding:7px 10px;border:1px solid var(--border);}
 .md tr:hover td{background:rgba(255,255,255,.02);}
 .md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
@@ -141,7 +141,7 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .warn{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
 .warn strong{color:var(--red);}
 
-.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* Priority action card */
@@ -232,24 +232,24 @@ img,table,iframe{max-width:100%;}
       </div>
       <div class="g2" style="gap:16px;">
         <div>
-          <div style="font-family:monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Pages CSV (required)</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Pages CSV (required)</div>
           <div class="upload-zone" id="pagesZone">
             <input type="file" id="pagesFile" accept=".csv" onchange="handlePagesCSV(this)">
             <div style="font-size:28px;margin-bottom:8px;">📄</div>
             <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Pages Performance</div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px;">Page · Clicks · Impressions · CTR · Position</div>
           </div>
-          <div id="pagesStatus" style="margin-top:8px;font-family:monospace;font-size:10px;color:var(--muted);"></div>
+          <div id="pagesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
         <div>
-          <div style="font-family:monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional)</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional)</div>
           <div class="upload-zone" id="queriesZone">
             <input type="file" id="queriesFile" accept=".csv" onchange="handleQueriesCSV(this)">
             <div style="font-size:28px;margin-bottom:8px;">🔍</div>
             <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Queries Performance</div>
             <div style="font-size:11px;color:var(--muted);margin-top:4px;">Query · Clicks · Impressions · CTR · Position</div>
           </div>
-          <div id="queriesStatus" style="margin-top:8px;font-family:monospace;font-size:10px;color:var(--muted);"></div>
+          <div id="queriesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
       </div>
     </div>
@@ -263,7 +263,7 @@ img,table,iframe{max-width:100%;}
         <div class="field"><label>Max CTR %</label><input type="number" id="maxCtr" step="0.1" value="10" onchange="renderTable()"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:11px;color:var(--muted);" id="tableCount"></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="tableCount"></span>
         <button class="btn-sm btn-muted" onclick="exportOpps()">↓ Export CSV</button>
         <button class="btn-sm btn-green" onclick="showCannibalization()">🔍 Cannibalization Report</button>
       </div>
@@ -302,32 +302,36 @@ img,table,iframe{max-width:100%;}
     <div class="panel">
       <div class="panel-title">① Page Details</div>
       <div class="g2" style="margin-bottom:14px;">
-        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework" onblur="aiSuggestGoal(this.value, document.getElementById('dKw')?.value); inferGeoFromContext(this.value, '')"></div>
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework"></div>
         <div class="field"><label>Primary Keyword *</label><input type="text" id="dKw" placeholder="GRAAF framework SEO 2026"></div>
       </div>
       <div class="g3">
         <div class="field"><label>Secondary Keyword</label><input type="text" id="dKw2" placeholder="EEAT content score"></div>
         <div class="field">
-          <label>Geo</label>
-          <select id="dGeo">
-            <option value="Netherlands">Netherlands 🇳🇱</option>
-            <option value="Belgium">Belgium 🇧🇪</option>
-            <option value="Global">Global</option>
-            <option value="UK">UK</option>
-            <option value="USA">USA</option>
+            <label>Geo <span style="font-size:9px;color:var(--muted);font-family:monospace">(city/state/country)</span></label>
+            <input type="text" id="dGeo" placeholder="e.g. New Jersey, USA" style="width:100%">
+          </div>
+        <div class="field">
+          <label>Conversion Goal</label>
+          <select id="dGoal">
+            <option>Lead generation</option>
+            <option>Phone call</option>
+            <option>Quote request</option>
+            <option>Sale / purchase</option>
+            <option>Demo / consultation</option>
+            <option>Newsletter signup</option>
+            <option>Brand awareness</option>
           </select>
         </div>
-                  <div class="field">
-            <label>Conversion Goal <span id="goalAiBadge" style="display:none;font-size:8px;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);border-radius:3px;padding:1px 5px;font-family:monospace;">AI</span></label>
-            <select id="dGoal">
-              <option>Lead generation</option>
-              <option>Sale / purchase</option>
-              <option>Demo / consultation</option>
-              <option>Brand awareness</option>
-              <option>Newsletter signup</option>
-              <option>Phone call</option>
-              <option>Quote request</option>
-            </select></div>
+      <!-- AUTO-FILL VIA GSC -->
+      <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:4px;">
+        <div>
+          <div style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:4px;">⇄ AUTO-FILL VIA GSC</div>
+          <div style="font-size:11px;color:var(--muted);">Vul de Page URL in en klik — impressies, CTR, positie en top queries worden automatisch opgehaald uit Google Search Console.</div>
+        </div>
+        <button onclick="autoFillGSC()" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 AUTO-FILL GSC DATA</button>
+      </div>
+
       </div>
     </div>
 
@@ -351,17 +355,11 @@ img,table,iframe{max-width:100%;}
         <strong>Chrome:</strong> Open page → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below.<br>
         The engine reads your ACTUAL H1, H2s, schema, word count — not guesses.
       </div>
-      <div style="margin-bottom:12px;">
-        <button onclick="aiDetectCompetitors()" id="aiCompBtn" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:#a78bfa;border-radius:6px;padding:7px 14px;font-size:10px;font-family:monospace;cursor:pointer;letter-spacing:.06em;">
-          🤖 AI FIND BEST COMPETITORS
-        </button>
-        <span id="aiCompStatus" style="font-size:10px;color:var(--muted);font-family:monospace;margin-left:10px;"></span>
-      </div>
       <div class="field">
         <label>Raw HTML (full page source)</label>
         <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>...paste full page source...</html>" oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
       </div>
-      <div id="dHtmlStats" style="margin-top:6px;font-family:monospace;font-size:10px;color:var(--muted);"></div>
+      <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
     <!-- META CONSISTENCY CHECKER — Stap ③b -->
@@ -377,6 +375,10 @@ img,table,iframe{max-width:100%;}
 
     <div class="panel">
       <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span></div>
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+        <button onclick="aiDetectCompetitors()" id="aiCompBtn" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:#a78bfa;border-radius:6px;padding:7px 16px;font-size:10px;font-family:monospace;cursor:pointer;letter-spacing:.06em;">🤖 AI FIND BEST COMPETITORS</button>
+        <span id="aiCompStatus" style="font-size:10px;color:var(--muted);font-family:monospace;"></span>
+      </div>
       <div class="info">
         <strong>Leave empty</strong> → defaults to Surfer SEO &amp; MarketMuse benchmark comparison from training data.<br>
         <strong>Paste HTML</strong> → real side-by-side diff of their actual content vs yours.
@@ -388,7 +390,7 @@ img,table,iframe{max-width:100%;}
             <label>Competitor 1 HTML (optional)</label>
             <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty for Surfer SEO benchmark" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
           </div>
-          <div id="dComp1stats" style="margin-top:5px;font-family:monospace;font-size:10px;color:var(--muted);"></div>
+          <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
         <div>
           <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL</label><input type="url" id="dComp2url" placeholder="https://marketmuse.com/..."></div>
@@ -396,7 +398,7 @@ img,table,iframe{max-width:100%;}
             <label>Competitor 2 HTML (optional)</label>
             <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty for MarketMuse benchmark" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
           </div>
-          <div id="dComp2stats" style="margin-top:5px;font-family:monospace;font-size:10px;color:var(--muted);"></div>
+          <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
       </div>
     </div>
@@ -408,17 +410,16 @@ img,table,iframe{max-width:100%;}
       </div>
       <div class="field">
         <label>Your Site URLs (one per line)</label>
-        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://yoursite.com/page1&#10;https://yoursite.com/page2&#10;&#10;Tip: click Load Sitemap to fetch automatically"></textarea>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://yoursite.com/page1&#10;https://yoursite.com/page2&#10;&#10;Or click Load from Sitemap below"></textarea>
         <button onclick="loadSitemapUrls()" style="margin-top:6px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:#60a5fa;border-radius:5px;padding:5px 12px;font-size:9px;font-family:monospace;cursor:pointer;letter-spacing:.06em;">📡 LOAD FROM SITEMAP</button>
       </div>
-      <div id="urlCount" style="margin-top:5px;font-family:monospace;font-size:10px;color:var(--muted);"></div>
+      <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
     <div class="panel">
       <div class="panel-title">⑥ Optional</div>
-      <div class="field"><label>Known Constraints <span id="conAiBadge" style="display:none;font-size:8px;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);border-radius:3px;padding:1px 5px;font-family:monospace;">AI</span></label>
-          <input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual...">
-          <div style="margin-top:5px;"><button onclick="aiDetectConstraints()" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);color:#a78bfa;border-radius:4px;padding:3px 10px;font-size:9px;font-family:monospace;cursor:pointer;">🤖 AI detect from URL</button></div></div>
+      <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN"></div>
+          <div style="margin-top:5px;"><button onclick="aiDetectConstraints()" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);color:#a78bfa;border-radius:4px;padding:3px 10px;font-size:9px;font-family:monospace;cursor:pointer;">🤖 AI detect from URL</button></div>
     </div>
 
     <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
@@ -437,36 +438,7 @@ img,table,iframe{max-width:100%;}
 let gscPages = [];
 let gscQueries = [];
 
-const RAILWAY = 'https://app.contentscale.site';
-
-// ── Auto-load GSC from Workflow Manager localStorage ──────────
-function loadSharedGSC() {
-  try {
-    const raw = localStorage.getItem('cs_shared_gsc');
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    if (data.pages && data.pages.length) {
-      gscPages = data.pages.map(p => ({
-        page: p.page || p.url || '',
-        impressions: p.impressions || 0,
-        clicks: p.clicks || 0,
-        ctr: p.ctr || 0,
-        position: p.position || 0,
-        score: p.score || 0
-      })).filter(p => p.page && p.page.includes('.'));
-      const el = document.getElementById('pagesStatus');
-      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscPages.length} pages from Workflow Manager</span>`;
-      console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC');
-    }
-    if (data.queries && data.queries.length) {
-      gscQueries = data.queries.map(q => ({query: q.query || '', position: q.position || 0})).filter(q => q.query);
-      const el = document.getElementById('queriesStatus');
-      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscQueries.length} queries from Workflow Manager</span>`;
-    }
-    return gscPages.length > 0;
-  } catch(e) { console.warn('[PULSE+NEXUS] loadSharedGSC error:', e.message); return false; }
-}
-setTimeout(loadSharedGSC, 200);
+const RAILWAY = 'https://contentscale-platform-production.up.railway.app';
 
 
 // ── META CONSISTENCY CHECKER ─────────────────────────────────
@@ -474,7 +446,7 @@ function runMetaCheck() {
   var html = document.getElementById('dHtml').value.trim();
   if (!html) {
     document.getElementById('metaCheckerInfo').style.display = 'block';
-    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ First paste your page HTML in field ③ above.</strong>';
+    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ Plak eerst je pagina HTML in veld ③ hierboven.</strong>';
     return;
   }
   document.getElementById('metaCheckerInfo').style.display = 'none';
@@ -699,24 +671,10 @@ function runMetaCheck() {
     if(p.get('wf'))   window._wfId = p.get('wf');
     const deepView = document.getElementById('deepView');
     if(!deepView) return;
-    // Load GSC from localStorage now that URL params are known
-    loadSharedGSC();
-    // Build connection banner
-    const chips = [];
-    if(p.get('pos'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ${parseFloat(p.get('pos')).toFixed(1)}</span>`);
-    if(p.get('impr')) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${parseInt(p.get('impr')).toLocaleString()} impr</span>`);
-    if(p.get('ctr'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${p.get('ctr')}% CTR</span>`);
-    const gscBadge = gscPages.length
-      ? `<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">✓ ${gscPages.length} GSC pages</span>`
-      : `<span style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:4px;padding:2px 8px;font-size:10px;color:#fbbf24;">⚠ No GSC — upload CSV above</span>`;
     const banner = document.createElement('div');
-    banner.style.cssText = 'background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:11px;color:#fbbf24;';
-    banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;">Connected from Workflow Manager</strong>
-      ${p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;">← Back to Workflow</a>' : ''}
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips.join('')} ${gscBadge}</div>
-    <div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);">Paste page HTML below → Run Full Audit</div>`;
+    banner.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:12px 18px;margin-bottom:14px;font-family:monospace;font-size:11px;color:#fbbf24;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    banner.innerHTML = '<span>✓ Pre-filled vanuit Workflow Manager — paste Pagina HTML hieronder voor beste resultaat. Competitor HTML is optioneel (defaultt naar Surfer SEO + MarketMuse benchmark).</span>'
+      + (p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;margin-left:auto;white-space:nowrap;">← Terug naar Workflow</a>' : '');
     deepView.insertBefore(banner, deepView.firstChild);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
@@ -808,7 +766,6 @@ function handlePagesCSV(input) {
     });
     gscPages.sort((a,b)=>b.score-a.score);
     document.getElementById('pagesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscPages.length} pages loaded</span>`;
-    try { localStorage.setItem('cs_shared_gsc', JSON.stringify({pages:gscPages, queries:gscQueries})); } catch(e) {}
     document.getElementById('filterPanel').style.display='block';
     document.getElementById('opportunityTable').style.display='block';
     renderTable();
@@ -883,14 +840,14 @@ function renderTable() {
     return `<tr>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${i<3?'var(--gold)':'var(--muted)'};">#${i+1}</td>
       <td>
-        <div style="font-family:monospace;font-size:10px;color:var(--blue);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.page}">${short}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.page}">${short}</div>
         <div style="font-size:10px;color:var(--dim);margin-top:2px;">${r.impressions.toLocaleString()} impr · ${r.clicks} clicks</div>
       </td>
-      <td style="font-family:monospace;font-size:11px;">${r.impressions.toLocaleString()}</td>
-      <td style="font-family:monospace;font-size:11px;color:${ctrColor};">${r.ctr.toFixed(1)}%</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${r.impressions.toLocaleString()}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:${ctrColor};">${r.ctr.toFixed(1)}%</td>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${posColor};">${Math.round(r.position)}</td>
       <td style="min-width:90px;">
-        <div style="font-family:monospace;font-size:11px;color:var(--gold);">${r.score}/100</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);">${r.score}/100</div>
         <div class="opp-bar" style="width:${barW}%;"></div>
       </td>
       <td>
@@ -1026,7 +983,7 @@ async function quickAudit(enc,impr,ctr,pos) {
 // ── DEEP AUDIT — 10 steps, PRIORITY ACTIONS FIRST ──
 const DEEP_STEPS=[
   {id:'d0',icon:'🔥',label:'PRIORITY ACTIONS — Do These First (top 7)',badge:'b-gold'},
-  {id:'d1',icon:'🔍',label:'Intent + AI Overview — Who Ranks & Why',badge:'b-tech'},
+  {id:'d1',icon:'🔍',label:'Intent + AI Overview Eligibility',badge:'b-tech'},
   {id:'d2',icon:'⚡',label:'CTR Surgery — real title/meta rewrite',badge:'b-win'},
   {id:'d3',icon:'🕵️',label:'Competitor Diff — Surfer SEO & MarketMuse benchmark',badge:'b-pulse'},
   {id:'d4',icon:'🕳️',label:'Content Gap Matrix — what you are missing',badge:'b-pulse'},
@@ -1099,7 +1056,7 @@ ${myContentStr}`;
   const prompts={
     d0:`${base}\n\nSTEP 0 — PRIORITY ACTIONS (show this first, before any analysis):\n\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\n\nFor each action use this format:\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change, add, or fix — copy-paste ready]\nWhere: [Exact location on page or in code]\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
 
-    d1:`${base}\n\nSTEP 1 — INTENT + AI OVERVIEW GAP ANALYSIS:\n\nYou have access to the CLIENT'S HTML (provided above). This is not a generic audit — use the actual HTML to check what exists and what is missing.\n\nPART A — INTENT DECODING:\nClassify primary intent precisely (informational/commercial/transactional/navigational).\nCheck the client HTML: does the page content match this intent? State any mismatch with a specific fix.\n\nPART B — AI OVERVIEW (AIO) LIVE INVESTIGATION:\nSearch Google NOW for: "${inp.kw}" ${inp.geo ? 'in ' + inp.geo : ''}.\n\n1. AI OVERVIEW EXISTS? Yes/No. Summarize exactly what Google's AIO says (the actual answer it shows).\n2. AIO SOURCES: List the top 3 URLs Google cites in the AIO. For each:\n   - URL\n   - Why Google chose it (direct answer format, FAQ schema, word count, authority, freshness, specific paragraph style)\n   - What exact content pattern earned them the AIO spot\n\nPART C — GAP CALCULATION (client HTML vs AIO sources):\nThis is a precise diff. Go through each AIO signal and check the client HTML:\n\n| Signal | AIO Sources Have | Client Page Has | Action Needed |\n|--------|-----------------|-----------------|---------------|\n| Direct answer paragraph (40-60w) | YES | check HTML → YES/NO | ... |\n| FAQ schema (JSON-LD) | YES | check HTML → YES/NO | ... |\n| H2/H3 question format | YES | check HTML → YES/NO | ... |\n| Author/expertise signal | YES | check HTML → YES/NO | ... |\n| Statistics/data citations | YES | check HTML → YES/NO | ... |\n| Definition of main term | YES | check HTML → YES/NO | ... |\n| Step-by-step process | YES | check HTML → YES/NO | ... |\n| Local/geo signals | YES | check HTML → YES/NO | ... |\n\nFor each row where client is missing: write the EXACT content to add (not a suggestion — the actual copy).\n\nPART D — POSITIVE CONTENT RECOMMENDATIONS:\nBased on what the client ALREADY HAS in the HTML that is strong — identify it and build on it.\n1. What is already good and should be kept/expanded?\n2. What existing section is closest to AIO eligibility and just needs a small rewrite?\n3. Write the exact rewrite of that section to make it AIO-ready (before → after).\n4. Write a ready-to-paste FAQ block (4 questions, 40-60w answers each) targeting the AIO format.\n5. Write the exact JSON-LD FAQ schema to add to the <head>.\n\nPART E — ZERO-CLICK RISK & CLICK STRATEGY:\nDoes this keyword trigger a featured snippet? What is the zero-click risk score (0-10)?\nHow to structure the page to WIN the snippet AND still drive clicks (hook after the answer)?`,
+    d1:`${base}\n\nSTEP 1 — INTENT + AI OVERVIEW GAP ANALYSIS:\n\nYou have the CLIENT HTML above. Use it — do not guess.\n\nPART A — INTENT:\nClassify intent (informational/commercial/transactional/navigational). Does the client HTML match? State mismatch with specific fix.\n\nPART B — AI OVERVIEW LIVE INVESTIGATION:\nSearch Google NOW for: "${inp.kw}" ${inp.geo ? 'in ' + inp.geo : ''}.\n1. DOES AN AI OVERVIEW EXIST? Yes/No. Quote exactly what it says.\n2. WHO IS CITED? List the top 3 AIO source URLs. For each: why Google chose it (direct answer format, FAQ schema, word count, E-E-A-T, freshness, paragraph style).\n\nPART C — GAP CALCULATION (client HTML vs AIO sources):\nCheck each signal in the actual client HTML — YES if present, NO if missing:\n| Signal | AIO Sources Have | Client HTML Has | Action |\n|--------|-----------------|-----------------|--------|\n| Direct answer paragraph (40-60w) | YES | YES/NO | ... |\n| FAQ schema JSON-LD | YES | YES/NO | ... |\n| H2/H3 question headings | YES | YES/NO | ... |\n| Author/expertise signal | YES | YES/NO | ... |\n| Statistics or data cited | YES | YES/NO | ... |\n| Definition of main term | YES | YES/NO | ... |\n| Step-by-step process | YES | YES/NO | ... |\n| Local/geo signal | YES | YES/NO | ... |\nFor every NO: write the EXACT content to add (not a suggestion — the actual copy to paste).\n\nPART D — BUILD ON WHAT IS ALREADY STRONG:\n1. What in the client HTML is already good? Name the specific section.\n2. Which existing section is closest to AIO eligibility with just a small rewrite?\n3. Write the before → after rewrite of that section.\n4. Write a ready-to-paste FAQ block (4 Q&As, 40-60 words each, AIO-optimized format).\n5. Write the exact JSON-LD FAQ schema to add to <head>.\n\nPART E — ZERO-CLICK RISK:\nZero-click risk score (0-10). Featured snippet opportunity? How to own the snippet AND still drive clicks?`,
 
     d2:`${base}\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "${extractTitle(inp.html)}"\nCURRENT META: "${extractMeta(inp.html)}"\n\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\n\n**Current Title** (${extractTitle(inp.html).length} chars): ${extractTitle(inp.html)}\n**Current Meta** (${extractMeta(inp.html).length} chars): ${extractMeta(inp.html)}\n**New Title**: [your version]\n**New Meta Description**: [your version]\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
 
@@ -1215,6 +1172,174 @@ function renderMd(t) {
     else handleQueriesCSV({files:[file]});
   });
 });
+
+// ══ AUTO-FILL GSC ═══════════════════════════════════════════════
+async function autoFillGSC() {
+  const urlField = document.getElementById('dUrl');
+  const url = urlField ? urlField.value.trim() : '';
+  if (!url) { alert('Enter the Page URL first'); return; }
+  
+  const btn = document.querySelector('[onclick="autoFillGSC()"]');
+  if (btn) { btn.textContent = '⏳ Fetching GSC...'; btn.disabled = true; }
+  
+  try {
+    const resp = await fetch('/api/gsc/auto-fill', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pageUrl: url })
+    });
+    const d = await resp.json();
+    if (!d.success) throw new Error(d.error || 'GSC error');
+    
+    const data = d.data;
+    // Fill impressions
+    const imprEl = document.getElementById('dImpr');
+    if (imprEl && data.impressions) imprEl.value = data.impressions;
+    // Fill CTR
+    const ctrEl = document.getElementById('dCtr');
+    if (ctrEl && data.ctr !== undefined) ctrEl.value = data.ctr;
+    // Fill position
+    const posEl = document.getElementById('dPos');
+    if (posEl && data.position) posEl.value = data.position;
+    // Fill top queries
+    const qEl = document.getElementById('dQueries');
+    if (qEl && data.topQueries) qEl.value = data.topQueries;
+    // Fill primary keyword (top query by impressions)
+    const kwEl = document.getElementById('dKw');
+    if (kwEl && !kwEl.value && data.topKeyword) kwEl.value = data.topKeyword;
+    // Fill secondary keyword (second query)
+    const kw2El = document.getElementById('dKw2');
+    if (kw2El && !kw2El.value && data.topQueries) {
+      const lines = data.topQueries.split('\n').filter(Boolean);
+      if (lines[1]) kw2El.value = lines[1];
+    }
+    // Auto-suggest geo and goal based on URL + keyword
+    inferGeoFromContext(url, data.topQueries || '');
+    aiSuggestGoal(url, document.getElementById('dKw')?.value || '');
+    
+    if (btn) { btn.textContent = '✅ GSC Data Loaded'; btn.disabled = false; }
+    setTimeout(() => { if(btn) btn.textContent = '🤖 AUTO-FILL GSC DATA'; }, 3000);
+  } catch(e) {
+    if (btn) { btn.textContent = '❌ ' + e.message; btn.disabled = false; }
+    setTimeout(() => { if(btn) btn.textContent = '🤖 AUTO-FILL GSC DATA'; }, 4000);
+  }
+}
+
+// ══ GEO INFERENCE ════════════════════════════════════════════════
+function inferGeoFromContext(url, queries) {
+  const geoField = document.getElementById('dGeo');
+  if (!geoField || geoField.value) return;
+  const stateMap = {
+    'nj':'New Jersey, USA','-nj':'New Jersey, USA','new-jersey':'New Jersey, USA',
+    '-ny':'New York, USA','new-york':'New York, USA',
+    '-fl':'Florida, USA','florida':'Florida, USA',
+    '-tx':'Texas, USA','texas':'Texas, USA',
+    '-ca':'California, USA','california':'California, USA',
+    '-il':'Illinois, USA','-pa':'Pennsylvania, USA',
+    '-ma':'Massachusetts, USA','-ga':'Georgia, USA',
+    '-oh':'Ohio, USA','-mi':'Michigan, USA','-nc':'North Carolina, USA',
+    'amsterdam':'Amsterdam, Netherlands','rotterdam':'Rotterdam, Netherlands',
+    'london':'London, UK','berlin':'Berlin, Germany',
+  };
+  const u = (url + ' ' + queries).toLowerCase();
+  for (const [k,v] of Object.entries(stateMap)) {
+    if (u.includes(k)) { geoField.value = v; return; }
+  }
+}
+
+// ══ GOAL AI SUGGESTION ═══════════════════════════════════════════
+function aiSuggestGoal(url, kw) {
+  const f = document.getElementById('dGoal');
+  if (!f) return;
+  const c = (url + ' ' + kw).toLowerCase();
+  if (c.includes('emergency') || c.includes('24 hour') || c.includes('urgent')) f.value = 'Phone call';
+  else if (c.includes('quote') || c.includes('estimate') || c.includes('price')) f.value = 'Quote request';
+  else if (c.includes('shop') || c.includes('buy') || c.includes('product') || c.includes('order')) f.value = 'Sale / purchase';
+  else if (c.includes('demo') || c.includes('trial') || c.includes('consult')) f.value = 'Demo / consultation';
+  else if (c.includes('service') || c.includes('repair') || c.includes('install') || c.includes('roof') || c.includes('plumb') || c.includes('hvac')) f.value = 'Lead generation';
+}
+
+// ══ AI COMPETITOR FINDER ══════════════════════════════════════════
+async function aiDetectCompetitors() {
+  const kw = document.getElementById('dKw')?.value || '';
+  const geo = document.getElementById('dGeo')?.value || 'USA';
+  if (!kw) { alert('Enter Primary Keyword first'); return; }
+  const btn = document.getElementById('aiCompBtn');
+  const status = document.getElementById('aiCompStatus');
+  btn.textContent = '⏳ Searching...'; btn.disabled = true;
+  status.textContent = '';
+  try {
+    const resp = await fetch('/api/gemini-proxy', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt: `You are an SEO expert. Search Google right now for: "${kw}" in ${geo}. Find the 2 best real competitor pages currently ranking on page 1. Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why"}. Use real ranking URLs only.` })
+    });
+    const d = await resp.json();
+    const text = (d.text || d.result || '').replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const parsed = JSON.parse(text);
+    if (parsed.comp1) {
+      const c1 = document.getElementById('dComp1url');
+      const c2 = document.getElementById('dComp2url');
+      if (c1) c1.value = parsed.comp1;
+      if (c2) c2.value = parsed.comp2 || '';
+      status.textContent = '✅ Found! Edit if needed.';
+      status.style.color = '#4ade80';
+    }
+  } catch(e) { status.textContent = '❌ ' + e.message; status.style.color = '#f43f5e'; }
+  btn.textContent = '🤖 AI FIND BEST COMPETITORS'; btn.disabled = false;
+}
+
+// ══ SITEMAP LOADER ════════════════════════════════════════════════
+async function loadSitemapUrls() {
+  const urlField = document.getElementById('dUrl');
+  const pageUrl = urlField?.value || '';
+  let sitemapUrl = '';
+  if (pageUrl) {
+    try { sitemapUrl = new URL(pageUrl).origin + '/sitemap.xml'; } catch(e) {}
+  }
+  if (!sitemapUrl) {
+    sitemapUrl = prompt('Enter sitemap URL:', 'https://yoursite.com/sitemap.xml');
+    if (!sitemapUrl) return;
+  }
+  const ta = document.getElementById('dSiteUrls');
+  ta.value = '⏳ Loading sitemap...';
+  try {
+    const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
+    const d = await r.json();
+    if (d.urls && d.urls.length) {
+      ta.value = d.urls.join('\n');
+    } else { ta.value = ''; alert('No URLs found. Paste manually.'); }
+  } catch(e) { ta.value = ''; alert('Could not fetch: ' + e.message); }
+}
+
+// ══ AI CONSTRAINTS DETECT ═════════════════════════════════════════
+async function aiDetectConstraints() {
+  const urlField = document.getElementById('dUrl');
+  const url = urlField?.value || '';
+  if (!url) { alert('Enter Page URL first'); return; }
+  try {
+    const hostname = new URL(url).hostname;
+    const r = await fetch('/api/gemini-proxy', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt: `For website ${hostname}, what CMS and technical constraints apply? Return ONLY a short comma-separated list. Examples: WordPress, no JS injection, GDPR-strict, AMP, Shopify, multilingual. Be concise, max 6 items.` })
+    });
+    const d = await r.json();
+    const constraints = (d.text || d.result || '').trim();
+    const f = document.getElementById('dConstraints');
+    if (f && constraints) f.value = constraints;
+  } catch(e) { console.error(e); }
+}
+
+// Hook URL field to auto-suggest geo + goal on blur
+document.addEventListener('DOMContentLoaded', function() {
+  const urlField = document.getElementById('dUrl');
+  if (urlField) {
+    urlField.addEventListener('blur', function() {
+      inferGeoFromContext(this.value, '');
+      aiSuggestGoal(this.value, document.getElementById('dKw')?.value || '');
+    });
+  }
+});
+
 </script>
 </body>
 </html>
