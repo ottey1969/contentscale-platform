@@ -6709,19 +6709,17 @@ function renderMd(t) {
 </body>
 </html>
 `;
+// SEO-AUDIT — served from public/ folder on Railway
 app.get('/seo-audit', (req, res) => {
   const tryPaths = [
-    path.join(__dirname, '../public/seo-audit.html'),
-    path.join(__dirname, 'public/seo-audit.html'),
+    require('path').join(__dirname, '../public/seo-audit.html'),
+    require('path').join(__dirname, 'public/seo-audit.html'),
   ];
-  const filePath = tryPaths.find(p => fs.existsSync(p));
-  if (!filePath) return res.status(404).send('seo-audit.html not found in public/');
-  
+  const filePath = tryPaths.find(p => require('fs').existsSync(p));
+  if (!filePath) return res.status(404).send('<h2>seo-audit.html not found — upload it to public/ on Railway</h2>');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  return res.send(fs.readFileSync(filePath, 'utf8'));
+  return res.send(require('fs').readFileSync(filePath, 'utf8'));
 });
 // /audit-seo now redirects above
 
