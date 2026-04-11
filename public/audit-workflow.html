@@ -569,21 +569,112 @@ function openInAudit(id){
       });
       scored.sort(function(a,b){ return b.score - a.score; });
 
-      // Top 15 queries for the textarea, top-2 for secondary keyword
+      // Top 15 queries for the textarea
       var top = scored.filter(function(s){ return s.score > 0; }).slice(0, 15);
       if (!top.length) top = scored.slice(0, 15); // fallback: use global top
-      pageTopQueries  = top.map(function(s){ return s.q; }).join('\n');
-      pageSecondaryKw = top[1] ? top[1].q : '';
+      pageTopQueries = top.map(function(s){ return s.q; }).join('\n');
+
+      // Secondary keyword — pick best query that is NOT the primary keyword
+      // Avoids primary === secondary when p.keyword matches top[0]
+      var primaryNorm = (p.keyword || '').toLowerCase().trim();
+      var secondaryCandidates = top.filter(function(s){
+        var qNorm = s.q.toLowerCase().trim();
+        if (!primaryNorm) return true;
+        if (qNorm === primaryNorm) return false;
+        // Skip near-duplicates: 80%+ word overlap
+        var primaryWords = primaryNorm.split(/\s+/);
+        var qWords = qNorm.split(/\s+/);
+        var overlap = primaryWords.filter(function(w){ return qWords.includes(w); }).length;
+        return (overlap / Math.max(primaryWords.length, 1)) < 0.8;
+      });
+      pageSecondaryKw = secondaryCandidates[0] ? secondaryCandidates[0].q : '';
     }
   } catch(e) {}
 
-  // ── Geo inference from project site field ─────────────────────
-  var geo = '';
+  // ── Geo inference — comprehensive TLD map + local business flag ──
+  var geo = 'Global'; // safe default
+  var isLocalBusiness = false;
   var siteVal = (project.site || '').toLowerCase();
-  if (siteVal.includes('.nl') || siteVal.includes('nederland') || siteVal.includes('netherlands')) geo = 'Netherlands';
-  else if (siteVal.includes('.be') || siteVal.includes('belgie') || siteVal.includes('belgium')) geo = 'Belgium';
-  else if (siteVal.includes('.co.uk') || siteVal.includes('.uk')) geo = 'UK';
-  else if (siteVal.includes('.com') || siteVal.includes('.us')) geo = 'Global';
+
+  // Detect local business from page URL patterns
+  var pageUrlLower = (p.url || '').toLowerCase();
+  var localBusinessKeywords = [
+    'dentist','tandarts','plumber','loodgieter','electrician','elektricien',
+    'roofer','dakdekker','accountant','notaris','lawyer','advocaat',
+    'restaurant','cafe','kapper','hairdresser','bakker','bakery',
+    'huisarts','gp-practice','kliniek','clinic','gym','fitness',
+    'slager','butcher','florist','bloemist','supermarkt','supermarket',
+    'autobedrijf','garage','mechanic','verzekeraar','insurance-broker',
+    'makelaar','realtor','estate-agent','tandartspraktijk','dierenarts',
+    'veterinarian','opticien','optician','fysiotherapeut','physiotherapist'
+  ];
+  isLocalBusiness = localBusinessKeywords.some(function(kw){ return pageUrlLower.includes(kw) || siteVal.includes(kw); });
+
+  // ccTLD → geo mapping (ordered: most-specific first to avoid .co.uk matching .uk)
+  var TLD_MAP = [
+    ['.co.uk',       'UK'],
+    ['.org.uk',      'UK'],
+    ['.me.uk',       'UK'],
+    ['.nl',          'Netherlands'],
+    ['.be',          'Belgium'],
+    ['.de',          'Germany'],
+    ['.at',          'Austria'],
+    ['.ch',          'Switzerland'],
+    ['.fr',          'France'],
+    ['.es',          'Spain'],
+    ['.it',          'Italy'],
+    ['.pt',          'Portugal'],
+    ['.pl',          'Poland'],
+    ['.se',          'Sweden'],
+    ['.no',          'Norway'],
+    ['.dk',          'Denmark'],
+    ['.fi',          'Finland'],
+    ['.ie',          'Ireland'],
+    ['.nz',          'New Zealand'],
+    ['.au',          'Australia'],
+    ['.ca',          'Canada'],
+    ['.us',          'USA'],
+    ['.br',          'Brazil'],
+    ['.mx',          'Mexico'],
+    ['.za',          'South Africa'],
+    ['.in',          'India'],
+    ['.sg',          'Singapore'],
+    ['.hk',          'Hong Kong'],
+    ['.jp',          'Japan'],
+    ['.kr',          'South Korea'],
+    ['.ae',          'UAE'],
+    ['.uk',          'UK'],   // catch-all .uk after more specific
+  ];
+
+  // Keyword hints in site URL (e.g. "netherlands", "nederland", "belgique")
+  var KEYWORD_MAP = [
+    ['nederland','Netherlands'],['netherlands','Netherlands'],
+    ['belgie','Belgium'],['belgique','Belgium'],['belgium','Belgium'],
+    ['deutschland','Germany'],['germany','Germany'],
+    ['frankreich','France'],['france','France'],
+    ['espana','Spain'],['spain','Spain'],
+    ['italia','Italy'],['italy','Italy'],
+    ['united-kingdom','UK'],['uk-',  'UK'],
+    ['australia','Australia'],['canada','Canada'],
+    ['united-states','USA'],['america','USA'],
+  ];
+
+  // Try TLD match on the site URL host
+  var siteHost = '';
+  try { siteHost = new URL(project.site || '').hostname.toLowerCase(); } catch(e) { siteHost = siteVal; }
+
+  var matched = false;
+  for (var ti = 0; ti < TLD_MAP.length; ti++) {
+    if (siteHost.endsWith(TLD_MAP[ti][0])) { geo = TLD_MAP[ti][1]; matched = true; break; }
+  }
+  // If no ccTLD matched, try keyword hints
+  if (!matched) {
+    for (var ki = 0; ki < KEYWORD_MAP.length; ki++) {
+      if (siteHost.includes(KEYWORD_MAP[ki][0])) { geo = KEYWORD_MAP[ki][1]; matched = true; break; }
+    }
+  }
+  // .com / .org / .net / .io without any ccTLD hint → Global (not USA assumption)
+  // (geo stays 'Global' from the default above)
 
   // ── Build the full transfer payload ───────────────────────────
   var transfer = {
@@ -603,6 +694,7 @@ function openInAudit(id){
 
     // Context
     geo:          geo,
+    isLocalBusiness: isLocalBusiness,
     priority:     p.priority || 'med',
     scoreBefore:  p.scoreBefore || '',
     notes:        p.notes    || '',
@@ -826,6 +918,45 @@ function renderPages(){
 
       // Notes
       +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea onchange="updateField(\''+p.id+'\',\'notes\',this.value)">'+p.notes+'</textarea></div>'
+
+
+      // Internal Link Suggestions (auto-computed from page list)
+      + (function(){
+          var kw = (p.keyword || '').toLowerCase();
+          var kwWords = kw.split(/\s+/).filter(function(w){ return w.length > 2; });
+          if (!kwWords.length || pages.length < 2) return '';
+          var scored = pages
+            .filter(function(pg){ return pg.id !== p.id && pg.url && pg.url.startsWith('http'); })
+            .map(function(pg){
+              var slug = '';
+              try { slug = new URL(pg.url).pathname.toLowerCase().replace(/[-_\/]/g,' '); } catch(e){ slug = pg.url.toLowerCase(); }
+              var combo = slug + ' ' + (pg.keyword||'').toLowerCase();
+              var matches = kwWords.filter(function(w){ return combo.includes(w); }).length;
+              return { pg: pg, score: matches };
+            })
+            .filter(function(x){ return x.score > 0; })
+            .sort(function(a,b){ return b.score - a.score; })
+            .slice(0, 5);
+          if (!scored.length) return '';
+          var rows = scored.map(function(x, i){
+            var slug = '';
+            try { slug = new URL(x.pg.url).pathname.replace(/^\//,'').replace(/\//g,' › ').slice(0,50)||'home'; } catch(e){ slug = x.pg.url.slice(-50); }
+            var targetKw = (x.pg.keyword || '').toLowerCase();
+            var anchorWords = kwWords.filter(function(w){ return targetKw.includes(w) || slug.toLowerCase().includes(w); });
+            var anchor = anchorWords.length ? anchorWords.slice(0,3).join(' ') : (x.pg.keyword || slug).slice(0,30);
+            return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(96,165,250,.04);border-radius:4px;margin-bottom:3px;flex-wrap:wrap;">'
+              +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--dim);width:14px;flex-shrink:0;">#'+(i+1)+'</span>'
+              +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--blue);flex:1;word-break:break-all;">'+x.pg.url.replace(/^https?:\/\//,'').slice(0,60)+'</span>'
+              +(x.pg.keyword?'<span style="font-size:9px;color:var(--muted);">'+x.pg.keyword.slice(0,30)+'</span>':'')
+              +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--gold);background:rgba(251,191,36,.1);padding:2px 6px;border-radius:3px;white-space:nowrap;">anchor: \"'+anchor+'\"</span>'
+              +'</div>';
+          }).join('');
+          return '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(96,165,250,.04);border:1px solid rgba(96,165,250,.15);border-radius:7px;">'
+            +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🔗 Internal Link Opportunities <span style=\"font-weight:400;text-transform:none;letter-spacing:0;font-size:8px;color:var(--dim);\">— other pages to link FROM/TO</span></div>'
+            +rows
+            +'<div style="font-size:10px;color:var(--dim);margin-top:5px;">Add contextual links between these pages using the suggested anchor text. Pre-filled automatically in PULSE+NEXUS ⑤.</div>'
+            +'</div>';
+        })()
 
       // Checklist
       +'<div class="cl-header"><span>Audit Checklist — 3 phases</span>'
