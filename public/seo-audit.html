@@ -129,10 +129,15 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
 .md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
 .md pre code{background:none;border:none;padding:0;font-size:11px;}
-.md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
-.md th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;text-align:left;border:1px solid var(--border);}
-.md td{padding:7px 10px;border:1px solid var(--border);}
-.md tr:hover td{background:rgba(255,255,255,.02);}
+.md-table-wrap{overflow-x:auto;margin:14px 0;border-radius:6px;}
+.md table{width:100%;border-collapse:collapse;font-size:12px;min-width:500px;}
+.md thead{background:var(--surface);}
+.md th{background:var(--surface);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;text-align:left;border:1px solid var(--border);white-space:nowrap;font-weight:700;}
+.md td{padding:9px 14px;border:1px solid var(--border);vertical-align:top;word-break:break-word;line-height:1.6;color:var(--muted);}
+.md td strong{color:var(--ink);}
+.md tr:nth-child(even) td{background:rgba(255,255,255,.018);}
+.md tr:hover td{background:rgba(251,191,36,.04);}
+.md tbody tr:first-child td{border-top:2px solid var(--border);}
 .md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
 .md hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
 
@@ -673,6 +678,36 @@ function runMetaCheck() {
     if(p.get('ctr'))  document.getElementById('dCtr').value  = p.get('ctr');
     if(p.get('mob'))  document.getElementById('dMob').value  = p.get('mob');
     if(p.get('wf'))   window._wfId = p.get('wf');
+
+    // ── Auto-load saved audit results if available ──
+    const savedUrl = p.get('url');
+    if (savedUrl) {
+      setTimeout(() => {
+        const saved = _loadAuditResults(savedUrl);
+        if (saved) {
+          const out = document.getElementById('deepOutput');
+          const prog = document.getElementById('deepProgress');
+          if (out && prog) {
+            out.innerHTML = saved;
+            out.className = 'output show';
+            prog.className = 'progress';
+            _auditDone = true;
+            const btn = document.getElementById('deepRunBtn');
+            if (btn) {
+              btn.textContent = '↺ RE-RUN FULL 10-STEP AUDIT';
+              btn.style.background = 'var(--surface)';
+              btn.style.color = 'var(--muted)';
+              btn.style.fontSize = '16px';
+            }
+            // Show a banner indicating results were loaded
+            const banner = document.createElement('div');
+            banner.style.cssText = 'background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-family:monospace;font-size:10px;color:var(--green);display:flex;align-items:center;gap:10px;';
+            banner.innerHTML = '✅ Previous audit results loaded — scroll down to view all 10 steps, or re-run the audit for fresh results.';
+            out.insertBefore(banner, out.firstChild);
+          }
+        }
+      }, 100); // small delay to let localStorage restore complete
+    }
     const deepView = document.getElementById('deepView');
     if(!deepView) return;
     const banner = document.createElement('div');
@@ -999,10 +1034,40 @@ const DEEP_STEPS=[
   {id:'d10',icon:'📈',label:'90-Day Ranking Plan — by week',badge:'b-win'},
 ];
 
+// ── AUDIT STATE ──
+let _auditDone = false;
+const _RESULTS_KEY = 'cs_audit_results_v1';
+
+function _saveAuditResults(url, html) {
+  try {
+    const store = JSON.parse(localStorage.getItem(_RESULTS_KEY)||'{}');
+    store[url] = { html, ts: Date.now() };
+    // Keep only 5 most recent
+    const keys = Object.keys(store).sort((a,b)=>(store[b].ts||0)-(store[a].ts||0));
+    if (keys.length > 5) keys.slice(5).forEach(k=>delete store[k]);
+    localStorage.setItem(_RESULTS_KEY, JSON.stringify(store));
+  } catch(e) {}
+}
+
+function _loadAuditResults(url) {
+  try {
+    const store = JSON.parse(localStorage.getItem(_RESULTS_KEY)||'{}');
+    const entry = store[url];
+    if (entry && entry.html && (Date.now() - entry.ts) < 24*60*60*1000) return entry.html;
+  } catch(e) {}
+  return null;
+}
+
 async function runDeepAudit() {
   const url=document.getElementById('dUrl').value.trim();
   const kw=document.getElementById('dKw').value.trim();
   if (!url||!kw) { toast('Enter URL and keyword first'); return; }
+
+  // ── Guard: confirm re-run if already done ──
+  if (_auditDone) {
+    const saved = _loadAuditResults(url);
+    if (saved && !confirm('✅ This audit is already complete.\n\nRe-running will replace the current results.\n\nContinue?')) return;
+  }
 
   const inp={
     url,kw,
@@ -1060,13 +1125,13 @@ ${myContentStr}`;
   const prompts={
     d0:`${base}\n\nSTEP 0 — PRIORITY ACTIONS (show this first, before any analysis):\n\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\n\nFor each action use this format:\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change, add, or fix — copy-paste ready]\nWhere: [Exact location on page or in code]\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
 
-    d1:`${base}\n\nSTEP 1 — INTENT + AI OVERVIEW GAP ANALYSIS:\n\nYou have the CLIENT HTML above. Use it — do not guess.\n\nPART A — INTENT:\nClassify intent (informational/commercial/transactional/navigational). Does the client HTML match? State mismatch with specific fix.\n\nPART B — AI OVERVIEW LIVE INVESTIGATION:\nSearch Google NOW for: "${inp.kw}" ${inp.geo ? 'in ' + inp.geo : ''}.\n1. DOES AN AI OVERVIEW EXIST? Yes/No. Quote exactly what it says.\n2. WHO IS CITED? List the top 3 AIO source URLs. For each: why Google chose it (direct answer format, FAQ schema, word count, E-E-A-T, freshness, paragraph style).\n\nPART C — GAP CALCULATION (client HTML vs AIO sources):\nCheck each signal in the actual client HTML — YES if present, NO if missing:\n| Signal | AIO Sources Have | Client HTML Has | Action |\n|--------|-----------------|-----------------|--------|\n| Direct answer paragraph (40-60w) | YES | YES/NO | ... |\n| FAQ schema JSON-LD | YES | YES/NO | ... |\n| H2/H3 question headings | YES | YES/NO | ... |\n| Author/expertise signal | YES | YES/NO | ... |\n| Statistics or data cited | YES | YES/NO | ... |\n| Definition of main term | YES | YES/NO | ... |\n| Step-by-step process | YES | YES/NO | ... |\n| Local/geo signal | YES | YES/NO | ... |\nFor every NO: write the EXACT content to add (not a suggestion — the actual copy to paste).\n\nPART D — BUILD ON WHAT IS ALREADY STRONG:\n1. What in the client HTML is already good? Name the specific section.\n2. Which existing section is closest to AIO eligibility with just a small rewrite?\n3. Write the before → after rewrite of that section.\n4. Write a ready-to-paste FAQ block (4 Q&As, 40-60 words each, AIO-optimized format).\n5. Write the exact JSON-LD FAQ schema to add to <head>.\n\nPART E — ZERO-CLICK RISK:\nZero-click risk score (0-10). Featured snippet opportunity? How to own the snippet AND still drive clicks?`,
+    d1:`${base}\n\nSTEP 1 — INTENT + AI OVERVIEW GAP ANALYSIS:\n\nYou have the CLIENT HTML above. Use it — do not guess.\n\n⚠️ CRITICAL RULE FOR THIS STEP: When identifying AIO source URLs, ONLY cite LOCAL BUSINESS WEBSITES and DIRECT SERVICE PROVIDERS. COMPLETELY IGNORE AND EXCLUDE all of the following: Angi, Angie's List, Yelp, HomeAdvisor, Thumbtack, BBB, Houzz, Porch, Modernize, ConsumerAffairs, Trustpilot, Clutch, Google My Business profiles, Facebook pages, Bing Places, aggregator directories, and any review/lead-gen platforms. If Google cites these sites in an AIO, note that local businesses CANNOT compete with them — instead identify which LOCAL BUSINESS websites appear as AIO sources.\n\nPART A — INTENT:\nClassify intent (informational/commercial/transactional/navigational). Does the client HTML match? State mismatch with specific fix.\n\nPART B — AI OVERVIEW LIVE INVESTIGATION:\nSearch Google NOW for: "${inp.kw}" ${inp.geo ? 'in ' + inp.geo : ''}.\n1. DOES AN AI OVERVIEW EXIST? Yes/No. Quote exactly what it says (full text, do not cut off).\n2. WHO IS CITED? List the top 3 AIO source URLs — LOCAL BUSINESSES ONLY (not Angi/Yelp/HomeAdvisor). For each: WHY Google chose it (direct answer format, FAQ schema, word count, E-E-A-T signals, freshness, geographic signals).\n3. If only directories appear: note "Directories dominate this SERP — focus on local pack optimization instead" and give 3 specific local pack signals to add.\n\nPART C — GAP CALCULATION (client HTML vs AIO sources):\nCheck each signal in the actual client HTML — YES if present, NO if missing:\n| Signal | AIO Sources Have | Client HTML Has | Action Required |\n|--------|-----------------|-----------------|------------------|\n| Direct answer paragraph (40-60w) | YES/NO — exact example | YES/NO | Exact copy to paste |\n| FAQ schema JSON-LD | YES/NO | YES/NO | Action |\n| H2/H3 question headings | YES/NO | YES/NO | Action |\n| Author/expertise signal | YES/NO | YES/NO | Action |\n| Statistics or data cited | YES/NO | YES/NO | Action |\n| Definition of main term | YES/NO | YES/NO | Action |\n| Step-by-step process | YES/NO | YES/NO | Action |\n| Local/geo signal (city, state) | YES/NO | YES/NO | Action |\nFor every NO: write the EXACT content to add (not a suggestion — the actual copy to paste).\n\nPART D — BUILD ON WHAT IS ALREADY STRONG:\n1. What in the client HTML is already good? Name the specific section.\n2. Which existing section is closest to AIO eligibility with just a small rewrite?\n3. Write the before → after rewrite of that section (show FULL before and FULL after — do not cut off).\n4. Write a ready-to-paste FAQ block (4 Q&As, 40-60 words each, AIO-optimized format).\n5. Write the exact JSON-LD FAQ schema to add to <head>.\n\nPART E — ZERO-CLICK RISK:\nZero-click risk score (0-10). Featured snippet opportunity? How to own the snippet AND still drive clicks?`,
 
     d2:`${base}\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "${extractTitle(inp.html)}"\nCURRENT META: "${extractMeta(inp.html)}"\n\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\n\n**Current Title** (${extractTitle(inp.html).length} chars): ${extractTitle(inp.html)}\n**Current Meta** (${extractMeta(inp.html).length} chars): ${extractMeta(inp.html)}\n**New Title**: [your version]\n**New Meta Description**: [your version]\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
 
-    d3:`${base}${compContext}\n\nSTEP 3 — COMPETITOR DIFF:\nCreate a comparison table between your page and the two competitors. Columns: Feature | Your Page | Competitor 1 (Surfer SEO) | Competitor 2 (MarketMuse) | Winner\nRows: Word count · H2 count · FAQ section · Schema types · Images with alt · CTA clarity · Data/stats count · Unique angle · Internal links\n\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: exact implementation instruction.`,
+    d3:`${base}${compContext}\n\nSTEP 3 — COMPETITOR DIFF:\n\nCOMPETITOR 1 URL: ${inp.comp1url}\nCOMPETITOR 2 URL: ${inp.comp2url}\n\nCreate a comparison table. Column headers must use the actual domain names from the URLs above:\n\n| Feature | Your Page | Competitor 1 (${(()=>{try{return new URL(inp.comp1url).hostname.replace('www.','')}catch(e){return inp.comp1url}})()}) | Competitor 2 (${(()=>{try{return new URL(inp.comp2url).hostname.replace('www.','')}catch(e){return inp.comp2url}})()}) | Winner |\n|---|---|---|---|---|\n| Word count | | | | |\n| H2 count | | | | |\n| FAQ section | YES/NO | YES/NO | YES/NO | |\n| Schema types | | | | |\n| Images with alt text | X/Y (%) | | | |\n| CTA clarity | quote from page | | | |\n| Data/stats count | N verified claims | | | |\n| Unique angle | | | | |\n| Internal links | N total | | | |\n| Title tag keyword match | X/3 primary keywords | | | |\n| Meta desc keyword match | X/3 primary keywords | | | |\n\nFill every cell with REAL data from the HTML provided. Do NOT use "?" or "unknown".\n\nThen: List EXACTLY 5 CRITICAL GAPS — things competitors do that YOUR PAGE does not. For each gap:\n**GAP #[N]: [TITLE IN CAPS]**\n**What Competitors Do:** [exact example with quote]\n**Your Page:** [what it currently has]\n**NEXUS Implementation (Exact):** [copy-paste ready fix — the actual content/code to add]`,
 
-    d4:`${base}${compContext}\n\nSTEP 4 — CONTENT GAP MATRIX:\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\n\n| Dimension | Your Score | Gap | Specific Fix |\n|---|---|---|---|\n| Subtopic coverage | | | |\n| Data & proof | | | |\n| Commercial signals | | | |\n| Media & UX | | | |\n| Freshness (2025-2026) | | | |\n| FAQ depth | | | |\n| E-E-A-T signals | | | |\n\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.`,
+    d4:`${base}${compContext}\n\nSTEP 4 — CONTENT GAP MATRIX:\n\nCreate a complete gap analysis table. Score each dimension: 0=missing, 1=weak, 2=adequate, 3=strong.\nCompetitor 2 is: ${inp.comp2url}\n\n| Dimension | Your Score (0-3) | Competitor 2 Score (0-3) | Gap | Severity | Specific Fix |\n|---|---|---|---|---|---|\n| Subtopic coverage depth | | | | HIGH/MED/LOW | |\n| Data & statistics proof | | | | | |\n| Commercial intent signals | | | | | |\n| Media & UX elements | | | | | |\n| Content freshness (2025-2026) | | | | | |\n| FAQ depth & schema | | | | | |\n| E-E-A-T signals | | | | | |\n| Local/geo optimization | | | | | |\n| Internal linking structure | | | | | |\n| Schema markup completeness | | | | | |\n\nFill EVERY cell. Do not leave any cell empty or use "?".\n\nThen: TOP 5 CONTENT ADDITIONS ranked by impact. For each:\n**Priority [N] — [TITLE] (Severity: HIGH/MED/LOW)**\nWhat to add: [exact content — copy-paste ready]\nWhere: [exact section or location on page]\nExpected impact: [specific metric improvement]`,
 
     d5:`${base}\n\nSTEP 5 — PULSE REWRITES (show current → improved for each):\n\nP — Purpose (intro rewrite):\nCURRENT: [quote first 3 sentences from body extract]\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\n\nU — Urgency signal:\nWhere to add: [exact location]\nNew sentence: [write it]\n\nL — Legitimacy:\nMissing proof elements: [list 3 specific items]\nWhere to add: [exact section]\n\nS — Structure improvement:\nPick ONE section and show Before/After conversion to table or bullets:\nBEFORE: [current format]\nAFTER: [improved format]\n\nE — Engagement (CTA rewrite):\nCURRENT CTA: [identify from page]\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
 
@@ -1081,32 +1146,68 @@ ${myContentStr}`;
     d10:`${base}\n\nSTEP 10 — 90-DAY PLAN (week by week):\n\n**WEEK 1 — Quick Wins (do today):**\n[List 5 specific changes, each under 30 min]\n\n**WEEK 2-3 — Content Upgrades:**\n[List 3-4 content additions/rewrites]\n\n**WEEK 4 — Technical + Schema:**\n[Schema implementation, internal links, technical fixes]\n\n**MONTH 2 — Authority Building:**\n[Link building, content expansion, E-E-A-T signals]\n\n**MONTH 3 — Measurement + Iteration:**\n[What to check in GSC, when to expect results]\n\n**GSC Checkpoints:**\n- Day 7: [what metric to check]\n- Day 30: [target position + CTR]\n- Day 90: [end goal for "${inp.kw}"]\n\nSUCCESS DEFINITION: Position ${inp.pos} → [target] within 90 days`,
   };
 
+  // Structured export data — saved alongside HTML for AI feeding
+  const _exportData = {
+    url, kw: inp.kw, kw2: inp.kw2, geo: inp.geo, goal: inp.goal,
+    date: new Date().toISOString(),
+    gsc: { impressions: inp.impr, ctr: inp.ctr, position: inp.pos, mobile: inp.mob },
+    queries: inp.queries,
+    comp1: inp.comp1url, comp2: inp.comp2url,
+    steps: {}
+  };
+
   for (let i=0;i<DEEP_STEPS.length;i++) {
     const s=DEEP_STEPS[i];setStep(s.id,'active');
     try {
       const result=await callGemini(prompts[s.id],4000);
       addSection(out,s.id,s.icon,s.label,s.badge,result);
+      _exportData.steps[s.id] = { label: s.label, content: result };
       setStep(s.id,'done');
     } catch(e) {
       setStep(s.id,'error');
-      addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`);
+      const errMsg = `**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`;
+      addSection(out,s.id,s.icon,s.label,s.badge,errMsg);
+      _exportData.steps[s.id] = { label: s.label, content: errMsg };
     }
     bar.style.width=((i+1)/DEEP_STEPS.length*100)+'%';
     if (i<DEEP_STEPS.length-1) await sleep(1500);
   }
 
+  // Save structured export data
+  try {
+    const expStore = JSON.parse(localStorage.getItem('cs_audit_export_v1')||'{}');
+    expStore[url] = _exportData;
+    const keys = Object.keys(expStore).sort((a,b)=>new Date(expStore[b].date)-new Date(expStore[a].date));
+    if (keys.length>5) keys.slice(5).forEach(k=>delete expStore[k]);
+    localStorage.setItem('cs_audit_export_v1', JSON.stringify(expStore));
+  } catch(e) {}
+
   prog.className='progress';
   document.getElementById('deepRunBtn').disabled=false;
+  document.getElementById('deepRunBtn').textContent='↺ RE-RUN FULL 10-STEP AUDIT';
+  document.getElementById('deepRunBtn').style.background='var(--surface)';
+  document.getElementById('deepRunBtn').style.color='var(--muted)';
+  document.getElementById('deepRunBtn').style.fontSize='16px';
+  _auditDone = true;
+  _saveAuditResults(url, out.innerHTML);
   toast('✅ Full audit complete — scroll up for Priority Actions');
 
   // ── Add Recommendations CTA at bottom of results ──
   const recBanner = document.createElement('div');
-  recBanner.style.cssText = 'margin-top:32px;padding:24px 28px;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(167,139,250,.1));border:2px solid rgba(251,191,36,.4);border-radius:14px;text-align:center;';
-  recBanner.innerHTML = '<div style="font-family:monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;">✅ Audit complete — next step</div>'
-    + '<div style="font-size:18px;font-weight:800;color:#f9fafb;margin-bottom:6px;">Turn this analysis into a full content plan</div>'
-    + '<div style="font-size:13px;color:#94a3b8;margin-bottom:18px;">The Recommendations engine uses all 10 steps above to write your rewrite plan, FAQ schema, internal link map and 90-day roadmap.</div>'
-    + '<a href="/audit-recommendations" style="display:inline-block;background:#fbbf24;color:#000;font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:12px 32px;border-radius:8px;text-decoration:none;">🎯 GO TO RECOMMENDATIONS →</a>';
+  recBanner.style.cssText = 'margin-top:32px;padding:24px 28px;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(167,139,250,.1));border:2px solid rgba(251,191,36,.4);border-radius:14px;';
+  recBanner.innerHTML = '<div style="font-family:monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;">✅ Audit complete — next steps</div>'
+    + '<div style="font-size:17px;font-weight:800;color:#f9fafb;margin-bottom:5px;">Export or continue</div>'
+    + '<div style="font-size:12px;color:#94a3b8;margin-bottom:18px;">Export for AI feeding (Markdown) or JSON, track progress, or view recommendations.</div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">'
+    + '<button onclick="exportAuditMarkdown()" style="background:var(--gold);color:#000;border:none;font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 22px;border-radius:7px;cursor:pointer;">📋 Export Markdown (AI-ready)</button>'
+    + '<button onclick="exportAuditJSON()" style="background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 22px;border-radius:7px;cursor:pointer;">{ } Export JSON</button>'
+    + '<a href="/audit-recommendations" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 22px;border-radius:7px;cursor:pointer;text-decoration:none;">🎯 Recommendations</a>'
+    + '<button onclick="document.getElementById(\'deepView\').scrollIntoView({behavior:\'smooth\'})" style="background:rgba(255,255,255,.05);color:#64748b;border:1px solid rgba(255,255,255,.1);font-family:monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:11px 18px;border-radius:7px;cursor:pointer;">↑ Back to Form</button>'
+    + '</div>';
   out.appendChild(recBanner);
+
+  // Scroll to start of output to show Priority Actions first
+  out.scrollIntoView({behavior:'smooth'});
 
   // Scroll to start of output to show Priority Actions first
   out.scrollIntoView({behavior:'smooth'});
@@ -1150,7 +1251,31 @@ function copyMd(id) {
 
 function renderMd(t) {
   if (!t) return '';
-  return t
+
+  // ── PRE-PROCESS: extract markdown tables BEFORE HTML escaping ──
+  // This ensures proper <thead>/<th> vs <tbody>/<td> handling
+  const savedTables = [];
+  function escH(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Match: header row + separator row + optional data rows
+  t = t.replace(/(\|[^\n]+\|\n?)(\|[\s\-:|]+\|\n?)((?:\|[^\n]+\|\n?)*)/g, (match, headerRow, sepRow, bodyRows) => {
+    const hCells = headerRow.trim().split('|').slice(1,-1);
+    const thead = '<thead><tr>' + hCells.map(c=>`<th>${escH(c.trim())}</th>`).join('') + '</tr></thead>';
+    const bodyLines = bodyRows.trim().split('\n').filter(r=>r.trim() && r.includes('|'));
+    const tbody = bodyLines.length
+      ? '<tbody>' + bodyLines.map(r=>{
+          const cells = r.split('|').slice(1,-1);
+          return '<tr>' + cells.map(c=>`<td>${escH(c.trim())}</td>`).join('') + '</tr>';
+        }).join('') + '</tbody>'
+      : '<tbody></tbody>';
+    const tbl = `<div class="md-table-wrap"><table>${thead}${tbody}</table></div>`;
+    const ph = `__TBL${savedTables.length}__`;
+    savedTables.push(tbl);
+    return ph;
+  });
+
+  // ── Standard markdown transformations ──
+  t = t
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/^### (.+)$/gm,'<h3>$1</h3>')
     .replace(/^## (.+)$/gm,'<h2>$1</h2>')
@@ -1161,17 +1286,16 @@ function renderMd(t) {
     .replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
     .replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
     .replace(/^---+$/gm,'<hr>')
-    .replace(/^\|(.+)\|$/gm,m=>{
-      const cells=m.split('|').slice(1,-1);
-      if (cells.every(c=>/^[\s\-:]+$/.test(c))) return '';
-      return '<tr>'+cells.map(c=>`<td>${c.trim()}</td>`).join('')+'</tr>';
-    })
-    .replace(/(<tr>[\s\S]*?<\/tr>)+/g,m=>`<table>${m}</table>`)
     .replace(/^[\-\*•] (.+)$/gm,'<li>$1</li>')
     .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
     .replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`)
     .replace(/\n\n/g,'</p><p>')
     .replace(/\n/g,'<br>');
+
+  // ── Restore pre-processed tables ──
+  savedTables.forEach((tbl,i)=>{ t = t.replace(`__TBL${i}__`, tbl); });
+
+  return t;
 }
 
 // Drag & drop
@@ -1510,9 +1634,82 @@ async function loadSitemapUrls() {
   alert('Could not find sitemap automatically.\n\nTried:\n' + sitemapCandidates.join('\n') + '\n\nPaste URLs manually.');
 }
 
+// ══ EXPORT FUNCTIONS ══════════════════════════════════════════════════
+
+function _getExportData() {
+  const url = document.getElementById('dUrl')?.value?.trim();
+  if (!url) return null;
+  try {
+    const store = JSON.parse(localStorage.getItem('cs_audit_export_v1')||'{}');
+    return store[url] || null;
+  } catch(e) { return null; }
+}
+
+function exportAuditMarkdown() {
+  const d = _getExportData();
+  if (!d) { toast('⚠ Run the audit first'); return; }
+
+  const STEP_LABELS = {
+    d0:'STEP 0 — PRIORITY ACTIONS',d1:'STEP 1 — INTENT + AI OVERVIEW',
+    d2:'STEP 2 — CTR SURGERY',d3:'STEP 3 — COMPETITOR DIFF',
+    d4:'STEP 4 — CONTENT GAP MATRIX',d5:'STEP 5 — PULSE REWRITES',
+    d6:'STEP 6 — NEXUS + INTERNAL LINKS',d7:'STEP 7 — ARCHITECTURE BLUEPRINT',
+    d8:'STEP 8 — TECHNICAL CHECKLIST',d9:'STEP 9 — SCORE PROJECTION',
+    d10:'STEP 10 — 90-DAY PLAN',
+  };
+
+  let md = `# SEO AUDIT — FULL REPORT\n`;
+  md += `**Generated:** ${new Date(d.date).toLocaleString()}\n\n`;
+  md += `---\n\n`;
+  md += `## PAGE DETAILS\n`;
+  md += `- **URL:** ${d.url}\n`;
+  md += `- **Primary Keyword:** ${d.kw}\n`;
+  if (d.kw2) md += `- **Secondary Keyword:** ${d.kw2}\n`;
+  if (d.geo)  md += `- **Geo:** ${d.geo}\n`;
+  if (d.goal) md += `- **Conversion Goal:** ${d.goal}\n`;
+  md += `\n## GSC BASELINE\n`;
+  md += `| Metric | Value |\n|--------|-------|\n`;
+  md += `| Impressions | ${d.gsc.impressions} |\n`;
+  md += `| CTR | ${d.gsc.ctr}% |\n`;
+  md += `| Avg Position | ${d.gsc.position} |\n`;
+  md += `| Mobile % | ${d.gsc.mobile}% |\n`;
+  if (d.queries) md += `\n**Top Queries:**\n${d.queries.split('\n').map(q=>`- ${q}`).join('\n')}\n`;
+  md += `\n---\n\n`;
+
+  // All steps
+  Object.keys(STEP_LABELS).forEach(id => {
+    const step = d.steps[id];
+    if (!step) return;
+    md += `## ${STEP_LABELS[id]}\n\n`;
+    md += step.content + '\n\n';
+    md += `---\n\n`;
+  });
+
+  md += `\n\n---\n*Exported from ContentScale PULSE+NEXUS · contentscale.site*\n`;
+  md += `*Competitors analyzed: ${d.comp1||'—'} vs ${d.comp2||'—'}*\n`;
+
+  const slug = (d.url||'audit').replace(/^https?:\/\//,'').replace(/[^a-z0-9]/gi,'-').slice(0,40);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([md],{type:'text/markdown'}));
+  a.download = `seo-audit-${slug}-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  toast('✅ Markdown exported — paste into Claude or ChatGPT');
+}
+
+function exportAuditJSON() {
+  const d = _getExportData();
+  if (!d) { toast('⚠ Run the audit first'); return; }
+  const slug = (d.url||'audit').replace(/^https?:\/\//,'').replace(/[^a-z0-9]/gi,'-').slice(0,40);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)],{type:'application/json'}));
+  a.download = `seo-audit-${slug}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('✅ JSON exported');
+}
+
 // ══ LOCALSTORAGE PERSISTENCE ═════════════════════════════════════
 const _LS_KEY = 'pulse_nexus_form_v1';
-const _LS_FIELDS = ['dUrl','dKw','dKw2','dGeo','dImpr','dCtr','dPos','dMob',
+const _LS_FIELDS = ['dUrl','dKw','dKw2','dGeo','dGoal','dImpr','dCtr','dPos','dMob',
   'dQueries','dHtml','dComp1url','dComp2url','dComp1html','dComp2html','dSiteUrls','dConstraints'];
 
 function _lsSave(id, val) {
@@ -1527,13 +1724,23 @@ function _lsRestore() {
   try {
     const saved = JSON.parse(localStorage.getItem(_LS_KEY)||'{}');
     if (!Object.keys(saved).length) return;
+    // Fields set by URL params should NOT be overwritten by localStorage
+    const urlP = new URLSearchParams(window.location.search);
+    const urlParamFields = new Set();
+    if (urlP.get('url'))  urlParamFields.add('dUrl');
+    if (urlP.get('kw'))   urlParamFields.add('dKw');
+    if (urlP.get('pos'))  urlParamFields.add('dPos');
+    if (urlP.get('impr')) urlParamFields.add('dImpr');
+    if (urlP.get('ctr'))  urlParamFields.add('dCtr');
+    if (urlP.get('mob'))  urlParamFields.add('dMob');
     _LS_FIELDS.forEach(id => {
+      if (urlParamFields.has(id)) return; // URL params take priority
       const el = document.getElementById(id);
       if (el && saved[id] !== undefined) el.value = saved[id];
     });
-    // Show restore notice
+    // Show restore notice only if NOT coming from URL params
     const notice = document.getElementById('restoreNotice');
-    if (notice) notice.style.display = 'flex';
+    if (notice && !urlP.get('url')) notice.style.display = 'flex';
   } catch(e) {}
 }
 
