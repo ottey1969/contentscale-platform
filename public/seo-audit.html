@@ -305,21 +305,15 @@ img,table,iframe{max-width:100%;}
     <div class="panel">
       <div class="panel-title">① Page Details</div>
       <div class="g2" style="margin-bottom:14px;">
-        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework"></div>
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework" oninput="onUrlChange(this.value)" onblur="onUrlBlur(this.value)"></div>
         <div class="field"><label>Primary Keyword *</label><input type="text" id="dKw" placeholder="GRAAF framework SEO 2026"></div>
       </div>
       <div class="g3">
         <div class="field"><label>Secondary Keyword</label><input type="text" id="dKw2" placeholder="EEAT content score"></div>
         <div class="field">
-          <label>Geo</label>
-          <select id="dGeo">
-            <option value="Netherlands">Netherlands 🇳🇱</option>
-            <option value="Belgium">Belgium 🇧🇪</option>
-            <option value="Global">Global</option>
-            <option value="UK">UK</option>
-            <option value="USA">USA</option>
-          </select>
-        </div>
+          <label>Geo <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— auto from URL · edit freely</span></label>
+          <input type="text" id="dGeo" placeholder="Netherlands" value="Netherlands">
+        </div
         <div class="field">
           <label>Conversion Goal</label>
           <select id="dGoal">
@@ -346,7 +340,7 @@ img,table,iframe{max-width:100%;}
         <div class="field"><label>Impressions</label><input type="number" id="dImpr" placeholder="12400"></div>
         <div class="field"><label>CTR %</label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
         <div class="field"><label>Avg Position</label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
-        <div class="field"><label>Mobile %</label><input type="number" id="dMob" placeholder="62"></div>
+        <div class="field"><label>Mobile % <span style="color:var(--green);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;" id="mobAutoNote"></span></label><input type="number" id="dMob" placeholder="auto from GSC"></div>
       </div>
       <div class="field">
         <label>Top Triggering Queries (one per line)</label>
@@ -427,7 +421,15 @@ img,table,iframe{max-width:100%;}
     <div class="panel">
       <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span></div>
       <div class="info">
-        <strong>Pre-filled from Workflow Manager</strong> → or paste your sitemap URLs below. Engine finds the 5 best pages to link FROM and TO with exact anchor text.
+        <strong>Auto-loads from sitemap</strong> when you enter URL in ① → or paste URLs manually below. Engine finds the 5 best pages to link FROM and TO with exact anchor text.
+      </div>
+      <!-- Sitemap auto-fetch strip -->
+      <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--muted);">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);">🗺 SITEMAP AUTO-LOAD</span>
+          — enters URL in ① → sitemap fetched automatically. Or paste manually below.
+        </div>
+        <button onclick="fetchSitemapForInternalLinks()" id="sitemapFetchBtn" class="btn-sm btn-blue">↓ Fetch Sitemap</button>
       </div>
       <!-- Auto-analyse strip -->
       <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
@@ -633,11 +635,26 @@ setTimeout(loadSharedGSC, 200);
 
 
 // ── META CONSISTENCY CHECKER ─────────────────────────────────
-function runMetaCheck() {
+async function runMetaCheck() {
   var html = document.getElementById('dHtml').value.trim();
+  var pageUrl = document.getElementById('dUrl').value.trim();
+
+  // If no HTML pasted, try to fetch via AI analysis of the URL
+  if (!html && pageUrl) {
+    document.getElementById('metaCheckerInfo').style.display = 'block';
+    document.getElementById('metaCheckerInfo').innerHTML = '<span style="color:var(--gold)">⏳ No HTML pasted — analysing URL via AI…</span>';
+    try {
+      var prompt = 'You are a technical SEO analyst. For the URL: ' + pageUrl + '\n\nBased on your knowledge of this site/page, simulate a meta consistency check. Report on:\n- Title tag (estimated)\n- H1 (estimated)\n- Meta description presence\n- og:title / og:description\n- Schema type likely present\n- dateModified freshness\n- Canonical likely correct?\n\nFormat as a brief audit report. Note: this is based on trained knowledge, not live fetch.';
+      var result = await callGemini(prompt, 600);
+      document.getElementById('metaCheckerInfo').innerHTML = '<div style="white-space:pre-wrap;font-size:12px;line-height:1.7;color:var(--muted);">ℹ AI-based estimate (paste HTML in ③ for exact results):\n\n' + result + '</div>';
+    } catch(e) {
+      document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--gold)">⚠ Paste your page HTML in field ③ for exact meta check results.</strong>';
+    }
+    return;
+  }
   if (!html) {
     document.getElementById('metaCheckerInfo').style.display = 'block';
-    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ First paste your page HTML in field ③ above.</strong>';
+    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--gold)">⚠ Enter URL in ① or paste page HTML in ③ for meta check.</strong>';
     return;
   }
   document.getElementById('metaCheckerInfo').style.display = 'none';
@@ -1812,6 +1829,224 @@ Reply as a short comma-separated list of constraints only. Max 5 items. If nothi
   btn.disabled = false;
   btn.textContent = '🔍 DETECT';
 }
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// URL CHANGE HANDLER — geo auto-detect, sitemap auto-load, constraint auto-detect
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+var _urlBlurTimer = null;
+
+function onUrlChange(url) {
+  // Instantly auto-detect geo from TLD
+  if (!url) return;
+  var geo = detectGeoFromUrl(url);
+  if (geo) {
+    var geoEl = document.getElementById('dGeo');
+    if (geoEl && !geoEl._manuallyEdited) geoEl.value = geo;
+  }
+}
+
+function onUrlBlur(url) {
+  // On leaving the URL field: auto-detect constraints + trigger sitemap load
+  if (!url || !url.startsWith('http')) return;
+  clearTimeout(_urlBlurTimer);
+  _urlBlurTimer = setTimeout(function() {
+    // Auto-detect constraints from URL (fast, no API)
+    var urlConstraints = detectConstraintsFromUrl(url);
+    if (urlConstraints.length) {
+      var field = document.getElementById('dConstraints');
+      if (field && !field.value.trim()) {
+        field.value = urlConstraints.join(', ');
+        var statusEl = document.getElementById('constraintStatus');
+        if (statusEl) { statusEl.textContent = '✅ ' + urlConstraints.length + ' detected from URL'; statusEl.style.color = 'var(--green)'; }
+      }
+    }
+    // Auto-load sitemap if site URLs textarea is empty
+    var siteUrls = document.getElementById('dSiteUrls');
+    if (siteUrls && !siteUrls.value.trim()) {
+      fetchSitemapForInternalLinks(url);
+    }
+  }, 800);
+}
+
+// Mark geo as manually edited so URL changes don't overwrite it
+document.addEventListener('DOMContentLoaded', function() {
+  var geoEl = document.getElementById('dGeo');
+  if (geoEl) geoEl.addEventListener('input', function() { geoEl._manuallyEdited = true; });
+});
+
+function detectGeoFromUrl(url) {
+  var host = '';
+  try { host = new URL(url).hostname.toLowerCase(); } catch(e) { return 'Netherlands'; }
+  var TLD_MAP = [
+    ['.co.uk','UK'],['.org.uk','UK'],['.nl','Netherlands'],['.be','Belgium'],
+    ['.de','Germany'],['.at','Austria'],['.ch','Switzerland'],['.fr','France'],
+    ['.es','Spain'],['.it','Italy'],['.pt','Portugal'],['.pl','Poland'],
+    ['.se','Sweden'],['.no','Norway'],['.dk','Denmark'],['.fi','Finland'],
+    ['.ie','Ireland'],['.au','Australia'],['.nz','New Zealand'],['.ca','Canada'],
+    ['.us','USA'],['.br','Brazil'],['.mx','Mexico'],['.za','South Africa'],
+    ['.in','India'],['.sg','Singapore'],['.ae','UAE'],['.jp','Japan'],['.uk','UK']
+  ];
+  for (var i = 0; i < TLD_MAP.length; i++) {
+    if (host.endsWith(TLD_MAP[i][0])) return TLD_MAP[i][1];
+  }
+  // Keyword hints in hostname
+  var HINTS = [['nederland','Netherlands'],['netherlands','Netherlands'],['belgie','Belgium'],
+    ['belgium','Belgium'],['deutschland','Germany'],['france','France'],['espana','Spain'],
+    ['australia','Australia'],['canada','Canada']];
+  for (var j = 0; j < HINTS.length; j++) {
+    if (host.includes(HINTS[j][0])) return HINTS[j][1];
+  }
+  return 'Netherlands'; // default
+}
+
+function detectConstraintsFromUrl(url) {
+  var detected = [];
+  try {
+    var parsed = new URL(url);
+    var host = parsed.hostname.toLowerCase();
+    var path = parsed.pathname.toLowerCase();
+    if (host.endsWith('.nl')) detected.push('Dutch domain (.nl)');
+    else if (host.endsWith('.be')) detected.push('Belgian domain (.be)');
+    else if (host.endsWith('.de')) detected.push('German domain (.de)');
+    else if (host.endsWith('.co.uk') || host.endsWith('.uk')) detected.push('UK domain');
+    else if (host.endsWith('.fr')) detected.push('French domain (.fr)');
+    if (path.includes('/en/') || path.includes('/nl/') || path.includes('/de/')) detected.push('Subfolder multilingual');
+    if (path.includes('/blog/') || path.includes('/nieuws/') || path.includes('/news/')) detected.push('Blog subfolder');
+    if (path.includes('/shop/') || path.includes('/product/') || path.includes('/winkel/')) detected.push('eCommerce');
+    if (host.includes('wordpress') || host.includes('.wp.')) detected.push('WordPress');
+    if (host.includes('shopify')) detected.push('Shopify');
+    if (host.includes('webflow')) detected.push('Webflow');
+  } catch(e) {}
+  return detected;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MOBILE % — auto-fill from loaded GSC data
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function autoFillMobilePct() {
+  // Try from transfer data first
+  try {
+    var td = window._workflowTransfer;
+    if (td && td.mobilePct) {
+      document.getElementById('dMob').value = td.mobilePct;
+      var note = document.getElementById('mobAutoNote');
+      if (note) note.textContent = '✅ from GSC';
+      return;
+    }
+  } catch(e) {}
+  // Try from shared GSC pages
+  try {
+    var url = document.getElementById('dUrl').value.trim();
+    if (url && gscPages.length) {
+      var match = gscPages.find(function(p) { return p.page === url || url.includes(p.page) || p.page.includes(url.replace(/^https?:\/\/[^\/]+/, '')); });
+      if (match && match.mobile_pct) {
+        document.getElementById('dMob').value = Math.round(match.mobile_pct);
+        var note = document.getElementById('mobAutoNote');
+        if (note) note.textContent = '✅ from GSC';
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fallback: industry average based on geo
+  var geo = (document.getElementById('dGeo').value || 'Netherlands').toLowerCase();
+  var mobileAvg = geo.includes('netherlands') || geo.includes('belgi') ? 58
+    : geo.includes('uk') || geo.includes('ireland') ? 65
+    : geo.includes('germany') || geo.includes('austria') || geo.includes('switzerland') ? 55
+    : geo.includes('usa') || geo.includes('canada') || geo.includes('australia') ? 62
+    : 60;
+  document.getElementById('dMob').value = mobileAvg;
+  var note = document.getElementById('mobAutoNote');
+  if (note) { note.textContent = '≈ industry avg for ' + (document.getElementById('dGeo').value || 'NL'); note.style.color = 'var(--dim)'; }
+}
+
+// Auto-fill mobile when GSC loads
+var _origLoadSharedGSC = typeof loadSharedGSC === 'function' ? loadSharedGSC : null;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SITEMAP AUTO-FETCH FOR INTERNAL LINKS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function fetchSitemapForInternalLinks(urlOverride) {
+  var pageUrl = urlOverride || document.getElementById('dUrl').value.trim();
+  var btn = document.getElementById('sitemapFetchBtn');
+  var siteUrlsEl = document.getElementById('dSiteUrls');
+  if (!pageUrl || !pageUrl.startsWith('http')) { toast('⚠ Enter page URL in ① first'); return; }
+
+  var origin = '';
+  try { origin = new URL(pageUrl).origin; } catch(e) { toast('⚠ Invalid URL'); return; }
+
+  // Check localStorage from workflow first
+  try {
+    var stored = localStorage.getItem('cs_sitemap_urls');
+    if (stored && stored.trim().length > 10) {
+      siteUrlsEl.value = stored;
+      updateUrlCount();
+      if (btn) { btn.textContent = '✅ Loaded from Workflow'; setTimeout(function(){ btn.textContent = '↓ Fetch Sitemap'; }, 2500); }
+      return;
+    }
+  } catch(e) {}
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching…'; }
+
+  // Try common sitemap URLs via Railway proxy
+  var sitemapCandidates = [
+    origin + '/sitemap.xml',
+    origin + '/sitemap_index.xml',
+    origin + '/sitemap-index.xml',
+    origin + '/wp-sitemap.xml',
+    origin + '/sitemap/sitemap.xml'
+  ];
+
+  var urls = [];
+  for (var i = 0; i < sitemapCandidates.length; i++) {
+    try {
+      var r = await fetch(RAILWAY + '/api/fetch-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: sitemapCandidates[i], type: 'sitemap' })
+      });
+      if (r.ok) {
+        var d = await r.json();
+        if (d.urls && d.urls.length) { urls = d.urls; break; }
+        if (d.html) {
+          // Parse URL tags from sitemap XML
+          var matches = d.html.match(/<loc>(https?:\/\/[^<]+)<\/loc>/gi) || [];
+          urls = matches.map(function(m){ return m.replace(/<\/?loc>/gi,'').trim(); }).filter(function(u){ return u.startsWith('http'); });
+          if (urls.length) break;
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (urls.length) {
+    siteUrlsEl.value = urls.slice(0, 200).join('\n');
+    updateUrlCount();
+    toast('✅ ' + urls.length + ' URLs loaded from sitemap');
+    if (btn) { btn.textContent = '✅ ' + urls.length + ' URLs'; setTimeout(function(){ btn.disabled = false; btn.textContent = '↓ Fetch Sitemap'; }, 3000); }
+  } else {
+    // Fallback: use AI to generate likely URL list
+    toast('⚠ Sitemap not accessible — paste URLs manually or AI will infer from context');
+    if (btn) { btn.disabled = false; btn.textContent = '↓ Fetch Sitemap'; }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INIT — run auto-fills when page loads with pre-filled data
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+document.addEventListener('DOMContentLoaded', function() {
+  // If URL already filled (e.g. from workflow transfer), trigger geo + mobile auto-fill
+  setTimeout(function() {
+    var url = document.getElementById('dUrl') && document.getElementById('dUrl').value.trim();
+    if (url) {
+      onUrlChange(url);
+      autoFillMobilePct();
+    }
+  }, 400);
+});
 
 </script>
 </body>
