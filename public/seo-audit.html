@@ -129,15 +129,13 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
 .md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
 .md pre code{background:none;border:none;padding:0;font-size:11px;}
-.md-table-wrap{overflow-x:auto;margin:14px 0;border-radius:6px;}
-.md table{width:100%;border-collapse:collapse;font-size:12px;min-width:500px;}
-.md thead{background:var(--surface);}
-.md th{background:var(--surface);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;text-align:left;border:1px solid var(--border);white-space:nowrap;font-weight:700;}
-.md td{padding:9px 14px;border:1px solid var(--border);vertical-align:top;word-break:break-word;line-height:1.6;color:var(--muted);}
-.md td strong{color:var(--ink);}
-.md tr:nth-child(even) td{background:rgba(255,255,255,.018);}
-.md tr:hover td{background:rgba(251,191,36,.04);}
-.md tbody tr:first-child td{border-top:2px solid var(--border);}
+.md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
+.md th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;text-align:left;border:1px solid var(--border);word-break:break-word;white-space:normal;}
+.md td{padding:8px 10px;border:1px solid var(--border);word-break:break-word;white-space:normal;vertical-align:top;line-height:1.55;}
+.md tr:hover td{background:rgba(255,255,255,.02);}
+.md td.sev-high{background:rgba(244,63,63,.12);color:#f87171;font-weight:700;border-color:rgba(244,63,63,.3);}
+.md td.sev-med{background:rgba(251,191,36,.10);color:#fbbf24;font-weight:700;border-color:rgba(251,191,36,.3);}
+.md td.sev-low{background:rgba(74,222,128,.10);color:#4ade80;font-weight:700;border-color:rgba(74,222,128,.3);}
 .md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
 .md hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
 
@@ -313,30 +311,24 @@ img,table,iframe{max-width:100%;}
       <div class="g3">
         <div class="field"><label>Secondary Keyword</label><input type="text" id="dKw2" placeholder="EEAT content score"></div>
         <div class="field">
-            <label>Geo <span style="font-size:9px;color:var(--muted);font-family:monospace">(city/state/country)</span></label>
-            <input type="text" id="dGeo" placeholder="e.g. New Jersey, USA" style="width:100%">
-          </div>
+          <label>Geo</label>
+          <select id="dGeo">
+            <option value="Netherlands">Netherlands 🇳🇱</option>
+            <option value="Belgium">Belgium 🇧🇪</option>
+            <option value="Global">Global</option>
+            <option value="UK">UK</option>
+            <option value="USA">USA</option>
+          </select>
+        </div>
         <div class="field">
           <label>Conversion Goal</label>
           <select id="dGoal">
             <option>Lead generation</option>
-            <option>Phone call</option>
-            <option>Quote request</option>
             <option>Sale / purchase</option>
             <option>Demo / consultation</option>
-            <option>Newsletter signup</option>
             <option>Brand awareness</option>
           </select>
         </div>
-      <!-- AUTO-FILL VIA GSC -->
-      <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:4px;">
-        <div>
-          <div style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:4px;">⇄ AUTO-FILL VIA GSC</div>
-          <div style="font-size:11px;color:var(--muted);">Enter the Page URL and click — impressions, CTR, position and top queries are automatically fetched from Google Search Console.</div>
-        </div>
-        <button onclick="autoFillGSC()" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 AUTO-FILL GSC DATA</button>
-      </div>
-
       </div>
     </div>
 
@@ -380,10 +372,6 @@ img,table,iframe{max-width:100%;}
 
     <div class="panel">
       <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span></div>
-      <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-        <button onclick="aiDetectCompetitors()" id="aiCompBtn" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:#a78bfa;border-radius:6px;padding:7px 16px;font-size:10px;font-family:monospace;cursor:pointer;letter-spacing:.06em;">🤖 AI FIND BEST COMPETITORS</button>
-        <span id="aiCompStatus" style="font-size:10px;color:var(--muted);font-family:monospace;"></span>
-      </div>
       <div class="info">
         <strong>Leave empty</strong> → defaults to Surfer SEO &amp; MarketMuse benchmark comparison from training data.<br>
         <strong>Paste HTML</strong> → real side-by-side diff of their actual content vs yours.
@@ -415,8 +403,7 @@ img,table,iframe{max-width:100%;}
       </div>
       <div class="field">
         <label>Your Site URLs (one per line)</label>
-        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://yoursite.com/page1&#10;https://yoursite.com/page2&#10;&#10;Or click Load from Sitemap below"></textarea>
-        <button onclick="loadSitemapUrls()" style="margin-top:6px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:#60a5fa;border-radius:5px;padding:5px 12px;font-size:9px;font-family:monospace;cursor:pointer;letter-spacing:.06em;">📡 LOAD FROM SITEMAP</button>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework&#10;https://contentscale.site/craft-framework"></textarea>
       </div>
       <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
@@ -424,14 +411,9 @@ img,table,iframe{max-width:100%;}
     <div class="panel">
       <div class="panel-title">⑥ Optional</div>
       <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN"></div>
-          <div style="margin-top:5px;"><button onclick="aiDetectConstraints()" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);color:#a78bfa;border-radius:4px;padding:3px 10px;font-size:9px;font-family:monospace;cursor:pointer;">🤖 AI detect from URL</button></div>
     </div>
 
-    <div id="restoreNotice" style="display:none;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:6px;padding:8px 14px;font-family:monospace;font-size:10px;color:#4ade80;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
-  <span>✅ Previous session restored from browser storage</span>
-  <button onclick="clearSavedForm()" style="background:none;border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:4px;padding:2px 8px;font-size:9px;font-family:monospace;cursor:pointer;">✕ Clear</button>
-</div>
-<button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
+    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
 
     <div class="progress" id="deepProgress">
       <div class="prog-label">Full Audit Running — 10 Steps · Do Not Close</div>
@@ -444,10 +426,188 @@ img,table,iframe{max-width:100%;}
 <div class="toast" id="toast"></div>
 
 <script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AUTO-LOAD DATA FROM RECOMMENDATIONS PAGE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(function autoLoadFromRecommendations() {
+  console.log('🔍 [PULSE+NEXUS] Checking for Recommendations data...');
+  
+  let transferData = null;
+  
+  // Method 1: Try localStorage first
+  try {
+    const stored = localStorage.getItem('cs_audit_transfer');
+    if (stored) {
+      transferData = JSON.parse(stored);
+      console.log('✅ [PULSE+NEXUS] Found data in localStorage:', transferData);
+    }
+  } catch (e) {
+    console.warn('⚠️ [PULSE+NEXUS] localStorage read error:', e);
+  }
+  
+  // Method 2: Try sessionStorage as backup
+  if (!transferData) {
+    try {
+      const stored = sessionStorage.getItem('cs_audit_transfer');
+      if (stored) {
+        transferData = JSON.parse(stored);
+        console.log('✅ [PULSE+NEXUS] Found data in sessionStorage:', transferData);
+      }
+    } catch (e) {}
+  }
+  
+  // Method 3: Check URL parameters
+  if (!transferData) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlData = {
+      pageUrl: urlParams.get('url'),
+      keyword: urlParams.get('kw'),
+      position: urlParams.get('pos'),
+      impressions: urlParams.get('impr'),
+      ctr: urlParams.get('ctr'),
+      source: urlParams.get('source')
+    };
+    
+    if (urlData.pageUrl) {
+      transferData = urlData;
+      console.log('✅ [PULSE+NEXUS] Found data in URL params:', transferData);
+    }
+  }
+  
+  // If we have data, auto-fill the form
+  if (transferData && transferData.pageUrl) {
+    console.log('📝 [PULSE+NEXUS] Auto-filling form with:', transferData);
+    
+    const fillForm = () => {
+      try {
+        // Fill URL field
+        const urlField = document.querySelector('input#dUrl, input[name="url"], input[type="url"]');
+        if (urlField && transferData.pageUrl) {
+          urlField.value = transferData.pageUrl;
+          console.log('✅ URL filled:', transferData.pageUrl);
+        }
+        
+        // Fill Primary Keyword field
+        const kwField = document.querySelector('input#dKw, input[name="keyword"]');
+        if (kwField && transferData.keyword) {
+          kwField.value = transferData.keyword;
+          console.log('✅ Keyword filled:', transferData.keyword);
+        }
+        
+        // Fill GSC data fields
+        if (transferData.position) {
+          const posField = document.getElementById('dPos');
+          if (posField) {
+            posField.value = transferData.position;
+            console.log('✅ Position filled:', transferData.position);
+          }
+        }
+        
+        if (transferData.impressions) {
+          const imprField = document.getElementById('dImpr');
+          if (imprField) {
+            imprField.value = transferData.impressions;
+            console.log('✅ Impressions filled:', transferData.impressions);
+          }
+        }
+        
+        if (transferData.ctr) {
+          const ctrField = document.getElementById('dCtr');
+          if (ctrField) {
+            ctrField.value = transferData.ctr;
+            console.log('✅ CTR filled:', transferData.ctr);
+          }
+        }
+        
+        // Switch to Deep Dive mode
+        if (typeof setMode === 'function') {
+          setMode('deep');
+          console.log('✅ Switched to Deep Dive mode');
+        }
+        
+        // Store globally for later use
+        window._recommendationsData = transferData;
+        
+        // Show success notification
+        const notif = document.createElement('div');
+        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:IBM Plex Mono,monospace;font-size:13px;';
+        notif.style.cssText = notifStyle;
+        notif.innerHTML = '✅ Workflow Data Loaded! 📊';
+        document.body.appendChild(notif);
+        
+        // AUTO-START DEEP DIVE
+        if (transferData.source === 'recommendations' || transferData.source === 'recs') {
+          console.log('🚀 Auto-starting Deep Dive from Recommendations...');
+          setTimeout(function() {
+            var runBtn = document.querySelector('#deepRunBtn, button[onclick*="runDeepAudit"]');
+            if (runBtn && !runBtn.disabled) {
+              console.log('🎯 Clicking Run Audit button...');
+              setTimeout(function() { 
+                runBtn.click(); 
+                console.log('✅ Deep Dive started automatically!');
+              }, 2000);
+            }
+          }, 1500);
+        }
+        
+        setTimeout(() => {
+          notif.style.transition = 'opacity 0.3s';
+          notif.style.opacity = '0';
+          setTimeout(() => notif.remove(), 300);
+        }, 4000);
+        
+        console.log('✅ [PULSE+NEXUS] Form filled successfully!');
+      } catch (e) {
+        console.error('❌ [PULSE+NEXUS] Error filling form:', e);
+      }
+    };
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fillForm);
+    } else {
+      setTimeout(fillForm, 100);
+    }
+  } else {
+    console.log('ℹ️ [PULSE+NEXUS] No Recommendations data found - manual mode');
+  }
+})();
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
 let gscPages = [];
 let gscQueries = [];
 
-const RAILWAY = 'https://contentscale-platform-production.up.railway.app';
+const RAILWAY = 'https://app.contentscale.site';
+
+// ── Auto-load GSC from Workflow Manager localStorage ──────────
+function loadSharedGSC() {
+  try {
+    const raw = localStorage.getItem('cs_shared_gsc');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.pages && data.pages.length) {
+      gscPages = data.pages.map(p => ({
+        page: p.page || p.url || '',
+        impressions: p.impressions || 0,
+        clicks: p.clicks || 0,
+        ctr: p.ctr || 0,
+        position: p.position || 0,
+        score: p.score || 0
+      })).filter(p => p.page && p.page.includes('.'));
+      const el = document.getElementById('pagesStatus');
+      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscPages.length} pages from Workflow Manager</span>`;
+      console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC');
+    }
+    if (data.queries && data.queries.length) {
+      gscQueries = data.queries.map(q => ({query: q.query || '', position: q.position || 0})).filter(q => q.query);
+      const el = document.getElementById('queriesStatus');
+      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscQueries.length} queries from Workflow Manager</span>`;
+    }
+    return gscPages.length > 0;
+  } catch(e) { console.warn('[PULSE+NEXUS] loadSharedGSC error:', e.message); return false; }
+}
+setTimeout(loadSharedGSC, 200);
 
 
 // ── META CONSISTENCY CHECKER ─────────────────────────────────
@@ -455,7 +615,7 @@ function runMetaCheck() {
   var html = document.getElementById('dHtml').value.trim();
   if (!html) {
     document.getElementById('metaCheckerInfo').style.display = 'block';
-    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ Plak eerst je pagina HTML in veld ③ hierboven.</strong>';
+    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--red)">⚠ First paste your page HTML in field ③ above.</strong>';
     return;
   }
   document.getElementById('metaCheckerInfo').style.display = 'none';
@@ -521,7 +681,7 @@ function runMetaCheck() {
   // ── 2. H1 vs Title consistency ──
   if (!h1) err('H1', 'MISSING', 'Voeg exact 1 H1 toe met primair keyword');
   else {
-    var titleCore = title.split(/[|\-–:]/)[0].trim().toLowerCase();
+    var titleCore = title.split(/[|\\-–:]/)[0].trim().toLowerCase();
     var h1Core = h1.toLowerCase().substring(0,60);
     var overlap = titleCore.split(' ').filter(w => w.length > 3 && h1Core.includes(w)).length;
     if (overlap === 0) warn('H1 ↔ Title inconsistentie', 'H1: "'+h1.substring(0,60)+'" / Title: "'+title.substring(0,60)+'"', 'H1 en Title moeten hetzelfde primaire keyword bevatten', 'high');
@@ -633,7 +793,7 @@ function runMetaCheck() {
   var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : 'var(--red)';
 
   var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;">'
-    + '<div><span style="font-family:monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistency</span>'
+    + '<div><span style="font-family:IBM Plex Mono,monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
     + '<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
     + '<div style="font-size:13px;color:var(--muted);">'
     + '<span style="color:var(--red);">'+errs.length+' fouten</span> · '
@@ -650,16 +810,16 @@ function runMetaCheck() {
       + '<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
       + '<div style="flex:1;">'
       + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
-      + '<div style="font-family:monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      + '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
       + (r.fix ? '<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>' : '')
       + (r.note ? '<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>' : '')
       + '</div></div></div>';
   }
 
-  if (errs.length) html_out += '<div style="font-family:monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
-  if (warns.length) html_out += '<div style="font-family:monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
+  if (errs.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
   if (oks.length) {
-    html_out += '<details style="margin-top:10px;"><summary style="font-family:monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
+    html_out += '<details style="margin-top:10px;"><summary style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
   }
 
   document.getElementById('metaCheckResults').innerHTML = html_out;
@@ -678,42 +838,26 @@ function runMetaCheck() {
     if(p.get('ctr'))  document.getElementById('dCtr').value  = p.get('ctr');
     if(p.get('mob'))  document.getElementById('dMob').value  = p.get('mob');
     if(p.get('wf'))   window._wfId = p.get('wf');
-
-    // ── Auto-load saved audit results if available ──
-    const savedUrl = p.get('url');
-    if (savedUrl) {
-      setTimeout(() => {
-        const saved = _loadAuditResults(savedUrl);
-        if (saved) {
-          const out = document.getElementById('deepOutput');
-          const prog = document.getElementById('deepProgress');
-          if (out && prog) {
-            out.innerHTML = saved;
-            out.className = 'output show';
-            prog.className = 'progress';
-            _auditDone = true;
-            const btn = document.getElementById('deepRunBtn');
-            if (btn) {
-              btn.textContent = '↺ RE-RUN FULL 10-STEP AUDIT';
-              btn.style.background = 'var(--surface)';
-              btn.style.color = 'var(--muted)';
-              btn.style.fontSize = '16px';
-            }
-            // Show a banner indicating results were loaded
-            const banner = document.createElement('div');
-            banner.style.cssText = 'background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-family:monospace;font-size:10px;color:var(--green);display:flex;align-items:center;gap:10px;';
-            banner.innerHTML = '✅ Previous audit results loaded — scroll down to view all 10 steps, or re-run the audit for fresh results.';
-            out.insertBefore(banner, out.firstChild);
-          }
-        }
-      }, 100); // small delay to let localStorage restore complete
-    }
     const deepView = document.getElementById('deepView');
     if(!deepView) return;
+    // Load GSC from localStorage now that URL params are known
+    loadSharedGSC();
+    // Build connection banner
+    const chips = [];
+    if(p.get('pos'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ${parseFloat(p.get('pos')).toFixed(1)}</span>`);
+    if(p.get('impr')) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${parseInt(p.get('impr')).toLocaleString()} impr</span>`);
+    if(p.get('ctr'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${p.get('ctr')}% CTR</span>`);
+    const gscBadge = gscPages.length
+      ? `<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">✓ ${gscPages.length} GSC pages</span>`
+      : `<span style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:4px;padding:2px 8px;font-size:10px;color:#fbbf24;">⚠ No GSC — upload CSV above</span>`;
     const banner = document.createElement('div');
-    banner.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:12px 18px;margin-bottom:14px;font-family:monospace;font-size:11px;color:#fbbf24;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
-    banner.innerHTML = '<span>✓ Pre-filled vanuit Workflow Manager — paste Pagina HTML hieronder voor beste resultaat. Competitor HTML is optioneel (defaultt naar Surfer SEO + MarketMuse benchmark).</span>'
-      + (p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;margin-left:auto;white-space:nowrap;">← Terug naar Workflow</a>' : '');
+    banner.style.cssText = 'background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:11px;color:#fbbf24;';
+    banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;">Connected from Workflow Manager</strong>
+      ${p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;">← Back to Workflow</a>' : ''}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips.join('')} ${gscBadge}</div>
+    <div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);">Paste page HTML below → Run Full Audit</div>`;
     deepView.insertBefore(banner, deepView.firstChild);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
@@ -739,7 +883,7 @@ function updateHtmlStats(inputId, statsId) {
   if (!html) { el.textContent=''; return; }
   try {
     const doc = new DOMParser().parseFromString(html,'text/html');
-    const words = (doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
+    const words = (doc.body?.innerText||'').split(/\\s+/).filter(Boolean).length;
     const h1 = doc.querySelectorAll('h1').length;
     const h2 = doc.querySelectorAll('h2').length;
     const schema = (html.match(/application\/ld\+json/gi)||[]).length;
@@ -751,14 +895,14 @@ function updateHtmlStats(inputId, statsId) {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dSiteUrls')?.addEventListener('input', function() {
-    const urls = this.value.trim().split('\n').filter(l=>l.trim().startsWith('http'));
+    const urls = this.value.trim().split('\\n').filter(l=>l.trim().startsWith('http'));
     document.getElementById('urlCount').textContent = urls.length ? `✓ ${urls.length} URLs loaded` : '';
   });
 });
 
 // ── CSV ──
 function parseGSCCsv(raw) {
-  const lines = raw.trim().split('\n');
+  const lines = raw.trim().split('\\n');
   if (lines.length < 2) return [];
   const header = lines[0].toLowerCase().replace(/"/g,'').split(',');
   const idx = {
@@ -805,6 +949,7 @@ function handlePagesCSV(input) {
     });
     gscPages.sort((a,b)=>b.score-a.score);
     document.getElementById('pagesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscPages.length} pages loaded</span>`;
+    try { localStorage.setItem('cs_shared_gsc', JSON.stringify({pages:gscPages, queries:gscQueries})); } catch(e) {}
     document.getElementById('filterPanel').style.display='block';
     document.getElementById('opportunityTable').style.display='block';
     renderTable();
@@ -844,7 +989,7 @@ function showCannibalization() {
   });
   const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
   if (!canns.length) {
-    body.innerHTML='<p style="color:var(--green);font-family:monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    body.innerHTML='<p style="color:var(--green);font-family:IBM Plex Mono,monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
     return;
   }
   body.innerHTML=canns.map(([seg,pages])=>`
@@ -852,7 +997,7 @@ function showCannibalization() {
       <h4>⚠ Conflict: "${seg}" appears in ${pages.length} pages</h4>
       ${pages.map(p=>`
         <div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">
-          <span style="font-family:monospace;color:var(--blue);flex:1;word-break:break-all;">${p.page.replace(/^https?:\/\//,'').slice(0,60)}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;color:var(--blue);flex:1;word-break:break-all;">${p.page.replace(/^https?:\//,'').slice(0,60)}</span>
           <span style="color:var(--muted);">${p.impressions.toLocaleString()} impr</span>
           <span style="color:var(--amber);">${p.ctr.toFixed(1)}% CTR</span>
           <span style="color:var(--orange);">pos ${Math.round(p.position)}</span>
@@ -914,7 +1059,7 @@ function exportOpps() {
   const rows=['Page,Impressions,Clicks,CTR,Position,Score'];
   gscPages.forEach(r=>rows.push(`"${r.page}",${r.impressions},${r.clicks},${r.ctr},${r.position},${r.score}`));
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.href=URL.createObjectURL(new Blob([rows.join('\\n')],{type:'text/csv'}));
   a.download='seo-opportunities.csv';a.click();
 }
 
@@ -945,12 +1090,12 @@ function extractContent(html, label='page') {
     const h1=Array.from(doc.querySelectorAll('h1')).map(e=>e.textContent.trim()).join(' | ');
     const h2s=Array.from(doc.querySelectorAll('h2')).map(e=>e.textContent.trim()).join(' · ');
     const h3s=Array.from(doc.querySelectorAll('h3')).slice(0,10).map(e=>e.textContent.trim()).join(' · ');
-    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\n');
-    const body=(doc.body?.innerText||'').replace(/\s+/g,' ').slice(0,3000);
+    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\\n');
+    const body=(doc.body?.innerText||'').replace(/\\s+/g,' ').slice(0,3000);
     const imgs=doc.querySelectorAll('img').length;
     const alts=doc.querySelectorAll('img[alt]').length;
     const intLinks=doc.querySelectorAll('a[href]').length;
-    const wordCount=(doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
+    const wordCount=(doc.body?.innerText||'').split(/\\s+/).filter(Boolean).length;
     const faqs=doc.querySelectorAll('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"]').length;
     return `=== ${label.toUpperCase()} ===
 Title (${title.length} chars): ${title}
@@ -993,13 +1138,13 @@ async function quickAudit(enc,impr,ctr,pos) {
   ];
   document.getElementById('quickSteps').innerHTML=QSTEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
   const bar=document.getElementById('quickBar');
-  const ctx=`URL: ${url}\nImpressions: ${impr}\nCTR: ${ctr}%\nPosition: ${pos}`;
+  const ctx=`URL: ${url}\\nImpressions: ${impr}\\nCTR: ${ctr}%\\nPosition: ${pos}`;
   const pageQueries=gscQueries.filter(q=>q.query).slice(0,20);
-  const queryCtx=pageQueries.length?`\nTop queries: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)} impr:${q.impressions}`).join(' | ')}`:'';
+  const queryCtx=pageQueries.length?`\\nTop queries: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)} impr:${q.impressions}`).join(' | ')}`:'';
   const prompts={
-    q0:`You are an elite SEO strategist.\n${ctx}${queryCtx}\n\nList EXACTLY 5 priority actions for this page. Each must be:\n- Specific and actionable (not generic advice)\n- Achievable in under 1 hour\n- Include expected metric change\n\nFormat each as:\n🔥 **[Action title]**\nDo: [exact what to do]\nExpect: [specific metric improvement]\n\nStart with the highest-impact action first.`,
-    q1:`You are an elite SEO strategist.\n${ctx}${queryCtx}\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\n\n**New Title**: [text]\n**New Meta Description**: [text]\n**Why**: [specific 2026 SERP psychology rationale]`,
-    q2:`You are an elite SEO strategist.\n${ctx}${queryCtx}\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.`,
+    q0:`You are an elite SEO strategist.\\n${ctx}${queryCtx}\\n\\nList EXACTLY 5 priority actions for this page. Each must be:\\n- Specific and actionable (not generic advice)\\n- Achievable in under 1 hour\\n- Include expected metric change\\n\\nFormat each as:\\n🔥 **[Action title]**\\nDo: [exact what to do]\\nExpect: [specific metric improvement]\\n\\nStart with the highest-impact action first.`,
+    q1:`You are an elite SEO strategist.\\n${ctx}${queryCtx}\\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]`,
+    q2:`You are an elite SEO strategist.\\n${ctx}${queryCtx}\\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.`,
   };
   for (let i=0;i<QSTEPS.length;i++) {
     const s=QSTEPS[i];setStep(s.id,'active');
@@ -1034,40 +1179,10 @@ const DEEP_STEPS=[
   {id:'d10',icon:'📈',label:'90-Day Ranking Plan — by week',badge:'b-win'},
 ];
 
-// ── AUDIT STATE ──
-let _auditDone = false;
-const _RESULTS_KEY = 'cs_audit_results_v1';
-
-function _saveAuditResults(url, html) {
-  try {
-    const store = JSON.parse(localStorage.getItem(_RESULTS_KEY)||'{}');
-    store[url] = { html, ts: Date.now() };
-    // Keep only 5 most recent
-    const keys = Object.keys(store).sort((a,b)=>(store[b].ts||0)-(store[a].ts||0));
-    if (keys.length > 5) keys.slice(5).forEach(k=>delete store[k]);
-    localStorage.setItem(_RESULTS_KEY, JSON.stringify(store));
-  } catch(e) {}
-}
-
-function _loadAuditResults(url) {
-  try {
-    const store = JSON.parse(localStorage.getItem(_RESULTS_KEY)||'{}');
-    const entry = store[url];
-    if (entry && entry.html && (Date.now() - entry.ts) < 24*60*60*1000) return entry.html;
-  } catch(e) {}
-  return null;
-}
-
 async function runDeepAudit() {
   const url=document.getElementById('dUrl').value.trim();
   const kw=document.getElementById('dKw').value.trim();
   if (!url||!kw) { toast('Enter URL and keyword first'); return; }
-
-  // ── Guard: confirm re-run if already done ──
-  if (_auditDone) {
-    const saved = _loadAuditResults(url);
-    if (saved && !confirm('✅ This audit is already complete.\n\nRe-running will replace the current results.\n\nContinue?')) return;
-  }
 
   const inp={
     url,kw,
@@ -1094,15 +1209,15 @@ async function runDeepAudit() {
   // Competitor context — real HTML or trained knowledge
   let compContext='';
   if (inp.comp1html||inp.comp2html) {
-    compContext=`\n${extractContent(inp.comp1html,`COMPETITOR 1 (${inp.comp1url})`)}\n\n${extractContent(inp.comp2html,`COMPETITOR 2 (${inp.comp2url})`)}`;
+    compContext=`\\n${extractContent(inp.comp1html,`COMPETITOR 1 (${inp.comp1url})`)}\\n\\n${extractContent(inp.comp2html,`COMPETITOR 2 (${inp.comp2url})`)}`;
   } else {
-    compContext=`\n[No competitor HTML pasted. Use your trained knowledge of:
+    compContext=`\\n[No competitor HTML pasted. Use your trained knowledge of:
 COMPETITOR 1: Surfer SEO (${inp.comp1url}) — known for: NLP content scores, content editor, SERP analyzer, keyword research, average ~2500-3500 word guides, heavy use of comparison tables, FAQ sections, JSON-LD FAQPage schema, strong internal linking]
 COMPETITOR 2: MarketMuse (${inp.comp2url}) — known for: topic modeling, content briefs, competitive analysis, comprehensive pillar pages, semantic clustering, authority scoring, strong structured data, 3000-5000 word pillar content]
 Compare the target page against these known competitor patterns.`;
   }
 
-  const siteUrlList=inp.siteUrls.split('\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\n');
+  const siteUrlList=inp.siteUrls.split('\\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\\n');
 
   document.getElementById('deepRunBtn').disabled=true;
   const prog=document.getElementById('deepProgress');
@@ -1123,92 +1238,46 @@ TOP QUERIES: ${inp.queries||'not provided'}
 ${myContentStr}`;
 
   const prompts={
-    d0:`${base}\n\nSTEP 0 — PRIORITY ACTIONS (show this first, before any analysis):\n\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\n\nFor each action use this format:\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change, add, or fix — copy-paste ready]\nWhere: [Exact location on page or in code]\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
+    d0:`${base}\\n\\nSTEP 0 — PRIORITY ACTIONS (show this first, before any analysis):\\n\\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\\n\\nFor each action use this format:\\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\\nDo: [Exact what to change, add, or fix — copy-paste ready]\\nWhere: [Exact location on page or in code]\\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\\nTime: [15 min / 30 min / 2 hrs]\\n\\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
 
-    d1:`${base}\n\nSTEP 1 — INTENT + AI OVERVIEW GAP ANALYSIS:\n\nYou have the CLIENT HTML above. Use it — do not guess.\n\n⚠️ CRITICAL RULE FOR THIS STEP: When identifying AIO source URLs, ONLY cite LOCAL BUSINESS WEBSITES and DIRECT SERVICE PROVIDERS. COMPLETELY IGNORE AND EXCLUDE all of the following: Angi, Angie's List, Yelp, HomeAdvisor, Thumbtack, BBB, Houzz, Porch, Modernize, ConsumerAffairs, Trustpilot, Clutch, Google My Business profiles, Facebook pages, Bing Places, aggregator directories, and any review/lead-gen platforms. If Google cites these sites in an AIO, note that local businesses CANNOT compete with them — instead identify which LOCAL BUSINESS websites appear as AIO sources.\n\nPART A — INTENT:\nClassify intent (informational/commercial/transactional/navigational). Does the client HTML match? State mismatch with specific fix.\n\nPART B — AI OVERVIEW LIVE INVESTIGATION:\nSearch Google NOW for: "${inp.kw}" ${inp.geo ? 'in ' + inp.geo : ''}.\n1. DOES AN AI OVERVIEW EXIST? Yes/No. Quote exactly what it says (full text, do not cut off).\n2. WHO IS CITED? List the top 3 AIO source URLs — LOCAL BUSINESSES ONLY (not Angi/Yelp/HomeAdvisor). For each: WHY Google chose it (direct answer format, FAQ schema, word count, E-E-A-T signals, freshness, geographic signals).\n3. If only directories appear: note "Directories dominate this SERP — focus on local pack optimization instead" and give 3 specific local pack signals to add.\n\nPART C — GAP CALCULATION (client HTML vs AIO sources):\nCheck each signal in the actual client HTML — YES if present, NO if missing:\n| Signal | AIO Sources Have | Client HTML Has | Action Required |\n|--------|-----------------|-----------------|------------------|\n| Direct answer paragraph (40-60w) | YES/NO — exact example | YES/NO | Exact copy to paste |\n| FAQ schema JSON-LD | YES/NO | YES/NO | Action |\n| H2/H3 question headings | YES/NO | YES/NO | Action |\n| Author/expertise signal | YES/NO | YES/NO | Action |\n| Statistics or data cited | YES/NO | YES/NO | Action |\n| Definition of main term | YES/NO | YES/NO | Action |\n| Step-by-step process | YES/NO | YES/NO | Action |\n| Local/geo signal (city, state) | YES/NO | YES/NO | Action |\nFor every NO: write the EXACT content to add (not a suggestion — the actual copy to paste).\n\nPART D — BUILD ON WHAT IS ALREADY STRONG:\n1. What in the client HTML is already good? Name the specific section.\n2. Which existing section is closest to AIO eligibility with just a small rewrite?\n3. Write the before → after rewrite of that section (show FULL before and FULL after — do not cut off).\n4. Write a ready-to-paste FAQ block (4 Q&As, 40-60 words each, AIO-optimized format).\n5. Write the exact JSON-LD FAQ schema to add to <head>.\n\nPART E — ZERO-CLICK RISK:\nZero-click risk score (0-10). Featured snippet opportunity? How to own the snippet AND still drive clicks?`,
+    d1:`${base}\\n\\nSTEP 1 — INTENT DECODING:\\nAnswer each concisely (no truncation):\\n1. Primary intent: [label] - 1 sentence why\\n2. AI Overview eligible: [Yes/Partial/No] - reason + format change\\n3. Zero-click risk: [High/Medium/Low] - what Google surfaces instead\\n4. Top 3 page-1 gaps (1 line each)\\n5. Mismatch Fix - Current H1: [quote from page] | Problem: [1 sentence] | New H1: [write full corrected H1] | New intro: [rewrite 2 sentences]`,
 
-    d2:`${base}\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "${extractTitle(inp.html)}"\nCURRENT META: "${extractMeta(inp.html)}"\n\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\n\n**Current Title** (${extractTitle(inp.html).length} chars): ${extractTitle(inp.html)}\n**Current Meta** (${extractMeta(inp.html).length} chars): ${extractMeta(inp.html)}\n**New Title**: [your version]\n**New Meta Description**: [your version]\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
+    d2:`${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "${extractTitle(inp.html)}"\\nCURRENT META: "${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\\n\\n**Current Title** (${extractTitle(inp.html).length} chars): ${extractTitle(inp.html)}\\n**Current Meta** (${extractMeta(inp.html).length} chars): ${extractMeta(inp.html)}\\n**New Title**: [your version]\\n**New Meta Description**: [your version]\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
 
-    d3:`${base}${compContext}\n\nSTEP 3 — COMPETITOR DIFF:\n\nCOMPETITOR 1 URL: ${inp.comp1url}\nCOMPETITOR 2 URL: ${inp.comp2url}\n\nCreate a comparison table. Column headers must use the actual domain names from the URLs above:\n\n| Feature | Your Page | Competitor 1 (${(()=>{try{return new URL(inp.comp1url).hostname.replace('www.','')}catch(e){return inp.comp1url}})()}) | Competitor 2 (${(()=>{try{return new URL(inp.comp2url).hostname.replace('www.','')}catch(e){return inp.comp2url}})()}) | Winner |\n|---|---|---|---|---|\n| Word count | | | | |\n| H2 count | | | | |\n| FAQ section | YES/NO | YES/NO | YES/NO | |\n| Schema types | | | | |\n| Images with alt text | X/Y (%) | | | |\n| CTA clarity | quote from page | | | |\n| Data/stats count | N verified claims | | | |\n| Unique angle | | | | |\n| Internal links | N total | | | |\n| Title tag keyword match | X/3 primary keywords | | | |\n| Meta desc keyword match | X/3 primary keywords | | | |\n\nFill every cell with REAL data from the HTML provided. Do NOT use "?" or "unknown".\n\nThen: List EXACTLY 5 CRITICAL GAPS — things competitors do that YOUR PAGE does not. For each gap:\n**GAP #[N]: [TITLE IN CAPS]**\n**What Competitors Do:** [exact example with quote]\n**Your Page:** [what it currently has]\n**NEXUS Implementation (Exact):** [copy-paste ready fix — the actual content/code to add]`,
+    d3:`${base}${compContext}\\n\\nSTEP 3 — COMPETITOR DIFF:\\nCreate a comparison table between your page and the two competitors. Columns: Feature | Your Page | Competitor 1 (Surfer SEO) | Competitor 2 (MarketMuse) | Winner\\nRows: Word count · H2 count · FAQ section · Schema types · Images with alt · CTA clarity · Data/stats count · Unique angle · Internal links\\n\\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each write all three:\\n- Gap: [specific element or content type]\\n- Evidence: [exactly where competitor uses it]\\n- How to implement: [copy-paste instruction for this page]`,
 
-    d4:`${base}${compContext}\n\nSTEP 4 — CONTENT GAP MATRIX:\n\nCreate a complete gap analysis table. Score each dimension: 0=missing, 1=weak, 2=adequate, 3=strong.\nCompetitor 2 is: ${inp.comp2url}\n\n| Dimension | Your Score (0-3) | Competitor 2 Score (0-3) | Gap | Severity | Specific Fix |\n|---|---|---|---|---|---|\n| Subtopic coverage depth | | | | HIGH/MED/LOW | |\n| Data & statistics proof | | | | | |\n| Commercial intent signals | | | | | |\n| Media & UX elements | | | | | |\n| Content freshness (2025-2026) | | | | | |\n| FAQ depth & schema | | | | | |\n| E-E-A-T signals | | | | | |\n| Local/geo optimization | | | | | |\n| Internal linking structure | | | | | |\n| Schema markup completeness | | | | | |\n\nFill EVERY cell. Do not leave any cell empty or use "?".\n\nThen: TOP 5 CONTENT ADDITIONS ranked by impact. For each:\n**Priority [N] — [TITLE] (Severity: HIGH/MED/LOW)**\nWhat to add: [exact content — copy-paste ready]\nWhere: [exact section or location on page]\nExpected impact: [specific metric improvement]`,
+    d4:`${base}${compContext}\\n\\nSTEP 4 — CONTENT GAP MATRIX:\\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\\n\\n| Dimension | Your Score | Gap | Specific Fix |\\n|---|---|---|---|\\n| Subtopic coverage | | | |\\n| Data & proof | | | |\\n| Commercial signals | | | |\\n| Media & UX | | | |\\n| Freshness (2025-2026) | | | |\\n| FAQ depth | | | |\\n| E-E-A-T signals | | | |\\n\\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.`,
 
-    d5:`${base}\n\nSTEP 5 — PULSE REWRITES (show current → improved for each):\n\nP — Purpose (intro rewrite):\nCURRENT: [quote first 3 sentences from body extract]\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\n\nU — Urgency signal:\nWhere to add: [exact location]\nNew sentence: [write it]\n\nL — Legitimacy:\nMissing proof elements: [list 3 specific items]\nWhere to add: [exact section]\n\nS — Structure improvement:\nPick ONE section and show Before/After conversion to table or bullets:\nBEFORE: [current format]\nAFTER: [improved format]\n\nE — Engagement (CTA rewrite):\nCURRENT CTA: [identify from page]\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
+    d5:`${base}\\n\\nSTEP 5 — PULSE REWRITES (show current → improved for each):\\n\\nP — Purpose (intro rewrite):\\nCURRENT: [quote first 3 sentences from body extract]\\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\\n\\nU — Urgency signal:\\nWhere to add: [exact location]\\nNew sentence: [write it]\\n\\nL — Legitimacy:\\nMissing proof elements: [list 3 specific items]\\nWhere to add: [exact section]\\n\\nS — Structure improvement:\\nPick ONE section and show Before/After conversion to table or bullets:\\nBEFORE: [current format]\\nAFTER: [improved format]\\n\\nE — Engagement (CTA rewrite):\\nCURRENT CTA: [identify from page]\\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
 
-    d6:`${base}\n\nSITE URLS:\n${siteUrlList||'[No URLs provided — suggest based on URL patterns and domain: '+inp.url+']'}\n\nSTEP 6 — NEXUS + INTERNAL LINKS:\n1. TOP 5 pages to link FROM to this page (use real URLs from list if available):\n   - URL | Anchor text (exact) | Why (semantic reason)\n\n2. TOP 5 pages this page should link TO:\n   - URL | Anchor text (exact) | Why\n\n3. Missing semantic entities for "${inp.kw}" (10 terms)\n\n4. Schema recommendation — provide complete FAQPage JSON-LD with 5 Q&As (40-60 words each, optimized for AI Overviews)`,
+    d6:`${base}\\n\\nSITE URLS:\\n${siteUrlList||'[No URLs provided — generate 5 suggested internal URLs based on domain: '+inp.url+']'}\\n\\nSTEP 6 — NEXUS: INTERNAL + EXTERNAL LINKS\\n\\n**A. Pages that should link TO this page (link FROM them):**\\nFor each: full URL | EXACT anchor text | semantic reason\\n1. [URL] | [anchor text] | [reason]\\n2. [URL] | [anchor text] | [reason]\\n3. [URL] | [anchor text] | [reason]\\n4. [URL] | [anchor text] | [reason]\\n5. [URL] | [anchor text] | [reason]\\n\\n**B. Pages this page should link TO:**\\nFor each: full URL | EXACT anchor text | exact sentence/location to insert\\n1. [URL] | [anchor text] | after: [quote 5 words]\\n2. [URL] | [anchor text] | [location]\\n3. [URL] | [anchor text] | [location]\\n4. [URL] | [anchor text] | [location]\\n5. [URL] | [anchor text] | [location]\\n\\n**C. External authoritative sources to cite (E-E-A-T):**\\nFor each: URL | anchor text | location on page | why this source adds trust\\n1. [URL] | [anchor text] | [section] | [reason]\\n2. [URL] | [anchor text] | [section] | [reason]\\n3. [URL] | [anchor text] | [section] | [reason]\\n\\n**D. 10 missing semantic entities for \"${inp.kw}\" not yet on this page**\\n\\n**E. Complete FAQPage JSON-LD — 5 Q&As, 40-60 words each, AI Overview optimised**`,
 
-    d7:`${base}\n\nSTEP 7 — ARCHITECTURE BLUEPRINT:\nCURRENT heading structure (from HTML):\nH1: ${extractTitle(inp.html)}\n[reconstruct H2-H3 from content]\n\nRECOMMENDED structure for intent + AI Overview extraction:\n[show new H1 → H2 → H3 hierarchy]\n\nFor each change: Old heading → New heading → Why this order wins`,
+    d7:`${base}\\n\\nSTEP 7 — ARCHITECTURE BLUEPRINT:\\nCURRENT heading structure (from HTML):\\nH1: ${extractTitle(inp.html)}\\n[reconstruct H2-H3 from content]\\n\\nRECOMMENDED structure for intent + AI Overview extraction:\\n[show new H1 → H2 → H3 hierarchy]\\n\\nFor each change: Old heading → New heading → Why this order wins`,
 
-    d8:`${base}\n\nSTEP 8 — TECHNICAL CHECKLIST:\n1. Keyword "${inp.kw}" placement audit:\n   □ In H1? □ First 100 words? □ URL? □ Meta title? □ Image alt?\n   → Fix for each missing item\n\n2. Missing LSI/semantic keywords (8 terms not found in content)\n\n3. Technical issues found in HTML:\n   - Duplicate tags, missing alt, schema errors, etc.\n\n4. Mobile optimization gaps (page is ${inp.mob||'?'}% mobile)\n\n5. Core Web Vitals recommendations based on page structure`,
+    d8:`${base}\\n\\nSTEP 8 — TECHNICAL CHECKLIST:\\n1. Keyword "${inp.kw}" placement audit:\\n   □ In H1? □ First 100 words? □ URL? □ Meta title? □ Image alt?\\n   → Fix for each missing item\\n\\n2. Missing LSI/semantic keywords (8 terms not found in content)\\n\\n3. Technical issues found in HTML:\\n   - Duplicate tags, missing alt, schema errors, etc.\\n\\n4. Mobile optimization gaps (page is ${inp.mob||'?'}% mobile)\\n\\n5. Core Web Vitals recommendations based on page structure`,
 
-    d9:`${base}\n\nSTEP 9 — BEFORE/AFTER SCORE PROJECTION:\n\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\n\nCURRENT estimated score:\n- GRAAF: [score]/50 — [what's missing]\n- CRAFT: [score]/30 — [what's missing]\n- Technical: [score]/20 — [what's missing]\n- TOTAL: [score]/100\n\nAFTER implementing all recommendations:\n- GRAAF: [new score]/50 — [what improved]\n- CRAFT: [new score]/30 — [what improved]\n- Technical: [new score]/20 — [what improved]\n- TOTAL: [new score]/100\n\nTraffic projection:\n- Current position ${inp.pos} → Expected new position: [X]\n- Current CTR ${inp.ctr}% → Expected new CTR: [X]%\n- Current clicks per month: [calc] → New estimated clicks: [calc]`,
+    d9:`${base}\\n\\nSTEP 9 — BEFORE/AFTER SCORE PROJECTION:\\n\\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\\n\\nCURRENT estimated score:\\n- GRAAF: [score]/50 — [what's missing]\\n- CRAFT: [score]/30 — [what's missing]\\n- Technical: [score]/20 — [what's missing]\\n- TOTAL: [score]/100\\n\\nAFTER implementing all recommendations:\\n- GRAAF: [new score]/50 — [what improved]\\n- CRAFT: [new score]/30 — [what improved]\\n- Technical: [new score]/20 — [what improved]\\n- TOTAL: [new score]/100\\n\\nTraffic projection:\\n- Current position ${inp.pos} → Expected new position: [X]\\n- Current CTR ${inp.ctr}% → Expected new CTR: [X]%\\n- Current clicks per month: [calc] → New estimated clicks: [calc]`,
 
-    d10:`${base}\n\nSTEP 10 — 90-DAY PLAN (week by week):\n\n**WEEK 1 — Quick Wins (do today):**\n[List 5 specific changes, each under 30 min]\n\n**WEEK 2-3 — Content Upgrades:**\n[List 3-4 content additions/rewrites]\n\n**WEEK 4 — Technical + Schema:**\n[Schema implementation, internal links, technical fixes]\n\n**MONTH 2 — Authority Building:**\n[Link building, content expansion, E-E-A-T signals]\n\n**MONTH 3 — Measurement + Iteration:**\n[What to check in GSC, when to expect results]\n\n**GSC Checkpoints:**\n- Day 7: [what metric to check]\n- Day 30: [target position + CTR]\n- Day 90: [end goal for "${inp.kw}"]\n\nSUCCESS DEFINITION: Position ${inp.pos} → [target] within 90 days`,
-  };
-
-  // Structured export data — saved alongside HTML for AI feeding
-  const _exportData = {
-    url, kw: inp.kw, kw2: inp.kw2, geo: inp.geo, goal: inp.goal,
-    date: new Date().toISOString(),
-    gsc: { impressions: inp.impr, ctr: inp.ctr, position: inp.pos, mobile: inp.mob },
-    queries: inp.queries,
-    comp1: inp.comp1url, comp2: inp.comp2url,
-    steps: {}
+    d10:`${base}\\n\\nSTEP 10 — 90-DAY PLAN (week by week):\\n\\n**WEEK 1 — Quick Wins (do today):**\\n[List 5 specific changes, each under 30 min]\\n\\n**WEEK 2-3 — Content Upgrades:**\\n[List 3-4 content additions/rewrites]\\n\\n**WEEK 4 — Technical + Schema:**\\n[Schema implementation, internal links, technical fixes]\\n\\n**MONTH 2 — Authority Building:**\\n[Link building, content expansion, E-E-A-T signals]\\n\\n**MONTH 3 — Measurement + Iteration:**\\n[What to check in GSC, when to expect results]\\n\\n**GSC Checkpoints:**\\n- Day 7: [what metric to check]\\n- Day 30: [target position + CTR]\\n- Day 90: [end goal for "${inp.kw}"]\\n\\nSUCCESS DEFINITION: Position ${inp.pos} → [target] within 90 days`,
   };
 
   for (let i=0;i<DEEP_STEPS.length;i++) {
     const s=DEEP_STEPS[i];setStep(s.id,'active');
     try {
-      const result=await callGemini(prompts[s.id],4000);
+      const result=await callGemini(prompts[s.id],6000);
       addSection(out,s.id,s.icon,s.label,s.badge,result);
-      _exportData.steps[s.id] = { label: s.label, content: result };
       setStep(s.id,'done');
     } catch(e) {
       setStep(s.id,'error');
-      const errMsg = `**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`;
-      addSection(out,s.id,s.icon,s.label,s.badge,errMsg);
-      _exportData.steps[s.id] = { label: s.label, content: errMsg };
+      addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\\n\\nCheck Railway server: ${RAILWAY}/api/health`);
     }
     bar.style.width=((i+1)/DEEP_STEPS.length*100)+'%';
     if (i<DEEP_STEPS.length-1) await sleep(1500);
   }
 
-  // Save structured export data
-  try {
-    const expStore = JSON.parse(localStorage.getItem('cs_audit_export_v1')||'{}');
-    expStore[url] = _exportData;
-    const keys = Object.keys(expStore).sort((a,b)=>new Date(expStore[b].date)-new Date(expStore[a].date));
-    if (keys.length>5) keys.slice(5).forEach(k=>delete expStore[k]);
-    localStorage.setItem('cs_audit_export_v1', JSON.stringify(expStore));
-  } catch(e) {}
-
   prog.className='progress';
   document.getElementById('deepRunBtn').disabled=false;
-  document.getElementById('deepRunBtn').textContent='↺ RE-RUN FULL 10-STEP AUDIT';
-  document.getElementById('deepRunBtn').style.background='var(--surface)';
-  document.getElementById('deepRunBtn').style.color='var(--muted)';
-  document.getElementById('deepRunBtn').style.fontSize='16px';
-  _auditDone = true;
-  _saveAuditResults(url, out.innerHTML);
   toast('✅ Full audit complete — scroll up for Priority Actions');
-
-  // ── Add Recommendations CTA at bottom of results ──
-  const recBanner = document.createElement('div');
-  recBanner.style.cssText = 'margin-top:32px;padding:24px 28px;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(167,139,250,.1));border:2px solid rgba(251,191,36,.4);border-radius:14px;';
-  recBanner.innerHTML = '<div style="font-family:monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;">✅ Audit complete — next steps</div>'
-    + '<div style="font-size:17px;font-weight:800;color:#f9fafb;margin-bottom:5px;">Export or continue</div>'
-    + '<div style="font-size:12px;color:#94a3b8;margin-bottom:18px;">Export for AI feeding (Markdown) or JSON, track progress, or view recommendations.</div>'
-    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">'
-    + '<button onclick="exportAuditMarkdown()" style="background:var(--gold);color:#000;border:none;font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 22px;border-radius:7px;cursor:pointer;">📋 Export Markdown (AI-ready)</button>'
-    + '<button onclick="exportAuditJSON()" style="background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 22px;border-radius:7px;cursor:pointer;">{ } Export JSON</button>'
-    + '<a href="/audit-recommendations" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 22px;border-radius:7px;cursor:pointer;text-decoration:none;">🎯 Recommendations</a>'
-    + '<button onclick="document.getElementById(\'deepView\').scrollIntoView({behavior:\'smooth\'})" style="background:rgba(255,255,255,.05);color:#64748b;border:1px solid rgba(255,255,255,.1);font-family:monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:11px 18px;border-radius:7px;cursor:pointer;">↑ Back to Form</button>'
-    + '</div>';
-  out.appendChild(recBanner);
-
-  // Scroll to start of output to show Priority Actions first
-  out.scrollIntoView({behavior:'smooth'});
-
   // Scroll to start of output to show Priority Actions first
   out.scrollIntoView({behavior:'smooth'});
 }
@@ -1251,31 +1320,7 @@ function copyMd(id) {
 
 function renderMd(t) {
   if (!t) return '';
-
-  // ── PRE-PROCESS: extract markdown tables BEFORE HTML escaping ──
-  // This ensures proper <thead>/<th> vs <tbody>/<td> handling
-  const savedTables = [];
-  function escH(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  // Match: header row + separator row + optional data rows
-  t = t.replace(/(\|[^\n]+\|\n?)(\|[\s\-:|]+\|\n?)((?:\|[^\n]+\|\n?)*)/g, (match, headerRow, sepRow, bodyRows) => {
-    const hCells = headerRow.trim().split('|').slice(1,-1);
-    const thead = '<thead><tr>' + hCells.map(c=>`<th>${escH(c.trim())}</th>`).join('') + '</tr></thead>';
-    const bodyLines = bodyRows.trim().split('\n').filter(r=>r.trim() && r.includes('|'));
-    const tbody = bodyLines.length
-      ? '<tbody>' + bodyLines.map(r=>{
-          const cells = r.split('|').slice(1,-1);
-          return '<tr>' + cells.map(c=>`<td>${escH(c.trim())}</td>`).join('') + '</tr>';
-        }).join('') + '</tbody>'
-      : '<tbody></tbody>';
-    const tbl = `<div class="md-table-wrap"><table>${thead}${tbody}</table></div>`;
-    const ph = `__TBL${savedTables.length}__`;
-    savedTables.push(tbl);
-    return ph;
-  });
-
-  // ── Standard markdown transformations ──
-  t = t
+  return t
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/^### (.+)$/gm,'<h3>$1</h3>')
     .replace(/^## (.+)$/gm,'<h2>$1</h2>')
@@ -1286,16 +1331,23 @@ function renderMd(t) {
     .replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
     .replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
     .replace(/^---+$/gm,'<hr>')
-    .replace(/^[\-\*•] (.+)$/gm,'<li>$1</li>')
+    .replace(/^\|(.+)\|$/gm,m=>{
+      const cells=m.split('|').slice(1,-1);
+      if (cells.every(c=>/^[\s\-:]+$/.test(c))) return '';
+      return '<tr>'+cells.map(function(c){
+        var v=c.trim();
+        if(/^HIGH$/i.test(v)) return '<td class="sev-high">'+v+'</td>';
+        if(/^(MED|MEDIUM)$/i.test(v)) return '<td class="sev-med">'+v+'</td>';
+        if(/^LOW$/i.test(v)) return '<td class="sev-low">'+v+'</td>';
+        return '<td>'+v+'</td>';
+      }).join('')+'</tr>';
+    })
+    .replace(/(<tr>[\s\S]*?<\/tr>)+/g,m=>`<table>${m}</table>`)
+    .replace(/^[-\*•] (.+)$/gm,'<li>$1</li>')
     .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
     .replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`)
     .replace(/\n\n/g,'</p><p>')
     .replace(/\n/g,'<br>');
-
-  // ── Restore pre-processed tables ──
-  savedTables.forEach((tbl,i)=>{ t = t.replace(`__TBL${i}__`, tbl); });
-
-  return t;
 }
 
 // Drag & drop
@@ -1310,472 +1362,6 @@ function renderMd(t) {
     else handleQueriesCSV({files:[file]});
   });
 });
-
-// ══ AUTO-FILL GSC ═══════════════════════════════════════════════
-async function autoFillGSC() {
-  const urlField = document.getElementById('dUrl');
-  const url = urlField ? urlField.value.trim() : '';
-  if (!url) { alert('Enter the Page URL first'); return; }
-  
-  const btn = document.querySelector('[onclick="autoFillGSC()"]');
-  if (btn) { btn.textContent = '⏳ Fetching GSC...'; btn.disabled = true; }
-  
-  try {
-    const resp = await fetch('/api/gsc/auto-fill', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ pageUrl: url })
-    });
-    const d = await resp.json();
-    if (!d.success) throw new Error(d.error || 'GSC error');
-    
-    const data = d.data;
-    // Fill impressions
-    const imprEl = document.getElementById('dImpr');
-    if (imprEl && data.impressions) imprEl.value = data.impressions;
-    // Fill CTR
-    const ctrEl = document.getElementById('dCtr');
-    if (ctrEl && data.ctr !== undefined) ctrEl.value = data.ctr;
-    // Fill position
-    const posEl = document.getElementById('dPos');
-    if (posEl && data.position) posEl.value = data.position;
-    // Fill mobile % (fetched separately)
-    if (data.mobilePct !== undefined) {
-      const mobEl = document.getElementById('dMob');
-      if (mobEl) mobEl.value = data.mobilePct;
-    }
-    // Fill top queries
-    const qEl = document.getElementById('dQueries');
-    if (qEl && data.topQueries) qEl.value = data.topQueries;
-    // Fill primary keyword (top query by impressions)
-    const kwEl = document.getElementById('dKw');
-    if (kwEl && !kwEl.value && data.topKeyword) kwEl.value = data.topKeyword;
-    // Fill secondary keyword (second query)
-    const kw2El = document.getElementById('dKw2');
-    if (kw2El && !kw2El.value && data.topQueries) {
-      const lines = data.topQueries.split('\n').filter(Boolean);
-      if (lines[1]) kw2El.value = lines[1];
-    }
-    // Auto-suggest geo and goal based on URL + keyword
-    inferGeoFromContext(url, data.topQueries || '');
-    aiSuggestGoal(url, document.getElementById('dKw')?.value || '');
-    
-    if (btn) { btn.textContent = '✅ GSC Data Loaded'; btn.disabled = false; }
-    setTimeout(() => { if(btn) btn.textContent = '🤖 AUTO-FILL GSC DATA'; }, 3000);
-  } catch(e) {
-    if (btn) { btn.textContent = '❌ ' + e.message; btn.disabled = false; }
-    setTimeout(() => { if(btn) btn.textContent = '🤖 AUTO-FILL GSC DATA'; }, 4000);
-  }
-}
-
-// ══ GEO INFERENCE ════════════════════════════════════════════════
-function inferGeoFromContext(url, queries) {
-  const geoField = document.getElementById('dGeo');
-  if (!geoField || geoField.value) return;
-  const stateMap = {
-    'nj':'New Jersey, USA','-nj':'New Jersey, USA','new-jersey':'New Jersey, USA',
-    '-ny':'New York, USA','new-york':'New York, USA',
-    '-fl':'Florida, USA','florida':'Florida, USA',
-    '-tx':'Texas, USA','texas':'Texas, USA',
-    '-ca':'California, USA','california':'California, USA',
-    '-il':'Illinois, USA','-pa':'Pennsylvania, USA',
-    '-ma':'Massachusetts, USA','-ga':'Georgia, USA',
-    '-oh':'Ohio, USA','-mi':'Michigan, USA','-nc':'North Carolina, USA',
-    'amsterdam':'Amsterdam, Netherlands','rotterdam':'Rotterdam, Netherlands',
-    'london':'London, UK','berlin':'Berlin, Germany',
-  };
-  const u = (url + ' ' + queries).toLowerCase();
-  for (const [k,v] of Object.entries(stateMap)) {
-    if (u.includes(k)) { geoField.value = v; return; }
-  }
-}
-
-// ══ GOAL AI SUGGESTION ═══════════════════════════════════════════
-function aiSuggestGoal(url, kw) {
-  const f = document.getElementById('dGoal');
-  if (!f) return;
-  const c = (url + ' ' + kw).toLowerCase();
-  if (c.includes('emergency') || c.includes('24 hour') || c.includes('urgent')) f.value = 'Phone call';
-  else if (c.includes('quote') || c.includes('estimate') || c.includes('price')) f.value = 'Quote request';
-  else if (c.includes('shop') || c.includes('buy') || c.includes('product') || c.includes('order')) f.value = 'Sale / purchase';
-  else if (c.includes('demo') || c.includes('trial') || c.includes('consult')) f.value = 'Demo / consultation';
-  else if (c.includes('service') || c.includes('repair') || c.includes('install') || c.includes('roof') || c.includes('plumb') || c.includes('hvac')) f.value = 'Lead generation';
-}
-
-// ══ AI COMPETITOR FINDER ══════════════════════════════════════════
-async function aiDetectCompetitors() {
-  const kw = document.getElementById('dKw')?.value || '';
-  const geo = document.getElementById('dGeo')?.value || '';
-  const url = document.getElementById('dUrl')?.value || '';
-  if (!kw) { alert('Enter Primary Keyword first'); return; }
-
-  const btn = document.getElementById('aiCompBtn');
-  const status = document.getElementById('aiCompStatus');
-  btn.textContent = '⏳ Searching...'; btn.disabled = true;
-  status.textContent = '';
-
-  // Detect if local service business
-  const localSignals = ['roofing','plumbing','hvac','electrician','dentist','lawyer','attorney',
-    'contractor','repair','installation','service','cleaning','landscaping','pest control',
-    'moving','storage','garage','fence','deck','siding','window','door','floor'];
-  const isLocal = localSignals.some(s => (kw + ' ' + url).toLowerCase().includes(s));
-
-  // Extract location from geo field or URL
-  let location = geo || '';
-  if (!location && url) {
-    try {
-      const path = new URL(url).pathname.toLowerCase();
-      const stateMap = {'-nj-':'New Jersey','-nj/':'New Jersey','new-jersey':'New Jersey',
-        '-ny-':'New York','-fl-':'Florida','-tx-':'Texas','-ca-':'California',
-        '-pa-':'Pennsylvania','-il-':'Illinois','-ma-':'Massachusetts'};
-      for (const [k,v] of Object.entries(stateMap)) {
-        if (path.includes(k) || url.toLowerCase().includes(k)) { location = v; break; }
-      }
-    } catch(e) {}
-  }
-
-  // Build search strategy based on local vs national
-  const searchQuery = isLocal && location
-    ? `"${kw}" ${location}` // local: add geo to search
-    : kw;
-
-  const prompt = isLocal
-    ? `You are an SEO expert specializing in local businesses. Search Google for: "${searchQuery}".
-Find the TOP 2 LOCAL competitor pages ranking on page 1 in ${location || 'this area'}.
-IMPORTANT: These must be LOCAL businesses (not national chains like HomeAdvisor, Angi, Thumbtack, Yelp, HomeDepot).
-Look for local/regional service companies actually operating in ${location || 'the target area'}.
-For each competitor analyze: their service area, why Google ranks them locally, what local SEO signals they have.
-Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why this local competitor ranks","reason2":"why this local competitor ranks","isLocal":true,"location":"${location}"}`
-    : `You are an SEO expert. Search Google for: "${searchQuery}".
-Find the TOP 2 competitor pages currently ranking on page 1.
-Return ONLY valid JSON: {"comp1":"https://...","comp2":"https://...","reason1":"why","reason2":"why","isLocal":false}`;
-
-  // Try Gemini with retries, fall back to Claude API
-  let d = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      status.textContent = attempt > 1 ? `⏳ Retry ${attempt}/3...` : '⏳ Searching...';
-      const resp = await fetch('/api/gemini-proxy', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      if (resp.status === 503 || resp.status === 429) {
-        if (attempt < 3) {
-          status.textContent = `⏳ Gemini busy — retrying (${attempt}/3)...`;
-          await new Promise(r => setTimeout(r, attempt * 5000));
-          continue;
-        }
-        // Final attempt: use Claude fallback
-        status.textContent = '⏳ Switching to backup AI...';
-        const fallback = await fetch('/api/gemini-proxy', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt + '\n\nIMPORTANT: Return ONLY the JSON object, nothing else.' }] }] })
-        });
-        const ft = await fallback.text();
-        try { d = JSON.parse(ft); } catch(e) {
-          try {
-            const fb2 = JSON.parse(ft);
-            d = fb2;
-          } catch(e2) {
-            throw new Error('AI service unavailable. Please try again in 1 minute.');
-          }
-        }
-        break;
-      }
-      const rawText = await resp.text();
-      try { d = JSON.parse(rawText); break; } catch(e) {
-        if (attempt < 3) { await new Promise(r => setTimeout(r, 3000)); continue; }
-        throw new Error('Invalid response — try again');
-      }
-    } catch(e) {
-      if (e.message.includes('unavailable') || attempt >= 3) throw e;
-      await new Promise(r => setTimeout(r, attempt * 2000));
-    }
-  }
-  if (!d) throw new Error('AI service unavailable — try again in 1 minute');
-
-  const text = (d?.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
-  if (!text) throw new Error('Gemini returned empty response — try again');
-  let parsed;
-  try { parsed = JSON.parse(text); }
-  catch(e) {
-    // Try to extract JSON from markdown
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch(e2) { throw new Error('Could not parse competitor data — try again'); } }
-    else throw new Error('No JSON in response — try again');
-  }
-
-  if (parsed.comp1) {
-    const c1 = document.getElementById('dComp1url');
-    const c2 = document.getElementById('dComp2url');
-    if (c1) c1.value = parsed.comp1;
-    if (c2) c2.value = parsed.comp2 || '';
-    const localNote = parsed.isLocal ? ` (local ${parsed.location || geo})` : '';
-    status.textContent = `✅ Found local competitors${localNote} — edit if needed`;
-    status.style.color = '#4ade80';
-  }
-  btn.textContent = '🤖 AI FIND BEST COMPETITORS'; btn.disabled = false;
-}
-
-
-async function aiDetectConstraints() {
-  const urlField = document.getElementById('dUrl');
-  const url = urlField ? urlField.value.trim() : '';
-  if (!url) { alert('Enter Page URL first'); return; }
-
-  const btn = document.querySelector('[onclick="aiDetectConstraints()"]');
-  const field = document.getElementById('dConstraints');
-  if (btn) { btn.textContent = '⏳ Detecting...'; btn.disabled = true; }
-
-  try {
-    const hostname = new URL(url).hostname;
-    const prompt = `For website ${hostname}, identify the CMS and technical constraints. Return ONLY a comma-separated list, max 6 items, no explanation. Examples: WordPress, Yoast SEO, Elementor, no JS injection, GDPR-strict, Wix, Shopify, multilingual, AMP.`;
-
-    let d = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const r = await fetch('/api/gemini-proxy', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        if (r.status === 503 || r.status === 429) {
-          if (attempt < 3) {
-            if (btn) btn.textContent = '⏳ Retrying ' + attempt + '/3...';
-            await new Promise(res => setTimeout(res, attempt * 4000));
-            continue;
-          }
-          throw new Error('AI busy — try again in 30s');
-        }
-        d = await r.json();
-        break;
-      } catch(e) {
-        if (attempt >= 3) throw e;
-        await new Promise(res => setTimeout(res, 2000));
-      }
-    }
-
-    const result = (d?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
-    if (result && field) {
-      field.value = result;
-      if (btn) { btn.textContent = '✅ Done'; btn.disabled = false; }
-      setTimeout(() => { if(btn) btn.textContent = '🤖 AI detect from URL'; }, 2000);
-    } else {
-      throw new Error('No result returned');
-    }
-  } catch(e) {
-    if (btn) { btn.textContent = '❌ ' + e.message; btn.disabled = false; }
-    setTimeout(() => { if(btn) btn.textContent = '🤖 AI detect from URL'; }, 3000);
-  }
-}
-
-async function loadSitemapUrls() {
-  const urlField = document.getElementById('dUrl');
-  const pageUrl = urlField ? urlField.value.trim() : '';
-  let baseUrl = '';
-  if (pageUrl) {
-    try { baseUrl = new URL(pageUrl).origin; } catch(e) {}
-  }
-  if (!baseUrl) {
-    const entered = prompt('Enter site URL or sitemap URL:', 'https://yoursite.com');
-    if (!entered) return;
-    try { baseUrl = new URL(entered).origin; } catch(e) { baseUrl = entered; }
-  }
-
-  const ta = document.getElementById('dSiteUrls');
-  const cnt = document.getElementById('urlCount');
-  if (!ta) return;
-
-  // Try multiple sitemap formats in order
-  const sitemapCandidates = [
-    baseUrl + '/sitemap_index.xml',
-    baseUrl + '/sitemap.xml',
-    baseUrl + '/wp-sitemap.xml',
-    baseUrl + '/page-sitemap.xml',
-  ];
-
-  ta.value = '⏳ Detecting sitemap...';
-
-  for (const sitemapUrl of sitemapCandidates) {
-    try {
-      ta.value = '⏳ Trying ' + sitemapUrl + '...';
-      const r = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(sitemapUrl));
-      const d = await r.json();
-
-      // If it's a sitemap index (has subSitemaps), fetch the pages sub-sitemap
-      if ((!d.urls || !d.urls.length) && d.subSitemaps && d.subSitemaps.length) {
-        // Prefer page-sitemap, then first available
-        const pageSitemap = d.subSitemaps.find(u => u.includes('page')) || d.subSitemaps[0];
-        ta.value = '⏳ Loading pages from ' + pageSitemap + '...';
-        const sub = await fetch('/api/fetch-sitemap?url=' + encodeURIComponent(pageSitemap));
-        const sd = await sub.json();
-        if (sd.urls && sd.urls.length) {
-          ta.value = sd.urls.join('\n');
-          if (cnt) cnt.textContent = '✅ ' + sd.urls.length + ' URLs loaded from ' + pageSitemap;
-          return;
-        }
-      }
-
-      // Direct URLs found
-      if (d.urls && d.urls.length) {
-        ta.value = d.urls.join('\n');
-        if (cnt) cnt.textContent = '✅ ' + d.urls.length + ' URLs loaded from ' + sitemapUrl;
-        return;
-      }
-
-    } catch(e) {
-      // Try next candidate
-      continue;
-    }
-  }
-
-  // Nothing found
-  ta.value = '';
-  if (cnt) cnt.textContent = '';
-  alert('Could not find sitemap automatically.\n\nTried:\n' + sitemapCandidates.join('\n') + '\n\nPaste URLs manually.');
-}
-
-// ══ EXPORT FUNCTIONS ══════════════════════════════════════════════════
-
-function _getExportData() {
-  const url = document.getElementById('dUrl')?.value?.trim();
-  if (!url) return null;
-  try {
-    const store = JSON.parse(localStorage.getItem('cs_audit_export_v1')||'{}');
-    return store[url] || null;
-  } catch(e) { return null; }
-}
-
-function exportAuditMarkdown() {
-  const d = _getExportData();
-  if (!d) { toast('⚠ Run the audit first'); return; }
-
-  const STEP_LABELS = {
-    d0:'STEP 0 — PRIORITY ACTIONS',d1:'STEP 1 — INTENT + AI OVERVIEW',
-    d2:'STEP 2 — CTR SURGERY',d3:'STEP 3 — COMPETITOR DIFF',
-    d4:'STEP 4 — CONTENT GAP MATRIX',d5:'STEP 5 — PULSE REWRITES',
-    d6:'STEP 6 — NEXUS + INTERNAL LINKS',d7:'STEP 7 — ARCHITECTURE BLUEPRINT',
-    d8:'STEP 8 — TECHNICAL CHECKLIST',d9:'STEP 9 — SCORE PROJECTION',
-    d10:'STEP 10 — 90-DAY PLAN',
-  };
-
-  let md = `# SEO AUDIT — FULL REPORT\n`;
-  md += `**Generated:** ${new Date(d.date).toLocaleString()}\n\n`;
-  md += `---\n\n`;
-  md += `## PAGE DETAILS\n`;
-  md += `- **URL:** ${d.url}\n`;
-  md += `- **Primary Keyword:** ${d.kw}\n`;
-  if (d.kw2) md += `- **Secondary Keyword:** ${d.kw2}\n`;
-  if (d.geo)  md += `- **Geo:** ${d.geo}\n`;
-  if (d.goal) md += `- **Conversion Goal:** ${d.goal}\n`;
-  md += `\n## GSC BASELINE\n`;
-  md += `| Metric | Value |\n|--------|-------|\n`;
-  md += `| Impressions | ${d.gsc.impressions} |\n`;
-  md += `| CTR | ${d.gsc.ctr}% |\n`;
-  md += `| Avg Position | ${d.gsc.position} |\n`;
-  md += `| Mobile % | ${d.gsc.mobile}% |\n`;
-  if (d.queries) md += `\n**Top Queries:**\n${d.queries.split('\n').map(q=>`- ${q}`).join('\n')}\n`;
-  md += `\n---\n\n`;
-
-  // All steps
-  Object.keys(STEP_LABELS).forEach(id => {
-    const step = d.steps[id];
-    if (!step) return;
-    md += `## ${STEP_LABELS[id]}\n\n`;
-    md += step.content + '\n\n';
-    md += `---\n\n`;
-  });
-
-  md += `\n\n---\n*Exported from ContentScale PULSE+NEXUS · contentscale.site*\n`;
-  md += `*Competitors analyzed: ${d.comp1||'—'} vs ${d.comp2||'—'}*\n`;
-
-  const slug = (d.url||'audit').replace(/^https?:\/\//,'').replace(/[^a-z0-9]/gi,'-').slice(0,40);
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([md],{type:'text/markdown'}));
-  a.download = `seo-audit-${slug}-${new Date().toISOString().slice(0,10)}.md`;
-  a.click();
-  toast('✅ Markdown exported — paste into Claude or ChatGPT');
-}
-
-function exportAuditJSON() {
-  const d = _getExportData();
-  if (!d) { toast('⚠ Run the audit first'); return; }
-  const slug = (d.url||'audit').replace(/^https?:\/\//,'').replace(/[^a-z0-9]/gi,'-').slice(0,40);
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)],{type:'application/json'}));
-  a.download = `seo-audit-${slug}-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  toast('✅ JSON exported');
-}
-
-// ══ LOCALSTORAGE PERSISTENCE ═════════════════════════════════════
-const _LS_KEY = 'pulse_nexus_form_v1';
-const _LS_FIELDS = ['dUrl','dKw','dKw2','dGeo','dGoal','dImpr','dCtr','dPos','dMob',
-  'dQueries','dHtml','dComp1url','dComp2url','dComp1html','dComp2html','dSiteUrls','dConstraints'];
-
-function _lsSave(id, val) {
-  try {
-    const d = JSON.parse(localStorage.getItem(_LS_KEY)||'{}');
-    d[id] = val;
-    localStorage.setItem(_LS_KEY, JSON.stringify(d));
-  } catch(e) {}
-}
-
-function _lsRestore() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(_LS_KEY)||'{}');
-    if (!Object.keys(saved).length) return;
-    // Fields set by URL params should NOT be overwritten by localStorage
-    const urlP = new URLSearchParams(window.location.search);
-    const urlParamFields = new Set();
-    if (urlP.get('url'))  urlParamFields.add('dUrl');
-    if (urlP.get('kw'))   urlParamFields.add('dKw');
-    if (urlP.get('pos'))  urlParamFields.add('dPos');
-    if (urlP.get('impr')) urlParamFields.add('dImpr');
-    if (urlP.get('ctr'))  urlParamFields.add('dCtr');
-    if (urlP.get('mob'))  urlParamFields.add('dMob');
-    _LS_FIELDS.forEach(id => {
-      if (urlParamFields.has(id)) return; // URL params take priority
-      const el = document.getElementById(id);
-      if (el && saved[id] !== undefined) el.value = saved[id];
-    });
-    // Show restore notice only if NOT coming from URL params
-    const notice = document.getElementById('restoreNotice');
-    if (notice && !urlP.get('url')) notice.style.display = 'flex';
-  } catch(e) {}
-}
-
-function clearSavedForm() {
-  try { localStorage.removeItem(_LS_KEY); } catch(e) {}
-  _LS_FIELDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  const notice = document.getElementById('restoreNotice');
-  if (notice) notice.style.display = 'none';
-  toast('✓ Form cleared');
-}
-
-// Hook all fields to auto-save
-(function attachSaveListeners() {
-  _LS_FIELDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const evt = el.tagName === 'SELECT' ? 'change' : 'input';
-    el.addEventListener(evt, function() { _lsSave(id, this.value); });
-  });
-  // Also hook Geo text input which may not be in FIELDS as select
-  const geoEl = document.getElementById('dGeo');
-  if (geoEl) geoEl.addEventListener('input', function() { _lsSave('dGeo', this.value); });
-  const goalEl = document.getElementById('dGoal');
-  if (goalEl) goalEl.addEventListener('change', function() { _lsSave('dGoal', this.value); });
-})();
-
-// Restore on page load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _lsRestore);
-} else {
-  _lsRestore();
-}
 </script>
 </body>
 </html>
