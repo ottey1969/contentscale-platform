@@ -546,26 +546,117 @@ function toggleCheck(pageId,checkId){
 
 function openInAudit(id){
   var p=pages.find(function(pg){return pg.id===id;});if(!p)return;
-  var params='?url='+encodeURIComponent(p.url)
-    +(p.keyword?'&kw='+encodeURIComponent(p.keyword):'')
-    +(p.position?'&pos='+p.position:'')
-    +(p.impressions?'&impr='+p.impressions:'')
-    +(p.ctr?'&ctr='+p.ctr:'')
-    +'&wf='+id;
-  // Save all GSC page URLs as sitemap so audit can auto-load them
+
+  // ── Build per-page top queries from _gscQueryMap ──────────────
+  // Find all queries that best match this page's URL
+  var pageTopQueries = '';
+  var pageSecondaryKw = '';
   try {
-    var siteUrls = pages.map(function(pg){ return pg.url; }).filter(function(u){ return u && u.startsWith('http'); }).join('\n');
-    if (siteUrls) localStorage.setItem('cs_sitemap_urls', siteUrls);
-    // Save queries if available
+    if (typeof _gscQueryMap !== 'undefined' && Object.keys(_gscQueryMap).length) {
+      var urlPath = '';
+      try { urlPath = new URL(p.url).pathname.toLowerCase().replace(/[-_/]/g,' ').trim(); } catch(e) { urlPath = p.url.toLowerCase(); }
+      var urlWords = urlPath.split(/\s+/).filter(function(w){ return w.length > 2; });
+
+      // Score every query against this page
+      var scored = Object.entries(_gscQueryMap).map(function(entry){
+        var q = entry[0];
+        var data = entry[1];
+        var pos  = typeof data === 'object' ? data.pos  : data;
+        var impr = typeof data === 'object' ? data.impr : 0;
+        var wordMatches = urlWords.filter(function(w){ return q.toLowerCase().includes(w); }).length;
+        var score = (wordMatches * 50) + Math.min(impr / 100, 20) + Math.max(0, 50 - pos);
+        return { q: q, score: score, impr: impr, pos: pos };
+      });
+      scored.sort(function(a,b){ return b.score - a.score; });
+
+      // Top 15 queries for the textarea, top-2 for secondary keyword
+      var top = scored.filter(function(s){ return s.score > 0; }).slice(0, 15);
+      if (!top.length) top = scored.slice(0, 15); // fallback: use global top
+      pageTopQueries  = top.map(function(s){ return s.q; }).join('\n');
+      pageSecondaryKw = top[1] ? top[1].q : '';
+    }
+  } catch(e) {}
+
+  // ── Geo inference from project site field ─────────────────────
+  var geo = '';
+  var siteVal = (project.site || '').toLowerCase();
+  if (siteVal.includes('.nl') || siteVal.includes('nederland') || siteVal.includes('netherlands')) geo = 'Netherlands';
+  else if (siteVal.includes('.be') || siteVal.includes('belgie') || siteVal.includes('belgium')) geo = 'Belgium';
+  else if (siteVal.includes('.co.uk') || siteVal.includes('.uk')) geo = 'UK';
+  else if (siteVal.includes('.com') || siteVal.includes('.us')) geo = 'Global';
+
+  // ── Build the full transfer payload ───────────────────────────
+  var transfer = {
+    // Core identifiers
+    pageUrl:     p.url,
+    workflowId:  id,
+    source:      'workflow',
+
+    // GSC metrics
+    keyword:     p.keyword   || '',
+    position:    p.position  || '',
+    impressions: p.impressions || '',
+    ctr:         p.ctr       || '',
+    topQueries:  pageTopQueries,
+    topKeyword:  p.keyword   || (pageTopQueries ? pageTopQueries.split('\n')[0] : ''),
+    secondaryKeyword: pageSecondaryKw,
+
+    // Context
+    geo:          geo,
+    priority:     p.priority || 'med',
+    scoreBefore:  p.scoreBefore || '',
+    notes:        p.notes    || '',
+    conversionGoal: p.conversionGoal || '',
+
+    // All sitemap URLs so Internal Link Finder is pre-filled
+    siteUrls: pages
+      .map(function(pg){ return pg.url; })
+      .filter(function(u){ return u && u.startsWith('http'); })
+      .join('\n')
+  };
+
+  // ── Write to both storage keys the audit tool reads ───────────
+  try {
+    localStorage.setItem('cs_audit_transfer',  JSON.stringify(transfer));
+    localStorage.setItem('cs_audit_transfer_2', JSON.stringify(transfer)); // belt-and-suspenders
+
+    // Sitemap URLs — audit's Internal Link Finder panel
+    if (transfer.siteUrls) localStorage.setItem('cs_sitemap_urls', transfer.siteUrls);
+
+    // Full query map for global GSC fallback
     if (typeof _gscQueryMap !== 'undefined' && Object.keys(_gscQueryMap).length) {
       localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap));
     }
+
+    // Shared GSC for bulk data (auto-fill button in audit)
+    var sharedGsc = {
+      pages: pages.map(function(pg){
+        return { page: pg.url, impressions: pg.impressions||0, clicks: 0, ctr: pg.ctr||0, position: pg.position||0 };
+      }),
+      queries: typeof _gscQueryMap !== 'undefined'
+        ? Object.entries(_gscQueryMap).map(function(e){ return { query: e[0], position: typeof e[1]==='object'?e[1].pos:e[1], impressions: typeof e[1]==='object'?e[1].impr:0 }; })
+        : []
+    };
+    localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
   } catch(e) {}
-  window.open(AUDIT_URL+params,'_blank');
-  // Auto-set to inprogress
-  if(p.status==='notstarted'){
-    p.status='inprogress';p.updated=new Date().toISOString();
-    save();renderPages();renderOverview();toast('🔬 Opened in PULSE+NEXUS — status → In Progress');
+
+  // ── URL params as lightweight fallback ────────────────────────
+  var params = '?url='    + encodeURIComponent(p.url)
+    + (p.keyword    ? '&kw='  + encodeURIComponent(p.keyword)  : '')
+    + (p.position   ? '&pos=' + p.position                      : '')
+    + (p.impressions? '&impr='+ p.impressions                   : '')
+    + (p.ctr        ? '&ctr=' + p.ctr                           : '')
+    + '&source=workflow&wf=' + id;
+
+  window.open(AUDIT_URL + params, '_blank');
+
+  // ── Auto-set status to In Progress ────────────────────────────
+  if (p.status === 'notstarted') {
+    p.status = 'inprogress'; p.updated = new Date().toISOString();
+    save(); renderPages(); renderOverview();
+    toast('🔬 Opened in PULSE+NEXUS — all data transferred, status → In Progress');
+  } else {
+    toast('🔬 Opened in PULSE+NEXUS — all data transferred');
   }
 }
 

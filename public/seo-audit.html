@@ -330,6 +330,14 @@ img,table,iframe{max-width:100%;}
           </select>
         </div>
       </div>
+      <!-- AUTO-FILL GSC -->
+      <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:14px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:4px;">⇄ AUTO-FILL VIA GSC</div>
+          <div style="font-size:11px;color:var(--muted);">Enter the Page URL and click — impressions, CTR, position and top queries are automatically fetched from Google Search Console.</div>
+        </div>
+        <button onclick="autoFillGSC()" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 AUTO-FILL GSC DATA</button>
+      </div>
     </div>
 
     <div class="panel">
@@ -429,150 +437,122 @@ img,table,iframe{max-width:100%;}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // AUTO-LOAD DATA FROM RECOMMENDATIONS PAGE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-(function autoLoadFromRecommendations() {
-  console.log('🔍 [PULSE+NEXUS] Checking for Recommendations data...');
-  
+(function autoLoadFromWorkflow() {
+  // ── Collect transfer data from all possible sources ───────────
   let transferData = null;
-  
-  // Method 1: Try localStorage first
+
+  // 1. localStorage (primary — written by openInAudit)
   try {
     const stored = localStorage.getItem('cs_audit_transfer');
-    if (stored) {
-      transferData = JSON.parse(stored);
-      console.log('✅ [PULSE+NEXUS] Found data in localStorage:', transferData);
-    }
-  } catch (e) {
-    console.warn('⚠️ [PULSE+NEXUS] localStorage read error:', e);
-  }
-  
-  // Method 2: Try sessionStorage as backup
+    if (stored) transferData = JSON.parse(stored);
+  } catch(e) {}
+
+  // 2. sessionStorage fallback
   if (!transferData) {
     try {
       const stored = sessionStorage.getItem('cs_audit_transfer');
-      if (stored) {
-        transferData = JSON.parse(stored);
-        console.log('✅ [PULSE+NEXUS] Found data in sessionStorage:', transferData);
-      }
-    } catch (e) {}
+      if (stored) transferData = JSON.parse(stored);
+    } catch(e) {}
   }
-  
-  // Method 3: Check URL parameters
+
+  // 3. URL params fallback (lightweight, used when localStorage unavailable)
   if (!transferData) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlData = {
-      pageUrl: urlParams.get('url'),
-      keyword: urlParams.get('kw'),
-      position: urlParams.get('pos'),
-      impressions: urlParams.get('impr'),
-      ctr: urlParams.get('ctr'),
-      source: urlParams.get('source')
-    };
-    
-    if (urlData.pageUrl) {
-      transferData = urlData;
-      console.log('✅ [PULSE+NEXUS] Found data in URL params:', transferData);
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('url')) {
+      transferData = {
+        pageUrl:     p.get('url'),
+        keyword:     p.get('kw')    || '',
+        position:    p.get('pos')   || '',
+        impressions: p.get('impr')  || '',
+        ctr:         p.get('ctr')   || '',
+        source:      p.get('source')|| '',
+      };
     }
   }
-  
-  // If we have data, auto-fill the form
-  if (transferData && transferData.pageUrl) {
-    console.log('📝 [PULSE+NEXUS] Auto-filling form with:', transferData);
-    
-    const fillForm = () => {
-      try {
-        // Fill URL field
-        const urlField = document.querySelector('input#dUrl, input[name="url"], input[type="url"]');
-        if (urlField && transferData.pageUrl) {
-          urlField.value = transferData.pageUrl;
-          console.log('✅ URL filled:', transferData.pageUrl);
-        }
-        
-        // Fill Primary Keyword field
-        const kwField = document.querySelector('input#dKw, input[name="keyword"]');
-        if (kwField && transferData.keyword) {
-          kwField.value = transferData.keyword;
-          console.log('✅ Keyword filled:', transferData.keyword);
-        }
-        
-        // Fill GSC data fields
-        if (transferData.position) {
-          const posField = document.getElementById('dPos');
-          if (posField) {
-            posField.value = transferData.position;
-            console.log('✅ Position filled:', transferData.position);
+
+  if (!transferData || !transferData.pageUrl) return;
+
+  const fillForm = () => {
+    try {
+      // ── Switch to Deep Dive immediately ───────────────────────
+      if (typeof setMode === 'function') setMode('deep');
+
+      // ── ① Page Details panel ──────────────────────────────────
+      const set = (id, val) => { if (val === undefined || val === null || val === '') return; const el = document.getElementById(id); if (el) el.value = val; };
+
+      set('dUrl',  transferData.pageUrl);
+      set('dKw',   transferData.keyword      || transferData.topKeyword || '');
+      set('dKw2',  transferData.secondaryKeyword || '');
+
+      // Geo dropdown — match option value
+      if (transferData.geo) {
+        const geoEl = document.getElementById('dGeo');
+        if (geoEl) {
+          for (const opt of geoEl.options) {
+            if (opt.value === transferData.geo) { geoEl.value = transferData.geo; break; }
           }
         }
-        
-        if (transferData.impressions) {
-          const imprField = document.getElementById('dImpr');
-          if (imprField) {
-            imprField.value = transferData.impressions;
-            console.log('✅ Impressions filled:', transferData.impressions);
-          }
-        }
-        
-        if (transferData.ctr) {
-          const ctrField = document.getElementById('dCtr');
-          if (ctrField) {
-            ctrField.value = transferData.ctr;
-            console.log('✅ CTR filled:', transferData.ctr);
-          }
-        }
-        
-        // Switch to Deep Dive mode
-        if (typeof setMode === 'function') {
-          setMode('deep');
-          console.log('✅ Switched to Deep Dive mode');
-        }
-        
-        // Store globally for later use
-        window._recommendationsData = transferData;
-        
-        // Show success notification
-        const notif = document.createElement('div');
-        const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:IBM Plex Mono,monospace;font-size:13px;';
-        notif.style.cssText = notifStyle;
-        notif.innerHTML = '✅ Workflow Data Loaded! 📊';
-        document.body.appendChild(notif);
-        
-        // AUTO-START DEEP DIVE
-        if (transferData.source === 'recommendations' || transferData.source === 'recs') {
-          console.log('🚀 Auto-starting Deep Dive from Recommendations...');
-          setTimeout(function() {
-            var runBtn = document.querySelector('#deepRunBtn, button[onclick*="runDeepAudit"]');
-            if (runBtn && !runBtn.disabled) {
-              console.log('🎯 Clicking Run Audit button...');
-              setTimeout(function() { 
-                runBtn.click(); 
-                console.log('✅ Deep Dive started automatically!');
-              }, 2000);
-            }
-          }, 1500);
-        }
-        
-        setTimeout(() => {
-          notif.style.transition = 'opacity 0.3s';
-          notif.style.opacity = '0';
-          setTimeout(() => notif.remove(), 300);
-        }, 4000);
-        
-        console.log('✅ [PULSE+NEXUS] Form filled successfully!');
-      } catch (e) {
-        console.error('❌ [PULSE+NEXUS] Error filling form:', e);
       }
-    };
-    
-    // Wait for DOM to be ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', fillForm);
-    } else {
-      setTimeout(fillForm, 100);
+
+      // ── ② GSC Data panel ──────────────────────────────────────
+      set('dImpr',    transferData.impressions);
+      set('dCtr',     transferData.ctr);
+      set('dPos',     transferData.position);
+      if (transferData.mobilePct !== undefined) set('dMob', transferData.mobilePct);
+
+      // Top Triggering Queries textarea
+      if (transferData.topQueries) set('dQueries', transferData.topQueries);
+
+      // ── ⑤ Internal Link Finder — pre-fill with all workflow URLs
+      if (transferData.siteUrls) set('dSiteUrls', transferData.siteUrls);
+      // Also try from localStorage sitemap key
+      if (!transferData.siteUrls) {
+        try {
+          const sm = localStorage.getItem('cs_sitemap_urls');
+          if (sm) set('dSiteUrls', sm);
+        } catch(e) {}
+      }
+
+      // ── Store globally ─────────────────────────────────────────
+      window._workflowTransfer = transferData;
+
+      // ── Count how many fields were filled for the notification ─
+      const filled = [
+        transferData.keyword, transferData.position, transferData.impressions,
+        transferData.ctr, transferData.topQueries, transferData.geo, transferData.siteUrls
+      ].filter(Boolean).length;
+
+      // ── Success notification ───────────────────────────────────
+      const notif = document.createElement('div');
+      notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:14px 20px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:IBM Plex Mono,monospace;font-size:12px;line-height:1.6;max-width:320px;';
+      notif.innerHTML = '✅ <strong>Workflow data loaded</strong><br>'
+        + (transferData.keyword    ? '🔑 Keyword: '     + transferData.keyword.slice(0,40)      + '<br>' : '')
+        + (transferData.position   ? '📍 Position: '   + transferData.position                  + '<br>' : '')
+        + (transferData.impressions? '👁 Impressions: ' + Number(transferData.impressions).toLocaleString() + '<br>' : '')
+        + (transferData.topQueries ? '🔍 ' + transferData.topQueries.split('\n').length + ' queries loaded<br>' : '')
+        + (transferData.siteUrls   ? '🔗 ' + transferData.siteUrls.split('\n').length + ' site URLs for internal links<br>' : '');
+      document.body.appendChild(notif);
+      setTimeout(() => { notif.style.transition='opacity .4s'; notif.style.opacity='0'; setTimeout(()=>notif.remove(),400); }, 5000);
+
+      // ── Auto-run audit when coming from workflow ───────────────
+      if (transferData.source === 'workflow') {
+        setTimeout(() => {
+          const runBtn = document.getElementById('deepRunBtn');
+          if (runBtn && !runBtn.disabled) runBtn.click();
+        }, 2200);
+      }
+
+    } catch(e) {
+      console.error('❌ [PULSE+NEXUS] fillForm error:', e);
     }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fillForm);
   } else {
-    console.log('ℹ️ [PULSE+NEXUS] No Recommendations data found - manual mode');
+    setTimeout(fillForm, 120);
   }
 })();
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
 let gscPages = [];
@@ -1348,6 +1328,96 @@ function renderMd(t) {
     .replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`)
     .replace(/\n\n/g,'</p><p>')
     .replace(/\n/g,'<br>');
+}
+
+// ══ AUTO-FILL GSC ═══════════════════════════════════════════════
+async function autoFillGSC() {
+  const urlField = document.getElementById('dUrl');
+  const url = urlField ? urlField.value.trim() : '';
+  if (!url) { toast('⚠️ Enter the Page URL first'); return; }
+
+  const btn = document.querySelector('[onclick="autoFillGSC()"]');
+  const originalLabel = '🤖 AUTO-FILL GSC DATA';
+  if (btn) { btn.textContent = '⏳ Fetching GSC...'; btn.disabled = true; }
+
+  try {
+    const resp = await fetch(`${RAILWAY}/api/gsc/auto-fill`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pageUrl: url })
+    });
+
+    let d;
+    try { d = await resp.json(); } catch(_) { throw new Error(`Server error (HTTP ${resp.status})`); }
+
+    if (!resp.ok || !d.success) throw new Error(d.error || `GSC error (HTTP ${resp.status})`);
+
+    const data = d.data;
+    if (data.impressions) document.getElementById('dImpr').value = data.impressions;
+    if (data.ctr !== undefined) document.getElementById('dCtr').value = data.ctr;
+    if (data.position) document.getElementById('dPos').value = data.position;
+    if (data.mobilePct !== undefined) document.getElementById('dMob').value = data.mobilePct;
+    if (data.topQueries) document.getElementById('dQueries').value = data.topQueries;
+    const kwEl = document.getElementById('dKw');
+    if (kwEl && !kwEl.value && data.topKeyword) kwEl.value = data.topKeyword;
+    const kw2El = document.getElementById('dKw2');
+    if (kw2El && !kw2El.value && data.topQueries) {
+      const lines = data.topQueries.split('\n').filter(Boolean);
+      if (lines[1]) kw2El.value = lines[1];
+    }
+    inferGeoFromContext(url, data.topQueries || '');
+    aiSuggestGoal(url, document.getElementById('dKw')?.value || '');
+
+    if (btn) { btn.textContent = '✅ GSC Data Loaded'; btn.disabled = false; }
+    toast('✅ GSC data loaded successfully!');
+    setTimeout(() => { if (btn) btn.textContent = originalLabel; }, 3000);
+  } catch(e) {
+    if (btn) { btn.textContent = originalLabel; btn.disabled = false; }
+    // Show full error in toast AND a persistent banner below the button
+    const shortMsg = e.message.length > 80 ? e.message.slice(0, 80) + '…' : e.message;
+    toast('❌ GSC: ' + shortMsg);
+    // Show detailed error in a dismissible banner near the button
+    const existingBanner = document.getElementById('gscErrorBanner');
+    if (existingBanner) existingBanner.remove();
+    const banner = document.createElement('div');
+    banner.id = 'gscErrorBanner';
+    banner.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(244,63,63,.1);border:1px solid rgba(244,63,63,.3);border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;color:#f87171;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;';
+    banner.innerHTML = `<span>❌ GSC Error: ${e.message.replace(/</g,'&lt;')}</span><button onclick="document.getElementById('gscErrorBanner').remove()" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0;">✕</button>`;
+    if (btn) btn.closest('div')?.after(banner);
+  }
+}
+
+// ══ GEO INFERENCE ════════════════════════════════════════════════
+function inferGeoFromContext(url, queries) {
+  const geoEl = document.getElementById('dGeo');
+  if (!geoEl || geoEl.value) return;
+  const stateMap = {
+    'netherlands':'Netherlands','nederland':'Netherlands',
+    'belgium':'Belgium','belgie':'Belgium',
+    'uk':'UK','united kingdom':'UK','london':'UK',
+    'usa':'USA','united states':'USA',
+    'global':'Global',
+  };
+  const u = (url + ' ' + queries).toLowerCase();
+  for (const [k,v] of Object.entries(stateMap)) {
+    if (u.includes(k)) {
+      // Try to select matching option
+      for (const opt of geoEl.options) {
+        if (opt.value === v) { geoEl.value = v; return; }
+      }
+    }
+  }
+}
+
+// ══ GOAL AI SUGGESTION ═══════════════════════════════════════════
+function aiSuggestGoal(url, kw) {
+  const f = document.getElementById('dGoal');
+  if (!f) return;
+  const c = (url + ' ' + kw).toLowerCase();
+  if (c.includes('emergency')||c.includes('urgent')) f.value = 'Lead generation';
+  else if (c.includes('quote')||c.includes('estimate')||c.includes('price')) f.value = 'Lead generation';
+  else if (c.includes('shop')||c.includes('buy')||c.includes('product')) f.value = 'Sale / purchase';
+  else if (c.includes('demo')||c.includes('trial')||c.includes('consult')) f.value = 'Demo / consultation';
 }
 
 // Drag & drop
