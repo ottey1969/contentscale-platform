@@ -315,32 +315,9 @@ img,table,iframe{max-width:100%;}
           <select id="dGeo">
             <option value="Netherlands">Netherlands 🇳🇱</option>
             <option value="Belgium">Belgium 🇧🇪</option>
-            <option value="Germany">Germany 🇩🇪</option>
-            <option value="Austria">Austria 🇦🇹</option>
-            <option value="Switzerland">Switzerland 🇨🇭</option>
-            <option value="France">France 🇫🇷</option>
-            <option value="Spain">Spain 🇪🇸</option>
-            <option value="Italy">Italy 🇮🇹</option>
-            <option value="Portugal">Portugal 🇵🇹</option>
-            <option value="Poland">Poland 🇵🇱</option>
-            <option value="Sweden">Sweden 🇸🇪</option>
-            <option value="Norway">Norway 🇳🇴</option>
-            <option value="Denmark">Denmark 🇩🇰</option>
-            <option value="Finland">Finland 🇫🇮</option>
-            <option value="Ireland">Ireland 🇮🇪</option>
-            <option value="UK">UK 🇬🇧</option>
-            <option value="USA">USA 🇺🇸</option>
-            <option value="Canada">Canada 🇨🇦</option>
-            <option value="Australia">Australia 🇦🇺</option>
-            <option value="New Zealand">New Zealand 🇳🇿</option>
-            <option value="South Africa">South Africa 🇿🇦</option>
-            <option value="India">India 🇮🇳</option>
-            <option value="Singapore">Singapore 🇸🇬</option>
-            <option value="UAE">UAE 🇦🇪</option>
-            <option value="Brazil">Brazil 🇧🇷</option>
-            <option value="Mexico">Mexico 🇲🇽</option>
-            <option value="Global">Global 🌍</option>
-            <option value="Local Business">Local Business 📍</option>
+            <option value="Global">Global</option>
+            <option value="UK">UK</option>
+            <option value="USA">USA</option>
           </select>
         </div>
         <div class="field">
@@ -402,25 +379,45 @@ img,table,iframe{max-width:100%;}
     </div>
 
     <div class="panel">
-      <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span></div>
-      <div class="info">
-        <strong>Leave empty</strong> → defaults to Surfer SEO &amp; MarketMuse benchmark comparison from training data.<br>
-        <strong>Paste HTML</strong> → real side-by-side diff of their actual content vs yours.
+      <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span>
+        <span id="compAutoStatus" style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);font-weight:400;letter-spacing:0;text-transform:none;"></span>
       </div>
+      <div class="info">
+        <strong>Step 1:</strong> Click <strong>🔍 Find Competitors</strong> → AI fills the URLs below.<br>
+        <strong>Step 2:</strong> Open each URL → View Source (<code>Ctrl+U</code>) → Ctrl+A → Ctrl+C → paste into the HTML field.<br>
+        <strong>Leave empty</strong> → defaults to Surfer SEO &amp; MarketMuse trained benchmark.
+      </div>
+
+      <!-- Find competitors strip -->
+      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--purple);margin-bottom:3px;">🔍 FIND TOP COMPETING PAGES</div>
+          <div style="font-size:11px;color:var(--muted);">AI looks up who ranks top 3 for your keyword → fills the URL fields → you open those pages, copy HTML, paste below.</div>
+        </div>
+        <button onclick="findTopCompetitors()" id="compFindBtn" style="background:var(--purple);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🔍 FIND COMPETITORS</button>
+      </div>
+      <div id="compFindResult" style="margin-bottom:10px;"></div>
+
       <div class="g2" style="gap:16px;">
         <div>
-          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL</label><input type="url" id="dComp1url" placeholder="https://surferseo.com/..."></div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Competitor 1 URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— auto-filled by AI or paste manually</span></label>
+            <input type="url" id="dComp1url" placeholder="https://example.com/your-topic">
+          </div>
           <div class="field">
-            <label>Competitor 1 HTML (optional)</label>
-            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty for Surfer SEO benchmark" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
+            <label>Competitor 1 HTML <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— View Source → Ctrl+A → Ctrl+C → paste here</span></label>
+            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML — OR enter URL above and click ↓ Fetch" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
           </div>
           <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
         <div>
-          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL</label><input type="url" id="dComp2url" placeholder="https://marketmuse.com/..."></div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Competitor 2 URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— auto-filled by AI or paste manually</span></label>
+            <input type="url" id="dComp2url" placeholder="https://example.com/your-topic">
+          </div>
           <div class="field">
-            <label>Competitor 2 HTML (optional)</label>
-            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML or leave empty for MarketMuse benchmark" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
+            <label>Competitor 2 HTML <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— View Source → Ctrl+A → Ctrl+C → paste here</span></label>
+            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML — OR enter URL above and click ↓ Fetch" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
           </div>
           <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
@@ -430,18 +427,40 @@ img,table,iframe{max-width:100%;}
     <div class="panel">
       <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span></div>
       <div class="info">
-        <strong>Paste your sitemap URLs</strong> (one per line) → engine finds the 5 best pages to link FROM and TO, with exact anchor text.
+        <strong>Pre-filled from Workflow Manager</strong> → or paste your sitemap URLs below. Engine finds the 5 best pages to link FROM and TO with exact anchor text.
+      </div>
+      <!-- Auto-analyse strip -->
+      <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:3px;">🔗 AUTO-ANALYSE INTERNAL LINKS</div>
+          <div style="font-size:11px;color:var(--muted);">Add site URLs below → click to get AI-picked anchor text + pages to link from/to right now.</div>
+        </div>
+        <button onclick="autoAnalyseInternalLinks()" id="intLinkBtn" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 ANALYSE LINKS</button>
       </div>
       <div class="field">
         <label>Your Site URLs (one per line)</label>
-        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework&#10;https://contentscale.site/craft-framework"></textarea>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework&#10;https://contentscale.site/craft-framework" oninput="updateUrlCount()"></textarea>
       </div>
       <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+      <div id="intLinkResult" style="margin-top:10px;"></div>
     </div>
 
     <div class="panel">
-      <div class="panel-title">⑥ Optional</div>
-      <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN"></div>
+      <div class="panel-title">⑥ Known Constraints
+        <span id="constraintStatus" style="margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);font-weight:400;letter-spacing:0;text-transform:none;"></span>
+      </div>
+      <!-- Auto-detect strip -->
+      <div style="background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;">🤖 AUTO-DETECT CONSTRAINTS</div>
+          <div style="font-size:11px;color:var(--muted);">Enter URL in ① → click to detect CMS, hosting, language, GDPR, multilingual, page builder, CDN and more.</div>
+        </div>
+        <button onclick="autoDetectConstraints()" id="constraintBtn" style="background:var(--gold);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🔍 DETECT</button>
+      </div>
+      <div class="field">
+        <label>Known Constraints <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">(auto-filled or type manually)</span></label>
+        <input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN">
+      </div>
     </div>
 
     <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
@@ -1455,6 +1474,345 @@ function aiSuggestGoal(url, kw) {
     else handleQueriesCSV({files:[file]});
   });
 });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ④ FIND TOP COMPETITOR URLS (AI lookup — you paste the HTML manually)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function findTopCompetitors() {
+  const kw  = document.getElementById('dKw').value.trim();
+  const geo = document.getElementById('dGeo').value;
+  const url = document.getElementById('dUrl').value.trim();
+  const btn = document.getElementById('compFindBtn');
+  const status = document.getElementById('compAutoStatus');
+  const resultEl = document.getElementById('compFindResult');
+
+  if (!kw) { toast('⚠ Enter your primary keyword in ① first'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Looking up…';
+  status.textContent = '';
+  resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--gold);padding:6px 0;">🔍 Finding who ranks top 3 for "' + kw + '" in ' + geo + '…</div>';
+
+  try {
+    const prompt = `You are an expert SEO analyst with current knowledge of Google SERPs.
+
+KEYWORD: "${kw}"
+GEO / MARKET: ${geo}
+OUR PAGE: ${url || 'unknown'}
+
+Task: Identify the TOP 3 pages that currently rank on page 1 of Google for this keyword in this market. These should be REAL competing content pages (not our own URL, not tool homepages unless they genuinely rank for this keyword).
+
+For each competitor give:
+- The exact URL of the ranking PAGE (not just the homepage)
+- The page title
+- Why it ranks (1 sentence: what content advantage does it have)
+- Word count estimate
+- Key content elements present (FAQ, schema, stats, expert quotes, comparison table, etc.)
+
+Reply in this EXACT format for each (3 total):
+---
+RANK: 1
+URL: https://...
+TITLE: ...
+WHY_IT_RANKS: ...
+EST_WORDS: ...
+KEY_ELEMENTS: ...
+---`;
+
+    const result = await callGemini(prompt, 800);
+
+    // Parse blocks
+    const blocks = result.split('---').map(b => b.trim()).filter(b => b.includes('URL:'));
+
+    if (!blocks.length) {
+      resultEl.innerHTML = '<div style="white-space:pre-wrap;font-size:12px;color:var(--muted);padding:8px 0;">' + result + '</div>';
+    } else {
+      // Auto-fill first 2 URL fields
+      let filled = 0;
+      blocks.forEach(function(block) {
+        const urlMatch = block.match(/URL:\s*(https?:\/\/\S+)/i);
+        if (urlMatch && filled < 2) {
+          filled++;
+          document.getElementById('dComp' + filled + 'url').value = urlMatch[1].trim();
+        }
+      });
+
+      // Render cards
+      resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:10px;">Top ' + blocks.length + ' competitors for "' + kw + '" — ' + geo + '</div>'
+        + blocks.map(function(block) {
+          const rank    = (block.match(/RANK:\s*(\d+)/i)||[])[1]||'?';
+          const bUrl    = (block.match(/URL:\s*(https?:\/\/\S+)/i)||[])[1]||'';
+          const title   = (block.match(/TITLE:\s*(.+)/i)||[])[1]||'';
+          const why     = (block.match(/WHY_IT_RANKS:\s*(.+)/i)||[])[1]||'';
+          const words   = (block.match(/EST_WORDS:\s*(.+)/i)||[])[1]||'';
+          const elems   = (block.match(/KEY_ELEMENTS:\s*(.+)/i)||[])[1]||'';
+          const shortUrl = bUrl.replace(/^https?:\/\//, '').slice(0, 65);
+          return '<div style="background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.2);border-radius:7px;padding:12px 14px;margin-bottom:8px;">'
+            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">'
+            + '<span style="font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;color:var(--gold);">#' + rank + '</span>'
+            + '<span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--blue);word-break:break-all;">' + shortUrl + '</span>'
+            + (rank <= 2 ? '<span style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:2px 6px;background:rgba(251,191,36,.15);color:var(--gold);border-radius:3px;">← URL filled above</span>' : '')
+            + '</div>'
+            + (title ? '<div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px;">' + title + '</div>' : '')
+            + (why   ? '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;">📌 ' + why + '</div>' : '')
+            + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">'
+            + (words ? '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--dim);">~' + words + ' words</span>' : '')
+            + (elems ? '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--dim);">' + elems + '</span>' : '')
+            + '</div>'
+            + '<div style="margin-top:8px;padding:6px 10px;background:rgba(96,165,250,.06);border-radius:4px;font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">'
+            + '→ Open <a href="' + bUrl + '" target="_blank" style="color:var(--blue);">' + shortUrl.slice(0,50) + '</a> → right-click → View Page Source → Ctrl+A → Ctrl+C → paste into HTML field above'
+            + '</div>'
+            + '</div>';
+        }).join('');
+
+      status.textContent = '✅ ' + blocks.length + ' competitors found — URLs filled';
+      status.style.color = 'var(--green)';
+      toast('✅ Top ' + blocks.length + ' competitors found — URLs auto-filled');
+    }
+  } catch(e) {
+    resultEl.innerHTML = '<div style="color:var(--red);font-size:11px;">⚠ ' + e.message + '</div>';
+    toast('⚠ Error: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 FIND COMPETITORS';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⑤ AUTO-ANALYSE INTERNAL LINKS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function updateUrlCount() {
+  const urls = (document.getElementById('dSiteUrls').value || '').trim().split('\n').filter(l => l.trim().startsWith('http'));
+  const el = document.getElementById('urlCount');
+  if (el) el.textContent = urls.length ? '✓ ' + urls.length + ' URLs ready' : '';
+}
+
+async function autoAnalyseInternalLinks() {
+  const btn = document.getElementById('intLinkBtn');
+  const resultEl = document.getElementById('intLinkResult');
+  const url = document.getElementById('dUrl').value.trim();
+  const kw = document.getElementById('dKw').value.trim();
+  const kw2 = document.getElementById('dKw2').value.trim();
+  const siteUrls = (document.getElementById('dSiteUrls').value || '').trim();
+
+  if (!url || !kw) { toast('⚠ Enter URL and keyword in ① first'); return; }
+  if (!siteUrls) { toast('⚠ Add your site URLs below first'); return; }
+
+  const urls = siteUrls.split('\n').filter(l => l.trim().startsWith('http')).slice(0, 60);
+  if (urls.length < 2) { toast('⚠ Need at least 2 site URLs'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Analysing…';
+  resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--gold);padding:8px 0;">🔗 Finding best internal link opportunities…</div>';
+
+  try {
+    const prompt = `You are an elite SEO internal linking strategist.
+
+TARGET PAGE: ${url}
+PRIMARY KEYWORD: ${kw}
+SECONDARY KEYWORD: ${kw2 || 'none'}
+
+SITE URL LIST (${urls.length} pages):
+${urls.join('\n')}
+
+TASK: Find the 5 BEST internal linking opportunities. For each opportunity:
+- Identify a page FROM the list that should link TO the target page (or vice versa)
+- Pick the most topically relevant pages only
+- Suggest exact anchor text (2-5 words, keyword-rich but natural)
+- Explain WHY this link matters (1 sentence)
+
+Format EXACTLY like this for each (5 total):
+---
+DIRECTION: [FROM url → TO target] or [FROM target → TO url]
+FROM: [full URL]
+TO: [full URL]  
+ANCHOR: "[exact anchor text to use]"
+WHY: [one sentence reason]
+---`;
+
+    const result = await callGemini(prompt, 1200);
+
+    // Parse the structured output into cards
+    const blocks = result.split('---').map(b => b.trim()).filter(b => b.includes('ANCHOR:'));
+    if (!blocks.length) {
+      resultEl.innerHTML = '<div style="white-space:pre-wrap;font-size:12px;line-height:1.7;color:var(--muted);">' + result + '</div>';
+    } else {
+      resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:10px;">🔗 ' + blocks.length + ' Internal Link Opportunities Found</div>'
+        + blocks.map(function(block, i) {
+          var dir = (block.match(/DIRECTION:\s*(.+)/i)||[])[1]||'';
+          var from = (block.match(/FROM:\s*(.+)/i)||[])[1]||'';
+          var to = (block.match(/TO:\s*(.+)/i)||[])[1]||'';
+          var anchor = (block.match(/ANCHOR:\s*"?([^"\n]+)"?/i)||[])[1]||'';
+          var why = (block.match(/WHY:\s*(.+)/i)||[])[1]||'';
+          return '<div style="background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.15);border-radius:7px;padding:12px 14px;margin-bottom:8px;">'
+            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+            + '<span style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--dim);">#' + (i+1) + '</span>'
+            + '<span style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:2px 6px;background:rgba(74,222,128,.12);color:var(--green);border-radius:3px;">' + (dir.includes('→ TO target') ? '→ LINK TO THIS PAGE' : '← LINK FROM THIS PAGE') + '</span>'
+            + '</div>'
+            + '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;word-break:break-all;">' + from.trim().replace(/^https?:\/\//, '').slice(0, 70) + ' → ' + to.trim().replace(/^https?:\/\//, '').slice(0, 70) + '</div>'
+            + '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--gold);margin-bottom:4px;">Anchor: "' + anchor.trim() + '"</div>'
+            + (why ? '<div style="font-size:10px;color:var(--dim);">' + why.trim() + '</div>' : '')
+            + '</div>';
+        }).join('');
+    }
+
+    toast('✅ Internal link analysis done');
+  } catch(e) {
+    resultEl.innerHTML = '<div style="color:var(--red);font-size:11px;">⚠ Error: ' + e.message + '</div>';
+    toast('⚠ Analysis failed: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '🤖 ANALYSE LINKS';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⑥ AUTO-DETECT KNOWN CONSTRAINTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async function autoDetectConstraints() {
+  const btn = document.getElementById('constraintBtn');
+  const statusEl = document.getElementById('constraintStatus');
+  const field = document.getElementById('dConstraints');
+  const url = document.getElementById('dUrl').value.trim();
+  const html = document.getElementById('dHtml').value.trim();
+
+  if (!url && !html) { toast('⚠ Enter URL in ① or paste page HTML in ③ first'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Detecting…';
+  statusEl.textContent = '';
+
+  // ── Step 1: Local heuristic detection from HTML (instant, free) ──
+  const detected = [];
+
+  if (html) {
+    const lowerHtml = html.toLowerCase();
+
+    // CMS detection
+    if (lowerHtml.includes('wp-content') || lowerHtml.includes('wp-includes') || lowerHtml.includes('wordpress')) detected.push('WordPress');
+    else if (lowerHtml.includes('shopify')) detected.push('Shopify');
+    else if (lowerHtml.includes('wix.com') || lowerHtml.includes('wixsite')) detected.push('Wix');
+    else if (lowerHtml.includes('squarespace')) detected.push('Squarespace');
+    else if (lowerHtml.includes('webflow')) detected.push('Webflow');
+    else if (lowerHtml.includes('drupal')) detected.push('Drupal');
+    else if (lowerHtml.includes('joomla')) detected.push('Joomla');
+    else if (lowerHtml.includes('ghost')) detected.push('Ghost');
+    else if (lowerHtml.includes('next.js') || lowerHtml.includes('__next')) detected.push('Next.js');
+    else if (lowerHtml.includes('nuxt') || lowerHtml.includes('__nuxt')) detected.push('Nuxt.js');
+    else if (lowerHtml.includes('gatsby')) detected.push('Gatsby');
+
+    // Page builders
+    if (lowerHtml.includes('elementor')) detected.push('Elementor');
+    else if (lowerHtml.includes('divi')) detected.push('Divi');
+    else if (lowerHtml.includes('beaver-builder') || lowerHtml.includes('fl-builder')) detected.push('Beaver Builder');
+    else if (lowerHtml.includes('wpbakery') || lowerHtml.includes('vc_row')) detected.push('WPBakery');
+
+    // CDN / hosting signals
+    if (lowerHtml.includes('cloudflare')) detected.push('Cloudflare CDN');
+    if (lowerHtml.includes('vercel')) detected.push('Vercel hosting');
+    if (lowerHtml.includes('netlify')) detected.push('Netlify hosting');
+
+    // Language / multilingual
+    const langMatch = html.match(/<html[^>]+lang=["\']([^"\'>]+)["\'>]/i);
+    if (langMatch) {
+      const lang = langMatch[1].toLowerCase();
+      if (lang.startsWith('nl')) detected.push('Language: NL');
+      else if (lang.startsWith('de')) detected.push('Language: DE');
+      else if (lang.startsWith('fr')) detected.push('Language: FR');
+      else if (lang.startsWith('es')) detected.push('Language: ES');
+      else if (lang.startsWith('en')) detected.push('Language: EN');
+    }
+    if (lowerHtml.includes('hreflang')) detected.push('Multilingual (hreflang)');
+
+    // GDPR / cookie signals
+    if (lowerHtml.includes('cookiebot') || lowerHtml.includes('cookie-consent') || lowerHtml.includes('gdpr') || lowerHtml.includes('cookieyes') || lowerHtml.includes('onetrust')) detected.push('GDPR-strict (cookie banner)');
+
+    // JS-heavy (no HTML injection possible)
+    const scriptCount = (html.match(/<script/gi) || []).length;
+    if (scriptCount > 15) detected.push('JS-heavy (' + scriptCount + ' scripts — no inline injection)');
+
+    // Schema already present
+    if (lowerHtml.includes('application/ld+json')) detected.push('Schema JSON-LD already present');
+
+    // AMP
+    if (lowerHtml.includes('<html amp') || lowerHtml.includes('<html ⚡')) detected.push('AMP page');
+
+    // Accessibility / ARIA heavy
+    if ((html.match(/aria-/gi) || []).length > 20) detected.push('Accessibility-focussed (ARIA)');
+
+    // eCommerce
+    if (lowerHtml.includes('add-to-cart') || lowerHtml.includes('woocommerce')) detected.push('WooCommerce');
+
+    // Analytics
+    if (lowerHtml.includes('gtag(') || lowerHtml.includes('google-analytics')) detected.push('Google Analytics');
+    if (lowerHtml.includes('gtm.js') || lowerHtml.includes('googletagmanager')) detected.push('Google Tag Manager');
+  }
+
+  // ── Step 2: URL-based heuristics (domain TLD, path patterns) ──
+  if (url) {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      const path = parsed.pathname.toLowerCase();
+
+      if (host.endsWith('.nl')) detected.push('Dutch domain (.nl)');
+      else if (host.endsWith('.be')) detected.push('Belgian domain (.be)');
+      else if (host.endsWith('.de')) detected.push('German domain (.de)');
+      else if (host.endsWith('.co.uk') || host.endsWith('.uk')) detected.push('UK domain');
+      else if (host.endsWith('.fr')) detected.push('French domain (.fr)');
+      else if (host.endsWith('.es')) detected.push('Spanish domain (.es)');
+
+      if (path.includes('/en/') || path.includes('/nl/') || path.includes('/de/') || path.includes('/fr/')) detected.push('Subfolder multilingual');
+      if (path.includes('/blog/') || path.includes('/news/') || path.includes('/artikel/')) detected.push('Blog/CMS subfolder');
+      if (path.includes('/shop/') || path.includes('/product/') || path.includes('/winkel/')) detected.push('eCommerce URL structure');
+    } catch(e) {}
+  }
+
+  // ── Step 3: If HTML available, use AI for deeper analysis ──
+  if (html && html.length > 500) {
+    try {
+      const snippet = html.slice(0, 4000); // head + first body
+      const prompt = `You are a technical SEO analyst. Analyse this HTML snippet and identify technical constraints relevant to SEO implementation.
+
+HTML SNIPPET:
+${snippet}
+
+List ONLY additional constraints NOT already detected. Focus on:
+- CMS or framework not already obvious from the HTML
+- Specific no-go rules (e.g. "no raw HTML editing", "structured data via plugin only")  
+- Performance constraints (lazy loading, critical CSS, preloading)
+- Server-side rendering vs static generation
+- Any unusual technical patterns
+
+Reply as a short comma-separated list of constraints only. Max 5 items. If nothing new, reply: NONE`;
+
+      const aiResult = await callGemini(prompt, 300);
+      if (aiResult && aiResult.trim() !== 'NONE' && !aiResult.toLowerCase().includes('none')) {
+        const aiConstraints = aiResult.split(',').map(s => s.trim()).filter(s => s.length > 2 && s.length < 60);
+        detected.push(...aiConstraints.slice(0, 5));
+      }
+    } catch(e) {} // silent fail — heuristics are enough
+  }
+
+  // ── Deduplicate and write to field ──
+  const unique = [...new Set(detected)];
+  if (unique.length > 0) {
+    field.value = unique.join(', ');
+    statusEl.textContent = '✅ ' + unique.length + ' constraints detected';
+    statusEl.style.color = 'var(--green)';
+    toast('✅ ' + unique.length + ' constraints auto-detected');
+  } else {
+    statusEl.textContent = '⚠ Nothing detected — add URL or HTML in ① / ③';
+    statusEl.style.color = 'var(--gold)';
+    toast('⚠ Paste page HTML in ③ for better detection');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 DETECT';
+}
+
 </script>
 </body>
 </html>
