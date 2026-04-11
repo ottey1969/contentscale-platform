@@ -14,124 +14,113 @@
   --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
   --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
 }
-body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
 .wrap{max-width:1100px;margin:0 auto;padding:0 20px 80px;}
-
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:10px;}
 .brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
 .tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
 .btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
 .btn-muted:hover{color:var(--ink);}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
 
-/* Summary bar */
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+/* Summary */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
 @media(max-width:600px){.summary{grid-template-columns:1fr 1fr;}}
 .sum-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center;}
 .sum-n{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-bottom:3px;}
 .sum-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
 
 /* Filter */
-.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.filter-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
 .filter-bar select{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 11px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--muted);outline:none;cursor:pointer;}
 .filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
+.filter-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);}
 
-/* Recommendation cards */
-.rec-list{display:flex;flex-direction:column;gap:12px;}
+/* Cards */
+.rec-list{display:flex;flex-direction:column;gap:18px;}
+.rec-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.rec-card.pri-high{border-left:4px solid var(--red);}
+.rec-card.pri-med{border-left:4px solid var(--gold);}
+.rec-card.pri-low{border-left:4px solid var(--green);}
 
-.rec-card{border-radius:12px;overflow:hidden;border:1px solid var(--border);}
-.rec-card.type-quickwin{border-left:4px solid var(--green);}
-.rec-card.type-ctr{border-left:4px solid var(--blue);}
-.rec-card.type-content{border-left:4px solid var(--gold);}
-.rec-card.type-rewrite{border-left:4px solid var(--orange);}
-.rec-card.type-authority{border-left:4px solid var(--purple);}
-.rec-card.type-build{border-left:4px solid var(--dim);}
-
-.rec-head{background:var(--card);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
-.rec-badge{flex-shrink:0;padding:4px 10px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;white-space:nowrap;margin-top:2px;}
+/* Card header */
+.rec-header{padding:20px 22px 16px;display:flex;gap:18px;align-items:flex-start;}
+.rec-rank{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;color:var(--gold);flex-shrink:0;width:52px;text-align:center;opacity:.85;}
+.rec-header-body{flex:1;min-width:0;}
+.rec-type-row{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap;}
+.type-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px;font-weight:700;white-space:nowrap;}
 .badge-quickwin{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
 .badge-ctr{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
 .badge-content{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
 .badge-rewrite{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
 .badge-authority{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
 .badge-build{background:rgba(71,85,105,.15);color:var(--dim);border:1px solid rgba(71,85,105,.3);}
+.pri-chip{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;}
+.pri-high-chip{background:rgba(244,63,63,.12);color:var(--red);border:1px solid rgba(244,63,63,.25);}
+.pri-med-chip{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.25);}
+.pri-low-chip{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.2);}
+.rec-page-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-bottom:4px;word-break:break-all;}
+.rec-keyword{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.rec-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--ink);margin-bottom:6px;line-height:1.1;}
+.rec-why{font-size:13px;color:var(--muted);line-height:1.7;}
+.gsc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.gsc-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:4px;border:1px solid var(--border);color:var(--dim);background:var(--surface);}
+.gsc-chip strong{color:var(--muted);}
 
-.rec-main{flex:1;min-width:200px;}
-.rec-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-bottom:5px;word-break:break-all;}
-.rec-kw{font-size:11px;color:var(--muted);margin-bottom:8px;}
-.rec-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.03em;color:var(--ink);margin-bottom:5px;}
-.rec-why{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;}
-.rec-action{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:flex-start;gap:6px;}
-.rec-action::before{content:'→';color:var(--gold);flex-shrink:0;}
+/* Ordered steps */
+.action-steps{border-top:1px solid var(--border);padding:20px 22px;}
+.steps-heading{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.steps-heading::after{content:'';flex:1;height:1px;background:var(--border);}
+.step-list{display:flex;flex-direction:column;gap:8px;}
 
-.rec-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-.meta-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:4px;border:1px solid var(--border);color:var(--dim);}
-.meta-chip strong{color:var(--muted);}
+.action-step{display:flex;gap:14px;padding:13px 16px;border-radius:8px;border:1px solid;}
+.action-step.sev-high{background:rgba(244,63,63,.04);border-color:rgba(244,63,63,.2);}
+.action-step.sev-med{background:rgba(251,191,36,.04);border-color:rgba(251,191,36,.18);}
+.action-step.sev-low{background:rgba(74,222,128,.04);border-color:rgba(74,222,128,.15);}
 
-/* Pre-filled info */
-.prefill-box{background:var(--surface);border-radius:8px;padding:12px 16px;margin:0 20px 0 0;min-width:200px;max-width:280px;flex-shrink:0;}
-@media(max-width:700px){.prefill-box{max-width:100%;margin:0;}}
-.prefill-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;}
-.prefill-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:11px;}
-.prefill-row.auto{color:var(--green);}
-.prefill-row.manual{color:var(--dim);}
-.prefill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.dot-auto{background:var(--green);}
-.dot-manual{background:var(--dim);}
+.step-num{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;flex-shrink:0;width:30px;text-align:center;margin-top:1px;}
+.sev-high .step-num{color:var(--red);}
+.sev-med  .step-num{color:var(--gold);}
+.sev-low  .step-num{color:var(--green);}
+.step-body{flex:1;min-width:0;}
+.step-title{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.step-sev-chip{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;flex-shrink:0;}
+.sev-high .step-sev-chip{background:rgba(244,63,63,.12);color:var(--red);}
+.sev-med  .step-sev-chip{background:rgba(251,191,36,.12);color:var(--gold);}
+.sev-low  .step-sev-chip{background:rgba(74,222,128,.12);color:var(--green);}
+.step-desc{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:6px;}
+.step-time{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.06em;}
 
-/* Action button */
-.rec-foot{background:rgba(255,255,255,.02);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.action-btn{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;padding:10px 28px;border-radius:7px;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .18s;}
+/* Footer */
+.rec-foot{background:rgba(255,255,255,.018);border-top:1px solid var(--border);padding:14px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.action-btn{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;padding:10px 26px;border-radius:7px;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .18s;white-space:nowrap;}
 .action-btn-gold{background:var(--gold);color:#000;}
 .action-btn-gold:hover{background:#e6b020;transform:translateY(-1px);}
-.action-btn-blue{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
-.action-btn-blue:hover{background:var(--blue);color:#000;}
-.time-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:5px;}
+.action-btn-dim{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border);}
+.action-btn-dim:hover{color:var(--ink);border-color:var(--muted);}
 
 .empty{text-align:center;padding:60px 20px;color:var(--dim);}
 .empty h3{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--sub);margin-bottom:8px;}
 
+.info-banner{background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.18);border-radius:8px;padding:12px 18px;margin-bottom:20px;font-size:12px;color:var(--muted);line-height:1.65;}
+.info-banner strong{color:var(--blue);}
+
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* ── MOBILE RESPONSIVE ─────────────────────────── */
-html,body{max-width:100%;overflow-x:hidden;}
-img,table,iframe{max-width:100%;}
 @media(max-width:768px){
   .wrap{padding:0 14px 60px!important;}
-  .topbar{padding:12px 0;gap:8px;}
-  .topbar-right{gap:5px;}
-  .btn{font-size:8px;padding:6px 10px;}
-  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
-  .add-row{flex-direction:column;}
-  .add-row input,.add-row select{width:100%!important;}
-  .filter-bar{flex-direction:column;gap:6px;}
-  .filter-bar select,.filter-bar input{width:100%!important;}
-  .card-head{flex-wrap:wrap;gap:6px;}
-  .rec-head{flex-direction:column;}
-  .prefill-box{max-width:100%;width:100%;}
-  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
-  .project-bar{flex-direction:column;}
-  .pf{min-width:100%!important;}
-  .steps{flex-direction:column!important;}
-  .step{border-right:none!important;border-bottom:1px solid var(--border);}
-  .step:last-child{border-bottom:none;}
-  .how-step{flex-direction:column;}
-  .flow-step{gap:10px;}
+  .rec-header{flex-direction:column;gap:10px;}
+  .rec-rank{font-size:32px;width:auto;}
   .rec-foot{flex-direction:column;gap:8px;}
-  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
-  .modes{grid-template-columns:1fr!important;}
-  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
-}
-@media(max-width:480px){
-  .overview,.summary{grid-template-columns:1fr 1fr!important;}
-  .topbar{flex-direction:column;align-items:flex-start;}
-  .topbar-right{flex-wrap:wrap;}
-  .card-meta{flex-wrap:wrap;gap:4px;}
-  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
-  h1,h2,.tool-name{word-break:break-word;}
-  .panel{padding:16px!important;}
-  .section{padding:14px 16px!important;}
+  .action-btn{width:100%;justify-content:center;font-size:15px!important;}
+  .summary{grid-template-columns:1fr 1fr!important;}
+  .filter-bar{flex-direction:column;align-items:flex-start;}
 }
 </style>
 </head>
@@ -140,32 +129,37 @@ img,table,iframe{max-width:100%;}
 
 <div class="topbar">
   <a href="https://contentscale.site" class="brand">ContentScale</a>
-  <div class="tool-title">SEO RECOMMENDATIONS ENGINE</div>
-  <div style="display:flex;gap:8px;">
-    <a href="/audit-workflow" class="btn btn-muted">← Workflow Manager</a>
+  <div class="tool-title">SEO RECOMMENDATIONS</div>
+  <div class="topbar-right">
+    <a href="/audit-workflow" class="btn btn-muted">← Workflow</a>
     <a href="/audit-seo" class="btn btn-muted">🔬 PULSE+NEXUS</a>
+    <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
+    <button class="btn btn-blue" onclick="exportReport()">📄 Export Report</button>
     <button class="btn btn-muted" onclick="location.reload()">↺ Refresh</button>
   </div>
 </div>
 
-<!-- Summary -->
+<div class="info-banner">
+  <strong>How to use:</strong> Pages are ranked by impact score. Each card shows numbered steps in order — do step 1 before step 2. Click <strong>Pre-fill &amp; Open Audit</strong> to load that page directly into PULSE+NEXUS. If you already ran the audit for this page, the results load automatically.
+</div>
+
 <div class="summary" id="summary"></div>
 
-<!-- Filters -->
 <div class="filter-bar">
+  <span class="filter-label">Filter:</span>
   <select id="fType" onchange="render()">
-    <option value="all">All recommendations</option>
-    <option value="quickwin">⚡ Quick Wins</option>
+    <option value="all">All recommendation types</option>
+    <option value="quickwin">⚡ Quick Wins only</option>
     <option value="ctr">📈 CTR Fix</option>
     <option value="content">📝 Content Upgrade</option>
     <option value="rewrite">✏️ Rewrite</option>
-    <option value="authority">🔗 Authority</option>
+    <option value="authority">🔗 Authority Gap</option>
   </select>
   <select id="fPri" onchange="render()">
     <option value="all">All priorities</option>
-    <option value="high">🔴 High</option>
-    <option value="med">🟡 Medium</option>
-    <option value="low">🟢 Low</option>
+    <option value="high">🔴 High priority</option>
+    <option value="med">🟡 Medium priority</option>
+    <option value="low">🟢 Low priority</option>
   </select>
   <select id="fStatus" onchange="render()">
     <option value="active">Not done</option>
@@ -173,7 +167,7 @@ img,table,iframe{max-width:100%;}
     <option value="done">Done only</option>
   </select>
   <select id="fSort" onchange="render()">
-    <option value="impact">Sort: Impact</option>
+    <option value="impact">Sort: Impact score</option>
     <option value="position">Sort: Position</option>
     <option value="impressions">Sort: Impressions</option>
   </select>
@@ -192,359 +186,340 @@ function toast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},2500);
 }
-
 function load(){
   try{ var p=localStorage.getItem('cs_wf_pages'); if(p) pages=JSON.parse(p); }catch(e){}
 }
 
-// ── Recommendation engine ─────────────────────────────────
 var RECS = {
-  quickwin: {
-    label:'Quick Win', badgeClass:'badge-quickwin', cardClass:'type-quickwin',
-    title:'Title & Meta — 30 Minute Win',
-    icon:'⚡',
-  },
-  ctr: {
-    label:'CTR Fix', badgeClass:'badge-ctr', cardClass:'type-ctr',
-    title:'CTR Surgery Needed',
-    icon:'📈',
-  },
-  content: {
-    label:'Content Upgrade', badgeClass:'badge-content', cardClass:'type-content',
-    title:'Content Upgrade — Full Audit',
-    icon:'📝',
-  },
-  rewrite: {
-    label:'Rewrite + Audit', badgeClass:'badge-rewrite', cardClass:'type-rewrite',
-    title:'Page Rewrite Required',
-    icon:'✏️',
-  },
-  authority: {
-    label:'Authority Gap', badgeClass:'badge-authority', cardClass:'type-authority',
-    title:'Content Good — Build Authority',
-    icon:'🔗',
-  },
-  build: {
-    label:'Build Content', badgeClass:'badge-build', cardClass:'type-build',
-    title:'Content Needs Building First',
-    icon:'🏗️',
-  },
+  quickwin:  { label:'Quick Win',        badgeClass:'badge-quickwin',  icon:'⚡' },
+  ctr:       { label:'CTR Fix',          badgeClass:'badge-ctr',       icon:'📈' },
+  content:   { label:'Content Upgrade',  badgeClass:'badge-content',   icon:'📝' },
+  rewrite:   { label:'Rewrite',          badgeClass:'badge-rewrite',   icon:'✏️' },
+  authority: { label:'Authority Gap',    badgeClass:'badge-authority', icon:'🔗' },
+  build:     { label:'Build Content',    badgeClass:'badge-build',     icon:'🏗️' },
 };
 
+function getActionSteps(p, rec){
+  var pos=p.position||0, ctr=parseFloat(p.ctr)||0, impr=p.impressions||0;
+  var score=parseFloat(p.scoreBefore)||0, type=rec.type;
+  if(type==='quickwin') return [
+    {sev:'high',title:'Rewrite title tag',time:'15 min',
+     desc:'CTR is '+ctr.toFixed(1)+'% at position '+Math.round(pos)+'. Open PULSE+NEXUS → Step 2 (CTR Surgery). New title ≤60 chars, include primary keyword, add a number or power word. Copy the AI-generated version directly.'},
+    {sev:'high',title:'Rewrite meta description',time:'10 min',
+     desc:'150-155 chars with an urgency trigger + specific benefit. Add a CTA phrase ("Get a free quote", "Available 24/7"). Open PULSE+NEXUS → Step 2 for the AI-written version.'},
+    {sev:'med',title:'Add FAQ schema to &lt;head&gt;',time:'30 min',
+     desc:'FAQPage JSON-LD with 4 Q&As based on your top queries. Open PULSE+NEXUS → Step 6 (NEXUS Signals) for a ready-to-paste schema block. This can trigger rich results in Google.'},
+    {sev:'med',title:'Check keyword in first 100 words',time:'10 min',
+     desc:'Primary keyword must appear in the first paragraph. Open PULSE+NEXUS → Step 8 (Technical Checklist) for the full keyword placement audit with exact fixes.'},
+    {sev:'low',title:'Add direct-answer paragraph above fold',time:'20 min',
+     desc:'Write a 40-60 word paragraph that directly defines your main keyword or answers the primary intent. Place it before any other body content. This is the #1 AI Overview eligibility signal.'},
+  ];
+  if(type==='ctr') return [
+    {sev:'high',title:'Rewrite title tag immediately',time:'15 min',
+     desc:'Position '+Math.round(pos)+' with CTR '+ctr.toFixed(1)+'% — the title is not converting. Open PULSE+NEXUS → Step 2. Add urgency, geo signal, and primary keyword in first 55-60 chars.'},
+    {sev:'high',title:'Rewrite meta description',time:'10 min',
+     desc:'Include a specific value proposition, the main pain point, and a CTA. Compare with Step 3 (Competitor Diff) to see how competing titles and metas are structured.'},
+    {sev:'high',title:'Run full 10-step audit',time:'2-3 hrs',
+     desc:'Position '+Math.round(pos)+' means content also needs strengthening. Open PULSE+NEXUS → paste your full page HTML → run all 10 steps. Start reading from Step 0 (Priority Actions).'},
+    {sev:'med',title:'Add structured data for rich results',time:'30 min',
+     desc:'FAQPage and LocalBusiness schema can increase CTR by 20-30% via rich results. Open PULSE+NEXUS → Step 8 for the exact JSON-LD to paste into your &lt;head&gt;.'},
+    {sev:'low',title:'Build 3-5 internal links to this page',time:'20 min',
+     desc:'Internal links signal authority and help Google understand the page\'s importance. Open PULSE+NEXUS → Step 6 for exact source pages and anchor text to use.'},
+  ];
+  if(type==='rewrite') return [
+    {sev:'high',title:'Run full audit BEFORE rewriting',time:'30 min',
+     desc:'Do not rewrite without the audit data. Open PULSE+NEXUS → paste full page HTML → run all 10 steps. The output is your rewrite brief. Read Step 0 (Priority Actions) first.'},
+    {sev:'high',title:'Rewrite intro using PULSE Step 5 output',time:'1 hr',
+     desc:'Step 5 (PULSE Rewrites) gives the exact before/after for your intro paragraph, urgency signal, and CTA. Follow the "P — Purpose" rewrite first. Do not skip this step.'},
+    {sev:'high',title:'Fix HIGH severity content gaps from Step 4',time:'2-3 hrs',
+     desc:'Step 4 (Content Gap Matrix) lists every missing section with the exact content to add. Work through HIGH severity rows first. Add the specific copy — not generic content.'},
+    {sev:'med',title:'Implement new heading structure from Step 7',time:'45 min',
+     desc:'Step 7 (Architecture Blueprint) gives the exact H1→H2→H3 hierarchy for this keyword. Rebuild the heading structure before rewriting body content.'},
+    {sev:'med',title:'Add FAQ + schema from Step 6',time:'30 min',
+     desc:'Step 6 (NEXUS Signals) provides the complete FAQPage JSON-LD to add to &lt;head&gt;. Also add the 4-5 Q&As as visible content in the page body.'},
+    {sev:'low',title:'Re-scan score after publishing',time:'10 min',
+     desc:'After going live: Workflow Manager → your page → Scan Score → enter the new score in "Post-scan Score". Track the improvement vs the before-score.'},
+  ];
+  if(type==='authority') return [
+    {sev:'med',title:'Add 3 internal links TO this page',time:'20 min',
+     desc:'Open PULSE+NEXUS → Step 6 for the exact pages to link from and the anchor text to use. Semantic relevance matters more than quantity for internal link authority.'},
+    {sev:'med',title:'Add expert quote or cited statistic',time:'30 min',
+     desc:'One cited stat (with source URL) and one expert quote (real name + credential). Place in the first or second section. Fastest single E-E-A-T improvement.'},
+    {sev:'med',title:'Update content with 2025-2026 data',time:'1 hr',
+     desc:'Replace any pre-2024 statistics or case studies with current data. Update schema dateModified to today. Open Step 3b (Meta Consistency) in PULSE+NEXUS to check current dateModified.'},
+    {sev:'low',title:'Add author bio section',time:'20 min',
+     desc:'Author bio with full name, credential/role, and 1-2 sentences of relevant expertise. This is the fastest E-E-A-T signal to add. Include a real photo if possible.'},
+  ];
+  if(type==='build') return [
+    {sev:'high',title:'Run keyword research first',time:'1 hr',
+     desc:'Before rebuilding, confirm this keyword has commercial value. Check search volume and competitor strength. Open PULSE+NEXUS → Step 1 (Intent + AIO) for the gap analysis.'},
+    {sev:'high',title:'Use audit output as content brief',time:'30 min',
+     desc:'Run all 10 steps in PULSE+NEXUS (no HTML needed for the brief). Steps 1, 4, 6, and 7 together form your complete content brief. Write against that structure.'},
+    {sev:'high',title:'Build with correct H1→H2→H3 structure from start',time:'2 hrs',
+     desc:'Step 7 (Architecture Blueprint) gives the exact heading hierarchy for this keyword. Build to that structure from the start — do not edit your way to good structure.'},
+    {sev:'med',title:'Add FAQ schema from day 1',time:'20 min',
+     desc:'New pages need schema from first publish. Step 6 provides the complete FAQPage JSON-LD to paste into &lt;head&gt; at launch.'},
+    {sev:'low',title:'Request indexing via GSC after publishing',time:'5 min',
+     desc:'Google Search Console → URL Inspection → Request Indexing. Do this immediately after publishing. Monitor impressions after 7-14 days.'},
+  ];
+  // default: content
+  return [
+    {sev:'high',title:'Run full 10-step PULSE+NEXUS audit',time:'2-3 hrs',
+     desc:'Paste your full page HTML in PULSE+NEXUS and run all 10 steps. Read Step 0 (Priority Actions) first — it gives the 7 highest-impact changes specific to your page.'},
+    {sev:'high',title:'Add direct-answer paragraph above fold',time:'20 min',
+     desc:'40-60 word paragraph directly answering the primary keyword or intent. Place before any other content. Biggest single AI Overview eligibility signal.'},
+    {sev:'high',title:'Work through Step 4 Content Gap fixes',time:'2-4 hrs',
+     desc:'After running the audit, Step 4 (Content Gap Matrix) lists every missing section. Add the HIGH severity content first — exact copy is provided, not just suggestions.'},
+    {sev:'med',title:'Rewrite H2s as questions',time:'30 min',
+     desc:'Change statement H2s to question format ("How fast do emergency roofers respond?"). Improves AI Overview eligibility and matches how users search.'},
+    {sev:'med',title:'Add FAQ section + JSON-LD schema',time:'30 min',
+     desc:'4 Q&As minimum, 40-60 words each. Step 6 (NEXUS) in PULSE+NEXUS gives the ready-to-paste JSON-LD FAQ schema targeting your specific top queries.'},
+    {sev:'low',title:'Check Meta Consistency via Step 3b',time:'10 min',
+     desc:'In PULSE+NEXUS: paste your HTML → click "Check Meta Consistency" (section 3b). It checks title, og:title, twitter:title, schema headline, dateModified — and flags every mismatch.'},
+  ];
+}
+
 function getRecommendation(p){
-  var pos   = p.position   || 0;
-  var ctr   = parseFloat(p.ctr) || 0;
-  var impr  = p.impressions || 0;
-  var score = parseFloat(p.scoreBefore) || 0;
-  var hasScore = p.scoreBefore !== '' && p.scoreBefore !== undefined;
-
-  // ── SCENARIO 1: Page 1 but low CTR ─────────────────────
-  if(pos>=1 && pos<=10 && ctr<2){
-    return {
-      type:'quickwin',
-      impactScore: 95,
-      why: 'Je staat op pagina 1 (positie '+Math.round(pos)+') maar CTR is slechts '+ctr.toFixed(1)+'%. '
-          +'Searchers zien je maar klikken niet. De title of meta description trekt niet genoeg aan.',
-      action: 'Herschrijf de title tag (≤60 chars) en meta description (≤155 chars). '
-             +'Voeg een getal, power word of urgentie-trigger toe.',
-      auditFocus: 'CTR Surgery — Stap 2 in PULSE+NEXUS',
-      time: '30 min',
-      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-      manual:    ['Pagina HTML (voor werkelijke title)','Competitor HTML'],
-      quickWin:  true,
-    };
+  var pos=p.position||0, ctr=parseFloat(p.ctr)||0;
+  var impr=p.impressions||0, score=parseFloat(p.scoreBefore)||0;
+  var hasScore=p.scoreBefore!==''&&p.scoreBefore!==undefined;
+  if(pos>=1&&pos<=10&&ctr<2) return{type:'quickwin',impactScore:95,quickWin:true,
+    title:'Quick Win — Title & Meta',
+    why:'Page 1, position '+Math.round(pos)+' — but CTR is only '+ctr.toFixed(1)+'%. Searchers see you but do not click. Title or meta needs an urgency/benefit rewrite.'};
+  if(pos>=1&&pos<=10&&ctr>=2){
+    if(hasScore&&score>=85) return{type:'authority',impactScore:40,
+      title:'Authority Gap — Build Links & Freshness',
+      why:'Position '+Math.round(pos)+', CTR '+ctr.toFixed(1)+'%, score '+score+'/100. Page performs well. Growth comes from backlinks, expert citations, and fresh data.'};
+    return null;}
+  if(pos>=11&&pos<=20){
+    if(ctr<1.5) return{type:'ctr',impactScore:92,quickWin:true,
+      title:'CTR Surgery + Content Push',
+      why:'Position '+Math.round(pos)+' with CTR '+ctr.toFixed(1)+'%. Two blockers: title not converting AND content not quite strong enough for page 1.'};
+    if(hasScore&&score<70) return{type:'content',impactScore:90,
+      title:'Content Upgrade — Score Below 70',
+      why:'Position '+Math.round(pos)+', score '+score+'/100. Content too weak for page 1. Full audit needed.'};
+    return{type:'content',impactScore:88,
+      title:'Content Upgrade — One Audit from Page 1',
+      why:'Position '+Math.round(pos)+(impr>2000?' — '+impr.toLocaleString()+' impressions means big traffic potential.':'')+' One strong audit from page 1.'};
   }
-
-  // ── SCENARIO 2: Page 1, CTR ok — already winning ───────
-  if(pos>=1 && pos<=10 && ctr>=2){
-    if(hasScore && score>=85){
-      return {
-        type:'authority',
-        impactScore: 40,
-        why: 'Positie '+Math.round(pos)+', CTR '+ctr.toFixed(1)+'%, score '+score+'/100. '
-            +'Pagina presteert goed. Verdere groei komt via linkbuilding en autoriteit.',
-        action: 'Focus op interne links en externe backlinks. '
-               +'Voeg expertcitaten en fresh data toe (2026).',
-        auditFocus: 'NEXUS Signals — Stap 6 in PULSE+NEXUS',
-        time: '1-2 uur',
-        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-        manual:    ['Sitemap URLs (voor interne links)','Competitor HTML'],
-      };
-    }
-    return null; // Already performing well, no urgent action
+  if(pos>=21&&pos<=30){
+    if(hasScore&&score<70) return{type:'rewrite',impactScore:82,
+      title:'Page Rewrite Required',
+      why:'Position '+Math.round(pos)+', score '+score+'/100. Full rewrite needed before ranking can improve.'+(impr>1000?' With '+impr.toLocaleString()+' impressions the potential is there.':'')};
+    return{type:'content',impactScore:78,
+      title:'Content Upgrade — Needs Depth',
+      why:'Position '+Math.round(pos)+'. Needs deeper content, authority signals, or both.'};
   }
-
-  // ── SCENARIO 3: Position 11-20 — closest to page 1 ─────
-  if(pos>=11 && pos<=20){
-    if(ctr<1.5){
-      return {
-        type:'ctr',
-        impactScore: 92,
-        why: 'Positie '+Math.round(pos)+' met CTR '+ctr.toFixed(1)+'%. '
-            +'Je staat bijna op pagina 1 maar de CTR is laag. '
-            +'Twee problemen: title trekt niet aan EN content net niet sterk genoeg.',
-        action: 'Stap 1: title + meta herschrijven (30 min). '
-               +'Stap 2: volledige PULSE+NEXUS audit voor de laatste push naar pagina 1.',
-        auditFocus: 'Start met Stap 2 (CTR Surgery) dan Stap 1 (Priority Actions)',
-        time: '1-3 uur',
-        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-        manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
-        quickWin:  true,
-      };
-    }
-    if(hasScore && score<70){
-      return {
-        type:'content',
-        impactScore: 90,
-        why: 'Positie '+Math.round(pos)+', score '+score+'/100. '
-            +'Bijna pagina 1 maar de content is te zwak. '
-            +'Met een score boven 80 heb je grote kans om naar de top te stijgen.',
-        action: 'Volledige PULSE+NEXUS audit. Focus op content gaps, PULSE rewrites en schema.',
-        auditFocus: 'Alle 10 stappen — Priority Actions eerst',
-        time: '2-4 uur',
-        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-        manual:    ['Pagina HTML','Competitor HTML (Surfer SEO + MarketMuse als default)','Sitemap URLs'],
-      };
-    }
-    return {
-      type:'content',
-      impactScore: 88,
-      why: 'Positie '+Math.round(pos)+' — één sterke audit verwijderd van pagina 1. '
-          +( impr>2000 ? impr.toLocaleString()+' impressies betekent veel te winnen. ' : '')
-          +(hasScore ? 'Score: '+score+'/100.' : 'ContentScore nog onbekend — scan eerst.'),
-      action: 'Volledige PULSE+NEXUS audit — focus op content gaps en interne links.',
-      auditFocus: 'Alle 10 stappen — Priority Actions eerst',
-      time: '2-3 uur',
-      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-      manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
-    };
+  if(pos>=31&&pos<=60){
+    if(impr>1000) return{type:'rewrite',impactScore:70,
+      title:'Rewrite Required — High Volume Keyword',
+      why:'Position '+Math.round(pos)+' with '+impr.toLocaleString()+' impressions. High demand but Google rates the page too weak for pages 1-3.'};
+    return{type:'content',impactScore:55,
+      title:'Content Audit — Determine Direction',
+      why:'Position '+Math.round(pos)+(impr<200?' with low impressions — confirm this keyword has enough demand before investing.':'')};
   }
-
-  // ── SCENARIO 4: Position 21-30 ──────────────────────────
-  if(pos>=21 && pos<=30){
-    if(hasScore && score<70){
-      return {
-        type:'rewrite',
-        impactScore: 82,
-        why: 'Positie '+Math.round(pos)+', score '+score+'/100. '
-            +'Content moet herschreven worden én de pagina heeft een volledige audit nodig. '
-            +(impr>1000 ? 'Met '+impr.toLocaleString()+' impressies is de potentie er.' : ''),
-        action: 'Pagina herschrijven op basis van PULSE+NEXUS aanbevelingen. '
-               +'Daarna opnieuw scannen en score vergelijken.',
-        auditFocus: 'Stap 5 (PULSE rewrites) + Stap 4 (Content Gap) zijn prioriteit',
-        time: '3-5 uur',
-        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-        manual:    ['Pagina HTML (verplicht voor rewrite analyse)','Competitor HTML','Sitemap URLs'],
-      };
-    }
-    return {
-      type:'content',
-      impactScore: 78,
-      why: 'Positie '+Math.round(pos)+'. Pagina heeft potentie maar mist autoriteit of content diepte. '
-          +(impr>500 ? impr.toLocaleString()+' impressies — het onderwerp heeft vraag.' : ''),
-      action: 'Volledige audit — focus op NEXUS signals, interne links en schema.',
-      auditFocus: 'Alle 10 stappen',
-      time: '2-3 uur',
-      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-      manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs'],
-    };
-  }
-
-  // ── SCENARIO 5: Position 31-60 ──────────────────────────
-  if(pos>=31 && pos<=60){
-    if(impr>1000){
-      return {
-        type:'rewrite',
-        impactScore: 70,
-        why: 'Positie '+Math.round(pos)+' met '+impr.toLocaleString()+' impressies. '
-            +'Veel zoekvolume maar Google vindt de pagina niet sterk genoeg voor pagina 1-3. '
-            +'Diepgaande audit + content rewrite is de enige weg omhoog.',
-        action: 'Diepgaande PULSE+NEXUS audit. Alle 10 stappen doorlopen. '
-               +'Daarna content rewrite en schema toevoegen.',
-        auditFocus: 'Alle 10 stappen — focus Stap 3 (Competitor Diff) en Stap 5 (PULSE rewrites)',
-        time: '4-6 uur',
-        prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-        manual:    ['Pagina HTML (kritiek)','Competitor HTML','Sitemap URLs'],
-      };
-    }
-    return {
-      type:'content',
-      impactScore: 55,
-      why: 'Positie '+Math.round(pos)+(impr<200?' met weinig impressies':'')+'. '
-          +'Content is te zwak of het onderwerp heeft weinig vraag. '
-          +'Audit geeft duidelijkheid welke richting het beste werkt.',
-      action: 'Audit om te bepalen of herschrijven of nieuwe aanpak nodig is.',
-      auditFocus: 'Stap 1 (Intent) en Stap 4 (Content Gap) eerst',
-      time: '1-3 uur',
-      prefilled: ['URL','Keyword','Positie','Impressies','CTR'],
-      manual:    ['Pagina HTML','Competitor HTML'],
-    };
-  }
-
-  // ── SCENARIO 6: Position 60+ ────────────────────────────
   if(pos>60){
-    if(impr>500){
-      return {
-        type:'build',
-        impactScore: 40,
-        why: 'Positie '+Math.round(pos)+' maar '+impr.toLocaleString()+' impressies — er is vraag. '
-            +'Google beoordeelt deze pagina als te zwak. Fundamentele content rebuild nodig.',
-        action: 'Content volledig opnieuw schrijven met PULSE+NEXUS als briefing. '
-               +'Focus op E-E-A-T, schema en content diepte.',
-        auditFocus: 'Alle 10 stappen als content brief gebruiken',
-        time: '5+ uur',
-        prefilled: ['URL','Keyword'],
-        manual:    ['Pagina HTML','Competitor HTML','Sitemap URLs','GSC queries'],
-      };
-    }
-    return {
-      type:'build',
-      impactScore: 25,
-      why: 'Positie '+Math.round(pos)+' met laag zoekvolume. '
-          +'Eerst bepalen of dit zoekwoord de moeite waard is.',
-      action: 'Keyword research eerst. Dan beslissen: rewrite of nieuw artikel.',
-      auditFocus: 'Stap 1 (Intent analyse) als startpunt',
-      time: 'Nader te bepalen',
-      prefilled: ['URL','Keyword'],
-      manual:    ['Alles — pagina heeft weinig data'],
-    };
+    if(impr>500) return{type:'build',impactScore:40,
+      title:'Content Rebuild — Keyword Has Demand',
+      why:'Position '+Math.round(pos)+' but '+impr.toLocaleString()+' impressions show demand exists. Fundamental rebuild needed.'};
+    return{type:'build',impactScore:25,
+      title:'Verify Keyword Value First',
+      why:'Position '+Math.round(pos)+' with low impressions. Confirm commercial value before investing in a full rewrite.'};
   }
-
-  // No position data
-  return {
-    type:'content',
-    impactScore: 50,
-    why: 'Geen GSC data beschikbaar. Voeg positie en impressies toe vanuit GSC voor een betere aanbeveling.',
-    action: 'Voeg GSC data toe, scan ContentScore, dan volledige audit.',
-    auditFocus: 'Alle 10 stappen',
-    time: 'Onbekend',
-    prefilled: ['URL','Keyword'],
-    manual:    ['GSC data','Pagina HTML','Competitor HTML'],
-  };
+  return{type:'content',impactScore:50,
+    title:'Add GSC Data for Better Recommendation',
+    why:'No position data. Add impressions and position from Google Search Console for a precise recommendation.'};
 }
 
 function buildAuditUrl(p){
-  var params = new URLSearchParams();
-  params.set('url', p.url);
-  if(p.keyword)     params.set('kw',   p.keyword);
-  if(p.position)    params.set('pos',  p.position);
-  if(p.impressions) params.set('impr', p.impressions);
-  if(p.ctr)         params.set('ctr',  p.ctr);
-  if(p.id)          params.set('wf',   p.id);
-  // Save top queries for this page to localStorage so audit auto-loads them
-  try {
-    var allQueries = localStorage.getItem('cs_gsc_queries');
-    if (allQueries) {
-      // Store global queries tagged to this URL so audit can pick them up
-      localStorage.setItem('cs_page_queries_' + p.url, '');
-    }
-    // Also ensure sitemap is saved
-    var sharedGsc = localStorage.getItem('cs_shared_gsc');
-    if (sharedGsc) {
-      var gscData = JSON.parse(sharedGsc);
-      if (gscData.pages && gscData.pages.length) {
-        var siteUrls = gscData.pages.map(function(pg){ return pg.page; }).join('\n');
-        localStorage.setItem('cs_sitemap_urls', siteUrls);
-      }
-    }
-  } catch(e) {}
-  return AUDIT_URL + '?' + params.toString();
+  var params=new URLSearchParams();
+  params.set('url',p.url);
+  if(p.keyword)     params.set('kw',  p.keyword);
+  if(p.position)    params.set('pos', p.position);
+  if(p.impressions) params.set('impr',p.impressions);
+  if(p.ctr)         params.set('ctr', p.ctr);
+  if(p.id)          params.set('wf',  p.id);
+  return AUDIT_URL+'?'+params.toString();
 }
 
 function render(){
-  var fType   = document.getElementById('fType').value;
-  var fPri    = document.getElementById('fPri').value;
-  var fStatus = document.getElementById('fStatus').value;
-  var fSort   = document.getElementById('fSort').value;
+  var fType=document.getElementById('fType').value;
+  var fPri=document.getElementById('fPri').value;
+  var fStatus=document.getElementById('fStatus').value;
+  var fSort=document.getElementById('fSort').value;
 
-  var arr = pages.filter(function(p){
-    if(fStatus==='active' && p.status==='done') return false;
-    if(fStatus==='done'   && p.status!=='done') return false;
-    if(fPri!=='all' && p.priority!==fPri) return false;
+  var arr=pages.filter(function(p){
+    if(fStatus==='active'&&p.status==='done') return false;
+    if(fStatus==='done'&&p.status!=='done')   return false;
+    if(fPri!=='all'&&p.priority!==fPri)       return false;
     return true;
-  }).map(function(p){
-    return { page:p, rec:getRecommendation(p) };
-  }).filter(function(x){
+  }).map(function(p){ return{page:p,rec:getRecommendation(p)}; })
+  .filter(function(x){
     if(!x.rec) return false;
-    if(fType!=='all' && x.rec.type!==fType) return false;
+    if(fType!=='all'&&x.rec.type!==fType) return false;
     return true;
   });
 
-  // Sort
-  if(fSort==='impact')      arr.sort(function(a,b){ return b.rec.impactScore - a.rec.impactScore; });
-  else if(fSort==='position') arr.sort(function(a,b){ return (a.page.position||999)-(b.page.position||999); });
-  else if(fSort==='impressions') arr.sort(function(a,b){ return b.page.impressions-a.page.impressions; });
+  if(fSort==='impact')       arr.sort(function(a,b){return b.rec.impactScore-a.rec.impactScore;});
+  else if(fSort==='position')    arr.sort(function(a,b){return(a.page.position||999)-(b.page.position||999);});
+  else if(fSort==='impressions') arr.sort(function(a,b){return b.page.impressions-a.page.impressions;});
 
-  // Summary
-  var types = {};
-  arr.forEach(function(x){ types[x.rec.type]=(types[x.rec.type]||0)+1; });
-  var quickwins = arr.filter(function(x){ return x.rec.quickWin; }).length;
-  document.getElementById('summary').innerHTML =
+  var types={};
+  arr.forEach(function(x){types[x.rec.type]=(types[x.rec.type]||0)+1;});
+  var qw=arr.filter(function(x){return x.rec.quickWin;}).length;
+  document.getElementById('summary').innerHTML=
     '<div class="sum-card"><div class="sum-n" style="color:var(--blue)">'+arr.length+'</div><div class="sum-l">Total pages</div></div>'
-   +'<div class="sum-card"><div class="sum-n" style="color:var(--green)">'+quickwins+'</div><div class="sum-l">Quick wins</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--green)">'+qw+'</div><div class="sum-l">Quick wins &lt;30min</div></div>'
    +'<div class="sum-card"><div class="sum-n" style="color:var(--gold)">'+(types.content||0)+'</div><div class="sum-l">Need audit</div></div>'
    +'<div class="sum-card"><div class="sum-n" style="color:var(--orange)">'+(types.rewrite||0)+'</div><div class="sum-l">Need rewrite</div></div>';
 
   if(!arr.length){
-    document.getElementById('recList').innerHTML='<div class="empty"><h3>No Pages</h3><p>Add pages in the Workflow Manager first, or adjust filters.</p></div>';
+    document.getElementById('recList').innerHTML='<div class="empty"><h3>No Pages Found</h3><p>Add pages in the Workflow Manager, or adjust the filters above.</p></div>';
     return;
   }
 
-  document.getElementById('recList').innerHTML = arr.map(function(x,i){
-    var p   = x.page;
-    var rec = x.rec;
-    var R   = RECS[rec.type] || RECS.content;
-    var auditUrl = buildAuditUrl(p);
-
+  document.getElementById('recList').innerHTML=arr.map(function(x,i){
+    var p=x.page,rec=x.rec,R=RECS[rec.type]||RECS.content;
+    var auditUrl=buildAuditUrl(p);
     var shortUrl='';
-    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
-    if(shortUrl.length>60) shortUrl=shortUrl.slice(0,60)+'…';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,60);}
+    if(shortUrl.length>65) shortUrl=shortUrl.slice(0,65)+'…';
+    var priClass=p.priority==='high'?'pri-high':p.priority==='low'?'pri-low':'pri-med';
+    var priChip=p.priority==='high'?'<span class="pri-chip pri-high-chip">🔴 HIGH</span>'
+               :p.priority==='low' ?'<span class="pri-chip pri-low-chip">🟢 LOW</span>'
+               :                    '<span class="pri-chip pri-med-chip">🟡 MED</span>';
+    var gscChips='';
+    if(p.position)    gscChips+='<div class="gsc-chip"><strong>Pos</strong> '+Math.round(p.position)+'</div>';
+    if(p.impressions) gscChips+='<div class="gsc-chip"><strong>Impr</strong> '+p.impressions.toLocaleString()+'</div>';
+    if(p.ctr)         gscChips+='<div class="gsc-chip"><strong>CTR</strong> '+parseFloat(p.ctr).toFixed(1)+'%</div>';
+    if(p.scoreBefore) gscChips+='<div class="gsc-chip"><strong>Score</strong> '+p.scoreBefore+'/100</div>';
+    if(p.deadline)    gscChips+='<div class="gsc-chip"><strong>Due</strong> '+p.deadline+'</div>';
 
-    var gscChips = '';
-    if(p.position)    gscChips+='<span class="meta-chip"><strong>Pos</strong> '+Math.round(p.position)+'</span>';
-    if(p.impressions) gscChips+='<span class="meta-chip"><strong>Impr</strong> '+p.impressions.toLocaleString()+'</span>';
-    if(p.ctr)         gscChips+='<span class="meta-chip"><strong>CTR</strong> '+parseFloat(p.ctr).toFixed(1)+'%</span>';
-    if(p.scoreBefore) gscChips+='<span class="meta-chip"><strong>Score</strong> '+p.scoreBefore+'/100</span>';
-
-    var prefillHtml = rec.prefilled.map(function(item){
-      return '<div class="prefill-row auto"><span class="prefill-dot dot-auto"></span>'+item+'</div>';
+    var steps=getActionSteps(p,rec);
+    var stepsHtml=steps.map(function(s,si){
+      return '<div class="action-step sev-'+s.sev+'">'
+        +'<div class="step-num">'+(si+1)+'</div>'
+        +'<div class="step-body">'
+        +'<div class="step-title">'+s.title+' <span class="step-sev-chip">'+s.sev.toUpperCase()+'</span></div>'
+        +'<div class="step-desc">'+s.desc+'</div>'
+        +'<div class="step-time">⏱ '+s.time+'</div>'
+        +'</div></div>';
     }).join('');
-    var manualHtml = rec.manual.map(function(item){
-      return '<div class="prefill-row manual"><span class="prefill-dot dot-manual"></span>'+item+'</div>';
-    }).join('');
 
-    return '<div class="rec-card '+R.cardClass+'">'
-
-      // Head
-      +'<div class="rec-head">'
-      +'<div><span class="rec-badge '+R.badgeClass+'">'+R.icon+' '+R.label+'</span></div>'
-      +'<div class="rec-main">'
-      +'<div class="rec-url">'+shortUrl+'</div>'
-      +(p.keyword?'<div class="rec-kw">'+p.keyword+'</div>':'')
+    return '<div class="rec-card '+priClass+'">'
+      +'<div class="rec-header">'
+      +'<div class="rec-rank">#'+(i+1)+'</div>'
+      +'<div class="rec-header-body">'
+      +'<div class="rec-type-row"><span class="type-badge '+R.badgeClass+'">'+R.icon+' '+R.label+'</span>'+priChip+(rec.quickWin?'<span class="type-badge badge-quickwin">⚡ QUICK WIN</span>':'')+'</div>'
+      +'<div class="rec-page-url">'+shortUrl+'</div>'
+      +(p.keyword?'<div class="rec-keyword">Keyword: <strong>'+p.keyword+'</strong></div>':'')
       +'<div class="rec-title">'+rec.title+'</div>'
       +'<div class="rec-why">'+rec.why+'</div>'
-      +'<div class="rec-action">'+rec.action+'</div>'
-      +(gscChips?'<div class="rec-meta">'+gscChips+'</div>':'')
+      +(gscChips?'<div class="gsc-chips">'+gscChips+'</div>':'')
+      +'</div></div>'
+      +'<div class="action-steps">'
+      +'<div class="steps-heading">What to do — in order</div>'
+      +'<div class="step-list">'+stepsHtml+'</div>'
       +'</div>'
-
-      // Pre-fill info
-      +'<div class="prefill-box">'
-      +'<div class="prefill-title">In PULSE+NEXUS</div>'
-      +(prefillHtml?'<div style="margin-bottom:6px;font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.08em;color:var(--green);text-transform:uppercase;">✓ Auto-ingevuld</div>'+prefillHtml:'')
-      +(manualHtml?'<div style="margin:8px 0 4px;font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;">✎ Handmatig</div>'+manualHtml:'')
-      +'</div>'
-      +'</div>'
-
-      // Footer with action
       +'<div class="rec-foot">'
-      +'<a href="'+auditUrl+'" target="_blank" class="action-btn action-btn-gold">🔬 Open in PULSE+NEXUS →</a>'
-      +'<a href="'+p.url+'" target="_blank" class="action-btn action-btn-blue">↗ Open pagina</a>'
-      +'<span class="time-chip">⏱ '+rec.time+'</span>'
-      +(rec.auditFocus?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--sub);letter-spacing:.06em;">'+rec.auditFocus+'</span>':'')
+      +'<a href="'+auditUrl+'" class="action-btn action-btn-gold">🔬 Pre-fill &amp; Open Audit →</a>'
+      +'<a href="'+p.url+'" target="_blank" class="action-btn action-btn-dim">↗ View page</a>'
+      +(p.status==='done'?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;">✅ Done</span>':'')
       +'</div>'
-
       +'</div>';
   }).join('');
+}
+
+// ── Export CSV ────────────────────────────────────────
+function exportCSV(){
+  if(!pages.length){toast('⚠ No pages to export');return;}
+  var rows=['Rank,URL,Keyword,Priority,Position,Impressions,CTR,Score,Type,ImpactScore,Status'];
+  pages.map(function(p){return{page:p,rec:getRecommendation(p)};})
+    .filter(function(x){return x.rec;})
+    .sort(function(a,b){return b.rec.impactScore-a.rec.impactScore;})
+    .forEach(function(x,i){
+      var p=x.page,rec=x.rec;
+      rows.push([i+1,'"'+p.url+'"','"'+(p.keyword||'')+'"',p.priority,
+        p.position||'',p.impressions||'',parseFloat(p.ctr||0).toFixed(1),
+        p.scoreBefore||'',rec.type,rec.impactScore,p.status||'notstarted'].join(','));
+    });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='seo-recommendations-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();toast('✅ CSV exported');
+}
+
+// ── Export HTML Report ────────────────────────────────
+function exportReport(){
+  if(!pages.length){toast('⚠ No pages to export');return;}
+  var items=pages.map(function(p){return{page:p,rec:getRecommendation(p)};})
+    .filter(function(x){return x.rec;})
+    .sort(function(a,b){return b.rec.impactScore-a.rec.impactScore;});
+
+  var css='body{font-family:Arial,sans-serif;max-width:920px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}'
+    +'h1{color:#7c3aed;font-size:26px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:6px;}'
+    +'.card{border:1px solid #e5e7eb;border-radius:8px;margin-bottom:20px;overflow:hidden;}'
+    +'.card.high{border-left:4px solid #dc2626;}.card.med{border-left:4px solid #d97706;}.card.low{border-left:4px solid #16a34a;}'
+    +'.ch{background:#f9fafb;padding:14px 18px;border-bottom:1px solid #e5e7eb;}'
+    +'.ch-top{display:flex;gap:14px;align-items:flex-start;}'
+    +'.rank{font-size:36px;font-weight:900;color:#d97706;width:44px;flex-shrink:0;text-align:center;line-height:1;}'
+    +'.ch-body{flex:1;}'
+    +'.tag{display:inline-block;font-size:9px;padding:2px 8px;border-radius:3px;background:#ede9fe;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;font-family:monospace;margin-bottom:6px;margin-right:4px;}'
+    +'.title{font-size:18px;font-weight:700;margin:4px 0;}'
+    +'.url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}'
+    +'.why{font-size:13px;color:#6b7280;margin-top:6px;}'
+    +'.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}'
+    +'.chip{background:#f3f4f6;border-radius:4px;padding:2px 8px;font-size:10px;font-family:monospace;color:#6b7280;}'
+    +'.steps{padding:14px 18px;}'
+    +'.steps-h{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;font-family:monospace;margin-bottom:10px;}'
+    +'.step{display:flex;gap:12px;padding:10px 12px;border-radius:6px;margin-bottom:7px;border:1px solid;}'
+    +'.step.h{background:#fef2f2;border-color:#fecaca;}.step.m{background:#fffbeb;border-color:#fde68a;}.step.l{background:#f0fdf4;border-color:#bbf7d0;}'
+    +'.sn{font-size:22px;font-weight:900;width:28px;text-align:center;flex-shrink:0;}'
+    +'.step.h .sn{color:#dc2626;}.step.m .sn{color:#d97706;}.step.l .sn{color:#16a34a;}'
+    +'.st{font-weight:700;font-size:13px;color:#111827;}'
+    +'.sd{font-size:12px;color:#6b7280;margin-top:3px;}'
+    +'.stm{font-size:10px;color:#9ca3af;margin-top:4px;font-family:monospace;}'
+    +'footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
+
+  var body='<h1>SEO Recommendations Report</h1>'
+    +'<p style="color:#6b7280;font-size:13px;margin-bottom:24px;"><strong>Generated:</strong> '+new Date().toLocaleString()
+    +' &nbsp;·&nbsp; <strong>Pages:</strong> '+items.length+'</p>';
+
+  items.forEach(function(x,i){
+    var p=x.page,rec=x.rec,R=RECS[rec.type]||RECS.content;
+    var steps=getActionSteps(p,rec);
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,70);}
+    var sevCls=p.priority==='high'?'high':p.priority==='low'?'low':'med';
+    body+='<div class="card '+sevCls+'">'
+      +'<div class="ch"><div class="ch-top"><div class="rank">#'+(i+1)+'</div><div class="ch-body">'
+      +'<div><span class="tag">'+R.icon+' '+R.label+'</span>'+(rec.quickWin?'<span class="tag" style="background:#dcfce7;color:#16a34a;">⚡ QUICK WIN</span>':'')+'</div>'
+      +'<div class="url">'+shortUrl+'</div>'
+      +(p.keyword?'<div style="font-size:11px;color:#6b7280;margin-top:3px;">Keyword: <strong>'+p.keyword+'</strong></div>':'')
+      +'<div class="title">'+rec.title+'</div>'
+      +'<div class="why">'+rec.why+'</div>'
+      +(p.position||p.impressions?'<div class="chips">'
+        +(p.position?'<span class="chip">Pos: '+Math.round(p.position)+'</span>':'')
+        +(p.impressions?'<span class="chip">Impr: '+p.impressions.toLocaleString()+'</span>':'')
+        +(p.ctr?'<span class="chip">CTR: '+parseFloat(p.ctr).toFixed(1)+'%</span>':'')
+        +(p.scoreBefore?'<span class="chip">Score: '+p.scoreBefore+'/100</span>':'')
+        +'</div>':'')
+      +'</div></div></div>'
+      +'<div class="steps"><div class="steps-h">Steps — in order</div>'
+      +steps.map(function(s,si){
+        var sc=s.sev==='high'?'h':s.sev==='low'?'l':'m';
+        return '<div class="step '+sc+'"><div class="sn">'+(si+1)+'</div><div>'
+          +'<div class="st">'+s.title+'</div><div class="sd">'+s.desc+'</div>'
+          +'<div class="stm">⏱ '+s.time+'</div></div></div>';
+      }).join('')+'</div></div>';
+  });
+  body+='<footer>ContentScale SEO Recommendations · contentscale.site</footer>';
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SEO Recommendations Report</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='seo-recommendations-'+new Date().toISOString().slice(0,10)+'.html';
+  a.click();toast('✅ HTML report exported');
 }
 
 load();
