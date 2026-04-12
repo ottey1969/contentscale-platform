@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PULSE + NEXUS v4 | ContentScale Elite SEO Audit</title>
+<title>PULSE + NEXUS v5 | ContentScale Elite SEO Audit</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -37,6 +37,8 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));}
 .panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .panel-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.panel-badge-green{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+.panel-badge-blue{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25);}
 
 /* Upload */
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
@@ -54,6 +56,9 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
 .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
 
+/* GSC Auto-loaded badge */
+.gsc-auto-badge{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.25);margin-left:8px;}
+
 /* Buttons */
 .btn-gold{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:16px 36px;border-radius:6px;cursor:pointer;transition:all .2s;width:100%;margin-top:6px;}
 .btn-gold:hover{background:var(--ink);transform:translateY(-1px);}
@@ -65,26 +70,12 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .btn-purple:hover{background:var(--purple);color:#000;}
 .btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
 .btn-green:hover{background:var(--green);color:#000;}
+.btn-gold-sm{background:var(--gold);border-color:var(--gold);color:#000;}
+.btn-gold-sm:hover{opacity:.85;}
 .btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
 .btn-muted:hover{color:var(--ink);}
-
-/* Priority box — shown first */
-.priority-box{background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(244,63,63,.05));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:20px;margin-bottom:14px;}
-.priority-box-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-
-/* Opportunity table */
-.opp-table{width:100%;border-collapse:collapse;font-size:12px;}
-.opp-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
-.opp-table td{padding:9px 11px;border:1px solid var(--border);vertical-align:middle;}
-.opp-table tr:hover td{background:rgba(255,255,255,.02);}
-.opp-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--pulse),var(--gold));margin-top:3px;}
-.trend-up{color:var(--green);}
-.trend-down{color:var(--red);}
-.trend-flat{color:var(--muted);}
-
-/* Cannibalization */
-.cann-card{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:14px;margin-bottom:10px;}
-.cann-card h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+.btn-red-sm{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.2);color:var(--red);}
+.btn-red-sm:hover{background:var(--red);color:#fff;}
 
 /* Progress */
 .progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
@@ -112,10 +103,11 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .b-tech{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
 .b-win{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
 .b-gold{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.b-voice{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
 .sec-body{padding:20px;}
 .sec-body.hidden{display:none;}
 
-/* Markdown */
+/* MD rendering */
 .md{font-size:13px;line-height:1.8;color:var(--muted);}
 .md h1,.md h2,.md h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--ink);margin:16px 0 7px;}
 .md h1{font-size:25px;}
@@ -129,25 +121,54 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
 .md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
 .md pre code{background:none;border:none;padding:0;font-size:11px;}
-.md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
-.md th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;text-align:left;border:1px solid var(--border);word-break:break-word;white-space:normal;}
-.md td{padding:8px 10px;border:1px solid var(--border);word-break:break-word;white-space:normal;vertical-align:top;line-height:1.55;}
-.md tr:hover td{background:rgba(255,255,255,.02);}
-.md td.sev-high{background:rgba(244,63,63,.12);color:#f87171;font-weight:700;border-color:rgba(244,63,63,.3);}
-.md td.sev-med{background:rgba(251,191,36,.10);color:#fbbf24;font-weight:700;border-color:rgba(251,191,36,.3);}
-.md td.sev-low{background:rgba(74,222,128,.10);color:#4ade80;font-weight:700;border-color:rgba(74,222,128,.3);}
 .md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
 .md hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
 
+/* REAL TABLES — professional, not markdown slop */
+.md table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.md thead tr{background:var(--surface);}
+.md th{padding:10px 13px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);white-space:nowrap;}
+.md th:last-child{border-right:none;}
+.md td{padding:10px 13px;border-bottom:1px solid rgba(255,255,255,.04);border-right:1px solid rgba(255,255,255,.04);color:var(--muted);vertical-align:top;line-height:1.5;}
+.md td:last-child{border-right:none;}
+.md tr:last-child td{border-bottom:none;}
+.md tr:hover td{background:rgba(255,255,255,.02);}
+
+/* Post-audit action bar */
+.post-audit-bar{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:18px 22px;margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.post-audit-bar .pa-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);flex:1;min-width:200px;}
+
+/* Info/warn */
 .info{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
 .info strong{color:var(--blue);}
 .warn{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
 .warn strong{color:var(--red);}
+.success-banner{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.65;}
+.success-banner strong{color:var(--green);}
 
+/* Opportunity table */
+.opp-table{width:100%;border-collapse:collapse;font-size:12px;}
+.opp-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
+.opp-table td{padding:9px 11px;border:1px solid var(--border);vertical-align:middle;}
+.opp-table tr:hover td{background:rgba(255,255,255,.02);}
+.opp-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--pulse),var(--gold));margin-top:3px;}
+
+/* Toast */
 .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* Priority action card */
+/* Cannibalization */
+.cann-card{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:14px;margin-bottom:10px;}
+.cann-card h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+
+/* Connection banner */
+.connection-banner{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;}
+
+/* Voice search section */
+.voice-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.voice-chip{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--orange);}
+
+/* Action step cards */
 .action-card{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:7px;margin-bottom:8px;}
 .action-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
 .action-body strong{color:var(--ink);font-size:13px;display:block;margin-bottom:3px;}
@@ -163,44 +184,29 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
   .brand{font-size:20px;}
 }
 
-/* ── MOBILE RESPONSIVE ─────────────────────────── */
+/* Print styles for recommendations */
+@media print{
+  .topbar,.modes,.panel:not(.output-panel),.btn-gold,#deepRunBtn,.progress{display:none!important;}
+  .output.show{display:block!important;}
+  .sec-body.hidden{display:block!important;}
+  body{background:#fff!important;color:#000!important;}
+  .sec-card{break-inside:avoid;border:1px solid #e5e7eb!important;background:#fff!important;}
+  .md{color:#374151!important;}
+  .md h2{color:#7c3aed!important;}
+  .md td,.md th{border-color:#e5e7eb!important;color:#374151!important;}
+}
+
+/* Mobile responsive */
 html,body{max-width:100%;overflow-x:hidden;}
 img,table,iframe{max-width:100%;}
 @media(max-width:768px){
   .wrap{padding:0 14px 60px!important;}
   .topbar{padding:12px 0;gap:8px;}
-  .topbar-right{gap:5px;}
-  .btn{font-size:8px;padding:6px 10px;}
-  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
-  .add-row{flex-direction:column;}
-  .add-row input,.add-row select{width:100%!important;}
-  .filter-bar{flex-direction:column;gap:6px;}
-  .filter-bar select,.filter-bar input{width:100%!important;}
-  .card-head{flex-wrap:wrap;gap:6px;}
-  .rec-head{flex-direction:column;}
-  .prefill-box{max-width:100%;width:100%;}
-  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
-  .project-bar{flex-direction:column;}
-  .pf{min-width:100%!important;}
-  .steps{flex-direction:column!important;}
-  .step{border-right:none!important;border-bottom:1px solid var(--border);}
-  .step:last-child{border-bottom:none;}
-  .how-step{flex-direction:column;}
-  .flow-step{gap:10px;}
-  .rec-foot{flex-direction:column;gap:8px;}
-  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
-  .modes{grid-template-columns:1fr!important;}
-  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+  .g2,.g3,.g4{grid-template-columns:1fr!important;}
+  .post-audit-bar{flex-direction:column;gap:8px;}
 }
 @media(max-width:480px){
-  .overview,.summary{grid-template-columns:1fr 1fr!important;}
   .topbar{flex-direction:column;align-items:flex-start;}
-  .topbar-right{flex-wrap:wrap;}
-  .card-meta{flex-wrap:wrap;gap:4px;}
-  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
-  h1,h2,.tool-name{word-break:break-word;}
-  .panel{padding:16px!important;}
-  .section{padding:14px 16px!important;}
 }
 </style>
 </head>
@@ -209,7 +215,7 @@ img,table,iframe{max-width:100%;}
   <nav class="topbar">
     <a href="https://contentscale.site" class="brand">ContentScale</a>
     <div style="text-align:right;">
-      <div class="topbar-title">PULSE + NEXUS v4</div>
+      <div class="topbar-title">PULSE + NEXUS v5</div>
       <div class="topbar-sub">Elite SEO Audit Engine</div>
     </div>
   </nav>
@@ -225,7 +231,7 @@ img,table,iframe{max-width:100%;}
     </button>
   </div>
 
-  <!-- ══════════ BULK SCAN ══════════ -->
+  <!-- ═══════════ BULK SCAN ═══════════ -->
   <div id="bulkView" class="active">
     <div class="panel">
       <div class="panel-title">① Upload GSC CSV Files <span class="panel-badge">DRAG & DROP</span></div>
@@ -299,21 +305,28 @@ img,table,iframe{max-width:100%;}
     <div class="output" id="quickOutput"></div>
   </div>
 
-  <!-- ══════════ DEEP DIVE ══════════ -->
+  <!-- ═══════════ DEEP DIVE ═══════════ -->
   <div id="deepView">
 
     <div class="panel">
       <div class="panel-title">① Page Details</div>
       <div class="g2" style="margin-bottom:14px;">
-        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://contentscale.site/graaf-framework" oninput="onUrlChange(this.value)" onblur="onUrlBlur(this.value)"></div>
-        <div class="field"><label>Primary Keyword *</label><input type="text" id="dKw" placeholder="GRAAF framework SEO 2026"></div>
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://site.com/your-page"></div>
+        <div class="field">
+          <label>Primary Keyword *</label>
+          <input type="text" id="dKw" placeholder="roofing contractor New Jersey">
+        </div>
       </div>
       <div class="g3">
-        <div class="field"><label>Secondary Keyword</label><input type="text" id="dKw2" placeholder="EEAT content score"></div>
         <div class="field">
-          <label>Geo <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— auto from URL · edit freely</span></label>
-          <input type="text" id="dGeo" placeholder="Netherlands" value="Netherlands">
-        </div
+          <label>Secondary Keyword <span id="kw2AutoBadge" style="display:none;" class="gsc-auto-badge">✓ auto from GSC</span></label>
+          <input type="text" id="dKw2" placeholder="roof repair NJ (auto-filled from GSC queries)">
+        </div>
+        <div class="field">
+          <label>Geo / City + Country <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);text-transform:none;letter-spacing:0;">(free text)</span></label>
+          <input type="text" id="dGeo" placeholder="Bergen County, New Jersey, USA" autocomplete="off">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">e.g. Bergen County NJ, USA — or Newark, NJ — or Netherlands</div>
+        </div>
         <div class="field">
           <label>Conversion Goal</label>
           <select id="dGoal">
@@ -324,27 +337,25 @@ img,table,iframe{max-width:100%;}
           </select>
         </div>
       </div>
-      <!-- AUTO-FILL GSC -->
-      <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:14px;">
-        <div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:4px;">⇄ AUTO-FILL VIA GSC</div>
-          <div style="font-size:11px;color:var(--muted);">Enter the Page URL and click — impressions, CTR, position and top queries are automatically fetched from Google Search Console.</div>
-        </div>
-        <button onclick="autoFillGSC()" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 AUTO-FILL GSC DATA</button>
-      </div>
     </div>
 
     <div class="panel">
-      <div class="panel-title">② GSC Data</div>
-      <div class="g4" style="margin-bottom:14px;">
-        <div class="field"><label>Impressions</label><input type="number" id="dImpr" placeholder="12400"></div>
-        <div class="field"><label>CTR %</label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
-        <div class="field"><label>Avg Position</label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
-        <div class="field"><label>Mobile % <span style="color:var(--green);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;" id="mobAutoNote"></span></label><input type="number" id="dMob" placeholder="auto from GSC"></div>
+      <div class="panel-title">② GSC Data <span id="gscAutoBadge" class="panel-badge panel-badge-green" style="display:none;">✓ Auto-loaded from Workflow</span></div>
+      <!-- GSC Fetch button — when URL is filled in panel ① -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="btn-sm btn-gold-sm" onclick="fetchGSCData()" id="gscFetchBtn">⬇ Fetch GSC Data for this URL</button>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);">Reads from Workflow Manager GSC data — enter URL in ① first</span>
+        <span id="gscFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);"></span>
       </div>
+      <div class="g3" style="margin-bottom:14px;">
+        <div class="field"><label>Impressions <span id="imprAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" id="dImpr" placeholder="12400"></div>
+        <div class="field"><label>CTR % <span id="ctrAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
+        <div class="field"><label>Avg Position <span id="posAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:12px;">Mobile % — not in standard GSC CSV. Check Google Analytics Device report separately.</div>
       <div class="field">
-        <label>Top Triggering Queries (one per line)</label>
-        <textarea id="dQueries" placeholder="graaf framework seo&#10;eeat content score&#10;seo content scanner free"></textarea>
+        <label>Top Triggering Queries (one per line) <span id="queriesAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓ auto from GSC</span></label>
+        <textarea id="dQueries" placeholder="roofing contractor New Jersey&#10;roof repair NJ&#10;emergency roofer Bergen County"></textarea>
       </div>
     </div>
 
@@ -361,250 +372,224 @@ img,table,iframe{max-width:100%;}
       <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
-    <!-- META CONSISTENCY CHECKER — Stap ③b -->
+    <!-- META CONSISTENCY CHECK — reads HTML from ③ if pasted, else fetches via URL from ① -->
     <div class="panel" id="metaCheckerPanel">
       <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span></div>
-      <div class="info" id="metaCheckerInfo" style="display:none;"></div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
-        Plak je HTML hierboven (③) en klik Check — het systeem vergelijkt title, og:title, twitter:title, schema headline, dateModified, author en meer. Inconsistenties worden direct gemarkeerd.
+        Paste your page HTML in ③ then click Check. The system compares: title, H1, og:title, twitter:title, schema headline, dateModified, author, canonical. Inconsistencies and missing tags are flagged instantly. <strong style="color:var(--gold);">Also detects duplicate H1s</strong> — more than one H1 is flagged as an error.
       </div>
+      <div id="metaCheckerInfo" style="display:none;margin-bottom:12px;"></div>
       <button class="btn-gold" style="font-size:16px;padding:12px 28px;width:auto;" onclick="runMetaCheck()">🔍 Check Meta Consistency</button>
       <div id="metaCheckResults" style="margin-top:16px;"></div>
     </div>
 
+    <!-- COMPETITOR — manual, clear instructions -->
     <div class="panel">
-      <div class="panel-title">④ Competitor HTML <span class="panel-badge">GAME CHANGER</span>
-        <span id="compAutoStatus" style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);font-weight:400;letter-spacing:0;text-transform:none;"></span>
-      </div>
+      <div class="panel-title">④ Competitor HTML <span class="panel-badge">REAL DIFF</span></div>
       <div class="info">
-        <strong>Step 1:</strong> Click <strong>🔍 Find Competitors</strong> → AI fills the URLs below.<br>
-        <strong>Step 2:</strong> Open each URL → View Source (<code>Ctrl+U</code>) → Ctrl+A → Ctrl+C → paste into the HTML field.<br>
-        <strong>Leave empty</strong> → defaults to Surfer SEO &amp; MarketMuse trained benchmark.
+        <strong>How to get competitor HTML:</strong> Google your primary keyword (on .com, .nl, or the relevant domain for your geo) → open the first 2 ranking pages → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below. Leave empty to let the AI compare based on what typically ranks well for this keyword and geo.
       </div>
-
-      <!-- Find competitors strip -->
-      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-        <div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--purple);margin-bottom:3px;">🔍 FIND TOP COMPETING PAGES</div>
-          <div style="font-size:11px;color:var(--muted);">AI looks up who ranks top 3 for your keyword → fills the URL fields → you open those pages, copy HTML, paste below.</div>
-        </div>
-        <button onclick="findTopCompetitors()" id="compFindBtn" style="background:var(--purple);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🔍 FIND COMPETITORS</button>
-      </div>
-      <div id="compFindResult" style="margin-bottom:10px;"></div>
-
       <div class="g2" style="gap:16px;">
         <div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Competitor 1 URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— auto-filled by AI or paste manually</span></label>
-            <input type="url" id="dComp1url" placeholder="https://example.com/your-topic">
-          </div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL (optional)</label><input type="url" id="dComp1url" placeholder="https://competitor-1.com/page"></div>
           <div class="field">
-            <label>Competitor 1 HTML <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— View Source → Ctrl+A → Ctrl+C → paste here</span></label>
-            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML — OR enter URL above and click ↓ Fetch" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
+            <label>Competitor 1 HTML — paste from View Source</label>
+            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Right-click page → View Page Source → Ctrl+A → Ctrl+C → paste here" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
           </div>
           <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
         <div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Competitor 2 URL <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— auto-filled by AI or paste manually</span></label>
-            <input type="url" id="dComp2url" placeholder="https://example.com/your-topic">
-          </div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL (optional)</label><input type="url" id="dComp2url" placeholder="https://competitor-2.com/page"></div>
           <div class="field">
-            <label>Competitor 2 HTML <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">— View Source → Ctrl+A → Ctrl+C → paste here</span></label>
-            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Paste HTML — OR enter URL above and click ↓ Fetch" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
+            <label>Competitor 2 HTML — paste from View Source</label>
+            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Right-click page → View Page Source → Ctrl+A → Ctrl+C → paste here" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
           </div>
           <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
         </div>
       </div>
     </div>
 
+    <!-- INTERNAL LINK FINDER — auto-filled from workflow + sitemap fetch -->
     <div class="panel">
-      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span></div>
+      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span> <span id="siteUrlsAutoBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto from Workflow</span></div>
       <div class="info">
-        <strong>Auto-loads from sitemap</strong> when you enter URL in ① → or paste URLs manually below. Engine finds the 5 best pages to link FROM and TO with exact anchor text.
+        The AI finds the 5 best pages to link FROM and TO, with exact anchor text. Pre-filled automatically from Workflow Manager. Or paste your sitemap URLs below, or fetch them from your sitemap.
       </div>
-      <!-- Sitemap auto-fetch strip -->
-      <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-        <div style="font-size:11px;color:var(--muted);">
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);">🗺 SITEMAP AUTO-LOAD</span>
-          — enters URL in ① → sitemap fetched automatically. Or paste manually below.
-        </div>
-        <button onclick="fetchSitemapForInternalLinks()" id="sitemapFetchBtn" class="btn-sm btn-blue">↓ Fetch Sitemap</button>
-      </div>
-      <!-- Auto-analyse strip -->
-      <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-        <div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:3px;">🔗 AUTO-ANALYSE INTERNAL LINKS</div>
-          <div style="font-size:11px;color:var(--muted);">Add site URLs below → click to get AI-picked anchor text + pages to link from/to right now.</div>
-        </div>
-        <button onclick="autoAnalyseInternalLinks()" id="intLinkBtn" style="background:var(--green);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🤖 ANALYSE LINKS</button>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="url" id="sitemapFetchUrl" placeholder="https://yoursite.com/sitemap.xml" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
+        <button class="btn-sm btn-blue" onclick="fetchSitemap()" id="sitemapFetchBtn">⬇ Fetch Sitemap</button>
+        <span id="sitemapFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);"></span>
       </div>
       <div class="field">
-        <label>Your Site URLs (one per line)</label>
-        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://contentscale.site/&#10;https://contentscale.site/graaf-framework&#10;https://contentscale.site/craft-framework" oninput="updateUrlCount()"></textarea>
+        <label>Your Site URLs (one per line) — or pre-filled from Workflow</label>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://yoursite.com/&#10;https://yoursite.com/roofing-services&#10;https://yoursite.com/about&#10;(auto-filled from Workflow Manager if coming from there)"></textarea>
       </div>
       <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
-      <div id="intLinkResult" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- VOICE SEARCH — fully automated, no input needed -->
+    <div class="panel">
+      <div class="panel-title">⑥ Voice Search <span class="panel-badge b-voice">AUTO · AI POWERED</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
+        Fully automated — the AI generates the voice search analysis based on your keyword, geo, and page content. It covers: eligibility, top 5 near-me queries, featured snippet optimization, and local schema. Select which assistant to optimize for:
+      </div>
+      <div class="field" style="max-width:280px;">
+        <label>Target Assistant / Device</label>
+        <select id="dVoiceDevice">
+          <option value="all">All — Google, Siri, Alexa</option>
+          <option value="google">Google Assistant / Search</option>
+          <option value="siri">Siri / Apple Maps</option>
+          <option value="local">Local voice (near me searches)</option>
+        </select>
+      </div>
     </div>
 
     <div class="panel">
-      <div class="panel-title">⑥ Known Constraints
-        <span id="constraintStatus" style="margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);font-weight:400;letter-spacing:0;text-transform:none;"></span>
-      </div>
-      <!-- Auto-detect strip -->
-      <div style="background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-        <div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;">🤖 AUTO-DETECT CONSTRAINTS</div>
-          <div style="font-size:11px;color:var(--muted);">Enter URL in ① → click to detect CMS, hosting, language, GDPR, multilingual, page builder, CDN and more.</div>
-        </div>
-        <button onclick="autoDetectConstraints()" id="constraintBtn" style="background:var(--gold);color:#000;border:none;border-radius:6px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;white-space:nowrap;">🔍 DETECT</button>
-      </div>
-      <div class="field">
-        <label>Known Constraints <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;">(auto-filled or type manually)</span></label>
-        <input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN">
-      </div>
+      <div class="panel-title">⑦ Optional</div>
+      <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN, no CMS access"></div>
     </div>
 
-    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 10-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
+    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 11-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
 
     <div class="progress" id="deepProgress">
-      <div class="prog-label">Full Audit Running — 10 Steps · Do Not Close</div>
+      <div class="prog-label">Full Audit Running — 11 Steps · Do Not Close</div>
       <div id="deepSteps"></div>
       <div class="prog-bar-wrap"><div class="prog-bar" id="deepBar"></div></div>
     </div>
     <div class="output" id="deepOutput"></div>
+
+    <!-- POST-AUDIT ACTION BAR — appears after audit completes -->
+    <div class="post-audit-bar" id="postAuditBar" style="display:none;">
+      <div class="pa-title">✅ Audit Complete — What next?</div>
+      <button class="btn-sm btn-gold-sm" onclick="printAudit()">🖨️ Print / PDF</button>
+      <button class="btn-sm btn-green" onclick="exportMarkdown()">📝 Export MD for AI</button>
+      <button class="btn-sm btn-purple" onclick="exportRecommendationsReport()">📋 Client Recommendations</button>
+      <a href="/audit-recommendations" class="btn-sm btn-blue">🎯 Full Recommendations</a>
+      <a href="/audit-progress-tracker" class="btn-sm btn-muted">📈 Progress Tracker</a>
+      <a href="/audit-workflow" class="btn-sm btn-muted">← Back to Workflow</a>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// AUTO-LOAD DATA FROM RECOMMENDATIONS PAGE
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-(function autoLoadFromWorkflow() {
-  // ── Collect transfer data from all possible sources ───────────
-  let transferData = null;
-
-  // 1. localStorage (primary — written by openInAudit)
-  try {
-    const stored = localStorage.getItem('cs_audit_transfer');
-    if (stored) transferData = JSON.parse(stored);
-  } catch(e) {}
-
-  // 2. sessionStorage fallback
-  if (!transferData) {
-    try {
-      const stored = sessionStorage.getItem('cs_audit_transfer');
-      if (stored) transferData = JSON.parse(stored);
-    } catch(e) {}
-  }
-
-  // 3. URL params fallback (lightweight, used when localStorage unavailable)
-  if (!transferData) {
-    const p = new URLSearchParams(window.location.search);
-    if (p.get('url')) {
-      transferData = {
-        pageUrl:     p.get('url'),
-        keyword:     p.get('kw')    || '',
-        position:    p.get('pos')   || '',
-        impressions: p.get('impr')  || '',
-        ctr:         p.get('ctr')   || '',
-        source:      p.get('source')|| '',
-      };
-    }
-  }
-
-  if (!transferData || !transferData.pageUrl) return;
-
-  const fillForm = () => {
-    try {
-      // ── Switch to Deep Dive immediately ───────────────────────
-      if (typeof setMode === 'function') setMode('deep');
-
-      // ── ① Page Details panel ──────────────────────────────────
-      const set = (id, val) => { if (val === undefined || val === null || val === '') return; const el = document.getElementById(id); if (el) el.value = val; };
-
-      set('dUrl',  transferData.pageUrl);
-      set('dKw',   transferData.keyword      || transferData.topKeyword || '');
-      set('dKw2',  transferData.secondaryKeyword || '');
-
-      // Geo dropdown — match option value
-      if (transferData.geo) {
-        const geoEl = document.getElementById('dGeo');
-        if (geoEl) {
-          for (const opt of geoEl.options) {
-            if (opt.value === transferData.geo) { geoEl.value = transferData.geo; break; }
-          }
-        }
-      }
-
-      // ── ② GSC Data panel ──────────────────────────────────────
-      set('dImpr',    transferData.impressions);
-      set('dCtr',     transferData.ctr);
-      set('dPos',     transferData.position);
-      if (transferData.mobilePct !== undefined) set('dMob', transferData.mobilePct);
-
-      // Top Triggering Queries textarea
-      if (transferData.topQueries) set('dQueries', transferData.topQueries);
-
-      // ── ⑤ Internal Link Finder — pre-fill with all workflow URLs
-      if (transferData.siteUrls) set('dSiteUrls', transferData.siteUrls);
-      // Also try from localStorage sitemap key
-      if (!transferData.siteUrls) {
-        try {
-          const sm = localStorage.getItem('cs_sitemap_urls');
-          if (sm) set('dSiteUrls', sm);
-        } catch(e) {}
-      }
-
-      // ── Store globally ─────────────────────────────────────────
-      window._workflowTransfer = transferData;
-
-      // ── Count how many fields were filled for the notification ─
-      const filled = [
-        transferData.keyword, transferData.position, transferData.impressions,
-        transferData.ctr, transferData.topQueries, transferData.geo, transferData.siteUrls
-      ].filter(Boolean).length;
-
-      // ── Success notification ───────────────────────────────────
-      const notif = document.createElement('div');
-      notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:14px 20px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:IBM Plex Mono,monospace;font-size:12px;line-height:1.6;max-width:320px;';
-      notif.innerHTML = '✅ <strong>Workflow data loaded</strong><br>'
-        + (transferData.keyword    ? '🔑 Keyword: '     + transferData.keyword.slice(0,40)      + '<br>' : '')
-        + (transferData.position   ? '📍 Position: '   + transferData.position                  + '<br>' : '')
-        + (transferData.impressions? '👁 Impressions: ' + Number(transferData.impressions).toLocaleString() + '<br>' : '')
-        + (transferData.topQueries ? '🔍 ' + transferData.topQueries.split('\n').length + ' queries loaded<br>' : '')
-        + (transferData.siteUrls   ? '🔗 ' + transferData.siteUrls.split('\n').length + ' site URLs for internal links<br>' : '');
-      document.body.appendChild(notif);
-      setTimeout(() => { notif.style.transition='opacity .4s'; notif.style.opacity='0'; setTimeout(()=>notif.remove(),400); }, 5000);
-
-      // ── Auto-run audit when coming from workflow ───────────────
-      if (transferData.source === 'workflow') {
-        setTimeout(() => {
-          const runBtn = document.getElementById('deepRunBtn');
-          if (runBtn && !runBtn.disabled) runBtn.click();
-        }, 2200);
-      }
-
-    } catch(e) {
-      console.error('❌ [PULSE+NEXUS] fillForm error:', e);
-    }
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fillForm);
-  } else {
-    setTimeout(fillForm, 120);
-  }
-})();
-
-
 let gscPages = [];
 let gscQueries = [];
-
 const RAILWAY = 'https://app.contentscale.site';
 
-// ── Auto-load GSC from Workflow Manager localStorage ──────────
+// ── Toast ──────────────────────────────────────────────────
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── Mode toggle ────────────────────────────────────────────
+function setMode(m) {
+  document.getElementById('bulkView').className = m==='bulk'?'active':'';
+  document.getElementById('deepView').className = m==='deep'?'active':'';
+  document.getElementById('modeBulk').className = 'mode-btn'+(m==='bulk'?' active':'');
+  document.getElementById('modeDeep').className = 'mode-btn'+(m==='deep'?' active':'');
+}
+
+// ── Auto-load from Workflow Manager ───────────────────────
+(function autoLoadFromWorkflow(){
+  // Try localStorage transfer object first
+  let transfer = null;
+  try {
+    const raw = localStorage.getItem('cs_audit_transfer') || localStorage.getItem('cs_audit_transfer_2');
+    if (raw) transfer = JSON.parse(raw);
+  } catch(e){}
+
+  // Fallback: URL params
+  const p = new URLSearchParams(window.location.search);
+  if (!transfer && p.get('url')) {
+    transfer = {
+      pageUrl: p.get('url'),
+      keyword: p.get('kw') || '',
+      position: p.get('pos') || '',
+      impressions: p.get('impr') || '',
+      ctr: p.get('ctr') || '',
+      topQueries: '',
+      secondaryKeyword: '',
+      geo: '',
+      siteUrls: '',
+      workflowId: p.get('wf') || ''
+    };
+  }
+
+  if (!transfer || !transfer.pageUrl) return;
+
+  const fill = () => {
+    try {
+      setMode('deep');
+
+      if (transfer.pageUrl)  document.getElementById('dUrl').value  = transfer.pageUrl;
+      if (transfer.keyword)  document.getElementById('dKw').value   = transfer.keyword;
+      if (transfer.position) document.getElementById('dPos').value  = transfer.position;
+      if (transfer.impressions) document.getElementById('dImpr').value = transfer.impressions;
+      if (transfer.ctr)      document.getElementById('dCtr').value  = transfer.ctr;
+
+      // Secondary keyword — auto from GSC queries, NOT same as primary
+      if (transfer.secondaryKeyword && transfer.secondaryKeyword !== transfer.keyword) {
+        document.getElementById('dKw2').value = transfer.secondaryKeyword;
+        document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+      }
+
+      // Geo — auto from workflow TLD detection
+      if (transfer.geo) {
+        document.getElementById('dGeo').value = transfer.geo;
+      }
+
+      // Top queries
+      if (transfer.topQueries) {
+        document.getElementById('dQueries').value = transfer.topQueries;
+        document.getElementById('queriesAutoMark').style.display = 'inline';
+      }
+
+      // Site URLs for internal link finder
+      if (transfer.siteUrls) {
+        document.getElementById('dSiteUrls').value = transfer.siteUrls;
+        document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        const urls = transfer.siteUrls.split('\n').filter(l=>l.trim().startsWith('http'));
+        document.getElementById('urlCount').textContent = urls.length ? `✓ ${urls.length} URLs loaded` : '';
+      }
+
+      // Show auto badges
+      if (transfer.impressions) document.getElementById('imprAutoMark').style.display = 'inline';
+      if (transfer.ctr) document.getElementById('ctrAutoMark').style.display = 'inline';
+      if (transfer.position) document.getElementById('posAutoMark').style.display = 'inline';
+      if (transfer.impressions || transfer.ctr || transfer.position) {
+        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+      }
+
+      // Show connection banner
+      const deepView = document.getElementById('deepView');
+      const chips = [];
+      if (transfer.position) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ${parseFloat(transfer.position).toFixed(1)}</span>`);
+      if (transfer.impressions) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${parseInt(transfer.impressions).toLocaleString()} impr</span>`);
+      if (transfer.ctr) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${transfer.ctr}% CTR</span>`);
+      if (gscPages.length) chips.push(`<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">✓ ${gscPages.length} GSC pages</span>`);
+
+      const banner = document.createElement('div');
+      banner.className = 'connection-banner';
+      banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <strong style="font-size:12px;font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--gold);">Connected from Workflow Manager</strong>
+        ${transfer.workflowId ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;font-family:\'IBM Plex Mono\',monospace;">← Back to Workflow</a>' : ''}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips.join('')}</div>
+      <div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);font-family:'IBM Plex Mono',monospace;">Paste page HTML below → Run Full Audit</div>`;
+      deepView.insertBefore(banner, deepView.firstChild);
+
+      window._wfId = transfer.workflowId || '';
+    } catch(e) { console.error('Auto-fill error:', e); }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
+  else setTimeout(fill, 100);
+})();
+
+// ── Auto-load shared GSC ───────────────────────────────────
 function loadSharedGSC() {
   try {
     const raw = localStorage.getItem('cs_shared_gsc');
@@ -621,7 +606,6 @@ function loadSharedGSC() {
       })).filter(p => p.page && p.page.includes('.'));
       const el = document.getElementById('pagesStatus');
       if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscPages.length} pages from Workflow Manager</span>`;
-      console.log('[PULSE+NEXUS] Loaded', gscPages.length, 'pages from shared GSC');
     }
     if (data.queries && data.queries.length) {
       gscQueries = data.queries.map(q => ({query: q.query || '', position: q.position || 0})).filter(q => q.query);
@@ -629,300 +613,101 @@ function loadSharedGSC() {
       if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscQueries.length} queries from Workflow Manager</span>`;
     }
     return gscPages.length > 0;
-  } catch(e) { console.warn('[PULSE+NEXUS] loadSharedGSC error:', e.message); return false; }
+  } catch(e) { return false; }
 }
 setTimeout(loadSharedGSC, 200);
 
+// ── Fetch GSC data for URL from panel ① ───────────────────
+function fetchGSCData() {
+  const url = document.getElementById('dUrl').value.trim();
+  if (!url) { toast('⚠ Enter a Page URL in ① first'); return; }
+  const btn = document.getElementById('gscFetchBtn');
+  const status = document.getElementById('gscFetchStatus');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  status.textContent = '';
 
-// ── META CONSISTENCY CHECKER ─────────────────────────────────
-async function runMetaCheck() {
-  var html = document.getElementById('dHtml').value.trim();
-  var pageUrl = document.getElementById('dUrl').value.trim();
-
-  // If no HTML pasted, try to fetch via AI analysis of the URL
-  if (!html && pageUrl) {
-    document.getElementById('metaCheckerInfo').style.display = 'block';
-    document.getElementById('metaCheckerInfo').innerHTML = '<span style="color:var(--gold)">⏳ No HTML pasted — analysing URL via AI…</span>';
+  // Try to match against loaded GSC pages from Workflow
+  const raw = (() => { try { return localStorage.getItem('cs_shared_gsc'); } catch(e) { return null; } })();
+  if (raw) {
     try {
-      var prompt = 'You are a technical SEO analyst. For the URL: ' + pageUrl + '\n\nBased on your knowledge of this site/page, simulate a meta consistency check. Report on:\n- Title tag (estimated)\n- H1 (estimated)\n- Meta description presence\n- og:title / og:description\n- Schema type likely present\n- dateModified freshness\n- Canonical likely correct?\n\nFormat as a brief audit report. Note: this is based on trained knowledge, not live fetch.';
-      var result = await callGemini(prompt, 600);
-      document.getElementById('metaCheckerInfo').innerHTML = '<div style="white-space:pre-wrap;font-size:12px;line-height:1.7;color:var(--muted);">ℹ AI-based estimate (paste HTML in ③ for exact results):\n\n' + result + '</div>';
-    } catch(e) {
-      document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--gold)">⚠ Paste your page HTML in field ③ for exact meta check results.</strong>';
-    }
-    return;
-  }
-  if (!html) {
-    document.getElementById('metaCheckerInfo').style.display = 'block';
-    document.getElementById('metaCheckerInfo').innerHTML = '<strong style="color:var(--gold)">⚠ Enter URL in ① or paste page HTML in ③ for meta check.</strong>';
-    return;
-  }
-  document.getElementById('metaCheckerInfo').style.display = 'none';
+      const data = JSON.parse(raw);
+      const match = (data.pages||[]).find(p => {
+        const pu = (p.page||p.url||'').toLowerCase().replace(/\/$/,'');
+        const u = url.toLowerCase().replace(/\/$/,'');
+        return pu === u || pu.includes(u.replace(/^https?:\/\//,'')) || u.includes(pu.replace(/^https?:\/\//,''));
+      });
+      if (match) {
+        if (match.impressions) { document.getElementById('dImpr').value = match.impressions; document.getElementById('imprAutoMark').style.display='inline'; }
+        if (match.ctr) { document.getElementById('dCtr').value = parseFloat(match.ctr).toFixed(1); document.getElementById('ctrAutoMark').style.display='inline'; }
+        if (match.position) { document.getElementById('dPos').value = parseFloat(match.position).toFixed(1); document.getElementById('posAutoMark').style.display='inline'; }
+        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+        status.textContent = `✓ Matched — pos ${Math.round(match.position||0)}, ${(match.impressions||0).toLocaleString()} impr`;
+        status.style.color = 'var(--green)';
+        btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
 
-  var doc = new DOMParser().parseFromString(html, 'text/html');
-  var results = [];
-
-  // ── Extract all fields ──
-  var title       = (doc.querySelector('title')?.textContent || '').trim();
-  var h1          = Array.from(doc.querySelectorAll('h1')).map(e => e.textContent.trim()).filter(Boolean)[0] || '';
-  var metaDesc    = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
-  var ogTitle     = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() || '';
-  var ogDesc      = doc.querySelector('meta[property="og:description"]')?.getAttribute('content')?.trim() || '';
-  var ogImage     = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')?.trim() || '';
-  var ogUrl       = doc.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
-  var twTitle     = doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content')?.trim() || '';
-  var twDesc      = doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content')?.trim() || '';
-  var twCard      = doc.querySelector('meta[name="twitter:card"]')?.getAttribute('content')?.trim() || '';
-  var twImage     = doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
-  var canonical   = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')?.trim() || '';
-  var viewport    = doc.querySelector('meta[name="viewport"]')?.getAttribute('content')?.trim() || '';
-
-  // Schema extraction
-  var schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s => {
-    try { return JSON.parse(s.textContent); } catch(e) { return null; }
-  }).filter(Boolean);
-  var flatSchemas = schemas.flatMap(s => Array.isArray(s) ? s : (s['@graph'] ? s['@graph'] : [s]));
-
-  var articleSchema = flatSchemas.find(s => ['Article','BlogPosting','NewsArticle','WebPage','TechArticle'].includes(s['@type']));
-  var orgSchema     = flatSchemas.find(s => ['Organization','LocalBusiness','Person'].includes(s['@type']));
-  var faqSchema     = flatSchemas.find(s => s['@type'] === 'FAQPage');
-
-  var schemaHeadline    = articleSchema?.headline?.trim() || '';
-  var schemaDesc        = articleSchema?.description?.trim() || '';
-  var schemaDatePub     = articleSchema?.datePublished || '';
-  var schemaDateMod     = articleSchema?.dateModified || '';
-  var schemaAuthorName  = (articleSchema?.author?.name || articleSchema?.author?.[0]?.name || '').trim();
-  var schemaImage       = articleSchema?.image?.url || articleSchema?.image || '';
-  var schemaUrl         = articleSchema?.url || '';
-
-  var now = new Date();
-  var thisYear = now.getFullYear().toString();
-  var thisMonth = (now.getMonth()+1).toString().padStart(2,'0');
-  var today = thisYear + '-' + thisMonth;
-
-  // ── Check functions ──
-  function ok(label, value, note) {
-    results.push({ status:'ok', label, value, note });
-  }
-  function warn(label, value, fix, severity) {
-    results.push({ status:'warn', label, value, fix, severity: severity||'medium' });
-  }
-  function err(label, value, fix) {
-    results.push({ status:'err', label, value, fix, severity:'high' });
+        // Also try to get queries for this URL
+        const queries = (data.queries||[]).filter(q => q.query).slice(0, 15);
+        if (queries.length && !document.getElementById('dQueries').value.trim()) {
+          document.getElementById('dQueries').value = queries.map(q => q.query).join('\n');
+          document.getElementById('queriesAutoMark').style.display = 'inline';
+        }
+        toast('✅ GSC data loaded for this URL');
+        return;
+      }
+    } catch(e) {}
   }
 
-  // ── 1. Title tag ──
-  if (!title) err('Title tag', 'MISSING', 'Voeg <title> toe met primair keyword (50-60 chars)');
-  else if (title.length < 40) warn('Title tag te kort', title + ' (' + title.length + ' chars)', 'Breid uit naar 50-60 chars', 'low');
-  else if (title.length > 65) warn('Title tag te lang', title + ' (' + title.length + ' chars)', 'Trim naar 50-60 chars — wordt afgekapt in Google', 'medium');
-  else ok('Title tag', title + ' (' + title.length + ' chars)', '✓ Goede lengte');
+  // No match found
+  status.textContent = 'No GSC data found for this URL — import GSC CSV in Workflow Manager first';
+  status.style.color = 'var(--amber)';
+  btn.textContent = '⬇ Fetch GSC Data for this URL'; btn.disabled = false;
+  toast('⚠ No GSC data found — import via Workflow Manager first');
+}
 
-  // ── 2. H1 vs Title consistency ──
-  if (!h1) err('H1', 'MISSING', 'Voeg exact 1 H1 toe met primair keyword');
-  else {
-    var titleCore = title.split(/[|\\-–:]/)[0].trim().toLowerCase();
-    var h1Core = h1.toLowerCase().substring(0,60);
-    var overlap = titleCore.split(' ').filter(w => w.length > 3 && h1Core.includes(w)).length;
-    if (overlap === 0) warn('H1 ↔ Title inconsistentie', 'H1: "'+h1.substring(0,60)+'" / Title: "'+title.substring(0,60)+'"', 'H1 en Title moeten hetzelfde primaire keyword bevatten', 'high');
-    else ok('H1 ↔ Title overlap', 'H1: "'+h1.substring(0,50)+'"', '✓ Keyword overlap gevonden');
-  }
-
-  // ── 3. og:title ──
-  if (!ogTitle) err('og:title', 'MISSING', 'Voeg <meta property="og:title"> toe — identiek aan je title tag');
-  else {
-    var sim = ogTitle.toLowerCase().split(' ').filter(w => w.length > 3 && title.toLowerCase().includes(w)).length;
-    if (sim === 0) warn('og:title ↔ Title mismatch', 'og:title: "'+ogTitle+'" / title: "'+title+'"', 'og:title moet overeenkomen met je <title> tag', 'high');
-    else ok('og:title', ogTitle.substring(0,60), '✓ Consistent met title');
-  }
-
-  // ── 4. twitter:title ──
-  if (!twTitle) warn('twitter:title', 'MISSING', 'Voeg <meta name="twitter:title"> toe', 'medium');
-  else {
-    var simTw = twTitle.toLowerCase().split(' ').filter(w => w.length > 3 && title.toLowerCase().includes(w)).length;
-    if (simTw === 0) warn('twitter:title ↔ Title mismatch', '"'+twTitle+'"', 'Zet gelijk aan title tag', 'medium');
-    else ok('twitter:title', twTitle.substring(0,60), '✓ Consistent');
-  }
-
-  // ── 5. Schema headline ──
-  if (!schemaHeadline && articleSchema) warn('Schema headline', 'MISSING in Article schema', 'Voeg "headline": "'+title+'" toe aan je Article schema', 'high');
-  else if (schemaHeadline) {
-    var schSim = schemaHeadline.toLowerCase().split(' ').filter(w => w.length > 3 && title.toLowerCase().includes(w)).length;
-    if (schSim === 0) warn('Schema headline ↔ Title mismatch', '"'+schemaHeadline+'"', 'Schema headline moet overeenkomen met je <title> tag', 'high');
-    else ok('Schema headline', '"'+schemaHeadline.substring(0,60)+'"', '✓ Consistent met title');
-  }
-  if (!articleSchema) warn('Article schema', 'MISSING', 'Voeg Article/BlogPosting JSON-LD toe aan <head>', 'high');
-
-  // ── 6. dateModified ──
-  if (!schemaDateMod && articleSchema) err('Schema dateModified', 'MISSING', 'Voeg "dateModified": "'+now.toISOString().split('T')[0]+'" toe aan je Article schema');
-  else if (schemaDateMod) {
-    var modYear = schemaDateMod.substring(0,4);
-    var modMonth = schemaDateMod.substring(0,7);
-    if (modYear !== thisYear) warn('Schema dateModified — jaar verouderd', '"'+schemaDateMod+'"', 'Update naar '+now.toISOString().split('T')[0]+' — Google ziet dit als verouderd', 'high');
-    else if (modMonth !== today) warn('Schema dateModified — maand niet actueel', '"'+schemaDateMod+'"', 'Update naar '+now.toISOString().split('T')[0]+' na elke content update', 'medium');
-    else ok('Schema dateModified', '"'+schemaDateMod+'"', '✓ Actueel');
-  }
-
-  // ── 7. datePublished ──
-  if (!schemaDatePub && articleSchema) warn('Schema datePublished', 'MISSING', 'Voeg "datePublished" toe aan Article schema', 'medium');
-  else if (schemaDatePub) {
-    ok('Schema datePublished', '"'+schemaDatePub+'"', '');
-  }
-
-  // ── 8. Meta description ──
-  if (!metaDesc) err('Meta description', 'MISSING', 'Voeg <meta name="description"> toe (150-160 chars)');
-  else if (metaDesc.length < 100) warn('Meta description te kort', metaDesc.length+' chars', 'Breid uit naar 150-160 chars', 'medium');
-  else if (metaDesc.length > 165) warn('Meta description te lang', metaDesc.length+' chars — wordt afgekapt', 'Trim naar 150-160 chars', 'low');
-  else ok('Meta description', metaDesc.length+' chars', '✓ Goede lengte');
-
-  // ── 9. og:description ──
-  if (!ogDesc) warn('og:description', 'MISSING', 'Voeg <meta property="og:description"> toe', 'low');
-  else ok('og:description', ogDesc.substring(0,60)+'…', '✓ Aanwezig');
-
-  // ── 10. og:image ──
-  if (!ogImage) warn('og:image', 'MISSING', 'Voeg og:image toe (aanbevolen: 1200×630px)', 'medium');
-  else {
-    if (!ogImage.startsWith('http')) warn('og:image — relatieve URL', ogImage, 'Gebruik absolute URL (https://...)', 'high');
-    else ok('og:image', ogImage.substring(0,60)+'…', '');
-    if (ogImage === twImage || !twImage) {
-      if (!twImage) warn('twitter:image', 'MISSING', 'Voeg twitter:image toe (kan zelfde zijn als og:image)', 'low');
+// ── Fetch Sitemap URLs ─────────────────────────────────────
+async function fetchSitemap() {
+  const url = document.getElementById('sitemapFetchUrl').value.trim() || 
+              (document.getElementById('dUrl').value.trim().replace(/\/[^\/]*$/, '/sitemap.xml'));
+  if (!url) { toast('⚠ Enter sitemap URL'); return; }
+  const btn = document.getElementById('sitemapFetchBtn');
+  const status = document.getElementById('sitemapFetchStatus');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  status.textContent = 'Fetching via proxy...';
+  try {
+    const r = await fetch(`${RAILWAY}/api/sitemap/urls`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url})
+    });
+    const d = await r.json();
+    if (d.success && d.urls && d.urls.length) {
+      document.getElementById('dSiteUrls').value = d.urls.join('\n');
+      document.getElementById('urlCount').textContent = `✓ ${d.urls.length} URLs loaded from sitemap`;
+      document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+      status.textContent = `✓ ${d.urls.length} URLs loaded`;
+      status.style.color = 'var(--green)';
+      toast(`✅ ${d.urls.length} URLs loaded from sitemap`);
     } else {
-      ok('twitter:image', twImage.substring(0,60)+'…', '');
+      status.textContent = d.error || 'No URLs found in sitemap';
+      status.style.color = 'var(--amber)';
+      toast('⚠ No URLs found — check sitemap URL');
     }
+  } catch(e) {
+    status.textContent = 'Fetch failed — paste URLs manually';
+    status.style.color = 'var(--red)';
+    toast('⚠ Sitemap fetch failed');
   }
-
-  // ── 11. twitter:card ──
-  if (!twCard) warn('twitter:card', 'MISSING', 'Voeg <meta name="twitter:card" content="summary_large_image"> toe', 'medium');
-  else ok('twitter:card', twCard, '');
-
-  // ── 12. canonical ──
-  if (!canonical) warn('Canonical tag', 'MISSING', 'Voeg <link rel="canonical" href="https://..."> toe', 'medium');
-  else {
-    if (!canonical.startsWith('http')) warn('Canonical — relatieve URL', canonical, 'Gebruik absolute URL', 'high');
-    else ok('Canonical', canonical, '');
-  }
-
-  // ── 13. og:url ──
-  if (!ogUrl) warn('og:url', 'MISSING', 'Voeg <meta property="og:url"> toe — zelfde als canonical', 'low');
-  else if (canonical && ogUrl !== canonical) warn('og:url ↔ Canonical mismatch', 'og:url: '+ogUrl+' / canonical: '+canonical, 'og:url en canonical moeten identiek zijn', 'high');
-  else ok('og:url', ogUrl.substring(0,60), '✓ Consistent met canonical');
-
-  // ── 14. Schema author ──
-  if (articleSchema && !schemaAuthorName) warn('Schema author', 'MISSING', 'Voeg "author": {"@type":"Person","name":"Jouw naam"} toe aan Article schema', 'medium');
-  else if (schemaAuthorName) ok('Schema author', '"'+schemaAuthorName+'"', '');
-
-  // ── 15. viewport ──
-  if (!viewport) err('Meta viewport', 'MISSING', 'Voeg <meta name="viewport" content="width=device-width, initial-scale=1"> toe');
-  else ok('Meta viewport', viewport, '✓ Aanwezig');
-
-  // ── 16. Year in content ──
-  var bodyText = (doc.body?.innerText || '').toLowerCase();
-  var lastYear = (thisYear - 1).toString();
-  var yearMatches = (html.match(/202[0-9]/g) || []);
-  var oldYears = yearMatches.filter(y => parseInt(y) < parseInt(thisYear) - 1);
-  if (oldYears.length > 3) warn('Verouderde jaren in HTML', 'Gevonden: '+[...new Set(oldYears)].join(', '), 'Controleer of '+[...new Set(oldYears)].join('/')+ ' moet worden bijgewerkt naar '+thisYear, 'medium');
-  else if (oldYears.length > 0) ok('Jaren in HTML', 'Verouderde jaren: '+[...new Set(oldYears)].join(', '), '⚠ Controleer of updates nodig zijn');
-  else ok('Jaren in HTML', 'Alleen actuele jaren gevonden', '✓');
-
-  // ── Render results ──
-  var errs  = results.filter(r => r.status === 'err');
-  var warns = results.filter(r => r.status === 'warn');
-  var oks   = results.filter(r => r.status === 'ok');
-
-  var score = Math.round((oks.length / results.length) * 100);
-  var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : 'var(--red)';
-
-  var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;">'
-    + '<div><span style="font-family:IBM Plex Mono,monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistentie</span>'
-    + '<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
-    + '<div style="font-size:13px;color:var(--muted);">'
-    + '<span style="color:var(--red);">'+errs.length+' fouten</span> · '
-    + '<span style="color:var(--gold);">'+warns.length+' waarschuwingen</span> · '
-    + '<span style="color:var(--green);">'+oks.length+' ok</span>'
-    + '</div></div>';
-
-  function renderRow(r) {
-    var icon = r.status==='err' ? '🔴' : r.status==='warn' ? '🟡' : '✅';
-    var bg = r.status==='err' ? 'rgba(244,63,63,.06)' : r.status==='warn' ? 'rgba(251,191,36,.04)' : 'rgba(74,222,128,.04)';
-    var border = r.status==='err' ? 'rgba(244,63,63,.25)' : r.status==='warn' ? 'rgba(251,191,36,.2)' : 'rgba(74,222,128,.15)';
-    return '<div style="padding:10px 14px;margin-bottom:6px;background:'+bg+';border:1px solid '+border+';border-radius:6px;">'
-      + '<div style="display:flex;align-items:flex-start;gap:8px;">'
-      + '<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
-      + '<div style="flex:1;">'
-      + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
-      + '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
-      + (r.fix ? '<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>' : '')
-      + (r.note ? '<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>' : '')
-      + '</div></div></div>';
-  }
-
-  if (errs.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">🔴 Fouten — direct fixen</div>' + errs.map(renderRow).join('');
-  if (warns.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">🟡 Waarschuwingen</div>' + warns.map(renderRow).join('');
-  if (oks.length) {
-    html_out += '<details style="margin-top:10px;"><summary style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (klik om te zien)</summary><div style="margin-top:8px;">' + oks.map(renderRow).join('') + '</div></details>';
-  }
-
-  document.getElementById('metaCheckResults').innerHTML = html_out;
+  btn.textContent = '⬇ Fetch Sitemap'; btn.disabled = false;
 }
 
-// ── Pre-fill from Workflow Manager URL params ──────────────
-(function(){
-  const p = new URLSearchParams(window.location.search);
-  if(!p.get('url') && !p.get('kw')) return;
-  function fill(){
-    setMode('deep');
-    if(p.get('url'))  document.getElementById('dUrl').value  = p.get('url');
-    if(p.get('kw'))   document.getElementById('dKw').value   = p.get('kw');
-    if(p.get('pos'))  document.getElementById('dPos').value  = p.get('pos');
-    if(p.get('impr')) document.getElementById('dImpr').value = p.get('impr');
-    if(p.get('ctr'))  document.getElementById('dCtr').value  = p.get('ctr');
-    if(p.get('mob'))  document.getElementById('dMob').value  = p.get('mob');
-    if(p.get('wf'))   window._wfId = p.get('wf');
-    const deepView = document.getElementById('deepView');
-    if(!deepView) return;
-    // Load GSC from localStorage now that URL params are known
-    loadSharedGSC();
-    // Build connection banner
-    const chips = [];
-    if(p.get('pos'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ${parseFloat(p.get('pos')).toFixed(1)}</span>`);
-    if(p.get('impr')) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${parseInt(p.get('impr')).toLocaleString()} impr</span>`);
-    if(p.get('ctr'))  chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${p.get('ctr')}% CTR</span>`);
-    const gscBadge = gscPages.length
-      ? `<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">✓ ${gscPages.length} GSC pages</span>`
-      : `<span style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:4px;padding:2px 8px;font-size:10px;color:#fbbf24;">⚠ No GSC — upload CSV above</span>`;
-    const banner = document.createElement('div');
-    banner.style.cssText = 'background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:11px;color:#fbbf24;';
-    banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;">Connected from Workflow Manager</strong>
-      ${p.get('wf') ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;">← Back to Workflow</a>' : ''}
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips.join('')} ${gscBadge}</div>
-    <div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);">Paste page HTML below → Run Full Audit</div>`;
-    deepView.insertBefore(banner, deepView.firstChild);
-  }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
-  else fill();
-})();
-
-function setMode(m) {
-  document.getElementById('bulkView').className = m==='bulk'?'active':'';
-  document.getElementById('deepView').className = m==='deep'?'active':'';
-  document.getElementById('modeBulk').className = 'mode-btn'+(m==='bulk'?' active':'');
-  document.getElementById('modeDeep').className = 'mode-btn'+(m==='deep'?' active':'');
-}
-
-function toast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
-}
-
+// ── HTML Stats ─────────────────────────────────────────────
 function updateHtmlStats(inputId, statsId) {
   const html = document.getElementById(inputId).value.trim();
   const el = document.getElementById(statsId);
   if (!html) { el.textContent=''; return; }
   try {
     const doc = new DOMParser().parseFromString(html,'text/html');
-    const words = (doc.body?.innerText||'').split(/\\s+/).filter(Boolean).length;
+    const words = (doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
     const h1 = doc.querySelectorAll('h1').length;
     const h2 = doc.querySelectorAll('h2').length;
     const schema = (html.match(/application\/ld\+json/gi)||[]).length;
@@ -932,16 +717,9 @@ function updateHtmlStats(inputId, statsId) {
   } catch(e) { el.textContent = 'Could not parse HTML'; }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('dSiteUrls')?.addEventListener('input', function() {
-    const urls = this.value.trim().split('\\n').filter(l=>l.trim().startsWith('http'));
-    document.getElementById('urlCount').textContent = urls.length ? `✓ ${urls.length} URLs loaded` : '';
-  });
-});
-
-// ── CSV ──
+// ── GSC CSV Parsing ────────────────────────────────────────
 function parseGSCCsv(raw) {
-  const lines = raw.trim().split('\\n');
+  const lines = raw.trim().split('\n');
   if (lines.length < 2) return [];
   const header = lines[0].toLowerCase().replace(/"/g,'').split(',');
   const idx = {
@@ -1001,51 +779,15 @@ function handleQueriesCSV(input) {
   const file=input.files[0]; if (!file) return;
   const r=new FileReader();
   r.onload=e=>{
-    gscQueries=parseGSCCsv(e.target.result);
-    gscQueries.forEach(q=>{q.query=q.page;delete q.page;});
+    const rows=parseGSCCsv(e.target.result);
+    gscQueries=rows.map(r=>({query:r.page, position:r.position, impressions:r.impressions, ctr:r.ctr}));
     document.getElementById('queriesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscQueries.length} queries loaded</span>`;
     toast(`✅ ${gscQueries.length} queries loaded`);
   };
   r.readAsText(file);
 }
 
-function showCannibalization() {
-  if (!gscPages.length) { toast('Upload pages CSV first'); return; }
-  const report=document.getElementById('cannReport');
-  const body=document.getElementById('cannBody');
-  report.style.display='block';
-  const groups={};
-  gscPages.forEach(p=>{
-    try {
-      const url=new URL(p.page);
-      const segs=url.pathname.split('/').filter(Boolean);
-      segs.forEach(seg=>{
-        if (seg.length<4) return;
-        if (!groups[seg]) groups[seg]=[];
-        groups[seg].push(p);
-      });
-    } catch(e){}
-  });
-  const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
-  if (!canns.length) {
-    body.innerHTML='<p style="color:var(--green);font-family:IBM Plex Mono,monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
-    return;
-  }
-  body.innerHTML=canns.map(([seg,pages])=>`
-    <div class="cann-card">
-      <h4>⚠ Conflict: "${seg}" appears in ${pages.length} pages</h4>
-      ${pages.map(p=>`
-        <div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">
-          <span style="font-family:'IBM Plex Mono',monospace;color:var(--blue);flex:1;word-break:break-all;">${p.page.replace(/^https?:\//,'').slice(0,60)}</span>
-          <span style="color:var(--muted);">${p.impressions.toLocaleString()} impr</span>
-          <span style="color:var(--amber);">${p.ctr.toFixed(1)}% CTR</span>
-          <span style="color:var(--orange);">pos ${Math.round(p.position)}</span>
-          <button class="btn-sm btn-purple" onclick="loadToDeep('${encodeURIComponent(p.page)}','${p.impressions}','${p.ctr}','${p.position}')">🔬 Audit</button>
-        </div>`).join('')}
-    </div>`).join('');
-  report.scrollIntoView({behavior:'smooth'});
-}
-
+// ── Table render ───────────────────────────────────────────
 function renderTable() {
   const minI=parseFloat(document.getElementById('minImpr').value)||0;
   const minP=parseFloat(document.getElementById('minPos').value)||0;
@@ -1098,11 +840,49 @@ function exportOpps() {
   const rows=['Page,Impressions,Clicks,CTR,Position,Score'];
   gscPages.forEach(r=>rows.push(`"${r.page}",${r.impressions},${r.clicks},${r.ctr},${r.position},${r.score}`));
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([rows.join('\\n')],{type:'text/csv'}));
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
   a.download='seo-opportunities.csv';a.click();
 }
 
-// ── GEMINI API via Railway proxy ──
+// ── Cannibalization ────────────────────────────────────────
+function showCannibalization() {
+  if (!gscPages.length) { toast('Upload pages CSV first'); return; }
+  const report=document.getElementById('cannReport');
+  const body=document.getElementById('cannBody');
+  report.style.display='block';
+  const groups={};
+  gscPages.forEach(p=>{
+    try {
+      const url=new URL(p.page);
+      const segs=url.pathname.split('/').filter(Boolean);
+      segs.forEach(seg=>{
+        if (seg.length<4) return;
+        if (!groups[seg]) groups[seg]=[];
+        groups[seg].push(p);
+      });
+    } catch(e){}
+  });
+  const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
+  if (!canns.length) {
+    body.innerHTML='<p style="color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    return;
+  }
+  body.innerHTML=canns.map(([seg,pages])=>`
+    <div class="cann-card">
+      <h4>⚠ Conflict: "${seg}" appears in ${pages.length} pages</h4>
+      ${pages.map(p=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono',monospace;color:var(--blue);flex:1;word-break:break-all;">${p.page.replace(/^https?:\/\//,'').slice(0,60)}</span>
+          <span style="color:var(--muted);">${p.impressions.toLocaleString()} impr</span>
+          <span style="color:var(--amber);">${p.ctr.toFixed(1)}% CTR</span>
+          <span style="color:var(--orange);">pos ${Math.round(p.position)}</span>
+          <button class="btn-sm btn-purple" onclick="loadToDeep('${encodeURIComponent(p.page)}','${p.impressions}','${p.ctr}','${p.position}')">🔬 Audit</button>
+        </div>`).join('')}
+    </div>`).join('');
+  report.scrollIntoView({behavior:'smooth'});
+}
+
+// ── Gemini call ────────────────────────────────────────────
 async function callGemini(prompt, maxTokens=4000) {
   const resp = await fetch(`${RAILWAY}/api/gemini-proxy`, {
     method:'POST',
@@ -1129,12 +909,12 @@ function extractContent(html, label='page') {
     const h1=Array.from(doc.querySelectorAll('h1')).map(e=>e.textContent.trim()).join(' | ');
     const h2s=Array.from(doc.querySelectorAll('h2')).map(e=>e.textContent.trim()).join(' · ');
     const h3s=Array.from(doc.querySelectorAll('h3')).slice(0,10).map(e=>e.textContent.trim()).join(' · ');
-    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\\n');
-    const body=(doc.body?.innerText||'').replace(/\\s+/g,' ').slice(0,3000);
+    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\n');
+    const body=(doc.body?.innerText||'').replace(/\s+/g,' ').slice(0,3000);
     const imgs=doc.querySelectorAll('img').length;
     const alts=doc.querySelectorAll('img[alt]').length;
     const intLinks=doc.querySelectorAll('a[href]').length;
-    const wordCount=(doc.body?.innerText||'').split(/\\s+/).filter(Boolean).length;
+    const wordCount=(doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
     const faqs=doc.querySelectorAll('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"]').length;
     return `=== ${label.toUpperCase()} ===
 Title (${title.length} chars): ${title}
@@ -1164,26 +944,26 @@ function extractMeta(html) {
 }
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
-// ── QUICK AUDIT ──
+// ── QUICK AUDIT ───────────────────────────────────────────
 async function quickAudit(enc,impr,ctr,pos) {
   const url=decodeURIComponent(enc);
   const prog=document.getElementById('quickProgress');
   const out=document.getElementById('quickOutput');
   prog.className='progress show';out.innerHTML='';out.className='output show';
   const QSTEPS=[
-    {id:'q0',icon:'🔥',label:'PRIORITY ACTIONS — Top 5 right now'},
+    {id:'q0',icon:'🎯',label:'PRIORITY ACTIONS — Top 5 right now'},
     {id:'q1',icon:'⚡',label:'CTR Surgery — new title + meta'},
-    {id:'q2',icon:'📈',label:'Position 11–20 query opportunities'},
+    {id:'q2',icon:'📊',label:'Position 11–30 query opportunities'},
   ];
   document.getElementById('quickSteps').innerHTML=QSTEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
   const bar=document.getElementById('quickBar');
-  const ctx=`URL: ${url}\\nImpressions: ${impr}\\nCTR: ${ctr}%\\nPosition: ${pos}`;
+  const ctx=`URL: ${url}\nImpressions: ${impr}\nCTR: ${ctr}%\nPosition: ${pos}`;
   const pageQueries=gscQueries.filter(q=>q.query).slice(0,20);
-  const queryCtx=pageQueries.length?`\\nTop queries: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)} impr:${q.impressions}`).join(' | ')}`:'';
+  const queryCx=pageQueries.length?`\nTop queries: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)}`).join(' | ')}` : '';
   const prompts={
-    q0:`You are an elite SEO strategist.\\n${ctx}${queryCtx}\\n\\nList EXACTLY 5 priority actions for this page. Each must be:\\n- Specific and actionable (not generic advice)\\n- Achievable in under 1 hour\\n- Include expected metric change\\n\\nFormat each as:\\n🔥 **[Action title]**\\nDo: [exact what to do]\\nExpect: [specific metric improvement]\\n\\nStart with the highest-impact action first.`,
-    q1:`You are an elite SEO strategist.\\n${ctx}${queryCtx}\\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]`,
-    q2:`You are an elite SEO strategist.\\n${ctx}${queryCtx}\\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.`,
+    q0:`You are an elite SEO strategist.\n${ctx}${queryCx}\n\nList EXACTLY 5 priority actions for this page. Each must be:\n- Specific and actionable (not generic advice)\n- Achievable in under 1 hour\n- Include expected metric change\n\nFormat each as:\n🎯 **[#]. [Short action title]**\nDo: [exact what to do]\nExpect: [specific metric improvement]\n\nStart with the highest-impact action first.`,
+    q1:`You are an elite SEO strategist.\n${ctx}${queryCx}\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\n\n**New Title**: [text]\n**New Meta Description**: [text]\n**Why**: [specific 2026 SERP psychology rationale]`,
+    q2:`You are an elite SEO strategist.\n${ctx}${queryCx}\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.`,
   };
   for (let i=0;i<QSTEPS.length;i++) {
     const s=QSTEPS[i];setStep(s.id,'active');
@@ -1203,19 +983,19 @@ async function quickAudit(enc,impr,ctr,pos) {
   out.scrollIntoView({behavior:'smooth'});
 }
 
-// ── DEEP AUDIT — 10 steps, PRIORITY ACTIONS FIRST ──
+// ── DEEP AUDIT — 11 STEPS (added Voice Search) ────────────
 const DEEP_STEPS=[
-  {id:'d0',icon:'🔥',label:'PRIORITY ACTIONS — Do These First (top 7)',badge:'b-gold'},
+  {id:'d0',icon:'🎯',label:'PRIORITY ACTIONS — Do These First (top 7)',badge:'b-gold'},
   {id:'d1',icon:'🔍',label:'Intent + AI Overview Eligibility',badge:'b-tech'},
   {id:'d2',icon:'⚡',label:'CTR Surgery — real title/meta rewrite',badge:'b-win'},
-  {id:'d3',icon:'🕵️',label:'Competitor Diff — Surfer SEO & MarketMuse benchmark',badge:'b-pulse'},
-  {id:'d4',icon:'🕳️',label:'Content Gap Matrix — what you are missing',badge:'b-pulse'},
-  {id:'d5',icon:'🫀',label:'PULSE Optimization — before/after rewrites',badge:'b-pulse'},
+  {id:'d3',icon:'📊',label:'Competitor Diff — real HTML comparison',badge:'b-pulse'},
+  {id:'d4',icon:'📝',label:'Content Gap Matrix — what you are missing',badge:'b-pulse'},
+  {id:'d5',icon:'🔧',label:'PULSE Optimization — before/after rewrites',badge:'b-pulse'},
   {id:'d6',icon:'🔗',label:'NEXUS Signals + Internal Link Finder',badge:'b-nexus'},
   {id:'d7',icon:'🏗️',label:'Architecture Blueprint — H1-H3 restructure',badge:'b-nexus'},
-  {id:'d8',icon:'🛠️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
-  {id:'d9',icon:'📊',label:'Before/After Score + Traffic Projection',badge:'b-gold'},
-  {id:'d10',icon:'📈',label:'90-Day Ranking Plan — by week',badge:'b-win'},
+  {id:'d8',icon:'⚙️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
+  {id:'d9',icon:'🎙️',label:'Voice Search Optimization — conversational queries',badge:'b-voice'},
+  {id:'d10',icon:'📈',label:'Before/After Score + Traffic Projection + 90-Day Plan',badge:'b-gold'},
 ];
 
 async function runDeepAudit() {
@@ -1224,39 +1004,39 @@ async function runDeepAudit() {
   if (!url||!kw) { toast('Enter URL and keyword first'); return; }
 
   const inp={
-    url,kw,
+    url, kw,
     kw2:document.getElementById('dKw2').value.trim(),
-    geo:document.getElementById('dGeo').value,
+    geo:document.getElementById('dGeo').value.trim()||'Global',
     goal:document.getElementById('dGoal').value,
     impr:document.getElementById('dImpr').value||'unknown',
     ctr:document.getElementById('dCtr').value||'unknown',
     pos:document.getElementById('dPos').value||'unknown',
-    mob:document.getElementById('dMob').value||'unknown',
     queries:document.getElementById('dQueries').value.trim(),
     html:document.getElementById('dHtml').value.trim(),
-    comp1url:document.getElementById('dComp1url').value.trim()||'https://surferseo.com',
+    comp1url:document.getElementById('dComp1url').value.trim(),
     comp1html:document.getElementById('dComp1html').value.trim(),
-    comp2url:document.getElementById('dComp2url').value.trim()||'https://marketmuse.com',
+    comp2url:document.getElementById('dComp2url').value.trim(),
     comp2html:document.getElementById('dComp2html').value.trim(),
     siteUrls:document.getElementById('dSiteUrls').value.trim(),
     constraints:document.getElementById('dConstraints').value.trim(),
+    voiceQueries:'', // auto-generated by AI from keyword + geo — no manual input needed
+    voiceDevice:document.getElementById('dVoiceDevice').value,
   };
 
   const myContent=extractContent(inp.html,'YOUR PAGE');
   const myContentStr=myContent||`[No HTML provided — URL: ${inp.url}]`;
 
-  // Competitor context — real HTML or trained knowledge
+  // Competitor context — real HTML only, no hallucination
   let compContext='';
-  if (inp.comp1html||inp.comp2html) {
-    compContext=`\\n${extractContent(inp.comp1html,`COMPETITOR 1 (${inp.comp1url})`)}\\n\\n${extractContent(inp.comp2html,`COMPETITOR 2 (${inp.comp2url})`)}`;
+  if (inp.comp1html || inp.comp2html) {
+    compContext=`\n${extractContent(inp.comp1html,`COMPETITOR 1 (${inp.comp1url||'unknown'})`)||'[No HTML for Competitor 1]'}\n\n${extractContent(inp.comp2html,`COMPETITOR 2 (${inp.comp2url||'unknown'})`)||'[No HTML for Competitor 2]'}`;
   } else {
-    compContext=`\\n[No competitor HTML pasted. Use your trained knowledge of:
-COMPETITOR 1: Surfer SEO (${inp.comp1url}) — known for: NLP content scores, content editor, SERP analyzer, keyword research, average ~2500-3500 word guides, heavy use of comparison tables, FAQ sections, JSON-LD FAQPage schema, strong internal linking]
-COMPETITOR 2: MarketMuse (${inp.comp2url}) — known for: topic modeling, content briefs, competitive analysis, comprehensive pillar pages, semantic clustering, authority scoring, strong structured data, 3000-5000 word pillar content]
-Compare the target page against these known competitor patterns.`;
+    // Honest fallback — no hallucination
+    compContext=`\n[No competitor HTML pasted. Analyze based on: (1) your knowledge of what typically ranks well for "${kw}" in ${inp.geo}, (2) general SEO best practices for this keyword type and geo. Do NOT invent specific competitor page stats.]`;
   }
 
-  const siteUrlList=inp.siteUrls.split('\\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\\n');
+  const siteUrlList=inp.siteUrls.split('\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\n');
+  const voiceCtx=inp.voiceQueries?`\nVOICE QUERIES: ${inp.voiceQueries}`:'';
 
   document.getElementById('deepRunBtn').disabled=true;
   const prog=document.getElementById('deepProgress');
@@ -1271,44 +1051,44 @@ PAGE: ${inp.url}
 PRIMARY KEYWORD: ${inp.kw}
 SECONDARY KEYWORD: ${inp.kw2||'none'}
 GEO: ${inp.geo} | GOAL: ${inp.goal} | CONSTRAINTS: ${inp.constraints||'none'}
-GSC: ${inp.impr} impressions · ${inp.ctr}% CTR · position ${inp.pos} · ${inp.mob}% mobile
-TOP QUERIES: ${inp.queries||'not provided'}
+GSC: ${inp.impr} impressions · ${inp.ctr}% CTR · position ${inp.pos}
+TOP QUERIES: ${inp.queries||'not provided'}${voiceCtx}
 
 ${myContentStr}`;
 
   const prompts={
-    d0:`${base}\\n\\nSTEP 0 — PRIORITY ACTIONS (show this first, before any analysis):\\n\\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\\n\\nFor each action use this format:\\n🔥 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\\nDo: [Exact what to change, add, or fix — copy-paste ready]\\nWhere: [Exact location on page or in code]\\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\\nTime: [15 min / 30 min / 2 hrs]\\n\\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
+    d0:`${base}\n\nSTEP 0 — PRIORITY ACTIONS (show this first):\n\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\n\nFor each action use this format:\n🎯 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change, add, or fix — copy-paste ready]\nWhere: [Exact location on page or in code]\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
 
-    d1:`${base}\\n\\nSTEP 1 — INTENT DECODING:\\nAnswer each concisely (no truncation):\\n1. Primary intent: [label] - 1 sentence why\\n2. AI Overview eligible: [Yes/Partial/No] - reason + format change\\n3. Zero-click risk: [High/Medium/Low] - what Google surfaces instead\\n4. Top 3 page-1 gaps (1 line each)\\n5. Mismatch Fix - Current H1: [quote from page] | Problem: [1 sentence] | New H1: [write full corrected H1] | New intro: [rewrite 2 sentences]`,
+    d1:`${base}\n\nSTEP 1 — INTENT DECODING:\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not? State any mismatch clearly with specific fix.`,
 
-    d2:`${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "${extractTitle(inp.html)}"\\nCURRENT META: "${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\\n\\n**Current Title** (${extractTitle(inp.html).length} chars): ${extractTitle(inp.html)}\\n**Current Meta** (${extractMeta(inp.html).length} chars): ${extractMeta(inp.html)}\\n**New Title**: [your version]\\n**New Meta Description**: [your version]\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
+    d2:`${base}\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "${extractTitle(inp.html)}"\nCURRENT META: "${extractMeta(inp.html)}"\n\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\n\n| Field | Current | New | Chars | Why |\n|-------|---------|-----|-------|-----|\n| Title | ${extractTitle(inp.html).slice(0,40)} | [your version] | [n] | [rationale] |\n| Meta | ${extractMeta(inp.html).slice(0,40)}... | [your version] | [n] | [rationale] |\n\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
 
-    d3:`${base}${compContext}\\n\\nSTEP 3 — COMPETITOR DIFF:\\nCreate a comparison table between your page and the two competitors. Columns: Feature | Your Page | Competitor 1 (Surfer SEO) | Competitor 2 (MarketMuse) | Winner\\nRows: Word count · H2 count · FAQ section · Schema types · Images with alt · CTA clarity · Data/stats count · Unique angle · Internal links\\n\\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each write all three:\\n- Gap: [specific element or content type]\\n- Evidence: [exactly where competitor uses it]\\n- How to implement: [copy-paste instruction for this page]`,
+    d3:`${base}${compContext}\n\nSTEP 3 — COMPETITOR DIFF:\nCreate a real comparison table between your page and the competitors.\n\n| Feature | Your Page | Competitor 1 | Competitor 2 | Winner |\n|---------|-----------|--------------|--------------|--------|\n| Word count | [n] | [n] | [n] | |\n| H2 count | [n] | [n] | [n] | |\n| FAQ section | Yes/No | Yes/No | Yes/No | |\n| Schema types | [list] | [list] | [list] | |\n| Images with alt | [n]/[total] | [n]/[total] | [n]/[total] | |\n| CTA clarity | [1-5] | [1-5] | [1-5] | |\n| Data/stats count | [n] | [n] | [n] | |\n| Internal links | [n] | [n] | [n] | |\n| Unique angle | [describe] | [describe] | [describe] | |\n\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: exact implementation instruction.`,
 
-    d4:`${base}${compContext}\\n\\nSTEP 4 — CONTENT GAP MATRIX:\\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\\n\\n| Dimension | Your Score | Gap | Specific Fix |\\n|---|---|---|---|\\n| Subtopic coverage | | | |\\n| Data & proof | | | |\\n| Commercial signals | | | |\\n| Media & UX | | | |\\n| Freshness (2025-2026) | | | |\\n| FAQ depth | | | |\\n| E-E-A-T signals | | | |\\n\\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.`,
+    d4:`${base}${compContext}\n\nSTEP 4 — CONTENT GAP MATRIX:\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\n\n| Dimension | Your Score | Gap | Specific Fix |\n|-----------|-----------|-----|-------------|\n| Subtopic coverage | | | |\n| Data & proof | | | |\n| Commercial signals | | | |\n| Media & UX | | | |\n| Freshness (2025-2026) | | | |\n| FAQ depth | | | |\n| E-E-A-T signals | | | |\n| Local relevance (${inp.geo}) | | | |\n\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.`,
 
-    d5:`${base}\\n\\nSTEP 5 — PULSE REWRITES (show current → improved for each):\\n\\nP — Purpose (intro rewrite):\\nCURRENT: [quote first 3 sentences from body extract]\\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\\n\\nU — Urgency signal:\\nWhere to add: [exact location]\\nNew sentence: [write it]\\n\\nL — Legitimacy:\\nMissing proof elements: [list 3 specific items]\\nWhere to add: [exact section]\\n\\nS — Structure improvement:\\nPick ONE section and show Before/After conversion to table or bullets:\\nBEFORE: [current format]\\nAFTER: [improved format]\\n\\nE — Engagement (CTA rewrite):\\nCURRENT CTA: [identify from page]\\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
+    d5:`${base}\n\nSTEP 5 — PULSE REWRITES (show current → improved for each):\n\nP — Purpose (intro rewrite):\nCURRENT: [quote first 3 sentences from body extract]\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\n\nU — Urgency signal:\nWhere to add: [exact location]\nNew sentence: [write it]\n\nL — Legitimacy:\nMissing proof elements: [list 3 specific items]\nWhere to add: [exact section]\n\nS — Structure improvement:\nBEFORE: [current format of one section]\nAFTER: [improved format — table or bullets]\n\nE — Engagement (CTA rewrite):\nCURRENT CTA: [identify from page]\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
 
-    d6:`${base}\\n\\nSITE URLS:\\n${siteUrlList||'[No URLs provided — generate 5 suggested internal URLs based on domain: '+inp.url+']'}\\n\\nSTEP 6 — NEXUS: INTERNAL + EXTERNAL LINKS\\n\\n**A. Pages that should link TO this page (link FROM them):**\\nFor each: full URL | EXACT anchor text | semantic reason\\n1. [URL] | [anchor text] | [reason]\\n2. [URL] | [anchor text] | [reason]\\n3. [URL] | [anchor text] | [reason]\\n4. [URL] | [anchor text] | [reason]\\n5. [URL] | [anchor text] | [reason]\\n\\n**B. Pages this page should link TO:**\\nFor each: full URL | EXACT anchor text | exact sentence/location to insert\\n1. [URL] | [anchor text] | after: [quote 5 words]\\n2. [URL] | [anchor text] | [location]\\n3. [URL] | [anchor text] | [location]\\n4. [URL] | [anchor text] | [location]\\n5. [URL] | [anchor text] | [location]\\n\\n**C. External authoritative sources to cite (E-E-A-T):**\\nFor each: URL | anchor text | location on page | why this source adds trust\\n1. [URL] | [anchor text] | [section] | [reason]\\n2. [URL] | [anchor text] | [section] | [reason]\\n3. [URL] | [anchor text] | [section] | [reason]\\n\\n**D. 10 missing semantic entities for \"${inp.kw}\" not yet on this page**\\n\\n**E. Complete FAQPage JSON-LD — 5 Q&As, 40-60 words each, AI Overview optimised**`,
+    d6:`${base}\n\nSITE URLS:\n${siteUrlList||'[No URLs provided — suggest based on URL patterns from: '+inp.url+']'}\n\nSTEP 6 — NEXUS + INTERNAL LINKS:\n1. TOP 5 pages to link FROM to this page (use real URLs from list if available):\n   - URL | Anchor text (exact) | Why (semantic reason)\n\n2. TOP 5 pages this page should link TO:\n   - URL | Anchor text (exact) | Why\n\n3. Missing semantic entities for "${inp.kw}" in ${inp.geo} (10 terms)\n\n4. Schema recommendation — provide complete FAQPage JSON-LD with 5 Q&As (40-60 words each, optimized for AI Overviews)`,
 
-    d7:`${base}\\n\\nSTEP 7 — ARCHITECTURE BLUEPRINT:\\nCURRENT heading structure (from HTML):\\nH1: ${extractTitle(inp.html)}\\n[reconstruct H2-H3 from content]\\n\\nRECOMMENDED structure for intent + AI Overview extraction:\\n[show new H1 → H2 → H3 hierarchy]\\n\\nFor each change: Old heading → New heading → Why this order wins`,
+    d7:`${base}\n\nSTEP 7 — ARCHITECTURE BLUEPRINT:\nCURRENT heading structure (from HTML):\nH1: ${extractTitle(inp.html)}\n[reconstruct H2-H3 from content]\n\nRECOMMENDED structure for intent + AI Overview extraction:\n[show new H1 → H2 → H3 hierarchy]\n\nFor each change: Old heading → New heading → Why this order wins`,
 
-    d8:`${base}\\n\\nSTEP 8 — TECHNICAL CHECKLIST:\\n1. Keyword "${inp.kw}" placement audit:\\n   □ In H1? □ First 100 words? □ URL? □ Meta title? □ Image alt?\\n   → Fix for each missing item\\n\\n2. Missing LSI/semantic keywords (8 terms not found in content)\\n\\n3. Technical issues found in HTML:\\n   - Duplicate tags, missing alt, schema errors, etc.\\n\\n4. Mobile optimization gaps (page is ${inp.mob||'?'}% mobile)\\n\\n5. Core Web Vitals recommendations based on page structure`,
+    d8:`${base}\n\nSTEP 8 — TECHNICAL CHECKLIST:\n1. Keyword "${inp.kw}" placement audit:\n   ☐ In H1? ☐ First 100 words? ☐ URL? ☐ Meta title? ☐ Image alt?\n   → Fix for each missing item\n\n2. Missing LSI/semantic keywords (8 terms not found in content)\n\n3. Technical issues found in HTML:\n   - Duplicate tags, missing alt, schema errors, etc.\n\n4. Schema errors or missing schema types for this page\n\n5. Core Web Vitals recommendations based on page structure`,
 
-    d9:`${base}\\n\\nSTEP 9 — BEFORE/AFTER SCORE PROJECTION:\\n\\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\\n\\nCURRENT estimated score:\\n- GRAAF: [score]/50 — [what's missing]\\n- CRAFT: [score]/30 — [what's missing]\\n- Technical: [score]/20 — [what's missing]\\n- TOTAL: [score]/100\\n\\nAFTER implementing all recommendations:\\n- GRAAF: [new score]/50 — [what improved]\\n- CRAFT: [new score]/30 — [what improved]\\n- Technical: [new score]/20 — [what improved]\\n- TOTAL: [new score]/100\\n\\nTraffic projection:\\n- Current position ${inp.pos} → Expected new position: [X]\\n- Current CTR ${inp.ctr}% → Expected new CTR: [X]%\\n- Current clicks per month: [calc] → New estimated clicks: [calc]`,
+    d9:`${base}\n\nSTEP 9 — VOICE SEARCH OPTIMIZATION:\n\nVoice search = conversational, question-based, local intent. Target device: ${inp.voiceDevice}.\n\n1. ELIGIBILITY CHECK — Does this page qualify for voice answer?\n   - Answer box potential: Yes/No + why\n   - Conversational readability score: [1-10]\n   - Local voice intent: Yes/No (is "${inp.kw}" a local voice query?)\n\n2. TOP 5 VOICE QUERIES for this page in ${inp.geo}:\n   | Voice Query | Current Answer on Page | Gap | Fix |\n   |-------------|----------------------|-----|-----|\n   | [query] | [current] | [gap] | [fix] |\n\n3. REWRITES — Convert 3 existing sentences to voice-friendly format:\n   Before: [current sentence]\n   After: [conversational, direct answer version]\n\n4. FEATURED SNIPPET optimization for voice:\n   - Write the perfect 40-word answer that Siri/Google will read aloud\n   - Format: [write it]\n\n5. Local near-me queries (if applicable for ${inp.geo}):\n   - Best 3 "near me" variations for this business type\n   - Schema additions needed for local voice: [list]`,
 
-    d10:`${base}\\n\\nSTEP 10 — 90-DAY PLAN (week by week):\\n\\n**WEEK 1 — Quick Wins (do today):**\\n[List 5 specific changes, each under 30 min]\\n\\n**WEEK 2-3 — Content Upgrades:**\\n[List 3-4 content additions/rewrites]\\n\\n**WEEK 4 — Technical + Schema:**\\n[Schema implementation, internal links, technical fixes]\\n\\n**MONTH 2 — Authority Building:**\\n[Link building, content expansion, E-E-A-T signals]\\n\\n**MONTH 3 — Measurement + Iteration:**\\n[What to check in GSC, when to expect results]\\n\\n**GSC Checkpoints:**\\n- Day 7: [what metric to check]\\n- Day 30: [target position + CTR]\\n- Day 90: [end goal for "${inp.kw}"]\\n\\nSUCCESS DEFINITION: Position ${inp.pos} → [target] within 90 days`,
+    d10:`${base}\n\nSTEP 10 — SCORE + PROJECTION + 90-DAY PLAN:\n\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\n\n**CURRENT estimated score:**\n| Component | Score | Missing |\n|-----------|-------|--------|\n| GRAAF | /50 | [what's missing] |\n| CRAFT | /30 | [what's missing] |\n| Technical | /20 | [what's missing] |\n| **TOTAL** | **/100** | |\n\n**AFTER implementing all recommendations:**\n| Component | New Score | Improved |\n|-----------|-----------|----------|\n| GRAAF | /50 | [what improved] |\n| CRAFT | /30 | [what improved] |\n| Technical | /20 | [what improved] |\n| **TOTAL** | **/100** | |\n\n**Traffic projection:**\n| Metric | Current | Expected (90 days) |\n|--------|---------|--------------------|\n| Position | ${inp.pos} | [target] |\n| CTR | ${inp.ctr}% | [target]% |\n| Monthly clicks | [calc] | [calc] |\n\n**90-Day Plan:**\n- **WEEK 1** (Quick Wins): [5 specific changes, each under 30 min]\n- **WEEK 2-3** (Content Upgrades): [3-4 content additions]\n- **WEEK 4** (Technical + Schema): [specific implementations]\n- **MONTH 2** (Authority Building): [link building, E-E-A-T signals]\n- **MONTH 3** (Measurement): [GSC checkpoints — Day 7, Day 30, Day 90]\n\nSUCCESS DEFINITION: Position ${inp.pos} → [target] for "${inp.kw}" in ${inp.geo} within 90 days`,
   };
 
   for (let i=0;i<DEEP_STEPS.length;i++) {
     const s=DEEP_STEPS[i];setStep(s.id,'active');
     try {
-      const result=await callGemini(prompts[s.id],6000);
+      const result=await callGemini(prompts[s.id],4000);
       addSection(out,s.id,s.icon,s.label,s.badge,result);
       setStep(s.id,'done');
     } catch(e) {
       setStep(s.id,'error');
-      addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\\n\\nCheck Railway server: ${RAILWAY}/api/health`);
+      addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`);
     }
     bar.style.width=((i+1)/DEEP_STEPS.length*100)+'%';
     if (i<DEEP_STEPS.length-1) await sleep(1500);
@@ -1317,31 +1097,50 @@ ${myContentStr}`;
   prog.className='progress';
   document.getElementById('deepRunBtn').disabled=false;
   toast('✅ Full audit complete — scroll up for Priority Actions');
-  // Scroll to start of output to show Priority Actions first
   out.scrollIntoView({behavior:'smooth'});
+
+  // Show post-audit action bar
+  document.getElementById('postAuditBar').style.display='flex';
+
+  // Store audit data for recommendations export
+  window._lastAuditData = {
+    url: inp.url,
+    keyword: inp.kw,
+    secondaryKeyword: inp.kw2,
+    geo: inp.geo,
+    position: inp.pos,
+    impressions: inp.impr,
+    ctr: inp.ctr,
+    auditDate: new Date().toISOString(),
+    steps: DEEP_STEPS.map(s => ({
+      id: s.id,
+      label: s.label,
+      content: document.getElementById('md-'+s.id)?.innerText || ''
+    }))
+  };
 }
 
+// ── Section helpers ────────────────────────────────────────
 function setStep(id,state) {
   const el=document.getElementById('step-'+id);
   if (!el) return;
   el.className='prog-step '+state;
   const icon=el.querySelector('.prog-icon');
-  if (state==='active') icon.textContent='⟳';
-  else if (state==='done') icon.textContent='✓';
-  else if (state==='error') icon.textContent='✗';
+  if (state==='active') icon.textContent='⏳';
+  else if (state==='done') icon.textContent='✅';
+  else if (state==='error') icon.textContent='❌';
 }
 
 function addSection(container,id,icon,title,badge,content) {
   const div=document.createElement('div');
   div.className='sec-card';
-  // Priority Actions card gets special gold border
   if (id==='d0'||id==='q0') div.style.border='1px solid rgba(251,191,36,.4)';
   div.innerHTML=`
     <div class="sec-head" onclick="toggleBody('${id}')">
       <span style="font-size:17px;">${icon}</span>
       <span class="sec-title">${title}</span>
       <span class="badge ${badge}">${id.toUpperCase()}</span>
-      <button class="btn-sm btn-muted" style="margin-left:8px;" onclick="event.stopPropagation();copyMd('md-${id}')">⧉ Copy</button>
+      <button class="btn-sm btn-muted" style="margin-left:8px;" onclick="event.stopPropagation();copyMd('md-${id}')">⎘ Copy</button>
     </div>
     <div class="sec-body" id="body-${id}">
       <div class="md" id="md-${id}">${renderMd(content)}</div>
@@ -1357,129 +1156,316 @@ function copyMd(id) {
   navigator.clipboard.writeText(document.getElementById(id)?.innerText||'').then(()=>toast('Copied!'));
 }
 
+// ── renderMd — with REAL table support ────────────────────
 function renderMd(t) {
   if (!t) return '';
-  return t
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/`([^`\n]+)`/g,'<code>$1</code>')
-    .replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
-    .replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
-    .replace(/^---+$/gm,'<hr>')
-    .replace(/^\|(.+)\|$/gm,m=>{
-      const cells=m.split('|').slice(1,-1);
-      if (cells.every(c=>/^[\s\-:]+$/.test(c))) return '';
-      return '<tr>'+cells.map(function(c){
-        var v=c.trim();
-        if(/^HIGH$/i.test(v)) return '<td class="sev-high">'+v+'</td>';
-        if(/^(MED|MEDIUM)$/i.test(v)) return '<td class="sev-med">'+v+'</td>';
-        if(/^LOW$/i.test(v)) return '<td class="sev-low">'+v+'</td>';
-        return '<td>'+v+'</td>';
-      }).join('')+'</tr>';
-    })
-    .replace(/(<tr>[\s\S]*?<\/tr>)+/g,m=>`<table>${m}</table>`)
-    .replace(/^[-\*•] (.+)$/gm,'<li>$1</li>')
-    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`)
-    .replace(/\n\n/g,'</p><p>')
-    .replace(/\n/g,'<br>');
+  // Escape HTML entities first
+  t = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Headings
+  t = t.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  t = t.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  // Bold, italic, code
+  t = t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  t = t.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  t = t.replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
+  // Blockquote
+  t = t.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  // HR
+  t = t.replace(/^---+$/gm,'<hr>');
+  // TABLES — parse entire table blocks properly
+  t = t.replace(/(\|.+\|[\s\S]*?)(?=\n\n|\n[^|]|$)/g, function(match) {
+    const lines = match.trim().split('\n').filter(l => l.trim().startsWith('|'));
+    if (lines.length < 2) return match;
+    // Check if second line is separator
+    const isSep = (l) => /^\|[\s\-:|]+\|/.test(l);
+    let headerLine = lines[0];
+    let bodyLines = lines.slice(1);
+    if (isSep(lines[1])) bodyLines = lines.slice(2);
+    const parseCells = (line) => line.split('|').slice(1,-1).map(c => c.trim());
+    const headerCells = parseCells(headerLine);
+    const html = '<table><thead><tr>' +
+      headerCells.map(c => `<th>${c}</th>`).join('') +
+      '</tr></thead><tbody>' +
+      bodyLines.map(l => {
+        if (isSep(l)) return '';
+        const cells = parseCells(l);
+        return '<tr>' + cells.map((c,i) => `<td>${c||'—'}</td>`).join('') + '</tr>';
+      }).filter(Boolean).join('') +
+      '</tbody></table>';
+    return html;
+  });
+  // Lists
+  t = t.replace(/^[\-\*•] (.+)$/gm,'<li>$1</li>');
+  t = t.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
+  t = t.replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`);
+  // Paragraphs
+  t = t.replace(/\n\n/g,'</p><p>');
+  t = t.replace(/\n/g,'<br>');
+  return t;
 }
 
-// ══ AUTO-FILL GSC ═══════════════════════════════════════════════
-async function autoFillGSC() {
-  const urlField = document.getElementById('dUrl');
-  const url = urlField ? urlField.value.trim() : '';
-  if (!url) { toast('⚠️ Enter the Page URL first'); return; }
+// ── Export Markdown for AI ────────────────────────────────
+function exportMarkdown() {
+  const out = document.getElementById('deepOutput');
+  if (!out || !out.children.length) { toast('Run the audit first'); return; }
+  const data = window._lastAuditData || {};
+  let md = `# SEO Audit Report — ${data.url || 'Unknown Page'}\n\n`;
+  md += `**Date:** ${new Date().toLocaleDateString()}\n`;
+  md += `**Keyword:** ${data.keyword || '—'}\n`;
+  md += `**Secondary:** ${data.secondaryKeyword || '—'}\n`;
+  md += `**Geo:** ${data.geo || '—'}\n`;
+  md += `**GSC:** pos ${data.position}, ${data.impressions} impr, ${data.ctr}% CTR\n\n---\n\n`;
 
-  const btn = document.querySelector('[onclick="autoFillGSC()"]');
-  const originalLabel = '🤖 AUTO-FILL GSC DATA';
-  if (btn) { btn.textContent = '⏳ Fetching GSC...'; btn.disabled = true; }
-
-  try {
-    const resp = await fetch(`${RAILWAY}/api/gsc/auto-fill`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ pageUrl: url })
-    });
-
-    let d;
-    try { d = await resp.json(); } catch(_) { throw new Error(`Server error (HTTP ${resp.status})`); }
-
-    if (!resp.ok || !d.success) throw new Error(d.error || `GSC error (HTTP ${resp.status})`);
-
-    const data = d.data;
-    if (data.impressions) document.getElementById('dImpr').value = data.impressions;
-    if (data.ctr !== undefined) document.getElementById('dCtr').value = data.ctr;
-    if (data.position) document.getElementById('dPos').value = data.position;
-    if (data.mobilePct !== undefined) document.getElementById('dMob').value = data.mobilePct;
-    if (data.topQueries) document.getElementById('dQueries').value = data.topQueries;
-    const kwEl = document.getElementById('dKw');
-    if (kwEl && !kwEl.value && data.topKeyword) kwEl.value = data.topKeyword;
-    const kw2El = document.getElementById('dKw2');
-    if (kw2El && !kw2El.value && data.topQueries) {
-      const lines = data.topQueries.split('\n').filter(Boolean);
-      if (lines[1]) kw2El.value = lines[1];
+  Array.from(out.querySelectorAll('.sec-card')).forEach(card => {
+    const title = card.querySelector('.sec-title')?.textContent || '';
+    const content = card.querySelector('.md')?.innerText || '';
+    if (content.trim()) {
+      md += `## ${title}\n\n${content}\n\n---\n\n`;
     }
-    inferGeoFromContext(url, data.topQueries || '');
-    aiSuggestGoal(url, document.getElementById('dKw')?.value || '');
+  });
 
-    if (btn) { btn.textContent = '✅ GSC Data Loaded'; btn.disabled = false; }
-    toast('✅ GSC data loaded successfully!');
-    setTimeout(() => { if (btn) btn.textContent = originalLabel; }, 3000);
-  } catch(e) {
-    if (btn) { btn.textContent = originalLabel; btn.disabled = false; }
-    // Show full error in toast AND a persistent banner below the button
-    const shortMsg = e.message.length > 80 ? e.message.slice(0, 80) + '…' : e.message;
-    toast('❌ GSC: ' + shortMsg);
-    // Show detailed error in a dismissible banner near the button
-    const existingBanner = document.getElementById('gscErrorBanner');
-    if (existingBanner) existingBanner.remove();
-    const banner = document.createElement('div');
-    banner.id = 'gscErrorBanner';
-    banner.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(244,63,63,.1);border:1px solid rgba(244,63,63,.3);border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;color:#f87171;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;';
-    banner.innerHTML = `<span>❌ GSC Error: ${e.message.replace(/</g,'&lt;')}</span><button onclick="document.getElementById('gscErrorBanner').remove()" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0;">✕</button>`;
-    if (btn) btn.closest('div')?.after(banner);
+  const blob = new Blob([md], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `seo-audit-${(data.keyword||'page').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  toast('✅ Markdown exported');
+}
+
+// ── Export Recommendations Report ────────────────────────
+function exportRecommendationsReport() {
+  const out = document.getElementById('deepOutput');
+  if (!out || !out.children.length) { toast('Run the audit first'); return; }
+  const data = window._lastAuditData || {};
+
+  // Extract priority actions section
+  const d0 = document.getElementById('md-d0')?.innerText || '';
+  const d2 = document.getElementById('md-d2')?.innerText || '';
+  const d4 = document.getElementById('md-d4')?.innerText || '';
+  const d10 = document.getElementById('md-d10')?.innerText || '';
+
+  const css = `body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}
+h1{color:#7c3aed;font-size:26px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:6px;}
+h2{color:#4b5563;font-size:18px;margin:28px 0 10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px;}
+h3{color:#374151;font-size:15px;margin:18px 0 6px;}
+.meta{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px;font-size:13px;}
+.meta-item{background:#f3f4f6;padding:6px 12px;border-radius:6px;color:#6b7280;}
+.meta-item strong{color:#374151;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;}
+th{background:#f3f4f6;padding:9px 12px;text-align:left;border:1px solid #e5e7eb;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
+td{padding:9px 12px;border:1px solid #e5e7eb;vertical-align:top;}
+tr:hover td{background:#fafafa;}
+.section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px 24px;margin-bottom:20px;}
+.section.priority{border-left:4px solid #d97706;}
+pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:11px;}
+code{background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:11px;}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}
+@media print{body{margin:20px;}h1{color:#000;}h2{color:#374151;}}`;
+
+  const htmlBody = `<h1>SEO Recommendations Report</h1>
+<div class="meta">
+  <div class="meta-item"><strong>URL:</strong> ${data.url||'—'}</div>
+  <div class="meta-item"><strong>Keyword:</strong> ${data.keyword||'—'}</div>
+  <div class="meta-item"><strong>Geo:</strong> ${data.geo||'—'}</div>
+  <div class="meta-item"><strong>Position:</strong> ${data.position||'—'}</div>
+  <div class="meta-item"><strong>Generated:</strong> ${new Date().toLocaleDateString()}</div>
+</div>
+
+<div class="section priority">
+  <h2>🎯 Priority Actions</h2>
+  <pre>${d0.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+</div>
+
+<div class="section">
+  <h2>⚡ CTR Surgery — New Title & Meta</h2>
+  <pre>${d2.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+</div>
+
+<div class="section">
+  <h2>📝 Content Gap Matrix</h2>
+  <pre>${d4.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+</div>
+
+<div class="section">
+  <h2>📈 Score Projection + 90-Day Plan</h2>
+  <pre>${d10.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+</div>
+
+<footer>ContentScale SEO Audit · contentscale.site · Generated ${new Date().toLocaleString()}</footer>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SEO Recommendations — ${data.url||'Audit'}</title><style>${css}</style></head><body>${htmlBody}</body></html>`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download = `seo-recommendations-${(data.keyword||'page').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  toast('✅ Recommendations report exported');
+}
+
+// ── Print audit ───────────────────────────────────────────
+function printAudit() {
+  // Open all sections before printing
+  document.querySelectorAll('.sec-body.hidden').forEach(el => el.classList.remove('hidden'));
+  window.print();
+}
+
+// ── Meta Consistency Check ────────────────────────────────
+function runMetaCheck() {
+  var html = document.getElementById('dHtml').value.trim();
+  if (!html) {
+    var info = document.getElementById('metaCheckerInfo');
+    info.style.cssText = 'display:block;background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:12px;';
+    info.innerHTML = '<strong style="color:var(--red)">⚠ Paste your page HTML in panel ③ above first, then click Check.</strong>';
+    return;
   }
-}
+  document.getElementById('metaCheckerInfo').style.display = 'none';
 
-// ══ GEO INFERENCE ════════════════════════════════════════════════
-function inferGeoFromContext(url, queries) {
-  const geoEl = document.getElementById('dGeo');
-  if (!geoEl || geoEl.value) return;
-  const stateMap = {
-    'netherlands':'Netherlands','nederland':'Netherlands',
-    'belgium':'Belgium','belgie':'Belgium',
-    'uk':'UK','united kingdom':'UK','london':'UK',
-    'usa':'USA','united states':'USA',
-    'global':'Global',
-  };
-  const u = (url + ' ' + queries).toLowerCase();
-  for (const [k,v] of Object.entries(stateMap)) {
-    if (u.includes(k)) {
-      // Try to select matching option
-      for (const opt of geoEl.options) {
-        if (opt.value === v) { geoEl.value = v; return; }
-      }
-    }
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+  var results = [];
+
+  // Extract all fields
+  var title         = (doc.querySelector('title')?.textContent || '').trim();
+  var allH1s        = Array.from(doc.querySelectorAll('h1')).map(e => e.textContent.trim()).filter(Boolean);
+  var h1            = allH1s[0] || '';
+  var h1Count       = allH1s.length;
+  var metaDesc      = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+  var ogTitle       = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() || '';
+  var ogImage       = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')?.trim() || '';
+  var ogUrl         = doc.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
+  var twCard        = doc.querySelector('meta[name="twitter:card"]')?.getAttribute('content')?.trim() || '';
+  var twImage       = doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
+  var canonical     = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')?.trim() || '';
+  var viewport      = doc.querySelector('meta[name="viewport"]')?.getAttribute('content')?.trim() || '';
+
+  var schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(function(s){
+    try { return JSON.parse(s.textContent); } catch(e) { return null; }
+  }).filter(Boolean);
+  var flatSchemas = schemas.flatMap ? schemas.flatMap(function(s){ return Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]); }) : [];
+  var articleSchema = flatSchemas.find ? flatSchemas.find(function(s){ return ['Article','BlogPosting','NewsArticle','WebPage','TechArticle'].includes(s['@type']); }) : null;
+  var schemaHeadline    = articleSchema?.headline?.trim() || '';
+  var schemaDateMod     = articleSchema?.dateModified || '';
+  var schemaAuthorName  = (articleSchema?.author?.name || (Array.isArray(articleSchema?.author) ? articleSchema.author[0]?.name : '') || '').trim();
+
+  var now = new Date();
+  var thisYear = now.getFullYear().toString();
+
+  function ok(label, value, note) { results.push({ status:'ok', label:label, value:value, note:note }); }
+  function warn(label, value, fix, sev) { results.push({ status:'warn', label:label, value:value, fix:fix, severity: sev||'medium' }); }
+  function err(label, value, fix) { results.push({ status:'err', label:label, value:value, fix:fix, severity:'high' }); }
+
+  // 0. DUPLICATE H1 — most important check
+  if (h1Count === 0) {
+    err('H1 tag', 'MISSING — no H1 found on this page', 'Add exactly 1 H1 tag near the top with your primary keyword');
+  } else if (h1Count > 1) {
+    var h1List = allH1s.map(function(h,i){ return 'H1['+(i+1)+']: "'+h.substring(0,50)+'"'; }).join(' · ');
+    var fix = 'Keep only H1[1]: "'+allH1s[0].substring(0,60)+'". Change H1[2] → H2: "'+allH1s[1].substring(0,50)+'"'+(h1Count>2?' and H1[3] → H2: "'+allH1s[2].substring(0,50)+'"':'');
+    err('Multiple H1 tags detected ('+h1Count+' found)', h1List, fix);
+  } else {
+    ok('H1 tag — exactly 1', '"'+h1.substring(0,60)+'"', '✓ Correct — exactly 1 H1');
   }
+
+  // 1. TITLE
+  if (!title) err('Title tag', 'MISSING', 'Add <title> with primary keyword (50-60 chars)');
+  else if (title.length < 40) warn('Title tag too short', '"'+title+'" ('+title.length+' chars)', 'Expand to 50-60 chars', 'low');
+  else if (title.length > 65) warn('Title tag too long', '"'+title+'" ('+title.length+' chars)', 'Trim to 50-60 chars — truncated in Google', 'medium');
+  else ok('Title tag', '"'+title+'" ('+title.length+' chars)', '✓ Good length');
+
+  // 2. H1 vs TITLE
+  if (h1 && title) {
+    var titleCore = title.split(/[|\-–:]/)[0].trim().toLowerCase();
+    var h1Core = h1.toLowerCase().substring(0,60);
+    var overlap = titleCore.split(' ').filter(function(w){ return w.length>3 && h1Core.includes(w); }).length;
+    if (overlap === 0) warn('H1 ↔ Title mismatch', 'H1: "'+h1.substring(0,50)+'" / Title: "'+title.substring(0,50)+'"', 'H1 and Title must share the primary keyword', 'high');
+    else ok('H1 ↔ Title overlap', 'Shared keyword found', '✓ Consistent');
+  }
+
+  // 3. OG TITLE
+  if (!ogTitle) err('og:title', 'MISSING', 'Add <meta property="og:title"> — same as your title tag');
+  else ok('og:title', '"'+ogTitle.substring(0,60)+'"', '✓ Present');
+
+  // 4. META DESCRIPTION
+  if (!metaDesc) err('Meta description', 'MISSING', 'Add <meta name="description"> (140-160 chars)');
+  else if (metaDesc.length < 100) warn('Meta description too short', metaDesc.length+' chars', 'Expand to 140-160 chars', 'medium');
+  else if (metaDesc.length > 165) warn('Meta description too long', metaDesc.length+' chars — truncated', 'Trim to 140-160 chars', 'low');
+  else ok('Meta description', metaDesc.length+' chars', '✓ Good length');
+
+  // 5. OG IMAGE
+  if (!ogImage) warn('og:image', 'MISSING', 'Add og:image (recommended: 1200×630px)', 'medium');
+  else if (!ogImage.startsWith('http')) warn('og:image — relative URL', ogImage, 'Use absolute URL (https://...)', 'high');
+  else ok('og:image', ogImage.substring(0,60)+'…', '');
+
+  // 6. TWITTER CARD
+  if (!twCard) warn('twitter:card', 'MISSING', 'Add <meta name="twitter:card" content="summary_large_image">', 'medium');
+  else ok('twitter:card', twCard, '');
+
+  // 7. CANONICAL
+  if (!canonical) warn('Canonical tag', 'MISSING', 'Add <link rel="canonical" href="https://..."> to <head>', 'medium');
+  else if (!canonical.startsWith('http')) warn('Canonical — relative URL', canonical, 'Use absolute URL', 'high');
+  else ok('Canonical', canonical, '');
+
+  // 8. SCHEMA
+  if (!articleSchema) warn('Article schema', 'MISSING', 'Add Article/BlogPosting JSON-LD schema to <head>', 'high');
+  else {
+    if (!schemaDateMod) err('Schema dateModified', 'MISSING', 'Add "dateModified": "'+now.toISOString().split('T')[0]+'" to Article schema');
+    else if (schemaDateMod.substring(0,4) !== thisYear) warn('Schema dateModified outdated', '"'+schemaDateMod+'"', 'Update to '+now.toISOString().split('T')[0], 'high');
+    else ok('Schema dateModified', '"'+schemaDateMod+'"', '✓ Current year');
+    if (!schemaAuthorName) warn('Schema author', 'MISSING', 'Add "author": {"@type":"Person","name":"Your Name"}', 'medium');
+    else ok('Schema author', '"'+schemaAuthorName+'"', '');
+    if (!schemaHeadline) warn('Schema headline', 'MISSING', 'Add "headline": "'+title+'" to Article schema', 'high');
+    else ok('Schema headline', '"'+schemaHeadline.substring(0,60)+'"', '');
+  }
+
+  // 9. VIEWPORT
+  if (!viewport) err('Meta viewport', 'MISSING', 'Add <meta name="viewport" content="width=device-width, initial-scale=1">');
+  else ok('Meta viewport', viewport, '✓ Present');
+
+  // 10. OLD YEARS
+  var yearMatches = (html.match(/202[0-9]/g) || []);
+  var oldYears = yearMatches.filter(function(y){ return parseInt(y) < parseInt(thisYear)-1; });
+  var uniqueOld = oldYears.filter(function(v,i,a){ return a.indexOf(v)===i; });
+  if (uniqueOld.length > 3) warn('Outdated years in HTML', 'Found: '+uniqueOld.join(', '), 'Check if '+uniqueOld.join('/')+' needs updating to '+thisYear, 'medium');
+
+  // RENDER
+  var errs  = results.filter(function(r){ return r.status==='err'; });
+  var warns = results.filter(function(r){ return r.status==='warn'; });
+  var oks   = results.filter(function(r){ return r.status==='ok'; });
+  var score = Math.round((oks.length / results.length) * 100);
+  var scoreColor = score>=80?'var(--green)':score>=60?'var(--gold)':'var(--red)';
+
+  var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;flex-wrap:wrap;">'
+    +'<div><div style="font-family:IBM Plex Mono,monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistency Score</div>'
+    +'<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
+    +'<div style="font-size:13px;color:var(--muted);">'
+    +'<span style="color:var(--red);">'+errs.length+' errors</span> · '
+    +'<span style="color:var(--gold);">'+warns.length+' warnings</span> · '
+    +'<span style="color:var(--green);">'+oks.length+' ok</span>'
+    +(h1Count>1?'<div style="margin-top:6px;color:var(--red);font-family:IBM Plex Mono,monospace;font-size:9px;">⚠ '+h1Count+' H1 tags found — only 1 allowed. Demote H1[2..'+h1Count+'] to H2.</div>':'')
+    +'</div></div>';
+
+  function renderRow(r) {
+    var icon = r.status==='err'?'🔴':r.status==='warn'?'🟡':'✅';
+    var bg = r.status==='err'?'rgba(244,63,63,.06)':r.status==='warn'?'rgba(251,191,36,.04)':'rgba(74,222,128,.04)';
+    var border = r.status==='err'?'rgba(244,63,63,.25)':r.status==='warn'?'rgba(251,191,36,.2)':'rgba(74,222,128,.15)';
+    return '<div style="padding:10px 14px;margin-bottom:6px;background:'+bg+';border:1px solid '+border+';border-radius:6px;">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
+      +'<div style="flex:1;">'
+      +'<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
+      +'<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      +(r.fix?'<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>':'')
+      +(r.note?'<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>':'')
+      +'</div></div></div>';
+  }
+
+  if (errs.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">Errors — fix immediately</div>'+errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">Warnings</div>'+warns.map(renderRow).join('');
+  if (oks.length) html_out += '<details style="margin-top:10px;"><summary style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (click to expand)</summary><div style="margin-top:8px;">'+oks.map(renderRow).join('')+'</div></details>';
+
+  document.getElementById('metaCheckResults').innerHTML = html_out;
 }
 
-// ══ GOAL AI SUGGESTION ═══════════════════════════════════════════
-function aiSuggestGoal(url, kw) {
-  const f = document.getElementById('dGoal');
-  if (!f) return;
-  const c = (url + ' ' + kw).toLowerCase();
-  if (c.includes('emergency')||c.includes('urgent')) f.value = 'Lead generation';
-  else if (c.includes('quote')||c.includes('estimate')||c.includes('price')) f.value = 'Lead generation';
-  else if (c.includes('shop')||c.includes('buy')||c.includes('product')) f.value = 'Sale / purchase';
-  else if (c.includes('demo')||c.includes('trial')||c.includes('consult')) f.value = 'Demo / consultation';
-}
-
-// Drag & drop
+// ── Drag & drop for CSV ───────────────────────────────────
 ['pagesZone','queriesZone'].forEach(zoneId=>{
   const z=document.getElementById(zoneId);
   z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
@@ -1492,562 +1478,13 @@ function aiSuggestGoal(url, kw) {
   });
 });
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ④ FIND TOP COMPETITOR URLS (AI lookup — you paste the HTML manually)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-async function findTopCompetitors() {
-  const kw  = document.getElementById('dKw').value.trim();
-  const geo = document.getElementById('dGeo').value;
-  const url = document.getElementById('dUrl').value.trim();
-  const btn = document.getElementById('compFindBtn');
-  const status = document.getElementById('compAutoStatus');
-  const resultEl = document.getElementById('compFindResult');
-
-  if (!kw) { toast('⚠ Enter your primary keyword in ① first'); return; }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Looking up…';
-  status.textContent = '';
-  resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--gold);padding:6px 0;">🔍 Finding who ranks top 3 for "' + kw + '" in ' + geo + '…</div>';
-
-  try {
-    const prompt = `You are an expert SEO analyst with current knowledge of Google SERPs.
-
-KEYWORD: "${kw}"
-GEO / MARKET: ${geo}
-OUR PAGE: ${url || 'unknown'}
-
-Task: Identify the TOP 3 pages that currently rank on page 1 of Google for this keyword in this market. These should be REAL competing content pages (not our own URL, not tool homepages unless they genuinely rank for this keyword).
-
-For each competitor give:
-- The exact URL of the ranking PAGE (not just the homepage)
-- The page title
-- Why it ranks (1 sentence: what content advantage does it have)
-- Word count estimate
-- Key content elements present (FAQ, schema, stats, expert quotes, comparison table, etc.)
-
-Reply in this EXACT format for each (3 total):
----
-RANK: 1
-URL: https://...
-TITLE: ...
-WHY_IT_RANKS: ...
-EST_WORDS: ...
-KEY_ELEMENTS: ...
----`;
-
-    const result = await callGemini(prompt, 800);
-
-    // Parse blocks
-    const blocks = result.split('---').map(b => b.trim()).filter(b => b.includes('URL:'));
-
-    if (!blocks.length) {
-      resultEl.innerHTML = '<div style="white-space:pre-wrap;font-size:12px;color:var(--muted);padding:8px 0;">' + result + '</div>';
-    } else {
-      // Auto-fill first 2 URL fields
-      let filled = 0;
-      blocks.forEach(function(block) {
-        const urlMatch = block.match(/URL:\s*(https?:\/\/\S+)/i);
-        if (urlMatch && filled < 2) {
-          filled++;
-          document.getElementById('dComp' + filled + 'url').value = urlMatch[1].trim();
-        }
-      });
-
-      // Render cards
-      resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:10px;">Top ' + blocks.length + ' competitors for "' + kw + '" — ' + geo + '</div>'
-        + blocks.map(function(block) {
-          const rank    = (block.match(/RANK:\s*(\d+)/i)||[])[1]||'?';
-          const bUrl    = (block.match(/URL:\s*(https?:\/\/\S+)/i)||[])[1]||'';
-          const title   = (block.match(/TITLE:\s*(.+)/i)||[])[1]||'';
-          const why     = (block.match(/WHY_IT_RANKS:\s*(.+)/i)||[])[1]||'';
-          const words   = (block.match(/EST_WORDS:\s*(.+)/i)||[])[1]||'';
-          const elems   = (block.match(/KEY_ELEMENTS:\s*(.+)/i)||[])[1]||'';
-          const shortUrl = bUrl.replace(/^https?:\/\//, '').slice(0, 65);
-          return '<div style="background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.2);border-radius:7px;padding:12px 14px;margin-bottom:8px;">'
-            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">'
-            + '<span style="font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;color:var(--gold);">#' + rank + '</span>'
-            + '<span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--blue);word-break:break-all;">' + shortUrl + '</span>'
-            + (rank <= 2 ? '<span style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:2px 6px;background:rgba(251,191,36,.15);color:var(--gold);border-radius:3px;">← URL filled above</span>' : '')
-            + '</div>'
-            + (title ? '<div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px;">' + title + '</div>' : '')
-            + (why   ? '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;">📌 ' + why + '</div>' : '')
-            + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">'
-            + (words ? '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--dim);">~' + words + ' words</span>' : '')
-            + (elems ? '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--dim);">' + elems + '</span>' : '')
-            + '</div>'
-            + '<div style="margin-top:8px;padding:6px 10px;background:rgba(96,165,250,.06);border-radius:4px;font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">'
-            + '→ Open <a href="' + bUrl + '" target="_blank" style="color:var(--blue);">' + shortUrl.slice(0,50) + '</a> → right-click → View Page Source → Ctrl+A → Ctrl+C → paste into HTML field above'
-            + '</div>'
-            + '</div>';
-        }).join('');
-
-      status.textContent = '✅ ' + blocks.length + ' competitors found — URLs filled';
-      status.style.color = 'var(--green)';
-      toast('✅ Top ' + blocks.length + ' competitors found — URLs auto-filled');
-    }
-  } catch(e) {
-    resultEl.innerHTML = '<div style="color:var(--red);font-size:11px;">⚠ ' + e.message + '</div>';
-    toast('⚠ Error: ' + e.message);
-  }
-
-  btn.disabled = false;
-  btn.textContent = '🔍 FIND COMPETITORS';
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ⑤ AUTO-ANALYSE INTERNAL LINKS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-function updateUrlCount() {
-  const urls = (document.getElementById('dSiteUrls').value || '').trim().split('\n').filter(l => l.trim().startsWith('http'));
-  const el = document.getElementById('urlCount');
-  if (el) el.textContent = urls.length ? '✓ ' + urls.length + ' URLs ready' : '';
-}
-
-async function autoAnalyseInternalLinks() {
-  const btn = document.getElementById('intLinkBtn');
-  const resultEl = document.getElementById('intLinkResult');
-  const url = document.getElementById('dUrl').value.trim();
-  const kw = document.getElementById('dKw').value.trim();
-  const kw2 = document.getElementById('dKw2').value.trim();
-  const siteUrls = (document.getElementById('dSiteUrls').value || '').trim();
-
-  if (!url || !kw) { toast('⚠ Enter URL and keyword in ① first'); return; }
-  if (!siteUrls) { toast('⚠ Add your site URLs below first'); return; }
-
-  const urls = siteUrls.split('\n').filter(l => l.trim().startsWith('http')).slice(0, 60);
-  if (urls.length < 2) { toast('⚠ Need at least 2 site URLs'); return; }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Analysing…';
-  resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--gold);padding:8px 0;">🔗 Finding best internal link opportunities…</div>';
-
-  try {
-    const prompt = `You are an elite SEO internal linking strategist.
-
-TARGET PAGE: ${url}
-PRIMARY KEYWORD: ${kw}
-SECONDARY KEYWORD: ${kw2 || 'none'}
-
-SITE URL LIST (${urls.length} pages):
-${urls.join('\n')}
-
-TASK: Find the 5 BEST internal linking opportunities. For each opportunity:
-- Identify a page FROM the list that should link TO the target page (or vice versa)
-- Pick the most topically relevant pages only
-- Suggest exact anchor text (2-5 words, keyword-rich but natural)
-- Explain WHY this link matters (1 sentence)
-
-Format EXACTLY like this for each (5 total):
----
-DIRECTION: [FROM url → TO target] or [FROM target → TO url]
-FROM: [full URL]
-TO: [full URL]  
-ANCHOR: "[exact anchor text to use]"
-WHY: [one sentence reason]
----`;
-
-    const result = await callGemini(prompt, 1200);
-
-    // Parse the structured output into cards
-    const blocks = result.split('---').map(b => b.trim()).filter(b => b.includes('ANCHOR:'));
-    if (!blocks.length) {
-      resultEl.innerHTML = '<div style="white-space:pre-wrap;font-size:12px;line-height:1.7;color:var(--muted);">' + result + '</div>';
-    } else {
-      resultEl.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:10px;">🔗 ' + blocks.length + ' Internal Link Opportunities Found</div>'
-        + blocks.map(function(block, i) {
-          var dir = (block.match(/DIRECTION:\s*(.+)/i)||[])[1]||'';
-          var from = (block.match(/FROM:\s*(.+)/i)||[])[1]||'';
-          var to = (block.match(/TO:\s*(.+)/i)||[])[1]||'';
-          var anchor = (block.match(/ANCHOR:\s*"?([^"\n]+)"?/i)||[])[1]||'';
-          var why = (block.match(/WHY:\s*(.+)/i)||[])[1]||'';
-          return '<div style="background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.15);border-radius:7px;padding:12px 14px;margin-bottom:8px;">'
-            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-            + '<span style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--dim);">#' + (i+1) + '</span>'
-            + '<span style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:2px 6px;background:rgba(74,222,128,.12);color:var(--green);border-radius:3px;">' + (dir.includes('→ TO target') ? '→ LINK TO THIS PAGE' : '← LINK FROM THIS PAGE') + '</span>'
-            + '</div>'
-            + '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;word-break:break-all;">' + from.trim().replace(/^https?:\/\//, '').slice(0, 70) + ' → ' + to.trim().replace(/^https?:\/\//, '').slice(0, 70) + '</div>'
-            + '<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--gold);margin-bottom:4px;">Anchor: "' + anchor.trim() + '"</div>'
-            + (why ? '<div style="font-size:10px;color:var(--dim);">' + why.trim() + '</div>' : '')
-            + '</div>';
-        }).join('');
-    }
-
-    toast('✅ Internal link analysis done');
-  } catch(e) {
-    resultEl.innerHTML = '<div style="color:var(--red);font-size:11px;">⚠ Error: ' + e.message + '</div>';
-    toast('⚠ Analysis failed: ' + e.message);
-  }
-  btn.disabled = false;
-  btn.textContent = '🤖 ANALYSE LINKS';
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ⑥ AUTO-DETECT KNOWN CONSTRAINTS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-async function autoDetectConstraints() {
-  const btn = document.getElementById('constraintBtn');
-  const statusEl = document.getElementById('constraintStatus');
-  const field = document.getElementById('dConstraints');
-  const url = document.getElementById('dUrl').value.trim();
-  const html = document.getElementById('dHtml').value.trim();
-
-  if (!url && !html) { toast('⚠ Enter URL in ① or paste page HTML in ③ first'); return; }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Detecting…';
-  statusEl.textContent = '';
-
-  // ── Step 1: Local heuristic detection from HTML (instant, free) ──
-  const detected = [];
-
-  if (html) {
-    const lowerHtml = html.toLowerCase();
-
-    // CMS detection
-    if (lowerHtml.includes('wp-content') || lowerHtml.includes('wp-includes') || lowerHtml.includes('wordpress')) detected.push('WordPress');
-    else if (lowerHtml.includes('shopify')) detected.push('Shopify');
-    else if (lowerHtml.includes('wix.com') || lowerHtml.includes('wixsite')) detected.push('Wix');
-    else if (lowerHtml.includes('squarespace')) detected.push('Squarespace');
-    else if (lowerHtml.includes('webflow')) detected.push('Webflow');
-    else if (lowerHtml.includes('drupal')) detected.push('Drupal');
-    else if (lowerHtml.includes('joomla')) detected.push('Joomla');
-    else if (lowerHtml.includes('ghost')) detected.push('Ghost');
-    else if (lowerHtml.includes('next.js') || lowerHtml.includes('__next')) detected.push('Next.js');
-    else if (lowerHtml.includes('nuxt') || lowerHtml.includes('__nuxt')) detected.push('Nuxt.js');
-    else if (lowerHtml.includes('gatsby')) detected.push('Gatsby');
-
-    // Page builders
-    if (lowerHtml.includes('elementor')) detected.push('Elementor');
-    else if (lowerHtml.includes('divi')) detected.push('Divi');
-    else if (lowerHtml.includes('beaver-builder') || lowerHtml.includes('fl-builder')) detected.push('Beaver Builder');
-    else if (lowerHtml.includes('wpbakery') || lowerHtml.includes('vc_row')) detected.push('WPBakery');
-
-    // CDN / hosting signals
-    if (lowerHtml.includes('cloudflare')) detected.push('Cloudflare CDN');
-    if (lowerHtml.includes('vercel')) detected.push('Vercel hosting');
-    if (lowerHtml.includes('netlify')) detected.push('Netlify hosting');
-
-    // Language / multilingual
-    const langMatch = html.match(/<html[^>]+lang=["\']([^"\'>]+)["\'>]/i);
-    if (langMatch) {
-      const lang = langMatch[1].toLowerCase();
-      if (lang.startsWith('nl')) detected.push('Language: NL');
-      else if (lang.startsWith('de')) detected.push('Language: DE');
-      else if (lang.startsWith('fr')) detected.push('Language: FR');
-      else if (lang.startsWith('es')) detected.push('Language: ES');
-      else if (lang.startsWith('en')) detected.push('Language: EN');
-    }
-    if (lowerHtml.includes('hreflang')) detected.push('Multilingual (hreflang)');
-
-    // GDPR / cookie signals
-    if (lowerHtml.includes('cookiebot') || lowerHtml.includes('cookie-consent') || lowerHtml.includes('gdpr') || lowerHtml.includes('cookieyes') || lowerHtml.includes('onetrust')) detected.push('GDPR-strict (cookie banner)');
-
-    // JS-heavy (no HTML injection possible)
-    const scriptCount = (html.match(/<script/gi) || []).length;
-    if (scriptCount > 15) detected.push('JS-heavy (' + scriptCount + ' scripts — no inline injection)');
-
-    // Schema already present
-    if (lowerHtml.includes('application/ld+json')) detected.push('Schema JSON-LD already present');
-
-    // AMP
-    if (lowerHtml.includes('<html amp') || lowerHtml.includes('<html ⚡')) detected.push('AMP page');
-
-    // Accessibility / ARIA heavy
-    if ((html.match(/aria-/gi) || []).length > 20) detected.push('Accessibility-focussed (ARIA)');
-
-    // eCommerce
-    if (lowerHtml.includes('add-to-cart') || lowerHtml.includes('woocommerce')) detected.push('WooCommerce');
-
-    // Analytics
-    if (lowerHtml.includes('gtag(') || lowerHtml.includes('google-analytics')) detected.push('Google Analytics');
-    if (lowerHtml.includes('gtm.js') || lowerHtml.includes('googletagmanager')) detected.push('Google Tag Manager');
-  }
-
-  // ── Step 2: URL-based heuristics (domain TLD, path patterns) ──
-  if (url) {
-    try {
-      const parsed = new URL(url);
-      const host = parsed.hostname.toLowerCase();
-      const path = parsed.pathname.toLowerCase();
-
-      if (host.endsWith('.nl')) detected.push('Dutch domain (.nl)');
-      else if (host.endsWith('.be')) detected.push('Belgian domain (.be)');
-      else if (host.endsWith('.de')) detected.push('German domain (.de)');
-      else if (host.endsWith('.co.uk') || host.endsWith('.uk')) detected.push('UK domain');
-      else if (host.endsWith('.fr')) detected.push('French domain (.fr)');
-      else if (host.endsWith('.es')) detected.push('Spanish domain (.es)');
-
-      if (path.includes('/en/') || path.includes('/nl/') || path.includes('/de/') || path.includes('/fr/')) detected.push('Subfolder multilingual');
-      if (path.includes('/blog/') || path.includes('/news/') || path.includes('/artikel/')) detected.push('Blog/CMS subfolder');
-      if (path.includes('/shop/') || path.includes('/product/') || path.includes('/winkel/')) detected.push('eCommerce URL structure');
-    } catch(e) {}
-  }
-
-  // ── Step 3: If HTML available, use AI for deeper analysis ──
-  if (html && html.length > 500) {
-    try {
-      const snippet = html.slice(0, 4000); // head + first body
-      const prompt = `You are a technical SEO analyst. Analyse this HTML snippet and identify technical constraints relevant to SEO implementation.
-
-HTML SNIPPET:
-${snippet}
-
-List ONLY additional constraints NOT already detected. Focus on:
-- CMS or framework not already obvious from the HTML
-- Specific no-go rules (e.g. "no raw HTML editing", "structured data via plugin only")  
-- Performance constraints (lazy loading, critical CSS, preloading)
-- Server-side rendering vs static generation
-- Any unusual technical patterns
-
-Reply as a short comma-separated list of constraints only. Max 5 items. If nothing new, reply: NONE`;
-
-      const aiResult = await callGemini(prompt, 300);
-      if (aiResult && aiResult.trim() !== 'NONE' && !aiResult.toLowerCase().includes('none')) {
-        const aiConstraints = aiResult.split(',').map(s => s.trim()).filter(s => s.length > 2 && s.length < 60);
-        detected.push(...aiConstraints.slice(0, 5));
-      }
-    } catch(e) {} // silent fail — heuristics are enough
-  }
-
-  // ── Deduplicate and write to field ──
-  const unique = [...new Set(detected)];
-  if (unique.length > 0) {
-    field.value = unique.join(', ');
-    statusEl.textContent = '✅ ' + unique.length + ' constraints detected';
-    statusEl.style.color = 'var(--green)';
-    toast('✅ ' + unique.length + ' constraints auto-detected');
-  } else {
-    statusEl.textContent = '⚠ Nothing detected — add URL or HTML in ① / ③';
-    statusEl.style.color = 'var(--gold)';
-    toast('⚠ Paste page HTML in ③ for better detection');
-  }
-
-  btn.disabled = false;
-  btn.textContent = '🔍 DETECT';
-}
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// URL CHANGE HANDLER — geo auto-detect, sitemap auto-load, constraint auto-detect
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-var _urlBlurTimer = null;
-
-function onUrlChange(url) {
-  // Instantly auto-detect geo from TLD
-  if (!url) return;
-  var geo = detectGeoFromUrl(url);
-  if (geo) {
-    var geoEl = document.getElementById('dGeo');
-    if (geoEl && !geoEl._manuallyEdited) geoEl.value = geo;
-  }
-}
-
-function onUrlBlur(url) {
-  // On leaving the URL field: auto-detect constraints + trigger sitemap load
-  if (!url || !url.startsWith('http')) return;
-  clearTimeout(_urlBlurTimer);
-  _urlBlurTimer = setTimeout(function() {
-    // Auto-detect constraints from URL (fast, no API)
-    var urlConstraints = detectConstraintsFromUrl(url);
-    if (urlConstraints.length) {
-      var field = document.getElementById('dConstraints');
-      if (field && !field.value.trim()) {
-        field.value = urlConstraints.join(', ');
-        var statusEl = document.getElementById('constraintStatus');
-        if (statusEl) { statusEl.textContent = '✅ ' + urlConstraints.length + ' detected from URL'; statusEl.style.color = 'var(--green)'; }
-      }
-    }
-    // Auto-load sitemap if site URLs textarea is empty
-    var siteUrls = document.getElementById('dSiteUrls');
-    if (siteUrls && !siteUrls.value.trim()) {
-      fetchSitemapForInternalLinks(url);
-    }
-  }, 800);
-}
-
-// Mark geo as manually edited so URL changes don't overwrite it
-document.addEventListener('DOMContentLoaded', function() {
-  var geoEl = document.getElementById('dGeo');
-  if (geoEl) geoEl.addEventListener('input', function() { geoEl._manuallyEdited = true; });
+// ── URL count for internal link finder ───────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dSiteUrls')?.addEventListener('input', function() {
+    const urls = this.value.trim().split('\n').filter(l=>l.trim().startsWith('http'));
+    document.getElementById('urlCount').textContent = urls.length ? `✓ ${urls.length} URLs loaded` : '';
+  });
 });
-
-function detectGeoFromUrl(url) {
-  var host = '';
-  try { host = new URL(url).hostname.toLowerCase(); } catch(e) { return 'Netherlands'; }
-  var TLD_MAP = [
-    ['.co.uk','UK'],['.org.uk','UK'],['.nl','Netherlands'],['.be','Belgium'],
-    ['.de','Germany'],['.at','Austria'],['.ch','Switzerland'],['.fr','France'],
-    ['.es','Spain'],['.it','Italy'],['.pt','Portugal'],['.pl','Poland'],
-    ['.se','Sweden'],['.no','Norway'],['.dk','Denmark'],['.fi','Finland'],
-    ['.ie','Ireland'],['.au','Australia'],['.nz','New Zealand'],['.ca','Canada'],
-    ['.us','USA'],['.br','Brazil'],['.mx','Mexico'],['.za','South Africa'],
-    ['.in','India'],['.sg','Singapore'],['.ae','UAE'],['.jp','Japan'],['.uk','UK']
-  ];
-  for (var i = 0; i < TLD_MAP.length; i++) {
-    if (host.endsWith(TLD_MAP[i][0])) return TLD_MAP[i][1];
-  }
-  // Keyword hints in hostname
-  var HINTS = [['nederland','Netherlands'],['netherlands','Netherlands'],['belgie','Belgium'],
-    ['belgium','Belgium'],['deutschland','Germany'],['france','France'],['espana','Spain'],
-    ['australia','Australia'],['canada','Canada']];
-  for (var j = 0; j < HINTS.length; j++) {
-    if (host.includes(HINTS[j][0])) return HINTS[j][1];
-  }
-  return 'Netherlands'; // default
-}
-
-function detectConstraintsFromUrl(url) {
-  var detected = [];
-  try {
-    var parsed = new URL(url);
-    var host = parsed.hostname.toLowerCase();
-    var path = parsed.pathname.toLowerCase();
-    if (host.endsWith('.nl')) detected.push('Dutch domain (.nl)');
-    else if (host.endsWith('.be')) detected.push('Belgian domain (.be)');
-    else if (host.endsWith('.de')) detected.push('German domain (.de)');
-    else if (host.endsWith('.co.uk') || host.endsWith('.uk')) detected.push('UK domain');
-    else if (host.endsWith('.fr')) detected.push('French domain (.fr)');
-    if (path.includes('/en/') || path.includes('/nl/') || path.includes('/de/')) detected.push('Subfolder multilingual');
-    if (path.includes('/blog/') || path.includes('/nieuws/') || path.includes('/news/')) detected.push('Blog subfolder');
-    if (path.includes('/shop/') || path.includes('/product/') || path.includes('/winkel/')) detected.push('eCommerce');
-    if (host.includes('wordpress') || host.includes('.wp.')) detected.push('WordPress');
-    if (host.includes('shopify')) detected.push('Shopify');
-    if (host.includes('webflow')) detected.push('Webflow');
-  } catch(e) {}
-  return detected;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MOBILE % — auto-fill from loaded GSC data
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-function autoFillMobilePct() {
-  // Try from transfer data first
-  try {
-    var td = window._workflowTransfer;
-    if (td && td.mobilePct) {
-      document.getElementById('dMob').value = td.mobilePct;
-      var note = document.getElementById('mobAutoNote');
-      if (note) note.textContent = '✅ from GSC';
-      return;
-    }
-  } catch(e) {}
-  // Try from shared GSC pages
-  try {
-    var url = document.getElementById('dUrl').value.trim();
-    if (url && gscPages.length) {
-      var match = gscPages.find(function(p) { return p.page === url || url.includes(p.page) || p.page.includes(url.replace(/^https?:\/\/[^\/]+/, '')); });
-      if (match && match.mobile_pct) {
-        document.getElementById('dMob').value = Math.round(match.mobile_pct);
-        var note = document.getElementById('mobAutoNote');
-        if (note) note.textContent = '✅ from GSC';
-        return;
-      }
-    }
-  } catch(e) {}
-  // Fallback: industry average based on geo
-  var geo = (document.getElementById('dGeo').value || 'Netherlands').toLowerCase();
-  var mobileAvg = geo.includes('netherlands') || geo.includes('belgi') ? 58
-    : geo.includes('uk') || geo.includes('ireland') ? 65
-    : geo.includes('germany') || geo.includes('austria') || geo.includes('switzerland') ? 55
-    : geo.includes('usa') || geo.includes('canada') || geo.includes('australia') ? 62
-    : 60;
-  document.getElementById('dMob').value = mobileAvg;
-  var note = document.getElementById('mobAutoNote');
-  if (note) { note.textContent = '≈ industry avg for ' + (document.getElementById('dGeo').value || 'NL'); note.style.color = 'var(--dim)'; }
-}
-
-// Auto-fill mobile when GSC loads
-var _origLoadSharedGSC = typeof loadSharedGSC === 'function' ? loadSharedGSC : null;
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SITEMAP AUTO-FETCH FOR INTERNAL LINKS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-async function fetchSitemapForInternalLinks(urlOverride) {
-  var pageUrl = urlOverride || document.getElementById('dUrl').value.trim();
-  var btn = document.getElementById('sitemapFetchBtn');
-  var siteUrlsEl = document.getElementById('dSiteUrls');
-  if (!pageUrl || !pageUrl.startsWith('http')) { toast('⚠ Enter page URL in ① first'); return; }
-
-  var origin = '';
-  try { origin = new URL(pageUrl).origin; } catch(e) { toast('⚠ Invalid URL'); return; }
-
-  // Check localStorage from workflow first
-  try {
-    var stored = localStorage.getItem('cs_sitemap_urls');
-    if (stored && stored.trim().length > 10) {
-      siteUrlsEl.value = stored;
-      updateUrlCount();
-      if (btn) { btn.textContent = '✅ Loaded from Workflow'; setTimeout(function(){ btn.textContent = '↓ Fetch Sitemap'; }, 2500); }
-      return;
-    }
-  } catch(e) {}
-
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching…'; }
-
-  // Try common sitemap URLs via Railway proxy
-  var sitemapCandidates = [
-    origin + '/sitemap.xml',
-    origin + '/sitemap_index.xml',
-    origin + '/sitemap-index.xml',
-    origin + '/wp-sitemap.xml',
-    origin + '/sitemap/sitemap.xml'
-  ];
-
-  var urls = [];
-  for (var i = 0; i < sitemapCandidates.length; i++) {
-    try {
-      var r = await fetch(RAILWAY + '/api/fetch-page', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: sitemapCandidates[i], type: 'sitemap' })
-      });
-      if (r.ok) {
-        var d = await r.json();
-        if (d.urls && d.urls.length) { urls = d.urls; break; }
-        if (d.html) {
-          // Parse URL tags from sitemap XML
-          var matches = d.html.match(/<loc>(https?:\/\/[^<]+)<\/loc>/gi) || [];
-          urls = matches.map(function(m){ return m.replace(/<\/?loc>/gi,'').trim(); }).filter(function(u){ return u.startsWith('http'); });
-          if (urls.length) break;
-        }
-      }
-    } catch(e) {}
-  }
-
-  if (urls.length) {
-    siteUrlsEl.value = urls.slice(0, 200).join('\n');
-    updateUrlCount();
-    toast('✅ ' + urls.length + ' URLs loaded from sitemap');
-    if (btn) { btn.textContent = '✅ ' + urls.length + ' URLs'; setTimeout(function(){ btn.disabled = false; btn.textContent = '↓ Fetch Sitemap'; }, 3000); }
-  } else {
-    // Fallback: use AI to generate likely URL list
-    toast('⚠ Sitemap not accessible — paste URLs manually or AI will infer from context');
-    if (btn) { btn.disabled = false; btn.textContent = '↓ Fetch Sitemap'; }
-  }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// INIT — run auto-fills when page loads with pre-filled data
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-document.addEventListener('DOMContentLoaded', function() {
-  // If URL already filled (e.g. from workflow transfer), trigger geo + mobile auto-fill
-  setTimeout(function() {
-    var url = document.getElementById('dUrl') && document.getElementById('dUrl').value.trim();
-    if (url) {
-      onUrlChange(url);
-      autoFillMobilePct();
-    }
-  }, 400);
-});
-
 </script>
 </body>
 </html>
