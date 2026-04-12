@@ -372,14 +372,14 @@ img,table,iframe{max-width:100%;}
       <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
-    <!-- META CONSISTENCY CHECK — reads HTML from ③ if pasted, else fetches via URL from ① -->
+    <!-- META CONSISTENCY CHECK -->
     <div class="panel" id="metaCheckerPanel">
       <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span></div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
-        Paste your page HTML in ③ then click Check. The system compares: title, H1, og:title, twitter:title, schema headline, dateModified, author, canonical. Inconsistencies and missing tags are flagged instantly. <strong style="color:var(--gold);">Also detects duplicate H1s</strong> — more than one H1 is flagged as an error.
+        Reads the HTML you pasted in ③ above. Checks: title tag, H1 (detects duplicates → suggests H2), og:title, meta description, canonical, schema dateModified, author, and more. Click the button after pasting HTML in ③.
       </div>
-      <div id="metaCheckerInfo" style="display:none;margin-bottom:12px;"></div>
       <button class="btn-gold" style="font-size:16px;padding:12px 28px;width:auto;" onclick="runMetaCheck()">🔍 Check Meta Consistency</button>
+      <div id="metaCheckerInfo" style="display:none;margin-top:12px;"></div>
       <div id="metaCheckResults" style="margin-top:16px;"></div>
     </div>
 
@@ -494,14 +494,14 @@ function setMode(m) {
 
 // ── Auto-load from Workflow Manager ───────────────────────
 (function autoLoadFromWorkflow(){
-  // Try localStorage transfer object first
+  // Try localStorage transfer object first (set by Workflow Manager openInAudit)
   let transfer = null;
   try {
     const raw = localStorage.getItem('cs_audit_transfer') || localStorage.getItem('cs_audit_transfer_2');
     if (raw) transfer = JSON.parse(raw);
   } catch(e){}
 
-  // Fallback: URL params
+  // Fallback: URL params (minimal data — enrich from localStorage GSC data)
   const p = new URLSearchParams(window.location.search);
   if (!transfer && p.get('url')) {
     transfer = {
@@ -516,11 +516,62 @@ function setMode(m) {
       siteUrls: '',
       workflowId: p.get('wf') || ''
     };
+    // Enrich from shared GSC data stored by Workflow Manager
+    try {
+      const gscRaw = localStorage.getItem('cs_shared_gsc');
+      if (gscRaw) {
+        const gscData = JSON.parse(gscRaw);
+        // Get top queries from GSC queries list
+        if (gscData.queries && gscData.queries.length && !transfer.topQueries) {
+          const topQ = gscData.queries.slice(0, 15).map(function(q){ return q.query || q; }).filter(Boolean);
+          transfer.topQueries = topQ.join('\n');
+          // Secondary = first query that differs from primary
+          const primary = (transfer.keyword || '').toLowerCase().trim();
+          const secCandidates = topQ.filter(function(q){
+            const qn = q.toLowerCase().trim();
+            if (qn === primary) return false;
+            const pw = primary.split(' '); const qw = qn.split(' ');
+            const overlap = pw.filter(function(w){ return qw.includes(w); }).length;
+            return overlap / Math.max(pw.length, 1) < 0.8;
+          });
+          transfer.secondaryKeyword = secCandidates[0] || '';
+        }
+        // Get GSC data for the specific URL
+        if (gscData.pages && gscData.pages.length && transfer.pageUrl) {
+          const urlNorm = function(u){ return u.toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\//, ''); };
+          const match = gscData.pages.find(function(pg){
+            return urlNorm(pg.page||pg.url||'').includes(urlNorm(transfer.pageUrl)) ||
+                   urlNorm(transfer.pageUrl).includes(urlNorm(pg.page||pg.url||''));
+          });
+          if (match) {
+            if (!transfer.impressions && match.impressions) transfer.impressions = match.impressions;
+            if (!transfer.ctr && match.ctr) transfer.ctr = parseFloat(match.ctr).toFixed(1);
+            if (!transfer.position && match.position) transfer.position = parseFloat(match.position).toFixed(1);
+          }
+        }
+        // Site URLs from all pages
+        if (gscData.pages && gscData.pages.length && !transfer.siteUrls) {
+          transfer.siteUrls = gscData.pages.map(function(pg){ return pg.page||pg.url||''; })
+            .filter(function(u){ return u.startsWith('http'); }).slice(0, 50).join('\n');
+        }
+      }
+    } catch(e){}
+    // Geo from stored workflow project or query params
+    try {
+      const gscQueries2 = localStorage.getItem('cs_gsc_queries');
+      // Geo from cs_audit_transfer geo field
+      const raw2 = localStorage.getItem('cs_audit_transfer');
+      if (raw2) {
+        const t2 = JSON.parse(raw2);
+        if (t2.geo) transfer.geo = t2.geo;
+        if (t2.siteUrls && !transfer.siteUrls) transfer.siteUrls = t2.siteUrls;
+      }
+    } catch(e){}
   }
 
   if (!transfer || !transfer.pageUrl) return;
 
-  const fill = () => {
+  const fill = function(){
     try {
       setMode('deep');
 
@@ -536,12 +587,10 @@ function setMode(m) {
         document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
       }
 
-      // Geo — auto from workflow TLD detection
-      if (transfer.geo) {
-        document.getElementById('dGeo').value = transfer.geo;
-      }
+      // Geo
+      if (transfer.geo) document.getElementById('dGeo').value = transfer.geo;
 
-      // Top queries
+      // Top queries — auto filled
       if (transfer.topQueries) {
         document.getElementById('dQueries').value = transfer.topQueries;
         document.getElementById('queriesAutoMark').style.display = 'inline';
@@ -551,8 +600,8 @@ function setMode(m) {
       if (transfer.siteUrls) {
         document.getElementById('dSiteUrls').value = transfer.siteUrls;
         document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
-        const urls = transfer.siteUrls.split('\n').filter(l=>l.trim().startsWith('http'));
-        document.getElementById('urlCount').textContent = urls.length ? `✓ ${urls.length} URLs loaded` : '';
+        const urls = transfer.siteUrls.split('\n').filter(function(l){ return l.trim().startsWith('http'); });
+        document.getElementById('urlCount').textContent = urls.length ? '\u2713 ' + urls.length + ' URLs loaded' : '';
       }
 
       // Show auto badges
@@ -563,30 +612,31 @@ function setMode(m) {
         document.getElementById('gscAutoBadge').style.display = 'inline-flex';
       }
 
-      // Show connection banner
+      // Connection banner
       const deepView = document.getElementById('deepView');
-      const chips = [];
-      if (transfer.position) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ${parseFloat(transfer.position).toFixed(1)}</span>`);
-      if (transfer.impressions) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${parseInt(transfer.impressions).toLocaleString()} impr</span>`);
-      if (transfer.ctr) chips.push(`<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">${transfer.ctr}% CTR</span>`);
-      if (gscPages.length) chips.push(`<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">✓ ${gscPages.length} GSC pages</span>`);
-
-      const banner = document.createElement('div');
-      banner.className = 'connection-banner';
-      banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <strong style="font-size:12px;font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--gold);">Connected from Workflow Manager</strong>
-        ${transfer.workflowId ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;font-family:\'IBM Plex Mono\',monospace;">← Back to Workflow</a>' : ''}
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${chips.join('')}</div>
-      <div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);font-family:'IBM Plex Mono',monospace;">Paste page HTML below → Run Full Audit</div>`;
-      deepView.insertBefore(banner, deepView.firstChild);
+      if (!document.querySelector('.connection-banner')) {
+        const chips = [];
+        if (transfer.position) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ' + parseFloat(transfer.position).toFixed(1) + '</span>');
+        if (transfer.impressions) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">' + parseInt(transfer.impressions).toLocaleString() + ' impr</span>');
+        if (transfer.ctr) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">' + transfer.ctr + '% CTR</span>');
+        if (transfer.secondaryKeyword) chips.push('<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">2nd kw: ' + transfer.secondaryKeyword.slice(0,30) + '</span>');
+        const banner = document.createElement('div');
+        banner.className = 'connection-banner';
+        banner.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+          + '<strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;color:var(--gold);">\u2713 Connected from Workflow Manager — all fields auto-filled</strong>'
+          + (transfer.workflowId ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;font-family:IBM Plex Mono,monospace;">&larr; Back to Workflow</a>' : '')
+          + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' + chips.join('') + '</div>'
+          + '<div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);font-family:IBM Plex Mono,monospace;">Paste page HTML in &#9432; below &rarr; Run Full Audit</div>';
+        deepView.insertBefore(banner, deepView.firstChild);
+      }
 
       window._wfId = transfer.workflowId || '';
     } catch(e) { console.error('Auto-fill error:', e); }
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
-  else setTimeout(fill, 100);
+  else setTimeout(fill, 150);
 })();
 
 // ── Auto-load shared GSC ───────────────────────────────────
@@ -626,43 +676,74 @@ function fetchGSCData() {
   btn.textContent = '⏳ Fetching...'; btn.disabled = true;
   status.textContent = '';
 
-  // Try to match against loaded GSC pages from Workflow
-  const raw = (() => { try { return localStorage.getItem('cs_shared_gsc'); } catch(e) { return null; } })();
+  const urlNorm = function(u){ return (u||'').toLowerCase().replace(/\/$/, '').replace(/^https?:\/\//, ''); };
+
+  const raw = (function(){ try { return localStorage.getItem('cs_shared_gsc'); } catch(e) { return null; } })();
   if (raw) {
     try {
       const data = JSON.parse(raw);
-      const match = (data.pages||[]).find(p => {
-        const pu = (p.page||p.url||'').toLowerCase().replace(/\/$/,'');
-        const u = url.toLowerCase().replace(/\/$/,'');
-        return pu === u || pu.includes(u.replace(/^https?:\/\//,'')) || u.includes(pu.replace(/^https?:\/\//,''));
+      const uNorm = urlNorm(url);
+      const match = (data.pages||[]).find(function(pg){
+        const pNorm = urlNorm(pg.page||pg.url||'');
+        return pNorm === uNorm || pNorm.includes(uNorm) || uNorm.includes(pNorm);
       });
+
       if (match) {
         if (match.impressions) { document.getElementById('dImpr').value = match.impressions; document.getElementById('imprAutoMark').style.display='inline'; }
         if (match.ctr) { document.getElementById('dCtr').value = parseFloat(match.ctr).toFixed(1); document.getElementById('ctrAutoMark').style.display='inline'; }
         if (match.position) { document.getElementById('dPos').value = parseFloat(match.position).toFixed(1); document.getElementById('posAutoMark').style.display='inline'; }
         document.getElementById('gscAutoBadge').style.display = 'inline-flex';
-        status.textContent = `✓ Matched — pos ${Math.round(match.position||0)}, ${(match.impressions||0).toLocaleString()} impr`;
+        status.textContent = '✓ pos ' + Math.round(match.position||0) + '  ·  ' + (match.impressions||0).toLocaleString() + ' impr  ·  ' + parseFloat(match.ctr||0).toFixed(1) + '% CTR';
         status.style.color = 'var(--green)';
-        btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
 
-        // Also try to get queries for this URL
-        const queries = (data.queries||[]).filter(q => q.query).slice(0, 15);
-        if (queries.length && !document.getElementById('dQueries').value.trim()) {
-          document.getElementById('dQueries').value = queries.map(q => q.query).join('\n');
-          document.getElementById('queriesAutoMark').style.display = 'inline';
+        // Fill queries
+        const queries = (data.queries||[]).filter(function(q){ return q.query; }).slice(0, 15);
+        if (queries.length) {
+          const qTexts = queries.map(function(q){ return q.query; });
+          if (!document.getElementById('dQueries').value.trim()) {
+            document.getElementById('dQueries').value = qTexts.join('\n');
+            document.getElementById('queriesAutoMark').style.display = 'inline';
+          }
+          // Secondary keyword — best query that differs from primary
+          const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
+          if (!document.getElementById('dKw2').value.trim()) {
+            const sec = qTexts.find(function(q){
+              const qn = q.toLowerCase().trim();
+              if (!primary || qn === primary) return false;
+              const pw = primary.split(' ');
+              const qw = qn.split(' ');
+              const overlap = pw.filter(function(w){ return w.length > 2 && qw.includes(w); }).length;
+              return overlap / Math.max(pw.length, 1) < 0.8;
+            });
+            if (sec) {
+              document.getElementById('dKw2').value = sec;
+              document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+            }
+          }
         }
-        toast('✅ GSC data loaded for this URL');
+
+        // Fill site URLs if empty
+        if (!document.getElementById('dSiteUrls').value.trim() && data.pages && data.pages.length) {
+          const urls = data.pages.map(function(pg){ return pg.page||pg.url||''; })
+            .filter(function(u){ return u.startsWith('http'); }).slice(0, 50);
+          document.getElementById('dSiteUrls').value = urls.join('\n');
+          document.getElementById('urlCount').textContent = '✓ ' + urls.length + ' URLs loaded';
+          document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        }
+
+        btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
+        toast('✅ Loaded: pos, impr, CTR, queries + secondary keyword');
         return;
       }
-    } catch(e) {}
+    } catch(e) { console.error('fetchGSCData error:', e); }
   }
 
-  // No match found
-  status.textContent = 'No GSC data found for this URL — import GSC CSV in Workflow Manager first';
+  status.textContent = 'No match — import GSC CSV in Workflow Manager first';
   status.style.color = 'var(--amber)';
   btn.textContent = '⬇ Fetch GSC Data for this URL'; btn.disabled = false;
   toast('⚠ No GSC data found — import via Workflow Manager first');
 }
+
 
 // ── Fetch Sitemap URLs ─────────────────────────────────────
 async function fetchSitemap() {
