@@ -475,8 +475,8 @@ img,table,iframe{max-width:100%;}
     <div class="post-audit-bar" id="postAuditBar" style="display:none;">
       <div class="pa-title">✅ Audit Complete — What next?</div>
       <button class="btn-sm btn-gold-sm" onclick="printAudit()">🖨️ Print / PDF</button>
-      <button class="btn-sm btn-green" onclick="exportMarkdown()">📝 Export MD for AI</button>
-      <button class="btn-sm btn-purple" onclick="exportRecommendationsReport()">📋 Client Recommendations</button>
+      <button class="btn-sm btn-green" onclick="exportMarkdown()">📝 Export MD voor AI</button>
+      <button class="btn-sm btn-purple" onclick="exportRecommendationsReport()">📋 Download Aanbevelingen Rapport</button>
       <a href="/audit-recommendations" class="btn-sm btn-blue">🎯 Full Recommendations</a>
       <a href="/audit-progress-tracker" class="btn-sm btn-muted">📈 Progress Tracker</a>
       <a href="/audit-workflow" class="btn-sm btn-muted">← Back to Workflow</a>
@@ -1355,13 +1355,8 @@ ${myContentStr}`;
       const result=await callGemini(prompts[s.id],8000);
       addSection(out,s.id,s.icon,s.label,s.badge,result);
       setStep(s.id,'done');
-      // Save step result to localStorage immediately so nothing is lost
-      try {
-        const savedAudit = JSON.parse(localStorage.getItem('cs_last_audit')||'{}');
-        savedAudit[s.id] = result;
-        savedAudit._meta = { url:inp.url, kw:inp.kw, geo:inp.geo, date:new Date().toISOString() };
-        localStorage.setItem('cs_last_audit', JSON.stringify(savedAudit));
-      } catch(e2){}
+      // Save step result to localStorage immediately — with size guard
+      auditSaveStep(s.id, result, inp);
     } catch(e) {
       setStep(s.id,'error');
       addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`);
@@ -1378,22 +1373,131 @@ ${myContentStr}`;
   // Show post-audit action bar
   document.getElementById('postAuditBar').style.display='flex';
 
-  // Store audit data for recommendations export
+  // Final full save including all input fields
+  auditSaveFinal(inp);
+}
+
+// ══════════════════════════════════════════════════════════
+// AUDIT SAVE / RESTORE — survives page reload & computer restart
+// Uses localStorage with per-key storage to handle large text.
+// Falls back gracefully when storage is full.
+// ══════════════════════════════════════════════════════════
+
+function auditSaveStep(stepId, result, inp) {
+  try {
+    // Save each step separately to avoid single-key size limit
+    localStorage.setItem('cs_audit_step_' + stepId, result);
+    // Save meta + inputs on every step so partial audits are also recoverable
+    const meta = {
+      url: inp.url, kw: inp.kw, kw2: inp.kw2, geo: inp.geo,
+      goal: inp.goal, impr: inp.impr, ctr: inp.ctr, pos: inp.pos,
+      queries: inp.queries, constraints: inp.constraints,
+      date: new Date().toISOString()
+    };
+    localStorage.setItem('cs_audit_meta', JSON.stringify(meta));
+  } catch(e) {
+    // localStorage full — clear oldest step and retry once
+    try {
+      // Remove oldest step keys to make room
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('cs_audit_step_'));
+      if (keys.length > 0) {
+        localStorage.removeItem(keys[0]);
+        localStorage.setItem('cs_audit_step_' + stepId, result);
+      }
+    } catch(e2) {
+      console.warn('[audit save] localStorage full, step', stepId, 'not saved');
+    }
+  }
+}
+
+function auditSaveFinal(inp) {
+  // Also keep window._lastAuditData for in-session use
   window._lastAuditData = {
-    url: inp.url,
-    keyword: inp.kw,
-    secondaryKeyword: inp.kw2,
-    geo: inp.geo,
-    position: inp.pos,
-    impressions: inp.impr,
-    ctr: inp.ctr,
-    auditDate: new Date().toISOString(),
-    steps: DEEP_STEPS.map(s => ({
-      id: s.id,
-      label: s.label,
-      content: document.getElementById('md-'+s.id)?.innerText || ''
-    }))
+    url: inp.url, keyword: inp.kw, secondaryKeyword: inp.kw2,
+    geo: inp.geo, position: inp.pos, impressions: inp.impr, ctr: inp.ctr,
+    auditDate: new Date().toISOString()
   };
+}
+
+function auditGetStep(stepId) {
+  try { return localStorage.getItem('cs_audit_step_' + stepId) || ''; } catch(e) { return ''; }
+}
+
+function auditGetMeta() {
+  try { return JSON.parse(localStorage.getItem('cs_audit_meta') || '{}'); } catch(e) { return {}; }
+}
+
+function auditClearAll() {
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('cs_audit_step_') || k === 'cs_audit_meta' || k === 'cs_last_audit');
+  keys.forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
+}
+
+// ── Restore last audit on page load ──────────────────────
+(function restoreLastAudit() {
+  try {
+    const meta = auditGetMeta();
+    if (!meta.url) return;
+
+    // Check if any steps were saved
+    const savedSteps = DEEP_STEPS.filter(s => auditGetStep(s.id));
+    if (!savedSteps.length) return;
+
+    const out = document.getElementById('deepOutput');
+    if (!out) return;
+
+    // Show restore banner
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+    banner.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">LAATSTE AUDIT: ' + (meta.kw||'') + ' · ' + (meta.url||'').slice(0,40) + ' · ' + (meta.date||'').slice(0,10) + ' · ' + savedSteps.length + '/' + DEEP_STEPS.length + ' stappen opgeslagen</span>'
+      + '<button onclick="doRestoreAudit()" class="btn-sm btn-blue">↩ Herstel audit</button>'
+      + '<button onclick="this.parentElement.remove()" class="btn-sm btn-muted">✕</button>';
+    out.before(banner);
+  } catch(e) {}
+})();
+
+function doRestoreAudit() {
+  try {
+    const meta = auditGetMeta();
+    if (!meta.url) { toast('⚠ Geen opgeslagen audit gevonden'); return; }
+
+    // Re-fill input fields
+    if (meta.url)  document.getElementById('dUrl').value  = meta.url;
+    if (meta.kw)   document.getElementById('dKw').value   = meta.kw;
+    if (meta.kw2)  document.getElementById('dKw2').value  = meta.kw2;
+    if (meta.geo)  document.getElementById('dGeo').value  = meta.geo;
+    if (meta.goal) document.getElementById('dGoal').value = meta.goal;
+    if (meta.impr) document.getElementById('dImpr').value = meta.impr;
+    if (meta.ctr)  document.getElementById('dCtr').value  = meta.ctr;
+    if (meta.pos)  document.getElementById('dPos').value  = meta.pos;
+    if (meta.queries) document.getElementById('dQueries').value = meta.queries;
+    if (meta.constraints) document.getElementById('dConstraints').value = meta.constraints;
+
+    setMode('deep');
+
+    const out = document.getElementById('deepOutput');
+    out.innerHTML = '';
+    out.className = 'output show';
+
+    let restored = 0;
+    DEEP_STEPS.forEach(s => {
+      const content = auditGetStep(s.id);
+      if (content) {
+        addSection(out, s.id, s.icon, s.label, s.badge, content);
+        restored++;
+      }
+    });
+
+    window._lastAuditData = {
+      url: meta.url, keyword: meta.kw, secondaryKeyword: meta.kw2,
+      geo: meta.geo, position: meta.pos, impressions: meta.impr, ctr: meta.ctr,
+      auditDate: meta.date
+    };
+
+    document.getElementById('postAuditBar').style.display = 'flex';
+    document.querySelector('.restore-banner')?.remove();
+    toast('✅ ' + restored + ' audit stappen hersteld');
+    out.scrollIntoView({behavior:'smooth'});
+  } catch(e) { toast('⚠ Herstel mislukt: ' + e.message); }
 }
 
 // ── Section helpers ────────────────────────────────────────
@@ -1435,26 +1539,19 @@ function copyMd(id) {
 // ── renderMd — with REAL table support ────────────────────
 function renderMd(t) {
   if (!t) return '';
-  // Escape HTML entities first
   t = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // Headings
   t = t.replace(/^### (.+)$/gm,'<h3>$1</h3>');
   t = t.replace(/^## (.+)$/gm,'<h2>$1</h2>');
   t = t.replace(/^# (.+)$/gm,'<h1>$1</h1>');
-  // Bold, italic, code
   t = t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   t = t.replace(/\*(.+?)\*/g,'<em>$1</em>');
   t = t.replace(/`([^`\n]+)`/g,'<code>$1</code>');
   t = t.replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
-  // Blockquote
   t = t.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
-  // HR
   t = t.replace(/^---+$/gm,'<hr>');
-  // TABLES — parse entire table blocks properly
   t = t.replace(/(\|.+\|[\s\S]*?)(?=\n\n|\n[^|]|$)/g, function(match) {
     const lines = match.trim().split('\n').filter(l => l.trim().startsWith('|'));
     if (lines.length < 2) return match;
-    // Check if second line is separator
     const isSep = (l) => /^\|[\s\-:|]+\|/.test(l);
     let headerLine = lines[0];
     let bodyLines = lines.slice(1);
@@ -1472,11 +1569,9 @@ function renderMd(t) {
       '</tbody></table>';
     return html;
   });
-  // Lists
   t = t.replace(/^[\-\*•] (.+)$/gm,'<li>$1</li>');
   t = t.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
   t = t.replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`);
-  // Paragraphs
   t = t.replace(/\n\n/g,'</p><p>');
   t = t.replace(/\n/g,'<br>');
   return t;
@@ -1484,104 +1579,200 @@ function renderMd(t) {
 
 // ── Export Markdown for AI ────────────────────────────────
 function exportMarkdown() {
-  const out = document.getElementById('deepOutput');
-  if (!out || !out.children.length) { toast('Run the audit first'); return; }
-  const data = window._lastAuditData || {};
-  let md = `# SEO Audit Report — ${data.url || 'Unknown Page'}\n\n`;
-  md += `**Date:** ${new Date().toLocaleDateString()}\n`;
-  md += `**Keyword:** ${data.keyword || '—'}\n`;
-  md += `**Secondary:** ${data.secondaryKeyword || '—'}\n`;
-  md += `**Geo:** ${data.geo || '—'}\n`;
-  md += `**GSC:** pos ${data.position}, ${data.impressions} impr, ${data.ctr}% CTR\n\n---\n\n`;
+  const meta = auditGetMeta();
+  const hasMeta = meta.url;
+  if (!hasMeta && (!window._lastAuditData?.url)) { toast('Run the audit first'); return; }
+  const data = window._lastAuditData || meta;
 
-  Array.from(out.querySelectorAll('.sec-card')).forEach(card => {
-    const title = card.querySelector('.sec-title')?.textContent || '';
-    const content = card.querySelector('.md')?.innerText || '';
+  let md = `# SEO Audit Report — ${data.url || data.keyword || 'Unknown Page'}\n\n`;
+  md += `**Date:** ${new Date().toLocaleDateString()}\n`;
+  md += `**Keyword:** ${data.keyword || data.kw || '—'}\n`;
+  md += `**Secondary:** ${data.secondaryKeyword || data.kw2 || '—'}\n`;
+  md += `**Geo:** ${data.geo || '—'}\n`;
+  md += `**GSC:** pos ${data.position || data.pos}, ${data.impressions || data.impr} impr, ${data.ctr}% CTR\n\n---\n\n`;
+
+  DEEP_STEPS.forEach(s => {
+    // Try DOM first (in-session), fall back to localStorage (after reload)
+    const domContent = document.getElementById('md-'+s.id)?.innerText || '';
+    const storedContent = auditGetStep(s.id);
+    const content = domContent || storedContent;
     if (content.trim()) {
-      md += `## ${title}\n\n${content}\n\n---\n\n`;
+      md += `## ${s.icon} ${s.label}\n\n${content}\n\n---\n\n`;
     }
   });
 
   const blob = new Blob([md], {type:'text/markdown'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `seo-audit-${(data.keyword||'page').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.md`;
+  a.download = `seo-audit-${((data.keyword||data.kw||'page')).replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.md`;
   a.click();
   toast('✅ Markdown exported');
 }
 
-// ── Export Recommendations Report ────────────────────────
+// ══════════════════════════════════════════════════════════
+// RECOMMENDATIONS REPORT
+// Volledig rapport voor:
+// 1. Website eigenaar — wat moet er gedaan worden, in volgorde
+// 2. AI schrijfbrief — exacte instructies om de content te schrijven
+// Haalt tekst uit localStorage zodat het ook na reload werkt
+// ══════════════════════════════════════════════════════════
 function exportRecommendationsReport() {
-  const out = document.getElementById('deepOutput');
-  if (!out || !out.children.length) { toast('Run the audit first'); return; }
-  const data = window._lastAuditData || {};
+  const meta = auditGetMeta();
+  const data = window._lastAuditData || meta;
+  const url = data.url || meta.url || '';
+  const kw = data.keyword || meta.kw || '';
 
-  // Extract priority actions section
-  const d0 = document.getElementById('md-d0')?.innerText || '';
-  const d2 = document.getElementById('md-d2')?.innerText || '';
-  const d4 = document.getElementById('md-d4')?.innerText || '';
-  const d10 = document.getElementById('md-d10')?.innerText || '';
+  if (!url && !kw) { toast('⚠ Voer eerst een audit uit'); return; }
 
-  const css = `body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}
-h1{color:#7c3aed;font-size:26px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:6px;}
-h2{color:#4b5563;font-size:18px;margin:28px 0 10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px;}
-h3{color:#374151;font-size:15px;margin:18px 0 6px;}
-.meta{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px;font-size:13px;}
-.meta-item{background:#f3f4f6;padding:6px 12px;border-radius:6px;color:#6b7280;}
-.meta-item strong{color:#374151;}
-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;}
-th{background:#f3f4f6;padding:9px 12px;text-align:left;border:1px solid #e5e7eb;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
-td{padding:9px 12px;border:1px solid #e5e7eb;vertical-align:top;}
-tr:hover td{background:#fafafa;}
-.section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px 24px;margin-bottom:20px;}
-.section.priority{border-left:4px solid #d97706;}
-pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:11px;}
-code{background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:11px;}
-footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}
-@media print{body{margin:20px;}h1{color:#000;}h2{color:#374151;}}`;
+  // Load all steps — DOM first, localStorage fallback
+  function getStep(id) {
+    return (document.getElementById('md-'+id)?.innerText || '').trim()
+      || auditGetStep(id).trim();
+  }
 
-  const htmlBody = `<h1>SEO Recommendations Report</h1>
-<div class="meta">
-  <div class="meta-item"><strong>URL:</strong> ${data.url||'—'}</div>
-  <div class="meta-item"><strong>Keyword:</strong> ${data.keyword||'—'}</div>
-  <div class="meta-item"><strong>Geo:</strong> ${data.geo||'—'}</div>
-  <div class="meta-item"><strong>Position:</strong> ${data.position||'—'}</div>
-  <div class="meta-item"><strong>Generated:</strong> ${new Date().toLocaleDateString()}</div>
-</div>
+  const d0  = getStep('d0');   // Priority actions
+  const d1  = getStep('d1');   // Intent
+  const d2  = getStep('d2');   // CTR Surgery
+  const d3  = getStep('d3');   // Competitor diff
+  const d4  = getStep('d4');   // Content gap
+  const d5  = getStep('d5');   // PULSE rewrites
+  const d6  = getStep('d6');   // NEXUS + internal links
+  const d7  = getStep('d7');   // Architecture
+  const d8  = getStep('d8');   // Technical
+  const d9  = getStep('d9');   // Voice search
+  const d10 = getStep('d10');  // Score + 90-day plan
 
-<div class="section priority">
-  <h2>🎯 Priority Actions</h2>
-  <pre>${d0.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
-</div>
+  const hasContent = [d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,d10].some(s => s.length > 10);
+  if (!hasContent) { toast('⚠ Geen audit resultaten gevonden — voer eerst een audit uit'); return; }
 
-<div class="section">
-  <h2>⚡ CTR Surgery — New Title & Meta</h2>
-  <pre>${d2.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
-</div>
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function section(icon, title, content, color) {
+    if (!content || content.length < 10) return '';
+    return `<div class="sec">
+      <div class="sec-head" style="border-left:4px solid ${color};">
+        <span class="sec-icon">${icon}</span>
+        <span class="sec-title">${title}</span>
+      </div>
+      <div class="sec-body"><pre class="content">${escHtml(content)}</pre></div>
+    </div>`;
+  }
 
-<div class="section">
-  <h2>📝 Content Gap Matrix</h2>
-  <pre>${d4.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
-</div>
+  const css = `
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#1f2937;background:#f9fafb;padding:0;}
+.page{max-width:960px;margin:0 auto;padding:32px 24px 60px;}
+.header{background:linear-gradient(135deg,#4c1d95,#1e3a8a);color:#fff;padding:28px 32px;border-radius:12px;margin-bottom:28px;}
+.header h1{font-size:24px;font-weight:900;margin-bottom:6px;}
+.header .sub{font-size:12px;opacity:.8;font-family:monospace;}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:28px;}
+.meta-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;}
+.meta-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-family:monospace;margin-bottom:3px;}
+.meta-val{font-size:15px;font-weight:700;color:#111827;word-break:break-all;}
+.sec{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:18px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
+.sec-icon{font-size:18px;}
+.sec-title{font-size:15px;font-weight:700;color:#111827;}
+.sec-body{padding:18px 20px;}
+pre.content{white-space:pre-wrap;word-break:break-word;font-family:Arial,sans-serif;font-size:13px;line-height:1.75;color:#374151;}
+.ai-brief{background:#fffbeb;border:2px solid #f59e0b;border-radius:10px;padding:24px;margin-bottom:28px;}
+.ai-brief h2{color:#92400e;font-size:17px;margin-bottom:10px;}
+.ai-brief p{font-size:13px;color:#78350f;line-height:1.7;margin-bottom:8px;}
+.ai-brief pre{background:#fff;border:1px solid #fcd34d;border-radius:6px;padding:14px;font-size:12px;white-space:pre-wrap;word-break:break-word;color:#374151;font-family:monospace;line-height:1.6;}
+.owner-box{background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:20px 24px;margin-bottom:28px;}
+.owner-box h2{color:#166534;font-size:17px;margin-bottom:10px;}
+.owner-box ol{padding-left:20px;}
+.owner-box li{margin-bottom:6px;font-size:13px;color:#14532d;line-height:1.6;}
+footer{text-align:center;font-size:11px;color:#9ca3af;margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;}
+@media print{body{background:#fff;}.page{padding:20px 16px;}}`;
 
-<div class="section">
-  <h2>📈 Score Projection + 90-Day Plan</h2>
-  <pre>${d10.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
-</div>
+  // Build owner checklist from d0 (priority actions)
+  const ownerLines = d0.split('\n')
+    .filter(l => l.trim().startsWith('🎯') || l.trim().match(/^\d+\./))
+    .slice(0, 10)
+    .map(l => `<li>${escHtml(l.replace(/^[🎯\d\.\s]+/,'').trim())}</li>`)
+    .join('');
 
-<footer>ContentScale SEO Audit · contentscale.site · Generated ${new Date().toLocaleString()}</footer>`;
+  // Build AI writing brief from key sections
+  const aiBrief = `SCHRIJFOPDRACHT VOOR AI — ${kw}
+URL: ${url}
+Primair keyword: ${kw}
+Secundair keyword: ${data.secondaryKeyword || meta.kw2 || '—'}
+Geo: ${data.geo || meta.geo || '—'}
+Doel: ${meta.goal || '—'}
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SEO Recommendations — ${data.url||'Audit'}</title><style>${css}</style></head><body>${htmlBody}</body></html>`;
+PRIORITEIT ACTIES (doe dit eerst):
+${d0}
+
+NIEUWE TITEL + META:
+${d2}
+
+CONTENT GAP — DIT ONTBREEKT:
+${d4}
+
+PULSE HERSCHRIJVINGEN (voor/na):
+${d5}
+
+HEADING STRUCTUUR (H1→H3):
+${d7}
+
+TECHNISCHE VEREISTEN:
+${d8}`;
+
+  const body = `
+<div class="page">
+  <div class="header">
+    <h1>📋 SEO Aanbevelingen Rapport</h1>
+    <div class="sub">${escHtml(url)} · ${new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}</div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-card"><div class="meta-label">URL</div><div class="meta-val" style="font-size:11px;">${escHtml(url)}</div></div>
+    <div class="meta-card"><div class="meta-label">Primair keyword</div><div class="meta-val">${escHtml(kw)}</div></div>
+    <div class="meta-card"><div class="meta-label">Secundair keyword</div><div class="meta-val">${escHtml(data.secondaryKeyword || meta.kw2 || '—')}</div></div>
+    <div class="meta-card"><div class="meta-label">Geo</div><div class="meta-val">${escHtml(data.geo || meta.geo || '—')}</div></div>
+    <div class="meta-card"><div class="meta-label">Positie</div><div class="meta-val">${data.position || meta.pos || '—'}</div></div>
+    <div class="meta-card"><div class="meta-label">Impressies</div><div class="meta-val">${data.impressions || meta.impr || '—'}</div></div>
+    <div class="meta-card"><div class="meta-label">CTR</div><div class="meta-val">${data.ctr || meta.ctr || '—'}%</div></div>
+    <div class="meta-card"><div class="meta-label">Audit datum</div><div class="meta-val">${(data.auditDate || meta.date || '').slice(0,10)}</div></div>
+  </div>
+
+  <div class="owner-box">
+    <h2>✅ Voor de website eigenaar — wat moet er gedaan worden</h2>
+    <ol>${ownerLines || '<li>Zie Priority Actions hieronder</li>'}</ol>
+  </div>
+
+  <div class="ai-brief">
+    <h2>🤖 AI Schrijfbrief — exacte instructies voor content</h2>
+    <p>Kopieer onderstaande brief naar je AI (Claude, Gemini) om de pagina te laten herschrijven op basis van de audit.</p>
+    <pre>${escHtml(aiBrief)}</pre>
+  </div>
+
+  ${section('🎯','Priority Actions — doe dit eerst', d0, '#d97706')}
+  ${section('🔍','Intent + AI Overview', d1, '#6366f1')}
+  ${section('⚡','CTR Surgery — nieuwe titel + meta', d2, '#16a34a')}
+  ${section('📊','Competitor Diff', d3, '#dc2626')}
+  ${section('📝','Content Gap Matrix', d4, '#dc2626')}
+  ${section('🔧','PULSE Herschrijvingen', d5, '#7c3aed')}
+  ${section('🔗','NEXUS + Interne links', d6, '#7c3aed')}
+  ${section('🏗️','Heading Structuur', d7, '#0891b2')}
+  ${section('⚙️','Technische Checklist + Schema', d8, '#0891b2')}
+  ${section('🎙️','Voice Search', d9, '#ea580c')}
+  ${section('📈','Score + Projectie + 90-Dagen Plan', d10, '#16a34a')}
+
+  <footer>ContentScale SEO Audit · contentscale.site · ${new Date().toLocaleString('nl-NL')}</footer>
+</div>`;
+
+  const html = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SEO Aanbevelingen — ${escHtml(kw)}</title><style>${css}</style></head><body>${body}</body></html>`;
+
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([html],{type:'text/html'}));
-  a.download = `seo-recommendations-${(data.keyword||'page').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.html`;
+  a.download = `seo-aanbevelingen-${(kw||'pagina').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.html`;
   a.click();
-  toast('✅ Recommendations report exported');
+  toast('✅ Rapport gedownload');
 }
 
 // ── Print audit ───────────────────────────────────────────
 function printAudit() {
-  // Open all sections before printing
   document.querySelectorAll('.sec-body.hidden').forEach(el => el.classList.remove('hidden'));
   window.print();
 }
