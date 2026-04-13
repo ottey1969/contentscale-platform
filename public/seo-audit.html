@@ -360,23 +360,33 @@ img,table,iframe{max-width:100%;}
     </div>
 
     <div class="panel">
-      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER</span></div>
-      <div class="info">
-        <strong>Chrome:</strong> Open page → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below.<br>
-        The engine reads your ACTUAL H1, H2s, schema, word count — not guesses.
+      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER</span> <span id="htmlAutoFetchBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto-fetched</span></div>
+
+      <!-- AUTO-FETCH STRIP -->
+      <div style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:10px;">🚀 Auto-Fetch — geen copy/paste nodig</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-sm btn-green" onclick="autoFetchPageHtml()" id="autoFetchBtn" style="font-size:10px;padding:8px 18px;">🚀 Fetch Page HTML</button>
+          <span id="autoFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:8px;line-height:1.6;">
+          Haalt automatisch de HTML op van de URL in veld ①. Vul URL in ① in en klik Fetch. Werkt via server-side proxy — geen browser extensie nodig.
+        </div>
       </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase;">Of handmatig plakken:</div>
       <div class="field">
         <label>Raw HTML (full page source)</label>
-        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>...paste full page source...</html>" oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
+        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>...paste full page source...</html>&#10;&#10;Of klik 🚀 Fetch Page HTML hierboven." oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
       </div>
       <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
     </div>
 
     <!-- META CONSISTENCY CHECK -->
     <div class="panel" id="metaCheckerPanel">
-      <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span></div>
+      <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span> <span id="metaAutoRunBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto-run na fetch</span></div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
-        Reads the HTML you pasted in ③ above. Checks: title tag, H1 (detects duplicates → suggests H2), og:title, meta description, canonical, schema dateModified, author, and more. Click the button after pasting HTML in ③.
+        Leest de HTML uit veld ③. Checkt: title tag, H1, og:title, meta description, canonical, schema dateModified, author en meer. <strong style="color:var(--green);">Draait automatisch na Auto-Fetch.</strong> Of klik handmatig na plakken.
       </div>
       <button class="btn-gold" style="font-size:16px;padding:12px 28px;width:auto;" onclick="runMetaCheck()">🔍 Check Meta Consistency</button>
       <div id="metaCheckerInfo" style="display:none;margin-top:12px;"></div>
@@ -445,8 +455,11 @@ img,table,iframe{max-width:100%;}
     </div>
 
     <div class="panel">
-      <div class="panel-title">⑦ Optional</div>
-      <div class="field"><label>Known Constraints</label><input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN, no CMS access"></div>
+      <div class="panel-title">⑦ Optional <span id="constraintsAutoBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto from Workflow</span></div>
+      <div class="field">
+        <label>Known Constraints <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);text-transform:none;letter-spacing:0;">— auto-gevuld vanuit Workflow als daar ingevuld</span></label>
+        <input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN, no CMS access">
+      </div>
     </div>
 
     <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 11-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
@@ -590,6 +603,16 @@ function setMode(m) {
       // Geo
       if (transfer.geo) document.getElementById('dGeo').value = transfer.geo;
 
+      // Constraints — auto-fill from workflow transfer if set
+      if (transfer.constraints) {
+        const constraintsEl = document.getElementById('dConstraints');
+        if (constraintsEl && !constraintsEl.value.trim()) {
+          constraintsEl.value = transfer.constraints;
+          const badge = document.getElementById('constraintsAutoBadge');
+          if (badge) badge.style.display = 'inline-flex';
+        }
+      }
+
       // Top queries — auto filled
       if (transfer.topQueries) {
         document.getElementById('dQueries').value = transfer.topQueries;
@@ -632,6 +655,22 @@ function setMode(m) {
       }
 
       window._wfId = transfer.workflowId || '';
+
+      // Auto-fetch page HTML — triggers 1s after fields are filled
+      // Only if URL is present and HTML field is still empty
+      if (transfer.pageUrl) {
+        setTimeout(function() {
+          const htmlEl = document.getElementById('dHtml');
+          if (htmlEl && !htmlEl.value.trim()) {
+            const status = document.getElementById('autoFetchStatus');
+            if (status) {
+              status.textContent = 'Auto-fetch gestart vanuit Workflow...';
+              status.style.color = 'var(--gold)';
+            }
+            autoFetchPageHtml();
+          }
+        }, 1000);
+      }
     } catch(e) { console.error('Auto-fill error:', e); }
   };
 
@@ -880,6 +919,54 @@ async function fetchSitemap() {
     toast('⚠ Sitemap fetch failed');
   }
   btn.textContent = '⬇ Fetch Sitemap'; btn.disabled = false;
+}
+
+// ── Auto-Fetch Page HTML via server proxy ─────────────────
+async function autoFetchPageHtml() {
+  const url = document.getElementById('dUrl').value.trim();
+  if (!url) { toast('⚠ Vul eerst de Page URL in bij ①'); return; }
+
+  const btn = document.getElementById('autoFetchBtn');
+  const status = document.getElementById('autoFetchStatus');
+
+  btn.textContent = '⏳ Fetching...';
+  btn.disabled = true;
+  status.textContent = 'Ophalen via server...';
+  status.style.color = 'var(--gold)';
+
+  try {
+    const r = await fetch(`${RAILWAY}/api/fetch-html`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const d = await r.json();
+
+    if (d.success && d.html) {
+      document.getElementById('dHtml').value = d.html;
+      updateHtmlStats('dHtml', 'dHtmlStats');
+      document.getElementById('htmlAutoFetchBadge').style.display = 'inline-flex';
+      status.textContent = '✅ HTML opgehaald (' + Math.round(d.html.length / 1024) + ' KB) via ' + (d.method || 'proxy');
+      status.style.color = 'var(--green)';
+      toast('✅ Page HTML geladen — meta check draait automatisch');
+      // Auto-run meta consistency check
+      setTimeout(function() {
+        runMetaCheck();
+        document.getElementById('metaAutoRunBadge').style.display = 'inline-flex';
+      }, 400);
+    } else {
+      status.textContent = '⚠ ' + (d.error || 'Fetch mislukt') + ' — plak HTML handmatig in ③';
+      status.style.color = 'var(--red)';
+      toast('⚠ Auto-fetch mislukt — plak HTML handmatig');
+    }
+  } catch (e) {
+    status.textContent = '⚠ Server niet bereikbaar: ' + e.message + ' — plak HTML handmatig';
+    status.style.color = 'var(--red)';
+    toast('⚠ Server offline — plak HTML handmatig in ③');
+  }
+
+  btn.textContent = '🚀 Fetch Page HTML';
+  btn.disabled = false;
 }
 
 // ── HTML Stats ─────────────────────────────────────────────
