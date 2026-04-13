@@ -917,7 +917,7 @@ function renderPages(){
       +'</div>'
 
       // Notes
-      +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea onchange="updateField(\''+p.id+'\',\'notes\',this.value)">'+p.notes+'</textarea></div>'
+      +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea oninput="updateField(\''+p.id+'\',\'notes\',this.value)">'+p.notes+'</textarea></div>'
 
 
       // Internal Link Suggestions (auto-computed from page list)
@@ -1651,8 +1651,37 @@ var _autoSaveTimer = null;
 var _lastSavedHash = '';
 
 function _dataHash(){
-  // Simple hash to detect changes
-  return pages.length + '_' + (pages[0]?.updated||'') + '_' + (pages[pages.length-1]?.updated||'');
+  // Real hash: stringify all page ids + updated timestamps + scores
+  // Detects any change anywhere in the list, not just first/last
+  try {
+    return pages.map(function(p){
+      return p.id + '|' + (p.updated||'') + '|' + (p.scoreBefore||'') + '|' + (p.scoreAfter||'') + '|' + p.status + '|' + JSON.stringify(p.checks||{});
+    }).join('~');
+  } catch(e) {
+    return pages.length + '_' + Date.now();
+  }
+}
+
+function _getProjectKey(){
+  // Build a stable, human-readable key from project fields
+  var clientPart = (project.client||'').replace(/\s+/g,'-').toLowerCase().replace(/[^a-z0-9\-]/g,'').slice(0,20);
+  var sitePart = (project.site||'').replace(/https?:\/\//,'').split('/')[0].replace(/\s+/g,'-').replace(/[^a-z0-9.\-]/g,'').slice(0,30);
+  var key = [clientPart, sitePart].filter(Boolean).join('-');
+  // If both fields empty, reuse the last saved key — never generate a new timestamp key
+  if(!key || key === '-'){
+    try { key = localStorage.getItem('cs_wf_sync_key') || ''; } catch(e) {}
+  }
+  // Absolute fallback: use a fixed key based on the first page URL slug
+  if(!key && pages.length){
+    try {
+      var slug = new URL(pages[0].url).hostname.replace(/\./g,'-').slice(0,30);
+      key = 'workflow-' + slug;
+    } catch(e) { key = 'workflow-default'; }
+  }
+  if(!key) key = 'workflow-default';
+  // Persist the key so next load/save uses the same one
+  try { localStorage.setItem('cs_wf_sync_key', key); } catch(e) {}
+  return key;
 }
 
 async function syncToServer(silent){
@@ -1660,11 +1689,8 @@ async function syncToServer(silent){
   var btn = document.getElementById('syncBtn');
   if(btn && !silent){ btn.textContent='☁ Saving...'; btn.disabled=true; }
 
-  var key = (project.client||'default').replace(/\s+/g,'-').toLowerCase()
-    + '-' + (project.site||'').replace(/https?:\/\//,'').split('/')[0].replace(/\s+/g,'-');
-  if(!key || key === '-') key = 'workflow-' + Date.now();
-
-  var payload = { key, project, pages, savedAt: new Date().toISOString() };
+  var key = _getProjectKey();
+  var payload = { key: key, project: project, pages: pages, savedAt: new Date().toISOString() };
 
   try {
     var r = await fetch('https://app.contentscale.site/api/workflow/save', {
@@ -1677,10 +1703,10 @@ async function syncToServer(silent){
       _lastSavedHash = _dataHash();
       var ts = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
       setSyncStatus('☁ Opgeslagen om ' + ts + ' — key: ' + key, 'var(--green)');
-      try{ localStorage.setItem('cs_wf_sync_key', key); }catch(e){}
-      if(!silent) toast('☁ Opgeslagen op server');
+      if(!silent) toast('☁ Opgeslagen op server — key: ' + key);
     } else {
       setSyncStatus('⚠ Server save mislukt — data staat in browser', 'var(--gold)');
+      if(!silent) toast('⚠ Server save mislukt');
     }
   } catch(e) {
     setSyncStatus('⚠ Server niet bereikbaar — data staat in browser', 'var(--gold)');
@@ -1690,12 +1716,10 @@ async function syncToServer(silent){
 }
 
 async function loadFromServer(){
-  var key = prompt('Project key (leeg = laatste opgeslagen):');
+  var key = prompt('Project key (leeg = automatisch laden):');
   if(key === null) return;
-  if(!key){
-    try{ key = localStorage.getItem('cs_wf_sync_key')||''; }catch(e){}
-  }
-  if(!key){ toast('⚠ Geen key gevonden'); return; }
+  if(!key){ key = _getProjectKey(); }
+  if(!key){ toast('⚠ Geen key gevonden — vul Client + Website in bovenaan'); return; }
   try {
     var r = await fetch('https://app.contentscale.site/api/workflow/load?key='+encodeURIComponent(key));
     var d = await r.json();
@@ -1799,16 +1823,26 @@ async function scanAllScores() {
 
 function startAutoSave(){
   if(_autoSaveTimer) clearInterval(_autoSaveTimer);
-  // Auto-save every 3 minutes IF data has changed
+  // Auto-save to server every 90 seconds IF data has changed
   _autoSaveTimer = setInterval(function(){
     if(pages.length > 0 && _dataHash() !== _lastSavedHash){
       syncToServer(true); // silent = no toast
     }
-  }, 3 * 60 * 1000);
-  // Also save on page unload
+  }, 90 * 1000);
+
+  // Also always save to localStorage on any change (belt + braces)
+  // beforeunload: use sendBeacon — the ONLY reliable way to fire during page close
+  // fetch() is cancelled by browsers on unload; sendBeacon is not
   window.addEventListener('beforeunload', function(){
+    // Always save to localStorage first (synchronous, always works)
+    try { save(); } catch(e) {}
+    // Then try to send to server via sendBeacon (non-blocking, survives unload)
     if(pages.length > 0 && _dataHash() !== _lastSavedHash){
-      syncToServer(true);
+      try {
+        var key = _getProjectKey();
+        var payload = JSON.stringify({ key: key, project: project, pages: pages, savedAt: new Date().toISOString() });
+        navigator.sendBeacon('https://app.contentscale.site/api/workflow/save', new Blob([payload], {type:'application/json'}));
+      } catch(e) {}
     }
   });
 }
@@ -1818,7 +1852,13 @@ load();
 renderPages();
 renderOverview();
 startAutoSave();
-if(pages.length>0) setSyncStatus('Data in browser — click ☁ Save to Server to backup', 'var(--dim)');
+// Show current project key on load so user always knows what key their data is under
+var _initKey = _getProjectKey();
+if(pages.length > 0){
+  setSyncStatus('💾 Data geladen — key: ' + _initKey + ' — auto-save actief elke 90 sec', 'var(--green)');
+} else {
+  setSyncStatus('Geen data — voeg paginas toe of laad van server', 'var(--dim)');
+}
 </script>
 </body>
 </html>
