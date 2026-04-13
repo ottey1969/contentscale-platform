@@ -637,6 +637,65 @@ function setMode(m) {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
   else setTimeout(fill, 150);
+
+  // Second pass at 600ms — catches cases where GSC data loads after the first fill
+  setTimeout(function(){
+    try {
+      // Only fill fields that are still empty
+      const kw2El = document.getElementById('dKw2');
+      const geoEl = document.getElementById('dGeo');
+      const queriesEl = document.getElementById('dQueries');
+
+      const gscRaw = localStorage.getItem('cs_shared_gsc');
+      if (!gscRaw) return;
+      const gscData = JSON.parse(gscRaw);
+
+      // Fill queries if still empty
+      if (queriesEl && !queriesEl.value.trim() && gscData.queries && gscData.queries.length) {
+        const topQ = gscData.queries.slice(0,15).map(function(q){ return q.query||''; }).filter(Boolean);
+        queriesEl.value = topQ.join('\n');
+        document.getElementById('queriesAutoMark').style.display = 'inline';
+      }
+
+      // Fill secondary keyword if still empty
+      if (kw2El && !kw2El.value.trim() && gscData.queries && gscData.queries.length) {
+        const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
+        const topQ = gscData.queries.slice(0,15).map(function(q){ return q.query||''; }).filter(Boolean);
+        const sec = topQ.find(function(q){
+          const qn = q.toLowerCase().trim();
+          if (!primary || qn === primary) return false;
+          const pw = primary.split(' ');
+          const qw = qn.split(' ');
+          const overlap = pw.filter(function(w){ return w.length>2 && qw.includes(w); }).length;
+          return overlap / Math.max(pw.length,1) < 0.8;
+        });
+        if (sec) {
+          kw2El.value = sec;
+          document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+        }
+      }
+
+      // Fill geo from stored transfer if still empty
+      if (geoEl && !geoEl.value.trim()) {
+        try {
+          const t = JSON.parse(localStorage.getItem('cs_audit_transfer')||'{}');
+          if (t.geo) geoEl.value = t.geo;
+        } catch(e2){}
+      }
+
+      // Fill site URLs if still empty
+      const siteUrlsEl = document.getElementById('dSiteUrls');
+      if (siteUrlsEl && !siteUrlsEl.value.trim() && gscData.pages && gscData.pages.length) {
+        const urls = gscData.pages.map(function(pg){ return pg.page||pg.url||''; })
+          .filter(function(u){ return u.startsWith('http'); }).slice(0,50);
+        if (urls.length) {
+          siteUrlsEl.value = urls.join('\n');
+          document.getElementById('urlCount').textContent = '\u2713 ' + urls.length + ' URLs loaded';
+          document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        }
+      }
+    } catch(e){}
+  }, 600);
 })();
 
 // ── Auto-load shared GSC ───────────────────────────────────
@@ -666,6 +725,48 @@ function loadSharedGSC() {
   } catch(e) { return false; }
 }
 setTimeout(loadSharedGSC, 200);
+
+// ── Restore last audit results if page reloaded ────────────
+(function restoreLastAudit(){
+  try {
+    const saved = localStorage.getItem('cs_last_audit');
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    if (!data._meta) return;
+    // Show a restore banner if there are saved results
+    const out = document.getElementById('deepOutput');
+    if (!out) return;
+    const restoreBanner = document.createElement('div');
+    restoreBanner.style.cssText = 'background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+    const d = data._meta;
+    restoreBanner.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">LAST AUDIT: ' + (d.kw||'') + ' · ' + (d.url||'').slice(0,40) + ' · ' + (d.date||'').slice(0,10) + '</span>'
+      + '<button onclick="restoreAuditResults()" class="btn-sm btn-blue">↩ Restore Results</button>'
+      + '<button onclick="this.parentElement.remove()" class="btn-sm btn-muted">✕</button>';
+    out.before(restoreBanner);
+  } catch(e){}
+})();
+
+function restoreAuditResults(){
+  try {
+    const saved = localStorage.getItem('cs_last_audit');
+    if (!saved) { toast('No saved audit found'); return; }
+    const data = JSON.parse(saved);
+    const out = document.getElementById('deepOutput');
+    out.innerHTML = '';
+    out.className = 'output show';
+    DEEP_STEPS.forEach(function(s){
+      if (data[s.id]) addSection(out, s.id, s.icon, s.label, s.badge, data[s.id]);
+    });
+    if (data._meta) {
+      if (data._meta.url) document.getElementById('dUrl').value = data._meta.url;
+      if (data._meta.kw) document.getElementById('dKw').value = data._meta.kw;
+      if (data._meta.geo) document.getElementById('dGeo').value = data._meta.geo;
+      setMode('deep');
+    }
+    document.getElementById('postAuditBar').style.display = 'flex';
+    toast('\u2705 Audit results restored');
+  } catch(e) { toast('\u26A0 Could not restore: ' + e.message); }
+}
 
 // ── Fetch GSC data for URL from panel ① ───────────────────
 function fetchGSCData() {
@@ -1164,9 +1265,16 @@ ${myContentStr}`;
   for (let i=0;i<DEEP_STEPS.length;i++) {
     const s=DEEP_STEPS[i];setStep(s.id,'active');
     try {
-      const result=await callGemini(prompts[s.id],4000);
+      const result=await callGemini(prompts[s.id],8000);
       addSection(out,s.id,s.icon,s.label,s.badge,result);
       setStep(s.id,'done');
+      // Save step result to localStorage immediately so nothing is lost
+      try {
+        const savedAudit = JSON.parse(localStorage.getItem('cs_last_audit')||'{}');
+        savedAudit[s.id] = result;
+        savedAudit._meta = { url:inp.url, kw:inp.kw, geo:inp.geo, date:new Date().toISOString() };
+        localStorage.setItem('cs_last_audit', JSON.stringify(savedAudit));
+      } catch(e2){}
     } catch(e) {
       setStep(s.id,'error');
       addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`);
