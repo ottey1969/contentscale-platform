@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Progress Tracker | ContentScale</title>
+<script>
+(function(){
+  var RAILWAY='https://app.contentscale.site';
+  if(localStorage.getItem('admin_id')){window._toolSession={type:'admin',projectKey:'admin',whitelabelName:'ContentScale',isAdmin:true};return;}
+  var token=localStorage.getItem('cs_access_token');
+  if(!token){window.location.href='/tools';return;}
+  document.documentElement.style.visibility='hidden';
+  fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':token}})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.success){localStorage.removeItem('cs_access_token');localStorage.removeItem('cs_access_session');window.location.href='/tools';return;}
+      window._toolSession=d;localStorage.setItem('cs_access_session',JSON.stringify(d));
+      if(d.whitelabelName&&d.whitelabelName!=='ContentScale SEO Tools'){var b=document.querySelector('.brand');if(b)b.textContent=d.whitelabelName;}
+      document.documentElement.style.visibility='';
+    }).catch(function(){
+      var c=null;try{c=JSON.parse(localStorage.getItem('cs_access_session')||'null');}catch(e){}
+      if(c&&c.type){window._toolSession=c;document.documentElement.style.visibility='';}
+      else{window.location.href='/tools';}
+    });
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1300px;margin:0 auto;padding:0 20px 80px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700;}
+.btn-gold:hover{opacity:.88;}
+.btn-red{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.2);color:var(--red);}
+.btn-red:hover{background:var(--red);color:#fff;}
+.btn-orange{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.3);color:var(--orange);}
+
+/* Sync status */
+#syncStatus{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--dim);text-align:right;margin-bottom:8px;}
+
+/* ── MEASUREMENT DASHBOARD ── */
+.meas-dash{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:22px;}
+.meas-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.meas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.meas-domain{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;transition:border-color .2s;}
+.meas-domain.due-now{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.meas-domain.overdue{border-color:var(--red);background:rgba(244,63,63,.04);}
+.meas-domain.spiral{border-color:var(--red);background:rgba(244,63,63,.06);}
+.meas-domain.ok{border-color:var(--green);background:rgba(74,222,128,.03);}
+.md-left{flex:1;min-width:0;}
+.md-name{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;color:var(--ink);margin-bottom:2px;}
+.md-meta{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);}
+.md-next{font-family:'IBM Plex Mono',monospace;font-size:9px;margin-top:5px;}
+.md-next.due{color:var(--gold);}
+.md-next.overdue{color:var(--red);}
+.md-next.future{color:var(--dim);}
+.md-next.spiral{color:var(--red);}
+.md-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;white-space:nowrap;}
+
+/* Global summary */
+.g-summary{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px;}
+@media(max-width:800px){.g-summary{grid-template-columns:repeat(3,1fr);}}
+.gs-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;}
+.gs-n{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;margin-bottom:3px;}
+.gs-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Domain sections */
+.domain-section{margin-bottom:28px;}
+.domain-header{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px 10px 0 0;cursor:pointer;user-select:none;}
+.domain-header:hover{background:var(--surface);}
+.domain-color{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.domain-name{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;flex:1;}
+.domain-meta{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);}
+.domain-body{border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;overflow:hidden;}
+
+/* GSC import strip */
+.gsc-strip{background:rgba(96,165,250,.05);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.gsc-strip input[type=file]{display:none;}
+
+/* Page cards */
+.page-card{border-bottom:1px solid var(--border);}
+.page-card:last-child{border-bottom:none;}
+.pc-head{display:flex;align-items:center;gap:10px;padding:12px 18px;cursor:pointer;user-select:none;}
+.pc-head:hover{background:rgba(255,255,255,.02);}
+.pc-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);flex:1;word-break:break-all;min-width:0;}
+.pc-kw{font-size:11px;color:var(--muted);}
+.pc-status{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;flex-shrink:0;}
+.st-improving{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+.st-stagnant{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.25);}
+.st-declining{background:rgba(244,63,63,.12);color:var(--red);border:1px solid rgba(244,63,63,.25);}
+.st-baseline{background:rgba(71,85,105,.15);color:var(--dim);border:1px solid var(--border);}
+.st-spiral{background:rgba(244,63,63,.2);color:var(--red);border:1px solid rgba(244,63,63,.5);}
+
+/* Timeline */
+.tl-wrap{padding:14px 18px;border-top:1px solid var(--border);}
+.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+@media(max-width:600px){.tl{grid-template-columns:repeat(4,1fr);}}
+.tl-node{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;position:relative;}
+.tl-node.filled{border-color:var(--green);background:rgba(74,222,128,.05);}
+.tl-node.due{border-color:var(--gold);background:rgba(251,191,36,.06);}
+.tl-node.overdue{border-color:var(--red);background:rgba(244,63,63,.05);}
+.tl-node.skipped{opacity:.5;}
+.tl-node.future{opacity:.35;}
+.tl-node.down{border-color:var(--red);}
+.tl-wk{font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--sub);margin-bottom:3px;}
+.tl-dt{font-family:'IBM Plex Mono',monospace;font-size:6px;color:var(--dim);margin-bottom:5px;}
+.tl-pos{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;}
+.tl-pos.good{color:var(--green);}
+.tl-pos.warn{color:var(--gold);}
+.tl-pos.bad{color:var(--red);}
+.tl-pos.empty{color:var(--dim);font-size:14px;}
+.tl-delta{font-family:'IBM Plex Mono',monospace;font-size:7px;margin-top:2px;}
+.tl-delta.up{color:var(--green);}
+.tl-delta.dn{color:var(--red);}
+.tl-inp{width:100%;margin-top:4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--ink);text-align:center;outline:none;}
+.tl-inp:focus{border-color:var(--gold);}
+.tl-skip{font-family:'IBM Plex Mono',monospace;font-size:6px;color:var(--dim);background:none;border:none;cursor:pointer;display:block;margin:3px auto 0;padding:1px 3px;}
+.tl-skip:hover{color:var(--muted);}
+.tl-now{position:absolute;top:-5px;right:-5px;width:12px;height:12px;border-radius:50%;background:var(--gold);font-size:7px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;}
+
+/* Metrics row */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 18px;border-top:1px solid var(--border);}
+@media(max-width:500px){.metrics-row{grid-template-columns:1fr 1fr;}}
+.mc{background:var(--surface);border-radius:6px;padding:8px 10px;text-align:center;}
+.mc-l{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:3px;}
+.mc-v{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;}
+.mc-v.good{color:var(--green);}
+.mc-v.warn{color:var(--gold);}
+.mc-v.bad{color:var(--red);}
+.mc-ch{font-family:'IBM Plex Mono',monospace;font-size:8px;margin-top:2px;}
+.mc-ch.up{color:var(--green);}
+.mc-ch.dn{color:var(--red);}
+
+/* GSC input panel */
+.gsc-input{padding:12px 18px;border-top:1px solid var(--border);background:rgba(96,165,250,.03);}
+.gi-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;}
+.gi-row{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end;}
+.gi-f label{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:3px;}
+.gi-f input{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink);outline:none;width:100%;}
+.gi-f input:focus{border-color:var(--gold);}
+.gi-f input[type=date]{color-scheme:dark;}
+
+/* Spiral alert */
+.spiral-alert{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.3);border-radius:8px;padding:12px 16px;margin:0 18px 12px;}
+.sa-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:6px;}
+.sa-body{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:8px;}
+.sa-actions{display:flex;gap:7px;flex-wrap:wrap;}
+
+/* Warn alert */
+.warn-alert{background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:7px;padding:10px 14px;margin:0 18px 10px;}
+.wa-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+.wa-body{font-size:12px;color:var(--muted);line-height:1.6;}
+
+/* Add domain + page panels */
+.add-panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:20px;}
+.add-panel-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin-bottom:12px;}
+.add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.af{flex:1;min-width:110px;}
+.af label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:4px;}
+.af input,.af select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;}
+.af input:focus,.af select:focus{border-color:var(--gold);}
+.af input[type=date]{color-scheme:dark;}
+.af select option{background:var(--card);}
+
+/* Domain colors */
+.dc-0{background:#a78bfa;} .dc-1{background:#60a5fa;} .dc-2{background:#4ade80;}
+.dc-3{background:#fbbf24;} .dc-4{background:#fb923c;} .dc-5{background:#f43f3f;}
+.dc-6{background:#c084fc;} .dc-7{background:#34d399;} .dc-8{background:#38bdf8;}
+
+.empty{text-align:center;padding:40px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--sub);margin-bottom:6px;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media(max-width:768px){.wrap{padding:0 14px 60px!important;}.add-row{flex-direction:column;}.af{min-width:100%;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO PROGRESS TRACKER</div>
+  <div class="topbar-right">
+    <a href="/audit-workflow" class="btn btn-muted">← Workflow</a>
+    <a href="/audit-seo" class="btn btn-muted">🔬 Audit</a>
+    <button class="btn btn-blue" onclick="trackerSyncToServer(false)">☁ Opslaan</button>
+    <button class="btn btn-muted" onclick="trackerLoadFromServer()">↓ Laden</button>
+    <button class="btn btn-green" onclick="exportCSV()">↓ CSV</button>
+    <button class="btn btn-blue" onclick="exportClientReport()">📄 Rapport</button>
+  </div>
+</div>
+
+<div id="syncStatus"></div>
+
+<!-- MEASUREMENT DASHBOARD -->
+<div class="meas-dash" id="measDash">
+  <div class="meas-title">
+    <span>📅 Meting Dashboard — wanneer moet ik meten?</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input type="file" id="gscGlobalInput" accept=".csv" onchange="importGSCGlobal(this)" style="display:none;">
+      <button class="btn btn-gold" onclick="document.getElementById('gscGlobalInput').click()">📊 Importeer GSC CSV</button>
+    </div>
+  </div>
+  <div class="meas-grid" id="measGrid"></div>
+</div>
+
+<!-- GLOBAL SUMMARY -->
+<div class="g-summary" id="gSummary"></div>
+
+<!-- ADD DOMAIN -->
+<div class="add-panel">
+  <div class="add-panel-title">➕ Domein toevoegen</div>
+  <div class="add-row">
+    <div class="af" style="flex:2;min-width:180px;">
+      <label>Domeinnaam *</label>
+      <input type="text" id="newDomainName" placeholder="perfectroofingteam.com">
+    </div>
+    <div class="af" style="min-width:120px;max-width:140px;">
+      <label>Baseline datum *</label>
+      <input type="date" id="newDomainDate">
+    </div>
+    <div class="af" style="flex:none;align-self:flex-end;">
+      <button class="btn btn-gold" onclick="addDomain()">+ Domein</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PAGE -->
+<div class="add-panel" id="addPagePanel">
+  <div class="add-panel-title">➕ Pagina toevoegen aan domein</div>
+  <div class="add-row">
+    <div class="af" style="min-width:140px;">
+      <label>Domein *</label>
+      <select id="newPageDomain"></select>
+    </div>
+    <div class="af" style="flex:3;min-width:200px;">
+      <label>Page URL *</label>
+      <input type="url" id="newUrl" placeholder="https://site.com/page">
+    </div>
+    <div class="af" style="flex:2;min-width:150px;">
+      <label>Primair Keyword *</label>
+      <input type="text" id="newKw" placeholder="emergency roof repair NJ">
+    </div>
+    <div class="af" style="min-width:75px;max-width:90px;">
+      <label>Positie</label>
+      <input type="number" id="newPos" placeholder="34" step="0.1">
+    </div>
+    <div class="af" style="min-width:80px;max-width:95px;">
+      <label>Impressies</label>
+      <input type="number" id="newImpr" placeholder="12400">
+    </div>
+    <div class="af" style="min-width:65px;max-width:80px;">
+      <label>CTR %</label>
+      <input type="number" id="newCtr" placeholder="1.8" step="0.1">
+    </div>
+    <div class="af" style="min-width:65px;max-width:80px;">
+      <label>Clicks</label>
+      <input type="number" id="newClicks" placeholder="223">
+    </div>
+    <div class="af" style="flex:none;align-self:flex-end;">
+      <button class="btn btn-gold" onclick="addPage()">+ Pagina</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT FROM WORKFLOW -->
+<div id="importBanner" style="display:none;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.18);border-radius:7px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);">
+  <strong style="color:var(--green);">✓ Workflow pagina's gevonden</strong>
+  <span id="importCount"></span> beschikbaar.
+  <button class="btn btn-green" onclick="importFromWorkflow()">Importeer uit Workflow</button>
+</div>
+
+<div id="domainList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var LS_KEY = 'cs_tracker_v3';
+var RAILWAY = 'https://app.contentscale.site';
+
+// domains = [ { id, name, baseDate, colorIdx, pages: [...] } ]
+// page = { id, url, keyword, checkpoints: { w0:{date,position,impressions,ctr,clicks,skipped}, w2:..., ... } }
+var domains = [];
+
+var CHECKPOINTS = [
+  {id:'w0',  label:'Baseline', days:0,  color:'var(--dim)'    },
+  {id:'w2',  label:'Week 2',   days:14, color:'var(--blue)'   },
+  {id:'w4',  label:'Week 4',   days:28, color:'var(--blue)'   },
+  {id:'w6',  label:'Week 6',   days:42, color:'var(--purple)' },
+  {id:'w8',  label:'Week 8',   days:56, color:'var(--purple)' },
+  {id:'w10', label:'Week 10',  days:70, color:'var(--gold)'   },
+  {id:'w12', label:'Week 12',  days:84, color:'var(--green)'  },
+];
+
+var DOMAIN_COLORS = ['#a78bfa','#60a5fa','#4ade80','#fbbf24','#fb923c','#f43f3f','#c084fc','#34d399','#38bdf8'];
+
+var CORE_UPDATES = ['2024-03-05','2024-08-15','2024-11-11','2025-03-13','2025-06-30','2025-11-04','2026-03-10'];
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function toast(msg,dur){ var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},dur||2500); }
+function setSyncStatus(msg,color){ var el=document.getElementById('syncStatus');if(el){el.textContent=msg;el.style.color=color||'var(--dim)';} }
+
+// ── Save / Load ──────────────────────────────────────────
+function save(){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(domains)); }catch(e){
+    try{ localStorage.removeItem(LS_KEY+'_bak'); localStorage.setItem(LS_KEY,JSON.stringify(domains)); }catch(e2){}
+  }
+  try{ localStorage.setItem(LS_KEY+'_bak',JSON.stringify({domains,savedAt:new Date().toISOString()})); }catch(e){}
+}
+function load(){
+  try{ var d=localStorage.getItem(LS_KEY); if(d) domains=JSON.parse(d); }
+  catch(e){ try{ var b=localStorage.getItem(LS_KEY+'_bak'); if(b){var bd=JSON.parse(b);if(bd.domains)domains=bd.domains;} }catch(e2){} }
+}
+
+function _getTrackerKey(){
+  try{ var k=localStorage.getItem('cs_tracker_key'); if(k) return k; }catch(e){}
+  var key = 'tracker-default';
+  if(domains.length){ try{ key='tracker-'+domains[0].name.replace(/[^a-z0-9]/gi,'-').toLowerCase().slice(0,40); }catch(e){} }
+  try{ localStorage.setItem('cs_tracker_key',key); }catch(e){}
+  return key;
+}
+
+async function trackerSyncToServer(silent){
+  if(!domains.length) return;
+  var key=_getTrackerKey();
+  try{
+    var r=await fetch(RAILWAY+'/api/tracker/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,pages:domains,savedAt:new Date().toISOString()})});
+    var d=await r.json();
+    if(d.success){ var ts=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}); setSyncStatus('☁ Opgeslagen om '+ts+' — key: '+key,'var(--green)'); if(!silent)toast('☁ Opgeslagen — key: '+key); }
+    else{ setSyncStatus('⚠ Server save mislukt','var(--gold)'); }
+  }catch(e){ setSyncStatus('⚠ Server niet bereikbaar — lokaal opgeslagen','var(--gold)'); }
+}
+
+async function trackerLoadFromServer(){
+  var key=prompt('Tracker key (leeg = automatisch):');
+  if(key===null) return;
+  if(!key) key=_getTrackerKey();
+  try{
+    var r=await fetch(RAILWAY+'/api/tracker/load?key='+encodeURIComponent(key));
+    var d=await r.json();
+    if(d.success&&d.data&&d.data.pages){
+      if(!confirm('Laden? Vervangt huidige data.')) return;
+      domains=d.data.pages;
+      try{localStorage.setItem('cs_tracker_key',key);}catch(e){}
+      save(); render();
+      setSyncStatus('☁ Geladen — key: '+key,'var(--green)');
+      toast('✅ Data geladen van server');
+    }else{ toast('⚠ Niet gevonden: '+key); }
+  }catch(e){ toast('⚠ Server niet bereikbaar: '+e.message); }
+}
+
+var _autoSaveTimer=null;
+function startAutoSave(){
+  if(_autoSaveTimer) clearInterval(_autoSaveTimer);
+  _autoSaveTimer=setInterval(function(){ if(domains.length) trackerSyncToServer(true); },90000);
+  window.addEventListener('beforeunload',function(){
+    try{save();}catch(e){}
+    if(domains.length){ try{ var key=_getTrackerKey(); navigator.sendBeacon(RAILWAY+'/api/tracker/save',new Blob([JSON.stringify({key,pages:domains,savedAt:new Date().toISOString()})],{type:'application/json'})); }catch(e){} }
+  });
+}
+
+// ── Checkpoint helpers ───────────────────────────────────
+function makeCheckpoints(baseDate){
+  var cp={};
+  CHECKPOINTS.forEach(function(c){ cp[c.id]={date:c.id==='w0'?baseDate:'',position:null,impressions:null,ctr:null,clicks:null,skipped:false}; });
+  return cp;
+}
+function expectedDate(baseDate,days){ if(!baseDate) return null; var d=new Date(baseDate); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+function getSpiralStatus(page){
+  var filled=CHECKPOINTS.filter(function(cp){ var d=page.checkpoints[cp.id]; return d&&d.position!==null&&!d.skipped; });
+  if(filled.length<2) return 'baseline';
+  var positions=filled.map(function(cp){ return page.checkpoints[cp.id].position; });
+  var last=positions[positions.length-1], prev=positions[positions.length-2], prev2=positions.length>=3?positions[positions.length-3]:null, base=positions[0];
+  if((prev2!==null&&last>prev&&prev>prev2)||(last>base+10)) return 'spiral';
+  if(last>prev+2) return 'declining';
+  if(last<base) return 'improving';
+  if(Math.abs(last-base)<=2) return 'stagnant';
+  return 'baseline';
+}
+
+function getDueCheckpoint(page, domainBaseDate){
+  var baseDate=page.checkpoints.w0.date||domainBaseDate;
+  if(!baseDate) return null;
+  var td=today();
+  for(var i=1;i<CHECKPOINTS.length;i++){
+    var cp=CHECKPOINTS[i], data=page.checkpoints[cp.id];
+    if(data.skipped||data.position!==null) continue;
+    var exp=expectedDate(baseDate,cp.days);
+    if(exp&&exp<=td) return {cp:cp,expectedDate:exp,isOverdue:new Date(exp)<new Date(td)};
+  }
+  // All filled — find next upcoming
+  for(var j=1;j<CHECKPOINTS.length;j++){
+    var cp2=CHECKPOINTS[j], data2=page.checkpoints[cp2.id];
+    if(data2.skipped||data2.position!==null) continue;
+    var exp2=expectedDate(baseDate,cp2.days);
+    if(exp2&&exp2>td) return {cp:cp2,expectedDate:exp2,isOverdue:false,isFuture:true};
+  }
+  return null;
+}
+
+function getDomainNextMeasurement(domain){
+  // Returns the earliest due date across all pages in this domain
+  var earliest=null, anyOverdue=false, anyDue=false, anySpiral=false;
+  domain.pages.forEach(function(p){
+    var due=getDueCheckpoint(p, domain.baseDate);
+    if(!due) return;
+    if(due.isFuture){ if(!earliest||due.expectedDate<earliest) earliest=due.expectedDate; }
+    else{ anyDue=true; if(due.isOverdue) anyOverdue=true; if(!earliest||due.expectedDate<earliest) earliest=due.expectedDate; }
+    if(getSpiralStatus(p)==='spiral') anySpiral=true;
+  });
+  return {date:earliest, overdue:anyOverdue, due:anyDue, spiral:anySpiral};
+}
+
+function posColor(v){ if(v===null) return ''; return v<=10?'good':v<=20?'warn':'bad'; }
+function fmtNum(v,m){
+  if(v===null||v===undefined) return '—';
+  if(m==='position') return Math.round(v*10)/10;
+  if(m==='ctr') return parseFloat(v).toFixed(1)+'%';
+  if(m==='impressions'||m==='clicks') return v>=1000?(v/1000).toFixed(1)+'k':v;
+  return v;
+}
+function coreUpdateNear(dateStr){
+  if(!dateStr) return null;
+  var d=new Date(dateStr);
+  for(var i=0;i<CORE_UPDATES.length;i++){ var cu=new Date(CORE_UPDATES[i]); if(Math.abs((d-cu)/(86400000))<=21) return CORE_UPDATES[i]; }
+  return null;
+}
+
+function updateCheckpoint(domainId,pageId,cpId,metric,value){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  var page=dom.pages.find(function(p){return p.id===pageId;});
+  if(!page) return;
+  var v=metric==='date'?value:(value===''?null:parseFloat(value));
+  page.checkpoints[cpId][metric]=v;
+  page.checkpoints[cpId].skipped=false;
+  save(); renderMeasDash(); renderGSummary();
+}
+
+function skipCheckpoint(domainId,pageId,cpId){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  var page=dom.pages.find(function(p){return p.id===pageId;});
+  if(!page) return;
+  page.checkpoints[cpId].skipped=true;
+  page.checkpoints[cpId].date=today();
+  save(); render(); toast('Overgeslagen');
+}
+
+// ── Domain management ────────────────────────────────────
+function addDomain(){
+  var name=document.getElementById('newDomainName').value.trim();
+  var baseDate=document.getElementById('newDomainDate').value||today();
+  if(!name){ toast('⚠ Domeinnaam verplicht'); return; }
+  if(domains.find(function(d){return d.name.toLowerCase()===name.toLowerCase();})){toast('⚠ Domein bestaat al');return;}
+  domains.push({id:uid(),name:name,baseDate:baseDate,colorIdx:domains.length%DOMAIN_COLORS.length,pages:[]});
+  document.getElementById('newDomainName').value='';
+  save(); render(); updateDomainSelect(); setTimeout(function(){trackerSyncToServer(true);},500);
+  toast('✅ Domein toegevoegd');
+}
+
+function removeDomain(domainId){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\'s?')) return;
+  domains=domains.filter(function(d){return d.id!==domainId;});
+  save(); render(); updateDomainSelect(); toast('Verwijderd');
+}
+
+function updateDomainSelect(){
+  var sel=document.getElementById('newPageDomain');
+  sel.innerHTML=domains.map(function(d){ return '<option value="'+d.id+'">'+d.name+'</option>'; }).join('');
+}
+
+// ── Page management ──────────────────────────────────────
+function addPage(){
+  var domainId=document.getElementById('newPageDomain').value;
+  var url=document.getElementById('newUrl').value.trim();
+  var kw=document.getElementById('newKw').value.trim();
+  if(!domainId||!url||!kw){ toast('⚠ Domein, URL en keyword verplicht'); return; }
+  if(!url.startsWith('http')) url='https://'+url;
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom){ toast('⚠ Domein niet gevonden'); return; }
+  if(dom.pages.find(function(p){return p.url===url;})){ toast('⚠ URL bestaat al in dit domein'); return; }
+  var cp=makeCheckpoints(dom.baseDate);
+  cp.w0={date:dom.baseDate,position:parseFloat(document.getElementById('newPos').value)||null,impressions:parseInt(document.getElementById('newImpr').value)||null,ctr:parseFloat(document.getElementById('newCtr').value)||null,clicks:parseInt(document.getElementById('newClicks').value)||null,skipped:false};
+  dom.pages.push({id:uid(),url:url,keyword:kw,checkpoints:cp});
+  ['newUrl','newKw','newPos','newImpr','newCtr','newClicks'].forEach(function(id){document.getElementById(id).value='';});
+  save(); render(); setTimeout(function(){trackerSyncToServer(true);},500);
+  toast('✅ Pagina toegevoegd');
+}
+
+function removePage(domainId,pageId){
+  if(!confirm('Verwijder pagina?')) return;
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  dom.pages=dom.pages.filter(function(p){return p.id!==pageId;});
+  save(); render(); toast('Verwijderd');
+}
+
+// ── GSC CSV import ───────────────────────────────────────
+function importGSCGlobal(input){
+  var file=input.files[0]; if(!file) return;
+  var r=new FileReader();
+  r.onload=function(e){ processGSCUpdate(e.target.result); input.value=''; };
+  r.readAsText(file);
+}
+
+function processGSCUpdate(raw){
+  var lines=raw.trim().split('\n');
+  if(lines.length<2){ toast('⚠ Leeg CSV'); return; }
+  var header=lines[0].toLowerCase().replace(/"/g,'').split(',');
+  var iPage=header.findIndex(function(h){return h.includes('page')||h.includes('url');});
+  var iPos =header.findIndex(function(h){return h.includes('position');});
+  var iImpr=header.findIndex(function(h){return h.includes('impression');});
+  var iCtr =header.findIndex(function(h){return h.includes('ctr');});
+  var iClk =header.findIndex(function(h){return h.includes('click');});
+  if(iPage<0){ toast('⚠ Geen URL kolom gevonden'); return; }
+
+  var gscMap={};
+  for(var i=1;i<lines.length;i++){
+    var cols=lines[i].replace(/"/g,'').split(',');
+    var pageUrl=(cols[iPage]||'').trim().toLowerCase().replace(/\/+$/,'');
+    if(!pageUrl) continue;
+    gscMap[pageUrl]={position:iPos>=0?parseFloat(cols[iPos])||null:null,impressions:iImpr>=0?parseInt(cols[iImpr])||null:null,ctr:iCtr>=0?parseFloat((cols[iCtr]||'0').replace('%',''))||null:null,clicks:iClk>=0?parseInt(cols[iClk])||null:null};
+  }
+
+  var td=today(); var updated=0;
+  function norm(u){ return (u||'').toLowerCase().replace(/^https?:\/\//,'').replace(/\/+$/,''); }
+
+  domains.forEach(function(dom){
+    dom.pages.forEach(function(page){
+      var pn=norm(page.url);
+      var match=gscMap[pn]||gscMap['https://'+pn]||gscMap['http://'+pn];
+      if(!match){
+        var pPath=''; try{pPath=new URL(page.url).pathname.toLowerCase().replace(/\/+$/,'');}catch(e){}
+        if(pPath) match=Object.keys(gscMap).reduce(function(f,k){return f||(k.includes(pPath)?gscMap[k]:null);},null);
+      }
+      if(!match) return;
+      // Find target checkpoint
+      var target=null;
+      for(var i=1;i<CHECKPOINTS.length;i++){
+        var cp=CHECKPOINTS[i], data=page.checkpoints[cp.id];
+        if(data.skipped||data.position!==null) continue;
+        var exp=expectedDate(dom.baseDate,cp.days);
+        if(exp&&exp<=td){ target=cp; break; }
+      }
+      if(!target){ for(var j=CHECKPOINTS.length-1;j>=1;j--){ if(!page.checkpoints[CHECKPOINTS[j].id].skipped){ target=CHECKPOINTS[j]; break; } } }
+      if(!target) return;
+      page.checkpoints[target.id].position=match.position;
+      page.checkpoints[target.id].impressions=match.impressions;
+      page.checkpoints[target.id].ctr=match.ctr;
+      page.checkpoints[target.id].clicks=match.clicks;
+      page.checkpoints[target.id].date=td;
+      page.checkpoints[target.id].skipped=false;
+      updated++;
+    });
+  });
+
+  save(); render();
+  toast('✅ '+updated+' pagina\'s bijgewerkt');
+  setTimeout(function(){trackerSyncToServer(true);},1000);
+}
+
+// ── Workflow import ──────────────────────────────────────
+function checkWorkflowImport(){
+  try{
+    var wf=localStorage.getItem('cs_wf_pages'); if(!wf) return;
+    var wfPages=JSON.parse(wf);
+    var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
+    var available=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
+    if(!available.length) return;
+    var banner=document.getElementById('importBanner');
+    banner.style.display='flex';
+    document.getElementById('importCount').textContent=available.length+' pagina\'s';
+  }catch(e){}
+}
+
+function importFromWorkflow(){
+  try{
+    var wf=localStorage.getItem('cs_wf_pages'); if(!wf) return;
+    var wfPages=JSON.parse(wf);
+    var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
+    var newPages=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
+    if(!newPages.length){ toast('Geen nieuwe pagina\'s'); return; }
+    // Group by domain
+    var domainMap={};
+    newPages.forEach(function(p){
+      var host=''; try{host=new URL(p.url).hostname;}catch(e){host='unknown';}
+      if(!domainMap[host]) domainMap[host]=[];
+      domainMap[host].push(p);
+    });
+    var td=today(); var added=0;
+    Object.keys(domainMap).forEach(function(host){
+      var dom=domains.find(function(d){return d.name===host||d.name.includes(host)||host.includes(d.name);});
+      if(!dom){
+        dom={id:uid(),name:host,baseDate:td,colorIdx:domains.length%DOMAIN_COLORS.length,pages:[]};
+        domains.push(dom);
+      }
+      domainMap[host].forEach(function(p){
+        var cp=makeCheckpoints(dom.baseDate);
+        cp.w0={date:dom.baseDate,position:p.position||null,impressions:p.impressions||null,ctr:p.ctr||null,clicks:null,skipped:false};
+        dom.pages.push({id:uid(),url:p.url,keyword:p.keyword||'',checkpoints:cp});
+        added++;
+      });
+    });
+    save(); render(); updateDomainSelect();
+    document.getElementById('importBanner').style.display='none';
+    setTimeout(function(){trackerSyncToServer(true);},500);
+    toast('✅ '+added+' pagina\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
+  }catch(e){ toast('⚠ Import mislukt: '+e.message); }
+}
+
+// ── Render measurement dashboard ─────────────────────────
+function renderMeasDash(){
+  var grid=document.getElementById('measGrid');
+  if(!domains.length){ grid.innerHTML='<div style="font-size:13px;color:var(--dim);padding:8px 0;">Voeg een domein toe om metingen bij te houden.</div>'; return; }
+
+  grid.innerHTML=domains.map(function(dom,di){
+    var info=getDomainNextMeasurement(dom);
+    var cls='meas-domain';
+    var statusText='', statusColor='var(--dim)';
+    var daysUntil=null;
+    if(info.spiral){ cls+=' spiral'; statusText='🚨 Spiraal — herstelaudit nodig'; statusColor='var(--red)'; }
+    else if(info.overdue){ cls+=' overdue'; statusText='⚠ Meting achterstallig'; statusColor='var(--red)'; }
+    else if(info.due){ cls+=' due-now'; statusText='📅 Meting klaar om te doen'; statusColor='var(--gold)'; }
+    else if(info.date){
+      var diff=Math.round((new Date(info.date)-new Date())/(86400000));
+      daysUntil=diff;
+      if(diff<=7){ cls+=' due-now'; statusText='Over '+diff+' dag'+(diff===1?'':'en'); statusColor='var(--gold)'; }
+      else{ cls+=' ok'; statusText='Over '+diff+' dagen'; statusColor='var(--green)'; }
+    } else { cls+=' ok'; statusText='Alle metingen compleet'; statusColor='var(--green)'; }
+
+    var spiralCount=dom.pages.filter(function(p){return getSpiralStatus(p)==='spiral';}).length;
+    var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
+
+    return '<div class="'+cls+'">'
+      +'<div class="md-left">'
+      +'<div class="md-name" style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0;display:inline-block;"></span>'+dom.name+'</div>'
+      +'<div class="md-meta">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
+      +'<div class="md-next '+(info.overdue?'overdue':info.due?'due':info.date&&daysUntil<=7?'due':'future')+'" style="color:'+statusColor+';">'+statusText+(info.date?' ('+info.date+')':'')+'</div>'
+      +'</div>'
+      +'<button class="btn btn-muted" style="font-size:8px;" onclick="scrollToDomain(\''+dom.id+'\')">↓ Naar domein</button>'
+      +'</div>';
+  }).join('');
+}
+
+function scrollToDomain(domainId){
+  var el=document.getElementById('domain-'+domainId);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Render global summary ────────────────────────────────
+function renderGSummary(){
+  var allPages=domains.flatMap(function(d){return d.pages;});
+  var total=allPages.length;
+  var improving=allPages.filter(function(p){return getSpiralStatus(p)==='improving';}).length;
+  var stagnant=allPages.filter(function(p){return getSpiralStatus(p)==='stagnant';}).length;
+  var declining=allPages.filter(function(p){return getSpiralStatus(p)==='declining';}).length;
+  var spiral=allPages.filter(function(p){return getSpiralStatus(p)==='spiral';}).length;
+  var changes=[];
+  allPages.forEach(function(p){
+    var filled=CHECKPOINTS.filter(function(cp){var d=p.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+    if(filled.length>=2){ var b=p.checkpoints[filled[0].id].position,l=p.checkpoints[filled[filled.length-1].id].position; if(b&&l)changes.push(b-l); }
+  });
+  var avg=changes.length?Math.round(changes.reduce(function(a,b){return a+b;},0)/changes.length*10)/10:null;
+  document.getElementById('gSummary').innerHTML=
+    '<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+domains.length+'</div><div class="gs-l">Domeinen</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+total+'</div><div class="gs-l">Pagina\'s</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--green)">'+improving+'</div><div class="gs-l">Stijgend</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--gold)">'+stagnant+'</div><div class="gs-l">Stabiel</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--orange)">'+declining+'</div><div class="gs-l">Dalend</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--red)">'+spiral+'</div><div class="gs-l">⚠ Spiraal</div></div>';
+}
+
+// ── Main render ──────────────────────────────────────────
+function render(){
+  renderMeasDash();
+  renderGSummary();
+  var list=document.getElementById('domainList');
+  if(!domains.length){ list.innerHTML='<div class="empty"><h3>Geen domeinen</h3><p>Voeg een domein toe hierboven.</p></div>'; return; }
+
+  list.innerHTML=domains.map(function(dom,di){
+    var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
+    var spiralCount=dom.pages.filter(function(p){return getSpiralStatus(p)==='spiral';}).length;
+    var info=getDomainNextMeasurement(dom);
+
+    var pagesHtml='';
+    if(!dom.pages.length){
+      pagesHtml='<div style="padding:18px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\'s — voeg toe via het formulier hierboven.</div>';
+    } else {
+      // Sort: spiral first, then declining, then rest
+      var sorted=dom.pages.slice().sort(function(a,b){
+        var order={spiral:0,declining:1,stagnant:2,baseline:3,improving:4};
+        return (order[getSpiralStatus(a)]||5)-(order[getSpiralStatus(b)]||5);
+      });
+      pagesHtml=sorted.map(function(page){
+        return renderPage(dom, page);
+      }).join('');
+    }
+
+    var nextInfo='';
+    if(info.date){ var diff=Math.round((new Date(info.date)-new Date())/(86400000)); nextInfo=diff<=0?'<span style="color:var(--gold);">Meting gereed</span>':'<span style="color:var(--dim);">Volgende meting: '+info.date+' ('+diff+'d)</span>'; }
+
+    return '<div class="domain-section" id="domain-'+dom.id+'">'
+      +'<div class="domain-header" onclick="toggleDomain(\'db-'+dom.id+'\')">'
+      +'<span class="domain-color" style="background:'+color+';"></span>'
+      +'<span class="domain-name">'+dom.name+'</span>'
+      +'<span class="domain-meta">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
+      +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;margin-left:auto;">'+nextInfo+'</span>'
+      +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:14px;color:var(--dim);margin-left:8px;" id="chev-'+dom.id+'">▾</span>'
+      +'</div>'
+      +'<div class="domain-body" id="db-'+dom.id+'">'
+      // GSC import strip per domain
+      +'<div class="gsc-strip">'
+      +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);">📊 GSC import voor '+dom.name+'</span>'
+      +'<input type="file" id="gsc-'+dom.id+'" accept=".csv" onchange="importGSCForDomain(this,\''+dom.id+'\')">'
+      +'<button class="btn btn-blue" style="font-size:8px;" onclick="document.getElementById(\'gsc-'+dom.id+'\').click()">📊 Importeer CSV</button>'
+      +'<button class="btn btn-red" style="font-size:8px;" onclick="removeDomain(\''+dom.id+'\')">✕ Verwijder domein</button>'
+      +'</div>'
+      +pagesHtml
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function importGSCForDomain(input, domainId){
+  var file=input.files[0]; if(!file) return;
+  var r=new FileReader();
+  r.onload=function(e){ processGSCForDomain(e.target.result, domainId); input.value=''; };
+  r.readAsText(file);
+}
+
+function processGSCForDomain(raw, domainId){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  var lines=raw.trim().split('\n');
+  if(lines.length<2) return;
+  var header=lines[0].toLowerCase().replace(/"/g,'').split(',');
+  var iPage=header.findIndex(function(h){return h.includes('page')||h.includes('url');});
+  var iPos=header.findIndex(function(h){return h.includes('position');});
+  var iImpr=header.findIndex(function(h){return h.includes('impression');});
+  var iCtr=header.findIndex(function(h){return h.includes('ctr');});
+  var iClk=header.findIndex(function(h){return h.includes('click');});
+  if(iPage<0) return;
+  var gscMap={};
+  for(var i=1;i<lines.length;i++){
+    var cols=lines[i].replace(/"/g,'').split(',');
+    var pu=(cols[iPage]||'').trim().toLowerCase().replace(/\/+$/,'');
+    if(pu) gscMap[pu]={position:iPos>=0?parseFloat(cols[iPos])||null:null,impressions:iImpr>=0?parseInt(cols[iImpr])||null:null,ctr:iCtr>=0?parseFloat((cols[iCtr]||'0').replace('%',''))||null:null,clicks:iClk>=0?parseInt(cols[iClk])||null:null};
+  }
+  var td=today(); var updated=0;
+  function norm(u){return (u||'').toLowerCase().replace(/^https?:\/\//,'').replace(/\/+$/,'');}
+  dom.pages.forEach(function(page){
+    var pn=norm(page.url);
+    var match=gscMap[pn]||gscMap['https://'+pn]||gscMap['http://'+pn];
+    if(!match){var pPath='';try{pPath=new URL(page.url).pathname.toLowerCase().replace(/\/+$/,'');}catch(e){}if(pPath)match=Object.keys(gscMap).reduce(function(f,k){return f||(k.includes(pPath)?gscMap[k]:null);},null);}
+    if(!match) return;
+    var target=null;
+    for(var i=1;i<CHECKPOINTS.length;i++){var cp=CHECKPOINTS[i],data=page.checkpoints[cp.id];if(data.skipped||data.position!==null) continue;var exp=expectedDate(dom.baseDate,cp.days);if(exp&&exp<=td){target=cp;break;}}
+    if(!target){for(var j=CHECKPOINTS.length-1;j>=1;j--){if(!page.checkpoints[CHECKPOINTS[j].id].skipped){target=CHECKPOINTS[j];break;}}}
+    if(!target) return;
+    page.checkpoints[target.id].position=match.position;
+    page.checkpoints[target.id].impressions=match.impressions;
+    page.checkpoints[target.id].ctr=match.ctr;
+    page.checkpoints[target.id].clicks=match.clicks;
+    page.checkpoints[target.id].date=td;
+    page.checkpoints[target.id].skipped=false;
+    updated++;
+  });
+  save(); render();
+  toast('✅ '+updated+' pagina\'s bijgewerkt voor '+dom.name);
+  setTimeout(function(){trackerSyncToServer(true);},500);
+}
+
+function renderPage(dom, page){
+  var status=getSpiralStatus(page);
+  var base=page.checkpoints.w0;
+  var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+  var latest=filled.length?page.checkpoints[filled[filled.length-1].id]:base;
+  var due=getDueCheckpoint(page,dom.baseDate);
+
+  var shortUrl=''; try{shortUrl=new URL(page.url).pathname||'/';}catch(e){shortUrl=page.url.slice(0,50);}
+  if(shortUrl.length>55) shortUrl=shortUrl.slice(0,55)+'…';
+
+  var statusLabels={improving:'📈 Stijgend',stagnant:'→ Stabiel',declining:'📉 Dalend',baseline:'⬜ Baseline',spiral:'🚨 Spiraal'};
+
+  // Spiral alert
+  var spiralHtml='';
+  if(status==='spiral'){
+    var posLoss=latest.position&&base.position?Math.round((latest.position-base.position)*10)/10:null;
+    var cuNear=coreUpdateNear(latest.date);
+    var auditParams='?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&pos='+encodeURIComponent(latest.position||'')+'&impr='+encodeURIComponent(latest.impressions||'')+'&ctr='+encodeURIComponent(latest.ctr||'')+'&mode=recovery';
+    spiralHtml='<div class="spiral-alert">'
+      +'<div class="sa-title">🚨 NEGATIEVE SPIRAAL — actie vereist</div>'
+      +'<div class="sa-body">Positie gedaald <strong style="color:var(--red);">'+(posLoss?'+'+posLoss+' posities':'significant')+'</strong> over '+(filled.length-1)+' metingen.'
+      +(cuNear?' · ⚠ Core Update nabij: '+cuNear:'')+'<br>Controleer: (1) zijn aanbevelingen geïmplementeerd? (2) heeft een concurrent betere content gepubliceerd?'+(latest.position>50?' (3) pagina buiten top 50 — overweeg herstructurering':'')+'</div>'
+      +'<div class="sa-actions">'
+      +'<a href="/audit-seo'+auditParams+'" class="btn btn-red" style="font-size:8px;">🔬 Herstelaudit</a>'
+      +'<button class="btn btn-orange" style="font-size:8px;" onclick="showRecoveryBrief(\''+dom.id+'\',\''+page.id+'\')">📋 Herstel brief</button>'
+      +'</div></div>';
+  }
+
+  // Warning alert
+  var warnHtml='';
+  if(status==='declining'){
+    var loss=latest.position&&base.position?Math.round((latest.position-base.position)*10)/10:null;
+    warnHtml='<div class="warn-alert"><div class="wa-title">⚠ Positie daalt</div><div class="wa-body">+'+(loss||'?')+' posities vs baseline. Controleer of er wijzigingen zijn gedaan aan de pagina of dat een concurrent is gestegen.</div></div>';
+  }
+
+  // Timeline
+  var tlHtml='<div class="tl-wrap"><div class="tl">';
+  CHECKPOINTS.forEach(function(cp,ci){
+    var data=page.checkpoints[cp.id];
+    var exp=ci===0?dom.baseDate:expectedDate(dom.baseDate,cp.days);
+    var td=today();
+    var isFilled=data.position!==null&&!data.skipped;
+    var isSkipped=data.skipped;
+    var isOverdue=!isFilled&&!isSkipped&&exp&&exp<=td&&ci>0;
+    var isDue=isOverdue;
+    var isFuture=!isFilled&&!isSkipped&&exp&&exp>td&&ci>0;
+    var isDeclining=isFilled&&ci>0&&data.position!==null;
+    if(isDeclining&&ci>0){var prev=page.checkpoints[CHECKPOINTS[ci-1].id];isDeclining=prev.position!==null&&data.position>prev.position+1;}
+
+    var nc='tl-node';
+    if(isFilled) nc+=isDeclining?' filled down':' filled';
+    else if(isSkipped) nc+=' skipped';
+    else if(isDue) nc+=' overdue';
+    else if(isFuture) nc+=' future';
+
+    var delta='';
+    if(isFilled&&ci>0&&base.position!==null&&data.position!==null){
+      var diff=data.position-base.position;
+      delta='<div class="tl-delta '+(diff<0?'up':'dn')+'">'+( diff<0?'↑'+Math.abs(Math.round(diff)):'↓+'+Math.round(diff))+'</div>';
+    }
+
+    var posDisp=isFilled?'<div class="tl-pos '+posColor(data.position)+'">'+Math.round(data.position||0)+'</div>':isSkipped?'<div class="tl-pos empty">skip</div>':'<div class="tl-pos empty">—</div>';
+    var nowBadge=isDue?'<div class="tl-now">!</div>':'';
+    var inp=(isDue||(isFilled&&ci>0))?'<input class="tl-inp" type="number" step="0.1" placeholder="pos" value="'+(isFilled?data.position:'')+'" onchange="updateCheckpoint(\''+dom.id+'\',\''+page.id+'\',\''+cp.id+'\',\'position\',this.value)">':'';
+    var skipBtn=(isDue&&!isFilled)?'<button class="tl-skip" onclick="event.stopPropagation();skipCheckpoint(\''+dom.id+'\',\''+page.id+'\',\''+cp.id+'\')">overslaan</button>':'';
+
+    tlHtml+='<div class="'+nc+'" title="Verwacht: '+(exp||'—')+'">'+nowBadge+'<div class="tl-wk">'+cp.label+'</div><div class="tl-dt">'+(exp?exp.slice(5):'—')+'</div>'+posDisp+delta+inp+skipBtn+'</div>';
+  });
+  tlHtml+='</div></div>';
+
+  // GSC input for due checkpoint
+  var gscInputHtml='';
+  if(due&&!due.isFuture){
+    var cpData=page.checkpoints[due.cp.id];
+    gscInputHtml='<div class="gsc-input"><div class="gi-title">📥 '+due.cp.label+' invullen (verwacht: '+due.expectedDate+')</div><div class="gi-row">'
+      +['position','impressions','ctr','clicks'].map(function(m){
+        return '<div class="gi-f" style="flex:1;min-width:70px;"><label>'+({position:'Positie',impressions:'Impressies',ctr:'CTR %',clicks:'Clicks'}[m])+'</label>'
+          +'<input type="number" step="'+(m==='ctr'||m==='position'?'0.1':'1')+'" value="'+(cpData[m]||'')+'" placeholder="—" onchange="updateCheckpoint(\''+dom.id+'\',\''+page.id+'\',\''+due.cp.id+'\',\''+m+'\',this.value)"></div>';
+      }).join('')
+      +'<div class="gi-f" style="flex:1;min-width:100px;"><label>Datum</label><input type="date" value="'+(cpData.date||'')+'" onchange="updateCheckpoint(\''+dom.id+'\',\''+page.id+'\',\''+due.cp.id+'\',\'date\',this.value)"></div>'
+      +'<div style="align-self:flex-end;"><button class="btn btn-muted" style="font-size:8px;" onclick="skipCheckpoint(\''+dom.id+'\',\''+page.id+'\',\''+due.cp.id+'\')">Skip</button></div>'
+      +'</div></div>';
+  }
+
+  // Metrics row
+  var metricsHtml='<div class="metrics-row">';
+  [{id:'position',label:'Positie'},{id:'impressions',label:'Impressies'},{id:'ctr',label:'CTR'},{id:'clicks',label:'Clicks'}].forEach(function(m){
+    var bv=base[m.id], cv=latest[m.id];
+    var chHtml='';
+    if(bv!==null&&cv!==null&&bv!==cv){
+      var diff=cv-bv, lowerBetter=m.id==='position';
+      var improved=lowerBetter?diff<0:diff>0;
+      var pct=Math.round(Math.abs(diff/bv)*100);
+      chHtml='<div class="mc-ch '+(improved?'up':'dn')+'">'+(improved?'↑':'↓')+pct+'%</div>';
+    }
+    var cls=m.id==='position'&&cv!==null?(cv<=10?'good':cv<=20?'warn':'bad'):'';
+    metricsHtml+='<div class="mc"><div class="mc-l">'+m.label+'</div><div class="mc-v '+cls+'">'+fmtNum(cv,m.id)+'</div>'+chHtml+'</div>';
+  });
+  metricsHtml+='</div>';
+
+  return '<div class="page-card">'
+    +'<div class="pc-head" onclick="togglePage(\'pb-'+page.id+'\')">'
+    +'<div style="flex:1;min-width:0;"><div class="pc-url">'+shortUrl+'<span class="pc-kw">'+(page.keyword?' — '+page.keyword:'')+'</span></div>'
+    +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--dim);margin-top:2px;">'+(filled.length-1)+'/6 metingen · baseline: '+dom.baseDate+'</div></div>'
+    +'<span class="pc-status st-'+status+'">'+statusLabels[status]+'</span>'
+    +'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--dim);" id="pchev-'+page.id+'">▾</span>'
+    +'</div>'
+    +spiralHtml+warnHtml
+    +'<div id="pb-'+page.id+'" style="display:none;">'
+    +tlHtml+gscInputHtml+metricsHtml
+    +'<div style="padding:8px 18px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;">'
+    +'<a href="'+page.url+'" target="_blank" class="btn btn-muted" style="font-size:8px;">↗ Pagina</a>'
+    +'<a href="/audit-seo?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&pos='+encodeURIComponent(latest.position||'')+'&impr='+encodeURIComponent(latest.impressions||'')+'&ctr='+encodeURIComponent(latest.ctr||'')+'" class="btn btn-blue" style="font-size:8px;">🔬 Audit</a>'
+    +'<button class="btn btn-red" style="font-size:8px;" onclick="removePage(\''+dom.id+'\',\''+page.id+'\')">✕</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function toggleDomain(id){
+  var el=document.getElementById(id); if(!el) return;
+  var open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'block':'none';
+  var domId=id.replace('db-','');
+  var chev=document.getElementById('chev-'+domId);
+  if(chev) chev.textContent=open?'▴':'▾';
+}
+
+function togglePage(id){
+  var el=document.getElementById(id); if(!el) return;
+  var open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'block':'none';
+  var pageId=id.replace('pb-','');
+  var chev=document.getElementById('pchev-'+pageId);
+  if(chev) chev.textContent=open?'▴':'▾';
+}
+
+// ── Recovery brief ───────────────────────────────────────
+function showRecoveryBrief(domainId,pageId){
+  var dom=domains.find(function(d){return d.id===domainId;}); if(!dom) return;
+  var page=dom.pages.find(function(p){return p.id===pageId;}); if(!page) return;
+  var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+  var base=page.checkpoints.w0;
+  var latest=filled.length?page.checkpoints[filled[filled.length-1].id]:base;
+  var d0=''; try{d0=localStorage.getItem('cs_audit_step_d0')||'';}catch(e){}
+  var d4=''; try{d4=localStorage.getItem('cs_audit_step_d4')||'';}catch(e){}
+  var brief='HERSTEL SCHRIJFBRIEF\n==================\nURL: '+page.url+'\nKeyword: '+(page.keyword||'—')+'\nDomein: '+dom.name+'\nBaseline positie: '+Math.round(base.position||0)+'\nHuidige positie: '+Math.round(latest.position||0)+'\nVerlies: +'+(Math.round((latest.position||0)-(base.position||0)))+' posities\n\nVRAAG AAN AI:\nDeze pagina staat in een negatieve spiraal. Analyseer waarom en geef een herstelplan:\n1. Diagnose: wat is de meest waarschijnlijke oorzaak?\n2. Wat heeft een concurrent wat wij niet hebben?\n3. Welke wijzigingen kunnen de daling omdraaien?\n4. Wat moet ANDERS dan in de originele aanbevelingen?\n\n'+(d0?'ORIGINELE PRIORITEIT ACTIES:\n'+d0.slice(0,1500):'[Geen opgeslagen audit — run eerst PULSE+NEXUS]')+(d4?'\n\nCONTENT GAP:\n'+d4.slice(0,800):'');
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML='<div style="background:var(--card);border:1px solid rgba(244,63,63,.4);border-radius:12px;padding:24px;max-width:680px;width:100%;max-height:80vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);">📋 Herstel schrijfbrief</div><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button></div>'
+    +'<textarea style="width:100%;min-height:260px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--ink);resize:vertical;outline:none;line-height:1.6;">'+brief+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
+    +'<button class="btn btn-gold" onclick="navigator.clipboard.writeText(this.closest(\'div[style*=fixed]\').querySelector(\'textarea\').value).then(function(){alert(\'Gekopieerd!\')})">⎘ Kopieer brief</button>'
+    +'<a href="/audit-seo?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&mode=recovery" class="btn btn-red">🔬 Open herstelaudit</a>'
+    +'<button class="btn btn-muted" onclick="this.closest(\'div[style*=fixed]\').remove()">Sluiten</button>'
+    +'</div></div>';
+  document.body.appendChild(overlay);
+}
+
+// ── Export CSV ───────────────────────────────────────────
+function exportCSV(){
+  if(!domains.length){ toast('⚠ Geen data'); return; }
+  var headers=['Domein','URL','Keyword'];
+  CHECKPOINTS.forEach(function(cp){headers.push(cp.label+' Datum',cp.label+' Positie',cp.label+' Impressies',cp.label+' CTR',cp.label+' Clicks');});
+  headers.push('Status','Pos Verandering');
+  var rows=[headers.join(',')];
+  domains.forEach(function(dom){
+    dom.pages.forEach(function(page){
+      var row=['"'+dom.name+'"','"'+page.url+'"','"'+(page.keyword||'')+'"'];
+      CHECKPOINTS.forEach(function(cp){var d=page.checkpoints[cp.id];row.push(d.date||'',d.position||'',d.impressions||'',d.ctr||'',d.clicks||'');});
+      var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+      var latest=filled.length?page.checkpoints[filled[filled.length-1].id]:page.checkpoints.w0;
+      var posChange=page.checkpoints.w0.position&&latest.position?Math.round((page.checkpoints.w0.position-latest.position)*10)/10:'';
+      row.push(getSpiralStatus(page),posChange);
+      rows.push(row.join(','));
+    });
+  });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='seo-tracker-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); toast('✅ CSV geëxporteerd');
+}
+
+// ── Client Report ────────────────────────────────────────
+function exportClientReport(){
+  if(!domains.length){ toast('⚠ Geen data'); return; }
+  var css='body{font-family:Arial,sans-serif;max-width:980px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}h1{color:#7c3aed;font-size:24px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:4px;}.dm{margin-bottom:28px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;}.dm-head{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;}.dm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}.dm-name{font-size:16px;font-weight:700;}.pc{border-bottom:1px solid #e5e7eb;padding:12px 18px;}.pc:last-child{border-bottom:none;}.pc-url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}.tl-c{text-align:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:6px 3px;}.tl-c.filled{background:#f0fdf4;border-color:#86efac;}.tl-c.down{background:#fef2f2;border-color:#fca5a5;}.tl-wk{font-size:8px;color:#9ca3af;font-family:monospace;}.tl-p{font-size:16px;font-weight:900;color:#374151;}.tl-p.good{color:#16a34a;}.tl-p.warn{color:#b45309;}.tl-p.bad{color:#dc2626;}.up{color:#16a34a;}.dn{color:#dc2626;}.spiral{background:#fee2e2;border-left:4px solid #dc2626;}footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
+  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\'s</p>';
+  domains.forEach(function(dom,di){
+    var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
+    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+'</span></div>';
+    dom.pages.forEach(function(page){
+      var status=getSpiralStatus(page);
+      var base=page.checkpoints.w0;
+      var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+      var tl='<div class="tl">';
+      CHECKPOINTS.forEach(function(cp){
+        var d=page.checkpoints[cp.id];
+        var isFilled=d.position!==null&&!d.skipped;
+        var down=isFilled&&base.position!==null&&d.position>base.position+3;
+        var pCls=d.position<=10?'good':d.position<=20?'warn':'bad';
+        var delta='';
+        if(isFilled&&cp.id!=='w0'&&base.position){var diff=d.position-base.position;delta='<br><span class="'+(diff<0?'up':'dn')+'">'+(diff<0?'↑'+Math.abs(Math.round(diff)):'↓+'+Math.round(diff))+'</span>';}
+        tl+='<div class="tl-c'+(isFilled?(down?' down':' filled'):'')+'"><div class="tl-wk">'+cp.label+'</div><div class="tl-p '+(isFilled?pCls:'')+'">'+( isFilled?Math.round(d.position||0):(d.skipped?'skip':'—'))+'</div>'+delta+'</div>';
+      });
+      tl+='</div>';
+      body+='<div class="pc'+(status==='spiral'?' spiral':'')+'">'
+        +'<div class="pc-url">'+page.url+'</div>'
+        +(page.keyword?'<div style="font-size:12px;font-weight:700;color:#111827;margin-top:2px;">'+page.keyword+'</div>':'')
+        +(status==='spiral'?'<div style="font-size:11px;color:#dc2626;margin-top:4px;">🚨 Negatieve spiraal — herstelaudit nodig</div>':'')
+        +tl+'</div>';
+    });
+    body+='</div>';
+  });
+  body+='<footer>ContentScale SEO Tracker · contentscale.site · '+new Date().toLocaleString('nl-NL')+'</footer>';
+  var html='<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>SEO Rapport</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='seo-rapport-'+new Date().toISOString().slice(0,10)+'.html';
+  a.click(); toast('✅ Rapport geëxporteerd');
+}
+
+// ── Init ─────────────────────────────────────────────────
+load();
+updateDomainSelect();
+checkWorkflowImport();
+render();
+startAutoSave();
+var _initKey=_getTrackerKey();
+if(domains.length>0){
+  setSyncStatus('💾 '+domains.length+' domeinen geladen — key: '+_initKey,'var(--dim)');
+  setTimeout(function(){trackerSyncToServer(true);},2000);
+} else {
+  setSyncStatus('Geen data — voeg domeinen toe of laad van server','var(--dim)');
+}
+</script>
+</body>
+</html>

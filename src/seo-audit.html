@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>PULSE + NEXUS v5 | ContentScale Elite SEO Audit</title>
+<script>
+(function(){
+  var RAILWAY='https://app.contentscale.site';
+  if(localStorage.getItem('admin_id')){window._toolSession={type:'admin',projectKey:'admin',whitelabelName:'ContentScale',isAdmin:true};return;}
+  var token=localStorage.getItem('cs_access_token');
+  if(!token){window.location.href='/tools';return;}
+  document.documentElement.style.visibility='hidden';
+  fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':token}})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.success){localStorage.removeItem('cs_access_token');localStorage.removeItem('cs_access_session');window.location.href='/tools';return;}
+      if(d.type==='read'){window.location.href='/audit-progress-tracker?tools=1';return;}
+      window._toolSession=d;localStorage.setItem('cs_access_session',JSON.stringify(d));
+      if(d.whitelabelName&&d.whitelabelName!=='ContentScale SEO Tools'){var b=document.querySelector('.brand');if(b)b.textContent=d.whitelabelName;}
+      document.documentElement.style.visibility='';
+    }).catch(function(){
+      var c=null;try{c=JSON.parse(localStorage.getItem('cs_access_session')||'null');}catch(e){}
+      if(c&&c.type){window._toolSession=c;document.documentElement.style.visibility='';}
+      else{window.location.href='/tools';}
+    });
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
+  --amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+  --pulse:#f43f3f;--nexus:#a78bfa;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;background:linear-gradient(90deg,var(--pulse),var(--nexus));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Modes */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:28px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.mode-btn{padding:16px 20px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.05em;background:none;border:none;border-right:1px solid var(--border);color:var(--sub);cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:12px;}
+.mode-btn:last-child{border-right:none;}
+.mode-btn.active{background:rgba(255,255,255,.04);color:var(--ink);}
+.mode-btn .mi{font-size:22px;}
+.mode-btn .ms{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:block;margin-top:3px;}
+.mode-btn.active .ms{color:var(--muted);}
+
+/* Panel */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:26px;margin-bottom:18px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));}
+.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.panel-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.panel-badge-green{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+.panel-badge-blue{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25);}
+
+/* Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+/* Fields */
+.field{margin-bottom:0;}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:all .2s;resize:vertical;}
+.field textarea{min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.07);}
+.field select option{background:var(--card);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+
+/* GSC Auto-loaded badge */
+.gsc-auto-badge{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.25);margin-left:8px;}
+
+/* Buttons */
+.btn-gold{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:16px 36px;border-radius:6px;cursor:pointer;transition:all .2s;width:100%;margin-top:6px;}
+.btn-gold:hover{background:var(--ink);transform:translateY(-1px);}
+.btn-gold:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.btn-sm{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid;white-space:nowrap;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple);}
+.btn-purple:hover{background:var(--purple);color:#000;}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-gold-sm{background:var(--gold);border-color:var(--gold);color:#000;}
+.btn-gold-sm:hover{opacity:.85;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-red-sm{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.2);color:var(--red);}
+.btn-red-sm:hover{background:var(--red);color:#fff;}
+
+/* Progress */
+.progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
+.progress.show{display:block;}
+.prog-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.prog-step{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;color:var(--dim);}
+.prog-step:last-child{border:none;}
+.prog-step.active{color:var(--gold);}
+.prog-step.done{color:var(--green);}
+.prog-step.error{color:var(--red);}
+.prog-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.prog-bar-wrap{background:var(--surface);border-radius:4px;height:4px;overflow:hidden;margin-top:12px;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));transition:width .5s ease;border-radius:4px;width:0%;}
+
+/* Output */
+.output{display:none;}
+.output.show{display:block;}
+.sec-card{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.02);}
+.sec-head:hover{background:rgba(255,255,255,.04);}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;flex:1;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;}
+.b-pulse{background:rgba(244,63,63,.15);color:var(--pulse);border:1px solid rgba(244,63,63,.3);}
+.b-nexus{background:rgba(167,139,250,.15);color:var(--nexus);border:1px solid rgba(167,139,250,.3);}
+.b-tech{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.b-win{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.b-gold{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.b-voice{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
+.sec-body{padding:20px;}
+.sec-body.hidden{display:none;}
+
+/* MD rendering */
+.md{font-size:13px;line-height:1.8;color:var(--muted);}
+.md h1,.md h2,.md h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--ink);margin:16px 0 7px;}
+.md h1{font-size:25px;}
+.md h2{font-size:20px;color:var(--gold);}
+.md h3{font-size:15px;color:var(--purple);}
+.md p{margin-bottom:9px;}
+.md ul,.md ol{margin:7px 0 13px 16px;}
+.md li{margin-bottom:4px;}
+.md strong{color:var(--ink);font-weight:700;}
+.md em{color:var(--amber);}
+.md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
+.md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
+.md pre code{background:none;border:none;padding:0;font-size:11px;}
+.md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
+.md hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+/* REAL TABLES — professional, not markdown slop */
+.md table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.md thead tr{background:var(--surface);}
+.md th{padding:10px 13px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);white-space:nowrap;}
+.md th:last-child{border-right:none;}
+.md td{padding:10px 13px;border-bottom:1px solid rgba(255,255,255,.04);border-right:1px solid rgba(255,255,255,.04);color:var(--muted);vertical-align:top;line-height:1.5;}
+.md td:last-child{border-right:none;}
+.md tr:last-child td{border-bottom:none;}
+.md tr:hover td{background:rgba(255,255,255,.02);}
+
+/* Post-audit action bar */
+.post-audit-bar{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:18px 22px;margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.post-audit-bar .pa-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);flex:1;min-width:200px;}
+
+/* Info/warn */
+.info{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+.info strong{color:var(--blue);}
+.warn{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+.warn strong{color:var(--red);}
+.success-banner{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.65;}
+.success-banner strong{color:var(--green);}
+
+/* Opportunity table */
+.opp-table{width:100%;border-collapse:collapse;font-size:12px;}
+.opp-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
+.opp-table td{padding:9px 11px;border:1px solid var(--border);vertical-align:middle;}
+.opp-table tr:hover td{background:rgba(255,255,255,.02);}
+.opp-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--pulse),var(--gold));margin-top:3px;}
+
+/* Toast */
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Cannibalization */
+.cann-card{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:14px;margin-bottom:10px;}
+.cann-card h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+
+/* Connection banner */
+.connection-banner{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;}
+
+/* Voice search section */
+.voice-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.voice-chip{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--orange);}
+
+/* Action step cards */
+.action-card{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:7px;margin-bottom:8px;}
+.action-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
+.action-body strong{color:var(--ink);font-size:13px;display:block;margin-bottom:3px;}
+.action-body span{font-size:11px;color:var(--muted);}
+
+#bulkView,#deepView{display:none;}
+#bulkView.active,#deepView.active{display:block;}
+
+@media(max-width:720px){
+  .g2,.g3,.g4,.modes{grid-template-columns:1fr;}
+  .wrap{padding:0 16px 60px;}
+  .topbar{padding:14px 0;}
+  .brand{font-size:20px;}
+}
+
+/* Print styles for recommendations */
+@media print{
+  .topbar,.modes,.panel:not(.output-panel),.btn-gold,#deepRunBtn,.progress{display:none!important;}
+  .output.show{display:block!important;}
+  .sec-body.hidden{display:block!important;}
+  body{background:#fff!important;color:#000!important;}
+  .sec-card{break-inside:avoid;border:1px solid #e5e7eb!important;background:#fff!important;}
+  .md{color:#374151!important;}
+  .md h2{color:#7c3aed!important;}
+  .md td,.md th{border-color:#e5e7eb!important;color:#374151!important;}
+}
+
+/* Mobile responsive */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .g2,.g3,.g4{grid-template-columns:1fr!important;}
+  .post-audit-bar{flex-direction:column;gap:8px;}
+}
+@media(max-width:480px){
+  .topbar{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topbar">
+    <a href="https://contentscale.site" class="brand">ContentScale</a>
+    <div style="text-align:right;">
+      <div class="topbar-title">PULSE + NEXUS v5</div>
+      <div class="topbar-sub">Elite SEO Audit Engine</div>
+    </div>
+  </nav>
+
+  <div class="modes">
+    <button class="mode-btn active" onclick="setMode('bulk')" id="modeBulk">
+      <span class="mi">📊</span>
+      <span>BULK SCAN<span class="ms">Upload GSC CSV → rank pages → quick wins</span></span>
+    </button>
+    <button class="mode-btn" onclick="setMode('deep')" id="modeDeep">
+      <span class="mi">🔬</span>
+      <span>DEEP DIVE<span class="ms">Paste HTML → full 10-step audit + competitor diff</span></span>
+    </button>
+  </div>
+
+  <!-- ═══════════ BULK SCAN ═══════════ -->
+  <div id="bulkView" class="active">
+    <div class="panel">
+      <div class="panel-title">① Upload GSC CSV Files <span class="panel-badge">DRAG & DROP</span></div>
+      <div class="info">
+        <strong>Pages CSV:</strong> GSC → Performance → Pages → Export CSV &nbsp;·&nbsp;
+        <strong>Queries CSV:</strong> GSC → Performance → Queries → Export CSV (enables cannibalization)
+      </div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Pages CSV (required)</div>
+          <div class="upload-zone" id="pagesZone">
+            <input type="file" id="pagesFile" accept=".csv" onchange="handlePagesCSV(this)">
+            <div style="font-size:28px;margin-bottom:8px;">📄</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Pages Performance</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Page · Clicks · Impressions · CTR · Position</div>
+          </div>
+          <div id="pagesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional)</div>
+          <div class="upload-zone" id="queriesZone">
+            <input type="file" id="queriesFile" accept=".csv" onchange="handleQueriesCSV(this)">
+            <div style="font-size:28px;margin-bottom:8px;">🔍</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Queries Performance</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Query · Clicks · Impressions · CTR · Position</div>
+          </div>
+          <div id="queriesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="filterPanel" style="display:none;">
+      <div class="panel-title">② Filter & Focus</div>
+      <div class="g4">
+        <div class="field"><label>Min Impressions</label><input type="number" id="minImpr" value="100" onchange="renderTable()"></div>
+        <div class="field"><label>Min Position</label><input type="number" id="minPos" value="5" onchange="renderTable()"></div>
+        <div class="field"><label>Max Position</label><input type="number" id="maxPos" value="50" onchange="renderTable()"></div>
+        <div class="field"><label>Max CTR %</label><input type="number" id="maxCtr" step="0.1" value="10" onchange="renderTable()"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="tableCount"></span>
+        <button class="btn-sm btn-muted" onclick="exportOpps()">↓ Export CSV</button>
+        <button class="btn-sm btn-green" onclick="showCannibalization()">🔍 Cannibalization Report</button>
+      </div>
+    </div>
+
+    <div id="cannReport" style="display:none;" class="panel">
+      <div class="panel-title">🔍 Keyword Cannibalization Detection <span class="panel-badge">AUTO-DETECTED</span></div>
+      <div id="cannBody"></div>
+    </div>
+
+    <div id="opportunityTable" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;">🎯 Pages Ranked by Opportunity</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="opp-table">
+          <thead>
+            <tr><th>#</th><th>Page</th><th>Impr</th><th>CTR</th><th>Pos</th><th>Score</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="progress" id="quickProgress">
+      <div class="prog-label" id="quickProgLabel">Quick Audit Running...</div>
+      <div id="quickSteps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="quickBar"></div></div>
+    </div>
+    <div class="output" id="quickOutput"></div>
+  </div>
+
+  <!-- ═══════════ DEEP DIVE ═══════════ -->
+  <div id="deepView">
+
+    <div class="panel">
+      <div class="panel-title">① Page Details</div>
+      <div class="g2" style="margin-bottom:14px;">
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://site.com/your-page"></div>
+        <div class="field">
+          <label>Primary Keyword *</label>
+          <input type="text" id="dKw" placeholder="roofing contractor New Jersey">
+        </div>
+      </div>
+      <div class="g3">
+        <div class="field">
+          <label>Secondary Keyword <span id="kw2AutoBadge" style="display:none;" class="gsc-auto-badge">✓ auto from GSC</span></label>
+          <input type="text" id="dKw2" placeholder="roof repair NJ (auto-filled from GSC queries)">
+        </div>
+        <div class="field">
+          <label>Geo / City + Country <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);text-transform:none;letter-spacing:0;">(free text)</span></label>
+          <input type="text" id="dGeo" placeholder="Bergen County, New Jersey, USA" autocomplete="off">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">e.g. Bergen County NJ, USA — or Newark, NJ — or Netherlands</div>
+        </div>
+        <div class="field">
+          <label>Conversion Goal</label>
+          <select id="dGoal">
+            <option>Lead generation</option>
+            <option>Sale / purchase</option>
+            <option>Demo / consultation</option>
+            <option>Brand awareness</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">② GSC Data <span id="gscAutoBadge" class="panel-badge panel-badge-green" style="display:none;">✓ Auto-loaded from Workflow</span></div>
+      <!-- GSC Fetch button — when URL is filled in panel ① -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="btn-sm btn-gold-sm" onclick="fetchGSCData()" id="gscFetchBtn">⬇ Fetch GSC Data for this URL</button>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);">Reads from Workflow Manager GSC data — enter URL in ① first</span>
+        <span id="gscFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);"></span>
+      </div>
+      <div class="g3" style="margin-bottom:14px;">
+        <div class="field"><label>Impressions <span id="imprAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" id="dImpr" placeholder="12400"></div>
+        <div class="field"><label>CTR % <span id="ctrAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
+        <div class="field"><label>Avg Position <span id="posAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:12px;">Mobile % — not in standard GSC CSV. Check Google Analytics Device report separately.</div>
+      <div class="field">
+        <label>Top Triggering Queries (one per line) <span id="queriesAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓ auto from GSC</span></label>
+        <textarea id="dQueries" placeholder="roofing contractor New Jersey&#10;roof repair NJ&#10;emergency roofer Bergen County"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER</span> <span id="htmlAutoFetchBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto-fetched</span></div>
+
+      <!-- AUTO-FETCH STRIP -->
+      <div style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:10px;">🚀 Auto-Fetch — geen copy/paste nodig</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-sm btn-green" onclick="autoFetchPageHtml()" id="autoFetchBtn" style="font-size:10px;padding:8px 18px;">🚀 Fetch Page HTML</button>
+          <span id="autoFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:8px;line-height:1.6;">
+          Haalt automatisch de HTML op van de URL in veld ①. Vul URL in ① in en klik Fetch. Werkt via server-side proxy — geen browser extensie nodig.
+        </div>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase;">Of handmatig plakken:</div>
+      <div class="field">
+        <label>Raw HTML (full page source)</label>
+        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>...paste full page source...</html>&#10;&#10;Of klik 🚀 Fetch Page HTML hierboven." oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
+      </div>
+      <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+    </div>
+
+    <!-- META CONSISTENCY CHECK -->
+    <div class="panel" id="metaCheckerPanel">
+      <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span> <span id="metaAutoRunBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto-run na fetch</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
+        Leest de HTML uit veld ③. Checkt: title tag, H1, og:title, meta description, canonical, schema dateModified, author en meer. <strong style="color:var(--green);">Draait automatisch na Auto-Fetch.</strong> Of klik handmatig na plakken.
+      </div>
+      <button class="btn-gold" style="font-size:16px;padding:12px 28px;width:auto;" onclick="runMetaCheck()">🔍 Check Meta Consistency</button>
+      <div id="metaCheckerInfo" style="display:none;margin-top:12px;"></div>
+      <div id="metaCheckResults" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- COMPETITOR — manual, clear instructions -->
+    <div class="panel">
+      <div class="panel-title">④ Competitor HTML <span class="panel-badge">REAL DIFF</span></div>
+      <div class="info">
+        <strong>How to get competitor HTML:</strong> Google your primary keyword (on .com, .nl, or the relevant domain for your geo) → open the first 2 ranking pages → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below. Leave empty to let the AI compare based on what typically ranks well for this keyword and geo.
+      </div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL (optional)</label><input type="url" id="dComp1url" placeholder="https://competitor-1.com/page"></div>
+          <div class="field">
+            <label>Competitor 1 HTML — paste from View Source</label>
+            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Right-click page → View Page Source → Ctrl+A → Ctrl+C → paste here" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
+          </div>
+          <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+        <div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL (optional)</label><input type="url" id="dComp2url" placeholder="https://competitor-2.com/page"></div>
+          <div class="field">
+            <label>Competitor 2 HTML — paste from View Source</label>
+            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Right-click page → View Page Source → Ctrl+A → Ctrl+C → paste here" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
+          </div>
+          <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERNAL LINK FINDER — auto-filled from workflow + sitemap fetch -->
+    <div class="panel">
+      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span> <span id="siteUrlsAutoBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto from Workflow</span></div>
+      <div class="info">
+        The AI finds the 5 best pages to link FROM and TO, with exact anchor text. Pre-filled automatically from Workflow Manager. Or paste your sitemap URLs below, or fetch them from your sitemap.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="url" id="sitemapFetchUrl" placeholder="https://yoursite.com/sitemap.xml" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
+        <button class="btn-sm btn-blue" onclick="fetchSitemap()" id="sitemapFetchBtn">⬇ Fetch Sitemap</button>
+        <span id="sitemapFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);"></span>
+      </div>
+      <div class="field">
+        <label>Your Site URLs (one per line) — or pre-filled from Workflow</label>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://yoursite.com/&#10;https://yoursite.com/roofing-services&#10;https://yoursite.com/about&#10;(auto-filled from Workflow Manager if coming from there)"></textarea>
+      </div>
+      <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+    </div>
+
+    <!-- VOICE SEARCH — fully automated, no input needed -->
+    <div class="panel">
+      <div class="panel-title">⑥ Voice Search <span class="panel-badge b-voice">AUTO · AI POWERED</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
+        Fully automated — the AI generates the voice search analysis based on your keyword, geo, and page content. It covers: eligibility, top 5 near-me queries, featured snippet optimization, and local schema. Select which assistant to optimize for:
+      </div>
+      <div class="field" style="max-width:280px;">
+        <label>Target Assistant / Device</label>
+        <select id="dVoiceDevice">
+          <option value="all">All — Google, Siri, Alexa</option>
+          <option value="google">Google Assistant / Search</option>
+          <option value="siri">Siri / Apple Maps</option>
+          <option value="local">Local voice (near me searches)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⑦ Optional <span id="constraintsAutoBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto from Workflow</span></div>
+      <div class="field">
+        <label>Known Constraints <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);text-transform:none;letter-spacing:0;">— auto-gevuld vanuit Workflow als daar ingevuld</span></label>
+        <input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN, no CMS access">
+      </div>
+    </div>
+
+    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 11-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
+
+    <div class="progress" id="deepProgress">
+      <div class="prog-label">Full Audit Running — 11 Steps · Do Not Close</div>
+      <div id="deepSteps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="deepBar"></div></div>
+    </div>
+    <div class="output" id="deepOutput"></div>
+
+    <!-- POST-AUDIT ACTION BAR — appears after audit completes -->
+    <div class="post-audit-bar" id="postAuditBar" style="display:none;">
+      <div class="pa-title">✅ Audit Complete — What next?</div>
+      <button class="btn-sm btn-gold-sm" onclick="printAudit()">🖨️ Print / PDF</button>
+      <button class="btn-sm btn-green" onclick="exportMarkdown()">📝 Export MD voor AI</button>
+      <button class="btn-sm btn-purple" onclick="exportRecommendationsReport()">📋 Download Aanbevelingen Rapport</button>
+      <a href="/audit-recommendations" class="btn-sm btn-blue">🎯 Full Recommendations</a>
+      <a href="/audit-progress-tracker" class="btn-sm btn-muted">📈 Progress Tracker</a>
+      <a href="/audit-workflow" class="btn-sm btn-muted">← Back to Workflow</a>
+    </div>
+
+    <!-- SYNC STATUS BAR — always visible in deep dive -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 0;border-top:1px solid var(--border);margin-top:12px;">
+      <span id="auditSyncStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--dim);">Audit resultaten worden automatisch opgeslagen op de server.</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-sm btn-blue" onclick="auditSyncToServer(false)" style="font-size:8px;">☁ Sla op server op</button>
+        <button class="btn-sm btn-muted" onclick="auditLoadFromServer()" style="font-size:8px;">↓ Laad van server</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let gscPages = [];
+let gscQueries = [];
+const RAILWAY = 'https://app.contentscale.site';
+
+// ── Toast ──────────────────────────────────────────────────
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── Mode toggle ────────────────────────────────────────────
+function setMode(m) {
+  document.getElementById('bulkView').className = m==='bulk'?'active':'';
+  document.getElementById('deepView').className = m==='deep'?'active':'';
+  document.getElementById('modeBulk').className = 'mode-btn'+(m==='bulk'?' active':'');
+  document.getElementById('modeDeep').className = 'mode-btn'+(m==='deep'?' active':'');
+}
+
+// ── Auto-load from Workflow Manager ───────────────────────
+(function autoLoadFromWorkflow(){
+  // Try localStorage transfer object first (set by Workflow Manager openInAudit)
+  let transfer = null;
+  try {
+    const raw = localStorage.getItem('cs_audit_transfer') || localStorage.getItem('cs_audit_transfer_2');
+    if (raw) transfer = JSON.parse(raw);
+  } catch(e){}
+
+  // Fallback: URL params (minimal data — enrich from localStorage GSC data)
+  const p = new URLSearchParams(window.location.search);
+  if (!transfer && p.get('url')) {
+    transfer = {
+      pageUrl: p.get('url'),
+      keyword: p.get('kw') || '',
+      position: p.get('pos') || '',
+      impressions: p.get('impr') || '',
+      ctr: p.get('ctr') || '',
+      topQueries: '',
+      secondaryKeyword: '',
+      geo: '',
+      siteUrls: '',
+      workflowId: p.get('wf') || ''
+    };
+    // Enrich from shared GSC data stored by Workflow Manager
+    try {
+      const gscRaw = localStorage.getItem('cs_shared_gsc');
+      if (gscRaw) {
+        const gscData = JSON.parse(gscRaw);
+        // Get top queries from GSC queries list
+        if (gscData.queries && gscData.queries.length && !transfer.topQueries) {
+          const topQ = gscData.queries.slice(0, 15).map(function(q){ return q.query || q; }).filter(Boolean);
+          transfer.topQueries = topQ.join('\n');
+          // Secondary = first query that differs from primary
+          const primary = (transfer.keyword || '').toLowerCase().trim();
+          const secCandidates = topQ.filter(function(q){
+            const qn = q.toLowerCase().trim();
+            if (qn === primary) return false;
+            const pw = primary.split(' '); const qw = qn.split(' ');
+            const overlap = pw.filter(function(w){ return qw.includes(w); }).length;
+            return overlap / Math.max(pw.length, 1) < 0.8;
+          });
+          transfer.secondaryKeyword = secCandidates[0] || '';
+        }
+        // Get GSC data for the specific URL
+        if (gscData.pages && gscData.pages.length && transfer.pageUrl) {
+          const urlNorm = function(u){ return u.toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\//, ''); };
+          const match = gscData.pages.find(function(pg){
+            return urlNorm(pg.page||pg.url||'').includes(urlNorm(transfer.pageUrl)) ||
+                   urlNorm(transfer.pageUrl).includes(urlNorm(pg.page||pg.url||''));
+          });
+          if (match) {
+            if (!transfer.impressions && match.impressions) transfer.impressions = match.impressions;
+            if (!transfer.ctr && match.ctr) transfer.ctr = parseFloat(match.ctr).toFixed(1);
+            if (!transfer.position && match.position) transfer.position = parseFloat(match.position).toFixed(1);
+          }
+        }
+        // Site URLs from all pages
+        if (gscData.pages && gscData.pages.length && !transfer.siteUrls) {
+          transfer.siteUrls = gscData.pages.map(function(pg){ return pg.page||pg.url||''; })
+            .filter(function(u){ return u.startsWith('http'); }).slice(0, 50).join('\n');
+        }
+      }
+    } catch(e){}
+    // Geo from stored workflow project or query params
+    try {
+      const gscQueries2 = localStorage.getItem('cs_gsc_queries');
+      // Geo from cs_audit_transfer geo field
+      const raw2 = localStorage.getItem('cs_audit_transfer');
+      if (raw2) {
+        const t2 = JSON.parse(raw2);
+        if (t2.geo) transfer.geo = t2.geo;
+        if (t2.siteUrls && !transfer.siteUrls) transfer.siteUrls = t2.siteUrls;
+      }
+    } catch(e){}
+  }
+
+  if (!transfer || !transfer.pageUrl) return;
+
+  const fill = function(){
+    try {
+      setMode('deep');
+
+      if (transfer.pageUrl)  document.getElementById('dUrl').value  = transfer.pageUrl;
+      if (transfer.keyword)  document.getElementById('dKw').value   = transfer.keyword;
+      if (transfer.position) document.getElementById('dPos').value  = transfer.position;
+      if (transfer.impressions) document.getElementById('dImpr').value = transfer.impressions;
+      if (transfer.ctr)      document.getElementById('dCtr').value  = transfer.ctr;
+
+      // Secondary keyword — auto from GSC queries, NOT same as primary
+      if (transfer.secondaryKeyword && transfer.secondaryKeyword !== transfer.keyword) {
+        document.getElementById('dKw2').value = transfer.secondaryKeyword;
+        document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+      }
+
+      // Geo
+      if (transfer.geo) document.getElementById('dGeo').value = transfer.geo;
+
+      // Constraints — auto-fill from workflow transfer if set
+      if (transfer.constraints) {
+        const constraintsEl = document.getElementById('dConstraints');
+        if (constraintsEl && !constraintsEl.value.trim()) {
+          constraintsEl.value = transfer.constraints;
+          const badge = document.getElementById('constraintsAutoBadge');
+          if (badge) badge.style.display = 'inline-flex';
+        }
+      }
+
+      // Top queries — auto filled
+      if (transfer.topQueries) {
+        document.getElementById('dQueries').value = transfer.topQueries;
+        document.getElementById('queriesAutoMark').style.display = 'inline';
+      }
+
+      // Site URLs for internal link finder
+      if (transfer.siteUrls) {
+        document.getElementById('dSiteUrls').value = transfer.siteUrls;
+        document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        const urls = transfer.siteUrls.split('\n').filter(function(l){ return l.trim().startsWith('http'); });
+        document.getElementById('urlCount').textContent = urls.length ? '\u2713 ' + urls.length + ' URLs loaded' : '';
+      }
+
+      // Show auto badges
+      if (transfer.impressions) document.getElementById('imprAutoMark').style.display = 'inline';
+      if (transfer.ctr) document.getElementById('ctrAutoMark').style.display = 'inline';
+      if (transfer.position) document.getElementById('posAutoMark').style.display = 'inline';
+      if (transfer.impressions || transfer.ctr || transfer.position) {
+        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+      }
+
+      // Connection banner
+      const deepView = document.getElementById('deepView');
+      if (!document.querySelector('.connection-banner')) {
+        const chips = [];
+        if (transfer.position) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ' + parseFloat(transfer.position).toFixed(1) + '</span>');
+        if (transfer.impressions) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">' + parseInt(transfer.impressions).toLocaleString() + ' impr</span>');
+        if (transfer.ctr) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">' + transfer.ctr + '% CTR</span>');
+        if (transfer.secondaryKeyword) chips.push('<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">2nd kw: ' + transfer.secondaryKeyword.slice(0,30) + '</span>');
+        const banner = document.createElement('div');
+        banner.className = 'connection-banner';
+        banner.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+          + '<strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;color:var(--gold);">\u2713 Connected from Workflow Manager — all fields auto-filled</strong>'
+          + (transfer.workflowId ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;font-family:IBM Plex Mono,monospace;">&larr; Back to Workflow</a>' : '')
+          + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' + chips.join('') + '</div>'
+          + '<div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);font-family:IBM Plex Mono,monospace;">Paste page HTML in &#9432; below &rarr; Run Full Audit</div>';
+        deepView.insertBefore(banner, deepView.firstChild);
+      }
+
+      window._wfId = transfer.workflowId || '';
+
+      // Auto-fetch page HTML — triggers 1s after fields are filled
+      // Only if URL is present and HTML field is still empty
+      if (transfer.pageUrl) {
+        setTimeout(function() {
+          const htmlEl = document.getElementById('dHtml');
+          if (htmlEl && !htmlEl.value.trim()) {
+            const status = document.getElementById('autoFetchStatus');
+            if (status) {
+              status.textContent = 'Auto-fetch gestart vanuit Workflow...';
+              status.style.color = 'var(--gold)';
+            }
+            autoFetchPageHtml();
+          }
+        }, 1000);
+      }
+    } catch(e) { console.error('Auto-fill error:', e); }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
+  else setTimeout(fill, 150);
+
+  // Second pass at 600ms — catches cases where GSC data loads after the first fill
+  setTimeout(function(){
+    try {
+      // Only fill fields that are still empty
+      const kw2El = document.getElementById('dKw2');
+      const geoEl = document.getElementById('dGeo');
+      const queriesEl = document.getElementById('dQueries');
+
+      const gscRaw = localStorage.getItem('cs_shared_gsc');
+      if (!gscRaw) return;
+      const gscData = JSON.parse(gscRaw);
+
+      // Fill queries if still empty
+      if (queriesEl && !queriesEl.value.trim() && gscData.queries && gscData.queries.length) {
+        const topQ = gscData.queries.slice(0,15).map(function(q){ return q.query||''; }).filter(Boolean);
+        queriesEl.value = topQ.join('\n');
+        document.getElementById('queriesAutoMark').style.display = 'inline';
+      }
+
+      // Fill secondary keyword if still empty
+      if (kw2El && !kw2El.value.trim() && gscData.queries && gscData.queries.length) {
+        const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
+        const topQ = gscData.queries.slice(0,15).map(function(q){ return q.query||''; }).filter(Boolean);
+        const sec = topQ.find(function(q){
+          const qn = q.toLowerCase().trim();
+          if (!primary || qn === primary) return false;
+          const pw = primary.split(' ');
+          const qw = qn.split(' ');
+          const overlap = pw.filter(function(w){ return w.length>2 && qw.includes(w); }).length;
+          return overlap / Math.max(pw.length,1) < 0.8;
+        });
+        if (sec) {
+          kw2El.value = sec;
+          document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+        }
+      }
+
+      // Fill geo from stored transfer if still empty
+      if (geoEl && !geoEl.value.trim()) {
+        try {
+          const t = JSON.parse(localStorage.getItem('cs_audit_transfer')||'{}');
+          if (t.geo) geoEl.value = t.geo;
+        } catch(e2){}
+      }
+
+      // Fill site URLs if still empty
+      const siteUrlsEl = document.getElementById('dSiteUrls');
+      if (siteUrlsEl && !siteUrlsEl.value.trim() && gscData.pages && gscData.pages.length) {
+        const urls = gscData.pages.map(function(pg){ return pg.page||pg.url||''; })
+          .filter(function(u){ return u.startsWith('http'); }).slice(0,50);
+        if (urls.length) {
+          siteUrlsEl.value = urls.join('\n');
+          document.getElementById('urlCount').textContent = '\u2713 ' + urls.length + ' URLs loaded';
+          document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        }
+      }
+    } catch(e){}
+  }, 600);
+})();
+
+// ── Auto-load shared GSC ───────────────────────────────────
+function loadSharedGSC() {
+  try {
+    const raw = localStorage.getItem('cs_shared_gsc');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.pages && data.pages.length) {
+      gscPages = data.pages.map(p => ({
+        page: p.page || p.url || '',
+        impressions: p.impressions || 0,
+        clicks: p.clicks || 0,
+        ctr: p.ctr || 0,
+        position: p.position || 0,
+        score: p.score || 0
+      })).filter(p => p.page && p.page.includes('.'));
+      const el = document.getElementById('pagesStatus');
+      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscPages.length} pages from Workflow Manager</span>`;
+    }
+    if (data.queries && data.queries.length) {
+      gscQueries = data.queries.map(q => ({query: q.query || '', position: q.position || 0})).filter(q => q.query);
+      const el = document.getElementById('queriesStatus');
+      if (el) el.innerHTML = `<span style="color:var(--green)">✓ ${gscQueries.length} queries from Workflow Manager</span>`;
+    }
+    return gscPages.length > 0;
+  } catch(e) { return false; }
+}
+setTimeout(loadSharedGSC, 200);
+
+// ── Restore last audit results if page reloaded ────────────
+(function restoreLastAudit(){
+  try {
+    const saved = localStorage.getItem('cs_last_audit');
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    if (!data._meta) return;
+    // Show a restore banner if there are saved results
+    const out = document.getElementById('deepOutput');
+    if (!out) return;
+    const restoreBanner = document.createElement('div');
+    restoreBanner.style.cssText = 'background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+    const d = data._meta;
+    restoreBanner.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">LAST AUDIT: ' + (d.kw||'') + ' · ' + (d.url||'').slice(0,40) + ' · ' + (d.date||'').slice(0,10) + '</span>'
+      + '<button onclick="restoreAuditResults()" class="btn-sm btn-blue">↩ Restore Results</button>'
+      + '<button onclick="this.parentElement.remove()" class="btn-sm btn-muted">✕</button>';
+    out.before(restoreBanner);
+  } catch(e){}
+})();
+
+function restoreAuditResults(){
+  try {
+    const saved = localStorage.getItem('cs_last_audit');
+    if (!saved) { toast('No saved audit found'); return; }
+    const data = JSON.parse(saved);
+    const out = document.getElementById('deepOutput');
+    out.innerHTML = '';
+    out.className = 'output show';
+    DEEP_STEPS.forEach(function(s){
+      if (data[s.id]) addSection(out, s.id, s.icon, s.label, s.badge, data[s.id]);
+    });
+    if (data._meta) {
+      if (data._meta.url) document.getElementById('dUrl').value = data._meta.url;
+      if (data._meta.kw) document.getElementById('dKw').value = data._meta.kw;
+      if (data._meta.geo) document.getElementById('dGeo').value = data._meta.geo;
+      setMode('deep');
+    }
+    document.getElementById('postAuditBar').style.display = 'flex';
+    toast('\u2705 Audit results restored');
+  } catch(e) { toast('\u26A0 Could not restore: ' + e.message); }
+}
+
+// ── Fetch GSC data for URL from panel ① ───────────────────
+function fetchGSCData() {
+  const url = document.getElementById('dUrl').value.trim();
+  if (!url) { toast('⚠ Enter a Page URL in ① first'); return; }
+  const btn = document.getElementById('gscFetchBtn');
+  const status = document.getElementById('gscFetchStatus');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  status.textContent = '';
+
+  const urlNorm = function(u){ return (u||'').toLowerCase().replace(/\/$/, '').replace(/^https?:\/\//, ''); };
+
+  const raw = (function(){ try { return localStorage.getItem('cs_shared_gsc'); } catch(e) { return null; } })();
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      const uNorm = urlNorm(url);
+      const match = (data.pages||[]).find(function(pg){
+        const pNorm = urlNorm(pg.page||pg.url||'');
+        return pNorm === uNorm || pNorm.includes(uNorm) || uNorm.includes(pNorm);
+      });
+
+      if (match) {
+        if (match.impressions) { document.getElementById('dImpr').value = match.impressions; document.getElementById('imprAutoMark').style.display='inline'; }
+        if (match.ctr) { document.getElementById('dCtr').value = parseFloat(match.ctr).toFixed(1); document.getElementById('ctrAutoMark').style.display='inline'; }
+        if (match.position) { document.getElementById('dPos').value = parseFloat(match.position).toFixed(1); document.getElementById('posAutoMark').style.display='inline'; }
+        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+        status.textContent = '✓ pos ' + Math.round(match.position||0) + '  ·  ' + (match.impressions||0).toLocaleString() + ' impr  ·  ' + parseFloat(match.ctr||0).toFixed(1) + '% CTR';
+        status.style.color = 'var(--green)';
+
+        // Fill queries
+        const queries = (data.queries||[]).filter(function(q){ return q.query; }).slice(0, 15);
+        if (queries.length) {
+          const qTexts = queries.map(function(q){ return q.query; });
+          if (!document.getElementById('dQueries').value.trim()) {
+            document.getElementById('dQueries').value = qTexts.join('\n');
+            document.getElementById('queriesAutoMark').style.display = 'inline';
+          }
+          // Secondary keyword — best query that differs from primary
+          const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
+          if (!document.getElementById('dKw2').value.trim()) {
+            const sec = qTexts.find(function(q){
+              const qn = q.toLowerCase().trim();
+              if (!primary || qn === primary) return false;
+              const pw = primary.split(' ');
+              const qw = qn.split(' ');
+              const overlap = pw.filter(function(w){ return w.length > 2 && qw.includes(w); }).length;
+              return overlap / Math.max(pw.length, 1) < 0.8;
+            });
+            if (sec) {
+              document.getElementById('dKw2').value = sec;
+              document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+            }
+          }
+        }
+
+        // Fill site URLs if empty
+        if (!document.getElementById('dSiteUrls').value.trim() && data.pages && data.pages.length) {
+          const urls = data.pages.map(function(pg){ return pg.page||pg.url||''; })
+            .filter(function(u){ return u.startsWith('http'); }).slice(0, 50);
+          document.getElementById('dSiteUrls').value = urls.join('\n');
+          document.getElementById('urlCount').textContent = '✓ ' + urls.length + ' URLs loaded';
+          document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        }
+
+        btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
+        toast('✅ Loaded: pos, impr, CTR, queries + secondary keyword');
+        return;
+      }
+    } catch(e) { console.error('fetchGSCData error:', e); }
+  }
+
+  status.textContent = 'No match — import GSC CSV in Workflow Manager first';
+  status.style.color = 'var(--amber)';
+  btn.textContent = '⬇ Fetch GSC Data for this URL'; btn.disabled = false;
+  toast('⚠ No GSC data found — import via Workflow Manager first');
+}
+
+
+// ── Fetch Sitemap URLs ─────────────────────────────────────
+async function fetchSitemap() {
+  const url = document.getElementById('sitemapFetchUrl').value.trim() || 
+              (document.getElementById('dUrl').value.trim().replace(/\/[^\/]*$/, '/sitemap.xml'));
+  if (!url) { toast('⚠ Enter sitemap URL'); return; }
+  const btn = document.getElementById('sitemapFetchBtn');
+  const status = document.getElementById('sitemapFetchStatus');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  status.textContent = 'Fetching via proxy...';
+  try {
+    const r = await fetch(`${RAILWAY}/api/sitemap/urls`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url})
+    });
+    const d = await r.json();
+    if (d.success && d.urls && d.urls.length) {
+      document.getElementById('dSiteUrls').value = d.urls.join('\n');
+      document.getElementById('urlCount').textContent = `✓ ${d.urls.length} URLs loaded from sitemap`;
+      document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+      status.textContent = `✓ ${d.urls.length} URLs loaded`;
+      status.style.color = 'var(--green)';
+      toast(`✅ ${d.urls.length} URLs loaded from sitemap`);
+    } else {
+      status.textContent = d.error || 'No URLs found in sitemap';
+      status.style.color = 'var(--amber)';
+      toast('⚠ No URLs found — check sitemap URL');
+    }
+  } catch(e) {
+    status.textContent = 'Fetch failed — paste URLs manually';
+    status.style.color = 'var(--red)';
+    toast('⚠ Sitemap fetch failed');
+  }
+  btn.textContent = '⬇ Fetch Sitemap'; btn.disabled = false;
+}
+
+// ── Auto-Fetch Page HTML via server proxy ─────────────────
+async function autoFetchPageHtml() {
+  const url = document.getElementById('dUrl').value.trim();
+  if (!url) { toast('⚠ Vul eerst de Page URL in bij ①'); return; }
+
+  const btn = document.getElementById('autoFetchBtn');
+  const status = document.getElementById('autoFetchStatus');
+
+  btn.textContent = '⏳ Fetching...';
+  btn.disabled = true;
+  status.textContent = 'Ophalen via server...';
+  status.style.color = 'var(--gold)';
+
+  try {
+    const r = await fetch(`${RAILWAY}/api/fetch-html`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const d = await r.json();
+
+    if (d.success && d.html) {
+      document.getElementById('dHtml').value = d.html;
+      updateHtmlStats('dHtml', 'dHtmlStats');
+      document.getElementById('htmlAutoFetchBadge').style.display = 'inline-flex';
+      status.textContent = '✅ HTML opgehaald (' + Math.round(d.html.length / 1024) + ' KB) via ' + (d.method || 'proxy');
+      status.style.color = 'var(--green)';
+      toast('✅ Page HTML geladen — meta check draait automatisch');
+      // Auto-run meta consistency check
+      setTimeout(function() {
+        runMetaCheck();
+        document.getElementById('metaAutoRunBadge').style.display = 'inline-flex';
+      }, 400);
+    } else {
+      status.textContent = '⚠ ' + (d.error || 'Fetch mislukt') + ' — plak HTML handmatig in ③';
+      status.style.color = 'var(--red)';
+      toast('⚠ Auto-fetch mislukt — plak HTML handmatig');
+    }
+  } catch (e) {
+    status.textContent = '⚠ Server niet bereikbaar: ' + e.message + ' — plak HTML handmatig';
+    status.style.color = 'var(--red)';
+    toast('⚠ Server offline — plak HTML handmatig in ③');
+  }
+
+  btn.textContent = '🚀 Fetch Page HTML';
+  btn.disabled = false;
+}
+
+// ── HTML Stats ─────────────────────────────────────────────
+function updateHtmlStats(inputId, statsId) {
+  const html = document.getElementById(inputId).value.trim();
+  const el = document.getElementById(statsId);
+  if (!html) { el.textContent=''; return; }
+  try {
+    const doc = new DOMParser().parseFromString(html,'text/html');
+    const words = (doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
+    const h1 = doc.querySelectorAll('h1').length;
+    const h2 = doc.querySelectorAll('h2').length;
+    const schema = (html.match(/application\/ld\+json/gi)||[]).length;
+    const imgs = doc.querySelectorAll('img').length;
+    const alts = doc.querySelectorAll('img[alt]').length;
+    el.textContent = `✓ ~${words.toLocaleString()} words · ${h1} H1 · ${h2} H2s · ${schema} schema · ${imgs} imgs (${alts} with alt)`;
+  } catch(e) { el.textContent = 'Could not parse HTML'; }
+}
+
+// ── GSC CSV Parsing ────────────────────────────────────────
+function parseGSCCsv(raw) {
+  const lines = raw.trim().split('\n');
+  if (lines.length < 2) return [];
+  const header = lines[0].toLowerCase().replace(/"/g,'').split(',');
+  const idx = {
+    page: header.findIndex(h=>h.includes('page')||h.includes('url')||h.includes('top page')),
+    clicks: header.findIndex(h=>h.includes('click')),
+    impressions: header.findIndex(h=>h.includes('impression')),
+    ctr: header.findIndex(h=>h.includes('ctr')),
+    position: header.findIndex(h=>h.includes('position')||h.includes('pos')),
+  };
+  if (idx.page<0) idx.page=0;
+  if (idx.clicks<0) idx.clicks=1;
+  if (idx.impressions<0) idx.impressions=2;
+  if (idx.ctr<0) idx.ctr=3;
+  if (idx.position<0) idx.position=4;
+  const rows=[];
+  for (let i=1;i<lines.length;i++) {
+    const cols=lines[i].replace(/"/g,'').split(',');
+    if (cols.length<3) continue;
+    const page=cols[idx.page]?.trim();
+    if (!page) continue;
+    const impressions=parseFloat(cols[idx.impressions])||0;
+    if (impressions<1) continue;
+    rows.push({
+      page,
+      clicks:parseFloat(cols[idx.clicks])||0,
+      impressions,
+      ctr:parseFloat((cols[idx.ctr]||'0').replace('%',''))||0,
+      position:parseFloat(cols[idx.position])||0,
+    });
+  }
+  return rows;
+}
+
+function handlePagesCSV(input) {
+  const file=input.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    gscPages=parseGSCCsv(e.target.result);
+    gscPages.forEach(p=>{
+      const posScore=p.position>10?Math.min((p.position-10)/40,1):0;
+      const ctrGap=Math.max(0,3-p.ctr)/3;
+      const imprW=Math.min(Math.log10(Math.max(p.impressions,10))/5,1);
+      p.score=Math.round((posScore*.45+ctrGap*.35+imprW*.2)*100);
+    });
+    gscPages.sort((a,b)=>b.score-a.score);
+    document.getElementById('pagesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscPages.length} pages loaded</span>`;
+    try { localStorage.setItem('cs_shared_gsc', JSON.stringify({pages:gscPages, queries:gscQueries})); } catch(e) {}
+    document.getElementById('filterPanel').style.display='block';
+    document.getElementById('opportunityTable').style.display='block';
+    renderTable();
+    toast(`✅ ${gscPages.length} pages loaded`);
+  };
+  r.readAsText(file);
+}
+
+function handleQueriesCSV(input) {
+  const file=input.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const rows=parseGSCCsv(e.target.result);
+    gscQueries=rows.map(r=>({query:r.page, position:r.position, impressions:r.impressions, ctr:r.ctr}));
+    document.getElementById('queriesStatus').innerHTML=`<span style="color:var(--green)">✓ ${gscQueries.length} queries loaded</span>`;
+    toast(`✅ ${gscQueries.length} queries loaded`);
+  };
+  r.readAsText(file);
+}
+
+// ── Table render ───────────────────────────────────────────
+function renderTable() {
+  const minI=parseFloat(document.getElementById('minImpr').value)||0;
+  const minP=parseFloat(document.getElementById('minPos').value)||0;
+  const maxP=parseFloat(document.getElementById('maxPos').value)||999;
+  const maxC=parseFloat(document.getElementById('maxCtr').value)||100;
+  const filtered=gscPages.filter(r=>r.impressions>=minI&&r.position>=minP&&r.position<=maxP&&r.ctr<=maxC);
+  document.getElementById('tableCount').textContent=`${filtered.length} pages`;
+  const maxScore=filtered[0]?.score||1;
+  const rows=filtered.slice(0,100).map((r,i)=>{
+    const short=(()=>{try{return new URL(r.page).pathname.slice(0,45)||'/';}catch(e){return r.page.slice(0,45);}})();
+    const posColor=r.position<20?'var(--amber)':r.position<35?'var(--orange)':'var(--red)';
+    const ctrColor=r.ctr<1?'var(--red)':r.ctr<3?'var(--amber)':'var(--green)';
+    const barW=Math.round((r.score/maxScore)*100);
+    const enc=encodeURIComponent(r.page);
+    return `<tr>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${i<3?'var(--gold)':'var(--muted)'};">#${i+1}</td>
+      <td>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.page}">${short}</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px;">${r.impressions.toLocaleString()} impr · ${r.clicks} clicks</div>
+      </td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${r.impressions.toLocaleString()}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:${ctrColor};">${r.ctr.toFixed(1)}%</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${posColor};">${Math.round(r.position)}</td>
+      <td style="min-width:90px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);">${r.score}/100</div>
+        <div class="opp-bar" style="width:${barW}%;"></div>
+      </td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn-sm btn-blue" onclick="quickAudit('${enc}','${r.impressions}','${r.ctr}','${r.position}')">⚡ Quick</button>
+          <button class="btn-sm btn-purple" onclick="loadToDeep('${enc}','${r.impressions}','${r.ctr}','${r.position}')">🔬 Deep</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tableBody').innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No pages match filters</td></tr>';
+}
+
+function loadToDeep(enc,impr,ctr,pos) {
+  document.getElementById('dUrl').value=decodeURIComponent(enc);
+  document.getElementById('dImpr').value=impr;
+  document.getElementById('dCtr').value=ctr;
+  document.getElementById('dPos').value=pos;
+  setMode('deep');
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('Loaded → paste your HTML and run Deep Dive!');
+}
+
+function exportOpps() {
+  const rows=['Page,Impressions,Clicks,CTR,Position,Score'];
+  gscPages.forEach(r=>rows.push(`"${r.page}",${r.impressions},${r.clicks},${r.ctr},${r.position},${r.score}`));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='seo-opportunities.csv';a.click();
+}
+
+// ── Cannibalization ────────────────────────────────────────
+function showCannibalization() {
+  if (!gscPages.length) { toast('Upload pages CSV first'); return; }
+  const report=document.getElementById('cannReport');
+  const body=document.getElementById('cannBody');
+  report.style.display='block';
+  const groups={};
+  gscPages.forEach(p=>{
+    try {
+      const url=new URL(p.page);
+      const segs=url.pathname.split('/').filter(Boolean);
+      segs.forEach(seg=>{
+        if (seg.length<4) return;
+        if (!groups[seg]) groups[seg]=[];
+        groups[seg].push(p);
+      });
+    } catch(e){}
+  });
+  const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
+  if (!canns.length) {
+    body.innerHTML='<p style="color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    return;
+  }
+  body.innerHTML=canns.map(([seg,pages])=>`
+    <div class="cann-card">
+      <h4>⚠ Conflict: "${seg}" appears in ${pages.length} pages</h4>
+      ${pages.map(p=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono',monospace;color:var(--blue);flex:1;word-break:break-all;">${p.page.replace(/^https?:\/\//,'').slice(0,60)}</span>
+          <span style="color:var(--muted);">${p.impressions.toLocaleString()} impr</span>
+          <span style="color:var(--amber);">${p.ctr.toFixed(1)}% CTR</span>
+          <span style="color:var(--orange);">pos ${Math.round(p.position)}</span>
+          <button class="btn-sm btn-purple" onclick="loadToDeep('${encodeURIComponent(p.page)}','${p.impressions}','${p.ctr}','${p.position}')">🔬 Audit</button>
+        </div>`).join('')}
+    </div>`).join('');
+  report.scrollIntoView({behavior:'smooth'});
+}
+
+// ── Gemini call ────────────────────────────────────────────
+async function callGemini(prompt, maxTokens=4000) {
+  const resp = await fetch(`${RAILWAY}/api/gemini-proxy`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      contents:[{parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.25,maxOutputTokens:maxTokens}
+    })
+  });
+  if (!resp.ok) {
+    const err=await resp.json().catch(()=>({}));
+    throw new Error(err.error?.message||err.detail||`HTTP ${resp.status}`);
+  }
+  const data=await resp.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+}
+
+function extractContent(html, label='page') {
+  if (!html) return null;
+  try {
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const title=doc.querySelector('title')?.textContent||'';
+    const desc=doc.querySelector('meta[name="description"]')?.getAttribute('content')||'';
+    const h1=Array.from(doc.querySelectorAll('h1')).map(e=>e.textContent.trim()).join(' | ');
+    const h2s=Array.from(doc.querySelectorAll('h2')).map(e=>e.textContent.trim()).join(' · ');
+    const h3s=Array.from(doc.querySelectorAll('h3')).slice(0,10).map(e=>e.textContent.trim()).join(' · ');
+    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\n');
+    const body=(doc.body?.innerText||'').replace(/\s+/g,' ').slice(0,3000);
+    const imgs=doc.querySelectorAll('img').length;
+    const alts=doc.querySelectorAll('img[alt]').length;
+    const intLinks=doc.querySelectorAll('a[href]').length;
+    const wordCount=(doc.body?.innerText||'').split(/\s+/).filter(Boolean).length;
+    const faqs=doc.querySelectorAll('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"]').length;
+    return `=== ${label.toUpperCase()} ===
+Title (${title.length} chars): ${title}
+Meta desc (${desc.length} chars): ${desc}
+H1: ${h1||'MISSING'}
+H2s: ${h2s||'none'}
+H3s (first 10): ${h3s||'none'}
+Word count: ~${wordCount}
+Images: ${imgs} total, ${alts} with alt (${imgs-alts} missing alt text)
+Links: ${intLinks} total
+Schema blocks: ${schemas||'none'}
+FAQ section: ${faqs>0?'YES':'NOT DETECTED'}
+Body extract: ${body}`;
+  } catch(e) { return `[Error parsing ${label} HTML: ${e.message}]`; }
+}
+
+function extractTitle(html) {
+  if (!html) return 'not provided';
+  const m=html.match(/<title[^>]*>(.*?)<\/title>/i);
+  return m?m[1].trim():'not found in HTML';
+}
+function extractMeta(html) {
+  if (!html) return 'not provided';
+  const m=html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
+           ||html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+  return m?m[1].trim():'not found in HTML';
+}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ── QUICK AUDIT ───────────────────────────────────────────
+async function quickAudit(enc,impr,ctr,pos) {
+  const url=decodeURIComponent(enc);
+  const prog=document.getElementById('quickProgress');
+  const out=document.getElementById('quickOutput');
+  prog.className='progress show';out.innerHTML='';out.className='output show';
+  const QSTEPS=[
+    {id:'q0',icon:'🎯',label:'PRIORITY ACTIONS — Top 5 right now'},
+    {id:'q1',icon:'⚡',label:'CTR Surgery — new title + meta'},
+    {id:'q2',icon:'📊',label:'Position 11–30 query opportunities'},
+  ];
+  document.getElementById('quickSteps').innerHTML=QSTEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
+  const bar=document.getElementById('quickBar');
+  const ctx=`URL: ${url}\nImpressions: ${impr}\nCTR: ${ctr}%\nPosition: ${pos}`;
+  const pageQueries=gscQueries.filter(q=>q.query).slice(0,20);
+  const queryCx=pageQueries.length?`\nTop queries: ${pageQueries.map(q=>`"${q.query}" pos:${Math.round(q.position)}`).join(' | ')}` : '';
+  const prompts={
+    q0:`You are an elite SEO strategist.\n${ctx}${queryCx}\n\nList EXACTLY 5 priority actions for this page. Each must be:\n- Specific and actionable (not generic advice)\n- Achievable in under 1 hour\n- Include expected metric change\n\nFormat each as:\n🎯 **[#]. [Short action title]**\nDo: [exact what to do]\nExpect: [specific metric improvement]\n\nStart with the highest-impact action first.`,
+    q1:`You are an elite SEO strategist.\n${ctx}${queryCx}\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\n\n**New Title**: [text]\n**New Meta Description**: [text]\n**Why**: [specific 2026 SERP psychology rationale]`,
+    q2:`You are an elite SEO strategist.\n${ctx}${queryCx}\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.`,
+  };
+  for (let i=0;i<QSTEPS.length;i++) {
+    const s=QSTEPS[i];setStep(s.id,'active');
+    try {
+      const r=await callGemini(prompts[s.id],1500);
+      addSection(out,s.id,s.icon,s.label,i===0?'b-gold':i===1?'b-win':'b-pulse',r);
+      setStep(s.id,'done');
+    } catch(e) {
+      setStep(s.id,'error');
+      addSection(out,s.id,s.icon,s.label,'b-tech',`**Error:** ${e.message}`);
+    }
+    bar.style.width=((i+1)/QSTEPS.length*100)+'%';
+    if (i<QSTEPS.length-1) await sleep(1200);
+  }
+  prog.className='progress';
+  toast('✅ Quick audit done');
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+// ── DEEP AUDIT — 11 STEPS (added Voice Search) ────────────
+const DEEP_STEPS=[
+  {id:'d0',icon:'🎯',label:'PRIORITY ACTIONS — Do These First (top 7)',badge:'b-gold'},
+  {id:'d1',icon:'🔍',label:'Intent + AI Overview Eligibility',badge:'b-tech'},
+  {id:'d2',icon:'⚡',label:'CTR Surgery — real title/meta rewrite',badge:'b-win'},
+  {id:'d3',icon:'📊',label:'Competitor Diff — real HTML comparison',badge:'b-pulse'},
+  {id:'d4',icon:'📝',label:'Content Gap Matrix — what you are missing',badge:'b-pulse'},
+  {id:'d5',icon:'🔧',label:'PULSE Optimization — before/after rewrites',badge:'b-pulse'},
+  {id:'d6',icon:'🔗',label:'NEXUS Signals + Internal Link Finder',badge:'b-nexus'},
+  {id:'d7',icon:'🏗️',label:'Architecture Blueprint — H1-H3 restructure',badge:'b-nexus'},
+  {id:'d8',icon:'⚙️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
+  {id:'d9',icon:'🎙️',label:'Voice Search Optimization — conversational queries',badge:'b-voice'},
+  {id:'d10',icon:'📈',label:'Before/After Score + Traffic Projection + 90-Day Plan',badge:'b-gold'},
+];
+
+async function runDeepAudit() {
+  const url=document.getElementById('dUrl').value.trim();
+  const kw=document.getElementById('dKw').value.trim();
+  if (!url||!kw) { toast('Enter URL and keyword first'); return; }
+
+  const inp={
+    url, kw,
+    kw2:document.getElementById('dKw2').value.trim(),
+    geo:document.getElementById('dGeo').value.trim()||'Global',
+    goal:document.getElementById('dGoal').value,
+    impr:document.getElementById('dImpr').value||'unknown',
+    ctr:document.getElementById('dCtr').value||'unknown',
+    pos:document.getElementById('dPos').value||'unknown',
+    queries:document.getElementById('dQueries').value.trim(),
+    html:document.getElementById('dHtml').value.trim(),
+    comp1url:document.getElementById('dComp1url').value.trim(),
+    comp1html:document.getElementById('dComp1html').value.trim(),
+    comp2url:document.getElementById('dComp2url').value.trim(),
+    comp2html:document.getElementById('dComp2html').value.trim(),
+    siteUrls:document.getElementById('dSiteUrls').value.trim(),
+    constraints:document.getElementById('dConstraints').value.trim(),
+    voiceQueries:'', // auto-generated by AI from keyword + geo — no manual input needed
+    voiceDevice:document.getElementById('dVoiceDevice').value,
+  };
+
+  const myContent=extractContent(inp.html,'YOUR PAGE');
+  const myContentStr=myContent||`[No HTML provided — URL: ${inp.url}]`;
+
+  // Competitor context — real HTML only, no hallucination
+  let compContext='';
+  if (inp.comp1html || inp.comp2html) {
+    compContext=`\n${extractContent(inp.comp1html,`COMPETITOR 1 (${inp.comp1url||'unknown'})`)||'[No HTML for Competitor 1]'}\n\n${extractContent(inp.comp2html,`COMPETITOR 2 (${inp.comp2url||'unknown'})`)||'[No HTML for Competitor 2]'}`;
+  } else {
+    // Honest fallback — no hallucination
+    compContext=`\n[No competitor HTML pasted. Analyze based on: (1) your knowledge of what typically ranks well for "${kw}" in ${inp.geo}, (2) general SEO best practices for this keyword type and geo. Do NOT invent specific competitor page stats.]`;
+  }
+
+  const siteUrlList=inp.siteUrls.split('\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\n');
+  const voiceCtx=inp.voiceQueries?`\nVOICE QUERIES: ${inp.voiceQueries}`:'';
+
+  document.getElementById('deepRunBtn').disabled=true;
+  const prog=document.getElementById('deepProgress');
+  const out=document.getElementById('deepOutput');
+  prog.className='progress show';out.innerHTML='';out.className='output show';
+  document.getElementById('deepSteps').innerHTML=DEEP_STEPS.map(s=>`<div class="prog-step" id="step-${s.id}"><span class="prog-icon">${s.icon}</span><span>${s.label}</span></div>`).join('');
+  const bar=document.getElementById('deepBar');
+
+  const base=`You are an elite SEO strategist for ContentScale.site using PULSE + NEXUS frameworks.
+
+PAGE: ${inp.url}
+PRIMARY KEYWORD: ${inp.kw}
+SECONDARY KEYWORD: ${inp.kw2||'none'}
+GEO: ${inp.geo} | GOAL: ${inp.goal} | CONSTRAINTS: ${inp.constraints||'none'}
+GSC: ${inp.impr} impressions · ${inp.ctr}% CTR · position ${inp.pos}
+TOP QUERIES: ${inp.queries||'not provided'}${voiceCtx}
+
+${myContentStr}`;
+
+  const prompts={
+    d0:`${base}\n\nSTEP 0 — PRIORITY ACTIONS (show this first):\n\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\n\nFor each action use this format:\n🎯 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\nDo: [Exact what to change, add, or fix — copy-paste ready]\nWhere: [Exact location on page or in code]\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\nTime: [15 min / 30 min / 2 hrs]\n\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.`,
+
+    d1:`${base}\n\nSTEP 1 — INTENT DECODING:\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not? State any mismatch clearly with specific fix.`,
+
+    d2:`${base}\n\nSTEP 2 — CTR SURGERY:\nCURRENT TITLE: "${extractTitle(inp.html)}"\nCURRENT META: "${extractMeta(inp.html)}"\n\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\n\n| Field | Current | New | Chars | Why |\n|-------|---------|-----|-------|-----|\n| Title | ${extractTitle(inp.html).slice(0,40)} | [your version] | [n] | [rationale] |\n| Meta | ${extractMeta(inp.html).slice(0,40)}... | [your version] | [n] | [rationale] |\n\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]`,
+
+    d3:`${base}${compContext}\n\nSTEP 3 — COMPETITOR DIFF:\nCreate a real comparison table between your page and the competitors.\n\n| Feature | Your Page | Competitor 1 | Competitor 2 | Winner |\n|---------|-----------|--------------|--------------|--------|\n| Word count | [n] | [n] | [n] | |\n| H2 count | [n] | [n] | [n] | |\n| FAQ section | Yes/No | Yes/No | Yes/No | |\n| Schema types | [list] | [list] | [list] | |\n| Images with alt | [n]/[total] | [n]/[total] | [n]/[total] | |\n| CTA clarity | [1-5] | [1-5] | [1-5] | |\n| Data/stats count | [n] | [n] | [n] | |\n| Internal links | [n] | [n] | [n] | |\n| Unique angle | [describe] | [describe] | [describe] | |\n\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: exact implementation instruction.`,
+
+    d4:`${base}${compContext}\n\nSTEP 4 — CONTENT GAP MATRIX:\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\n\n| Dimension | Your Score | Gap | Specific Fix |\n|-----------|-----------|-----|-------------|\n| Subtopic coverage | | | |\n| Data & proof | | | |\n| Commercial signals | | | |\n| Media & UX | | | |\n| Freshness (2025-2026) | | | |\n| FAQ depth | | | |\n| E-E-A-T signals | | | |\n| Local relevance (${inp.geo}) | | | |\n\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.`,
+
+    d5:`${base}\n\nSTEP 5 — PULSE REWRITES (show current → improved for each):\n\nP — Purpose (intro rewrite):\nCURRENT: [quote first 3 sentences from body extract]\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\n\nU — Urgency signal:\nWhere to add: [exact location]\nNew sentence: [write it]\n\nL — Legitimacy:\nMissing proof elements: [list 3 specific items]\nWhere to add: [exact section]\n\nS — Structure improvement:\nBEFORE: [current format of one section]\nAFTER: [improved format — table or bullets]\n\nE — Engagement (CTA rewrite):\nCURRENT CTA: [identify from page]\nIMPROVED: [rewrite aligned to ${inp.goal}]`,
+
+    d6:`${base}\n\nSITE URLS:\n${siteUrlList||'[No URLs provided — suggest based on URL patterns from: '+inp.url+']'}\n\nSTEP 6 — NEXUS + INTERNAL LINKS:\n1. TOP 5 pages to link FROM to this page (use real URLs from list if available):\n   - URL | Anchor text (exact) | Why (semantic reason)\n\n2. TOP 5 pages this page should link TO:\n   - URL | Anchor text (exact) | Why\n\n3. Missing semantic entities for "${inp.kw}" in ${inp.geo} (10 terms)\n\n4. Schema recommendation — provide complete FAQPage JSON-LD with 5 Q&As (40-60 words each, optimized for AI Overviews)`,
+
+    d7:`${base}\n\nSTEP 7 — ARCHITECTURE BLUEPRINT:\nCURRENT heading structure (from HTML):\nH1: ${extractTitle(inp.html)}\n[reconstruct H2-H3 from content]\n\nRECOMMENDED structure for intent + AI Overview extraction:\n[show new H1 → H2 → H3 hierarchy]\n\nFor each change: Old heading → New heading → Why this order wins`,
+
+    d8:`${base}\n\nSTEP 8 — TECHNICAL CHECKLIST:\n1. Keyword "${inp.kw}" placement audit:\n   ☐ In H1? ☐ First 100 words? ☐ URL? ☐ Meta title? ☐ Image alt?\n   → Fix for each missing item\n\n2. Missing LSI/semantic keywords (8 terms not found in content)\n\n3. Technical issues found in HTML:\n   - Duplicate tags, missing alt, schema errors, etc.\n\n4. Schema errors or missing schema types for this page\n\n5. Core Web Vitals recommendations based on page structure`,
+
+    d9:`${base}\n\nSTEP 9 — VOICE SEARCH OPTIMIZATION:\n\nVoice search = conversational, question-based, local intent. Target device: ${inp.voiceDevice}.\n\n1. ELIGIBILITY CHECK — Does this page qualify for voice answer?\n   - Answer box potential: Yes/No + why\n   - Conversational readability score: [1-10]\n   - Local voice intent: Yes/No (is "${inp.kw}" a local voice query?)\n\n2. TOP 5 VOICE QUERIES for this page in ${inp.geo}:\n   | Voice Query | Current Answer on Page | Gap | Fix |\n   |-------------|----------------------|-----|-----|\n   | [query] | [current] | [gap] | [fix] |\n\n3. REWRITES — Convert 3 existing sentences to voice-friendly format:\n   Before: [current sentence]\n   After: [conversational, direct answer version]\n\n4. FEATURED SNIPPET optimization for voice:\n   - Write the perfect 40-word answer that Siri/Google will read aloud\n   - Format: [write it]\n\n5. Local near-me queries (if applicable for ${inp.geo}):\n   - Best 3 "near me" variations for this business type\n   - Schema additions needed for local voice: [list]`,
+
+    d10:`${base}\n\nSTEP 10 — SCORE + PROJECTION + 90-DAY PLAN:\n\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\n\n**CURRENT estimated score:**\n| Component | Score | Missing |\n|-----------|-------|--------|\n| GRAAF | /50 | [what's missing] |\n| CRAFT | /30 | [what's missing] |\n| Technical | /20 | [what's missing] |\n| **TOTAL** | **/100** | |\n\n**AFTER implementing all recommendations:**\n| Component | New Score | Improved |\n|-----------|-----------|----------|\n| GRAAF | /50 | [what improved] |\n| CRAFT | /30 | [what improved] |\n| Technical | /20 | [what improved] |\n| **TOTAL** | **/100** | |\n\n**Traffic projection:**\n| Metric | Current | Expected (90 days) |\n|--------|---------|--------------------|\n| Position | ${inp.pos} | [target] |\n| CTR | ${inp.ctr}% | [target]% |\n| Monthly clicks | [calc] | [calc] |\n\n**90-Day Plan:**\n- **WEEK 1** (Quick Wins): [5 specific changes, each under 30 min]\n- **WEEK 2-3** (Content Upgrades): [3-4 content additions]\n- **WEEK 4** (Technical + Schema): [specific implementations]\n- **MONTH 2** (Authority Building): [link building, E-E-A-T signals]\n- **MONTH 3** (Measurement): [GSC checkpoints — Day 7, Day 30, Day 90]\n\nSUCCESS DEFINITION: Position ${inp.pos} → [target] for "${inp.kw}" in ${inp.geo} within 90 days`,
+  };
+
+  for (let i=0;i<DEEP_STEPS.length;i++) {
+    const s=DEEP_STEPS[i];setStep(s.id,'active');
+    try {
+      const result=await callGemini(prompts[s.id],8000);
+      addSection(out,s.id,s.icon,s.label,s.badge,result);
+      setStep(s.id,'done');
+      // Save step result to localStorage immediately — with size guard
+      auditSaveStep(s.id, result, inp);
+    } catch(e) {
+      setStep(s.id,'error');
+      addSection(out,s.id,s.icon,s.label,s.badge,`**Error:** ${e.message}\n\nCheck Railway server: ${RAILWAY}/api/health`);
+    }
+    bar.style.width=((i+1)/DEEP_STEPS.length*100)+'%';
+    if (i<DEEP_STEPS.length-1) await sleep(1500);
+  }
+
+  prog.className='progress';
+  document.getElementById('deepRunBtn').disabled=false;
+  toast('✅ Full audit complete — scroll up for Priority Actions');
+  out.scrollIntoView({behavior:'smooth'});
+
+  // Show post-audit action bar
+  document.getElementById('postAuditBar').style.display='flex';
+
+  // Final full save including all input fields
+  auditSaveFinal(inp);
+}
+
+// ══════════════════════════════════════════════════════════
+// AUDIT SAVE / RESTORE — localStorage + server backup
+// localStorage: instant, per-step
+// Server: survives computer crash, accessible from anywhere
+// Key: shown in UI so you can load from any computer
+// ══════════════════════════════════════════════════════════
+
+function _getAuditKey() {
+  try {
+    var stored = localStorage.getItem('cs_audit_server_key');
+    if (stored) return stored;
+  } catch(e) {}
+  // Build from meta if available
+  try {
+    var meta = JSON.parse(localStorage.getItem('cs_audit_meta') || '{}');
+    if (meta.url) {
+      var host = new URL(meta.url).hostname.replace(/\./g,'-').slice(0,30);
+      var kw = (meta.kw||'').replace(/\s+/g,'-').toLowerCase().slice(0,20);
+      var key = 'audit-' + host + (kw ? '-' + kw : '');
+      try { localStorage.setItem('cs_audit_server_key', key); } catch(e) {}
+      return key;
+    }
+  } catch(e) {}
+  var fallback = 'audit-' + Date.now().toString(36);
+  try { localStorage.setItem('cs_audit_server_key', fallback); } catch(e) {}
+  return fallback;
+}
+
+function _showSyncStatus(msg, color) {
+  var el = document.getElementById('auditSyncStatus');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--dim)'; }
+}
+
+async function auditSyncToServer(silent) {
+  try {
+    var meta = auditGetMeta();
+    if (!meta.url) return; // nothing to save
+    var key = _getAuditKey();
+    var steps = {};
+    DEEP_STEPS.forEach(function(s) { steps[s.id] = auditGetStep(s.id); });
+    var payload = { key: key, meta: meta, steps: steps, savedAt: new Date().toISOString() };
+    var r = await fetch(RAILWAY + '/api/audit/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if (d.success) {
+      var ts = new Date().toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+      _showSyncStatus('☁ Opgeslagen om ' + ts + ' — key: ' + key, 'var(--green)');
+      if (!silent) toast('☁ Audit opgeslagen op server — key: ' + key);
+    } else {
+      _showSyncStatus('⚠ Server save mislukt — alleen lokaal opgeslagen', 'var(--gold)');
+    }
+  } catch(e) {
+    _showSyncStatus('⚠ Server niet bereikbaar — alleen lokaal opgeslagen', 'var(--gold)');
+  }
+}
+
+async function auditLoadFromServer() {
+  var key = prompt('Audit key (laat leeg voor automatisch):');
+  if (key === null) return;
+  if (!key) key = _getAuditKey();
+  if (!key) { toast('⚠ Geen key gevonden'); return; }
+  try {
+    var r = await fetch(RAILWAY + '/api/audit/load?key=' + encodeURIComponent(key));
+    var d = await r.json();
+    if (d.success && d.data) {
+      // Restore meta
+      if (d.data.meta) {
+        try { localStorage.setItem('cs_audit_meta', JSON.stringify(d.data.meta)); } catch(e) {}
+      }
+      // Restore steps
+      if (d.data.steps) {
+        Object.keys(d.data.steps).forEach(function(stepId) {
+          if (d.data.steps[stepId]) {
+            try { localStorage.setItem('cs_audit_step_' + stepId, d.data.steps[stepId]); } catch(e) {}
+          }
+        });
+      }
+      try { localStorage.setItem('cs_audit_server_key', key); } catch(e) {}
+      var ts = new Date(d.savedAt || Date.now()).toLocaleString('nl-NL');
+      _showSyncStatus('☁ Geladen van server (opgeslagen: ' + ts + ')', 'var(--green)');
+      toast('✅ Audit hersteld van server — key: ' + key);
+      // Trigger DOM restore
+      doRestoreAudit();
+    } else {
+      toast('⚠ Niet gevonden op server: ' + key);
+    }
+  } catch(e) {
+    toast('⚠ Server niet bereikbaar: ' + e.message);
+  }
+}
+
+function auditSaveStep(stepId, result, inp) {
+  try {
+    localStorage.setItem('cs_audit_step_' + stepId, result);
+    const meta = {
+      url: inp.url, kw: inp.kw, kw2: inp.kw2, geo: inp.geo,
+      goal: inp.goal, impr: inp.impr, ctr: inp.ctr, pos: inp.pos,
+      queries: inp.queries, constraints: inp.constraints,
+      date: new Date().toISOString()
+    };
+    localStorage.setItem('cs_audit_meta', JSON.stringify(meta));
+    // Reset key so it's built from this URL
+    try {
+      var host = new URL(inp.url).hostname.replace(/\./g,'-').slice(0,30);
+      var kw = (inp.kw||'').replace(/\s+/g,'-').toLowerCase().slice(0,20);
+      var key = 'audit-' + host + (kw ? '-' + kw : '');
+      localStorage.setItem('cs_audit_server_key', key);
+    } catch(e) {}
+  } catch(e) {
+    try {
+      var keys = Object.keys(localStorage).filter(function(k){ return k.startsWith('cs_audit_step_'); });
+      if (keys.length > 0) { localStorage.removeItem(keys[0]); localStorage.setItem('cs_audit_step_' + stepId, result); }
+    } catch(e2) { console.warn('[audit save] localStorage full, step', stepId, 'not saved'); }
+  }
+  // Save to server every 3 steps (not every single step to avoid too many requests)
+  try {
+    var _stepNums = {'d0':0,'d1':1,'d2':2,'d3':3,'d4':4,'d5':5,'d6':6,'d7':7,'d8':8,'d9':9,'d10':10};
+    var n = _stepNums[stepId];
+    if (n !== undefined && (n === 0 || n === 4 || n === 8 || n === 10)) {
+      auditSyncToServer(true); // silent
+    }
+  } catch(e) {}
+}
+
+function auditSaveFinal(inp) {
+  window._lastAuditData = {
+    url: inp.url, keyword: inp.kw, secondaryKeyword: inp.kw2,
+    geo: inp.geo, position: inp.pos, impressions: inp.impr, ctr: inp.ctr,
+    auditDate: new Date().toISOString()
+  };
+  // Final full save to server
+  setTimeout(function() {
+    auditSyncToServer(false); // show toast with key
+    // Also save recommendations backup
+    try {
+      var reportData = { meta: auditGetMeta(), steps: {} };
+      DEEP_STEPS.forEach(function(s) { reportData.steps[s.id] = auditGetStep(s.id); });
+      localStorage.setItem('cs_last_recommendations', JSON.stringify(reportData));
+    } catch(e) {}
+  }, 800);
+}
+
+function auditGetStep(stepId) {
+  try { return localStorage.getItem('cs_audit_step_' + stepId) || ''; } catch(e) { return ''; }
+}
+
+function auditGetMeta() {
+  try { return JSON.parse(localStorage.getItem('cs_audit_meta') || '{}'); } catch(e) { return {}; }
+}
+
+function auditClearAll() {
+  var keys = Object.keys(localStorage).filter(function(k){
+    return k.startsWith('cs_audit_step_') || k === 'cs_audit_meta' || k === 'cs_last_audit' || k === 'cs_audit_server_key';
+  });
+  keys.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+}
+
+// ── Restore last audit on page load ──────────────────────
+(function restoreLastAudit() {
+  try {
+    const meta = auditGetMeta();
+    if (!meta.url) return;
+
+    // Check if any steps were saved
+    const savedSteps = DEEP_STEPS.filter(s => auditGetStep(s.id));
+    if (!savedSteps.length) return;
+
+    const out = document.getElementById('deepOutput');
+    if (!out) return;
+
+    // Show restore banner
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+    banner.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">LAATSTE AUDIT: ' + (meta.kw||'') + ' · ' + (meta.url||'').slice(0,40) + ' · ' + (meta.date||'').slice(0,10) + ' · ' + savedSteps.length + '/' + DEEP_STEPS.length + ' stappen opgeslagen</span>'
+      + '<button onclick="doRestoreAudit()" class="btn-sm btn-blue">↩ Herstel audit</button>'
+      + '<button onclick="this.parentElement.remove()" class="btn-sm btn-muted">✕</button>';
+    out.before(banner);
+  } catch(e) {}
+})();
+
+function doRestoreAudit() {
+  try {
+    const meta = auditGetMeta();
+    if (!meta.url) { toast('⚠ Geen opgeslagen audit gevonden'); return; }
+
+    // Re-fill input fields
+    if (meta.url)  document.getElementById('dUrl').value  = meta.url;
+    if (meta.kw)   document.getElementById('dKw').value   = meta.kw;
+    if (meta.kw2)  document.getElementById('dKw2').value  = meta.kw2;
+    if (meta.geo)  document.getElementById('dGeo').value  = meta.geo;
+    if (meta.goal) document.getElementById('dGoal').value = meta.goal;
+    if (meta.impr) document.getElementById('dImpr').value = meta.impr;
+    if (meta.ctr)  document.getElementById('dCtr').value  = meta.ctr;
+    if (meta.pos)  document.getElementById('dPos').value  = meta.pos;
+    if (meta.queries) document.getElementById('dQueries').value = meta.queries;
+    if (meta.constraints) document.getElementById('dConstraints').value = meta.constraints;
+
+    setMode('deep');
+
+    const out = document.getElementById('deepOutput');
+    out.innerHTML = '';
+    out.className = 'output show';
+
+    let restored = 0;
+    DEEP_STEPS.forEach(s => {
+      const content = auditGetStep(s.id);
+      if (content) {
+        addSection(out, s.id, s.icon, s.label, s.badge, content);
+        restored++;
+      }
+    });
+
+    window._lastAuditData = {
+      url: meta.url, keyword: meta.kw, secondaryKeyword: meta.kw2,
+      geo: meta.geo, position: meta.pos, impressions: meta.impr, ctr: meta.ctr,
+      auditDate: meta.date
+    };
+
+    document.getElementById('postAuditBar').style.display = 'flex';
+    document.querySelector('.restore-banner')?.remove();
+    toast('✅ ' + restored + ' audit stappen hersteld');
+    out.scrollIntoView({behavior:'smooth'});
+  } catch(e) { toast('⚠ Herstel mislukt: ' + e.message); }
+}
+
+// ── Section helpers ────────────────────────────────────────
+function setStep(id,state) {
+  const el=document.getElementById('step-'+id);
+  if (!el) return;
+  el.className='prog-step '+state;
+  const icon=el.querySelector('.prog-icon');
+  if (state==='active') icon.textContent='⏳';
+  else if (state==='done') icon.textContent='✅';
+  else if (state==='error') icon.textContent='❌';
+}
+
+function addSection(container,id,icon,title,badge,content) {
+  const div=document.createElement('div');
+  div.className='sec-card';
+  if (id==='d0'||id==='q0') div.style.border='1px solid rgba(251,191,36,.4)';
+  div.innerHTML=`
+    <div class="sec-head" onclick="toggleBody('${id}')">
+      <span style="font-size:17px;">${icon}</span>
+      <span class="sec-title">${title}</span>
+      <span class="badge ${badge}">${id.toUpperCase()}</span>
+      <button class="btn-sm btn-muted" style="margin-left:8px;" onclick="event.stopPropagation();copyMd('md-${id}')">⎘ Copy</button>
+    </div>
+    <div class="sec-body" id="body-${id}">
+      <div class="md" id="md-${id}">${renderMd(content)}</div>
+    </div>`;
+  container.appendChild(div);
+}
+
+function toggleBody(id) {
+  document.getElementById('body-'+id)?.classList.toggle('hidden');
+}
+
+function copyMd(id) {
+  navigator.clipboard.writeText(document.getElementById(id)?.innerText||'').then(()=>toast('Copied!'));
+}
+
+// ── renderMd — with REAL table support ────────────────────
+function renderMd(t) {
+  if (!t) return '';
+  t = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  t = t.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  t = t.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  t = t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  t = t.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  t = t.replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>');
+  t = t.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  t = t.replace(/^---+$/gm,'<hr>');
+  t = t.replace(/(\|.+\|[\s\S]*?)(?=\n\n|\n[^|]|$)/g, function(match) {
+    const lines = match.trim().split('\n').filter(l => l.trim().startsWith('|'));
+    if (lines.length < 2) return match;
+    const isSep = (l) => /^\|[\s\-:|]+\|/.test(l);
+    let headerLine = lines[0];
+    let bodyLines = lines.slice(1);
+    if (isSep(lines[1])) bodyLines = lines.slice(2);
+    const parseCells = (line) => line.split('|').slice(1,-1).map(c => c.trim());
+    const headerCells = parseCells(headerLine);
+    const html = '<table><thead><tr>' +
+      headerCells.map(c => `<th>${c}</th>`).join('') +
+      '</tr></thead><tbody>' +
+      bodyLines.map(l => {
+        if (isSep(l)) return '';
+        const cells = parseCells(l);
+        return '<tr>' + cells.map((c,i) => `<td>${c||'—'}</td>`).join('') + '</tr>';
+      }).filter(Boolean).join('') +
+      '</tbody></table>';
+    return html;
+  });
+  t = t.replace(/^[\-\*•] (.+)$/gm,'<li>$1</li>');
+  t = t.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
+  t = t.replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`);
+  t = t.replace(/\n\n/g,'</p><p>');
+  t = t.replace(/\n/g,'<br>');
+  return t;
+}
+
+// ── Export Markdown for AI ────────────────────────────────
+function exportMarkdown() {
+  const meta = auditGetMeta();
+  const hasMeta = meta.url;
+  if (!hasMeta && (!window._lastAuditData?.url)) { toast('Run the audit first'); return; }
+  const data = window._lastAuditData || meta;
+
+  let md = `# SEO Audit Report — ${data.url || data.keyword || 'Unknown Page'}\n\n`;
+  md += `**Date:** ${new Date().toLocaleDateString()}\n`;
+  md += `**Keyword:** ${data.keyword || data.kw || '—'}\n`;
+  md += `**Secondary:** ${data.secondaryKeyword || data.kw2 || '—'}\n`;
+  md += `**Geo:** ${data.geo || '—'}\n`;
+  md += `**GSC:** pos ${data.position || data.pos}, ${data.impressions || data.impr} impr, ${data.ctr}% CTR\n\n---\n\n`;
+
+  DEEP_STEPS.forEach(s => {
+    // Try DOM first (in-session), fall back to localStorage (after reload)
+    const domContent = document.getElementById('md-'+s.id)?.innerText || '';
+    const storedContent = auditGetStep(s.id);
+    const content = domContent || storedContent;
+    if (content.trim()) {
+      md += `## ${s.icon} ${s.label}\n\n${content}\n\n---\n\n`;
+    }
+  });
+
+  const blob = new Blob([md], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `seo-audit-${((data.keyword||data.kw||'page')).replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  toast('✅ Markdown exported');
+}
+
+// ══════════════════════════════════════════════════════════
+// RECOMMENDATIONS REPORT
+// Volledig rapport voor:
+// 1. Website eigenaar — wat moet er gedaan worden, in volgorde
+// 2. AI schrijfbrief — exacte instructies om de content te schrijven
+// Haalt tekst uit localStorage zodat het ook na reload werkt
+// ══════════════════════════════════════════════════════════
+function exportRecommendationsReport() {
+  const meta = auditGetMeta();
+  const data = window._lastAuditData || meta;
+  const url = data.url || meta.url || '';
+  const kw = data.keyword || meta.kw || '';
+
+  if (!url && !kw) { toast('⚠ Voer eerst een audit uit'); return; }
+
+  // Load all steps — DOM first, localStorage fallback
+  function getStep(id) {
+    return (document.getElementById('md-'+id)?.innerText || '').trim()
+      || auditGetStep(id).trim();
+  }
+
+  const d0  = getStep('d0');   // Priority actions
+  const d1  = getStep('d1');   // Intent
+  const d2  = getStep('d2');   // CTR Surgery
+  const d3  = getStep('d3');   // Competitor diff
+  const d4  = getStep('d4');   // Content gap
+  const d5  = getStep('d5');   // PULSE rewrites
+  const d6  = getStep('d6');   // NEXUS + internal links
+  const d7  = getStep('d7');   // Architecture
+  const d8  = getStep('d8');   // Technical
+  const d9  = getStep('d9');   // Voice search
+  const d10 = getStep('d10');  // Score + 90-day plan
+
+  const hasContent = [d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,d10].some(s => s.length > 10);
+  if (!hasContent) { toast('⚠ Geen audit resultaten gevonden — voer eerst een audit uit'); return; }
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function section(icon, title, content, color) {
+    if (!content || content.length < 10) return '';
+    return `<div class="sec">
+      <div class="sec-head" style="border-left:4px solid ${color};">
+        <span class="sec-icon">${icon}</span>
+        <span class="sec-title">${title}</span>
+      </div>
+      <div class="sec-body"><pre class="content">${escHtml(content)}</pre></div>
+    </div>`;
+  }
+
+  const css = `
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#1f2937;background:#f9fafb;padding:0;}
+.page{max-width:960px;margin:0 auto;padding:32px 24px 60px;}
+.header{background:linear-gradient(135deg,#4c1d95,#1e3a8a);color:#fff;padding:28px 32px;border-radius:12px;margin-bottom:28px;}
+.header h1{font-size:24px;font-weight:900;margin-bottom:6px;}
+.header .sub{font-size:12px;opacity:.8;font-family:monospace;}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:28px;}
+.meta-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;}
+.meta-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-family:monospace;margin-bottom:3px;}
+.meta-val{font-size:15px;font-weight:700;color:#111827;word-break:break-all;}
+.sec{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:18px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
+.sec-icon{font-size:18px;}
+.sec-title{font-size:15px;font-weight:700;color:#111827;}
+.sec-body{padding:18px 20px;}
+pre.content{white-space:pre-wrap;word-break:break-word;font-family:Arial,sans-serif;font-size:13px;line-height:1.75;color:#374151;}
+.ai-brief{background:#fffbeb;border:2px solid #f59e0b;border-radius:10px;padding:24px;margin-bottom:28px;}
+.ai-brief h2{color:#92400e;font-size:17px;margin-bottom:10px;}
+.ai-brief p{font-size:13px;color:#78350f;line-height:1.7;margin-bottom:8px;}
+.ai-brief pre{background:#fff;border:1px solid #fcd34d;border-radius:6px;padding:14px;font-size:12px;white-space:pre-wrap;word-break:break-word;color:#374151;font-family:monospace;line-height:1.6;}
+.owner-box{background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:20px 24px;margin-bottom:28px;}
+.owner-box h2{color:#166534;font-size:17px;margin-bottom:10px;}
+.owner-box ol{padding-left:20px;}
+.owner-box li{margin-bottom:6px;font-size:13px;color:#14532d;line-height:1.6;}
+footer{text-align:center;font-size:11px;color:#9ca3af;margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;}
+@media print{body{background:#fff;}.page{padding:20px 16px;}}`;
+
+  // Build owner checklist from d0 (priority actions)
+  const ownerLines = d0.split('\n')
+    .filter(l => l.trim().startsWith('🎯') || l.trim().match(/^\d+\./))
+    .slice(0, 10)
+    .map(l => `<li>${escHtml(l.replace(/^[🎯\d\.\s]+/,'').trim())}</li>`)
+    .join('');
+
+  // Build AI writing brief from key sections
+  const aiBrief = `SCHRIJFOPDRACHT VOOR AI — ${kw}
+URL: ${url}
+Primair keyword: ${kw}
+Secundair keyword: ${data.secondaryKeyword || meta.kw2 || '—'}
+Geo: ${data.geo || meta.geo || '—'}
+Doel: ${meta.goal || '—'}
+
+PRIORITEIT ACTIES (doe dit eerst):
+${d0}
+
+NIEUWE TITEL + META:
+${d2}
+
+CONTENT GAP — DIT ONTBREEKT:
+${d4}
+
+PULSE HERSCHRIJVINGEN (voor/na):
+${d5}
+
+HEADING STRUCTUUR (H1→H3):
+${d7}
+
+TECHNISCHE VEREISTEN:
+${d8}`;
+
+  const body = `
+<div class="page">
+  <div class="header">
+    <h1>📋 SEO Aanbevelingen Rapport</h1>
+    <div class="sub">${escHtml(url)} · ${new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}</div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-card"><div class="meta-label">URL</div><div class="meta-val" style="font-size:11px;">${escHtml(url)}</div></div>
+    <div class="meta-card"><div class="meta-label">Primair keyword</div><div class="meta-val">${escHtml(kw)}</div></div>
+    <div class="meta-card"><div class="meta-label">Secundair keyword</div><div class="meta-val">${escHtml(data.secondaryKeyword || meta.kw2 || '—')}</div></div>
+    <div class="meta-card"><div class="meta-label">Geo</div><div class="meta-val">${escHtml(data.geo || meta.geo || '—')}</div></div>
+    <div class="meta-card"><div class="meta-label">Positie</div><div class="meta-val">${data.position || meta.pos || '—'}</div></div>
+    <div class="meta-card"><div class="meta-label">Impressies</div><div class="meta-val">${data.impressions || meta.impr || '—'}</div></div>
+    <div class="meta-card"><div class="meta-label">CTR</div><div class="meta-val">${data.ctr || meta.ctr || '—'}%</div></div>
+    <div class="meta-card"><div class="meta-label">Audit datum</div><div class="meta-val">${(data.auditDate || meta.date || '').slice(0,10)}</div></div>
+  </div>
+
+  <div class="owner-box">
+    <h2>✅ Voor de website eigenaar — wat moet er gedaan worden</h2>
+    <ol>${ownerLines || '<li>Zie Priority Actions hieronder</li>'}</ol>
+  </div>
+
+  <div class="ai-brief">
+    <h2>🤖 AI Schrijfbrief — exacte instructies voor content</h2>
+    <p>Kopieer onderstaande brief naar je AI (Claude, Gemini) om de pagina te laten herschrijven op basis van de audit.</p>
+    <pre>${escHtml(aiBrief)}</pre>
+  </div>
+
+  ${section('🎯','Priority Actions — doe dit eerst', d0, '#d97706')}
+  ${section('🔍','Intent + AI Overview', d1, '#6366f1')}
+  ${section('⚡','CTR Surgery — nieuwe titel + meta', d2, '#16a34a')}
+  ${section('📊','Competitor Diff', d3, '#dc2626')}
+  ${section('📝','Content Gap Matrix', d4, '#dc2626')}
+  ${section('🔧','PULSE Herschrijvingen', d5, '#7c3aed')}
+  ${section('🔗','NEXUS + Interne links', d6, '#7c3aed')}
+  ${section('🏗️','Heading Structuur', d7, '#0891b2')}
+  ${section('⚙️','Technische Checklist + Schema', d8, '#0891b2')}
+  ${section('🎙️','Voice Search', d9, '#ea580c')}
+  ${section('📈','Score + Projectie + 90-Dagen Plan', d10, '#16a34a')}
+
+  <footer>ContentScale SEO Audit · contentscale.site · ${new Date().toLocaleString('nl-NL')}</footer>
+</div>`;
+
+  const html = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SEO Aanbevelingen — ${escHtml(kw)}</title><style>${css}</style></head><body>${body}</body></html>`;
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download = `seo-aanbevelingen-${(kw||'pagina').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  toast('✅ Rapport gedownload');
+}
+
+// ── Print audit ───────────────────────────────────────────
+function printAudit() {
+  document.querySelectorAll('.sec-body.hidden').forEach(el => el.classList.remove('hidden'));
+  window.print();
+}
+
+// ── Meta Consistency Check ────────────────────────────────
+function runMetaCheck() {
+  var html = document.getElementById('dHtml').value.trim();
+  if (!html) {
+    var info = document.getElementById('metaCheckerInfo');
+    info.style.cssText = 'display:block;background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:12px;';
+    info.innerHTML = '<strong style="color:var(--red)">⚠ Paste your page HTML in panel ③ above first, then click Check.</strong>';
+    return;
+  }
+  document.getElementById('metaCheckerInfo').style.display = 'none';
+
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+  var results = [];
+
+  // Extract all fields
+  var title         = (doc.querySelector('title')?.textContent || '').trim();
+  var allH1s        = Array.from(doc.querySelectorAll('h1')).map(e => e.textContent.trim()).filter(Boolean);
+  var h1            = allH1s[0] || '';
+  var h1Count       = allH1s.length;
+  var metaDesc      = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+  var ogTitle       = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() || '';
+  var ogImage       = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')?.trim() || '';
+  var ogUrl         = doc.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
+  var twCard        = doc.querySelector('meta[name="twitter:card"]')?.getAttribute('content')?.trim() || '';
+  var twImage       = doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
+  var canonical     = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')?.trim() || '';
+  var viewport      = doc.querySelector('meta[name="viewport"]')?.getAttribute('content')?.trim() || '';
+
+  var schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(function(s){
+    try { return JSON.parse(s.textContent); } catch(e) { return null; }
+  }).filter(Boolean);
+  var flatSchemas = schemas.flatMap ? schemas.flatMap(function(s){ return Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]); }) : [];
+  var articleSchema = flatSchemas.find ? flatSchemas.find(function(s){ return ['Article','BlogPosting','NewsArticle','WebPage','TechArticle'].includes(s['@type']); }) : null;
+  var schemaHeadline    = articleSchema?.headline?.trim() || '';
+  var schemaDateMod     = articleSchema?.dateModified || '';
+  var schemaAuthorName  = (articleSchema?.author?.name || (Array.isArray(articleSchema?.author) ? articleSchema.author[0]?.name : '') || '').trim();
+
+  var now = new Date();
+  var thisYear = now.getFullYear().toString();
+
+  function ok(label, value, note) { results.push({ status:'ok', label:label, value:value, note:note }); }
+  function warn(label, value, fix, sev) { results.push({ status:'warn', label:label, value:value, fix:fix, severity: sev||'medium' }); }
+  function err(label, value, fix) { results.push({ status:'err', label:label, value:value, fix:fix, severity:'high' }); }
+
+  // 0. DUPLICATE H1 — most important check
+  if (h1Count === 0) {
+    err('H1 tag', 'MISSING — no H1 found on this page', 'Add exactly 1 H1 tag near the top with your primary keyword');
+  } else if (h1Count > 1) {
+    var h1List = allH1s.map(function(h,i){ return 'H1['+(i+1)+']: "'+h.substring(0,50)+'"'; }).join(' · ');
+    var fix = 'Keep only H1[1]: "'+allH1s[0].substring(0,60)+'". Change H1[2] → H2: "'+allH1s[1].substring(0,50)+'"'+(h1Count>2?' and H1[3] → H2: "'+allH1s[2].substring(0,50)+'"':'');
+    err('Multiple H1 tags detected ('+h1Count+' found)', h1List, fix);
+  } else {
+    ok('H1 tag — exactly 1', '"'+h1.substring(0,60)+'"', '✓ Correct — exactly 1 H1');
+  }
+
+  // 1. TITLE
+  if (!title) err('Title tag', 'MISSING', 'Add <title> with primary keyword (50-60 chars)');
+  else if (title.length < 40) warn('Title tag too short', '"'+title+'" ('+title.length+' chars)', 'Expand to 50-60 chars', 'low');
+  else if (title.length > 65) warn('Title tag too long', '"'+title+'" ('+title.length+' chars)', 'Trim to 50-60 chars — truncated in Google', 'medium');
+  else ok('Title tag', '"'+title+'" ('+title.length+' chars)', '✓ Good length');
+
+  // 2. H1 vs TITLE
+  if (h1 && title) {
+    var titleCore = title.split(/[|\-–:]/)[0].trim().toLowerCase();
+    var h1Core = h1.toLowerCase().substring(0,60);
+    var overlap = titleCore.split(' ').filter(function(w){ return w.length>3 && h1Core.includes(w); }).length;
+    if (overlap === 0) warn('H1 ↔ Title mismatch', 'H1: "'+h1.substring(0,50)+'" / Title: "'+title.substring(0,50)+'"', 'H1 and Title must share the primary keyword', 'high');
+    else ok('H1 ↔ Title overlap', 'Shared keyword found', '✓ Consistent');
+  }
+
+  // 3. OG TITLE
+  if (!ogTitle) err('og:title', 'MISSING', 'Add <meta property="og:title"> — same as your title tag');
+  else ok('og:title', '"'+ogTitle.substring(0,60)+'"', '✓ Present');
+
+  // 4. META DESCRIPTION
+  if (!metaDesc) err('Meta description', 'MISSING', 'Add <meta name="description"> (140-160 chars)');
+  else if (metaDesc.length < 100) warn('Meta description too short', metaDesc.length+' chars', 'Expand to 140-160 chars', 'medium');
+  else if (metaDesc.length > 165) warn('Meta description too long', metaDesc.length+' chars — truncated', 'Trim to 140-160 chars', 'low');
+  else ok('Meta description', metaDesc.length+' chars', '✓ Good length');
+
+  // 5. OG IMAGE
+  if (!ogImage) warn('og:image', 'MISSING', 'Add og:image (recommended: 1200×630px)', 'medium');
+  else if (!ogImage.startsWith('http')) warn('og:image — relative URL', ogImage, 'Use absolute URL (https://...)', 'high');
+  else ok('og:image', ogImage.substring(0,60)+'…', '');
+
+  // 6. TWITTER CARD
+  if (!twCard) warn('twitter:card', 'MISSING', 'Add <meta name="twitter:card" content="summary_large_image">', 'medium');
+  else ok('twitter:card', twCard, '');
+
+  // 7. CANONICAL
+  if (!canonical) warn('Canonical tag', 'MISSING', 'Add <link rel="canonical" href="https://..."> to <head>', 'medium');
+  else if (!canonical.startsWith('http')) warn('Canonical — relative URL', canonical, 'Use absolute URL', 'high');
+  else ok('Canonical', canonical, '');
+
+  // 8. SCHEMA
+  if (!articleSchema) warn('Article schema', 'MISSING', 'Add Article/BlogPosting JSON-LD schema to <head>', 'high');
+  else {
+    if (!schemaDateMod) err('Schema dateModified', 'MISSING', 'Add "dateModified": "'+now.toISOString().split('T')[0]+'" to Article schema');
+    else if (schemaDateMod.substring(0,4) !== thisYear) warn('Schema dateModified outdated', '"'+schemaDateMod+'"', 'Update to '+now.toISOString().split('T')[0], 'high');
+    else ok('Schema dateModified', '"'+schemaDateMod+'"', '✓ Current year');
+    if (!schemaAuthorName) warn('Schema author', 'MISSING', 'Add "author": {"@type":"Person","name":"Your Name"}', 'medium');
+    else ok('Schema author', '"'+schemaAuthorName+'"', '');
+    if (!schemaHeadline) warn('Schema headline', 'MISSING', 'Add "headline": "'+title+'" to Article schema', 'high');
+    else ok('Schema headline', '"'+schemaHeadline.substring(0,60)+'"', '');
+  }
+
+  // 9. VIEWPORT
+  if (!viewport) err('Meta viewport', 'MISSING', 'Add <meta name="viewport" content="width=device-width, initial-scale=1">');
+  else ok('Meta viewport', viewport, '✓ Present');
+
+  // 10. OLD YEARS
+  var yearMatches = (html.match(/202[0-9]/g) || []);
+  var oldYears = yearMatches.filter(function(y){ return parseInt(y) < parseInt(thisYear)-1; });
+  var uniqueOld = oldYears.filter(function(v,i,a){ return a.indexOf(v)===i; });
+  if (uniqueOld.length > 3) warn('Outdated years in HTML', 'Found: '+uniqueOld.join(', '), 'Check if '+uniqueOld.join('/')+' needs updating to '+thisYear, 'medium');
+
+  // RENDER
+  var errs  = results.filter(function(r){ return r.status==='err'; });
+  var warns = results.filter(function(r){ return r.status==='warn'; });
+  var oks   = results.filter(function(r){ return r.status==='ok'; });
+  var score = Math.round((oks.length / results.length) * 100);
+  var scoreColor = score>=80?'var(--green)':score>=60?'var(--gold)':'var(--red)';
+
+  var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;flex-wrap:wrap;">'
+    +'<div><div style="font-family:IBM Plex Mono,monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistency Score</div>'
+    +'<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
+    +'<div style="font-size:13px;color:var(--muted);">'
+    +'<span style="color:var(--red);">'+errs.length+' errors</span> · '
+    +'<span style="color:var(--gold);">'+warns.length+' warnings</span> · '
+    +'<span style="color:var(--green);">'+oks.length+' ok</span>'
+    +(h1Count>1?'<div style="margin-top:6px;color:var(--red);font-family:IBM Plex Mono,monospace;font-size:9px;">⚠ '+h1Count+' H1 tags found — only 1 allowed. Demote H1[2..'+h1Count+'] to H2.</div>':'')
+    +'</div></div>';
+
+  function renderRow(r) {
+    var icon = r.status==='err'?'🔴':r.status==='warn'?'🟡':'✅';
+    var bg = r.status==='err'?'rgba(244,63,63,.06)':r.status==='warn'?'rgba(251,191,36,.04)':'rgba(74,222,128,.04)';
+    var border = r.status==='err'?'rgba(244,63,63,.25)':r.status==='warn'?'rgba(251,191,36,.2)':'rgba(74,222,128,.15)';
+    return '<div style="padding:10px 14px;margin-bottom:6px;background:'+bg+';border:1px solid '+border+';border-radius:6px;">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
+      +'<div style="flex:1;">'
+      +'<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
+      +'<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      +(r.fix?'<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>':'')
+      +(r.note?'<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>':'')
+      +'</div></div></div>';
+  }
+
+  if (errs.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">Errors — fix immediately</div>'+errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">Warnings</div>'+warns.map(renderRow).join('');
+  if (oks.length) html_out += '<details style="margin-top:10px;"><summary style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (click to expand)</summary><div style="margin-top:8px;">'+oks.map(renderRow).join('')+'</div></details>';
+
+  document.getElementById('metaCheckResults').innerHTML = html_out;
+}
+
+// ── Drag & drop for CSV ───────────────────────────────────
+['pagesZone','queriesZone'].forEach(zoneId=>{
+  const z=document.getElementById(zoneId);
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
+  z.addEventListener('dragleave',()=>z.classList.remove('drag'));
+  z.addEventListener('drop',e=>{
+    e.preventDefault();z.classList.remove('drag');
+    const file=e.dataTransfer.files[0]; if (!file) return;
+    if (zoneId==='pagesZone') handlePagesCSV({files:[file]});
+    else handleQueriesCSV({files:[file]});
+  });
+});
+
+// ── URL count for internal link finder ───────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dSiteUrls')?.addEventListener('input', function() {
+    const urls = this.value.trim().split('\n').filter(l=>l.trim().startsWith('http'));
+    document.getElementById('urlCount').textContent = urls.length ? `✓ ${urls.length} URLs loaded` : '';
+  });
+});
+</script>
+</body>
+</html>
