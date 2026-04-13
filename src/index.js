@@ -1515,6 +1515,77 @@ res.json({ success: true, urls: filtered, total: filtered.length });
 res.status(500).json({ success: false, error: 'Could not fetch sitemap: ' + e.message });
 }
 });
+// ============================================================
+// /api/fetch-html
+// Fetches raw HTML of any URL via axios (fast) with Puppeteer fallback.
+// Used by PULSE+NEXUS to auto-fill ③ Your Page HTML field.
+// POST body: { url: "https://example.com/page" }
+// Returns:   { success: true, html: "...", url: "...", method: "axios"|"puppeteer" }
+// ============================================================
+app.post('/api/fetch-html', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'url required' });
+  let fetchUrl = url.startsWith('http') ? url : 'https://' + url;
+
+  // ── Attempt 1: axios — fast, no browser needed ──────────
+  try {
+    const r = await axios.get(fetchUrl, {
+      timeout: 12000,
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+      },
+      responseType: 'text',
+    });
+    const html = r.data;
+    if (html && html.length > 500 && (html.includes('<html') || html.includes('<!DOCTYPE'))) {
+      console.log(`[fetch-html] axios OK: ${fetchUrl} (${html.length} chars)`);
+      return res.json({ success: true, html, url: fetchUrl, method: 'axios' });
+    }
+    console.log(`[fetch-html] axios thin response (${html.length} chars) — trying Puppeteer`);
+  } catch (axiosErr) {
+    console.log(`[fetch-html] axios failed (${axiosErr.message}) — trying Puppeteer`);
+  }
+
+  // ── Attempt 2: Puppeteer — handles JS-rendered pages ────
+  let page = null;
+  try {
+    let browser = await getBrowser();
+    if (!browser) { browserInstance = null; browser = await getBrowser(); }
+    if (!browser) return res.status(503).json({ success: false, error: 'Browser unavailable — try again in 10 seconds or paste HTML manually' });
+
+    page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+    // Block images/fonts/media — only need HTML
+    await page.setRequestInterception(true);
+    page.on('request', (interceptedReq) => {
+      const type = interceptedReq.resourceType();
+      if (['image', 'media', 'font', 'stylesheet'].includes(type)) interceptedReq.abort();
+      else interceptedReq.continue();
+    });
+
+    await page.goto(fetchUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await new Promise(r => setTimeout(r, 600));
+    const html = await page.evaluate(() => document.documentElement.outerHTML);
+
+    if (!html || html.length < 500) {
+      return res.status(422).json({ success: false, error: 'Page returned empty HTML — site may be blocking bots. Paste HTML manually.' });
+    }
+    console.log(`[fetch-html] Puppeteer OK: ${fetchUrl} (${html.length} chars)`);
+    return res.json({ success: true, html, url: fetchUrl, method: 'puppeteer' });
+  } catch (e) {
+    console.error(`[fetch-html] Puppeteer error: ${e.message}`);
+    return res.status(502).json({ success: false, error: 'Could not fetch page: ' + e.message + ' — paste HTML manually in ③' });
+  } finally {
+    if (page) { try { await page.close(); } catch (_) {} }
+  }
+});
+
 // Submit aggregate sitemap scan result as pending leaderboard entry
 const AUTO_APPROVE_DOMAINS = ['contentscale.site', 'app.contentscale.site'];
 app.post('/api/sitemap/submit', async (req, res) => {
