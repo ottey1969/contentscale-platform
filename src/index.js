@@ -11587,7 +11587,7 @@ function importGSC(input){
         // Save GSC data to shared storage for PULSE+NEXUS
         try {
           var sharedGsc = { pages: pages.map(function(p){ return {page:p.url, impressions:p.impressions||0, clicks:0, ctr:p.ctr||0, position:p.position||0, score:0}; }), queries: [] };
-          if (typeof _gscQueryMap !== 'undefined') { sharedGsc.queries = Object.keys(_gscQueryMap).map(function(q){ return {query:q, position:_gscQueryMap[q]}; }); }
+          if (typeof _gscQueryMap !== 'undefined') { sharedGsc.queries = Object.entries(_gscQueryMap).map(function(e){ var d=e[1]; return {query:e[0], position:typeof d==='object'?d.pos:d, impressions:typeof d==='object'?d.impr:0}; }).sort(function(a,b){return (b.impressions||0)-(a.impressions||0);}); }
           localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
           // Also save sitemap URLs if available
           if (typeof _sitemapUrls !== 'undefined' && _sitemapUrls.length) {
