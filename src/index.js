@@ -8596,6 +8596,7 @@ img,table,iframe{max-width:100%;}
         <div class="field"><label>CTR % <span id="ctrAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
         <div class="field"><label>Avg Position <span id="posAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
       </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:12px;">Mobile % — not in standard GSC CSV. Check Google Analytics Device report separately.</div>
       <div class="field">
         <label>Top Triggering Queries (one per line) <span id="queriesAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓ auto from GSC</span></label>
         <textarea id="dQueries" placeholder="roofing contractor New Jersey&#10;roof repair NJ&#10;emergency roofer Bergen County"></textarea>
@@ -8776,7 +8777,7 @@ function setMode(m) {
     if (raw) transfer = JSON.parse(raw);
   } catch(e){}
 
-  // Fallback: URL params (minimal data — enrich from localStorage GSC data)
+  // Fallback: URL params — now includes geo, kw2, queries from openInAudit()
   const p = new URLSearchParams(window.location.search);
   if (!transfer && p.get('url')) {
     transfer = {
@@ -8785,9 +8786,9 @@ function setMode(m) {
       position: p.get('pos') || '',
       impressions: p.get('impr') || '',
       ctr: p.get('ctr') || '',
-      topQueries: '',
-      secondaryKeyword: '',
-      geo: '',
+      topQueries: p.get('q') || '',
+      secondaryKeyword: p.get('kw2') || '',
+      geo: p.get('geo') || '',
       siteUrls: '',
       workflowId: p.get('wf') || ''
     };
@@ -9098,25 +9099,10 @@ function fetchGSCData() {
         status.textContent = '✓ pos ' + Math.round(match.position||0) + '  ·  ' + (match.impressions||0).toLocaleString() + ' impr  ·  ' + parseFloat(match.ctr||0).toFixed(1) + '% CTR';
         status.style.color = 'var(--green)';
 
-        // Fill queries — prefer page-specific queries from Workflow Manager
-        var pageSpecificQueries = [];
-        try {
-          var wfRaw = localStorage.getItem('cs_wf_pages');
-          if (wfRaw) {
-            var wfPages = JSON.parse(wfRaw);
-            var wfMatch = wfPages.find(function(pg){
-              return urlNorm(pg.url||'') === uNorm || urlNorm(pg.url||'').includes(uNorm) || uNorm.includes(urlNorm(pg.url||''));
-            });
-            if (wfMatch && wfMatch.topQueries) {
-              pageSpecificQueries = wfMatch.topQueries.split('\n').filter(function(q){ return q.trim(); });
-            }
-          }
-        } catch(e) {}
-        const queries = pageSpecificQueries.length
-          ? pageSpecificQueries.map(function(q){ return {query:q}; })
-          : (data.queries||[]).filter(function(q){ return q.query; }).slice(0, 15);
+        // Fill queries
+        const queries = (data.queries||[]).filter(function(q){ return q.query; }).slice(0, 15);
         if (queries.length) {
-          const qTexts = queries.map(function(q){ return q.query||q; });
+          const qTexts = queries.map(function(q){ return q.query; });
           if (!document.getElementById('dQueries').value.trim()) {
             document.getElementById('dQueries').value = qTexts.join('\\n');
             document.getElementById('queriesAutoMark').style.display = 'inline';
@@ -9149,7 +9135,7 @@ function fetchGSCData() {
         }
 
         btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
-        toast('✅ Auto-filled: pos, impr, CTR' + (pageSpecificQueries.length ? ' + page queries ✓' : (queries.length ? ' + queries' : '')) + (document.getElementById('dKw2').value ? ' + secondary kw' : ''));
+        toast('✅ Loaded: pos, impr, CTR, queries + secondary keyword');
         return;
       }
     } catch(e) { console.error('fetchGSCData error:', e); }
@@ -11097,12 +11083,15 @@ function openInAudit(id){
     localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
   } catch(e) {}
 
-  // ── URL params as lightweight fallback ────────────────────────
+  // ── URL params — include all enriched data ────────────────────
   var params = '?url='    + encodeURIComponent(p.url)
-    + (p.keyword    ? '&kw='  + encodeURIComponent(p.keyword)  : '')
-    + (p.position   ? '&pos=' + p.position                      : '')
-    + (p.impressions? '&impr='+ p.impressions                   : '')
-    + (p.ctr        ? '&ctr=' + p.ctr                           : '')
+    + (p.keyword           ? '&kw='   + encodeURIComponent(p.keyword)         : '')
+    + (p.position          ? '&pos='  + p.position                             : '')
+    + (p.impressions       ? '&impr=' + p.impressions                           : '')
+    + (p.ctr               ? '&ctr='  + p.ctr                                   : '')
+    + (geo && geo !== 'Global' ? '&geo=' + encodeURIComponent(geo)              : '')
+    + (pageSecondaryKw     ? '&kw2='  + encodeURIComponent(pageSecondaryKw)    : '')
+    + (pageTopQueries      ? '&q='    + encodeURIComponent(pageTopQueries.split('\\n').slice(0,15).join('\\n')) : '')
     + '&source=workflow&wf=' + id;
 
   window.open(AUDIT_URL + params, '_blank');
