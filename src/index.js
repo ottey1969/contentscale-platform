@@ -8199,6 +8199,102 @@ app.delete('/api/optout/:phone', verifyAdmin, async (req, res) => {
 });
 
 
+// ── /tools login page ────────────────────────────────────────────────────────
+app.get('/tools', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>ContentScale — Inloggen</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Inter',system-ui,sans-serif;color:#e2e8f0}
+  .card{background:#13131a;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+  .logo{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#6b7280;margin-bottom:32px;text-align:center}
+  .logo span{color:#a78bfa}
+  h1{font-size:22px;font-weight:700;margin-bottom:8px;text-align:center}
+  p{font-size:13px;color:#6b7280;text-align:center;margin-bottom:28px}
+  label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:6px}
+  input{width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px 14px;color:#e2e8f0;font-size:15px;font-family:monospace;outline:none;transition:border .2s}
+  input:focus{border-color:#7c3aed}
+  button{width:100%;margin-top:20px;background:#7c3aed;border:none;border-radius:8px;padding:13px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s}
+  button:hover{background:#6d28d9}
+  button:disabled{background:#374151;cursor:not-allowed}
+  .err{margin-top:14px;font-size:13px;color:#f87171;text-align:center;min-height:20px}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><span>Content</span>Scale</div>
+  <h1>Toegang tot tools</h1>
+  <p>Voer je toegangscode in om verder te gaan</p>
+  <div>
+    <label for="code">Toegangscode</label>
+    <input id="code" type="text" placeholder="CS-XXXXXXXX" autocomplete="off" spellcheck="false">
+    <button id="btn" onclick="doLogin()">Inloggen</button>
+    <div class="err" id="err"></div>
+  </div>
+</div>
+<script>
+var RAILWAY='https://app.contentscale.site';
+document.getElementById('code').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+// If already logged in, redirect immediately
+(function(){
+  var t=localStorage.getItem('cs_access_token');
+  var s=localStorage.getItem('cs_access_session');
+  if(t&&s){
+    fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':t}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.success){
+          if(d.type==='read'){window.location.href='/audit-progress-tracker?tools=1';}
+          else{window.location.href='/audit-seo';}
+        }
+      }).catch(function(){});
+  }
+})();
+function doLogin(){
+  var code=document.getElementById('code').value.trim();
+  var btn=document.getElementById('btn');
+  var err=document.getElementById('err');
+  if(!code){err.textContent='Voer een code in.';return;}
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Even controleren...';
+  err.textContent='';
+  fetch(RAILWAY+'/api/access/verify',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:code})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.success){
+      localStorage.setItem('cs_access_token',d.token);
+      localStorage.setItem('cs_access_session',d.session);
+      if(d.type==='read'){window.location.href='/audit-progress-tracker?tools=1';}
+      else if(d.type==='write'){window.location.href='/audit-seo';}
+      else{window.location.href='/audit-seo';}
+    } else {
+      err.textContent=d.error||'Ongeldige code. Probeer opnieuw.';
+      btn.disabled=false;
+      btn.textContent='Inloggen';
+    }
+  })
+  .catch(function(){
+    err.textContent='Verbindingsfout. Probeer opnieuw.';
+    btn.disabled=false;
+    btn.textContent='Inloggen';
+  });
+}
+</script>
+</body>
+</html>`);
+});
+
 startServer();
 
 
