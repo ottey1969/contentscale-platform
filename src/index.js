@@ -8200,3 +8200,5617 @@ app.delete('/api/optout/:phone', verifyAdmin, async (req, res) => {
 
 
 startServer();
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const _SEO_AUDIT_FINAL_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>PULSE + NEXUS v5 | ContentScale Elite SEO Audit</title>
+<script>
+(function(){
+  var RAILWAY='https://app.contentscale.site';
+  if(localStorage.getItem('admin_id')){window._toolSession={type:'admin',projectKey:'admin',whitelabelName:'ContentScale',isAdmin:true};return;}
+  var token=localStorage.getItem('cs_access_token');
+  if(!token){window.location.href='/tools';return;}
+  document.documentElement.style.visibility='hidden';
+  fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':token}})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.success){localStorage.removeItem('cs_access_token');localStorage.removeItem('cs_access_session');window.location.href='/tools';return;}
+      if(d.type==='read'){window.location.href='/audit-progress-tracker?tools=1';return;}
+      window._toolSession=d;localStorage.setItem('cs_access_session',JSON.stringify(d));
+      if(d.whitelabelName&&d.whitelabelName!=='ContentScale SEO Tools'){var b=document.querySelector('.brand');if(b)b.textContent=d.whitelabelName;}
+      document.documentElement.style.visibility='';
+    }).catch(function(){
+      var c=null;try{c=JSON.parse(localStorage.getItem('cs_access_session')||'null');}catch(e){}
+      if(c&&c.type){window._toolSession=c;document.documentElement.style.visibility='';}
+      else{window.location.href='/tools';}
+    });
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
+  --amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+  --pulse:#f43f3f;--nexus:#a78bfa;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;background:linear-gradient(90deg,var(--pulse),var(--nexus));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Modes */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:28px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.mode-btn{padding:16px 20px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.05em;background:none;border:none;border-right:1px solid var(--border);color:var(--sub);cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:12px;}
+.mode-btn:last-child{border-right:none;}
+.mode-btn.active{background:rgba(255,255,255,.04);color:var(--ink);}
+.mode-btn .mi{font-size:22px;}
+.mode-btn .ms{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);display:block;margin-top:3px;}
+.mode-btn.active .ms{color:var(--muted);}
+
+/* Panel */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:26px;margin-bottom:18px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));}
+.panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub);margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.panel-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.panel-badge-green{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+.panel-badge-blue{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25);}
+
+/* Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+/* Fields */
+.field{margin-bottom:0;}
+.field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:7px;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:all .2s;resize:vertical;}
+.field textarea{min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.07);}
+.field select option{background:var(--card);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+
+/* GSC Auto-loaded badge */
+.gsc-auto-badge{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.25);margin-left:8px;}
+
+/* Buttons */
+.btn-gold{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:16px 36px;border-radius:6px;cursor:pointer;transition:all .2s;width:100%;margin-top:6px;}
+.btn-gold:hover{background:var(--ink);transform:translateY(-1px);}
+.btn-gold:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.btn-sm{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid;white-space:nowrap;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple);}
+.btn-purple:hover{background:var(--purple);color:#000;}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-gold-sm{background:var(--gold);border-color:var(--gold);color:#000;}
+.btn-gold-sm:hover{opacity:.85;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-red-sm{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.2);color:var(--red);}
+.btn-red-sm:hover{background:var(--red);color:#fff;}
+
+/* Progress */
+.progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
+.progress.show{display:block;}
+.prog-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.prog-step{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px;color:var(--dim);}
+.prog-step:last-child{border:none;}
+.prog-step.active{color:var(--gold);}
+.prog-step.done{color:var(--green);}
+.prog-step.error{color:var(--red);}
+.prog-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.prog-bar-wrap{background:var(--surface);border-radius:4px;height:4px;overflow:hidden;margin-top:12px;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--pulse),var(--gold),var(--nexus));transition:width .5s ease;border-radius:4px;width:0%;}
+
+/* Output */
+.output{display:none;}
+.output.show{display:block;}
+.sec-card{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:visible;}
+.sec-head{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.02);border-radius:10px 10px 0 0;}
+.sec-head:hover{background:rgba(255,255,255,.04);}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;flex:1;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;}
+.b-pulse{background:rgba(244,63,63,.15);color:var(--pulse);border:1px solid rgba(244,63,63,.3);}
+.b-nexus{background:rgba(167,139,250,.15);color:var(--nexus);border:1px solid rgba(167,139,250,.3);}
+.b-tech{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.b-win{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.b-gold{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.b-voice{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
+.sec-body{padding:20px;overflow-x:auto;}
+.sec-body.hidden{display:none;}
+
+/* MD rendering */
+.md{font-size:13px;line-height:1.8;color:var(--muted);}
+.md h1,.md h2,.md h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em;color:var(--ink);margin:16px 0 7px;}
+.md h1{font-size:25px;}
+.md h2{font-size:20px;color:var(--gold);}
+.md h3{font-size:15px;color:var(--purple);}
+.md p{margin-bottom:9px;}
+.md ul,.md ol{margin:7px 0 13px 16px;}
+.md li{margin-bottom:4px;}
+.md strong{color:var(--ink);font-weight:700;}
+.md em{color:var(--amber);}
+.md code{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);}
+.md pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px;overflow-x:auto;margin:11px 0;}
+.md pre code{background:none;border:none;padding:0;font-size:11px;}
+.md blockquote{border-left:3px solid var(--gold);padding:9px 14px;background:rgba(251,191,36,.05);border-radius:0 6px 6px 0;margin:11px 0;font-style:italic;color:var(--ink);}
+.md hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+/* REAL TABLES — professional, not markdown slop */
+.md table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.md thead tr{background:var(--surface);}
+.md th{padding:10px 13px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);white-space:nowrap;}
+.md th:last-child{border-right:none;}
+.md td{padding:10px 13px;border-bottom:1px solid rgba(255,255,255,.04);border-right:1px solid rgba(255,255,255,.04);color:var(--muted);vertical-align:top;line-height:1.5;}
+.md td:last-child{border-right:none;}
+.md tr:last-child td{border-bottom:none;}
+.md tr:hover td{background:rgba(255,255,255,.02);}
+
+/* Post-audit action bar */
+.post-audit-bar{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:18px 22px;margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.post-audit-bar .pa-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);flex:1;min-width:200px;}
+
+/* Info/warn */
+.info{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+.info strong{color:var(--blue);}
+.warn{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+.warn strong{color:var(--red);}
+.success-banner{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.65;}
+.success-banner strong{color:var(--green);}
+
+/* Opportunity table */
+.opp-table{width:100%;border-collapse:collapse;font-size:12px;}
+.opp-table th{background:var(--surface);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:9px 11px;text-align:left;border:1px solid var(--border);}
+.opp-table td{padding:9px 11px;border:1px solid var(--border);vertical-align:middle;}
+.opp-table tr:hover td{background:rgba(255,255,255,.02);}
+.opp-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--pulse),var(--gold));margin-top:3px;}
+
+/* Toast */
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:11px 22px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Cannibalization */
+.cann-card{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:14px;margin-bottom:10px;}
+.cann-card h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;}
+
+/* Connection banner */
+.connection-banner{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px 18px;margin-bottom:14px;}
+
+/* Voice search section */
+.voice-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.voice-chip{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--orange);}
+
+/* Action step cards */
+.action-card{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:7px;margin-bottom:8px;}
+.action-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1;flex-shrink:0;width:28px;}
+.action-body strong{color:var(--ink);font-size:13px;display:block;margin-bottom:3px;}
+.action-body span{font-size:11px;color:var(--muted);}
+
+#bulkView,#deepView{display:none;}
+#bulkView.active,#deepView.active{display:block;}
+
+@media(max-width:720px){
+  .g2,.g3,.g4,.modes{grid-template-columns:1fr;}
+  .wrap{padding:0 16px 60px;}
+  .topbar{padding:14px 0;}
+  .brand{font-size:20px;}
+}
+
+/* Print styles for recommendations */
+@media print{
+  .topbar,.modes,.panel:not(.output-panel),.btn-gold,#deepRunBtn,.progress{display:none!important;}
+  .output.show{display:block!important;}
+  .sec-body.hidden{display:block!important;}
+  body{background:#fff!important;color:#000!important;}
+  .sec-card{break-inside:avoid;border:1px solid #e5e7eb!important;background:#fff!important;}
+  .md{color:#374151!important;}
+  .md h2{color:#7c3aed!important;}
+  .md td,.md th{border-color:#e5e7eb!important;color:#374151!important;}
+}
+
+/* Mobile responsive */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .g2,.g3,.g4{grid-template-columns:1fr!important;}
+  .post-audit-bar{flex-direction:column;gap:8px;}
+}
+@media(max-width:480px){
+  .topbar{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topbar">
+    <a href="https://contentscale.site" class="brand">ContentScale</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <a href="/audit-workflow" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);text-decoration:none;padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);">← Workflow</a>
+      <a href="/audit-recommendations" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);text-decoration:none;padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);">🎯 Recommendations</a>
+      <a href="/audit-progress-tracker" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);text-decoration:none;padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);">📈 Tracker</a>
+      <a href="/admin" id="adminNavLink" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);text-decoration:none;padding:5px 10px;border:1px solid rgba(251,191,36,.3);border-radius:5px;background:rgba(251,191,36,.08);">⚙️ Admin</a>
+    </div>
+    <div style="text-align:right;">
+      <div class="topbar-title">PULSE + NEXUS v5</div>
+      <div class="topbar-sub">Elite SEO Audit Engine</div>
+    </div>
+  </nav>
+  <script>
+  // Show admin link if admin session
+  (function(){
+    if(localStorage.getItem('admin_id')){
+      var el=document.getElementById('adminNavLink');
+      if(el) el.style.display='';
+      var el2=document.getElementById('adminLinkAudit');
+      if(el2) el2.style.display='';
+    }
+  })();
+  </script>
+
+  <div class="modes">
+    <button class="mode-btn active" onclick="setMode('bulk')" id="modeBulk">
+      <span class="mi">📊</span>
+      <span>BULK SCAN<span class="ms">Upload GSC CSV → rank pages → quick wins</span></span>
+    </button>
+    <button class="mode-btn" onclick="setMode('deep')" id="modeDeep">
+      <span class="mi">🔬</span>
+      <span>DEEP DIVE<span class="ms">Paste HTML → full 10-step audit + competitor diff</span></span>
+    </button>
+  </div>
+
+  <!-- ═══════════ BULK SCAN ═══════════ -->
+  <div id="bulkView" class="active">
+    <div class="panel">
+      <div class="panel-title">① Upload GSC CSV Files <span class="panel-badge">DRAG & DROP</span></div>
+      <div class="info">
+        <strong>Pages CSV:</strong> GSC → Performance → Pages → Export CSV &nbsp;·&nbsp;
+        <strong>Queries CSV:</strong> GSC → Performance → Queries → Export CSV (enables cannibalization)
+      </div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Pages CSV (required)</div>
+          <div class="upload-zone" id="pagesZone">
+            <input type="file" id="pagesFile" accept=".csv" onchange="handlePagesCSV(this)">
+            <div style="font-size:28px;margin-bottom:8px;">📄</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Pages Performance</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Page · Clicks · Impressions · CTR · Position</div>
+          </div>
+          <div id="pagesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;">Queries CSV (optional)</div>
+          <div class="upload-zone" id="queriesZone">
+            <input type="file" id="queriesFile" accept=".csv" onchange="handleQueriesCSV(this)">
+            <div style="font-size:28px;margin-bottom:8px;">🔍</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;">Queries Performance</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Query · Clicks · Impressions · CTR · Position</div>
+          </div>
+          <div id="queriesStatus" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="filterPanel" style="display:none;">
+      <div class="panel-title">② Filter & Focus</div>
+      <div class="g4">
+        <div class="field"><label>Min Impressions</label><input type="number" id="minImpr" value="100" onchange="renderTable()"></div>
+        <div class="field"><label>Min Position</label><input type="number" id="minPos" value="5" onchange="renderTable()"></div>
+        <div class="field"><label>Max Position</label><input type="number" id="maxPos" value="50" onchange="renderTable()"></div>
+        <div class="field"><label>Max CTR %</label><input type="number" id="maxCtr" step="0.1" value="10" onchange="renderTable()"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="tableCount"></span>
+        <button class="btn-sm btn-muted" onclick="exportOpps()">↓ Export CSV</button>
+        <button class="btn-sm btn-green" onclick="showCannibalization()">🔍 Cannibalization Report</button>
+      </div>
+    </div>
+
+    <div id="cannReport" style="display:none;" class="panel">
+      <div class="panel-title">🔍 Keyword Cannibalization Detection <span class="panel-badge">AUTO-DETECTED</span></div>
+      <div id="cannBody"></div>
+    </div>
+
+    <div id="opportunityTable" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;">🎯 Pages Ranked by Opportunity</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="opp-table">
+          <thead>
+            <tr><th>#</th><th>Page</th><th>Impr</th><th>CTR</th><th>Pos</th><th>Score</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="progress" id="quickProgress">
+      <div class="prog-label" id="quickProgLabel">Quick Audit Running...</div>
+      <div id="quickSteps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="quickBar"></div></div>
+    </div>
+    <div class="output" id="quickOutput"></div>
+  </div>
+
+  <!-- ═══════════ DEEP DIVE ═══════════ -->
+  <div id="deepView">
+
+    <div class="panel">
+      <div class="panel-title">① Page Details</div>
+      <div class="g2" style="margin-bottom:14px;">
+        <div class="field"><label>Page URL *</label><input type="url" id="dUrl" placeholder="https://site.com/your-page"></div>
+        <div class="field">
+          <label>Primary Keyword *</label>
+          <input type="text" id="dKw" placeholder="roofing contractor New Jersey">
+        </div>
+      </div>
+      <div class="g3">
+        <div class="field">
+          <label>Secondary Keyword <span id="kw2AutoBadge" style="display:none;" class="gsc-auto-badge">✓ auto from GSC</span></label>
+          <input type="text" id="dKw2" placeholder="roof repair NJ (auto-filled from GSC queries)">
+        </div>
+        <div class="field">
+          <label>Geo / City + Country <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);text-transform:none;letter-spacing:0;">(free text)</span></label>
+          <input type="text" id="dGeo" placeholder="Bergen County, New Jersey, USA" autocomplete="off">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">e.g. Bergen County NJ, USA — or Newark, NJ — or Netherlands</div>
+        </div>
+        <div class="field">
+          <label>Conversion Goal</label>
+          <select id="dGoal">
+            <option>Lead generation</option>
+            <option>Sale / purchase</option>
+            <option>Demo / consultation</option>
+            <option>Brand awareness</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">② GSC Data <span id="gscAutoBadge" class="panel-badge panel-badge-green" style="display:none;">✓ Auto-loaded from Workflow</span></div>
+      <!-- GSC Fetch button — when URL is filled in panel ① -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="btn-sm btn-gold-sm" onclick="fetchGSCData()" id="gscFetchBtn">⬇ Fetch GSC Data for this URL</button>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);">Reads from Workflow Manager GSC data — enter URL in ① first</span>
+        <span id="gscFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);"></span>
+      </div>
+      <div class="g3" style="margin-bottom:14px;">
+        <div class="field"><label>Impressions <span id="imprAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" id="dImpr" placeholder="12400"></div>
+        <div class="field"><label>CTR % <span id="ctrAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dCtr" placeholder="1.8"></div>
+        <div class="field"><label>Avg Position <span id="posAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓</span></label><input type="number" step="0.1" id="dPos" placeholder="34.2"></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:12px;">Mobile % — not in standard GSC CSV. Check Google Analytics Device report separately.</div>
+      <div class="field">
+        <label>Top Triggering Queries (one per line) <span id="queriesAutoMark" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green);">✓ auto from GSC</span></label>
+        <textarea id="dQueries" placeholder="roofing contractor New Jersey&#10;roof repair NJ&#10;emergency roofer Bergen County"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">③ Your Page HTML <span class="panel-badge">GAME CHANGER</span> <span id="htmlAutoFetchBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto-fetched</span></div>
+
+      <!-- AUTO-FETCH STRIP -->
+      <div style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:10px;">🚀 Auto-Fetch — geen copy/paste nodig</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-sm btn-green" onclick="autoFetchPageHtml()" id="autoFetchBtn" style="font-size:10px;padding:8px 18px;">🚀 Fetch Page HTML</button>
+          <span id="autoFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-top:8px;line-height:1.6;">
+          Haalt automatisch de HTML op van de URL in veld ①. Vul URL in ① in en klik Fetch. Werkt via server-side proxy — geen browser extensie nodig.
+        </div>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase;">Of handmatig plakken:</div>
+      <div class="field">
+        <label>Raw HTML (full page source)</label>
+        <textarea id="dHtml" style="min-height:130px;font-size:11px;" placeholder="<!DOCTYPE html>&#10;<html>...paste full page source...</html>&#10;&#10;Of klik 🚀 Fetch Page HTML hierboven." oninput="updateHtmlStats('dHtml','dHtmlStats')"></textarea>
+      </div>
+      <div id="dHtmlStats" style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+    </div>
+
+    <!-- META CONSISTENCY CHECK -->
+    <div class="panel" id="metaCheckerPanel">
+      <div class="panel-title">③b Meta Consistency Check <span class="panel-badge">DIRECT FEEDBACK</span> <span id="metaAutoRunBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto-run na fetch</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.7;">
+        Leest de HTML uit veld ③. Checkt: title tag, H1, og:title, meta description, canonical, schema dateModified, author en meer. <strong style="color:var(--green);">Draait automatisch na Auto-Fetch.</strong> Of klik handmatig na plakken.
+      </div>
+      <button class="btn-gold" style="font-size:16px;padding:12px 28px;width:auto;" onclick="runMetaCheck()">🔍 Check Meta Consistency</button>
+      <div id="metaCheckerInfo" style="display:none;margin-top:12px;"></div>
+      <div id="metaCheckResults" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- COMPETITOR — manual, clear instructions -->
+    <div class="panel">
+      <div class="panel-title">④ Competitor HTML <span class="panel-badge">REAL DIFF</span></div>
+      <div class="info">
+        <strong>How to get competitor HTML:</strong> Google your primary keyword (on .com, .nl, or the relevant domain for your geo) → open the first 2 ranking pages → Right-click → View Page Source → Ctrl+A → Ctrl+C → paste below. Leave empty to let the AI compare based on what typically ranks well for this keyword and geo.
+      </div>
+      <div class="g2" style="gap:16px;">
+        <div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 1 URL (optional)</label><input type="url" id="dComp1url" placeholder="https://competitor-1.com/page"></div>
+          <div class="field">
+            <label>Competitor 1 HTML — paste from View Source</label>
+            <textarea id="dComp1html" style="min-height:100px;font-size:11px;" placeholder="Right-click page → View Page Source → Ctrl+A → Ctrl+C → paste here" oninput="updateHtmlStats('dComp1html','dComp1stats')"></textarea>
+          </div>
+          <div id="dComp1stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+        <div>
+          <div class="field" style="margin-bottom:8px;"><label>Competitor 2 URL (optional)</label><input type="url" id="dComp2url" placeholder="https://competitor-2.com/page"></div>
+          <div class="field">
+            <label>Competitor 2 HTML — paste from View Source</label>
+            <textarea id="dComp2html" style="min-height:100px;font-size:11px;" placeholder="Right-click page → View Page Source → Ctrl+A → Ctrl+C → paste here" oninput="updateHtmlStats('dComp2html','dComp2stats')"></textarea>
+          </div>
+          <div id="dComp2stats" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERNAL LINK FINDER — auto-filled from workflow + sitemap fetch -->
+    <div class="panel">
+      <div class="panel-title">⑤ Internal Link Finder <span class="panel-badge">GAME CHANGER</span> <span id="siteUrlsAutoBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto from Workflow</span></div>
+      <div class="info">
+        The AI finds the 5 best pages to link FROM and TO, with exact anchor text. Pre-filled automatically from Workflow Manager. Or paste your sitemap URLs below, or fetch them from your sitemap.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="url" id="sitemapFetchUrl" placeholder="https://yoursite.com/sitemap.xml" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
+        <button class="btn-sm btn-blue" onclick="fetchSitemap()" id="sitemapFetchBtn">⬇ Fetch Sitemap</button>
+        <span id="sitemapFetchStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);"></span>
+      </div>
+      <div class="field">
+        <label>Your Site URLs (one per line) — or pre-filled from Workflow</label>
+        <textarea id="dSiteUrls" style="min-height:90px;font-size:11px;" placeholder="https://yoursite.com/&#10;https://yoursite.com/roofing-services&#10;https://yoursite.com/about&#10;(auto-filled from Workflow Manager if coming from there)"></textarea>
+      </div>
+      <div id="urlCount" style="margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);"></div>
+    </div>
+
+    <!-- VOICE SEARCH — fully automated, no input needed -->
+    <div class="panel">
+      <div class="panel-title">⑥ Voice Search <span class="panel-badge b-voice">AUTO · AI POWERED</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
+        Fully automated — the AI generates the voice search analysis based on your keyword, geo, and page content. It covers: eligibility, top 5 near-me queries, featured snippet optimization, and local schema. Select which assistant to optimize for:
+      </div>
+      <div class="field" style="max-width:280px;">
+        <label>Target Assistant / Device</label>
+        <select id="dVoiceDevice">
+          <option value="all">All — Google, Siri, Alexa</option>
+          <option value="google">Google Assistant / Search</option>
+          <option value="siri">Siri / Apple Maps</option>
+          <option value="local">Local voice (near me searches)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⑦ Optional <span id="constraintsAutoBadge" style="display:none;" class="panel-badge panel-badge-green">✓ Auto from Workflow</span></div>
+      <div class="field">
+        <label>Known Constraints <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);text-transform:none;letter-spacing:0;">— auto-gevuld vanuit Workflow als daar ingevuld</span></label>
+        <input type="text" id="dConstraints" placeholder="WordPress, no JS injection, GDPR-strict, multilingual NL/EN, no CMS access">
+      </div>
+    </div>
+
+    <button class="btn-gold" id="deepRunBtn" onclick="runDeepAudit()">🔬 RUN FULL 11-STEP AUDIT — PRIORITY ACTIONS FIRST</button>
+
+    <div class="progress" id="deepProgress">
+      <div class="prog-label">Full Audit Running — 11 Steps · Do Not Close</div>
+      <div id="deepSteps"></div>
+      <div class="prog-bar-wrap"><div class="prog-bar" id="deepBar"></div></div>
+    </div>
+    <div class="output" id="deepOutput"></div>
+
+    <!-- POST-AUDIT ACTION BAR — appears after audit completes -->
+    <div class="post-audit-bar" id="postAuditBar" style="display:none;">
+      <div class="pa-title" style="width:100%;margin-bottom:8px;">✅ Audit Complete — Volgende stappen:</div>
+
+      <!-- Row 1: Export actions -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;padding-bottom:10px;border-bottom:1px solid rgba(74,222,128,.15);margin-bottom:10px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);">① Exporteer</span>
+        <button class="btn-sm btn-gold-sm" onclick="printAudit()">🖨️ Print / PDF</button>
+        <button class="btn-sm btn-green" onclick="exportMarkdown()">📝 Export MD voor AI</button>
+        <button class="btn-sm btn-purple" onclick="exportRecommendationsReport()" style="font-weight:700;">📋 Download Aanbevelingen Rapport</button>
+      </div>
+
+      <!-- Row 2: Navigate -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;padding-bottom:10px;border-bottom:1px solid rgba(74,222,128,.15);margin-bottom:10px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);">② Ga naar</span>
+        <a href="/audit-recommendations" class="btn-sm btn-blue">🎯 Recommendations</a>
+        <a href="/audit-progress-tracker" class="btn-sm btn-blue">📈 Progress Tracker</a>
+        <a href="/audit-workflow" class="btn-sm btn-muted">← Workflow</a>
+        <a href="/admin" class="btn-sm btn-muted" id="adminLinkAudit" style="display:none;">⚙️ Admin</a>
+      </div>
+
+      <!-- Row 3: Save -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);">③ Opslaan</span>
+        <button class="btn-sm btn-blue" onclick="auditSyncToServer(false)">☁ Sla op server op</button>
+        <button class="btn-sm btn-muted" onclick="auditLoadFromServer()">↓ Laad van server</button>
+        <span id="auditSyncStatus" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);"></span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let gscPages = [];
+let gscQueries = [];
+const RAILWAY = 'https://app.contentscale.site';
+
+// ── Toast ──────────────────────────────────────────────────
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── Mode toggle ────────────────────────────────────────────
+function setMode(m) {
+  document.getElementById('bulkView').className = m==='bulk'?'active':'';
+  document.getElementById('deepView').className = m==='deep'?'active':'';
+  document.getElementById('modeBulk').className = 'mode-btn'+(m==='bulk'?' active':'');
+  document.getElementById('modeDeep').className = 'mode-btn'+(m==='deep'?' active':'');
+}
+
+// ── Auto-load from Workflow Manager ───────────────────────
+(function autoLoadFromWorkflow(){
+  // Try localStorage transfer object first (set by Workflow Manager openInAudit)
+  let transfer = null;
+  try {
+    const raw = localStorage.getItem('cs_audit_transfer') || localStorage.getItem('cs_audit_transfer_2');
+    if (raw) transfer = JSON.parse(raw);
+  } catch(e){}
+
+  // Fallback: URL params (minimal data — enrich from localStorage GSC data)
+  const p = new URLSearchParams(window.location.search);
+  if (!transfer && p.get('url')) {
+    transfer = {
+      pageUrl: p.get('url'),
+      keyword: p.get('kw') || '',
+      position: p.get('pos') || '',
+      impressions: p.get('impr') || '',
+      ctr: p.get('ctr') || '',
+      topQueries: '',
+      secondaryKeyword: '',
+      geo: '',
+      siteUrls: '',
+      workflowId: p.get('wf') || ''
+    };
+    // Enrich from shared GSC data stored by Workflow Manager
+    try {
+      const gscRaw = localStorage.getItem('cs_shared_gsc');
+      if (gscRaw) {
+        const gscData = JSON.parse(gscRaw);
+        // Get top queries from GSC queries list
+        if (gscData.queries && gscData.queries.length && !transfer.topQueries) {
+          const topQ = gscData.queries.slice(0, 15).map(function(q){ return q.query || q; }).filter(Boolean);
+          transfer.topQueries = topQ.join('\\n');
+          // Secondary = first query that differs from primary
+          const primary = (transfer.keyword || '').toLowerCase().trim();
+          const secCandidates = topQ.filter(function(q){
+            const qn = q.toLowerCase().trim();
+            if (qn === primary) return false;
+            const pw = primary.split(' '); const qw = qn.split(' ');
+            const overlap = pw.filter(function(w){ return qw.includes(w); }).length;
+            return overlap / Math.max(pw.length, 1) < 0.8;
+          });
+          transfer.secondaryKeyword = secCandidates[0] || '';
+        }
+        // Get GSC data for the specific URL
+        if (gscData.pages && gscData.pages.length && transfer.pageUrl) {
+          const urlNorm = function(u){ return u.toLowerCase().replace(/\\/+$/, '').replace(/^https?:\\/\\//, ''); };
+          const match = gscData.pages.find(function(pg){
+            return urlNorm(pg.page||pg.url||'').includes(urlNorm(transfer.pageUrl)) ||
+                   urlNorm(transfer.pageUrl).includes(urlNorm(pg.page||pg.url||''));
+          });
+          if (match) {
+            if (!transfer.impressions && match.impressions) transfer.impressions = match.impressions;
+            if (!transfer.ctr && match.ctr) transfer.ctr = parseFloat(match.ctr).toFixed(1);
+            if (!transfer.position && match.position) transfer.position = parseFloat(match.position).toFixed(1);
+          }
+        }
+        // Site URLs from all pages
+        if (gscData.pages && gscData.pages.length && !transfer.siteUrls) {
+          transfer.siteUrls = gscData.pages.map(function(pg){ return pg.page||pg.url||''; })
+            .filter(function(u){ return u.startsWith('http'); }).slice(0, 50).join('\\n');
+        }
+      }
+    } catch(e){}
+    // Geo from stored workflow project or query params
+    try {
+      const gscQueries2 = localStorage.getItem('cs_gsc_queries');
+      // Geo from cs_audit_transfer geo field
+      const raw2 = localStorage.getItem('cs_audit_transfer');
+      if (raw2) {
+        const t2 = JSON.parse(raw2);
+        if (t2.geo) transfer.geo = t2.geo;
+        if (t2.siteUrls && !transfer.siteUrls) transfer.siteUrls = t2.siteUrls;
+      }
+    } catch(e){}
+  }
+
+  if (!transfer || !transfer.pageUrl) return;
+
+  const fill = function(){
+    try {
+      setMode('deep');
+
+      if (transfer.pageUrl)  document.getElementById('dUrl').value  = transfer.pageUrl;
+      if (transfer.keyword)  document.getElementById('dKw').value   = transfer.keyword;
+      if (transfer.position) document.getElementById('dPos').value  = transfer.position;
+      if (transfer.impressions) document.getElementById('dImpr').value = transfer.impressions;
+      if (transfer.ctr)      document.getElementById('dCtr').value  = transfer.ctr;
+
+      // Secondary keyword — auto from GSC queries, NOT same as primary
+      if (transfer.secondaryKeyword && transfer.secondaryKeyword !== transfer.keyword) {
+        document.getElementById('dKw2').value = transfer.secondaryKeyword;
+        document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+      }
+
+      // Geo
+      if (transfer.geo) document.getElementById('dGeo').value = transfer.geo;
+
+      // Constraints — auto-fill from workflow transfer if set
+      if (transfer.constraints) {
+        const constraintsEl = document.getElementById('dConstraints');
+        if (constraintsEl && !constraintsEl.value.trim()) {
+          constraintsEl.value = transfer.constraints;
+          const badge = document.getElementById('constraintsAutoBadge');
+          if (badge) badge.style.display = 'inline-flex';
+        }
+      }
+
+      // Top queries — auto filled
+      if (transfer.topQueries) {
+        document.getElementById('dQueries').value = transfer.topQueries;
+        document.getElementById('queriesAutoMark').style.display = 'inline';
+      }
+
+      // Site URLs for internal link finder
+      if (transfer.siteUrls) {
+        document.getElementById('dSiteUrls').value = transfer.siteUrls;
+        document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        const urls = transfer.siteUrls.split('\\n').filter(function(l){ return l.trim().startsWith('http'); });
+        document.getElementById('urlCount').textContent = urls.length ? '\\u2713 ' + urls.length + ' URLs loaded' : '';
+      }
+
+      // Show auto badges
+      if (transfer.impressions) document.getElementById('imprAutoMark').style.display = 'inline';
+      if (transfer.ctr) document.getElementById('ctrAutoMark').style.display = 'inline';
+      if (transfer.position) document.getElementById('posAutoMark').style.display = 'inline';
+      if (transfer.impressions || transfer.ctr || transfer.position) {
+        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+      }
+
+      // Connection banner
+      const deepView = document.getElementById('deepView');
+      if (!document.querySelector('.connection-banner')) {
+        const chips = [];
+        if (transfer.position) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">pos ' + parseFloat(transfer.position).toFixed(1) + '</span>');
+        if (transfer.impressions) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">' + parseInt(transfer.impressions).toLocaleString() + ' impr</span>');
+        if (transfer.ctr) chips.push('<span style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:2px 8px;font-size:10px;">' + transfer.ctr + '% CTR</span>');
+        if (transfer.secondaryKeyword) chips.push('<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);border-radius:4px;padding:2px 8px;font-size:10px;color:#4ade80;">2nd kw: ' + transfer.secondaryKeyword.slice(0,30) + '</span>');
+        const banner = document.createElement('div');
+        banner.className = 'connection-banner';
+        banner.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+          + '<strong style="font-size:12px;font-family:Bebas Neue,sans-serif;letter-spacing:.04em;color:var(--gold);">\\u2713 Connected from Workflow Manager — all fields auto-filled</strong>'
+          + (transfer.workflowId ? '<a href="/audit-workflow" style="color:#a78bfa;text-decoration:none;font-size:10px;font-family:IBM Plex Mono,monospace;">&larr; Back to Workflow</a>' : '')
+          + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' + chips.join('') + '</div>'
+          + '<div style="margin-top:8px;font-size:10px;color:rgba(251,191,36,.5);font-family:IBM Plex Mono,monospace;">Paste page HTML in &#9432; below &rarr; Run Full Audit</div>';
+        deepView.insertBefore(banner, deepView.firstChild);
+      }
+
+      window._wfId = transfer.workflowId || '';
+
+      // Auto-fetch page HTML — triggers 1s after fields are filled
+      // Only if URL is present and HTML field is still empty
+      if (transfer.pageUrl) {
+        setTimeout(function() {
+          const htmlEl = document.getElementById('dHtml');
+          if (htmlEl && !htmlEl.value.trim()) {
+            const status = document.getElementById('autoFetchStatus');
+            if (status) {
+              status.textContent = 'Auto-fetch gestart vanuit Workflow...';
+              status.style.color = 'var(--gold)';
+            }
+            autoFetchPageHtml();
+          }
+        }, 1000);
+      }
+    } catch(e) { console.error('Auto-fill error:', e); }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill);
+  else setTimeout(fill, 150);
+
+  // Second pass at 600ms — catches cases where GSC data loads after the first fill
+  setTimeout(function(){
+    try {
+      // Only fill fields that are still empty
+      const kw2El = document.getElementById('dKw2');
+      const geoEl = document.getElementById('dGeo');
+      const queriesEl = document.getElementById('dQueries');
+
+      const gscRaw = localStorage.getItem('cs_shared_gsc');
+      if (!gscRaw) return;
+      const gscData = JSON.parse(gscRaw);
+
+      // Fill queries if still empty
+      if (queriesEl && !queriesEl.value.trim() && gscData.queries && gscData.queries.length) {
+        const topQ = gscData.queries.slice(0,15).map(function(q){ return q.query||''; }).filter(Boolean);
+        queriesEl.value = topQ.join('\\n');
+        document.getElementById('queriesAutoMark').style.display = 'inline';
+      }
+
+      // Fill secondary keyword if still empty
+      if (kw2El && !kw2El.value.trim() && gscData.queries && gscData.queries.length) {
+        const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
+        const topQ = gscData.queries.slice(0,15).map(function(q){ return q.query||''; }).filter(Boolean);
+        const sec = topQ.find(function(q){
+          const qn = q.toLowerCase().trim();
+          if (!primary || qn === primary) return false;
+          const pw = primary.split(' ');
+          const qw = qn.split(' ');
+          const overlap = pw.filter(function(w){ return w.length>2 && qw.includes(w); }).length;
+          return overlap / Math.max(pw.length,1) < 0.8;
+        });
+        if (sec) {
+          kw2El.value = sec;
+          document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+        }
+      }
+
+      // Fill geo from stored transfer if still empty
+      if (geoEl && !geoEl.value.trim()) {
+        try {
+          const t = JSON.parse(localStorage.getItem('cs_audit_transfer')||'{}');
+          if (t.geo) geoEl.value = t.geo;
+        } catch(e2){}
+      }
+
+      // Fill site URLs if still empty
+      const siteUrlsEl = document.getElementById('dSiteUrls');
+      if (siteUrlsEl && !siteUrlsEl.value.trim() && gscData.pages && gscData.pages.length) {
+        const urls = gscData.pages.map(function(pg){ return pg.page||pg.url||''; })
+          .filter(function(u){ return u.startsWith('http'); }).slice(0,50);
+        if (urls.length) {
+          siteUrlsEl.value = urls.join('\\n');
+          document.getElementById('urlCount').textContent = '\\u2713 ' + urls.length + ' URLs loaded';
+          document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        }
+      }
+    } catch(e){}
+  }, 600);
+})();
+
+// ── Auto-load shared GSC ───────────────────────────────────
+function loadSharedGSC() {
+  try {
+    const raw = localStorage.getItem('cs_shared_gsc');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.pages && data.pages.length) {
+      gscPages = data.pages.map(p => ({
+        page: p.page || p.url || '',
+        impressions: p.impressions || 0,
+        clicks: p.clicks || 0,
+        ctr: p.ctr || 0,
+        position: p.position || 0,
+        score: p.score || 0
+      })).filter(p => p.page && p.page.includes('.'));
+      const el = document.getElementById('pagesStatus');
+      if (el) el.innerHTML = \`<span style="color:var(--green)">✓ \${gscPages.length} pages from Workflow Manager</span>\`;
+    }
+    if (data.queries && data.queries.length) {
+      gscQueries = data.queries.map(q => ({query: q.query || '', position: q.position || 0})).filter(q => q.query);
+      const el = document.getElementById('queriesStatus');
+      if (el) el.innerHTML = \`<span style="color:var(--green)">✓ \${gscQueries.length} queries from Workflow Manager</span>\`;
+    }
+    return gscPages.length > 0;
+  } catch(e) { return false; }
+}
+setTimeout(loadSharedGSC, 200);
+
+// ── Restore last audit results if page reloaded ────────────
+(function restoreLastAudit(){
+  try {
+    const saved = localStorage.getItem('cs_last_audit');
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    if (!data._meta) return;
+    // Show a restore banner if there are saved results
+    const out = document.getElementById('deepOutput');
+    if (!out) return;
+    const restoreBanner = document.createElement('div');
+    restoreBanner.style.cssText = 'background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+    const d = data._meta;
+    restoreBanner.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">LAST AUDIT: ' + (d.kw||'') + ' · ' + (d.url||'').slice(0,40) + ' · ' + (d.date||'').slice(0,10) + '</span>'
+      + '<button onclick="restoreAuditResults()" class="btn-sm btn-blue">↩ Restore Results</button>'
+      + '<button onclick="this.parentElement.remove()" class="btn-sm btn-muted">✕</button>';
+    out.before(restoreBanner);
+  } catch(e){}
+})();
+
+function restoreAuditResults(){
+  try {
+    const saved = localStorage.getItem('cs_last_audit');
+    if (!saved) { toast('No saved audit found'); return; }
+    const data = JSON.parse(saved);
+    const out = document.getElementById('deepOutput');
+    out.innerHTML = '';
+    out.className = 'output show';
+    DEEP_STEPS.forEach(function(s){
+      if (data[s.id]) addSection(out, s.id, s.icon, s.label, s.badge, data[s.id]);
+    });
+    if (data._meta) {
+      if (data._meta.url) document.getElementById('dUrl').value = data._meta.url;
+      if (data._meta.kw) document.getElementById('dKw').value = data._meta.kw;
+      if (data._meta.geo) document.getElementById('dGeo').value = data._meta.geo;
+      setMode('deep');
+    }
+    document.getElementById('postAuditBar').style.display = 'flex';
+    toast('\\u2705 Audit results restored');
+  } catch(e) { toast('\\u26A0 Could not restore: ' + e.message); }
+}
+
+// ── Fetch GSC data for URL from panel ① ───────────────────
+function fetchGSCData() {
+  const url = document.getElementById('dUrl').value.trim();
+  if (!url) { toast('⚠ Enter a Page URL in ① first'); return; }
+  const btn = document.getElementById('gscFetchBtn');
+  const status = document.getElementById('gscFetchStatus');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  status.textContent = '';
+
+  const urlNorm = function(u){ return (u||'').toLowerCase().replace(/\\/$/, '').replace(/^https?:\\/\\//, ''); };
+
+  const raw = (function(){ try { return localStorage.getItem('cs_shared_gsc'); } catch(e) { return null; } })();
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      const uNorm = urlNorm(url);
+      const match = (data.pages||[]).find(function(pg){
+        const pNorm = urlNorm(pg.page||pg.url||'');
+        return pNorm === uNorm || pNorm.includes(uNorm) || uNorm.includes(pNorm);
+      });
+
+      if (match) {
+        if (match.impressions) { document.getElementById('dImpr').value = match.impressions; document.getElementById('imprAutoMark').style.display='inline'; }
+        if (match.ctr) { document.getElementById('dCtr').value = parseFloat(match.ctr).toFixed(1); document.getElementById('ctrAutoMark').style.display='inline'; }
+        if (match.position) { document.getElementById('dPos').value = parseFloat(match.position).toFixed(1); document.getElementById('posAutoMark').style.display='inline'; }
+        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+        status.textContent = '✓ pos ' + Math.round(match.position||0) + '  ·  ' + (match.impressions||0).toLocaleString() + ' impr  ·  ' + parseFloat(match.ctr||0).toFixed(1) + '% CTR';
+        status.style.color = 'var(--green)';
+
+        // Fill queries
+        const queries = (data.queries||[]).filter(function(q){ return q.query; }).slice(0, 15);
+        if (queries.length) {
+          const qTexts = queries.map(function(q){ return q.query; });
+          if (!document.getElementById('dQueries').value.trim()) {
+            document.getElementById('dQueries').value = qTexts.join('\\n');
+            document.getElementById('queriesAutoMark').style.display = 'inline';
+          }
+          // Secondary keyword — best query that differs from primary
+          const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
+          if (!document.getElementById('dKw2').value.trim()) {
+            const sec = qTexts.find(function(q){
+              const qn = q.toLowerCase().trim();
+              if (!primary || qn === primary) return false;
+              const pw = primary.split(' ');
+              const qw = qn.split(' ');
+              const overlap = pw.filter(function(w){ return w.length > 2 && qw.includes(w); }).length;
+              return overlap / Math.max(pw.length, 1) < 0.8;
+            });
+            if (sec) {
+              document.getElementById('dKw2').value = sec;
+              document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
+            }
+          }
+        }
+
+        // Fill site URLs if empty
+        if (!document.getElementById('dSiteUrls').value.trim() && data.pages && data.pages.length) {
+          const urls = data.pages.map(function(pg){ return pg.page||pg.url||''; })
+            .filter(function(u){ return u.startsWith('http'); }).slice(0, 50);
+          document.getElementById('dSiteUrls').value = urls.join('\\n');
+          document.getElementById('urlCount').textContent = '✓ ' + urls.length + ' URLs loaded';
+          document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+        }
+
+        btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
+        toast('✅ Loaded: pos, impr, CTR, queries + secondary keyword');
+        return;
+      }
+    } catch(e) { console.error('fetchGSCData error:', e); }
+  }
+
+  status.textContent = 'No match — import GSC CSV in Workflow Manager first';
+  status.style.color = 'var(--amber)';
+  btn.textContent = '⬇ Fetch GSC Data for this URL'; btn.disabled = false;
+  toast('⚠ No GSC data found — import via Workflow Manager first');
+}
+
+
+// ── Fetch Sitemap URLs ─────────────────────────────────────
+async function fetchSitemap() {
+  const url = document.getElementById('sitemapFetchUrl').value.trim() || 
+              (document.getElementById('dUrl').value.trim().replace(/\\/[^\\/]*$/, '/sitemap.xml'));
+  if (!url) { toast('⚠ Enter sitemap URL'); return; }
+  const btn = document.getElementById('sitemapFetchBtn');
+  const status = document.getElementById('sitemapFetchStatus');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  status.textContent = 'Fetching via proxy...';
+  try {
+    const r = await fetch(\`\${RAILWAY}/api/sitemap/urls\`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url})
+    });
+    const d = await r.json();
+    if (d.success && d.urls && d.urls.length) {
+      document.getElementById('dSiteUrls').value = d.urls.join('\\n');
+      document.getElementById('urlCount').textContent = \`✓ \${d.urls.length} URLs loaded from sitemap\`;
+      document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+      status.textContent = \`✓ \${d.urls.length} URLs loaded\`;
+      status.style.color = 'var(--green)';
+      toast(\`✅ \${d.urls.length} URLs loaded from sitemap\`);
+    } else {
+      status.textContent = d.error || 'No URLs found in sitemap';
+      status.style.color = 'var(--amber)';
+      toast('⚠ No URLs found — check sitemap URL');
+    }
+  } catch(e) {
+    status.textContent = 'Fetch failed — paste URLs manually';
+    status.style.color = 'var(--red)';
+    toast('⚠ Sitemap fetch failed');
+  }
+  btn.textContent = '⬇ Fetch Sitemap'; btn.disabled = false;
+}
+
+// ── Auto-Fetch Page HTML via server proxy ─────────────────
+async function autoFetchPageHtml() {
+  const url = document.getElementById('dUrl').value.trim();
+  if (!url) { toast('⚠ Vul eerst de Page URL in bij ①'); return; }
+
+  const btn = document.getElementById('autoFetchBtn');
+  const status = document.getElementById('autoFetchStatus');
+
+  btn.textContent = '⏳ Fetching...';
+  btn.disabled = true;
+  status.textContent = 'Ophalen via server...';
+  status.style.color = 'var(--gold)';
+
+  try {
+    const r = await fetch(\`\${RAILWAY}/api/fetch-html\`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const d = await r.json();
+
+    if (d.success && d.html) {
+      document.getElementById('dHtml').value = d.html;
+      updateHtmlStats('dHtml', 'dHtmlStats');
+      document.getElementById('htmlAutoFetchBadge').style.display = 'inline-flex';
+      status.textContent = '✅ HTML opgehaald (' + Math.round(d.html.length / 1024) + ' KB) via ' + (d.method || 'proxy');
+      status.style.color = 'var(--green)';
+      toast('✅ Page HTML geladen — meta check draait automatisch');
+      // Auto-run meta consistency check
+      setTimeout(function() {
+        runMetaCheck();
+        document.getElementById('metaAutoRunBadge').style.display = 'inline-flex';
+      }, 400);
+    } else {
+      status.textContent = '⚠ ' + (d.error || 'Fetch mislukt') + ' — plak HTML handmatig in ③';
+      status.style.color = 'var(--red)';
+      toast('⚠ Auto-fetch mislukt — plak HTML handmatig');
+    }
+  } catch (e) {
+    status.textContent = '⚠ Server niet bereikbaar: ' + e.message + ' — plak HTML handmatig';
+    status.style.color = 'var(--red)';
+    toast('⚠ Server offline — plak HTML handmatig in ③');
+  }
+
+  btn.textContent = '🚀 Fetch Page HTML';
+  btn.disabled = false;
+}
+
+// ── HTML Stats ─────────────────────────────────────────────
+function updateHtmlStats(inputId, statsId) {
+  const html = document.getElementById(inputId).value.trim();
+  const el = document.getElementById(statsId);
+  if (!html) { el.textContent=''; return; }
+  try {
+    const doc = new DOMParser().parseFromString(html,'text/html');
+    const words = (doc.body?.innerText||'').split(/\\s+/).filter(Boolean).length;
+    const h1 = doc.querySelectorAll('h1').length;
+    const h2 = doc.querySelectorAll('h2').length;
+    const schema = (html.match(/application\\/ld\\+json/gi)||[]).length;
+    const imgs = doc.querySelectorAll('img').length;
+    const alts = doc.querySelectorAll('img[alt]').length;
+    el.textContent = \`✓ ~\${words.toLocaleString()} words · \${h1} H1 · \${h2} H2s · \${schema} schema · \${imgs} imgs (\${alts} with alt)\`;
+  } catch(e) { el.textContent = 'Could not parse HTML'; }
+}
+
+// ── GSC CSV Parsing ────────────────────────────────────────
+function parseGSCCsv(raw) {
+  const lines = raw.trim().split('\\n');
+  if (lines.length < 2) return [];
+  const header = lines[0].toLowerCase().replace(/"/g,'').split(',');
+  const idx = {
+    page: header.findIndex(h=>h.includes('page')||h.includes('url')||h.includes('top page')),
+    clicks: header.findIndex(h=>h.includes('click')),
+    impressions: header.findIndex(h=>h.includes('impression')),
+    ctr: header.findIndex(h=>h.includes('ctr')),
+    position: header.findIndex(h=>h.includes('position')||h.includes('pos')),
+  };
+  if (idx.page<0) idx.page=0;
+  if (idx.clicks<0) idx.clicks=1;
+  if (idx.impressions<0) idx.impressions=2;
+  if (idx.ctr<0) idx.ctr=3;
+  if (idx.position<0) idx.position=4;
+  const rows=[];
+  for (let i=1;i<lines.length;i++) {
+    const cols=lines[i].replace(/"/g,'').split(',');
+    if (cols.length<3) continue;
+    const page=cols[idx.page]?.trim();
+    if (!page) continue;
+    const impressions=parseFloat(cols[idx.impressions])||0;
+    if (impressions<1) continue;
+    rows.push({
+      page,
+      clicks:parseFloat(cols[idx.clicks])||0,
+      impressions,
+      ctr:parseFloat((cols[idx.ctr]||'0').replace('%',''))||0,
+      position:parseFloat(cols[idx.position])||0,
+    });
+  }
+  return rows;
+}
+
+function handlePagesCSV(input) {
+  const file=input.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    gscPages=parseGSCCsv(e.target.result);
+    gscPages.forEach(p=>{
+      const posScore=p.position>10?Math.min((p.position-10)/40,1):0;
+      const ctrGap=Math.max(0,3-p.ctr)/3;
+      const imprW=Math.min(Math.log10(Math.max(p.impressions,10))/5,1);
+      p.score=Math.round((posScore*.45+ctrGap*.35+imprW*.2)*100);
+    });
+    gscPages.sort((a,b)=>b.score-a.score);
+    document.getElementById('pagesStatus').innerHTML=\`<span style="color:var(--green)">✓ \${gscPages.length} pages loaded</span>\`;
+    try { localStorage.setItem('cs_shared_gsc', JSON.stringify({pages:gscPages, queries:gscQueries})); } catch(e) {}
+    document.getElementById('filterPanel').style.display='block';
+    document.getElementById('opportunityTable').style.display='block';
+    renderTable();
+    toast(\`✅ \${gscPages.length} pages loaded\`);
+  };
+  r.readAsText(file);
+}
+
+function handleQueriesCSV(input) {
+  const file=input.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const rows=parseGSCCsv(e.target.result);
+    gscQueries=rows.map(r=>({query:r.page, position:r.position, impressions:r.impressions, ctr:r.ctr}));
+    document.getElementById('queriesStatus').innerHTML=\`<span style="color:var(--green)">✓ \${gscQueries.length} queries loaded</span>\`;
+    toast(\`✅ \${gscQueries.length} queries loaded\`);
+  };
+  r.readAsText(file);
+}
+
+// ── Table render ───────────────────────────────────────────
+function renderTable() {
+  const minI=parseFloat(document.getElementById('minImpr').value)||0;
+  const minP=parseFloat(document.getElementById('minPos').value)||0;
+  const maxP=parseFloat(document.getElementById('maxPos').value)||999;
+  const maxC=parseFloat(document.getElementById('maxCtr').value)||100;
+  const filtered=gscPages.filter(r=>r.impressions>=minI&&r.position>=minP&&r.position<=maxP&&r.ctr<=maxC);
+  document.getElementById('tableCount').textContent=\`\${filtered.length} pages\`;
+  const maxScore=filtered[0]?.score||1;
+  const rows=filtered.slice(0,100).map((r,i)=>{
+    const short=(()=>{try{return new URL(r.page).pathname.slice(0,45)||'/';}catch(e){return r.page.slice(0,45);}})();
+    const posColor=r.position<20?'var(--amber)':r.position<35?'var(--orange)':'var(--red)';
+    const ctrColor=r.ctr<1?'var(--red)':r.ctr<3?'var(--amber)':'var(--green)';
+    const barW=Math.round((r.score/maxScore)*100);
+    const enc=encodeURIComponent(r.page);
+    return \`<tr>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:\${i<3?'var(--gold)':'var(--muted)'};">#\${i+1}</td>
+      <td>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="\${r.page}">\${short}</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px;">\${r.impressions.toLocaleString()} impr · \${r.clicks} clicks</div>
+      </td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">\${r.impressions.toLocaleString()}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:\${ctrColor};">\${r.ctr.toFixed(1)}%</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:\${posColor};">\${Math.round(r.position)}</td>
+      <td style="min-width:90px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);">\${r.score}/100</div>
+        <div class="opp-bar" style="width:\${barW}%;"></div>
+      </td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn-sm btn-blue" onclick="quickAudit('\${enc}','\${r.impressions}','\${r.ctr}','\${r.position}')">⚡ Quick</button>
+          <button class="btn-sm btn-purple" onclick="loadToDeep('\${enc}','\${r.impressions}','\${r.ctr}','\${r.position}')">🔬 Deep</button>
+        </div>
+      </td>
+    </tr>\`;
+  }).join('');
+  document.getElementById('tableBody').innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No pages match filters</td></tr>';
+}
+
+function loadToDeep(enc,impr,ctr,pos) {
+  document.getElementById('dUrl').value=decodeURIComponent(enc);
+  document.getElementById('dImpr').value=impr;
+  document.getElementById('dCtr').value=ctr;
+  document.getElementById('dPos').value=pos;
+  setMode('deep');
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('Loaded → paste your HTML and run Deep Dive!');
+}
+
+function exportOpps() {
+  const rows=['Page,Impressions,Clicks,CTR,Position,Score'];
+  gscPages.forEach(r=>rows.push(\`"\${r.page}",\${r.impressions},\${r.clicks},\${r.ctr},\${r.position},\${r.score}\`));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\\n')],{type:'text/csv'}));
+  a.download='seo-opportunities.csv';a.click();
+}
+
+// ── Cannibalization ────────────────────────────────────────
+function showCannibalization() {
+  if (!gscPages.length) { toast('Upload pages CSV first'); return; }
+  const report=document.getElementById('cannReport');
+  const body=document.getElementById('cannBody');
+  report.style.display='block';
+  const groups={};
+  gscPages.forEach(p=>{
+    try {
+      const url=new URL(p.page);
+      const segs=url.pathname.split('/').filter(Boolean);
+      segs.forEach(seg=>{
+        if (seg.length<4) return;
+        if (!groups[seg]) groups[seg]=[];
+        groups[seg].push(p);
+      });
+    } catch(e){}
+  });
+  const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
+  if (!canns.length) {
+    body.innerHTML='<p style="color:var(--green);font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    return;
+  }
+  body.innerHTML=canns.map(([seg,pages])=>\`
+    <div class="cann-card">
+      <h4>⚠ Conflict: "\${seg}" appears in \${pages.length} pages</h4>
+      \${pages.map(p=>\`
+        <div style="display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono',monospace;color:var(--blue);flex:1;word-break:break-all;">\${p.page.replace(/^https?:\\/\\//,'').slice(0,60)}</span>
+          <span style="color:var(--muted);">\${p.impressions.toLocaleString()} impr</span>
+          <span style="color:var(--amber);">\${p.ctr.toFixed(1)}% CTR</span>
+          <span style="color:var(--orange);">pos \${Math.round(p.position)}</span>
+          <button class="btn-sm btn-purple" onclick="loadToDeep('\${encodeURIComponent(p.page)}','\${p.impressions}','\${p.ctr}','\${p.position}')">🔬 Audit</button>
+        </div>\`).join('')}
+    </div>\`).join('');
+  report.scrollIntoView({behavior:'smooth'});
+}
+
+// ── Gemini call ────────────────────────────────────────────
+async function callGemini(prompt, maxTokens=4000) {
+  const resp = await fetch(\`\${RAILWAY}/api/gemini-proxy\`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      contents:[{parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.25,maxOutputTokens:maxTokens}
+    })
+  });
+  if (!resp.ok) {
+    const err=await resp.json().catch(()=>({}));
+    throw new Error(err.error?.message||err.detail||\`HTTP \${resp.status}\`);
+  }
+  const data=await resp.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+}
+
+function extractContent(html, label='page') {
+  if (!html) return null;
+  try {
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const title=doc.querySelector('title')?.textContent||'';
+    const desc=doc.querySelector('meta[name="description"]')?.getAttribute('content')||'';
+    const h1=Array.from(doc.querySelectorAll('h1')).map(e=>e.textContent.trim()).join(' | ');
+    const h2s=Array.from(doc.querySelectorAll('h2')).map(e=>e.textContent.trim()).join(' · ');
+    const h3s=Array.from(doc.querySelectorAll('h3')).slice(0,10).map(e=>e.textContent.trim()).join(' · ');
+    const schemas=Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(s=>s.textContent.slice(0,200)).join('\\n');
+    const body=(doc.body?.innerText||'').replace(/\\s+/g,' ').slice(0,3000);
+    const imgs=doc.querySelectorAll('img').length;
+    const alts=doc.querySelectorAll('img[alt]').length;
+    const intLinks=doc.querySelectorAll('a[href]').length;
+    const wordCount=(doc.body?.innerText||'').split(/\\s+/).filter(Boolean).length;
+    const faqs=doc.querySelectorAll('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"]').length;
+    return \`=== \${label.toUpperCase()} ===
+Title (\${title.length} chars): \${title}
+Meta desc (\${desc.length} chars): \${desc}
+H1: \${h1||'MISSING'}
+H2s: \${h2s||'none'}
+H3s (first 10): \${h3s||'none'}
+Word count: ~\${wordCount}
+Images: \${imgs} total, \${alts} with alt (\${imgs-alts} missing alt text)
+Links: \${intLinks} total
+Schema blocks: \${schemas||'none'}
+FAQ section: \${faqs>0?'YES':'NOT DETECTED'}
+Body extract: \${body}\`;
+  } catch(e) { return \`[Error parsing \${label} HTML: \${e.message}]\`; }
+}
+
+function extractTitle(html) {
+  if (!html) return 'not provided';
+  const m=html.match(/<title[^>]*>(.*?)<\\/title>/i);
+  return m?m[1].trim():'not found in HTML';
+}
+function extractMeta(html) {
+  if (!html) return 'not provided';
+  const m=html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
+           ||html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+  return m?m[1].trim():'not found in HTML';
+}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ── QUICK AUDIT ───────────────────────────────────────────
+async function quickAudit(enc,impr,ctr,pos) {
+  const url=decodeURIComponent(enc);
+  const prog=document.getElementById('quickProgress');
+  const out=document.getElementById('quickOutput');
+  prog.className='progress show';out.innerHTML='';out.className='output show';
+  const QSTEPS=[
+    {id:'q0',icon:'🎯',label:'PRIORITY ACTIONS — Top 5 right now'},
+    {id:'q1',icon:'⚡',label:'CTR Surgery — new title + meta'},
+    {id:'q2',icon:'📊',label:'Position 11–30 query opportunities'},
+  ];
+  document.getElementById('quickSteps').innerHTML=QSTEPS.map(s=>\`<div class="prog-step" id="step-\${s.id}"><span class="prog-icon">\${s.icon}</span><span>\${s.label}</span></div>\`).join('');
+  const bar=document.getElementById('quickBar');
+  const ctx=\`URL: \${url}\\nImpressions: \${impr}\\nCTR: \${ctr}%\\nPosition: \${pos}\`;
+  const pageQueries=gscQueries.filter(q=>q.query).slice(0,20);
+  const queryCx=pageQueries.length?\`\\nTop queries: \${pageQueries.map(q=>\`"\${q.query}" pos:\${Math.round(q.position)}\`).join(' | ')}\` : '';
+  const prompts={
+    q0:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\n\\nList EXACTLY 5 priority actions for this page. Each must be:\\n- Specific and actionable (not generic advice)\\n- Achievable in under 1 hour\\n- Include expected metric change\\n\\nFormat each as:\\n🎯 **[#]. [Short action title]**\\nDo: [exact what to do]\\nExpect: [specific metric improvement]\\n\\nStart with the highest-impact action first.\`,
+    q1:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]\`,
+    q2:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.\`,
+  };
+  for (let i=0;i<QSTEPS.length;i++) {
+    const s=QSTEPS[i];setStep(s.id,'active');
+    try {
+      const r=await callGemini(prompts[s.id],1500);
+      addSection(out,s.id,s.icon,s.label,i===0?'b-gold':i===1?'b-win':'b-pulse',r);
+      setStep(s.id,'done');
+    } catch(e) {
+      setStep(s.id,'error');
+      addSection(out,s.id,s.icon,s.label,'b-tech',\`**Error:** \${e.message}\`);
+    }
+    bar.style.width=((i+1)/QSTEPS.length*100)+'%';
+    if (i<QSTEPS.length-1) await sleep(1200);
+  }
+  prog.className='progress';
+  toast('✅ Quick audit done');
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+// ── DEEP AUDIT — 11 STEPS (added Voice Search) ────────────
+const DEEP_STEPS=[
+  {id:'d0',icon:'🎯',label:'PRIORITY ACTIONS — Do These First (top 7)',badge:'b-gold'},
+  {id:'d1',icon:'🔍',label:'Intent + AI Overview Eligibility',badge:'b-tech'},
+  {id:'d2',icon:'⚡',label:'CTR Surgery — real title/meta rewrite',badge:'b-win'},
+  {id:'d3',icon:'📊',label:'Competitor Diff — real HTML comparison',badge:'b-pulse'},
+  {id:'d4',icon:'📝',label:'Content Gap Matrix — what you are missing',badge:'b-pulse'},
+  {id:'d5',icon:'🔧',label:'PULSE Optimization — before/after rewrites',badge:'b-pulse'},
+  {id:'d6',icon:'🔗',label:'NEXUS Signals + Internal Link Finder',badge:'b-nexus'},
+  {id:'d7',icon:'🏗️',label:'Architecture Blueprint — H1-H3 restructure',badge:'b-nexus'},
+  {id:'d8',icon:'⚙️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
+  {id:'d9',icon:'🎙️',label:'Voice Search Optimization — conversational queries',badge:'b-voice'},
+  {id:'d10',icon:'📈',label:'Before/After Score + Traffic Projection + 90-Day Plan',badge:'b-gold'},
+];
+
+async function runDeepAudit() {
+  const url=document.getElementById('dUrl').value.trim();
+  const kw=document.getElementById('dKw').value.trim();
+  if (!url||!kw) { toast('Enter URL and keyword first'); return; }
+
+  const inp={
+    url, kw,
+    kw2:document.getElementById('dKw2').value.trim(),
+    geo:document.getElementById('dGeo').value.trim()||'Global',
+    goal:document.getElementById('dGoal').value,
+    impr:document.getElementById('dImpr').value||'unknown',
+    ctr:document.getElementById('dCtr').value||'unknown',
+    pos:document.getElementById('dPos').value||'unknown',
+    queries:document.getElementById('dQueries').value.trim(),
+    html:document.getElementById('dHtml').value.trim(),
+    comp1url:document.getElementById('dComp1url').value.trim(),
+    comp1html:document.getElementById('dComp1html').value.trim(),
+    comp2url:document.getElementById('dComp2url').value.trim(),
+    comp2html:document.getElementById('dComp2html').value.trim(),
+    siteUrls:document.getElementById('dSiteUrls').value.trim(),
+    constraints:document.getElementById('dConstraints').value.trim(),
+    voiceQueries:'', // auto-generated by AI from keyword + geo — no manual input needed
+    voiceDevice:document.getElementById('dVoiceDevice').value,
+  };
+
+  const myContent=extractContent(inp.html,'YOUR PAGE');
+  const myContentStr=myContent||\`[No HTML provided — URL: \${inp.url}]\`;
+
+  // Competitor context — real HTML only, no hallucination
+  let compContext='';
+  if (inp.comp1html || inp.comp2html) {
+    compContext=\`\\n\${extractContent(inp.comp1html,\`COMPETITOR 1 (\${inp.comp1url||'unknown'})\`)||'[No HTML for Competitor 1]'}\\n\\n\${extractContent(inp.comp2html,\`COMPETITOR 2 (\${inp.comp2url||'unknown'})\`)||'[No HTML for Competitor 2]'}\`;
+  } else {
+    // Honest fallback — no hallucination
+    compContext=\`\\n[No competitor HTML pasted. Analyze based on: (1) your knowledge of what typically ranks well for "\${kw}" in \${inp.geo}, (2) general SEO best practices for this keyword type and geo. Do NOT invent specific competitor page stats.]\`;
+  }
+
+  const siteUrlList=inp.siteUrls.split('\\n').filter(l=>l.trim().startsWith('http')).slice(0,50).join('\\n');
+  const voiceCtx=inp.voiceQueries?\`\\nVOICE QUERIES: \${inp.voiceQueries}\`:'';
+
+  document.getElementById('deepRunBtn').disabled=true;
+  const prog=document.getElementById('deepProgress');
+  const out=document.getElementById('deepOutput');
+  prog.className='progress show';out.innerHTML='';out.className='output show';
+  document.getElementById('deepSteps').innerHTML=DEEP_STEPS.map(s=>\`<div class="prog-step" id="step-\${s.id}"><span class="prog-icon">\${s.icon}</span><span>\${s.label}</span></div>\`).join('');
+  const bar=document.getElementById('deepBar');
+
+  const base=\`You are an elite SEO strategist for ContentScale.site using PULSE + NEXUS frameworks.
+
+PAGE: \${inp.url}
+PRIMARY KEYWORD: \${inp.kw}
+SECONDARY KEYWORD: \${inp.kw2||'none'}
+GEO: \${inp.geo} | GOAL: \${inp.goal} | CONSTRAINTS: \${inp.constraints||'none'}
+GSC: \${inp.impr} impressions · \${inp.ctr}% CTR · position \${inp.pos}
+TOP QUERIES: \${inp.queries||'not provided'}\${voiceCtx}
+
+\${myContentStr}\`;
+
+  const prompts={
+    d0:\`\${base}\\n\\nSTEP 0 — PRIORITY ACTIONS (show this first):\\n\\nBased on the page data above, list EXACTLY 7 priority actions ordered by impact. Be brutally specific — no generic SEO advice.\\n\\nFor each action use this format:\\n🎯 **[#]. [Short action title]** [QUICK WIN / MEDIUM / STRATEGIC]\\nDo: [Exact what to change, add, or fix — copy-paste ready]\\nWhere: [Exact location on page or in code]\\nExpect: [Specific metric improvement, e.g., "CTR +0.8-1.2%" or "Position jump 5-8 spots"]\\nTime: [15 min / 30 min / 2 hrs]\\n\\nStart with the 3 fastest wins (under 30 min). End with 2 strategic actions.\`,
+
+    d1:\`\${base}\\n\\nSTEP 1 — INTENT DECODING:\\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not? State any mismatch clearly with specific fix.\`,
+
+    d2:\`\${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "\${extractTitle(inp.html)}"\\nCURRENT META: "\${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\\n\\n| Field | Current | New | Chars | Why |\\n|-------|---------|-----|-------|-----|\\n| Title | \${extractTitle(inp.html).slice(0,40)} | [your version] | [n] | [rationale] |\\n| Meta | \${extractMeta(inp.html).slice(0,40)}... | [your version] | [n] | [rationale] |\\n\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]\`,
+
+    d3:\`\${base}\${compContext}\\n\\nSTEP 3 — COMPETITOR DIFF:\\nCreate a real comparison table between your page and the competitors.\\n\\n| Feature | Your Page | Competitor 1 | Competitor 2 | Winner |\\n|---------|-----------|--------------|--------------|--------|\\n| Word count | [n] | [n] | [n] | |\\n| H2 count | [n] | [n] | [n] | |\\n| FAQ section | Yes/No | Yes/No | Yes/No | |\\n| Schema types | [list] | [list] | [list] | |\\n| Images with alt | [n]/[total] | [n]/[total] | [n]/[total] | |\\n| CTA clarity | [1-5] | [1-5] | [1-5] | |\\n| Data/stats count | [n] | [n] | [n] | |\\n| Internal links | [n] | [n] | [n] | |\\n| Unique angle | [describe] | [describe] | [describe] | |\\n\\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: exact implementation instruction.\`,
+
+    d4:\`\${base}\${compContext}\\n\\nSTEP 4 — CONTENT GAP MATRIX:\\nCreate a precise gap analysis. For each dimension score: 0=missing 1=weak 2=adequate 3=strong\\n\\n| Dimension | Your Score | Gap | Specific Fix |\\n|-----------|-----------|-----|-------------|\\n| Subtopic coverage | | | |\\n| Data & proof | | | |\\n| Commercial signals | | | |\\n| Media & UX | | | |\\n| Freshness (2025-2026) | | | |\\n| FAQ depth | | | |\\n| E-E-A-T signals | | | |\\n| Local relevance (\${inp.geo}) | | | |\\n\\nThen: Top 5 content additions, each with severity (High/Med/Low) and exact implementation.\`,
+
+    d5:\`\${base}\\n\\nSTEP 5 — PULSE REWRITES (show current → improved for each):\\n\\nP — Purpose (intro rewrite):\\nCURRENT: [quote first 3 sentences from body extract]\\nIMPROVED: [rewrite — lead with the benefit, include primary keyword, add a stat]\\n\\nU — Urgency signal:\\nWhere to add: [exact location]\\nNew sentence: [write it]\\n\\nL — Legitimacy:\\nMissing proof elements: [list 3 specific items]\\nWhere to add: [exact section]\\n\\nS — Structure improvement:\\nBEFORE: [current format of one section]\\nAFTER: [improved format — table or bullets]\\n\\nE — Engagement (CTA rewrite):\\nCURRENT CTA: [identify from page]\\nIMPROVED: [rewrite aligned to \${inp.goal}]\`,
+
+    d6:\`\${base}\\n\\nSITE URLS:\\n\${siteUrlList||'[No URLs provided — suggest based on URL patterns from: '+inp.url+']'}\\n\\nSTEP 6 — NEXUS + INTERNAL LINKS:\\n1. TOP 5 pages to link FROM to this page (use real URLs from list if available):\\n   - URL | Anchor text (exact) | Why (semantic reason)\\n\\n2. TOP 5 pages this page should link TO:\\n   - URL | Anchor text (exact) | Why\\n\\n3. Missing semantic entities for "\${inp.kw}" in \${inp.geo} (10 terms)\\n\\n4. Schema recommendation — provide complete FAQPage JSON-LD with 5 Q&As (40-60 words each, optimized for AI Overviews)\`,
+
+    d7:\`\${base}\\n\\nSTEP 7 — ARCHITECTURE BLUEPRINT:\\nCURRENT heading structure (from HTML):\\nH1: \${extractTitle(inp.html)}\\n[reconstruct H2-H3 from content]\\n\\nRECOMMENDED structure for intent + AI Overview extraction:\\n[show new H1 → H2 → H3 hierarchy]\\n\\nFor each change: Old heading → New heading → Why this order wins\`,
+
+    d8:\`\${base}\\n\\nSTEP 8 — TECHNICAL CHECKLIST:\\n1. Keyword "\${inp.kw}" placement audit:\\n   ☐ In H1? ☐ First 100 words? ☐ URL? ☐ Meta title? ☐ Image alt?\\n   → Fix for each missing item\\n\\n2. Missing LSI/semantic keywords (8 terms not found in content)\\n\\n3. Technical issues found in HTML:\\n   - Duplicate tags, missing alt, schema errors, etc.\\n\\n4. Schema errors or missing schema types for this page\\n\\n5. Core Web Vitals recommendations based on page structure\`,
+
+    d9:\`\${base}\\n\\nSTEP 9 — VOICE SEARCH OPTIMIZATION:\\n\\nVoice search = conversational, question-based, local intent. Target device: \${inp.voiceDevice}.\\n\\n1. ELIGIBILITY CHECK — Does this page qualify for voice answer?\\n   - Answer box potential: Yes/No + why\\n   - Conversational readability score: [1-10]\\n   - Local voice intent: Yes/No (is "\${inp.kw}" a local voice query?)\\n\\n2. TOP 5 VOICE QUERIES for this page in \${inp.geo}:\\n   | Voice Query | Current Answer on Page | Gap | Fix |\\n   |-------------|----------------------|-----|-----|\\n   | [query] | [current] | [gap] | [fix] |\\n\\n3. REWRITES — Convert 3 existing sentences to voice-friendly format:\\n   Before: [current sentence]\\n   After: [conversational, direct answer version]\\n\\n4. FEATURED SNIPPET optimization for voice:\\n   - Write the perfect 40-word answer that Siri/Google will read aloud\\n   - Format: [write it]\\n\\n5. Local near-me queries (if applicable for \${inp.geo}):\\n   - Best 3 "near me" variations for this business type\\n   - Schema additions needed for local voice: [list]\`,
+
+    d10:\`\${base}\\n\\nSTEP 10 — SCORE + PROJECTION + 90-DAY PLAN:\\n\\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\\n\\n**CURRENT estimated score:**\\n| Component | Score | Missing |\\n|-----------|-------|--------|\\n| GRAAF | /50 | [what's missing] |\\n| CRAFT | /30 | [what's missing] |\\n| Technical | /20 | [what's missing] |\\n| **TOTAL** | **/100** | |\\n\\n**AFTER implementing all recommendations:**\\n| Component | New Score | Improved |\\n|-----------|-----------|----------|\\n| GRAAF | /50 | [what improved] |\\n| CRAFT | /30 | [what improved] |\\n| Technical | /20 | [what improved] |\\n| **TOTAL** | **/100** | |\\n\\n**Traffic projection:**\\n| Metric | Current | Expected (90 days) |\\n|--------|---------|--------------------|\\n| Position | \${inp.pos} | [target] |\\n| CTR | \${inp.ctr}% | [target]% |\\n| Monthly clicks | [calc] | [calc] |\\n\\n**90-Day Plan:**\\n- **WEEK 1** (Quick Wins): [5 specific changes, each under 30 min]\\n- **WEEK 2-3** (Content Upgrades): [3-4 content additions]\\n- **WEEK 4** (Technical + Schema): [specific implementations]\\n- **MONTH 2** (Authority Building): [link building, E-E-A-T signals]\\n- **MONTH 3** (Measurement): [GSC checkpoints — Day 7, Day 30, Day 90]\\n\\nSUCCESS DEFINITION: Position \${inp.pos} → [target] for "\${inp.kw}" in \${inp.geo} within 90 days\`,
+  };
+
+  for (let i=0;i<DEEP_STEPS.length;i++) {
+    const s=DEEP_STEPS[i];setStep(s.id,'active');
+    try {
+      const result=await callGemini(prompts[s.id],8000);
+      addSection(out,s.id,s.icon,s.label,s.badge,result);
+      setStep(s.id,'done');
+      // Save step result to localStorage immediately — with size guard
+      auditSaveStep(s.id, result, inp);
+    } catch(e) {
+      setStep(s.id,'error');
+      addSection(out,s.id,s.icon,s.label,s.badge,\`**Error:** \${e.message}\\n\\nCheck Railway server: \${RAILWAY}/api/health\`);
+    }
+    bar.style.width=((i+1)/DEEP_STEPS.length*100)+'%';
+    if (i<DEEP_STEPS.length-1) await sleep(1500);
+  }
+
+  prog.className='progress';
+  document.getElementById('deepRunBtn').disabled=false;
+  toast('✅ Full audit complete — scroll up for Priority Actions');
+  out.scrollIntoView({behavior:'smooth'});
+
+  // Show post-audit action bar
+  document.getElementById('postAuditBar').style.display='flex';
+
+  // Final full save including all input fields
+  auditSaveFinal(inp);
+}
+
+// ══════════════════════════════════════════════════════════
+// AUDIT SAVE / RESTORE — localStorage + server backup
+// localStorage: instant, per-step
+// Server: survives computer crash, accessible from anywhere
+// Key: shown in UI so you can load from any computer
+// ══════════════════════════════════════════════════════════
+
+function _getAuditKey() {
+  try {
+    var stored = localStorage.getItem('cs_audit_server_key');
+    if (stored) return stored;
+  } catch(e) {}
+  // Build from meta if available
+  try {
+    var meta = JSON.parse(localStorage.getItem('cs_audit_meta') || '{}');
+    if (meta.url) {
+      var host = new URL(meta.url).hostname.replace(/\\./g,'-').slice(0,30);
+      var kw = (meta.kw||'').replace(/\\s+/g,'-').toLowerCase().slice(0,20);
+      var key = 'audit-' + host + (kw ? '-' + kw : '');
+      try { localStorage.setItem('cs_audit_server_key', key); } catch(e) {}
+      return key;
+    }
+  } catch(e) {}
+  var fallback = 'audit-' + Date.now().toString(36);
+  try { localStorage.setItem('cs_audit_server_key', fallback); } catch(e) {}
+  return fallback;
+}
+
+function _showSyncStatus(msg, color) {
+  var el = document.getElementById('auditSyncStatus');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--dim)'; }
+}
+
+async function auditSyncToServer(silent) {
+  try {
+    var meta = auditGetMeta();
+    if (!meta.url) return; // nothing to save
+    var key = _getAuditKey();
+    var steps = {};
+    DEEP_STEPS.forEach(function(s) { steps[s.id] = auditGetStep(s.id); });
+    var payload = { key: key, meta: meta, steps: steps, savedAt: new Date().toISOString() };
+    var r = await fetch(RAILWAY + '/api/audit/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if (d.success) {
+      var ts = new Date().toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+      _showSyncStatus('☁ Opgeslagen om ' + ts + ' — key: ' + key, 'var(--green)');
+      if (!silent) toast('☁ Audit opgeslagen op server — key: ' + key);
+    } else {
+      _showSyncStatus('⚠ Server save mislukt — alleen lokaal opgeslagen', 'var(--gold)');
+    }
+  } catch(e) {
+    _showSyncStatus('⚠ Server niet bereikbaar — alleen lokaal opgeslagen', 'var(--gold)');
+  }
+}
+
+async function auditLoadFromServer() {
+  var key = prompt('Audit key (laat leeg voor automatisch):');
+  if (key === null) return;
+  if (!key) key = _getAuditKey();
+  if (!key) { toast('⚠ Geen key gevonden'); return; }
+  try {
+    var r = await fetch(RAILWAY + '/api/audit/load?key=' + encodeURIComponent(key));
+    var d = await r.json();
+    if (d.success && d.data) {
+      // Restore meta
+      if (d.data.meta) {
+        try { localStorage.setItem('cs_audit_meta', JSON.stringify(d.data.meta)); } catch(e) {}
+      }
+      // Restore steps
+      if (d.data.steps) {
+        Object.keys(d.data.steps).forEach(function(stepId) {
+          if (d.data.steps[stepId]) {
+            try { localStorage.setItem('cs_audit_step_' + stepId, d.data.steps[stepId]); } catch(e) {}
+          }
+        });
+      }
+      try { localStorage.setItem('cs_audit_server_key', key); } catch(e) {}
+      var ts = new Date(d.savedAt || Date.now()).toLocaleString('nl-NL');
+      _showSyncStatus('☁ Geladen van server (opgeslagen: ' + ts + ')', 'var(--green)');
+      toast('✅ Audit hersteld van server — key: ' + key);
+      // Trigger DOM restore
+      doRestoreAudit();
+    } else {
+      toast('⚠ Niet gevonden op server: ' + key);
+    }
+  } catch(e) {
+    toast('⚠ Server niet bereikbaar: ' + e.message);
+  }
+}
+
+function auditSaveStep(stepId, result, inp) {
+  try {
+    localStorage.setItem('cs_audit_step_' + stepId, result);
+    const meta = {
+      url: inp.url, kw: inp.kw, kw2: inp.kw2, geo: inp.geo,
+      goal: inp.goal, impr: inp.impr, ctr: inp.ctr, pos: inp.pos,
+      queries: inp.queries, constraints: inp.constraints,
+      date: new Date().toISOString()
+    };
+    localStorage.setItem('cs_audit_meta', JSON.stringify(meta));
+    // Reset key so it's built from this URL
+    try {
+      var host = new URL(inp.url).hostname.replace(/\\./g,'-').slice(0,30);
+      var kw = (inp.kw||'').replace(/\\s+/g,'-').toLowerCase().slice(0,20);
+      var key = 'audit-' + host + (kw ? '-' + kw : '');
+      localStorage.setItem('cs_audit_server_key', key);
+    } catch(e) {}
+  } catch(e) {
+    try {
+      var keys = Object.keys(localStorage).filter(function(k){ return k.startsWith('cs_audit_step_'); });
+      if (keys.length > 0) { localStorage.removeItem(keys[0]); localStorage.setItem('cs_audit_step_' + stepId, result); }
+    } catch(e2) { console.warn('[audit save] localStorage full, step', stepId, 'not saved'); }
+  }
+  // Save to server every 3 steps (not every single step to avoid too many requests)
+  try {
+    var _stepNums = {'d0':0,'d1':1,'d2':2,'d3':3,'d4':4,'d5':5,'d6':6,'d7':7,'d8':8,'d9':9,'d10':10};
+    var n = _stepNums[stepId];
+    if (n !== undefined && (n === 0 || n === 4 || n === 8 || n === 10)) {
+      auditSyncToServer(true); // silent
+    }
+  } catch(e) {}
+}
+
+function auditSaveFinal(inp) {
+  window._lastAuditData = {
+    url: inp.url, keyword: inp.kw, secondaryKeyword: inp.kw2,
+    geo: inp.geo, position: inp.pos, impressions: inp.impr, ctr: inp.ctr,
+    auditDate: new Date().toISOString()
+  };
+  // Final full save to server
+  setTimeout(function() {
+    auditSyncToServer(false); // show toast with key
+    // Also save recommendations backup
+    try {
+      var reportData = { meta: auditGetMeta(), steps: {} };
+      DEEP_STEPS.forEach(function(s) { reportData.steps[s.id] = auditGetStep(s.id); });
+      localStorage.setItem('cs_last_recommendations', JSON.stringify(reportData));
+    } catch(e) {}
+  }, 800);
+}
+
+function auditGetStep(stepId) {
+  try { return localStorage.getItem('cs_audit_step_' + stepId) || ''; } catch(e) { return ''; }
+}
+
+function auditGetMeta() {
+  try { return JSON.parse(localStorage.getItem('cs_audit_meta') || '{}'); } catch(e) { return {}; }
+}
+
+function auditClearAll() {
+  var keys = Object.keys(localStorage).filter(function(k){
+    return k.startsWith('cs_audit_step_') || k === 'cs_audit_meta' || k === 'cs_last_audit' || k === 'cs_audit_server_key';
+  });
+  keys.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+}
+
+// ── Restore last audit on page load ──────────────────────
+(function restoreLastAudit() {
+  try {
+    const meta = auditGetMeta();
+    if (!meta.url) return;
+
+    // Check if any steps were saved
+    const savedSteps = DEEP_STEPS.filter(s => auditGetStep(s.id));
+    if (!savedSteps.length) return;
+
+    const out = document.getElementById('deepOutput');
+    if (!out) return;
+
+    // Show restore banner
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+    banner.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);">LAATSTE AUDIT: ' + (meta.kw||'') + ' · ' + (meta.url||'').slice(0,40) + ' · ' + (meta.date||'').slice(0,10) + ' · ' + savedSteps.length + '/' + DEEP_STEPS.length + ' stappen opgeslagen</span>'
+      + '<button onclick="doRestoreAudit()" class="btn-sm btn-blue">↩ Herstel audit</button>'
+      + '<button onclick="this.parentElement.remove()" class="btn-sm btn-muted">✕</button>';
+    out.before(banner);
+  } catch(e) {}
+})();
+
+function doRestoreAudit() {
+  try {
+    const meta = auditGetMeta();
+    if (!meta.url) { toast('⚠ Geen opgeslagen audit gevonden'); return; }
+
+    // Re-fill input fields
+    if (meta.url)  document.getElementById('dUrl').value  = meta.url;
+    if (meta.kw)   document.getElementById('dKw').value   = meta.kw;
+    if (meta.kw2)  document.getElementById('dKw2').value  = meta.kw2;
+    if (meta.geo)  document.getElementById('dGeo').value  = meta.geo;
+    if (meta.goal) document.getElementById('dGoal').value = meta.goal;
+    if (meta.impr) document.getElementById('dImpr').value = meta.impr;
+    if (meta.ctr)  document.getElementById('dCtr').value  = meta.ctr;
+    if (meta.pos)  document.getElementById('dPos').value  = meta.pos;
+    if (meta.queries) document.getElementById('dQueries').value = meta.queries;
+    if (meta.constraints) document.getElementById('dConstraints').value = meta.constraints;
+
+    setMode('deep');
+
+    const out = document.getElementById('deepOutput');
+    out.innerHTML = '';
+    out.className = 'output show';
+
+    let restored = 0;
+    DEEP_STEPS.forEach(s => {
+      const content = auditGetStep(s.id);
+      if (content) {
+        addSection(out, s.id, s.icon, s.label, s.badge, content);
+        restored++;
+      }
+    });
+
+    window._lastAuditData = {
+      url: meta.url, keyword: meta.kw, secondaryKeyword: meta.kw2,
+      geo: meta.geo, position: meta.pos, impressions: meta.impr, ctr: meta.ctr,
+      auditDate: meta.date
+    };
+
+    document.getElementById('postAuditBar').style.display = 'flex';
+    document.querySelector('.restore-banner')?.remove();
+    toast('✅ ' + restored + ' audit stappen hersteld');
+    out.scrollIntoView({behavior:'smooth'});
+  } catch(e) { toast('⚠ Herstel mislukt: ' + e.message); }
+}
+
+// ── Section helpers ────────────────────────────────────────
+function setStep(id,state) {
+  const el=document.getElementById('step-'+id);
+  if (!el) return;
+  el.className='prog-step '+state;
+  const icon=el.querySelector('.prog-icon');
+  if (state==='active') icon.textContent='⏳';
+  else if (state==='done') icon.textContent='✅';
+  else if (state==='error') icon.textContent='❌';
+}
+
+function addSection(container,id,icon,title,badge,content) {
+  const div=document.createElement('div');
+  div.className='sec-card';
+  if (id==='d0'||id==='q0') div.style.border='1px solid rgba(251,191,36,.4)';
+  div.innerHTML=\`
+    <div class="sec-head" onclick="toggleBody('\${id}')">
+      <span style="font-size:17px;">\${icon}</span>
+      <span class="sec-title">\${title}</span>
+      <span class="badge \${badge}">\${id.toUpperCase()}</span>
+      <button class="btn-sm btn-muted" style="margin-left:8px;" onclick="event.stopPropagation();copyMd('md-\${id}')">⎘ Copy</button>
+    </div>
+    <div class="sec-body" id="body-\${id}">
+      <div class="md" id="md-\${id}">\${renderMd(content)}</div>
+    </div>\`;
+  container.appendChild(div);
+}
+
+function toggleBody(id) {
+  document.getElementById('body-'+id)?.classList.toggle('hidden');
+}
+
+function copyMd(id) {
+  navigator.clipboard.writeText(document.getElementById(id)?.innerText||'').then(()=>toast('Copied!'));
+}
+
+// ── renderMd — with REAL table support ────────────────────
+function renderMd(t) {
+  if (!t) return '';
+  t = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  t = t.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  t = t.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  t = t.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
+  t = t.replace(/\\*(.+?)\\*/g,'<em>$1</em>');
+  t = t.replace(/\`([^\`\\n]+)\`/g,'<code>$1</code>');
+  t = t.replace(/\`\`\`[\\w]*\\n?([\\s\\S]*?)\`\`\`/g,'<pre><code>$1</code></pre>');
+  t = t.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  t = t.replace(/^---+$/gm,'<hr>');
+  t = t.replace(/(\\|.+\\|[\\s\\S]*?)(?=\\n\\n|\\n[^|]|$)/g, function(match) {
+    const lines = match.trim().split('\\n').filter(l => l.trim().startsWith('|'));
+    if (lines.length < 2) return match;
+    const isSep = (l) => /^\\|[\\s\\-:|]+\\|/.test(l);
+    let headerLine = lines[0];
+    let bodyLines = lines.slice(1);
+    if (isSep(lines[1])) bodyLines = lines.slice(2);
+    const parseCells = (line) => line.split('|').slice(1,-1).map(c => c.trim());
+    const headerCells = parseCells(headerLine);
+    const html = '<table><thead><tr>' +
+      headerCells.map(c => \`<th>\${c}</th>\`).join('') +
+      '</tr></thead><tbody>' +
+      bodyLines.map(l => {
+        if (isSep(l)) return '';
+        const cells = parseCells(l);
+        return '<tr>' + cells.map((c,i) => \`<td>\${c||'—'}</td>\`).join('') + '</tr>';
+      }).filter(Boolean).join('') +
+      '</tbody></table>';
+    return html;
+  });
+  t = t.replace(/^[\\-\\*•] (.+)$/gm,'<li>$1</li>');
+  t = t.replace(/^\\d+\\. (.+)$/gm,'<li>$1</li>');
+  t = t.replace(/(<li>[\\s\\S]*?<\\/li>)+/g,m=>\`<ul>\${m}</ul>\`);
+  t = t.replace(/\\n\\n/g,'</p><p>');
+  t = t.replace(/\\n/g,'<br>');
+  return t;
+}
+
+// ── Export Markdown for AI ────────────────────────────────
+function exportMarkdown() {
+  const meta = auditGetMeta();
+  const hasMeta = meta.url;
+  if (!hasMeta && (!window._lastAuditData?.url)) { toast('Run the audit first'); return; }
+  const data = window._lastAuditData || meta;
+
+  let md = \`# SEO Audit Report — \${data.url || data.keyword || 'Unknown Page'}\\n\\n\`;
+  md += \`**Date:** \${new Date().toLocaleDateString()}\\n\`;
+  md += \`**Keyword:** \${data.keyword || data.kw || '—'}\\n\`;
+  md += \`**Secondary:** \${data.secondaryKeyword || data.kw2 || '—'}\\n\`;
+  md += \`**Geo:** \${data.geo || '—'}\\n\`;
+  md += \`**GSC:** pos \${data.position || data.pos}, \${data.impressions || data.impr} impr, \${data.ctr}% CTR\\n\\n---\\n\\n\`;
+
+  DEEP_STEPS.forEach(s => {
+    // Try DOM first (in-session), fall back to localStorage (after reload)
+    const domContent = document.getElementById('md-'+s.id)?.innerText || '';
+    const storedContent = auditGetStep(s.id);
+    const content = domContent || storedContent;
+    if (content.trim()) {
+      md += \`## \${s.icon} \${s.label}\\n\\n\${content}\\n\\n---\\n\\n\`;
+    }
+  });
+
+  const blob = new Blob([md], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = \`seo-audit-\${((data.keyword||data.kw||'page')).replace(/\\s+/g,'-').toLowerCase()}-\${new Date().toISOString().slice(0,10)}.md\`;
+  a.click();
+  toast('✅ Markdown exported');
+}
+
+// ══════════════════════════════════════════════════════════
+// RECOMMENDATIONS REPORT
+// Volledig rapport voor:
+// 1. Website eigenaar — wat moet er gedaan worden, in volgorde
+// 2. AI schrijfbrief — exacte instructies om de content te schrijven
+// Haalt tekst uit localStorage zodat het ook na reload werkt
+// ══════════════════════════════════════════════════════════
+function exportRecommendationsReport() {
+  const meta = auditGetMeta();
+  const data = window._lastAuditData || meta;
+  const url = data.url || meta.url || '';
+  const kw = data.keyword || meta.kw || '';
+
+  if (!url && !kw) { toast('⚠ Voer eerst een audit uit'); return; }
+
+  // Load all steps — DOM first, localStorage fallback
+  function getStep(id) {
+    return (document.getElementById('md-'+id)?.innerText || '').trim()
+      || auditGetStep(id).trim();
+  }
+
+  const d0  = getStep('d0');   // Priority actions
+  const d1  = getStep('d1');   // Intent
+  const d2  = getStep('d2');   // CTR Surgery
+  const d3  = getStep('d3');   // Competitor diff
+  const d4  = getStep('d4');   // Content gap
+  const d5  = getStep('d5');   // PULSE rewrites
+  const d6  = getStep('d6');   // NEXUS + internal links
+  const d7  = getStep('d7');   // Architecture
+  const d8  = getStep('d8');   // Technical
+  const d9  = getStep('d9');   // Voice search
+  const d10 = getStep('d10');  // Score + 90-day plan
+
+  const hasContent = [d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,d10].some(s => s.length > 10);
+  if (!hasContent) { toast('⚠ Geen audit resultaten gevonden — voer eerst een audit uit'); return; }
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function section(icon, title, content, color) {
+    if (!content || content.length < 10) return '';
+    return \`<div class="sec">
+      <div class="sec-head" style="border-left:4px solid \${color};">
+        <span class="sec-icon">\${icon}</span>
+        <span class="sec-title">\${title}</span>
+      </div>
+      <div class="sec-body"><pre class="content">\${escHtml(content)}</pre></div>
+    </div>\`;
+  }
+
+  const css = \`
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#1f2937;background:#f9fafb;padding:0;}
+.page{max-width:960px;margin:0 auto;padding:32px 24px 60px;}
+.header{background:linear-gradient(135deg,#4c1d95,#1e3a8a);color:#fff;padding:28px 32px;border-radius:12px;margin-bottom:28px;}
+.header h1{font-size:24px;font-weight:900;margin-bottom:6px;}
+.header .sub{font-size:12px;opacity:.8;font-family:monospace;}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:28px;}
+.meta-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;}
+.meta-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-family:monospace;margin-bottom:3px;}
+.meta-val{font-size:15px;font-weight:700;color:#111827;word-break:break-all;}
+.sec{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:18px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
+.sec-icon{font-size:18px;}
+.sec-title{font-size:15px;font-weight:700;color:#111827;}
+.sec-body{padding:18px 20px;}
+pre.content{white-space:pre-wrap;word-break:break-word;font-family:Arial,sans-serif;font-size:13px;line-height:1.75;color:#374151;}
+.ai-brief{background:#fffbeb;border:2px solid #f59e0b;border-radius:10px;padding:24px;margin-bottom:28px;}
+.ai-brief h2{color:#92400e;font-size:17px;margin-bottom:10px;}
+.ai-brief p{font-size:13px;color:#78350f;line-height:1.7;margin-bottom:8px;}
+.ai-brief pre{background:#fff;border:1px solid #fcd34d;border-radius:6px;padding:14px;font-size:12px;white-space:pre-wrap;word-break:break-word;color:#374151;font-family:monospace;line-height:1.6;}
+.owner-box{background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:20px 24px;margin-bottom:28px;}
+.owner-box h2{color:#166534;font-size:17px;margin-bottom:10px;}
+.owner-box ol{padding-left:20px;}
+.owner-box li{margin-bottom:6px;font-size:13px;color:#14532d;line-height:1.6;}
+footer{text-align:center;font-size:11px;color:#9ca3af;margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;}
+@media print{body{background:#fff;}.page{padding:20px 16px;}}\`;
+
+  // Build owner checklist from d0 (priority actions)
+  const ownerLines = d0.split('\\n')
+    .filter(l => l.trim().startsWith('🎯') || l.trim().match(/^\\d+\\./))
+    .slice(0, 10)
+    .map(l => \`<li>\${escHtml(l.replace(/^[🎯\\d\\.\\s]+/,'').trim())}</li>\`)
+    .join('');
+
+  // Build AI writing brief from key sections
+  const aiBrief = \`SCHRIJFOPDRACHT VOOR AI — \${kw}
+URL: \${url}
+Primair keyword: \${kw}
+Secundair keyword: \${data.secondaryKeyword || meta.kw2 || '—'}
+Geo: \${data.geo || meta.geo || '—'}
+Doel: \${meta.goal || '—'}
+
+PRIORITEIT ACTIES (doe dit eerst):
+\${d0}
+
+NIEUWE TITEL + META:
+\${d2}
+
+CONTENT GAP — DIT ONTBREEKT:
+\${d4}
+
+PULSE HERSCHRIJVINGEN (voor/na):
+\${d5}
+
+HEADING STRUCTUUR (H1→H3):
+\${d7}
+
+TECHNISCHE VEREISTEN:
+\${d8}\`;
+
+  const body = \`
+<div class="page">
+  <div class="header">
+    <h1>📋 SEO Aanbevelingen Rapport</h1>
+    <div class="sub">\${escHtml(url)} · \${new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}</div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-card"><div class="meta-label">URL</div><div class="meta-val" style="font-size:11px;">\${escHtml(url)}</div></div>
+    <div class="meta-card"><div class="meta-label">Primair keyword</div><div class="meta-val">\${escHtml(kw)}</div></div>
+    <div class="meta-card"><div class="meta-label">Secundair keyword</div><div class="meta-val">\${escHtml(data.secondaryKeyword || meta.kw2 || '—')}</div></div>
+    <div class="meta-card"><div class="meta-label">Geo</div><div class="meta-val">\${escHtml(data.geo || meta.geo || '—')}</div></div>
+    <div class="meta-card"><div class="meta-label">Positie</div><div class="meta-val">\${data.position || meta.pos || '—'}</div></div>
+    <div class="meta-card"><div class="meta-label">Impressies</div><div class="meta-val">\${data.impressions || meta.impr || '—'}</div></div>
+    <div class="meta-card"><div class="meta-label">CTR</div><div class="meta-val">\${data.ctr || meta.ctr || '—'}%</div></div>
+    <div class="meta-card"><div class="meta-label">Audit datum</div><div class="meta-val">\${(data.auditDate || meta.date || '').slice(0,10)}</div></div>
+  </div>
+
+  <div class="owner-box">
+    <h2>✅ Voor de website eigenaar — wat moet er gedaan worden</h2>
+    <ol>\${ownerLines || '<li>Zie Priority Actions hieronder</li>'}</ol>
+  </div>
+
+  <div class="ai-brief">
+    <h2>🤖 AI Schrijfbrief — exacte instructies voor content</h2>
+    <p>Kopieer onderstaande brief naar je AI (Claude, Gemini) om de pagina te laten herschrijven op basis van de audit.</p>
+    <pre>\${escHtml(aiBrief)}</pre>
+  </div>
+
+  \${section('🎯','Priority Actions — doe dit eerst', d0, '#d97706')}
+  \${section('🔍','Intent + AI Overview', d1, '#6366f1')}
+  \${section('⚡','CTR Surgery — nieuwe titel + meta', d2, '#16a34a')}
+  \${section('📊','Competitor Diff', d3, '#dc2626')}
+  \${section('📝','Content Gap Matrix', d4, '#dc2626')}
+  \${section('🔧','PULSE Herschrijvingen', d5, '#7c3aed')}
+  \${section('🔗','NEXUS + Interne links', d6, '#7c3aed')}
+  \${section('🏗️','Heading Structuur', d7, '#0891b2')}
+  \${section('⚙️','Technische Checklist + Schema', d8, '#0891b2')}
+  \${section('🎙️','Voice Search', d9, '#ea580c')}
+  \${section('📈','Score + Projectie + 90-Dagen Plan', d10, '#16a34a')}
+
+  <footer>ContentScale SEO Audit · contentscale.site · \${new Date().toLocaleString('nl-NL')}</footer>
+</div>\`;
+
+  const html = \`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SEO Aanbevelingen — \${escHtml(kw)}</title><style>\${css}</style></head><body>\${body}</body></html>\`;
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download = \`seo-aanbevelingen-\${(kw||'pagina').replace(/\\s+/g,'-').toLowerCase()}-\${new Date().toISOString().slice(0,10)}.html\`;
+  a.click();
+  toast('✅ Rapport gedownload');
+}
+
+// ── Print audit ───────────────────────────────────────────
+function printAudit() {
+  document.querySelectorAll('.sec-body.hidden').forEach(el => el.classList.remove('hidden'));
+  window.print();
+}
+
+// ── Meta Consistency Check ────────────────────────────────
+function runMetaCheck() {
+  var html = document.getElementById('dHtml').value.trim();
+  if (!html) {
+    var info = document.getElementById('metaCheckerInfo');
+    info.style.cssText = 'display:block;background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.2);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:12px;';
+    info.innerHTML = '<strong style="color:var(--red)">⚠ Paste your page HTML in panel ③ above first, then click Check.</strong>';
+    return;
+  }
+  document.getElementById('metaCheckerInfo').style.display = 'none';
+
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+  var results = [];
+
+  // Extract all fields
+  var title         = (doc.querySelector('title')?.textContent || '').trim();
+  var allH1s        = Array.from(doc.querySelectorAll('h1')).map(e => e.textContent.trim()).filter(Boolean);
+  var h1            = allH1s[0] || '';
+  var h1Count       = allH1s.length;
+  var metaDesc      = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+  var ogTitle       = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() || '';
+  var ogImage       = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')?.trim() || '';
+  var ogUrl         = doc.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
+  var twCard        = doc.querySelector('meta[name="twitter:card"]')?.getAttribute('content')?.trim() || '';
+  var twImage       = doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
+  var canonical     = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')?.trim() || '';
+  var viewport      = doc.querySelector('meta[name="viewport"]')?.getAttribute('content')?.trim() || '';
+
+  var schemas = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(function(s){
+    try { return JSON.parse(s.textContent); } catch(e) { return null; }
+  }).filter(Boolean);
+  var flatSchemas = schemas.flatMap ? schemas.flatMap(function(s){ return Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]); }) : [];
+  var articleSchema = flatSchemas.find ? flatSchemas.find(function(s){ return ['Article','BlogPosting','NewsArticle','WebPage','TechArticle'].includes(s['@type']); }) : null;
+  var schemaHeadline    = articleSchema?.headline?.trim() || '';
+  var schemaDateMod     = articleSchema?.dateModified || '';
+  var schemaAuthorName  = (articleSchema?.author?.name || (Array.isArray(articleSchema?.author) ? articleSchema.author[0]?.name : '') || '').trim();
+
+  var now = new Date();
+  var thisYear = now.getFullYear().toString();
+
+  function ok(label, value, note) { results.push({ status:'ok', label:label, value:value, note:note }); }
+  function warn(label, value, fix, sev) { results.push({ status:'warn', label:label, value:value, fix:fix, severity: sev||'medium' }); }
+  function err(label, value, fix) { results.push({ status:'err', label:label, value:value, fix:fix, severity:'high' }); }
+
+  // 0. DUPLICATE H1 — most important check
+  if (h1Count === 0) {
+    err('H1 tag', 'MISSING — no H1 found on this page', 'Add exactly 1 H1 tag near the top with your primary keyword');
+  } else if (h1Count > 1) {
+    var h1List = allH1s.map(function(h,i){ return 'H1['+(i+1)+']: "'+h.substring(0,50)+'"'; }).join(' · ');
+    var fix = 'Keep only H1[1]: "'+allH1s[0].substring(0,60)+'". Change H1[2] → H2: "'+allH1s[1].substring(0,50)+'"'+(h1Count>2?' and H1[3] → H2: "'+allH1s[2].substring(0,50)+'"':'');
+    err('Multiple H1 tags detected ('+h1Count+' found)', h1List, fix);
+  } else {
+    ok('H1 tag — exactly 1', '"'+h1.substring(0,60)+'"', '✓ Correct — exactly 1 H1');
+  }
+
+  // 1. TITLE
+  if (!title) err('Title tag', 'MISSING', 'Add <title> with primary keyword (50-60 chars)');
+  else if (title.length < 40) warn('Title tag too short', '"'+title+'" ('+title.length+' chars)', 'Expand to 50-60 chars', 'low');
+  else if (title.length > 65) warn('Title tag too long', '"'+title+'" ('+title.length+' chars)', 'Trim to 50-60 chars — truncated in Google', 'medium');
+  else ok('Title tag', '"'+title+'" ('+title.length+' chars)', '✓ Good length');
+
+  // 2. H1 vs TITLE
+  if (h1 && title) {
+    var titleCore = title.split(/[|\\-–:]/)[0].trim().toLowerCase();
+    var h1Core = h1.toLowerCase().substring(0,60);
+    var overlap = titleCore.split(' ').filter(function(w){ return w.length>3 && h1Core.includes(w); }).length;
+    if (overlap === 0) warn('H1 ↔ Title mismatch', 'H1: "'+h1.substring(0,50)+'" / Title: "'+title.substring(0,50)+'"', 'H1 and Title must share the primary keyword', 'high');
+    else ok('H1 ↔ Title overlap', 'Shared keyword found', '✓ Consistent');
+  }
+
+  // 3. OG TITLE
+  if (!ogTitle) err('og:title', 'MISSING', 'Add <meta property="og:title"> — same as your title tag');
+  else ok('og:title', '"'+ogTitle.substring(0,60)+'"', '✓ Present');
+
+  // 4. META DESCRIPTION
+  if (!metaDesc) err('Meta description', 'MISSING', 'Add <meta name="description"> (140-160 chars)');
+  else if (metaDesc.length < 100) warn('Meta description too short', metaDesc.length+' chars', 'Expand to 140-160 chars', 'medium');
+  else if (metaDesc.length > 165) warn('Meta description too long', metaDesc.length+' chars — truncated', 'Trim to 140-160 chars', 'low');
+  else ok('Meta description', metaDesc.length+' chars', '✓ Good length');
+
+  // 5. OG IMAGE
+  if (!ogImage) warn('og:image', 'MISSING', 'Add og:image (recommended: 1200×630px)', 'medium');
+  else if (!ogImage.startsWith('http')) warn('og:image — relative URL', ogImage, 'Use absolute URL (https://...)', 'high');
+  else ok('og:image', ogImage.substring(0,60)+'…', '');
+
+  // 6. TWITTER CARD
+  if (!twCard) warn('twitter:card', 'MISSING', 'Add <meta name="twitter:card" content="summary_large_image">', 'medium');
+  else ok('twitter:card', twCard, '');
+
+  // 7. CANONICAL
+  if (!canonical) warn('Canonical tag', 'MISSING', 'Add <link rel="canonical" href="https://..."> to <head>', 'medium');
+  else if (!canonical.startsWith('http')) warn('Canonical — relative URL', canonical, 'Use absolute URL', 'high');
+  else ok('Canonical', canonical, '');
+
+  // 8. SCHEMA
+  if (!articleSchema) warn('Article schema', 'MISSING', 'Add Article/BlogPosting JSON-LD schema to <head>', 'high');
+  else {
+    if (!schemaDateMod) err('Schema dateModified', 'MISSING', 'Add "dateModified": "'+now.toISOString().split('T')[0]+'" to Article schema');
+    else if (schemaDateMod.substring(0,4) !== thisYear) warn('Schema dateModified outdated', '"'+schemaDateMod+'"', 'Update to '+now.toISOString().split('T')[0], 'high');
+    else ok('Schema dateModified', '"'+schemaDateMod+'"', '✓ Current year');
+    if (!schemaAuthorName) warn('Schema author', 'MISSING', 'Add "author": {"@type":"Person","name":"Your Name"}', 'medium');
+    else ok('Schema author', '"'+schemaAuthorName+'"', '');
+    if (!schemaHeadline) warn('Schema headline', 'MISSING', 'Add "headline": "'+title+'" to Article schema', 'high');
+    else ok('Schema headline', '"'+schemaHeadline.substring(0,60)+'"', '');
+  }
+
+  // 9. VIEWPORT
+  if (!viewport) err('Meta viewport', 'MISSING', 'Add <meta name="viewport" content="width=device-width, initial-scale=1">');
+  else ok('Meta viewport', viewport, '✓ Present');
+
+  // 10. OLD YEARS
+  var yearMatches = (html.match(/202[0-9]/g) || []);
+  var oldYears = yearMatches.filter(function(y){ return parseInt(y) < parseInt(thisYear)-1; });
+  var uniqueOld = oldYears.filter(function(v,i,a){ return a.indexOf(v)===i; });
+  if (uniqueOld.length > 3) warn('Outdated years in HTML', 'Found: '+uniqueOld.join(', '), 'Check if '+uniqueOld.join('/')+' needs updating to '+thisYear, 'medium');
+
+  // RENDER
+  var errs  = results.filter(function(r){ return r.status==='err'; });
+  var warns = results.filter(function(r){ return r.status==='warn'; });
+  var oks   = results.filter(function(r){ return r.status==='ok'; });
+  var score = Math.round((oks.length / results.length) * 100);
+  var scoreColor = score>=80?'var(--green)':score>=60?'var(--gold)':'var(--red)';
+
+  var html_out = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--surface);border-radius:8px;flex-wrap:wrap;">'
+    +'<div><div style="font-family:IBM Plex Mono,monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);">Meta Consistency Score</div>'
+    +'<div style="font-size:32px;font-weight:900;color:'+scoreColor+';line-height:1;">'+score+'%</div></div>'
+    +'<div style="font-size:13px;color:var(--muted);">'
+    +'<span style="color:var(--red);">'+errs.length+' errors</span> · '
+    +'<span style="color:var(--gold);">'+warns.length+' warnings</span> · '
+    +'<span style="color:var(--green);">'+oks.length+' ok</span>'
+    +(h1Count>1?'<div style="margin-top:6px;color:var(--red);font-family:IBM Plex Mono,monospace;font-size:9px;">⚠ '+h1Count+' H1 tags found — only 1 allowed. Demote H1[2..'+h1Count+'] to H2.</div>':'')
+    +'</div></div>';
+
+  function renderRow(r) {
+    var icon = r.status==='err'?'🔴':r.status==='warn'?'🟡':'✅';
+    var bg = r.status==='err'?'rgba(244,63,63,.06)':r.status==='warn'?'rgba(251,191,36,.04)':'rgba(74,222,128,.04)';
+    var border = r.status==='err'?'rgba(244,63,63,.25)':r.status==='warn'?'rgba(251,191,36,.2)':'rgba(74,222,128,.15)';
+    return '<div style="padding:10px 14px;margin-bottom:6px;background:'+bg+';border:1px solid '+border+';border-radius:6px;">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
+      +'<div style="flex:1;">'
+      +'<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
+      +'<div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      +(r.fix?'<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>':'')
+      +(r.note?'<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>':'')
+      +'</div></div></div>';
+  }
+
+  if (errs.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin:12px 0 6px;">Errors — fix immediately</div>'+errs.map(renderRow).join('');
+  if (warns.length) html_out += '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;">Warnings</div>'+warns.map(renderRow).join('');
+  if (oks.length) html_out += '<details style="margin-top:10px;"><summary style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green);cursor:pointer;padding:4px 0;">✅ '+oks.length+' items correct (click to expand)</summary><div style="margin-top:8px;">'+oks.map(renderRow).join('')+'</div></details>';
+
+  document.getElementById('metaCheckResults').innerHTML = html_out;
+}
+
+// ── Drag & drop for CSV ───────────────────────────────────
+['pagesZone','queriesZone'].forEach(zoneId=>{
+  const z=document.getElementById(zoneId);
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('drag');});
+  z.addEventListener('dragleave',()=>z.classList.remove('drag'));
+  z.addEventListener('drop',e=>{
+    e.preventDefault();z.classList.remove('drag');
+    const file=e.dataTransfer.files[0]; if (!file) return;
+    if (zoneId==='pagesZone') handlePagesCSV({files:[file]});
+    else handleQueriesCSV({files:[file]});
+  });
+});
+
+// ── URL count for internal link finder ───────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dSiteUrls')?.addEventListener('input', function() {
+    const urls = this.value.trim().split('\\n').filter(l=>l.trim().startsWith('http'));
+    document.getElementById('urlCount').textContent = urls.length ? \`✓ \${urls.length} URLs loaded\` : '';
+  });
+});
+</script>
+</body>
+</html>
+`;
+const _AUDIT_WORKFLOW_FIXED_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Audit Workflow Manager | ContentScale</title>
+<script>
+(function(){
+  var RAILWAY='https://app.contentscale.site';
+  if(localStorage.getItem('admin_id')){window._toolSession={type:'admin',projectKey:'admin',whitelabelName:'ContentScale',isAdmin:true};return;}
+  var token=localStorage.getItem('cs_access_token');
+  if(!token){window.location.href='/tools';return;}
+  document.documentElement.style.visibility='hidden';
+  fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':token}})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.success){localStorage.removeItem('cs_access_token');localStorage.removeItem('cs_access_session');window.location.href='/tools';return;}
+      if(d.type==='read'){window.location.href='/audit-progress-tracker?tools=1';return;}
+      window._toolSession=d;localStorage.setItem('cs_access_session',JSON.stringify(d));
+      if(d.whitelabelName&&d.whitelabelName!=='ContentScale SEO Tools'){var b=document.querySelector('.brand');if(b)b.textContent=d.whitelabelName;}
+      document.documentElement.style.visibility='';
+    }).catch(function(){
+      var c=null;try{c=JSON.parse(localStorage.getItem('cs_access_session')||'null');}catch(e){}
+      if(c&&c.type){window._toolSession=c;document.documentElement.style.visibility='';}
+      else{window.location.href='/tools';}
+    });
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;--orange:#fb923c;
+  --amber:#f59e0b;--red:#f43f3f;--gold:#fbbf24;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1300px;margin:0 auto;padding:0 20px 80px;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-right{display:flex;gap:7px;flex-wrap:wrap;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;}
+.btn-gold{background:var(--gold)!important;color:#000!important;border-color:var(--gold)!important;}
+.btn-gold:hover{opacity:.85;}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple);}
+.btn-purple:hover{background:var(--purple);color:#000;}
+.btn-red{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.25);color:var(--red);}
+.btn-red:hover{background:var(--red);color:#fff;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-sm{padding:4px 10px;font-size:8px;}
+
+/* Project bar */
+.project-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+.pf{flex:1;min-width:130px;}
+.pf label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:5px;}
+.pf input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;}
+.pf input:focus{border-color:var(--gold);}
+
+/* Overview */
+.overview{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px;}
+@media(max-width:700px){.overview{grid-template-columns:repeat(3,1fr);}}
+.ov{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;}
+.ov-n{font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;margin-bottom:3px;}
+.ov-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+.prog-wrap{background:var(--surface);border-radius:3px;height:4px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--green));border-radius:3px;transition:width .4s;}
+
+/* Add panel */
+.add-panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;}
+.add-panel-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin-bottom:10px;}
+.add-row{display:flex;gap:7px;flex-wrap:wrap;}
+.add-row input,.add-row select{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;}
+.add-row input:focus,.add-row select:focus{border-color:var(--gold);}
+.add-row select option{background:var(--card);}
+.ai-url{flex:3;min-width:180px;}
+.ai-kw{flex:2;min-width:140px;}
+.ai-pos{width:90px;}
+.ai-impr{width:90px;}
+.bulk-area{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;min-height:60px;resize:vertical;margin-top:8px;}
+.bulk-area:focus{border-color:var(--gold);}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+.filter-bar select,.filter-bar input{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--muted);outline:none;}
+.filter-bar input{text-transform:none;font-size:12px;}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
+
+/* Page cards */
+.pages-list{display:flex;flex-direction:column;gap:8px;}
+.page-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.page-card.s-done{border-left:3px solid var(--green);}
+.page-card.s-inprogress{border-left:3px solid var(--gold);}
+.page-card.s-notstarted{border-left:3px solid var(--dim);}
+.page-card.s-followup{border-left:3px solid var(--purple);}
+.page-card.s-blocked{border-left:3px solid var(--red);}
+
+.card-head{display:flex;align-items:center;gap:9px;padding:11px 15px;cursor:pointer;user-select:none;}
+.card-head:hover{background:rgba(255,255,255,.02);}
+.card-rank{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--dim);width:26px;text-align:center;flex-shrink:0;}
+.pri-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pri-high{background:var(--red);}
+.pri-med{background:var(--gold);}
+.pri-low{background:var(--green);}
+.card-url{flex:1;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);word-break:break-all;line-height:1.4;}
+.card-kw{font-size:11px;color:var(--muted);margin-left:4px;}
+.card-gsc{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);white-space:nowrap;}
+.card-chk{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);white-space:nowrap;}
+.status-btn{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer;border:1px solid;white-space:nowrap;}
+.s-notstarted .status-btn{background:rgba(71,85,105,.2);color:var(--sub);border-color:var(--border);}
+.s-inprogress .status-btn{background:rgba(251,191,36,.1);color:var(--gold);border-color:rgba(251,191,36,.3);}
+.s-done .status-btn{background:rgba(74,222,128,.1);color:var(--green);border-color:rgba(74,222,128,.3);}
+.s-followup .status-btn{background:rgba(167,139,250,.1);color:var(--purple);border-color:rgba(167,139,250,.3);}
+.s-blocked .status-btn{background:rgba(244,63,63,.1);color:var(--red);border-color:rgba(244,63,63,.3);}
+.chevron{color:var(--dim);font-size:11px;transition:transform .2s;flex-shrink:0;}
+.chevron.open{transform:rotate(180deg);}
+
+.card-body{display:none;padding:14px 15px;border-top:1px solid var(--border);}
+.card-body.open{display:block;}
+.cb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:600px){.cb-grid{grid-template-columns:1fr;}}
+.cb-field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:5px;}
+.cb-field input,.cb-field select,.cb-field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;resize:vertical;}
+.cb-field textarea{min-height:60px;font-size:12px;}
+.cb-field input:focus,.cb-field select:focus,.cb-field textarea:focus{border-color:var(--gold);}
+.cb-field select option{background:var(--card);}
+
+/* Checklist */
+.cl-header{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--sub);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.cl-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:12px;}
+@media(max-width:600px){.cl-grid{grid-template-columns:1fr;}}
+.cl-item{display:flex;align-items:center;gap:7px;padding:6px 9px;background:rgba(255,255,255,.015);border-radius:4px;cursor:pointer;user-select:none;}
+.cl-item:hover{background:rgba(255,255,255,.04);}
+.cl-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.cl-item label{font-size:11px;color:var(--muted);cursor:pointer;flex:1;line-height:1.3;}
+.cl-item.checked label{color:var(--green);text-decoration:line-through;opacity:.55;}
+.cl-cat{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.05em;text-transform:uppercase;padding:1px 5px;border-radius:3px;flex-shrink:0;}
+.cat-audit{background:rgba(251,191,36,.12);color:var(--gold);}
+.cat-content{background:rgba(167,139,250,.12);color:var(--purple);}
+.cat-technical{background:rgba(96,165,250,.12);color:var(--blue);}
+.cat-authority{background:rgba(74,222,128,.12);color:var(--green);}
+
+.card-actions{display:flex;gap:5px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border);}
+
+/* Empty */
+.empty{text-align:center;padding:50px 20px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;margin-bottom:6px;color:var(--sub);}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#importInput{display:none;}
+
+/* ── MOBILE RESPONSIVE ─────────────────────────── */
+html,body{max-width:100%;overflow-x:hidden;}
+img,table,iframe{max-width:100%;}
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .topbar{padding:12px 0;gap:8px;}
+  .topbar-right{gap:5px;}
+  .btn{font-size:8px;padding:6px 10px;}
+  .overview,.summary{grid-template-columns:repeat(3,1fr)!important;}
+  .add-row{flex-direction:column;}
+  .add-row input,.add-row select{width:100%!important;}
+  .filter-bar{flex-direction:column;gap:6px;}
+  .filter-bar select,.filter-bar input{width:100%!important;}
+  .card-head{flex-wrap:wrap;gap:6px;}
+  .rec-head{flex-direction:column;}
+  .prefill-box{max-width:100%;width:100%;}
+  .g2,.g3,.g4,.cb-grid,.card-grid{grid-template-columns:1fr!important;}
+  .project-bar{flex-direction:column;}
+  .pf{min-width:100%!important;}
+  .steps{flex-direction:column!important;}
+  .step{border-right:none!important;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .how-step{flex-direction:column;}
+  .flow-step{gap:10px;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:16px!important;}
+  .modes{grid-template-columns:1fr!important;}
+  .mode-btn{border-right:none!important;border-bottom:1px solid var(--border);}
+}
+@media(max-width:480px){
+  .overview,.summary{grid-template-columns:1fr 1fr!important;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .topbar-right{flex-wrap:wrap;}
+  .card-meta{flex-wrap:wrap;gap:4px;}
+  .card-actions,.card-actions .btn,.card-foot{flex-wrap:wrap;}
+  h1,h2,.tool-name{word-break:break-word;}
+  .panel{padding:16px!important;}
+  .section{padding:14px 16px!important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO AUDIT WORKFLOW MANAGER</div>
+  <div class="topbar-right">
+    <button class="btn btn-gold" onclick="document.getElementById('gscImportInput').click()">📊 Import GSC CSV (Pages + Queries)</button>
+    <button class="btn btn-purple" onclick="scanAllScores()">⚡ Auto-Score All</button>
+    <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
+    <button class="btn btn-purple" onclick="syncToServer()" id="syncBtn" title="Save to server — accessible from any device">☁ Save to Server</button>
+    <button class="btn btn-muted" onclick="loadFromServer()" title="Load from server">↓ Load from Server</button>
+    <button class="btn btn-blue" onclick="document.getElementById('importInput').click()">↑ Import Progress</button>
+    <button class="btn btn-purple" onclick="exportClientReport()">📄 Client Report</button>
+    <a href="/audit-recommendations" class="btn btn-gold">🎯 Recommendations</a>
+    <button class="btn btn-red" onclick="clearAll()">✕ Clear</button>
+    <button class="btn btn-muted" onclick="cleanBadPages()" title="Remove invalid entries (queries, keywords) from the list">🧹 Clean up</button>
+    <button class="btn btn-muted" onclick="mergeDuplicatePages()" title="Merge duplicate URLs into one entry">🔀 Merge dupes</button>
+    <button class="btn btn-red btn-sm" id="bulkDeleteBtn" onclick="bulkDeleteSelected()" style="display:none">🗑 Delete selected (<span id="bulkCount">0</span>)</button>
+    <button class="btn btn-muted btn-sm" id="bulkSelectAllBtn" onclick="bulkSelectAll()" style="display:none">✓ Select all</button>
+    <button class="btn btn-muted" onclick="selectAllPages()" title="Select all visible pages for bulk actions">☑ Select all</button>
+    <a href="/admin" id="wfAdminLink" style="display:none;" class="btn btn-gold">⚙️ Admin</a>
+    <input type="file" id="importInput" accept=".csv" onchange="importCSV(this)">
+    <input type="file" id="gscImportInput" accept=".csv" multiple onchange="importGSC(this)">
+  </div>
+</div>
+<script>
+(function(){ if(localStorage.getItem('admin_id')){ var el=document.getElementById('wfAdminLink'); if(el) el.style.display=''; } })();
+</script>
+
+<div id="syncStatus" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
+<div class="project-bar">
+  <div class="pf"><label>Client / Project</label><input id="pClient" placeholder="ContentScale.site" oninput="save()"></div>
+  <div class="pf" style="flex:2"><label>Website</label><input id="pSite" placeholder="https://contentscale.site" oninput="save()"></div>
+  <div class="pf"><label>Deadline</label><input type="date" id="pDeadline" oninput="save()"></div>
+  <div class="pf"><label>Auditor</label><input id="pAuditor" placeholder="Ottmar" oninput="save()"></div>
+</div>
+
+<div class="overview">
+  <div class="ov"><div class="ov-n" id="ovTotal" style="color:var(--blue)">0</div><div class="ov-l">Total</div></div>
+  <div class="ov"><div class="ov-n" id="ovNotStarted" style="color:var(--dim)">0</div><div class="ov-l">Not Started</div></div>
+  <div class="ov"><div class="ov-n" id="ovInProgress" style="color:var(--gold)">0</div><div class="ov-l">In Progress</div></div>
+  <div class="ov"><div class="ov-n" id="ovDone" style="color:var(--green)">0</div><div class="ov-l">Done</div></div>
+  <div class="ov"><div class="ov-n" id="ovFollowup" style="color:var(--purple)">0</div><div class="ov-l">Follow-up</div></div>
+  <div class="ov"><div class="ov-n" id="ovPct" style="color:var(--gold)">0%</div><div class="ov-l">Complete</div><div class="prog-wrap"><div class="prog-fill" id="ovBar" style="width:0%"></div></div></div>
+</div>
+
+<div class="add-panel">
+  <div class="add-panel-title">Add Pages to Audit Queue</div>
+
+  <!-- Single URL row -->
+  <div class="add-row">
+    <input class="ai-url" id="newUrl" placeholder="https://site.com/page" onkeydown="if(event.key==='Enter')addPage()">
+    <input class="ai-kw" id="newKw" placeholder="Primary keyword" onkeydown="if(event.key==='Enter')addPage()">
+    <select id="newPri"><option value="high">🔴 High</option><option value="med" selected>🟡 Medium</option><option value="low">🟢 Low</option></select>
+    <input class="ai-pos" id="newPos" type="number" placeholder="Position" min="1" max="200">
+    <input class="ai-impr" id="newImpr" type="number" placeholder="Impressions">
+    <button class="btn btn-gold" onclick="addPage()">+ Add</button>
+  </div>
+
+  <!-- Sitemap fetch -->
+  <div style="margin-top:12px;padding:14px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">
+    <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Import Sitemap</div>
+    <div class="add-row" style="flex-wrap:wrap;">
+      <input id="sitemapUrl" placeholder="https://contentscale.site/sitemap.xml" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;" onkeydown="if(event.key==='Enter')fetchSitemap()">
+      <button class="btn btn-blue" onclick="fetchSitemap()" id="sitemapBtn">↓ Fetch Sitemap</button>
+    </div>
+    <div id="sitemapStatus" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
+
+    <!-- Sitemap preview + filter -->
+    <div id="sitemapPreview" style="display:none;margin-top:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <input id="sitemapFilter" placeholder="Filter by path... e.g. /blog or /services" oninput="filterSitemapUrls()"
+          style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;">
+        <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Show only sitemap URLs that are also in your GSC data">🔗 Filter by GSC</button>
+        <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ All</button>
+        <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ None</button>
+        <span id="sitemapSelCount" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);"></span>
+      </div>
+      <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-gold" onclick="addSelectedSitemapUrls()">+ Add selected to queue</button>
+        <button class="btn btn-red btn-sm" onclick="deleteSelectedSitemapUrls()" title="Remove selected URLs from list">🗑 Delete selected</button>
+        <button class="btn btn-muted btn-sm" onclick="clearAllSitemapUrls()" title="Remove all URLs from list">✕ Clear all</button>
+        <button class="btn btn-muted" onclick="document.getElementById('sitemapPreview').style.display='none'">✕ Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk paste -->
+  <div style="margin-top:10px;">
+    <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Paste</div>
+    <textarea class="bulk-area" id="bulkArea" placeholder="Paste multiple URLs (één per line) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
+    <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
+      <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
+      <span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--dim);">One URL per line</span>
+    </div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <select id="fStatus" onchange="renderPages()">
+    <option value="all">All statuses</option>
+    <option value="notstarted">Not Started</option>
+    <option value="inprogress">In Progress</option>
+    <option value="done">Done</option>
+    <option value="followup">Follow-up</option>
+    <option value="blocked">Blocked</option>
+  </select>
+  <select id="fPri" onchange="renderPages()">
+    <option value="all">All priorities</option>
+    <option value="high">🔴 High</option>
+    <option value="med">🟡 Medium</option>
+    <option value="low">🟢 Low</option>
+  </select>
+  <select id="fSort" onchange="renderPages()">
+    <option value="priority">Sort: Priority</option>
+    <option value="position">Sort: GSC Position</option>
+    <option value="impressions">Sort: Impressions</option>
+    <option value="checklist">Sort: Checklist %</option>
+    <option value="status">Sort: Status</option>
+  </select>
+  <input id="fSearch" placeholder="Search URL or keyword..." oninput="renderPages()" style="flex:1;min-width:150px;">
+</div>
+
+<div id="bulkBar" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 14px;margin-bottom:8px;display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+  <span id="bulkCount" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red);font-weight:700;">0 selected</span>
+  <button class="btn btn-red btn-sm" onclick="deleteSelectedPages()">🗑 Delete selected</button>
+  <button class="btn btn-muted btn-sm" onclick="deselectAllPages()">✕ Deselect all</button>
+</div>
+
+<div class="pages-list" id="pagesList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var AUDIT_URL = 'https://app.contentscale.site/audit-seo';
+var pages = [];
+var project = {};
+
+// points: true = adds ContentScore points, false = UX/CTR only (no score change)
+var CL = [
+  // ── PHASE 1: Pre-audit (geen score impact)
+  {id:'scan_before', label:'① Step 1 — Pre-scan done (Scan Score recorded)',    cat:'phase1', points:false, phase:1, tip:'FIRST: Click the 📊 Scan Score button below — this records your starting score before any changes'},
+  {id:'pulse',       label:'② Step 2 — PULSE+NEXUS audit done',                  cat:'phase1', points:false, phase:1, tip:'Click 🔬 Open in PULSE+NEXUS → run the full SEO audit → note all findings before making changes'},
+  {id:'gsc_check',   label:'③ Step 3 — GSC data recorded',                        cat:'phase1', points:false, phase:1, tip:'Import your Google Search Console CSV via the 📊 Import GSC CSV button at the top of the page'},
+
+  // ── PHASE 2: Implementatie — PUNTEN (score gaat omhoog)
+  {id:'wordcount',   label:'② Words added (min 1500)',             cat:'phase2', points:true,  phase:2},
+  {id:'stats',       label:'② Stats added (2025-2026, 8+)',          cat:'phase2', points:true,  phase:2},
+  {id:'expert',      label:'② Expert quotes added (3-5)',            cat:'phase2', points:true,  phase:2},
+  {id:'faq',         label:'② FAQ section added/expanded',          cat:'phase2', points:true,  phase:2},
+  {id:'casestudy',   label:'② Case study with metrics added',         cat:'phase2', points:true,  phase:2},
+  {id:'direct_ans',  label:'② Direct Answer (40-80w) after H1 added',  cat:'phase2', points:true,  phase:2},
+  {id:'tldr',        label:'② Key Takeaways / TL;DR added',          cat:'phase2', points:true,  phase:2},
+  {id:'listcount',   label:'② Bullet/numbered lists expanded (15+)',cat:'phase2', points:true,  phase:2},
+  {id:'authorbio',   label:'② Author bio with credentials added',     cat:'phase2', points:true,  phase:2},
+  {id:'schema_a',    label:'② Article schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
+  {id:'schema_f',    label:'② FAQPage schema JSON-LD added',         cat:'phase2', points:true,  phase:2},
+  {id:'intlinks',    label:'② Internal links added (3-5)',             cat:'phase2', points:true,  phase:2},
+  {id:'extlinks',    label:'② Externe links autoritatief (2-3)',           cat:'phase2', points:true,  phase:2},
+  {id:'eeat',        label:'② E-E-A-T signals strengthened',                cat:'phase2', points:true,  phase:2},
+
+  // ── PHASE 2: UX/CTR fixes — NO score points, but important
+  {id:'h1',          label:'② H1 optimised',                        cat:'phase2_ctr', points:false, phase:2},
+  {id:'h2',          label:'② H2 structure revised',                      cat:'phase2_ctr', points:false, phase:2},
+  {id:'title',       label:'② SEO title herschreven (50-60 chars)',       cat:'phase2_ctr', points:false, phase:2},
+  {id:'meta',        label:'② Meta description herschreven (150-160)',    cat:'phase2_ctr', points:false, phase:2},
+  {id:'canonical',   label:'② Canonical tag checked',               cat:'phase2_ctr', points:false, phase:2},
+  {id:'alt',         label:'② Image alt text complete',             cat:'phase2_ctr', points:false, phase:2},
+  {id:'cta',         label:'② CTA optimised for conversion goal',    cat:'phase2_ctr', points:false, phase:2},
+
+  // ── PHASE 3: Live zetten + nascan
+  {id:'publish',     label:'③ Page published + timestamp refreshed', cat:'phase3', points:false, phase:3},
+  {id:'reindex',     label:'③ GSC reindex requested',                   cat:'phase3', points:false, phase:3},
+  {id:'scan_after',  label:'③ Post-scan done (final score recorded)',      cat:'phase3', points:false, phase:3},
+  {id:'recheck',     label:'③ GSC recheck scheduled (14 days)',          cat:'phase3', points:false, phase:3},
+];
+
+var STATUS_ORDER = ['notstarted','inprogress','followup','blocked','done'];
+var STATUS_LABELS = {notstarted:'Not Started',inprogress:'In Progress',done:'Done',followup:'Follow-up',blocked:'Blocked'};
+var PRI_ORDER = {high:0,med:1,low:2};
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+
+function toast(msg,dur){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},dur||2500);
+}
+
+function save(){
+  project.client   = document.getElementById('pClient').value;
+  project.site     = document.getElementById('pSite').value;
+  project.deadline = document.getElementById('pDeadline').value;
+  project.auditor  = document.getElementById('pAuditor').value;
+  try{localStorage.setItem('cs_wf_proj',JSON.stringify(project));}catch(e){}
+  try{localStorage.setItem('cs_wf_pages',JSON.stringify(pages));}catch(e){}
+}
+
+function load(){
+  try{var p=localStorage.getItem('cs_wf_proj');if(p)project=JSON.parse(p);}catch(e){}
+  try{var pg=localStorage.getItem('cs_wf_pages');if(pg)pages=JSON.parse(pg);}catch(e){}
+  if(project.client)  document.getElementById('pClient').value=project.client;
+  if(project.site)    document.getElementById('pSite').value=project.site;
+  if(project.deadline)document.getElementById('pDeadline').value=project.deadline;
+  if(project.auditor) document.getElementById('pAuditor').value=project.auditor;
+}
+
+function makePage(url,kw,pri,pos,impr){
+  var checks={};
+  CL.forEach(function(c){checks[c.id]=false;});
+  return {id:uid(),url:url,keyword:kw||'',priority:pri||'med',
+    position:parseFloat(pos)||0,impressions:parseInt(impr)||0,
+    status:'notstarted',scoreBefore:'',scoreAfter:'',notes:'',deadline:'',
+    checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
+}
+
+function updateBulkCount(){
+  var checked = document.querySelectorAll('.page-bulk-cb:checked');
+  var bar = document.getElementById('bulkBar');
+  if (!bar) return;
+  if(checked.length > 0){
+    bar.style.display = 'flex';
+    document.getElementById('bulkCount').textContent = checked.length + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function selectAllPages(){
+  document.querySelectorAll('.page-bulk-cb').forEach(function(cb){ cb.checked = true; });
+  updateBulkCount();
+}
+
+function deselectAllPages(){
+  document.querySelectorAll('.page-bulk-cb').forEach(function(cb){ cb.checked = false; });
+  updateBulkCount();
+}
+
+function deleteSelectedPages(){
+  var ids = Array.from(document.querySelectorAll('.page-bulk-cb:checked')).map(function(cb){ return cb.dataset.id; });
+  if(!ids.length){ toast('No pages selected'); return; }
+  if(!confirm('Delete ' + ids.length + ' selected pages?')) return;
+  pages = pages.filter(function(p){ return !ids.includes(p.id); });
+  save(); renderPages(); renderOverview();
+  document.getElementById('bulkBar').style.display = 'none';
+  toast('🗑 ' + ids.length + ' pages deleted');
+}
+
+
+
+function bulkSelectAll(){
+  var cbs = document.querySelectorAll('.page-bulk-cb');
+  var allChecked = Array.from(cbs).every(function(cb){ return cb.checked; });
+  cbs.forEach(function(cb){ cb.checked = !allChecked; });
+  updateBulkCount();
+}
+
+function bulkDeleteSelected(){
+  var selected = Array.from(document.querySelectorAll('.page-bulk-cb:checked')).map(function(cb){ return cb.dataset.id; });
+  if(!selected.length){ toast('⚠ No pages selected'); return; }
+  if(!confirm('Delete ' + selected.length + ' selected pages from the queue?')) return;
+  pages = pages.filter(function(p){ return !selected.includes(p.id); });
+  save(); renderPages(); renderOverview();
+  updateBulkCount();
+  toast('🗑 ' + selected.length + ' pages deleted');
+}
+
+function cleanBadPages(){
+  var before = pages.length;
+  // Remove invalid URLs
+  pages = pages.filter(function(p){
+    if(!p.url) return false;
+    if(!p.url.startsWith('http') && !p.url.startsWith('/')) return false;
+    if(p.url.includes('-site:') || p.url.includes(' ')) return false;
+    return true;
+  });
+  // Remove duplicates — keep first occurrence per URL
+  var seen = {};
+  pages = pages.filter(function(p){
+    if(seen[p.url]) return false;
+    seen[p.url] = true;
+    return true;
+  });
+  var removed = before - pages.length;
+  if(removed > 0){
+    save(); renderPages(); renderOverview();
+    toast('🧹 Removed ' + removed + ' invalid/duplicate entries');
+  } else {
+    toast('✓ No invalid or duplicate entries found');
+  }
+}
+
+function addPage(){
+  var url=document.getElementById('newUrl').value.trim();
+  if(!url){toast('⚠ Enter a URL');return;}
+  if(!url.startsWith('http'))url='https://'+url;
+  pages.push(makePage(url,
+    document.getElementById('newKw').value.trim(),
+    document.getElementById('newPri').value,
+    document.getElementById('newPos').value,
+    document.getElementById('newImpr').value));
+  document.getElementById('newUrl').value='';
+  document.getElementById('newKw').value='';
+  document.getElementById('newPos').value='';
+  document.getElementById('newImpr').value='';
+  save();renderPages();renderOverview();toast('✅ Page added');
+}
+
+function bulkAdd(){
+  var raw=document.getElementById('bulkArea').value.trim();
+  if(!raw){toast('⚠ Paste URLs first');return;}
+  var lines=raw.split('\\n').map(function(l){return l.trim();}).filter(function(l){return l.includes('.');});
+  var added=0;
+  lines.forEach(function(l){
+    var url=l.startsWith('http')?l:'https://'+l;
+    pages.push(makePage(url,'','med',0,0));added++;
+  });
+  document.getElementById('bulkArea').value='';
+  save();renderPages();renderOverview();toast('✅ '+added+' pages added');
+}
+
+function deletePage(id){
+  if(!confirm('Delete this page?'))return;
+  pages=pages.filter(function(p){return p.id!==id;});
+  save();renderPages();renderOverview();toast('Deleted');
+}
+
+function clearAll(){
+  if(!confirm('Clear ALL pages? Cannot be undone.'))return;
+  pages=[];save();renderPages();renderOverview();
+}
+
+function cycleStatus(id){
+  var p=pages.find(function(p){return p.id===id;});if(!p)return;
+  var i=STATUS_ORDER.indexOf(p.status);
+  p.status=STATUS_ORDER[(i+1)%STATUS_ORDER.length];
+  p.updated=new Date().toISOString();
+  save();renderPages();renderOverview();
+}
+
+function updateField(id,field,val){
+  var p=pages.find(function(p){return p.id===id;});if(!p)return;
+  p[field]=val;p.updated=new Date().toISOString();save();
+  if(field==='status'){renderPages();renderOverview();}
+}
+
+function toggleCheck(pageId,checkId){
+  var p=pages.find(function(p){return p.id===pageId;});if(!p)return;
+  p.checks[checkId]=!p.checks[checkId];
+  p.updated=new Date().toISOString();
+  save();
+  // Update checklist progress display
+  var done=Object.values(p.checks).filter(Boolean).length;
+  var total=CL.length;
+  var pct=Math.round(done/total*100);
+  var el=document.getElementById('cl-prog-'+pageId);
+  if(el){
+    var pts=pointsDone(p);
+    el.innerHTML='<span style="color:var(--green)">+score: '+pts+'/'+pointsTotal()+'</span>'
+      +' <span style="color:var(--muted);margin-left:8px;">totaal: '+done+'/'+total+'</span>';
+  }
+  var chkEl=document.getElementById('chk-'+pageId);
+  if(chkEl)chkEl.textContent=pct+'%';
+  // Update class on item
+  var item=document.getElementById('cli-'+pageId+'-'+checkId);
+  if(item)item.className='cl-item'+(p.checks[checkId]?' checked':'');
+  renderOverview();
+}
+
+function openInAudit(id){
+  var p=pages.find(function(pg){return pg.id===id;});if(!p)return;
+
+  // ── Build per-page top queries from _gscQueryMap ──────────────
+  // Find all queries that best match this page's URL
+  var pageTopQueries = '';
+  var pageSecondaryKw = '';
+  try {
+    if (typeof _gscQueryMap !== 'undefined' && Object.keys(_gscQueryMap).length) {
+      var urlPath = '';
+      try { urlPath = new URL(p.url).pathname.toLowerCase().replace(/[-_/]/g,' ').trim(); } catch(e) { urlPath = p.url.toLowerCase(); }
+      var urlWords = urlPath.split(/\\s+/).filter(function(w){ return w.length > 2; });
+
+      // Score every query against this page
+      var scored = Object.entries(_gscQueryMap).map(function(entry){
+        var q = entry[0];
+        var data = entry[1];
+        var pos  = typeof data === 'object' ? data.pos  : data;
+        var impr = typeof data === 'object' ? data.impr : 0;
+        var wordMatches = urlWords.filter(function(w){ return q.toLowerCase().includes(w); }).length;
+        var score = (wordMatches * 50) + Math.min(impr / 100, 20) + Math.max(0, 50 - pos);
+        return { q: q, score: score, impr: impr, pos: pos };
+      });
+      scored.sort(function(a,b){ return b.score - a.score; });
+
+      // Top 15 queries for the textarea
+      var top = scored.filter(function(s){ return s.score > 0; }).slice(0, 15);
+      if (!top.length) top = scored.slice(0, 15); // fallback: use global top
+      pageTopQueries = top.map(function(s){ return s.q; }).join('\\n');
+
+      // Secondary keyword — pick best query that is NOT the primary keyword
+      // Avoids primary === secondary when p.keyword matches top[0]
+      var primaryNorm = (p.keyword || '').toLowerCase().trim();
+      var secondaryCandidates = top.filter(function(s){
+        var qNorm = s.q.toLowerCase().trim();
+        if (!primaryNorm) return true;
+        if (qNorm === primaryNorm) return false;
+        // Skip near-duplicates: 80%+ word overlap
+        var primaryWords = primaryNorm.split(/\\s+/);
+        var qWords = qNorm.split(/\\s+/);
+        var overlap = primaryWords.filter(function(w){ return qWords.includes(w); }).length;
+        return (overlap / Math.max(primaryWords.length, 1)) < 0.8;
+      });
+      pageSecondaryKw = secondaryCandidates[0] ? secondaryCandidates[0].q : '';
+    }
+  } catch(e) {}
+
+  // ── Geo inference — comprehensive TLD map + local business flag ──
+  var geo = 'Global'; // safe default
+  var isLocalBusiness = false;
+  var siteVal = (project.site || '').toLowerCase();
+
+  // Detect local business from page URL patterns
+  var pageUrlLower = (p.url || '').toLowerCase();
+  var localBusinessKeywords = [
+    'dentist','tandarts','plumber','loodgieter','electrician','elektricien',
+    'roofer','dakdekker','accountant','notaris','lawyer','advocaat',
+    'restaurant','cafe','kapper','hairdresser','bakker','bakery',
+    'huisarts','gp-practice','kliniek','clinic','gym','fitness',
+    'slager','butcher','florist','bloemist','supermarkt','supermarket',
+    'autobedrijf','garage','mechanic','verzekeraar','insurance-broker',
+    'makelaar','realtor','estate-agent','tandartspraktijk','dierenarts',
+    'veterinarian','opticien','optician','fysiotherapeut','physiotherapist'
+  ];
+  isLocalBusiness = localBusinessKeywords.some(function(kw){ return pageUrlLower.includes(kw) || siteVal.includes(kw); });
+
+  // ccTLD → geo mapping (ordered: most-specific first to avoid .co.uk matching .uk)
+  var TLD_MAP = [
+    ['.co.uk',       'UK'],
+    ['.org.uk',      'UK'],
+    ['.me.uk',       'UK'],
+    ['.nl',          'Netherlands'],
+    ['.be',          'Belgium'],
+    ['.de',          'Germany'],
+    ['.at',          'Austria'],
+    ['.ch',          'Switzerland'],
+    ['.fr',          'France'],
+    ['.es',          'Spain'],
+    ['.it',          'Italy'],
+    ['.pt',          'Portugal'],
+    ['.pl',          'Poland'],
+    ['.se',          'Sweden'],
+    ['.no',          'Norway'],
+    ['.dk',          'Denmark'],
+    ['.fi',          'Finland'],
+    ['.ie',          'Ireland'],
+    ['.nz',          'New Zealand'],
+    ['.au',          'Australia'],
+    ['.ca',          'Canada'],
+    ['.us',          'USA'],
+    ['.br',          'Brazil'],
+    ['.mx',          'Mexico'],
+    ['.za',          'South Africa'],
+    ['.in',          'India'],
+    ['.sg',          'Singapore'],
+    ['.hk',          'Hong Kong'],
+    ['.jp',          'Japan'],
+    ['.kr',          'South Korea'],
+    ['.ae',          'UAE'],
+    ['.uk',          'UK'],   // catch-all .uk after more specific
+  ];
+
+  // Keyword hints in site URL (e.g. "netherlands", "nederland", "belgique")
+  var KEYWORD_MAP = [
+    ['nederland','Netherlands'],['netherlands','Netherlands'],
+    ['belgie','Belgium'],['belgique','Belgium'],['belgium','Belgium'],
+    ['deutschland','Germany'],['germany','Germany'],
+    ['frankreich','France'],['france','France'],
+    ['espana','Spain'],['spain','Spain'],
+    ['italia','Italy'],['italy','Italy'],
+    ['united-kingdom','UK'],['uk-',  'UK'],
+    ['australia','Australia'],['canada','Canada'],
+    ['united-states','USA'],['america','USA'],
+  ];
+
+  // Try TLD match on the site URL host
+  var siteHost = '';
+  try { siteHost = new URL(project.site || '').hostname.toLowerCase(); } catch(e) { siteHost = siteVal; }
+
+  var matched = false;
+  for (var ti = 0; ti < TLD_MAP.length; ti++) {
+    if (siteHost.endsWith(TLD_MAP[ti][0])) { geo = TLD_MAP[ti][1]; matched = true; break; }
+  }
+  // If no ccTLD matched, try keyword hints
+  if (!matched) {
+    for (var ki = 0; ki < KEYWORD_MAP.length; ki++) {
+      if (siteHost.includes(KEYWORD_MAP[ki][0])) { geo = KEYWORD_MAP[ki][1]; matched = true; break; }
+    }
+  }
+  // .com / .org / .net / .io without any ccTLD hint → Global (not USA assumption)
+  // (geo stays 'Global' from the default above)
+
+  // ── Build the full transfer payload ───────────────────────────
+  var transfer = {
+    // Core identifiers
+    pageUrl:     p.url,
+    workflowId:  id,
+    source:      'workflow',
+
+    // GSC metrics
+    keyword:     p.keyword   || '',
+    position:    p.position  || '',
+    impressions: p.impressions || '',
+    ctr:         p.ctr       || '',
+    topQueries:  pageTopQueries,
+    topKeyword:  p.keyword   || (pageTopQueries ? pageTopQueries.split('\\n')[0] : ''),
+    secondaryKeyword: pageSecondaryKw,
+
+    // Context
+    geo:          geo,
+    isLocalBusiness: isLocalBusiness,
+    priority:     p.priority || 'med',
+    scoreBefore:  p.scoreBefore || '',
+    notes:        p.notes    || '',
+    conversionGoal: p.conversionGoal || '',
+
+    // All sitemap URLs so Internal Link Finder is pre-filled
+    siteUrls: pages
+      .map(function(pg){ return pg.url; })
+      .filter(function(u){ return u && u.startsWith('http'); })
+      .join('\\n')
+  };
+
+  // ── Write to both storage keys the audit tool reads ───────────
+  try {
+    localStorage.setItem('cs_audit_transfer',  JSON.stringify(transfer));
+    localStorage.setItem('cs_audit_transfer_2', JSON.stringify(transfer)); // belt-and-suspenders
+
+    // Sitemap URLs — audit's Internal Link Finder panel
+    if (transfer.siteUrls) localStorage.setItem('cs_sitemap_urls', transfer.siteUrls);
+
+    // Full query map for global GSC fallback
+    if (typeof _gscQueryMap !== 'undefined' && Object.keys(_gscQueryMap).length) {
+      localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap));
+    }
+
+    // Shared GSC for bulk data (auto-fill button in audit)
+    var sharedGsc = {
+      pages: pages.map(function(pg){
+        return { page: pg.url, impressions: pg.impressions||0, clicks: 0, ctr: pg.ctr||0, position: pg.position||0 };
+      }),
+      queries: typeof _gscQueryMap !== 'undefined'
+        ? Object.entries(_gscQueryMap).map(function(e){ return { query: e[0], position: typeof e[1]==='object'?e[1].pos:e[1], impressions: typeof e[1]==='object'?e[1].impr:0 }; })
+        : []
+    };
+    localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
+  } catch(e) {}
+
+  // ── URL params as lightweight fallback ────────────────────────
+  var params = '?url='    + encodeURIComponent(p.url)
+    + (p.keyword    ? '&kw='  + encodeURIComponent(p.keyword)  : '')
+    + (p.position   ? '&pos=' + p.position                      : '')
+    + (p.impressions? '&impr='+ p.impressions                   : '')
+    + (p.ctr        ? '&ctr=' + p.ctr                           : '')
+    + '&source=workflow&wf=' + id;
+
+  window.open(AUDIT_URL + params, '_blank');
+
+  // ── Auto-set status to In Progress ────────────────────────────
+  if (p.status === 'notstarted') {
+    p.status = 'inprogress'; p.updated = new Date().toISOString();
+    save(); renderPages(); renderOverview();
+    toast('🔬 Opened in PULSE+NEXUS — all data transferred, status → In Progress');
+  } else {
+    toast('🔬 Opened in PULSE+NEXUS — all data transferred');
+  }
+}
+
+function markDone(id){
+  var p=pages.find(function(pg){return pg.id===id;});if(!p)return;
+  p.status='done';p.updated=new Date().toISOString();
+  // Auto-check pulse
+  p.checks['pulse']=true;
+  save();renderPages();renderOverview();toast('✅ Marked as Done');
+}
+
+function checkProgress(p){
+  var done=Object.values(p.checks).filter(Boolean).length;
+  return {done:done,total:CL.length,pct:Math.round(done/CL.length*100)};
+}
+
+// Returns true if the "after score" field should be locked
+// Locked until at least 3 points-giving items are checked
+function scoreAfterLocked(p){
+  var pointsDone = CL.filter(function(c){ return c.points && p.checks[c.id]; }).length;
+  return pointsDone < 3;
+}
+
+// Count points items done
+function pointsDone(p){
+  return CL.filter(function(c){ return c.points && p.checks[c.id]; }).length;
+}
+function pointsTotal(){
+  return CL.filter(function(c){ return c.points; }).length;
+}
+
+function renderOverview(){
+  var total=pages.length;
+  var done=pages.filter(function(p){return p.status==='done';}).length;
+  var inp=pages.filter(function(p){return p.status==='inprogress';}).length;
+  var ns=pages.filter(function(p){return p.status==='notstarted';}).length;
+  var fu=pages.filter(function(p){return p.status==='followup';}).length;
+  var pct=total?Math.round(done/total*100):0;
+  document.getElementById('ovTotal').textContent=total;
+  document.getElementById('ovDone').textContent=done;
+  document.getElementById('ovInProgress').textContent=inp;
+  document.getElementById('ovNotStarted').textContent=ns;
+  document.getElementById('ovFollowup').textContent=fu;
+  document.getElementById('ovPct').textContent=pct+'%';
+  document.getElementById('ovBar').style.width=pct+'%';
+}
+
+function getSorted(){
+  var sort=document.getElementById('fSort').value;
+  var arr=pages.slice();
+  if(sort==='priority')arr.sort(function(a,b){return PRI_ORDER[a.priority]-PRI_ORDER[b.priority];});
+  else if(sort==='position')arr.sort(function(a,b){
+    var ap=a.position||999,bp=b.position||999;
+    // Position 11-30 = most valuable (closest to page 1)
+    var as=ap>=11&&ap<=30?0:ap>30?1:2;
+    var bs=bp>=11&&bp<=30?0:bp>30?1:2;
+    return as-bs||(ap-bp);
+  });
+  else if(sort==='impressions')arr.sort(function(a,b){return b.impressions-a.impressions;});
+  else if(sort==='checklist')arr.sort(function(a,b){return checkProgress(a).pct-checkProgress(b).pct;});
+  else if(sort==='status')arr.sort(function(a,b){return STATUS_ORDER.indexOf(a.status)-STATUS_ORDER.indexOf(b.status);});
+  return arr;
+}
+
+function renderPages(){
+  var fStatus=document.getElementById('fStatus').value;
+  var fPri=document.getElementById('fPri').value;
+  var fSearch=document.getElementById('fSearch').value.toLowerCase();
+  var list=document.getElementById('pagesList');
+
+  var arr=getSorted().filter(function(p){
+    if(fStatus!=='all'&&p.status!==fStatus)return false;
+    if(fPri!=='all'&&p.priority!==fPri)return false;
+    if(fSearch&&!p.url.toLowerCase().includes(fSearch)&&!p.keyword.toLowerCase().includes(fSearch))return false;
+    return true;
+  });
+
+  if(!arr.length){
+    list.innerHTML='<div class="empty"><h3>'+(pages.length?'No pages match filters':'No Pages Yet')+'</h3><p>'+(pages.length?'Adjust filters above.':'Add URLs above or import a CSV.')+'</p></div>';
+    return;
+  }
+
+  list.innerHTML=arr.map(function(p,i){
+    var prog=checkProgress(p);
+    var priClass='pri-'+p.priority;
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,50);}
+    if(shortUrl.length>55)shortUrl=shortUrl.slice(0,55)+'…';
+
+    // Grouped checklist by phase
+  function renderClItems(items){
+    return items.map(function(c){
+      var checked = p.checks[c.id];
+      var badge = (c.phase===2&&c.points)
+        ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(74,222,128,.12);color:var(--green);flex-shrink:0;">+score</span>'
+        : (c.phase===2&&!c.points)
+        ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
+        : '';
+      return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\\''+p.id+'\\',\\''+c.id+'\\')"'+(c.tip?' title="'+c.tip+'"':'')+'>'
+        +'<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();toggleCheck(\\''+p.id+'\\',\\''+c.id+'\\')">'
+        +'<label>'+c.label+(c.tip?' <span style="font-size:9px;color:var(--dim);cursor:help;" title="'+c.tip+'">ⓘ</span>':'')+'</label>'
+        +badge
+        +'</div>';
+    }).join('');
+  }
+  var f1 = CL.filter(function(c){return c.phase===1;});
+  var f2p = CL.filter(function(c){return c.phase===2&&c.points;});
+  var f2c = CL.filter(function(c){return c.phase===2&&!c.points;});
+  var f3 = CL.filter(function(c){return c.phase===3;});
+  var ph = function(label,color,border){
+    return '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:'+color+';padding:8px 0 4px;border-bottom:1px solid '+border+';margin-bottom:4px;margin-top:6px;">'+label+'</div>';
+  };
+  var cl = ph('① Pre-audit','var(--blue)','rgba(96,165,250,.2)')
+    + '<div class="cl-grid">'+renderClItems(f1)+'</div>'
+    + ph('② Implementation — improves ContentScore','var(--green)','rgba(74,222,128,.2)')
+    + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Add real content → score goes up. Meta/title only = no points.</div>'
+    + '<div class="cl-grid">'+renderClItems(f2p)+'</div>'
+    + ph('② UX & CTR fixes — no score impact','var(--blue)','rgba(96,165,250,.15)')
+    + '<div class="cl-grid">'+renderClItems(f2c)+'</div>'
+    + ph('③ Go live + re-scan','var(--gold)','rgba(251,191,36,.2)')
+    + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Re-scan only AFTER the page is live and point items are completed.</div>'
+    + '<div class="cl-grid">'+renderClItems(f3)+'</div>';
+
+    return '<div class="page-card s-'+p.status+'" id="card-'+p.id+'">'
+
+      // Header
+      +'<div class="card-head" style="display:flex;align-items:center;gap:6px;">'
+      +'<input type="checkbox" class="page-bulk-cb" data-id="'+p.id+'" onclick="event.stopPropagation();updateBulkCount()" style="width:14px;height:14px;accent-color:var(--red);flex-shrink:0;cursor:pointer;">'
+      +'<div style="flex:1;display:flex;align-items:center;gap:6px;" onclick="toggleCard(\\''+p.id+'\\')">'
+      +'<span class="card-rank">#'+(i+1)+'</span>'
+      +'<span class="pri-dot '+priClass+'"></span>'
+      +'<span class="card-url">'+shortUrl+'<span class="card-kw">'+( p.keyword?' — '+p.keyword:'')+'</span></span>'
+      +(p.position?'<span class="card-gsc">pos '+Math.round(p.position)+(p.impressions?' · '+p.impressions.toLocaleString()+' impr':'')+'</span>':'')
+      +(p.scoreBefore?'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
+      +'<span class="card-chk" id="chk-'+p.id+'">'+prog.pct+'%</span>'
+      +'<button class="status-btn" onclick="event.stopPropagation();cycleStatus(\\''+p.id+'\\')">'+STATUS_LABELS[p.status]+'</button>'
+      +'<span class="chevron" id="chev-'+p.id+'">▾</span>'
+      +'</div>'  // close inner clickable div
+      +'</div>'
+
+      // Body
+      +'<div class="card-body" id="body-'+p.id+'">'
+
+      // Fields
+      +'<div class="cb-grid">'
+      +'<div class="cb-field"><label>Status</label><select onchange="updateField(\\''+p.id+'\\',\\'status\\',this.value)">'
+      +['notstarted','inprogress','done','followup','blocked'].map(function(s){return '<option value="'+s+'"'+(p.status===s?' selected':'')+'>'+STATUS_LABELS[s]+'</option>';}).join('')
+      +'</select></div>'
+      +'<div class="cb-field"><label>Priority</label><select onchange="updateField(\\''+p.id+'\\',\\'priority\\',this.value)">'
+      +[['high','🔴 High'],['med','🟡 Medium'],['low','🟢 Low']].map(function(x){return '<option value="'+x[0]+'"'+(p.priority===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('')
+      +'</select></div>'
+      +'<div class="cb-field">'
+      +'<label style="color:var(--blue)">① Pre-scan Score (BEFORE audit)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="Scan first, enter here" data-score-before="'+p.id+'" onchange="updateField(\\''+p.id+'\\',\\'scoreBefore\\',this.value)">'
+      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score button — do this BEFORE the audit</div>'
+      +'</div>'
+      +'<div class="cb-field">'
+      +'<label style="color:'+(scoreAfterLocked(p)?'var(--dim)':'var(--green)')+'">③ Post-scan Score (AFTER implementation)</label>'
+      +'<input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="'+(scoreAfterLocked(p)?'Complete point items first':'Scan after page is live')+'" '+(scoreAfterLocked(p)?'disabled style="opacity:.4;cursor:not-allowed"':'')+' onchange="updateField(\\''+p.id+'\\',\\'scoreAfter\\',this.value)">'
+      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Complete point items (②) first — meta/title alone does not change the score':'✓ Re-scan AFTER you have published the page')+'</div>'
+      +'</div>'
+      +'<div class="cb-field"><label>GSC Position</label><input type="number" value="'+p.position+'" placeholder="34" onchange="updateField(\\''+p.id+'\\',\\'position\\',this.value)"></div>'
+      +'<div class="cb-field"><label>Impressions</label><input type="number" value="'+p.impressions+'" placeholder="12400" onchange="updateField(\\''+p.id+'\\',\\'impressions\\',this.value)"></div>'
+      +'<div class="cb-field"><label>Deadline</label><input type="date" value="'+p.deadline+'" onchange="updateField(\\''+p.id+'\\',\\'deadline\\',this.value)"></div>'
+      +'<div class="cb-field"><label>Primary Keyword</label><input type="text" value="'+p.keyword+'" onchange="updateField(\\''+p.id+'\\',\\'keyword\\',this.value)"></div>'
+      +'</div>'
+
+      // Notes
+      +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea oninput="updateField(\\''+p.id+'\\',\\'notes\\',this.value)">'+p.notes+'</textarea></div>'
+
+
+      // Internal Link Suggestions (auto-computed from page list)
+      + (function(){
+          var kw = (p.keyword || '').toLowerCase();
+          var kwWords = kw.split(/\\s+/).filter(function(w){ return w.length > 2; });
+          if (!kwWords.length || pages.length < 2) return '';
+          var scored = pages
+            .filter(function(pg){ return pg.id !== p.id && pg.url && pg.url.startsWith('http'); })
+            .map(function(pg){
+              var slug = '';
+              try { slug = new URL(pg.url).pathname.toLowerCase().replace(/[-_\\/]/g,' '); } catch(e){ slug = pg.url.toLowerCase(); }
+              var combo = slug + ' ' + (pg.keyword||'').toLowerCase();
+              var matches = kwWords.filter(function(w){ return combo.includes(w); }).length;
+              return { pg: pg, score: matches };
+            })
+            .filter(function(x){ return x.score > 0; })
+            .sort(function(a,b){ return b.score - a.score; })
+            .slice(0, 5);
+          if (!scored.length) return '';
+          var rows = scored.map(function(x, i){
+            var slug = '';
+            try { slug = new URL(x.pg.url).pathname.replace(/^\\//,'').replace(/\\//g,' › ').slice(0,50)||'home'; } catch(e){ slug = x.pg.url.slice(-50); }
+            var targetKw = (x.pg.keyword || '').toLowerCase();
+            var anchorWords = kwWords.filter(function(w){ return targetKw.includes(w) || slug.toLowerCase().includes(w); });
+            var anchor = anchorWords.length ? anchorWords.slice(0,3).join(' ') : (x.pg.keyword || slug).slice(0,30);
+            return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(96,165,250,.04);border-radius:4px;margin-bottom:3px;flex-wrap:wrap;">'
+              +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--dim);width:14px;flex-shrink:0;">#'+(i+1)+'</span>'
+              +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--blue);flex:1;word-break:break-all;">'+x.pg.url.replace(/^https?:\\/\\//,'').slice(0,60)+'</span>'
+              +(x.pg.keyword?'<span style="font-size:9px;color:var(--muted);">'+x.pg.keyword.slice(0,30)+'</span>':'')
+              +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--gold);background:rgba(251,191,36,.1);padding:2px 6px;border-radius:3px;white-space:nowrap;">anchor: \\"'+anchor+'\\"</span>'
+              +'</div>';
+          }).join('');
+          return '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(96,165,250,.04);border:1px solid rgba(96,165,250,.15);border-radius:7px;">'
+            +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🔗 Internal Link Opportunities <span style=\\"font-weight:400;text-transform:none;letter-spacing:0;font-size:8px;color:var(--dim);\\">— other pages to link FROM/TO</span></div>'
+            +rows
+            +'<div style="font-size:10px;color:var(--dim);margin-top:5px;">Add contextual links between these pages using the suggested anchor text. Pre-filled automatically in PULSE+NEXUS ⑤.</div>'
+            +'</div>';
+        })()
+
+      // Checklist
+      +'<div class="cl-header"><span>Audit Checklist — 3 phases</span>'
+      +'<span id="cl-prog-'+p.id+'" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;display:flex;gap:10px;">'
+      +'<span style="color:var(--green)">+pts: '+pointsDone(p)+'/'+pointsTotal()+'</span>'
+      +'<span style="color:var(--muted)">totaal: '+prog.done+'/'+prog.total+'</span>'
+      +'</span>'
+      +'</div>'
+      +'<div class="cl-grid">'+cl+'</div>'
+
+      // Actions
+      +'<div class="card-actions">'
+      +'<button class="btn btn-purple btn-sm" onclick="openInAudit(\\''+p.id+'\\')">🔬 Open in PULSE+NEXUS</button>'
+      +'<button class="btn btn-green btn-sm" onclick="markDone(\\''+p.id+'\\')">✓ Mark Done</button>'
+      +'<a href="'+p.url+'" target="_blank" class="btn btn-blue btn-sm">↗ Open Page</a>'
+      +'<button class="btn btn-muted btn-sm" onclick="scanOnePage(\\''+p.id+'\\')">📊 Scan Score</button>'
+      +'<a href="https://app.contentscale.site/?url='+encodeURIComponent(p.url)+'" target="_blank" class="btn btn-blue btn-sm">↗ ContentScale</a>'
+      +'<button class="btn btn-red btn-sm" onclick="deletePage(\\''+p.id+'\\')">✕ Delete</button>'
+      +'</div>'
+
+      +'</div></div>';
+  }).join('');
+}
+
+function toggleCard(id){
+  var body=document.getElementById('body-'+id);
+  var chev=document.getElementById('chev-'+id);
+  if(!body)return;
+  var open=body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open',open);
+}
+
+// ── Export CSV ──
+function exportCSV(){
+  if(!pages.length){toast('⚠ No pages to export');return;}
+  var headers=['URL','Keyword','Priority','Status','Position','Impressions','ScoreBefore','ScoreAfter','Deadline','Notes','ChecklistPct','Updated'];
+  CL.forEach(function(c){headers.push('chk_'+c.id);});
+  var rows=[headers.join(',')];
+  pages.forEach(function(p){
+    var prog=checkProgress(p);
+    var base=[
+      '"'+p.url+'"','"'+(p.keyword||'')+'"',p.priority,p.status,
+      p.position||'',p.impressions||'',p.scoreBefore||'',p.scoreAfter||'',
+      p.deadline||'','"'+(p.notes||'').replace(/"/g,"''")+'"',
+      prog.pct+'%',p.updated||''
+    ];
+    CL.forEach(function(c){base.push(p.checks[c.id]?'1':'0');});
+    rows.push(base.join(','));
+  });
+  // Project info as first comment line
+  var meta='# Client: '+(project.client||'')+' | Site: '+(project.site||'')+' | Auditor: '+(project.auditor||'')+' | Exported: '+new Date().toISOString();
+  var csv=meta+'\\n'+rows.join('\\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='seo-audit-workflow-'+(project.client||'export').replace(/\\s+/g,'-').toLowerCase()+'-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('✅ CSV exported');
+}
+
+// ── Import CSV ──
+function importCSV(input){
+  var file=input.files[0];if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    var lines=e.target.result.split('\\n').filter(function(l){return l&&!l.startsWith('#');});
+    if(lines.length<2){toast('⚠ Invalid CSV');return;}
+    var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'');});
+    var imported=0;
+    for(var i=1;i<lines.length;i++){
+      var cols=lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||lines[i].split(',');
+      cols=cols.map(function(c){return (c||'').replace(/^"|"$/g,'').trim();});
+      var url=cols[headers.indexOf('URL')]||'';
+      if(!url||!url.includes('.'))continue;
+      // Check if already exists
+      var exists=pages.find(function(p){return p.url===url;});
+      if(!exists){
+        var np=makePage(url,
+          cols[headers.indexOf('Keyword')]||'',
+          cols[headers.indexOf('Priority')]||'med',
+          cols[headers.indexOf('Position')]||0,
+          cols[headers.indexOf('Impressions')]||0);
+        np.status=cols[headers.indexOf('Status')]||'notstarted';
+        np.scoreBefore=cols[headers.indexOf('ScoreBefore')]||'';
+        np.scoreAfter=cols[headers.indexOf('ScoreAfter')]||'';
+        np.deadline=cols[headers.indexOf('Deadline')]||'';
+        np.notes=cols[headers.indexOf('Notes')]||'';
+        // Restore checklist
+        CL.forEach(function(c){
+          var ci=headers.indexOf('chk_'+c.id);
+          if(ci>=0)np.checks[c.id]=cols[ci]==='1';
+        });
+        pages.push(np);imported++;
+      } else {
+        // Update existing
+        exists.status=cols[headers.indexOf('Status')]||exists.status;
+        exists.notes=cols[headers.indexOf('Notes')]||exists.notes;
+        exists.scoreBefore=cols[headers.indexOf('ScoreBefore')]||exists.scoreBefore;
+        exists.scoreAfter=cols[headers.indexOf('ScoreAfter')]||exists.scoreAfter;
+        CL.forEach(function(c){
+          var ci=headers.indexOf('chk_'+c.id);
+          if(ci>=0)exists.checks[c.id]=cols[ci]==='1';
+        });
+        imported++;
+      }
+    }
+    save();renderPages();renderOverview();
+    toast('✅ '+imported+' pages imported/updated');
+  };
+  r.readAsText(file);
+  input.value='';
+}
+
+function makePage(url,kw,pri,pos,impr){
+  var checks={};
+  CL.forEach(function(c){checks[c.id]=false;});
+  return {id:uid(),url:url,keyword:kw||'',priority:pri||'med',
+    position:parseFloat(pos)||0,impressions:parseInt(impr)||0,
+    status:'notstarted',scoreBefore:'',scoreAfter:'',notes:'',deadline:'',
+    checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
+}
+
+// ── Client report export ──
+function exportClientReport(){
+  if(!pages.length){toast('⚠ No pages');return;}
+  var done=pages.filter(function(p){return p.status==='done';});
+  var inp=pages.filter(function(p){return p.status==='inprogress';});
+  var fu=pages.filter(function(p){return p.status==='followup';});
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SEO Audit Report — '+(project.client||'Client')+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;color:#1f2937;padding:0 20px;}'
+    +'h1{color:#6d28d9;font-size:28px;margin-bottom:4px;}h2{color:#4b5563;font-size:18px;margin:24px 0 10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px;}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;}'
+    +'th{background:#f3f4f6;padding:8px 10px;text-align:left;border:1px solid #e5e7eb;color:#6b7280;}'
+    +'td{padding:8px 10px;border:1px solid #e5e7eb;}'
+    +'.done{color:#16a34a;font-weight:700;}.inp{color:#b45309;}.fu{color:#7c3aed;}'
+    +'</style></head><body>'
+    +'<h1>SEO Audit Report</h1>'
+    +'<p><strong>Client:</strong> '+(project.client||'—')+' &nbsp; <strong>Site:</strong> '+(project.site||'—')
+    +' &nbsp; <strong>Auditor:</strong> '+(project.auditor||'—')+' &nbsp; <strong>Date:</strong> '+new Date().toLocaleDateString()+'</p>'
+    +'<p><strong>Progress:</strong> '+done.length+'/'+pages.length+' pages completed ('+Math.round(done.length/pages.length*100)+'%)</p>';
+
+  function pageRows(arr){
+    return arr.map(function(p){
+      var prog=checkProgress(p);
+      return '<tr><td><a href="'+p.url+'">'+p.url+'</a></td><td>'+p.keyword+'</td>'
+        +'<td>'+(p.scoreBefore||'—')+' → '+(p.scoreAfter||'—')+'</td>'
+        +'<td>'+prog.pct+'%</td><td>'+(p.notes||'—')+'</td></tr>';
+    }).join('');
+  }
+
+  if(done.length){html+='<h2>✅ Completed Pages ('+done.length+')</h2><table><tr><th>URL</th><th>Keyword</th><th>Score Before→After</th><th>Checklist</th><th>Notes</th></tr>'+pageRows(done)+'</table>';}
+  if(inp.length){html+='<h2>🔄 In Progress ('+inp.length+')</h2><table><tr><th>URL</th><th>Keyword</th><th>Score Before→After</th><th>Checklist</th><th>Notes</th></tr>'+pageRows(inp)+'</table>';}
+  if(fu.length){html+='<h2>📌 Follow-up Required ('+fu.length+')</h2><table><tr><th>URL</th><th>Keyword</th><th>Score Before→After</th><th>Checklist</th><th>Notes</th></tr>'+pageRows(fu)+'</table>';}
+
+  html+='</body></html>';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='seo-report-'+(project.client||'client').replace(/\\s+/g,'-').toLowerCase()+'-'+new Date().toISOString().slice(0,10)+'.html';
+  a.click();
+  toast('✅ Client report exported');
+}
+
+// ── Check for PULSE+NEXUS callback ──
+// When audit tool marks a page done, it can set ?done=pageId in URL
+(function checkCallback(){
+  var params=new URLSearchParams(window.location.search);
+  var doneId=params.get('done');
+  if(doneId){
+    var p=pages.find(function(pg){return pg.id===doneId;});
+    if(p){
+      p.status='done';p.checks['pulse']=true;p.updated=new Date().toISOString();
+      save();toast('✅ Page marked done from PULSE+NEXUS');
+    }
+    history.replaceState(null,'',window.location.pathname);
+  }
+})();
+
+// ── Import GSC CSV → auto-populate pages ──────────────────
+// GSC export: Performance → Pages tab → Export CSV
+// ── GSC import — Pages CSV + Queries CSV beide tegelijk ────
+var _gscQueryMap = {}; // url → [query, query, ...]
+
+function importGSC(input){
+  var files = Array.from(input.files);
+  if(!files.length) return;
+
+  var totalAdded = 0, totalUpdated = 0, queriesLoaded = 0;
+  var pending = files.length;
+
+  files.forEach(function(file){
+    var r = new FileReader();
+    r.onload = function(e){
+      var result = parseGSCFile(e.target.result);
+      if(result.type === 'pages'){
+        totalAdded += result.added;
+        totalUpdated += result.updated;
+      } else if(result.type === 'queries'){
+        queriesLoaded = result.count;
+      }
+      pending--;
+      if(pending === 0){
+        // Auto-merge duplicates after import
+        var beforeMerge = pages.length;
+        var seen = {}, cnts = {};
+        pages.forEach(function(p) {
+          var key = (p.url||'').trim().toLowerCase().replace(/\\/+$/, '');
+          if (seen[key]) {
+            var ex = seen[key];
+            ex.impressions = (ex.impressions||0) + (p.impressions||0);
+            ex._ps = (ex._ps||ex.position||0) + (p.position||0);
+            cnts[key]++;
+            p._dup = true;
+          } else { seen[key] = p; p._ps = p.position||0; cnts[key] = 1; }
+        });
+        Object.keys(seen).forEach(function(k){
+          var p = seen[k];
+          if(cnts[k]>1){ p.position=Math.round((p._ps/cnts[k])*10)/10; }
+          delete p._ps;
+        });
+        pages = pages.filter(function(p){ return !p._dup; });
+        var mergedCount = beforeMerge - pages.length;
+        // Save GSC data to shared storage for PULSE+NEXUS
+        try {
+          var sharedGsc = { pages: pages.map(function(p){ return {page:p.url, impressions:p.impressions||0, clicks:0, ctr:p.ctr||0, position:p.position||0, score:0}; }), queries: [] };
+          if (typeof _gscQueryMap !== 'undefined') { sharedGsc.queries = Object.keys(_gscQueryMap).map(function(q){ return {query:q, position:_gscQueryMap[q]}; }); }
+          localStorage.setItem('cs_shared_gsc', JSON.stringify(sharedGsc));
+          // Also save sitemap URLs if available
+          if (typeof _sitemapUrls !== 'undefined' && _sitemapUrls.length) {
+            localStorage.setItem('cs_sitemap_urls', _sitemapUrls.join('\\n'));
+          }
+          // Save per-page queries if query map available
+          if (typeof _gscQueryMap !== 'undefined') {
+            // Save full query map for global fallback
+            localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap));
+          }
+        } catch(e) {}
+        save(); renderPages(); renderOverview();
+        // Auto-assign keywords from queries CSV if available
+        if(Object.keys(_gscQueryMap).length && pages.length){
+          autoAssignKeywords();
+        }
+        var msg = '✅ GSC: ' + totalAdded + ' added, ' + totalUpdated + ' updated';
+        if (mergedCount > 0) msg += ' · ' + mergedCount + ' duplicates merged';
+        if(queriesLoaded) msg += ' · ' + queriesLoaded + ' queries loaded';
+        toast(msg);
+      }
+    };
+    r.readAsText(file);
+  });
+  input.value = '';
+}
+
+// ── Auto-assign best keyword per page from queries CSV ───────
+function autoAssignKeywords(){
+  var queries = Object.entries(_gscQueryMap);
+  if(!queries.length) return;
+
+  var assigned = 0;
+  pages.forEach(function(p){
+    // Only assign if keyword is empty or was never set
+    if(p.keyword && p.keyword.trim()) return;
+
+    // Get the URL path segments to match against queries
+    var urlPath = '';
+    try { urlPath = new URL(p.url).pathname.toLowerCase().replace(/[-_/]/g,' ').trim(); } catch(e) { urlPath = p.url.toLowerCase(); }
+    var urlWords = urlPath.split(/\\s+/).filter(function(w){ return w.length > 2; });
+
+    var bestQuery = null;
+    var bestScore = -1;
+
+    queries.forEach(function(entry){
+      var q = entry[0].toLowerCase();
+      var data = entry[1];
+      var pos = typeof data === 'object' ? data.pos : data;
+      var impr = typeof data === 'object' ? data.impr : 0;
+
+      // Score: how many URL words appear in the query, weighted by impressions and position
+      var wordMatches = urlWords.filter(function(w){ return q.includes(w); }).length;
+      var posScore = pos > 0 ? Math.max(0, 100 - pos) : 0;
+      var imprScore = Math.min(impr / 100, 10);
+      var totalScore = (wordMatches * 50) + posScore + imprScore;
+
+      if(totalScore > bestScore){
+        bestScore = totalScore;
+        bestQuery = entry[0];
+      }
+    });
+
+    // Fallback: if no URL-word match, use the query closest to page's own position
+    if(!bestQuery || bestScore < 10){
+      var pagePos = p.position || 99;
+      var closest = queries.reduce(function(best, entry){
+        var pos = typeof entry[1] === 'object' ? entry[1].pos : entry[1];
+        var impr = typeof entry[1] === 'object' ? entry[1].impr : 0;
+        var diff = Math.abs(pos - pagePos);
+        if(!best || diff < best.diff || (diff === best.diff && impr > best.impr)){
+          return {query: entry[0], diff: diff, impr: impr};
+        }
+        return best;
+      }, null);
+      if(closest) bestQuery = closest.query;
+    }
+
+    if(bestQuery){
+      p.keyword = bestQuery;
+      p.updated = new Date().toISOString();
+      assigned++;
+    }
+  });
+
+  if(assigned > 0){
+    save(); renderPages();
+    toast('🔑 ' + assigned + ' keywords auto-assigned from GSC queries');
+  }
+}
+
+function parseGSCFile(raw){
+  var lines = raw.trim().split('\\n');
+  if(lines.length < 2) return {type:'unknown'};
+  var header = lines[0].toLowerCase().replace(/"/g,'').split(',');
+
+  // Detect if this is a Queries CSV or Pages CSV
+  var isQueries = header.some(function(h){ return h.includes('query') || h.includes('search term'); });
+
+  if(isQueries){
+    _gscQueryMap = {};
+    var iQuery = header.findIndex(function(h){ return h.includes('query')||h.includes('search term'); });
+    var iPos   = header.findIndex(function(h){ return h.includes('position'); });
+    var iImprQ = header.findIndex(function(h){ return h.includes('impression'); });
+    var iCtrQ  = header.findIndex(function(h){ return h.includes('ctr'); });
+    var count  = 0;
+    for(var i=1;i<lines.length;i++){
+      var cols = lines[i].replace(/"/g,'').split(',');
+      var q    = (cols[iQuery]||'').trim();
+      var pos  = parseFloat(cols[iPos])||0;
+      var impr = parseInt(cols[iImprQ])||0;
+      var ctr  = parseFloat((cols[iCtrQ]||'0').replace('%',''))||0;
+      if(q){ _gscQueryMap[q] = {pos:pos, impr:impr, ctr:ctr}; count++; }
+    }
+    try{ localStorage.setItem('cs_gsc_queries', JSON.stringify(_gscQueryMap)); }catch(e){}
+    return {type:'queries', count:count};
+  }
+
+  // Pages CSV
+  var iUrl  = header.findIndex(function(h){ return h.includes('page')||h.includes('url')||h.includes('top page'); });
+  var iImpr = header.findIndex(function(h){ return h.includes('impression'); });
+  var iCtr  = header.findIndex(function(h){ return h.includes('ctr'); });
+  var iPos  = header.findIndex(function(h){ return h.includes('position')||h.includes('pos'); });
+  if(iUrl<0)iUrl=0; if(iImpr<0)iImpr=2; if(iPos<0)iPos=4;
+
+  var added=0, updated=0;
+  for(var i=1;i<lines.length;i++){
+    var cols = lines[i].replace(/"/g,'').split(',');
+    var url = (cols[iUrl]||'').trim();
+    // Only accept real page URLs — must start with http or /
+    if(!url) continue;
+    if(!url.startsWith('http') && !url.startsWith('/')) continue;
+    // Reject query strings masquerading as URLs
+    if(url.includes('-site:') || url.includes(' ') || url.includes('?q=')) continue;
+    var impr = parseInt(cols[iImpr])||0;
+    var pos  = parseFloat(cols[iPos])||0;
+    var ctr  = parseFloat((cols[iCtr]||'0').replace('%',''))||0;
+    var pri;
+    if(pos>=11&&pos<=30) pri='high';
+    else if(pos>=1&&pos<=10&&ctr<2) pri='high';
+    else if(pos>30&&pos<=60) pri='med';
+    else if(pos>60) pri='low';
+    else pri='low';
+    var existing = pages.find(function(p){ return p.url===url; });
+    if(existing){
+      // Merge: keep highest impressions, best position
+      if(impr > (existing.impressions||0)) existing.impressions = impr;
+      if(pos > 0 && (existing.position===0 || pos < existing.position)) existing.position = pos;
+      existing.priority=pri; existing.ctr=ctr;
+      existing.updated=new Date().toISOString();
+      updated++;
+    } else {
+      var np = makePage(url,'',pri,pos,impr);
+      np.ctr = ctr;
+      pages.push(np);
+      added++;
+    }
+  }
+  return {type:'pages', added:added, updated:updated};
+}
+
+function mergeDuplicatePages() {
+  var seen = {};    // key -> primary page object
+  var counts = {};  // key -> count for averaging position
+  var merged = 0;
+
+  pages.forEach(function(p) {
+    var key = (p.url || '').trim().toLowerCase().replace(/\\/+$/, '');
+    if (seen[key]) {
+      var ex = seen[key];
+      // Sum impressions
+      ex.impressions = (ex.impressions || 0) + (p.impressions || 0);
+      // Running average for position
+      ex._posSum = (ex._posSum || ex.position || 0) + (p.position || 0);
+      counts[key]++;
+      p._duplicate = true;
+      merged++;
+    } else {
+      seen[key] = p;
+      p._posSum = p.position || 0;
+      counts[key] = 1;
+    }
+  });
+
+  // Finalize averages
+  Object.keys(seen).forEach(function(key) {
+    var p = seen[key];
+    if (counts[key] > 1) {
+      p.position = Math.round((p._posSum / counts[key]) * 10) / 10;
+      // Recalculate priority from avg position
+      if (p.position >= 11 && p.position <= 30) p.priority = 'high';
+      else if (p.position >= 1 && p.position <= 10) p.priority = 'high';
+      else if (p.position > 30 && p.position <= 60) p.priority = 'med';
+      else p.priority = 'low';
+    }
+    delete p._posSum;
+  });
+
+  if (merged > 0) {
+    pages = pages.filter(function(p){ return !p._duplicate; });
+    save(); renderPages(); renderOverview();
+    toast('🔀 Merged ' + merged + ' duplicates — avg position, summed impressions');
+  } else {
+    toast('✓ No duplicates found');
+  }
+}
+
+// ── Sitemap + GSC — group into: in GSC / not in GSC ───────────
+
+function addSelectedSitemapUrls(){
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if(!selected.length){ toast('⚠ No URLs selected'); return; }
+  var added=0, skipped=0;
+  selected.forEach(function(url){
+    if(pages.find(function(p){ return p.url===url; })){ skipped++; return; }
+    // Check if GSC data available from pages already imported
+    var gscEntry = _gscDataMap && _gscDataMap[url];
+    if(gscEntry){
+      var np = makePage(url,'',gscEntry.pri,gscEntry.pos,gscEntry.impr);
+      np.ctr = gscEntry.ctr;
+      pages.push(np);
+    } else {
+      pages.push(makePage(url,'','low',0,0));
+    }
+    added++;
+  });
+  save(); renderPages(); renderOverview();
+  document.getElementById('sitemapPreview').style.display='none';
+  document.getElementById('sitemapUrl').value='';
+  _sitemapUrls=[]; _sitemapFiltered=[];
+  document.getElementById('sitemapStatus').textContent='';
+  toast('✅ '+added+' pages added'+(skipped?' · '+skipped+' already present':''));
+}
+
+// Global GSC data map for cross-referencing
+var _gscDataMap = {};
+
+// Build GSC map from imported pages
+function buildGscMap(){
+  _gscDataMap = {};
+  pages.forEach(function(p){
+    if(p.position>0 || p.impressions>0){
+      _gscDataMap[p.url] = {pos:p.position, impr:p.impressions, ctr:p.ctr||0, pri:p.priority};
+    }
+  });
+}
+
+// ── Main filter: show sitemap URLs in two groups ─────────────
+function filterSitemapByGSC(){
+  buildGscMap();
+  var gscUrls = Object.keys(_gscDataMap);
+  if(!gscUrls.length){
+    toast('⚠ Importeer eerst je GSC CSV — dan wordt de vergelijking gemaakt');
+    return;
+  }
+  var inGSC    = _sitemapUrls.filter(function(u){ return _gscDataMap[u]; });
+  var notInGSC = _sitemapUrls.filter(function(u){ return !_gscDataMap[u]; });
+
+  renderSitemapGrouped(inGSC, notInGSC);
+  document.getElementById('sitemapStatus').innerHTML =
+    '<span style="color:var(--green)">🟢 '+inGSC.length+' in GSC</span>'
+    +' &nbsp; <span style="color:var(--gold)">🟡 '+notInGSC.length+' not in GSC (not indexed / new)</span>'
+    +' &nbsp; <span style="color:var(--sub)">'+_sitemapUrls.length+' totaal</span>';
+}
+
+function renderSitemapGrouped(inGSC, notInGSC){
+  var list = document.getElementById('sitemapUrlList');
+  var selCount = document.getElementById('sitemapSelCount');
+
+  function rowHtml(u, defaultChecked, gscData){
+    var shortUrl = u.replace(/^https?:\\/\\/[^/]+/,'') || '/';
+    var gscInfo = gscData
+      ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);margin-left:6px;">pos '+Math.round(gscData.pos)+(gscData.impr?' · '+gscData.impr.toLocaleString()+' impr':'')+'</span>'
+      : '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">not in GSC</span>';
+    return '<div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(\\'input\\').click()">'
+      +'<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(defaultChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
+      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      +gscInfo
+      +'<button onclick="event.stopPropagation();removeSitemapUrl(\\''+u+'\\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
+      +'</div>';
+  }
+
+  var html = '';
+
+  // Group 1 — in GSC
+  if(inGSC.length){
+    // Sort by opportunity: pos 11-30 first
+    inGSC.sort(function(a,b){
+      var pa = _gscDataMap[a]?.pos || 999;
+      var pb = _gscDataMap[b]?.pos || 999;
+      var scoreA = (pa>=11&&pa<=30)?0:(pa>=1&&pa<=10)?1:(pa>30&&pa<=60)?2:3;
+      var scoreB = (pb>=11&&pb<=30)?0:(pb>=1&&pb<=10)?1:(pb>30&&pb<=60)?2:3;
+      return scoreA-scoreB || pa-pb;
+    });
+    html += '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);padding:8px 8px 4px;border-bottom:1px solid rgba(74,222,128,.2);margin-bottom:4px;">'
+      +'🟢 In GSC — '+inGSC.length+' pages (sorted by opportunity)'
+      +'</div>';
+    html += inGSC.map(function(u){ return rowHtml(u, true, _gscDataMap[u]); }).join('');
+  }
+
+  // Group 2 — not in GSC
+  if(notInGSC.length){
+    html += '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:12px 8px 4px;border-bottom:1px solid rgba(251,191,36,.2);margin-bottom:4px;margin-top:8px;">'
+      +'🟡 Not in GSC — '+notInGSC.length+' pages (not indexed or new)'
+      +'</div>'
+      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Google does not know these pages yet. Add them to investigate why.</div>';
+    html += notInGSC.map(function(u){ return rowHtml(u, false, null); }).join('');
+  }
+
+  list.innerHTML = html || '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">No URLs found.</div>';
+  updateSitemapCount();
+}
+
+
+// ── Sitemap fetch + preview ─────────────────────────────────
+var _sitemapUrls = []; // all fetched URLs
+var _sitemapFiltered = []; // after filter
+
+async function fetchSitemap() {
+  var url = document.getElementById('sitemapUrl').value.trim();
+  if (!url) { toast('⚠ Voer een sitemap URL in'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+
+  var btn = document.getElementById('sitemapBtn');
+  var status = document.getElementById('sitemapStatus');
+  btn.textContent = '⏳ Fetching...';
+  btn.disabled = true;
+  status.textContent = 'Fetching sitemap via server...';
+  status.style.color = 'var(--muted)';
+
+  try {
+    // Use Railway server as proxy to avoid CORS
+    var r = await fetch('https://app.contentscale.site/api/sitemap/urls', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: url})
+    });
+    var d = await r.json();
+
+    if (!d.success || !d.urls || !d.urls.length) {
+      throw new Error(d.error || 'Geen URLs gevonden in sitemap');
+    }
+
+    _sitemapUrls = d.urls;
+    _sitemapFiltered = d.urls.slice();
+    status.innerHTML = '<span style="color:var(--green)">✓ ' + d.total + ' URLs gevonden</span>';
+    document.getElementById('sitemapPreview').style.display = 'block';
+    renderSitemapList(_sitemapFiltered, true);
+    toast('✅ ' + d.total + ' URLs loaded from sitemap');
+
+  } catch(e) {
+    status.innerHTML = '<span style="color:var(--red)">⚠ ' + e.message + '</span>';
+    toast('⚠ Sitemap fetch mislukt: ' + e.message);
+  }
+
+  btn.textContent = '↓ Fetch Sitemap';
+  btn.disabled = false;
+}
+
+function filterSitemapUrls() {
+  var q = document.getElementById('sitemapFilter').value.trim().toLowerCase();
+  _sitemapFiltered = q
+    ? _sitemapUrls.filter(function(u){ return u.toLowerCase().includes(q); })
+    : _sitemapUrls.slice();
+
+  // Preserve checked state
+  var checked = {};
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){
+    checked[cb.dataset.url] = cb.checked;
+  });
+  renderSitemapList(_sitemapFiltered, false, checked);
+}
+
+function renderSitemapList(urls, selectAll, preserveChecked) {
+  var list = document.getElementById('sitemapUrlList');
+  var selCount = document.getElementById('sitemapSelCount');
+
+  if (!urls.length) {
+    list.innerHTML = '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
+    selCount.textContent = '';
+    return;
+  }
+
+  list.innerHTML = urls.map(function(u) {
+    var shortUrl = u.replace(/^https?:\\/\\/[^/]+/, '') || '/';
+    var isChecked = preserveChecked ? (preserveChecked[u] !== false) : (selectAll !== false);
+    // Skip homepage, XML, images by default
+    var skip = u.endsWith('.xml') || u.endsWith('.jpg') || u.endsWith('.png') || u.endsWith('.pdf');
+    if (skip) isChecked = false;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(&quot;input&quot;).click()">'
+      + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
+      + '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      + '<button onclick="event.stopPropagation();removeSitemapUrl(\\''+u+'\\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
+      + '</div>';
+  }).join('');
+
+  updateSitemapCount();
+}
+
+function updateSitemapCount() {
+  var all = document.querySelectorAll('.sitemap-cb');
+  var checked = document.querySelectorAll('.sitemap-cb:checked');
+  document.getElementById('sitemapSelCount').textContent = checked.length + '/' + all.length + ' selected';
+}
+
+function deleteSelectedSitemapUrls() {
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if (!selected.length) { toast('⚠ No URLs selected'); return; }
+  if (!confirm('Delete ' + selected.length + ' selected URLs from the list?')) return;
+  _sitemapUrls = _sitemapUrls.filter(function(u){ return !selected.includes(u); });
+  _sitemapFiltered = _sitemapFiltered.filter(function(u){ return !selected.includes(u); });
+  renderSitemapList(_sitemapFiltered, false);
+  document.getElementById('sitemapStatus').innerHTML = '<span style="color:var(--green)">✓ ' + _sitemapUrls.length + ' URLs remaining</span>';
+  toast('🗑 ' + selected.length + ' URLs removed');
+  if (!_sitemapUrls.length) document.getElementById('sitemapPreview').style.display = 'none';
+}
+
+function clearAllSitemapUrls() {
+  if (!_sitemapUrls.length) return;
+  if (!confirm('Clear all ' + _sitemapUrls.length + ' URLs from the list?')) return;
+  _sitemapUrls = []; _sitemapFiltered = [];
+  document.getElementById('sitemapPreview').style.display = 'none';
+  document.getElementById('sitemapUrl').value = '';
+  document.getElementById('sitemapStatus').textContent = '';
+  toast('✕ Sitemap cleared');
+}
+
+function selectAllSitemap() {
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){ cb.checked = true; });
+  updateSitemapCount();
+}
+
+function deselectAllSitemap() {
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){ cb.checked = false; });
+  updateSitemapCount();
+}
+
+function removeSitemapUrl(url) {
+  _sitemapUrls = _sitemapUrls.filter(function(u){ return u !== url; });
+  _sitemapFiltered = _sitemapFiltered.filter(function(u){ return u !== url; });
+  var preserved = {};
+  document.querySelectorAll('.sitemap-cb').forEach(function(cb){
+    preserved[cb.dataset.url] = cb.checked;
+  });
+  renderSitemapList(_sitemapFiltered, false, preserved);
+  document.getElementById('sitemapStatus').innerHTML = '<span style="color:var(--muted)">' + _sitemapUrls.length + ' URLs resterend</span>';
+}
+
+function addSelectedSitemapUrls() {
+  var selected = Array.from(document.querySelectorAll('.sitemap-cb:checked')).map(function(cb){ return cb.dataset.url; });
+  if (!selected.length) { toast('⚠ No URLs selected'); return; }
+  var added = 0;
+  selected.forEach(function(url){
+    var exists = pages.find(function(p){ return p.url === url; });
+    if (!exists) { pages.push(makePage(url,'','med',0,0)); added++; }
+  });
+  save(); renderPages(); renderOverview();
+  document.getElementById('sitemapPreview').style.display = 'none';
+  document.getElementById('sitemapUrl').value = '';
+  _sitemapUrls = [];
+  _sitemapFiltered = [];
+  document.getElementById('sitemapStatus').textContent = '';
+  toast('✅ ' + added + ' pages added (' + (selected.length - added) + ' already present)');
+}
+
+// ── Server sync + auto-save ─────────────────────────────────
+var _autoSaveTimer = null;
+var _lastSavedHash = '';
+
+function _dataHash(){
+  // Real hash: stringify all page ids + updated timestamps + scores
+  // Detects any change anywhere in the list, not just first/last
+  try {
+    return pages.map(function(p){
+      return p.id + '|' + (p.updated||'') + '|' + (p.scoreBefore||'') + '|' + (p.scoreAfter||'') + '|' + p.status + '|' + JSON.stringify(p.checks||{});
+    }).join('~');
+  } catch(e) {
+    return pages.length + '_' + Date.now();
+  }
+}
+
+function _getProjectKey(){
+  // Build a stable, human-readable key from project fields
+  var clientPart = (project.client||'').replace(/\\s+/g,'-').toLowerCase().replace(/[^a-z0-9\\-]/g,'').slice(0,20);
+  var sitePart = (project.site||'').replace(/https?:\\/\\//,'').split('/')[0].replace(/\\s+/g,'-').replace(/[^a-z0-9.\\-]/g,'').slice(0,30);
+  var key = [clientPart, sitePart].filter(Boolean).join('-');
+  // If both fields empty, reuse the last saved key — never generate a new timestamp key
+  if(!key || key === '-'){
+    try { key = localStorage.getItem('cs_wf_sync_key') || ''; } catch(e) {}
+  }
+  // Absolute fallback: use a fixed key based on the first page URL slug
+  if(!key && pages.length){
+    try {
+      var slug = new URL(pages[0].url).hostname.replace(/\\./g,'-').slice(0,30);
+      key = 'workflow-' + slug;
+    } catch(e) { key = 'workflow-default'; }
+  }
+  if(!key) key = 'workflow-default';
+  // Persist the key so next load/save uses the same one
+  try { localStorage.setItem('cs_wf_sync_key', key); } catch(e) {}
+  return key;
+}
+
+async function syncToServer(silent){
+  if(!pages.length) return;
+  var btn = document.getElementById('syncBtn');
+  if(btn && !silent){ btn.textContent='☁ Saving...'; btn.disabled=true; }
+
+  var key = _getProjectKey();
+  var payload = { key: key, project: project, pages: pages, savedAt: new Date().toISOString() };
+
+  try {
+    var r = await fetch('https://app.contentscale.site/api/workflow/save', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if(d.success){
+      _lastSavedHash = _dataHash();
+      var ts = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      setSyncStatus('☁ Opgeslagen om ' + ts + ' — key: ' + key, 'var(--green)');
+      if(!silent) toast('☁ Opgeslagen op server — key: ' + key);
+    } else {
+      setSyncStatus('⚠ Server save mislukt — data staat in browser', 'var(--gold)');
+      if(!silent) toast('⚠ Server save mislukt');
+    }
+  } catch(e) {
+    setSyncStatus('⚠ Server niet bereikbaar — data staat in browser', 'var(--gold)');
+    if(!silent) toast('⚠ Server offline — browser backup actief');
+  }
+  if(btn && !silent){ btn.textContent='☁ Save to Server'; btn.disabled=false; }
+}
+
+async function loadFromServer(){
+  var key = prompt('Project key (leeg = automatisch laden):');
+  if(key === null) return;
+  if(!key){ key = _getProjectKey(); }
+  if(!key){ toast('⚠ Geen key gevonden — vul Client + Website in bovenaan'); return; }
+  try {
+    var r = await fetch('https://app.contentscale.site/api/workflow/load?key='+encodeURIComponent(key));
+    var d = await r.json();
+    if(d.success && d.data){
+      if(!confirm('Workflow "'+key+'" laden? Vervangt huidige data.')) return;
+      if(d.data.project) project = d.data.project;
+      if(d.data.pages)   pages   = d.data.pages;
+      if(project.client)   document.getElementById('pClient').value   = project.client;
+      if(project.site)     document.getElementById('pSite').value     = project.site;
+      if(project.deadline) document.getElementById('pDeadline').value = project.deadline;
+      if(project.auditor)  document.getElementById('pAuditor').value  = project.auditor;
+      save(); renderPages(); renderOverview();
+      var ts = new Date(d.data.savedAt||Date.now()).toLocaleString('nl-NL');
+      setSyncStatus('☁ Geladen van server (opgeslagen: '+ts+')', 'var(--green)');
+      toast('✅ '+pages.length+' pages loaded from server');
+    } else {
+      toast('⚠ Niet gevonden: '+key);
+    }
+  } catch(e){ toast('⚠ Server niet bereikbaar'); }
+}
+
+function setSyncStatus(msg, color){
+  var el = document.getElementById('syncStatus');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--dim)'; }
+}
+
+
+// ── ContentScore scan per page ──────────────────────────────────
+async function scanOnePage(pageId) {
+  var p = pages.find(function(pg){ return pg.id === pageId; });
+  if (!p) return;
+  var btn = document.querySelector('[onclick="scanOnePage(\\'' + pageId + '\\')"]');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+  try {
+    var r = await fetch('https://app.contentscale.site/api/scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: p.url})
+    });
+    var d = await r.json();
+    if (d.score) {
+      if (!p.scoreBefore) {
+        p.scoreBefore = d.score;
+        toast('✅ Pre-scan: ' + d.score + '/100 — ' + p.url.split('/').pop());
+      } else {
+        p.scoreAfter = d.score;
+        toast('✅ Na-scan: ' + d.score + '/100 — verschil: ' + (d.score - p.scoreBefore));
+      }
+      save(); renderPages();
+    } else {
+      toast('⚠ Scan mislukt: ' + (d.error || 'onbekende fout'));
+    }
+  } catch(e) {
+    toast('⚠ Server niet bereikbaar: ' + e.message);
+  }
+  if (btn) { btn.textContent = '📊 Scan Score'; btn.disabled = false; }
+}
+
+// ── Scan alle paginas zonder score ───────────────────────────
+var _scanQueue = [];
+var _scanRunning = false;
+
+async function scanAllScores() {
+  var unscored = pages.filter(function(p){ return !p.scoreBefore && p.url; });
+  var all = pages.filter(function(p){ return p.url; });
+  // If all have scores, ask if they want to rescan
+  if (!unscored.length && all.length) {
+    if (!confirm('All pages already have a score. Re-scan all ' + all.length + ' pages?')) return;
+    unscored = all; // rescan all
+  }
+  if (!unscored.length) { toast('No pages with URLs found'); return; }
+  if (_scanRunning) { toast('⏳ Scan already running...'); return; }
+  _scanQueue = unscored.slice();
+  _scanRunning = true;
+  toast('⏳ Scanning ' + _scanQueue.length + ' pages...');
+  setSyncStatus('⏳ Auto-scan running: 0/' + _scanQueue.length + ' pages', 'var(--gold)');
+
+  var done = 0;
+  for (var i = 0; i < _scanQueue.length; i++) {
+    var p = _scanQueue[i];
+    try {
+      var r = await fetch('https://app.contentscale.site/api/scan', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: p.url})
+      });
+      var d = await r.json();
+      if (d.score) { p.scoreBefore = d.score; done++; }
+    } catch(e) {}
+    setSyncStatus('⏳ Scanning ' + (i+1) + '/' + _scanQueue.length + ' — ' + done + ' scores found', 'var(--gold)');
+    save();
+    await new Promise(function(res){ setTimeout(res, 2000); }); // 2s between scans
+  }
+
+  _scanRunning = false;
+  renderPages(); renderOverview();
+  setSyncStatus('✅ Auto-scan complete — ' + done + ' scores loaded', 'var(--green)');
+  toast('✅ ' + done + '/' + _scanQueue.length + ' pages scanned');
+}
+
+function startAutoSave(){
+  if(_autoSaveTimer) clearInterval(_autoSaveTimer);
+  // Auto-save to server every 90 seconds IF data has changed
+  _autoSaveTimer = setInterval(function(){
+    if(pages.length > 0 && _dataHash() !== _lastSavedHash){
+      syncToServer(true); // silent = no toast
+    }
+  }, 90 * 1000);
+
+  // Also always save to localStorage on any change (belt + braces)
+  // beforeunload: use sendBeacon — the ONLY reliable way to fire during page close
+  // fetch() is cancelled by browsers on unload; sendBeacon is not
+  window.addEventListener('beforeunload', function(){
+    // Always save to localStorage first (synchronous, always works)
+    try { save(); } catch(e) {}
+    // Then try to send to server via sendBeacon (non-blocking, survives unload)
+    if(pages.length > 0 && _dataHash() !== _lastSavedHash){
+      try {
+        var key = _getProjectKey();
+        var payload = JSON.stringify({ key: key, project: project, pages: pages, savedAt: new Date().toISOString() });
+        navigator.sendBeacon('https://app.contentscale.site/api/workflow/save', new Blob([payload], {type:'application/json'}));
+      } catch(e) {}
+    }
+  });
+}
+
+// ── Init ──
+load();
+renderPages();
+renderOverview();
+startAutoSave();
+// Show current project key on load so user always knows what key their data is under
+var _initKey = _getProjectKey();
+if(pages.length > 0){
+  setSyncStatus('💾 Data geladen — key: ' + _initKey + ' — auto-save actief elke 90 sec', 'var(--green)');
+} else {
+  setSyncStatus('Geen data — voeg paginas toe of laad van server', 'var(--dim)');
+}
+</script>
+</body>
+</html>
+`;
+const _AUDIT_RECOMMENDATIONS_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Recommendations | ContentScale</title>
+<script>
+(function(){
+  var RAILWAY='https://app.contentscale.site';
+  if(localStorage.getItem('admin_id')){window._toolSession={type:'admin',projectKey:'admin',whitelabelName:'ContentScale',isAdmin:true};return;}
+  var token=localStorage.getItem('cs_access_token');
+  if(!token){window.location.href='/tools';return;}
+  document.documentElement.style.visibility='hidden';
+  fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':token}})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.success){localStorage.removeItem('cs_access_token');localStorage.removeItem('cs_access_session');window.location.href='/tools';return;}
+      window._toolSession=d;localStorage.setItem('cs_access_session',JSON.stringify(d));
+      if(d.whitelabelName&&d.whitelabelName!=='ContentScale SEO Tools'){var b=document.querySelector('.brand');if(b)b.textContent=d.whitelabelName;}
+      // Read users: hide all action buttons, show read-only banner
+      if(d.type==='read'){
+        document.addEventListener('DOMContentLoaded',function(){
+          document.querySelectorAll('.btn-green,.btn-blue,.action-btn-gold').forEach(function(el){el.style.display='none';});
+          var banner=document.createElement('div');
+          banner.style.cssText='background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 18px;margin-bottom:16px;font-family:IBM Plex Mono,monospace;font-size:10px;color:#60a5fa;letter-spacing:.08em;';
+          banner.textContent='👁 READ-ONLY — je kunt deze aanbevelingen bekijken maar niet wijzigen';
+          var wrap=document.querySelector('.wrap');
+          if(wrap)wrap.insertBefore(banner,wrap.firstChild);
+        });
+      }
+      document.documentElement.style.visibility='';
+    }).catch(function(){
+      var c=null;try{c=JSON.parse(localStorage.getItem('cs_access_session')||'null');}catch(e){}
+      if(c&&c.type){window._toolSession=c;document.documentElement.style.visibility='';}
+      else{window.location.href='/tools';}
+    });
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px 80px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+
+/* Summary */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+@media(max-width:600px){.summary{grid-template-columns:1fr 1fr;}}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center;}
+.sum-n{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-bottom:3px;}
+.sum-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Filter */
+.filter-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+.filter-bar select{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 11px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--muted);outline:none;cursor:pointer;}
+.filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
+.filter-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);}
+
+/* Cards */
+.rec-list{display:flex;flex-direction:column;gap:18px;}
+.rec-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.rec-card.pri-high{border-left:4px solid var(--red);}
+.rec-card.pri-med{border-left:4px solid var(--gold);}
+.rec-card.pri-low{border-left:4px solid var(--green);}
+
+/* Card header */
+.rec-header{padding:20px 22px 16px;display:flex;gap:18px;align-items:flex-start;}
+.rec-rank{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;color:var(--gold);flex-shrink:0;width:52px;text-align:center;opacity:.85;}
+.rec-header-body{flex:1;min-width:0;}
+.rec-type-row{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap;}
+.type-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px;font-weight:700;white-space:nowrap;}
+.badge-quickwin{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.badge-ctr{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+.badge-content{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+.badge-rewrite{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3);}
+.badge-authority{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
+.badge-build{background:rgba(71,85,105,.15);color:var(--dim);border:1px solid rgba(71,85,105,.3);}
+.pri-chip{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;}
+.pri-high-chip{background:rgba(244,63,63,.12);color:var(--red);border:1px solid rgba(244,63,63,.25);}
+.pri-med-chip{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.25);}
+.pri-low-chip{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.2);}
+.rec-page-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);margin-bottom:4px;word-break:break-all;}
+.rec-keyword{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.rec-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--ink);margin-bottom:6px;line-height:1.1;}
+.rec-why{font-size:13px;color:var(--muted);line-height:1.7;}
+.gsc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.gsc-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:4px;border:1px solid var(--border);color:var(--dim);background:var(--surface);}
+.gsc-chip strong{color:var(--muted);}
+
+/* Ordered steps */
+.action-steps{border-top:1px solid var(--border);padding:20px 22px;}
+.steps-heading{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.steps-heading::after{content:'';flex:1;height:1px;background:var(--border);}
+.step-list{display:flex;flex-direction:column;gap:8px;}
+
+.action-step{display:flex;gap:14px;padding:13px 16px;border-radius:8px;border:1px solid;}
+.action-step.sev-high{background:rgba(244,63,63,.04);border-color:rgba(244,63,63,.2);}
+.action-step.sev-med{background:rgba(251,191,36,.04);border-color:rgba(251,191,36,.18);}
+.action-step.sev-low{background:rgba(74,222,128,.04);border-color:rgba(74,222,128,.15);}
+
+.step-num{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;flex-shrink:0;width:30px;text-align:center;margin-top:1px;}
+.sev-high .step-num{color:var(--red);}
+.sev-med  .step-num{color:var(--gold);}
+.sev-low  .step-num{color:var(--green);}
+.step-body{flex:1;min-width:0;}
+.step-title{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.step-sev-chip{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:3px;flex-shrink:0;}
+.sev-high .step-sev-chip{background:rgba(244,63,63,.12);color:var(--red);}
+.sev-med  .step-sev-chip{background:rgba(251,191,36,.12);color:var(--gold);}
+.sev-low  .step-sev-chip{background:rgba(74,222,128,.12);color:var(--green);}
+.step-desc{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:6px;}
+.step-time{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.06em;}
+
+/* Footer */
+.rec-foot{background:rgba(255,255,255,.018);border-top:1px solid var(--border);padding:14px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.action-btn{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;padding:10px 26px;border-radius:7px;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .18s;white-space:nowrap;}
+.action-btn-gold{background:var(--gold);color:#000;}
+.action-btn-gold:hover{background:#e6b020;transform:translateY(-1px);}
+.action-btn-dim{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border);}
+.action-btn-dim:hover{color:var(--ink);border-color:var(--muted);}
+
+.empty{text-align:center;padding:60px 20px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--sub);margin-bottom:8px;}
+
+.info-banner{background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.18);border-radius:8px;padding:12px 18px;margin-bottom:20px;font-size:12px;color:var(--muted);line-height:1.65;}
+.info-banner strong{color:var(--blue);}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:768px){
+  .wrap{padding:0 14px 60px!important;}
+  .rec-header{flex-direction:column;gap:10px;}
+  .rec-rank{font-size:32px;width:auto;}
+  .rec-foot{flex-direction:column;gap:8px;}
+  .action-btn{width:100%;justify-content:center;font-size:15px!important;}
+  .summary{grid-template-columns:1fr 1fr!important;}
+  .filter-bar{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO RECOMMENDATIONS</div>
+  <div class="topbar-right">
+    <a href="/audit-workflow" class="btn btn-muted">← Workflow</a>
+    <a href="/audit-seo" class="btn btn-muted">🔬 PULSE+NEXUS</a>
+    <a href="/audit-progress-tracker" class="btn btn-muted">📈 Tracker</a>
+    <button class="btn btn-green" onclick="exportCSV()">↓ Export CSV</button>
+    <button class="btn btn-blue" onclick="exportReport()">📄 Export Report</button>
+    <button class="btn btn-muted" onclick="location.reload()">↺ Refresh</button>
+    <a href="/admin" id="recAdminLink" style="display:none;" class="btn btn-gold">⚙️ Admin</a>
+  </div>
+</div>
+<script>(function(){ if(localStorage.getItem('admin_id')){ var el=document.getElementById('recAdminLink'); if(el) el.style.display=''; } })();</script>
+
+<div class="info-banner">
+  <strong>How to use:</strong> Pages are ranked by impact score. Each card shows numbered steps in order — do step 1 before step 2. Click <strong>Pre-fill &amp; Open Audit</strong> to load that page directly into PULSE+NEXUS. If you already ran the audit for this page, the results load automatically.
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="filter-bar">
+  <span class="filter-label">Filter:</span>
+  <select id="fType" onchange="render()">
+    <option value="all">All recommendation types</option>
+    <option value="quickwin">⚡ Quick Wins only</option>
+    <option value="ctr">📈 CTR Fix</option>
+    <option value="content">📝 Content Upgrade</option>
+    <option value="rewrite">✏️ Rewrite</option>
+    <option value="authority">🔗 Authority Gap</option>
+  </select>
+  <select id="fPri" onchange="render()">
+    <option value="all">All priorities</option>
+    <option value="high">🔴 High priority</option>
+    <option value="med">🟡 Medium priority</option>
+    <option value="low">🟢 Low priority</option>
+  </select>
+  <select id="fStatus" onchange="render()">
+    <option value="active">Not done</option>
+    <option value="all">All pages</option>
+    <option value="done">Done only</option>
+  </select>
+  <select id="fSort" onchange="render()">
+    <option value="impact">Sort: Impact score</option>
+    <option value="position">Sort: Position</option>
+    <option value="impressions">Sort: Impressions</option>
+  </select>
+</div>
+
+<div class="rec-list" id="recList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var AUDIT_URL = '/audit-seo';
+var pages = [];
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+function load(){
+  try{ var p=localStorage.getItem('cs_wf_pages'); if(p) pages=JSON.parse(p); }catch(e){}
+}
+
+var RECS = {
+  quickwin:  { label:'Quick Win',        badgeClass:'badge-quickwin',  icon:'⚡' },
+  ctr:       { label:'CTR Fix',          badgeClass:'badge-ctr',       icon:'📈' },
+  content:   { label:'Content Upgrade',  badgeClass:'badge-content',   icon:'📝' },
+  rewrite:   { label:'Rewrite',          badgeClass:'badge-rewrite',   icon:'✏️' },
+  authority: { label:'Authority Gap',    badgeClass:'badge-authority', icon:'🔗' },
+  build:     { label:'Build Content',    badgeClass:'badge-build',     icon:'🏗️' },
+};
+
+function getActionSteps(p, rec){
+  var pos=p.position||0, ctr=parseFloat(p.ctr)||0, impr=p.impressions||0;
+  var score=parseFloat(p.scoreBefore)||0, type=rec.type;
+  if(type==='quickwin') return [
+    {sev:'high',title:'Rewrite title tag',time:'15 min',
+     desc:'CTR is '+ctr.toFixed(1)+'% at position '+Math.round(pos)+'. Open PULSE+NEXUS → Step 2 (CTR Surgery). New title ≤60 chars, include primary keyword, add a number or power word. Copy the AI-generated version directly.'},
+    {sev:'high',title:'Rewrite meta description',time:'10 min',
+     desc:'150-155 chars with an urgency trigger + specific benefit. Add a CTA phrase ("Get a free quote", "Available 24/7"). Open PULSE+NEXUS → Step 2 for the AI-written version.'},
+    {sev:'med',title:'Add FAQ schema to &lt;head&gt;',time:'30 min',
+     desc:'FAQPage JSON-LD with 4 Q&As based on your top queries. Open PULSE+NEXUS → Step 6 (NEXUS Signals) for a ready-to-paste schema block. This can trigger rich results in Google.'},
+    {sev:'med',title:'Check keyword in first 100 words',time:'10 min',
+     desc:'Primary keyword must appear in the first paragraph. Open PULSE+NEXUS → Step 8 (Technical Checklist) for the full keyword placement audit with exact fixes.'},
+    {sev:'low',title:'Add direct-answer paragraph above fold',time:'20 min',
+     desc:'Write a 40-60 word paragraph that directly defines your main keyword or answers the primary intent. Place it before any other body content. This is the #1 AI Overview eligibility signal.'},
+  ];
+  if(type==='ctr') return [
+    {sev:'high',title:'Rewrite title tag immediately',time:'15 min',
+     desc:'Position '+Math.round(pos)+' with CTR '+ctr.toFixed(1)+'% — the title is not converting. Open PULSE+NEXUS → Step 2. Add urgency, geo signal, and primary keyword in first 55-60 chars.'},
+    {sev:'high',title:'Rewrite meta description',time:'10 min',
+     desc:'Include a specific value proposition, the main pain point, and a CTA. Compare with Step 3 (Competitor Diff) to see how competing titles and metas are structured.'},
+    {sev:'high',title:'Run full 10-step audit',time:'2-3 hrs',
+     desc:'Position '+Math.round(pos)+' means content also needs strengthening. Open PULSE+NEXUS → paste your full page HTML → run all 10 steps. Start reading from Step 0 (Priority Actions).'},
+    {sev:'med',title:'Add structured data for rich results',time:'30 min',
+     desc:'FAQPage and LocalBusiness schema can increase CTR by 20-30% via rich results. Open PULSE+NEXUS → Step 8 for the exact JSON-LD to paste into your &lt;head&gt;.'},
+    {sev:'low',title:'Build 3-5 internal links to this page',time:'20 min',
+     desc:'Internal links signal authority and help Google understand the page\\'s importance. Open PULSE+NEXUS → Step 6 for exact source pages and anchor text to use.'},
+  ];
+  if(type==='rewrite') return [
+    {sev:'high',title:'Run full audit BEFORE rewriting',time:'30 min',
+     desc:'Do not rewrite without the audit data. Open PULSE+NEXUS → paste full page HTML → run all 10 steps. The output is your rewrite brief. Read Step 0 (Priority Actions) first.'},
+    {sev:'high',title:'Rewrite intro using PULSE Step 5 output',time:'1 hr',
+     desc:'Step 5 (PULSE Rewrites) gives the exact before/after for your intro paragraph, urgency signal, and CTA. Follow the "P — Purpose" rewrite first. Do not skip this step.'},
+    {sev:'high',title:'Fix HIGH severity content gaps from Step 4',time:'2-3 hrs',
+     desc:'Step 4 (Content Gap Matrix) lists every missing section with the exact content to add. Work through HIGH severity rows first. Add the specific copy — not generic content.'},
+    {sev:'med',title:'Implement new heading structure from Step 7',time:'45 min',
+     desc:'Step 7 (Architecture Blueprint) gives the exact H1→H2→H3 hierarchy for this keyword. Rebuild the heading structure before rewriting body content.'},
+    {sev:'med',title:'Add FAQ + schema from Step 6',time:'30 min',
+     desc:'Step 6 (NEXUS Signals) provides the complete FAQPage JSON-LD to add to &lt;head&gt;. Also add the 4-5 Q&As as visible content in the page body.'},
+    {sev:'low',title:'Re-scan score after publishing',time:'10 min',
+     desc:'After going live: Workflow Manager → your page → Scan Score → enter the new score in "Post-scan Score". Track the improvement vs the before-score.'},
+  ];
+  if(type==='authority') return [
+    {sev:'med',title:'Add 3 internal links TO this page',time:'20 min',
+     desc:'Open PULSE+NEXUS → Step 6 for the exact pages to link from and the anchor text to use. Semantic relevance matters more than quantity for internal link authority.'},
+    {sev:'med',title:'Add expert quote or cited statistic',time:'30 min',
+     desc:'One cited stat (with source URL) and one expert quote (real name + credential). Place in the first or second section. Fastest single E-E-A-T improvement.'},
+    {sev:'med',title:'Update content with 2025-2026 data',time:'1 hr',
+     desc:'Replace any pre-2024 statistics or case studies with current data. Update schema dateModified to today. Open Step 3b (Meta Consistency) in PULSE+NEXUS to check current dateModified.'},
+    {sev:'low',title:'Add author bio section',time:'20 min',
+     desc:'Author bio with full name, credential/role, and 1-2 sentences of relevant expertise. This is the fastest E-E-A-T signal to add. Include a real photo if possible.'},
+  ];
+  if(type==='build') return [
+    {sev:'high',title:'Run keyword research first',time:'1 hr',
+     desc:'Before rebuilding, confirm this keyword has commercial value. Check search volume and competitor strength. Open PULSE+NEXUS → Step 1 (Intent + AIO) for the gap analysis.'},
+    {sev:'high',title:'Use audit output as content brief',time:'30 min',
+     desc:'Run all 10 steps in PULSE+NEXUS (no HTML needed for the brief). Steps 1, 4, 6, and 7 together form your complete content brief. Write against that structure.'},
+    {sev:'high',title:'Build with correct H1→H2→H3 structure from start',time:'2 hrs',
+     desc:'Step 7 (Architecture Blueprint) gives the exact heading hierarchy for this keyword. Build to that structure from the start — do not edit your way to good structure.'},
+    {sev:'med',title:'Add FAQ schema from day 1',time:'20 min',
+     desc:'New pages need schema from first publish. Step 6 provides the complete FAQPage JSON-LD to paste into &lt;head&gt; at launch.'},
+    {sev:'low',title:'Request indexing via GSC after publishing',time:'5 min',
+     desc:'Google Search Console → URL Inspection → Request Indexing. Do this immediately after publishing. Monitor impressions after 7-14 days.'},
+  ];
+  // default: content
+  return [
+    {sev:'high',title:'Run full 10-step PULSE+NEXUS audit',time:'2-3 hrs',
+     desc:'Paste your full page HTML in PULSE+NEXUS and run all 10 steps. Read Step 0 (Priority Actions) first — it gives the 7 highest-impact changes specific to your page.'},
+    {sev:'high',title:'Add direct-answer paragraph above fold',time:'20 min',
+     desc:'40-60 word paragraph directly answering the primary keyword or intent. Place before any other content. Biggest single AI Overview eligibility signal.'},
+    {sev:'high',title:'Work through Step 4 Content Gap fixes',time:'2-4 hrs',
+     desc:'After running the audit, Step 4 (Content Gap Matrix) lists every missing section. Add the HIGH severity content first — exact copy is provided, not just suggestions.'},
+    {sev:'med',title:'Rewrite H2s as questions',time:'30 min',
+     desc:'Change statement H2s to question format ("How fast do emergency roofers respond?"). Improves AI Overview eligibility and matches how users search.'},
+    {sev:'med',title:'Add FAQ section + JSON-LD schema',time:'30 min',
+     desc:'4 Q&As minimum, 40-60 words each. Step 6 (NEXUS) in PULSE+NEXUS gives the ready-to-paste JSON-LD FAQ schema targeting your specific top queries.'},
+    {sev:'low',title:'Check Meta Consistency via Step 3b',time:'10 min',
+     desc:'In PULSE+NEXUS: paste your HTML → click "Check Meta Consistency" (section 3b). It checks title, og:title, twitter:title, schema headline, dateModified — and flags every mismatch.'},
+  ];
+}
+
+function getRecommendation(p){
+  var pos=p.position||0, ctr=parseFloat(p.ctr)||0;
+  var impr=p.impressions||0, score=parseFloat(p.scoreBefore)||0;
+  var hasScore=p.scoreBefore!==''&&p.scoreBefore!==undefined;
+  if(pos>=1&&pos<=10&&ctr<2) return{type:'quickwin',impactScore:95,quickWin:true,
+    title:'Quick Win — Title & Meta',
+    why:'Page 1, position '+Math.round(pos)+' — but CTR is only '+ctr.toFixed(1)+'%. Searchers see you but do not click. Title or meta needs an urgency/benefit rewrite.'};
+  if(pos>=1&&pos<=10&&ctr>=2){
+    if(hasScore&&score>=85) return{type:'authority',impactScore:40,
+      title:'Authority Gap — Build Links & Freshness',
+      why:'Position '+Math.round(pos)+', CTR '+ctr.toFixed(1)+'%, score '+score+'/100. Page performs well. Growth comes from backlinks, expert citations, and fresh data.'};
+    return null;}
+  if(pos>=11&&pos<=20){
+    if(ctr<1.5) return{type:'ctr',impactScore:92,quickWin:true,
+      title:'CTR Surgery + Content Push',
+      why:'Position '+Math.round(pos)+' with CTR '+ctr.toFixed(1)+'%. Two blockers: title not converting AND content not quite strong enough for page 1.'};
+    if(hasScore&&score<70) return{type:'content',impactScore:90,
+      title:'Content Upgrade — Score Below 70',
+      why:'Position '+Math.round(pos)+', score '+score+'/100. Content too weak for page 1. Full audit needed.'};
+    return{type:'content',impactScore:88,
+      title:'Content Upgrade — One Audit from Page 1',
+      why:'Position '+Math.round(pos)+(impr>2000?' — '+impr.toLocaleString()+' impressions means big traffic potential.':'')+' One strong audit from page 1.'};
+  }
+  if(pos>=21&&pos<=30){
+    if(hasScore&&score<70) return{type:'rewrite',impactScore:82,
+      title:'Page Rewrite Required',
+      why:'Position '+Math.round(pos)+', score '+score+'/100. Full rewrite needed before ranking can improve.'+(impr>1000?' With '+impr.toLocaleString()+' impressions the potential is there.':'')};
+    return{type:'content',impactScore:78,
+      title:'Content Upgrade — Needs Depth',
+      why:'Position '+Math.round(pos)+'. Needs deeper content, authority signals, or both.'};
+  }
+  if(pos>=31&&pos<=60){
+    if(impr>1000) return{type:'rewrite',impactScore:70,
+      title:'Rewrite Required — High Volume Keyword',
+      why:'Position '+Math.round(pos)+' with '+impr.toLocaleString()+' impressions. High demand but Google rates the page too weak for pages 1-3.'};
+    return{type:'content',impactScore:55,
+      title:'Content Audit — Determine Direction',
+      why:'Position '+Math.round(pos)+(impr<200?' with low impressions — confirm this keyword has enough demand before investing.':'')};
+  }
+  if(pos>60){
+    if(impr>500) return{type:'build',impactScore:40,
+      title:'Content Rebuild — Keyword Has Demand',
+      why:'Position '+Math.round(pos)+' but '+impr.toLocaleString()+' impressions show demand exists. Fundamental rebuild needed.'};
+    return{type:'build',impactScore:25,
+      title:'Verify Keyword Value First',
+      why:'Position '+Math.round(pos)+' with low impressions. Confirm commercial value before investing in a full rewrite.'};
+  }
+  return{type:'content',impactScore:50,
+    title:'Add GSC Data for Better Recommendation',
+    why:'No position data. Add impressions and position from Google Search Console for a precise recommendation.'};
+}
+
+function buildAuditUrl(p){
+  var params=new URLSearchParams();
+  params.set('url',p.url);
+  if(p.keyword)     params.set('kw',  p.keyword);
+  if(p.position)    params.set('pos', p.position);
+  if(p.impressions) params.set('impr',p.impressions);
+  if(p.ctr)         params.set('ctr', p.ctr);
+  if(p.id)          params.set('wf',  p.id);
+  return AUDIT_URL+'?'+params.toString();
+}
+
+function render(){
+  var fType=document.getElementById('fType').value;
+  var fPri=document.getElementById('fPri').value;
+  var fStatus=document.getElementById('fStatus').value;
+  var fSort=document.getElementById('fSort').value;
+
+  var arr=pages.filter(function(p){
+    if(fStatus==='active'&&p.status==='done') return false;
+    if(fStatus==='done'&&p.status!=='done')   return false;
+    if(fPri!=='all'&&p.priority!==fPri)       return false;
+    return true;
+  }).map(function(p){ return{page:p,rec:getRecommendation(p)}; })
+  .filter(function(x){
+    if(!x.rec) return false;
+    if(fType!=='all'&&x.rec.type!==fType) return false;
+    return true;
+  });
+
+  if(fSort==='impact')       arr.sort(function(a,b){return b.rec.impactScore-a.rec.impactScore;});
+  else if(fSort==='position')    arr.sort(function(a,b){return(a.page.position||999)-(b.page.position||999);});
+  else if(fSort==='impressions') arr.sort(function(a,b){return b.page.impressions-a.page.impressions;});
+
+  var types={};
+  arr.forEach(function(x){types[x.rec.type]=(types[x.rec.type]||0)+1;});
+  var qw=arr.filter(function(x){return x.rec.quickWin;}).length;
+  document.getElementById('summary').innerHTML=
+    '<div class="sum-card"><div class="sum-n" style="color:var(--blue)">'+arr.length+'</div><div class="sum-l">Total pages</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--green)">'+qw+'</div><div class="sum-l">Quick wins &lt;30min</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--gold)">'+(types.content||0)+'</div><div class="sum-l">Need audit</div></div>'
+   +'<div class="sum-card"><div class="sum-n" style="color:var(--orange)">'+(types.rewrite||0)+'</div><div class="sum-l">Need rewrite</div></div>';
+
+  if(!arr.length){
+    document.getElementById('recList').innerHTML='<div class="empty"><h3>No Pages Found</h3><p>Add pages in the Workflow Manager, or adjust the filters above.</p></div>';
+    return;
+  }
+
+  document.getElementById('recList').innerHTML=arr.map(function(x,i){
+    var p=x.page,rec=x.rec,R=RECS[rec.type]||RECS.content;
+    var auditUrl=buildAuditUrl(p);
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,60);}
+    if(shortUrl.length>65) shortUrl=shortUrl.slice(0,65)+'…';
+    var priClass=p.priority==='high'?'pri-high':p.priority==='low'?'pri-low':'pri-med';
+    var priChip=p.priority==='high'?'<span class="pri-chip pri-high-chip">🔴 HIGH</span>'
+               :p.priority==='low' ?'<span class="pri-chip pri-low-chip">🟢 LOW</span>'
+               :                    '<span class="pri-chip pri-med-chip">🟡 MED</span>';
+    var gscChips='';
+    if(p.position)    gscChips+='<div class="gsc-chip"><strong>Pos</strong> '+Math.round(p.position)+'</div>';
+    if(p.impressions) gscChips+='<div class="gsc-chip"><strong>Impr</strong> '+p.impressions.toLocaleString()+'</div>';
+    if(p.ctr)         gscChips+='<div class="gsc-chip"><strong>CTR</strong> '+parseFloat(p.ctr).toFixed(1)+'%</div>';
+    if(p.scoreBefore) gscChips+='<div class="gsc-chip"><strong>Score</strong> '+p.scoreBefore+'/100</div>';
+    if(p.deadline)    gscChips+='<div class="gsc-chip"><strong>Due</strong> '+p.deadline+'</div>';
+
+    var steps=getActionSteps(p,rec);
+    var stepsHtml=steps.map(function(s,si){
+      return '<div class="action-step sev-'+s.sev+'">'
+        +'<div class="step-num">'+(si+1)+'</div>'
+        +'<div class="step-body">'
+        +'<div class="step-title">'+s.title+' <span class="step-sev-chip">'+s.sev.toUpperCase()+'</span></div>'
+        +'<div class="step-desc">'+s.desc+'</div>'
+        +'<div class="step-time">⏱ '+s.time+'</div>'
+        +'</div></div>';
+    }).join('');
+
+    return '<div class="rec-card '+priClass+'">'
+      +'<div class="rec-header">'
+      +'<div class="rec-rank">#'+(i+1)+'</div>'
+      +'<div class="rec-header-body">'
+      +'<div class="rec-type-row"><span class="type-badge '+R.badgeClass+'">'+R.icon+' '+R.label+'</span>'+priChip+(rec.quickWin?'<span class="type-badge badge-quickwin">⚡ QUICK WIN</span>':'')+'</div>'
+      +'<div class="rec-page-url">'+shortUrl+'</div>'
+      +(p.keyword?'<div class="rec-keyword">Keyword: <strong>'+p.keyword+'</strong></div>':'')
+      +'<div class="rec-title">'+rec.title+'</div>'
+      +'<div class="rec-why">'+rec.why+'</div>'
+      +(gscChips?'<div class="gsc-chips">'+gscChips+'</div>':'')
+      +'</div></div>'
+      +'<div class="action-steps">'
+      +'<div class="steps-heading">What to do — in order</div>'
+      +'<div class="step-list">'+stepsHtml+'</div>'
+      +'</div>'
+      +'<div class="rec-foot">'
+      +'<a href="'+auditUrl+'" class="action-btn action-btn-gold">🔬 Pre-fill &amp; Open Audit →</a>'
+      +'<a href="'+p.url+'" target="_blank" class="action-btn action-btn-dim">↗ View page</a>'
+      +(p.status==='done'?'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;">✅ Done</span>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Export CSV ────────────────────────────────────────
+function exportCSV(){
+  if(!pages.length){toast('⚠ No pages to export');return;}
+  var rows=['Rank,URL,Keyword,Priority,Position,Impressions,CTR,Score,Type,ImpactScore,Status'];
+  pages.map(function(p){return{page:p,rec:getRecommendation(p)};})
+    .filter(function(x){return x.rec;})
+    .sort(function(a,b){return b.rec.impactScore-a.rec.impactScore;})
+    .forEach(function(x,i){
+      var p=x.page,rec=x.rec;
+      rows.push([i+1,'"'+p.url+'"','"'+(p.keyword||'')+'"',p.priority,
+        p.position||'',p.impressions||'',parseFloat(p.ctr||0).toFixed(1),
+        p.scoreBefore||'',rec.type,rec.impactScore,p.status||'notstarted'].join(','));
+    });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\\n')],{type:'text/csv'}));
+  a.download='seo-recommendations-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();toast('✅ CSV exported');
+}
+
+// ── Export HTML Report ────────────────────────────────
+function exportReport(){
+  if(!pages.length){toast('⚠ No pages to export');return;}
+  var items=pages.map(function(p){return{page:p,rec:getRecommendation(p)};})
+    .filter(function(x){return x.rec;})
+    .sort(function(a,b){return b.rec.impactScore-a.rec.impactScore;});
+
+  var css='body{font-family:Arial,sans-serif;max-width:920px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}'
+    +'h1{color:#7c3aed;font-size:26px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:6px;}'
+    +'.card{border:1px solid #e5e7eb;border-radius:8px;margin-bottom:20px;overflow:hidden;}'
+    +'.card.high{border-left:4px solid #dc2626;}.card.med{border-left:4px solid #d97706;}.card.low{border-left:4px solid #16a34a;}'
+    +'.ch{background:#f9fafb;padding:14px 18px;border-bottom:1px solid #e5e7eb;}'
+    +'.ch-top{display:flex;gap:14px;align-items:flex-start;}'
+    +'.rank{font-size:36px;font-weight:900;color:#d97706;width:44px;flex-shrink:0;text-align:center;line-height:1;}'
+    +'.ch-body{flex:1;}'
+    +'.tag{display:inline-block;font-size:9px;padding:2px 8px;border-radius:3px;background:#ede9fe;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;font-family:monospace;margin-bottom:6px;margin-right:4px;}'
+    +'.title{font-size:18px;font-weight:700;margin:4px 0;}'
+    +'.url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}'
+    +'.why{font-size:13px;color:#6b7280;margin-top:6px;}'
+    +'.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}'
+    +'.chip{background:#f3f4f6;border-radius:4px;padding:2px 8px;font-size:10px;font-family:monospace;color:#6b7280;}'
+    +'.steps{padding:14px 18px;}'
+    +'.steps-h{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;font-family:monospace;margin-bottom:10px;}'
+    +'.step{display:flex;gap:12px;padding:10px 12px;border-radius:6px;margin-bottom:7px;border:1px solid;}'
+    +'.step.h{background:#fef2f2;border-color:#fecaca;}.step.m{background:#fffbeb;border-color:#fde68a;}.step.l{background:#f0fdf4;border-color:#bbf7d0;}'
+    +'.sn{font-size:22px;font-weight:900;width:28px;text-align:center;flex-shrink:0;}'
+    +'.step.h .sn{color:#dc2626;}.step.m .sn{color:#d97706;}.step.l .sn{color:#16a34a;}'
+    +'.st{font-weight:700;font-size:13px;color:#111827;}'
+    +'.sd{font-size:12px;color:#6b7280;margin-top:3px;}'
+    +'.stm{font-size:10px;color:#9ca3af;margin-top:4px;font-family:monospace;}'
+    +'footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
+
+  var body='<h1>SEO Recommendations Report</h1>'
+    +'<p style="color:#6b7280;font-size:13px;margin-bottom:24px;"><strong>Generated:</strong> '+new Date().toLocaleString()
+    +' &nbsp;·&nbsp; <strong>Pages:</strong> '+items.length+'</p>';
+
+  items.forEach(function(x,i){
+    var p=x.page,rec=x.rec,R=RECS[rec.type]||RECS.content;
+    var steps=getActionSteps(p,rec);
+    var shortUrl='';
+    try{shortUrl=new URL(p.url).pathname||'/';}catch(e){shortUrl=p.url.slice(0,70);}
+    var sevCls=p.priority==='high'?'high':p.priority==='low'?'low':'med';
+    body+='<div class="card '+sevCls+'">'
+      +'<div class="ch"><div class="ch-top"><div class="rank">#'+(i+1)+'</div><div class="ch-body">'
+      +'<div><span class="tag">'+R.icon+' '+R.label+'</span>'+(rec.quickWin?'<span class="tag" style="background:#dcfce7;color:#16a34a;">⚡ QUICK WIN</span>':'')+'</div>'
+      +'<div class="url">'+shortUrl+'</div>'
+      +(p.keyword?'<div style="font-size:11px;color:#6b7280;margin-top:3px;">Keyword: <strong>'+p.keyword+'</strong></div>':'')
+      +'<div class="title">'+rec.title+'</div>'
+      +'<div class="why">'+rec.why+'</div>'
+      +(p.position||p.impressions?'<div class="chips">'
+        +(p.position?'<span class="chip">Pos: '+Math.round(p.position)+'</span>':'')
+        +(p.impressions?'<span class="chip">Impr: '+p.impressions.toLocaleString()+'</span>':'')
+        +(p.ctr?'<span class="chip">CTR: '+parseFloat(p.ctr).toFixed(1)+'%</span>':'')
+        +(p.scoreBefore?'<span class="chip">Score: '+p.scoreBefore+'/100</span>':'')
+        +'</div>':'')
+      +'</div></div></div>'
+      +'<div class="steps"><div class="steps-h">Steps — in order</div>'
+      +steps.map(function(s,si){
+        var sc=s.sev==='high'?'h':s.sev==='low'?'l':'m';
+        return '<div class="step '+sc+'"><div class="sn">'+(si+1)+'</div><div>'
+          +'<div class="st">'+s.title+'</div><div class="sd">'+s.desc+'</div>'
+          +'<div class="stm">⏱ '+s.time+'</div></div></div>';
+      }).join('')+'</div></div>';
+  });
+  body+='<footer>ContentScale SEO Recommendations · contentscale.site</footer>';
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SEO Recommendations Report</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='seo-recommendations-'+new Date().toISOString().slice(0,10)+'.html';
+  a.click();toast('✅ HTML report exported');
+}
+
+load();
+render();
+</script>
+</body>
+</html>
+`;
+const _AUDIT_PROGRESS_TRACKER_FINAL_HTML = `<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>SEO Progress Tracker | ContentScale</title>
+<script>
+(function(){
+  var RAILWAY='https://app.contentscale.site';
+  if(localStorage.getItem('admin_id')){window._toolSession={type:'admin',projectKey:'admin',whitelabelName:'ContentScale',isAdmin:true};return;}
+  var token=localStorage.getItem('cs_access_token');
+  if(!token){window.location.href='/tools';return;}
+  document.documentElement.style.visibility='hidden';
+  fetch(RAILWAY+'/api/access/session',{headers:{'x-access-token':token}})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.success){localStorage.removeItem('cs_access_token');localStorage.removeItem('cs_access_session');window.location.href='/tools';return;}
+      window._toolSession=d;localStorage.setItem('cs_access_session',JSON.stringify(d));
+      if(d.whitelabelName&&d.whitelabelName!=='ContentScale SEO Tools'){var b=document.querySelector('.brand');if(b)b.textContent=d.whitelabelName;}
+      document.documentElement.style.visibility='';
+    }).catch(function(){
+      var c=null;try{c=JSON.parse(localStorage.getItem('cs_access_session')||'null');}catch(e){}
+      if(c&&c.type){window._toolSession=c;document.documentElement.style.visibility='';}
+      else{window.location.href='/tools';}
+    });
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030712;--card:#0f172a;--surface:#1e293b;--border:#334155;
+  --ink:#f9fafb;--muted:#94a3b8;--sub:#64748b;--dim:#475569;
+  --purple:#a78bfa;--blue:#60a5fa;--green:#4ade80;
+  --gold:#fbbf24;--red:#f43f3f;--orange:#fb923c;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh;line-height:1.5;}
+.wrap{max-width:1300px;margin:0 auto;padding:0 20px 80px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+.tool-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;background:linear-gradient(90deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.topbar-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;background:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.btn-muted{background:var(--surface);border-color:var(--border);color:var(--muted);}
+.btn-muted:hover{color:var(--ink);}
+.btn-green{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+.btn-blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:var(--blue);}
+.btn-blue:hover{background:var(--blue);color:#000;}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700;}
+.btn-gold:hover{opacity:.88;}
+.btn-red{background:rgba(244,63,63,.08);border-color:rgba(244,63,63,.2);color:var(--red);}
+.btn-red:hover{background:var(--red);color:#fff;}
+.btn-orange{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.3);color:var(--orange);}
+
+/* Sync status */
+#syncStatus{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--dim);text-align:right;margin-bottom:8px;}
+
+/* ── MEASUREMENT DASHBOARD ── */
+.meas-dash{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:22px;}
+.meas-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.meas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.meas-domain{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;transition:border-color .2s;}
+.meas-domain.due-now{border-color:var(--gold);background:rgba(251,191,36,.04);}
+.meas-domain.overdue{border-color:var(--red);background:rgba(244,63,63,.04);}
+.meas-domain.spiral{border-color:var(--red);background:rgba(244,63,63,.06);}
+.meas-domain.ok{border-color:var(--green);background:rgba(74,222,128,.03);}
+.md-left{flex:1;min-width:0;}
+.md-name{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;color:var(--ink);margin-bottom:2px;}
+.md-meta{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);}
+.md-next{font-family:'IBM Plex Mono',monospace;font-size:9px;margin-top:5px;}
+.md-next.due{color:var(--gold);}
+.md-next.overdue{color:var(--red);}
+.md-next.future{color:var(--dim);}
+.md-next.spiral{color:var(--red);}
+.md-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;white-space:nowrap;}
+
+/* Global summary */
+.g-summary{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px;}
+@media(max-width:800px){.g-summary{grid-template-columns:repeat(3,1fr);}}
+.gs-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;}
+.gs-n{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;margin-bottom:3px;}
+.gs-l{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+
+/* Domain sections */
+.domain-section{margin-bottom:28px;}
+.domain-header{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px 10px 0 0;cursor:pointer;user-select:none;}
+.domain-header:hover{background:var(--surface);}
+.domain-color{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.domain-name{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;flex:1;}
+.domain-meta{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);}
+.domain-body{border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;overflow:hidden;}
+
+/* GSC import strip */
+.gsc-strip{background:rgba(96,165,250,.05);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.gsc-strip input[type=file]{display:none;}
+
+/* Page cards */
+.page-card{border-bottom:1px solid var(--border);}
+.page-card:last-child{border-bottom:none;}
+.pc-head{display:flex;align-items:center;gap:10px;padding:12px 18px;cursor:pointer;user-select:none;}
+.pc-head:hover{background:rgba(255,255,255,.02);}
+.pc-url{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);flex:1;word-break:break-all;min-width:0;}
+.pc-kw{font-size:11px;color:var(--muted);}
+.pc-status{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;flex-shrink:0;}
+.st-improving{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+.st-stagnant{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.25);}
+.st-declining{background:rgba(244,63,63,.12);color:var(--red);border:1px solid rgba(244,63,63,.25);}
+.st-baseline{background:rgba(71,85,105,.15);color:var(--dim);border:1px solid var(--border);}
+.st-spiral{background:rgba(244,63,63,.2);color:var(--red);border:1px solid rgba(244,63,63,.5);}
+
+/* Timeline */
+.tl-wrap{padding:14px 18px;border-top:1px solid var(--border);}
+.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+@media(max-width:600px){.tl{grid-template-columns:repeat(4,1fr);}}
+.tl-node{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;position:relative;}
+.tl-node.filled{border-color:var(--green);background:rgba(74,222,128,.05);}
+.tl-node.due{border-color:var(--gold);background:rgba(251,191,36,.06);}
+.tl-node.overdue{border-color:var(--red);background:rgba(244,63,63,.05);}
+.tl-node.skipped{opacity:.5;}
+.tl-node.future{opacity:.35;}
+.tl-node.down{border-color:var(--red);}
+.tl-wk{font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--sub);margin-bottom:3px;}
+.tl-dt{font-family:'IBM Plex Mono',monospace;font-size:6px;color:var(--dim);margin-bottom:5px;}
+.tl-pos{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;}
+.tl-pos.good{color:var(--green);}
+.tl-pos.warn{color:var(--gold);}
+.tl-pos.bad{color:var(--red);}
+.tl-pos.empty{color:var(--dim);font-size:14px;}
+.tl-delta{font-family:'IBM Plex Mono',monospace;font-size:7px;margin-top:2px;}
+.tl-delta.up{color:var(--green);}
+.tl-delta.dn{color:var(--red);}
+.tl-inp{width:100%;margin-top:4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--ink);text-align:center;outline:none;}
+.tl-inp:focus{border-color:var(--gold);}
+.tl-skip{font-family:'IBM Plex Mono',monospace;font-size:6px;color:var(--dim);background:none;border:none;cursor:pointer;display:block;margin:3px auto 0;padding:1px 3px;}
+.tl-skip:hover{color:var(--muted);}
+.tl-now{position:absolute;top:-5px;right:-5px;width:12px;height:12px;border-radius:50%;background:var(--gold);font-size:7px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;}
+
+/* Metrics row */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 18px;border-top:1px solid var(--border);}
+@media(max-width:500px){.metrics-row{grid-template-columns:1fr 1fr;}}
+.mc{background:var(--surface);border-radius:6px;padding:8px 10px;text-align:center;}
+.mc-l{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:3px;}
+.mc-v{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;}
+.mc-v.good{color:var(--green);}
+.mc-v.warn{color:var(--gold);}
+.mc-v.bad{color:var(--red);}
+.mc-ch{font-family:'IBM Plex Mono',monospace;font-size:8px;margin-top:2px;}
+.mc-ch.up{color:var(--green);}
+.mc-ch.dn{color:var(--red);}
+
+/* GSC input panel */
+.gsc-input{padding:12px 18px;border-top:1px solid var(--border);background:rgba(96,165,250,.03);}
+.gi-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;}
+.gi-row{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end;}
+.gi-f label{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:3px;}
+.gi-f input{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink);outline:none;width:100%;}
+.gi-f input:focus{border-color:var(--gold);}
+.gi-f input[type=date]{color-scheme:dark;}
+
+/* Spiral alert */
+.spiral-alert{background:rgba(244,63,63,.06);border:1px solid rgba(244,63,63,.3);border-radius:8px;padding:12px 16px;margin:0 18px 12px;}
+.sa-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:6px;}
+.sa-body{font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:8px;}
+.sa-actions{display:flex;gap:7px;flex-wrap:wrap;}
+
+/* Warn alert */
+.warn-alert{background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:7px;padding:10px 14px;margin:0 18px 10px;}
+.wa-title{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+.wa-body{font-size:12px;color:var(--muted);line-height:1.6;}
+
+/* Add domain + page panels */
+.add-panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:20px;}
+.add-panel-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin-bottom:12px;}
+.add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.af{flex:1;min-width:110px;}
+.af label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:4px;}
+.af input,.af select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;}
+.af input:focus,.af select:focus{border-color:var(--gold);}
+.af input[type=date]{color-scheme:dark;}
+.af select option{background:var(--card);}
+
+/* Domain colors */
+.dc-0{background:#a78bfa;} .dc-1{background:#60a5fa;} .dc-2{background:#4ade80;}
+.dc-3{background:#fbbf24;} .dc-4{background:#fb923c;} .dc-5{background:#f43f3f;}
+.dc-6{background:#c084fc;} .dc-7{background:#34d399;} .dc-8{background:#38bdf8;}
+
+.empty{text-align:center;padding:40px;color:var(--dim);}
+.empty h3{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--sub);margin-bottom:6px;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gold);color:#000;padding:9px 20px;border-radius:50px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;opacity:0;transition:all .3s;z-index:10000;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media(max-width:768px){.wrap{padding:0 14px 60px!important;}.add-row{flex-direction:column;}.af{min-width:100%;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <a href="https://contentscale.site" class="brand">ContentScale</a>
+  <div class="tool-title">SEO PROGRESS TRACKER</div>
+  <div class="topbar-right">
+    <a href="/audit-workflow" class="btn btn-muted">← Workflow</a>
+    <a href="/audit-seo" class="btn btn-muted">🔬 Audit</a>
+    <a href="/audit-recommendations" class="btn btn-muted">🎯 Recs</a>
+    <button class="btn btn-blue" onclick="trackerSyncToServer(false)">☁ Opslaan</button>
+    <button class="btn btn-muted" onclick="trackerLoadFromServer()">↓ Laden</button>
+    <button class="btn btn-green" onclick="exportCSV()">↓ CSV</button>
+    <button class="btn btn-blue" onclick="exportClientReport()">📄 Rapport</button>
+    <a href="/admin" id="trackerAdminLink" style="display:none;" class="btn btn-gold">⚙️ Admin</a>
+  </div>
+</div>
+<script>(function(){ if(localStorage.getItem('admin_id')){ var el=document.getElementById('trackerAdminLink'); if(el) el.style.display=''; } })();</script>
+
+<div id="syncStatus"></div>
+
+<!-- MEASUREMENT DASHBOARD -->
+<div class="meas-dash" id="measDash">
+  <div class="meas-title">
+    <span>📅 Meting Dashboard — wanneer moet ik meten?</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input type="file" id="gscGlobalInput" accept=".csv" onchange="importGSCGlobal(this)" style="display:none;">
+      <button class="btn btn-gold" onclick="document.getElementById('gscGlobalInput').click()">📊 Importeer GSC CSV</button>
+    </div>
+  </div>
+  <div class="meas-grid" id="measGrid"></div>
+</div>
+
+<!-- GLOBAL SUMMARY -->
+<div class="g-summary" id="gSummary"></div>
+
+<!-- ADD DOMAIN -->
+<div class="add-panel">
+  <div class="add-panel-title">➕ Domein toevoegen</div>
+  <div class="add-row">
+    <div class="af" style="flex:2;min-width:180px;">
+      <label>Domeinnaam *</label>
+      <input type="text" id="newDomainName" placeholder="perfectroofingteam.com">
+    </div>
+    <div class="af" style="min-width:120px;max-width:140px;">
+      <label>Baseline datum *</label>
+      <input type="date" id="newDomainDate">
+    </div>
+    <div class="af" style="flex:none;align-self:flex-end;">
+      <button class="btn btn-gold" onclick="addDomain()">+ Domein</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PAGE -->
+<div class="add-panel" id="addPagePanel">
+  <div class="add-panel-title">➕ Pagina toevoegen aan domein</div>
+  <div class="add-row">
+    <div class="af" style="min-width:140px;">
+      <label>Domein *</label>
+      <select id="newPageDomain"></select>
+    </div>
+    <div class="af" style="flex:3;min-width:200px;">
+      <label>Page URL *</label>
+      <input type="url" id="newUrl" placeholder="https://site.com/page">
+    </div>
+    <div class="af" style="flex:2;min-width:150px;">
+      <label>Primair Keyword *</label>
+      <input type="text" id="newKw" placeholder="emergency roof repair NJ">
+    </div>
+    <div class="af" style="min-width:75px;max-width:90px;">
+      <label>Positie</label>
+      <input type="number" id="newPos" placeholder="34" step="0.1">
+    </div>
+    <div class="af" style="min-width:80px;max-width:95px;">
+      <label>Impressies</label>
+      <input type="number" id="newImpr" placeholder="12400">
+    </div>
+    <div class="af" style="min-width:65px;max-width:80px;">
+      <label>CTR %</label>
+      <input type="number" id="newCtr" placeholder="1.8" step="0.1">
+    </div>
+    <div class="af" style="min-width:65px;max-width:80px;">
+      <label>Clicks</label>
+      <input type="number" id="newClicks" placeholder="223">
+    </div>
+    <div class="af" style="flex:none;align-self:flex-end;">
+      <button class="btn btn-gold" onclick="addPage()">+ Pagina</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT FROM WORKFLOW -->
+<div id="importBanner" style="display:none;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.18);border-radius:7px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);">
+  <strong style="color:var(--green);">✓ Workflow pagina's gevonden</strong>
+  <span id="importCount"></span> beschikbaar.
+  <button class="btn btn-green" onclick="importFromWorkflow()">Importeer uit Workflow</button>
+</div>
+
+<div id="domainList"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var LS_KEY = 'cs_tracker_v3';
+var RAILWAY = 'https://app.contentscale.site';
+
+// domains = [ { id, name, baseDate, colorIdx, pages: [...] } ]
+// page = { id, url, keyword, checkpoints: { w0:{date,position,impressions,ctr,clicks,skipped}, w2:..., ... } }
+var domains = [];
+
+var CHECKPOINTS = [
+  {id:'w0',  label:'Baseline', days:0,  color:'var(--dim)'    },
+  {id:'w2',  label:'Week 2',   days:14, color:'var(--blue)'   },
+  {id:'w4',  label:'Week 4',   days:28, color:'var(--blue)'   },
+  {id:'w6',  label:'Week 6',   days:42, color:'var(--purple)' },
+  {id:'w8',  label:'Week 8',   days:56, color:'var(--purple)' },
+  {id:'w10', label:'Week 10',  days:70, color:'var(--gold)'   },
+  {id:'w12', label:'Week 12',  days:84, color:'var(--green)'  },
+];
+
+var DOMAIN_COLORS = ['#a78bfa','#60a5fa','#4ade80','#fbbf24','#fb923c','#f43f3f','#c084fc','#34d399','#38bdf8'];
+
+var CORE_UPDATES = ['2024-03-05','2024-08-15','2024-11-11','2025-03-13','2025-06-30','2025-11-04','2026-03-10'];
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function toast(msg,dur){ var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},dur||2500); }
+function setSyncStatus(msg,color){ var el=document.getElementById('syncStatus');if(el){el.textContent=msg;el.style.color=color||'var(--dim)';} }
+
+// ── Save / Load ──────────────────────────────────────────
+function save(){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(domains)); }catch(e){
+    try{ localStorage.removeItem(LS_KEY+'_bak'); localStorage.setItem(LS_KEY,JSON.stringify(domains)); }catch(e2){}
+  }
+  try{ localStorage.setItem(LS_KEY+'_bak',JSON.stringify({domains,savedAt:new Date().toISOString()})); }catch(e){}
+}
+function load(){
+  try{ var d=localStorage.getItem(LS_KEY); if(d) domains=JSON.parse(d); }
+  catch(e){ try{ var b=localStorage.getItem(LS_KEY+'_bak'); if(b){var bd=JSON.parse(b);if(bd.domains)domains=bd.domains;} }catch(e2){} }
+}
+
+function _getTrackerKey(){
+  try{ var k=localStorage.getItem('cs_tracker_key'); if(k) return k; }catch(e){}
+  var key = 'tracker-default';
+  if(domains.length){ try{ key='tracker-'+domains[0].name.replace(/[^a-z0-9]/gi,'-').toLowerCase().slice(0,40); }catch(e){} }
+  try{ localStorage.setItem('cs_tracker_key',key); }catch(e){}
+  return key;
+}
+
+async function trackerSyncToServer(silent){
+  if(!domains.length) return;
+  var key=_getTrackerKey();
+  try{
+    var r=await fetch(RAILWAY+'/api/tracker/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,pages:domains,savedAt:new Date().toISOString()})});
+    var d=await r.json();
+    if(d.success){ var ts=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}); setSyncStatus('☁ Opgeslagen om '+ts+' — key: '+key,'var(--green)'); if(!silent)toast('☁ Opgeslagen — key: '+key); }
+    else{ setSyncStatus('⚠ Server save mislukt','var(--gold)'); }
+  }catch(e){ setSyncStatus('⚠ Server niet bereikbaar — lokaal opgeslagen','var(--gold)'); }
+}
+
+async function trackerLoadFromServer(){
+  var key=prompt('Tracker key (leeg = automatisch):');
+  if(key===null) return;
+  if(!key) key=_getTrackerKey();
+  try{
+    var r=await fetch(RAILWAY+'/api/tracker/load?key='+encodeURIComponent(key));
+    var d=await r.json();
+    if(d.success&&d.data&&d.data.pages){
+      if(!confirm('Laden? Vervangt huidige data.')) return;
+      domains=d.data.pages;
+      try{localStorage.setItem('cs_tracker_key',key);}catch(e){}
+      save(); render();
+      setSyncStatus('☁ Geladen — key: '+key,'var(--green)');
+      toast('✅ Data geladen van server');
+    }else{ toast('⚠ Niet gevonden: '+key); }
+  }catch(e){ toast('⚠ Server niet bereikbaar: '+e.message); }
+}
+
+var _autoSaveTimer=null;
+function startAutoSave(){
+  if(_autoSaveTimer) clearInterval(_autoSaveTimer);
+  _autoSaveTimer=setInterval(function(){ if(domains.length) trackerSyncToServer(true); },90000);
+  window.addEventListener('beforeunload',function(){
+    try{save();}catch(e){}
+    if(domains.length){ try{ var key=_getTrackerKey(); navigator.sendBeacon(RAILWAY+'/api/tracker/save',new Blob([JSON.stringify({key,pages:domains,savedAt:new Date().toISOString()})],{type:'application/json'})); }catch(e){} }
+  });
+}
+
+// ── Checkpoint helpers ───────────────────────────────────
+function makeCheckpoints(baseDate){
+  var cp={};
+  CHECKPOINTS.forEach(function(c){ cp[c.id]={date:c.id==='w0'?baseDate:'',position:null,impressions:null,ctr:null,clicks:null,skipped:false}; });
+  return cp;
+}
+function expectedDate(baseDate,days){ if(!baseDate) return null; var d=new Date(baseDate); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+function getSpiralStatus(page){
+  var filled=CHECKPOINTS.filter(function(cp){ var d=page.checkpoints[cp.id]; return d&&d.position!==null&&!d.skipped; });
+  if(filled.length<2) return 'baseline';
+  var positions=filled.map(function(cp){ return page.checkpoints[cp.id].position; });
+  var last=positions[positions.length-1], prev=positions[positions.length-2], prev2=positions.length>=3?positions[positions.length-3]:null, base=positions[0];
+  if((prev2!==null&&last>prev&&prev>prev2)||(last>base+10)) return 'spiral';
+  if(last>prev+2) return 'declining';
+  if(last<base) return 'improving';
+  if(Math.abs(last-base)<=2) return 'stagnant';
+  return 'baseline';
+}
+
+function getDueCheckpoint(page, domainBaseDate){
+  var baseDate=page.checkpoints.w0.date||domainBaseDate;
+  if(!baseDate) return null;
+  var td=today();
+  for(var i=1;i<CHECKPOINTS.length;i++){
+    var cp=CHECKPOINTS[i], data=page.checkpoints[cp.id];
+    if(data.skipped||data.position!==null) continue;
+    var exp=expectedDate(baseDate,cp.days);
+    if(exp&&exp<=td) return {cp:cp,expectedDate:exp,isOverdue:new Date(exp)<new Date(td)};
+  }
+  // All filled — find next upcoming
+  for(var j=1;j<CHECKPOINTS.length;j++){
+    var cp2=CHECKPOINTS[j], data2=page.checkpoints[cp2.id];
+    if(data2.skipped||data2.position!==null) continue;
+    var exp2=expectedDate(baseDate,cp2.days);
+    if(exp2&&exp2>td) return {cp:cp2,expectedDate:exp2,isOverdue:false,isFuture:true};
+  }
+  return null;
+}
+
+function getDomainNextMeasurement(domain){
+  // Returns the earliest due date across all pages in this domain
+  var earliest=null, anyOverdue=false, anyDue=false, anySpiral=false;
+  domain.pages.forEach(function(p){
+    var due=getDueCheckpoint(p, domain.baseDate);
+    if(!due) return;
+    if(due.isFuture){ if(!earliest||due.expectedDate<earliest) earliest=due.expectedDate; }
+    else{ anyDue=true; if(due.isOverdue) anyOverdue=true; if(!earliest||due.expectedDate<earliest) earliest=due.expectedDate; }
+    if(getSpiralStatus(p)==='spiral') anySpiral=true;
+  });
+  return {date:earliest, overdue:anyOverdue, due:anyDue, spiral:anySpiral};
+}
+
+function posColor(v){ if(v===null) return ''; return v<=10?'good':v<=20?'warn':'bad'; }
+function fmtNum(v,m){
+  if(v===null||v===undefined) return '—';
+  if(m==='position') return Math.round(v*10)/10;
+  if(m==='ctr') return parseFloat(v).toFixed(1)+'%';
+  if(m==='impressions'||m==='clicks') return v>=1000?(v/1000).toFixed(1)+'k':v;
+  return v;
+}
+function coreUpdateNear(dateStr){
+  if(!dateStr) return null;
+  var d=new Date(dateStr);
+  for(var i=0;i<CORE_UPDATES.length;i++){ var cu=new Date(CORE_UPDATES[i]); if(Math.abs((d-cu)/(86400000))<=21) return CORE_UPDATES[i]; }
+  return null;
+}
+
+function updateCheckpoint(domainId,pageId,cpId,metric,value){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  var page=dom.pages.find(function(p){return p.id===pageId;});
+  if(!page) return;
+  var v=metric==='date'?value:(value===''?null:parseFloat(value));
+  page.checkpoints[cpId][metric]=v;
+  page.checkpoints[cpId].skipped=false;
+  save(); renderMeasDash(); renderGSummary();
+}
+
+function skipCheckpoint(domainId,pageId,cpId){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  var page=dom.pages.find(function(p){return p.id===pageId;});
+  if(!page) return;
+  page.checkpoints[cpId].skipped=true;
+  page.checkpoints[cpId].date=today();
+  save(); render(); toast('Overgeslagen');
+}
+
+// ── Domain management ────────────────────────────────────
+function addDomain(){
+  var name=document.getElementById('newDomainName').value.trim();
+  var baseDate=document.getElementById('newDomainDate').value||today();
+  if(!name){ toast('⚠ Domeinnaam verplicht'); return; }
+  if(domains.find(function(d){return d.name.toLowerCase()===name.toLowerCase();})){toast('⚠ Domein bestaat al');return;}
+  domains.push({id:uid(),name:name,baseDate:baseDate,colorIdx:domains.length%DOMAIN_COLORS.length,pages:[]});
+  document.getElementById('newDomainName').value='';
+  save(); render(); updateDomainSelect(); setTimeout(function(){trackerSyncToServer(true);},500);
+  toast('✅ Domein toegevoegd');
+}
+
+function removeDomain(domainId){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\\'s?')) return;
+  domains=domains.filter(function(d){return d.id!==domainId;});
+  save(); render(); updateDomainSelect(); toast('Verwijderd');
+}
+
+function updateDomainSelect(){
+  var sel=document.getElementById('newPageDomain');
+  sel.innerHTML=domains.map(function(d){ return '<option value="'+d.id+'">'+d.name+'</option>'; }).join('');
+}
+
+// ── Page management ──────────────────────────────────────
+function addPage(){
+  var domainId=document.getElementById('newPageDomain').value;
+  var url=document.getElementById('newUrl').value.trim();
+  var kw=document.getElementById('newKw').value.trim();
+  if(!domainId||!url||!kw){ toast('⚠ Domein, URL en keyword verplicht'); return; }
+  if(!url.startsWith('http')) url='https://'+url;
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom){ toast('⚠ Domein niet gevonden'); return; }
+  if(dom.pages.find(function(p){return p.url===url;})){ toast('⚠ URL bestaat al in dit domein'); return; }
+  var cp=makeCheckpoints(dom.baseDate);
+  cp.w0={date:dom.baseDate,position:parseFloat(document.getElementById('newPos').value)||null,impressions:parseInt(document.getElementById('newImpr').value)||null,ctr:parseFloat(document.getElementById('newCtr').value)||null,clicks:parseInt(document.getElementById('newClicks').value)||null,skipped:false};
+  dom.pages.push({id:uid(),url:url,keyword:kw,checkpoints:cp});
+  ['newUrl','newKw','newPos','newImpr','newCtr','newClicks'].forEach(function(id){document.getElementById(id).value='';});
+  save(); render(); setTimeout(function(){trackerSyncToServer(true);},500);
+  toast('✅ Pagina toegevoegd');
+}
+
+function removePage(domainId,pageId){
+  if(!confirm('Verwijder pagina?')) return;
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  dom.pages=dom.pages.filter(function(p){return p.id!==pageId;});
+  save(); render(); toast('Verwijderd');
+}
+
+// ── GSC CSV import ───────────────────────────────────────
+function importGSCGlobal(input){
+  var file=input.files[0]; if(!file) return;
+  var r=new FileReader();
+  r.onload=function(e){ processGSCUpdate(e.target.result); input.value=''; };
+  r.readAsText(file);
+}
+
+function processGSCUpdate(raw){
+  var lines=raw.trim().split('\\n');
+  if(lines.length<2){ toast('⚠ Leeg CSV'); return; }
+  var header=lines[0].toLowerCase().replace(/"/g,'').split(',');
+  var iPage=header.findIndex(function(h){return h.includes('page')||h.includes('url');});
+  var iPos =header.findIndex(function(h){return h.includes('position');});
+  var iImpr=header.findIndex(function(h){return h.includes('impression');});
+  var iCtr =header.findIndex(function(h){return h.includes('ctr');});
+  var iClk =header.findIndex(function(h){return h.includes('click');});
+  if(iPage<0){ toast('⚠ Geen URL kolom gevonden'); return; }
+
+  var gscMap={};
+  for(var i=1;i<lines.length;i++){
+    var cols=lines[i].replace(/"/g,'').split(',');
+    var pageUrl=(cols[iPage]||'').trim().toLowerCase().replace(/\\/+$/,'');
+    if(!pageUrl) continue;
+    gscMap[pageUrl]={position:iPos>=0?parseFloat(cols[iPos])||null:null,impressions:iImpr>=0?parseInt(cols[iImpr])||null:null,ctr:iCtr>=0?parseFloat((cols[iCtr]||'0').replace('%',''))||null:null,clicks:iClk>=0?parseInt(cols[iClk])||null:null};
+  }
+
+  var td=today(); var updated=0;
+  function norm(u){ return (u||'').toLowerCase().replace(/^https?:\\/\\//,'').replace(/\\/+$/,''); }
+
+  domains.forEach(function(dom){
+    dom.pages.forEach(function(page){
+      var pn=norm(page.url);
+      var match=gscMap[pn]||gscMap['https://'+pn]||gscMap['http://'+pn];
+      if(!match){
+        var pPath=''; try{pPath=new URL(page.url).pathname.toLowerCase().replace(/\\/+$/,'');}catch(e){}
+        if(pPath) match=Object.keys(gscMap).reduce(function(f,k){return f||(k.includes(pPath)?gscMap[k]:null);},null);
+      }
+      if(!match) return;
+      // Find target checkpoint
+      var target=null;
+      for(var i=1;i<CHECKPOINTS.length;i++){
+        var cp=CHECKPOINTS[i], data=page.checkpoints[cp.id];
+        if(data.skipped||data.position!==null) continue;
+        var exp=expectedDate(dom.baseDate,cp.days);
+        if(exp&&exp<=td){ target=cp; break; }
+      }
+      if(!target){ for(var j=CHECKPOINTS.length-1;j>=1;j--){ if(!page.checkpoints[CHECKPOINTS[j].id].skipped){ target=CHECKPOINTS[j]; break; } } }
+      if(!target) return;
+      page.checkpoints[target.id].position=match.position;
+      page.checkpoints[target.id].impressions=match.impressions;
+      page.checkpoints[target.id].ctr=match.ctr;
+      page.checkpoints[target.id].clicks=match.clicks;
+      page.checkpoints[target.id].date=td;
+      page.checkpoints[target.id].skipped=false;
+      updated++;
+    });
+  });
+
+  save(); render();
+  toast('✅ '+updated+' pagina\\'s bijgewerkt');
+  setTimeout(function(){trackerSyncToServer(true);},1000);
+}
+
+// ── Workflow import ──────────────────────────────────────
+function checkWorkflowImport(){
+  try{
+    var wf=localStorage.getItem('cs_wf_pages'); if(!wf) return;
+    var wfPages=JSON.parse(wf);
+    var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
+    var available=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
+    if(!available.length) return;
+    var banner=document.getElementById('importBanner');
+    banner.style.display='flex';
+    document.getElementById('importCount').textContent=available.length+' pagina\\'s';
+  }catch(e){}
+}
+
+function importFromWorkflow(){
+  try{
+    var wf=localStorage.getItem('cs_wf_pages'); if(!wf) return;
+    var wfPages=JSON.parse(wf);
+    var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
+    var newPages=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
+    if(!newPages.length){ toast('Geen nieuwe pagina\\'s'); return; }
+    // Group by domain
+    var domainMap={};
+    newPages.forEach(function(p){
+      var host=''; try{host=new URL(p.url).hostname;}catch(e){host='unknown';}
+      if(!domainMap[host]) domainMap[host]=[];
+      domainMap[host].push(p);
+    });
+    var td=today(); var added=0;
+    Object.keys(domainMap).forEach(function(host){
+      var dom=domains.find(function(d){return d.name===host||d.name.includes(host)||host.includes(d.name);});
+      if(!dom){
+        dom={id:uid(),name:host,baseDate:td,colorIdx:domains.length%DOMAIN_COLORS.length,pages:[]};
+        domains.push(dom);
+      }
+      domainMap[host].forEach(function(p){
+        var cp=makeCheckpoints(dom.baseDate);
+        cp.w0={date:dom.baseDate,position:p.position||null,impressions:p.impressions||null,ctr:p.ctr||null,clicks:null,skipped:false};
+        dom.pages.push({id:uid(),url:p.url,keyword:p.keyword||'',checkpoints:cp});
+        added++;
+      });
+    });
+    save(); render(); updateDomainSelect();
+    document.getElementById('importBanner').style.display='none';
+    setTimeout(function(){trackerSyncToServer(true);},500);
+    toast('✅ '+added+' pagina\\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
+  }catch(e){ toast('⚠ Import mislukt: '+e.message); }
+}
+
+// ── Render measurement dashboard ─────────────────────────
+function renderMeasDash(){
+  var grid=document.getElementById('measGrid');
+  if(!domains.length){ grid.innerHTML='<div style="font-size:13px;color:var(--dim);padding:8px 0;">Voeg een domein toe om metingen bij te houden.</div>'; return; }
+
+  grid.innerHTML=domains.map(function(dom,di){
+    var info=getDomainNextMeasurement(dom);
+    var cls='meas-domain';
+    var statusText='', statusColor='var(--dim)';
+    var daysUntil=null;
+    if(info.spiral){ cls+=' spiral'; statusText='🚨 Spiraal — herstelaudit nodig'; statusColor='var(--red)'; }
+    else if(info.overdue){ cls+=' overdue'; statusText='⚠ Meting achterstallig'; statusColor='var(--red)'; }
+    else if(info.due){ cls+=' due-now'; statusText='📅 Meting klaar om te doen'; statusColor='var(--gold)'; }
+    else if(info.date){
+      var diff=Math.round((new Date(info.date)-new Date())/(86400000));
+      daysUntil=diff;
+      if(diff<=7){ cls+=' due-now'; statusText='Over '+diff+' dag'+(diff===1?'':'en'); statusColor='var(--gold)'; }
+      else{ cls+=' ok'; statusText='Over '+diff+' dagen'; statusColor='var(--green)'; }
+    } else { cls+=' ok'; statusText='Alle metingen compleet'; statusColor='var(--green)'; }
+
+    var spiralCount=dom.pages.filter(function(p){return getSpiralStatus(p)==='spiral';}).length;
+    var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
+
+    return '<div class="'+cls+'">'
+      +'<div class="md-left">'
+      +'<div class="md-name" style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0;display:inline-block;"></span>'+dom.name+'</div>'
+      +'<div class="md-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
+      +'<div class="md-next '+(info.overdue?'overdue':info.due?'due':info.date&&daysUntil<=7?'due':'future')+'" style="color:'+statusColor+';">'+statusText+(info.date?' ('+info.date+')':'')+'</div>'
+      +'</div>'
+      +'<button class="btn btn-muted" style="font-size:8px;" onclick="scrollToDomain(\\''+dom.id+'\\')">↓ Naar domein</button>'
+      +'</div>';
+  }).join('');
+}
+
+function scrollToDomain(domainId){
+  var el=document.getElementById('domain-'+domainId);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Render global summary ────────────────────────────────
+function renderGSummary(){
+  var allPages=domains.flatMap(function(d){return d.pages;});
+  var total=allPages.length;
+  var improving=allPages.filter(function(p){return getSpiralStatus(p)==='improving';}).length;
+  var stagnant=allPages.filter(function(p){return getSpiralStatus(p)==='stagnant';}).length;
+  var declining=allPages.filter(function(p){return getSpiralStatus(p)==='declining';}).length;
+  var spiral=allPages.filter(function(p){return getSpiralStatus(p)==='spiral';}).length;
+  var changes=[];
+  allPages.forEach(function(p){
+    var filled=CHECKPOINTS.filter(function(cp){var d=p.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+    if(filled.length>=2){ var b=p.checkpoints[filled[0].id].position,l=p.checkpoints[filled[filled.length-1].id].position; if(b&&l)changes.push(b-l); }
+  });
+  var avg=changes.length?Math.round(changes.reduce(function(a,b){return a+b;},0)/changes.length*10)/10:null;
+  document.getElementById('gSummary').innerHTML=
+    '<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+domains.length+'</div><div class="gs-l">Domeinen</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+total+'</div><div class="gs-l">Pagina\\'s</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--green)">'+improving+'</div><div class="gs-l">Stijgend</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--gold)">'+stagnant+'</div><div class="gs-l">Stabiel</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--orange)">'+declining+'</div><div class="gs-l">Dalend</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--red)">'+spiral+'</div><div class="gs-l">⚠ Spiraal</div></div>';
+}
+
+// ── Main render ──────────────────────────────────────────
+function render(){
+  renderMeasDash();
+  renderGSummary();
+  var list=document.getElementById('domainList');
+  if(!domains.length){ list.innerHTML='<div class="empty"><h3>Geen domeinen</h3><p>Voeg een domein toe hierboven.</p></div>'; return; }
+
+  list.innerHTML=domains.map(function(dom,di){
+    var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
+    var spiralCount=dom.pages.filter(function(p){return getSpiralStatus(p)==='spiral';}).length;
+    var info=getDomainNextMeasurement(dom);
+
+    var pagesHtml='';
+    if(!dom.pages.length){
+      pagesHtml='<div style="padding:18px;font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\\'s — voeg toe via het formulier hierboven.</div>';
+    } else {
+      // Sort: spiral first, then declining, then rest
+      var sorted=dom.pages.slice().sort(function(a,b){
+        var order={spiral:0,declining:1,stagnant:2,baseline:3,improving:4};
+        return (order[getSpiralStatus(a)]||5)-(order[getSpiralStatus(b)]||5);
+      });
+      pagesHtml=sorted.map(function(page){
+        return renderPage(dom, page);
+      }).join('');
+    }
+
+    var nextInfo='';
+    if(info.date){ var diff=Math.round((new Date(info.date)-new Date())/(86400000)); nextInfo=diff<=0?'<span style="color:var(--gold);">Meting gereed</span>':'<span style="color:var(--dim);">Volgende meting: '+info.date+' ('+diff+'d)</span>'; }
+
+    return '<div class="domain-section" id="domain-'+dom.id+'">'
+      +'<div class="domain-header" onclick="toggleDomain(\\'db-'+dom.id+'\\')">'
+      +'<span class="domain-color" style="background:'+color+';"></span>'
+      +'<span class="domain-name">'+dom.name+'</span>'
+      +'<span class="domain-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
+      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;margin-left:auto;">'+nextInfo+'</span>'
+      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:14px;color:var(--dim);margin-left:8px;" id="chev-'+dom.id+'">▾</span>'
+      +'</div>'
+      +'<div class="domain-body" id="db-'+dom.id+'">'
+      // GSC import strip per domain
+      +'<div class="gsc-strip">'
+      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);">📊 GSC import voor '+dom.name+'</span>'
+      +'<input type="file" id="gsc-'+dom.id+'" accept=".csv" onchange="importGSCForDomain(this,\\''+dom.id+'\\')">'
+      +'<button class="btn btn-blue" style="font-size:8px;" onclick="document.getElementById(\\'gsc-'+dom.id+'\\').click()">📊 Importeer CSV</button>'
+      +'<button class="btn btn-red" style="font-size:8px;" onclick="removeDomain(\\''+dom.id+'\\')">✕ Verwijder domein</button>'
+      +'</div>'
+      +pagesHtml
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function importGSCForDomain(input, domainId){
+  var file=input.files[0]; if(!file) return;
+  var r=new FileReader();
+  r.onload=function(e){ processGSCForDomain(e.target.result, domainId); input.value=''; };
+  r.readAsText(file);
+}
+
+function processGSCForDomain(raw, domainId){
+  var dom=domains.find(function(d){return d.id===domainId;});
+  if(!dom) return;
+  var lines=raw.trim().split('\\n');
+  if(lines.length<2) return;
+  var header=lines[0].toLowerCase().replace(/"/g,'').split(',');
+  var iPage=header.findIndex(function(h){return h.includes('page')||h.includes('url');});
+  var iPos=header.findIndex(function(h){return h.includes('position');});
+  var iImpr=header.findIndex(function(h){return h.includes('impression');});
+  var iCtr=header.findIndex(function(h){return h.includes('ctr');});
+  var iClk=header.findIndex(function(h){return h.includes('click');});
+  if(iPage<0) return;
+  var gscMap={};
+  for(var i=1;i<lines.length;i++){
+    var cols=lines[i].replace(/"/g,'').split(',');
+    var pu=(cols[iPage]||'').trim().toLowerCase().replace(/\\/+$/,'');
+    if(pu) gscMap[pu]={position:iPos>=0?parseFloat(cols[iPos])||null:null,impressions:iImpr>=0?parseInt(cols[iImpr])||null:null,ctr:iCtr>=0?parseFloat((cols[iCtr]||'0').replace('%',''))||null:null,clicks:iClk>=0?parseInt(cols[iClk])||null:null};
+  }
+  var td=today(); var updated=0;
+  function norm(u){return (u||'').toLowerCase().replace(/^https?:\\/\\//,'').replace(/\\/+$/,'');}
+  dom.pages.forEach(function(page){
+    var pn=norm(page.url);
+    var match=gscMap[pn]||gscMap['https://'+pn]||gscMap['http://'+pn];
+    if(!match){var pPath='';try{pPath=new URL(page.url).pathname.toLowerCase().replace(/\\/+$/,'');}catch(e){}if(pPath)match=Object.keys(gscMap).reduce(function(f,k){return f||(k.includes(pPath)?gscMap[k]:null);},null);}
+    if(!match) return;
+    var target=null;
+    for(var i=1;i<CHECKPOINTS.length;i++){var cp=CHECKPOINTS[i],data=page.checkpoints[cp.id];if(data.skipped||data.position!==null) continue;var exp=expectedDate(dom.baseDate,cp.days);if(exp&&exp<=td){target=cp;break;}}
+    if(!target){for(var j=CHECKPOINTS.length-1;j>=1;j--){if(!page.checkpoints[CHECKPOINTS[j].id].skipped){target=CHECKPOINTS[j];break;}}}
+    if(!target) return;
+    page.checkpoints[target.id].position=match.position;
+    page.checkpoints[target.id].impressions=match.impressions;
+    page.checkpoints[target.id].ctr=match.ctr;
+    page.checkpoints[target.id].clicks=match.clicks;
+    page.checkpoints[target.id].date=td;
+    page.checkpoints[target.id].skipped=false;
+    updated++;
+  });
+  save(); render();
+  toast('✅ '+updated+' pagina\\'s bijgewerkt voor '+dom.name);
+  setTimeout(function(){trackerSyncToServer(true);},500);
+}
+
+function renderPage(dom, page){
+  var status=getSpiralStatus(page);
+  var base=page.checkpoints.w0;
+  var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+  var latest=filled.length?page.checkpoints[filled[filled.length-1].id]:base;
+  var due=getDueCheckpoint(page,dom.baseDate);
+
+  var shortUrl=''; try{shortUrl=new URL(page.url).pathname||'/';}catch(e){shortUrl=page.url.slice(0,50);}
+  if(shortUrl.length>55) shortUrl=shortUrl.slice(0,55)+'…';
+
+  var statusLabels={improving:'📈 Stijgend',stagnant:'→ Stabiel',declining:'📉 Dalend',baseline:'⬜ Baseline',spiral:'🚨 Spiraal'};
+
+  // Spiral alert
+  var spiralHtml='';
+  if(status==='spiral'){
+    var posLoss=latest.position&&base.position?Math.round((latest.position-base.position)*10)/10:null;
+    var cuNear=coreUpdateNear(latest.date);
+    var auditParams='?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&pos='+encodeURIComponent(latest.position||'')+'&impr='+encodeURIComponent(latest.impressions||'')+'&ctr='+encodeURIComponent(latest.ctr||'')+'&mode=recovery';
+    spiralHtml='<div class="spiral-alert">'
+      +'<div class="sa-title">🚨 NEGATIEVE SPIRAAL — actie vereist</div>'
+      +'<div class="sa-body">Positie gedaald <strong style="color:var(--red);">'+(posLoss?'+'+posLoss+' posities':'significant')+'</strong> over '+(filled.length-1)+' metingen.'
+      +(cuNear?' · ⚠ Core Update nabij: '+cuNear:'')+'<br>Controleer: (1) zijn aanbevelingen geïmplementeerd? (2) heeft een concurrent betere content gepubliceerd?'+(latest.position>50?' (3) pagina buiten top 50 — overweeg herstructurering':'')+'</div>'
+      +'<div class="sa-actions">'
+      +'<a href="/audit-seo'+auditParams+'" class="btn btn-red" style="font-size:8px;">🔬 Herstelaudit</a>'
+      +'<button class="btn btn-orange" style="font-size:8px;" onclick="showRecoveryBrief(\\''+dom.id+'\\',\\''+page.id+'\\')">📋 Herstel brief</button>'
+      +'</div></div>';
+  }
+
+  // Warning alert
+  var warnHtml='';
+  if(status==='declining'){
+    var loss=latest.position&&base.position?Math.round((latest.position-base.position)*10)/10:null;
+    warnHtml='<div class="warn-alert"><div class="wa-title">⚠ Positie daalt</div><div class="wa-body">+'+(loss||'?')+' posities vs baseline. Controleer of er wijzigingen zijn gedaan aan de pagina of dat een concurrent is gestegen.</div></div>';
+  }
+
+  // Timeline
+  var tlHtml='<div class="tl-wrap"><div class="tl">';
+  CHECKPOINTS.forEach(function(cp,ci){
+    var data=page.checkpoints[cp.id];
+    var exp=ci===0?dom.baseDate:expectedDate(dom.baseDate,cp.days);
+    var td=today();
+    var isFilled=data.position!==null&&!data.skipped;
+    var isSkipped=data.skipped;
+    var isOverdue=!isFilled&&!isSkipped&&exp&&exp<=td&&ci>0;
+    var isDue=isOverdue;
+    var isFuture=!isFilled&&!isSkipped&&exp&&exp>td&&ci>0;
+    var isDeclining=isFilled&&ci>0&&data.position!==null;
+    if(isDeclining&&ci>0){var prev=page.checkpoints[CHECKPOINTS[ci-1].id];isDeclining=prev.position!==null&&data.position>prev.position+1;}
+
+    var nc='tl-node';
+    if(isFilled) nc+=isDeclining?' filled down':' filled';
+    else if(isSkipped) nc+=' skipped';
+    else if(isDue) nc+=' overdue';
+    else if(isFuture) nc+=' future';
+
+    var delta='';
+    if(isFilled&&ci>0&&base.position!==null&&data.position!==null){
+      var diff=data.position-base.position;
+      delta='<div class="tl-delta '+(diff<0?'up':'dn')+'">'+( diff<0?'↑'+Math.abs(Math.round(diff)):'↓+'+Math.round(diff))+'</div>';
+    }
+
+    var posDisp=isFilled?'<div class="tl-pos '+posColor(data.position)+'">'+Math.round(data.position||0)+'</div>':isSkipped?'<div class="tl-pos empty">skip</div>':'<div class="tl-pos empty">—</div>';
+    var nowBadge=isDue?'<div class="tl-now">!</div>':'';
+    var inp=(isDue||(isFilled&&ci>0))?'<input class="tl-inp" type="number" step="0.1" placeholder="pos" value="'+(isFilled?data.position:'')+'" onchange="updateCheckpoint(\\''+dom.id+'\\',\\''+page.id+'\\',\\''+cp.id+'\\',\\'position\\',this.value)">':'';
+    var skipBtn=(isDue&&!isFilled)?'<button class="tl-skip" onclick="event.stopPropagation();skipCheckpoint(\\''+dom.id+'\\',\\''+page.id+'\\',\\''+cp.id+'\\')">overslaan</button>':'';
+
+    tlHtml+='<div class="'+nc+'" title="Verwacht: '+(exp||'—')+'">'+nowBadge+'<div class="tl-wk">'+cp.label+'</div><div class="tl-dt">'+(exp?exp.slice(5):'—')+'</div>'+posDisp+delta+inp+skipBtn+'</div>';
+  });
+  tlHtml+='</div></div>';
+
+  // GSC input for due checkpoint
+  var gscInputHtml='';
+  if(due&&!due.isFuture){
+    var cpData=page.checkpoints[due.cp.id];
+    gscInputHtml='<div class="gsc-input"><div class="gi-title">📥 '+due.cp.label+' invullen (verwacht: '+due.expectedDate+')</div><div class="gi-row">'
+      +['position','impressions','ctr','clicks'].map(function(m){
+        return '<div class="gi-f" style="flex:1;min-width:70px;"><label>'+({position:'Positie',impressions:'Impressies',ctr:'CTR %',clicks:'Clicks'}[m])+'</label>'
+          +'<input type="number" step="'+(m==='ctr'||m==='position'?'0.1':'1')+'" value="'+(cpData[m]||'')+'" placeholder="—" onchange="updateCheckpoint(\\''+dom.id+'\\',\\''+page.id+'\\',\\''+due.cp.id+'\\',\\''+m+'\\',this.value)"></div>';
+      }).join('')
+      +'<div class="gi-f" style="flex:1;min-width:100px;"><label>Datum</label><input type="date" value="'+(cpData.date||'')+'" onchange="updateCheckpoint(\\''+dom.id+'\\',\\''+page.id+'\\',\\''+due.cp.id+'\\',\\'date\\',this.value)"></div>'
+      +'<div style="align-self:flex-end;"><button class="btn btn-muted" style="font-size:8px;" onclick="skipCheckpoint(\\''+dom.id+'\\',\\''+page.id+'\\',\\''+due.cp.id+'\\')">Skip</button></div>'
+      +'</div></div>';
+  }
+
+  // Metrics row
+  var metricsHtml='<div class="metrics-row">';
+  [{id:'position',label:'Positie'},{id:'impressions',label:'Impressies'},{id:'ctr',label:'CTR'},{id:'clicks',label:'Clicks'}].forEach(function(m){
+    var bv=base[m.id], cv=latest[m.id];
+    var chHtml='';
+    if(bv!==null&&cv!==null&&bv!==cv){
+      var diff=cv-bv, lowerBetter=m.id==='position';
+      var improved=lowerBetter?diff<0:diff>0;
+      var pct=Math.round(Math.abs(diff/bv)*100);
+      chHtml='<div class="mc-ch '+(improved?'up':'dn')+'">'+(improved?'↑':'↓')+pct+'%</div>';
+    }
+    var cls=m.id==='position'&&cv!==null?(cv<=10?'good':cv<=20?'warn':'bad'):'';
+    metricsHtml+='<div class="mc"><div class="mc-l">'+m.label+'</div><div class="mc-v '+cls+'">'+fmtNum(cv,m.id)+'</div>'+chHtml+'</div>';
+  });
+  metricsHtml+='</div>';
+
+  return '<div class="page-card">'
+    +'<div class="pc-head" onclick="togglePage(\\'pb-'+page.id+'\\')">'
+    +'<div style="flex:1;min-width:0;"><div class="pc-url">'+shortUrl+'<span class="pc-kw">'+(page.keyword?' — '+page.keyword:'')+'</span></div>'
+    +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--dim);margin-top:2px;">'+(filled.length-1)+'/6 metingen · baseline: '+dom.baseDate+'</div></div>'
+    +'<span class="pc-status st-'+status+'">'+statusLabels[status]+'</span>'
+    +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:13px;color:var(--dim);" id="pchev-'+page.id+'">▾</span>'
+    +'</div>'
+    +spiralHtml+warnHtml
+    +'<div id="pb-'+page.id+'" style="display:none;">'
+    +tlHtml+gscInputHtml+metricsHtml
+    +'<div style="padding:8px 18px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;">'
+    +'<a href="'+page.url+'" target="_blank" class="btn btn-muted" style="font-size:8px;">↗ Pagina</a>'
+    +'<a href="/audit-seo?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&pos='+encodeURIComponent(latest.position||'')+'&impr='+encodeURIComponent(latest.impressions||'')+'&ctr='+encodeURIComponent(latest.ctr||'')+'" class="btn btn-blue" style="font-size:8px;">🔬 Audit</a>'
+    +'<button class="btn btn-red" style="font-size:8px;" onclick="removePage(\\''+dom.id+'\\',\\''+page.id+'\\')">✕</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function toggleDomain(id){
+  var el=document.getElementById(id); if(!el) return;
+  var open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'block':'none';
+  var domId=id.replace('db-','');
+  var chev=document.getElementById('chev-'+domId);
+  if(chev) chev.textContent=open?'▴':'▾';
+}
+
+function togglePage(id){
+  var el=document.getElementById(id); if(!el) return;
+  var open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'block':'none';
+  var pageId=id.replace('pb-','');
+  var chev=document.getElementById('pchev-'+pageId);
+  if(chev) chev.textContent=open?'▴':'▾';
+}
+
+// ── Recovery brief ───────────────────────────────────────
+function showRecoveryBrief(domainId,pageId){
+  var dom=domains.find(function(d){return d.id===domainId;}); if(!dom) return;
+  var page=dom.pages.find(function(p){return p.id===pageId;}); if(!page) return;
+  var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+  var base=page.checkpoints.w0;
+  var latest=filled.length?page.checkpoints[filled[filled.length-1].id]:base;
+  var d0=''; try{d0=localStorage.getItem('cs_audit_step_d0')||'';}catch(e){}
+  var d4=''; try{d4=localStorage.getItem('cs_audit_step_d4')||'';}catch(e){}
+  var brief='HERSTEL SCHRIJFBRIEF\\n==================\\nURL: '+page.url+'\\nKeyword: '+(page.keyword||'—')+'\\nDomein: '+dom.name+'\\nBaseline positie: '+Math.round(base.position||0)+'\\nHuidige positie: '+Math.round(latest.position||0)+'\\nVerlies: +'+(Math.round((latest.position||0)-(base.position||0)))+' posities\\n\\nVRAAG AAN AI:\\nDeze pagina staat in een negatieve spiraal. Analyseer waarom en geef een herstelplan:\\n1. Diagnose: wat is de meest waarschijnlijke oorzaak?\\n2. Wat heeft een concurrent wat wij niet hebben?\\n3. Welke wijzigingen kunnen de daling omdraaien?\\n4. Wat moet ANDERS dan in de originele aanbevelingen?\\n\\n'+(d0?'ORIGINELE PRIORITEIT ACTIES:\\n'+d0.slice(0,1500):'[Geen opgeslagen audit — run eerst PULSE+NEXUS]')+(d4?'\\n\\nCONTENT GAP:\\n'+d4.slice(0,800):'');
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML='<div style="background:var(--card);border:1px solid rgba(244,63,63,.4);border-radius:12px;padding:24px;max-width:680px;width:100%;max-height:80vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);">📋 Herstel schrijfbrief</div><button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button></div>'
+    +'<textarea style="width:100%;min-height:260px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--ink);resize:vertical;outline:none;line-height:1.6;">'+brief+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
+    +'<button class="btn btn-gold" onclick="navigator.clipboard.writeText(this.closest(\\'div[style*=fixed]\\').querySelector(\\'textarea\\').value).then(function(){alert(\\'Gekopieerd!\\')})">⎘ Kopieer brief</button>'
+    +'<a href="/audit-seo?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&mode=recovery" class="btn btn-red">🔬 Open herstelaudit</a>'
+    +'<button class="btn btn-muted" onclick="this.closest(\\'div[style*=fixed]\\').remove()">Sluiten</button>'
+    +'</div></div>';
+  document.body.appendChild(overlay);
+}
+
+// ── Export CSV ───────────────────────────────────────────
+function exportCSV(){
+  if(!domains.length){ toast('⚠ Geen data'); return; }
+  var headers=['Domein','URL','Keyword'];
+  CHECKPOINTS.forEach(function(cp){headers.push(cp.label+' Datum',cp.label+' Positie',cp.label+' Impressies',cp.label+' CTR',cp.label+' Clicks');});
+  headers.push('Status','Pos Verandering');
+  var rows=[headers.join(',')];
+  domains.forEach(function(dom){
+    dom.pages.forEach(function(page){
+      var row=['"'+dom.name+'"','"'+page.url+'"','"'+(page.keyword||'')+'"'];
+      CHECKPOINTS.forEach(function(cp){var d=page.checkpoints[cp.id];row.push(d.date||'',d.position||'',d.impressions||'',d.ctr||'',d.clicks||'');});
+      var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+      var latest=filled.length?page.checkpoints[filled[filled.length-1].id]:page.checkpoints.w0;
+      var posChange=page.checkpoints.w0.position&&latest.position?Math.round((page.checkpoints.w0.position-latest.position)*10)/10:'';
+      row.push(getSpiralStatus(page),posChange);
+      rows.push(row.join(','));
+    });
+  });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\\n')],{type:'text/csv'}));
+  a.download='seo-tracker-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); toast('✅ CSV geëxporteerd');
+}
+
+// ── Client Report ────────────────────────────────────────
+function exportClientReport(){
+  if(!domains.length){ toast('⚠ Geen data'); return; }
+  var css='body{font-family:Arial,sans-serif;max-width:980px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}h1{color:#7c3aed;font-size:24px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:4px;}.dm{margin-bottom:28px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;}.dm-head{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;}.dm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}.dm-name{font-size:16px;font-weight:700;}.pc{border-bottom:1px solid #e5e7eb;padding:12px 18px;}.pc:last-child{border-bottom:none;}.pc-url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}.tl-c{text-align:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:6px 3px;}.tl-c.filled{background:#f0fdf4;border-color:#86efac;}.tl-c.down{background:#fef2f2;border-color:#fca5a5;}.tl-wk{font-size:8px;color:#9ca3af;font-family:monospace;}.tl-p{font-size:16px;font-weight:900;color:#374151;}.tl-p.good{color:#16a34a;}.tl-p.warn{color:#b45309;}.tl-p.bad{color:#dc2626;}.up{color:#16a34a;}.dn{color:#dc2626;}.spiral{background:#fee2e2;border-left:4px solid #dc2626;}footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
+  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\\'s</p>';
+  domains.forEach(function(dom,di){
+    var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
+    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+'</span></div>';
+    dom.pages.forEach(function(page){
+      var status=getSpiralStatus(page);
+      var base=page.checkpoints.w0;
+      var filled=CHECKPOINTS.filter(function(cp){var d=page.checkpoints[cp.id];return d&&d.position!==null&&!d.skipped;});
+      var tl='<div class="tl">';
+      CHECKPOINTS.forEach(function(cp){
+        var d=page.checkpoints[cp.id];
+        var isFilled=d.position!==null&&!d.skipped;
+        var down=isFilled&&base.position!==null&&d.position>base.position+3;
+        var pCls=d.position<=10?'good':d.position<=20?'warn':'bad';
+        var delta='';
+        if(isFilled&&cp.id!=='w0'&&base.position){var diff=d.position-base.position;delta='<br><span class="'+(diff<0?'up':'dn')+'">'+(diff<0?'↑'+Math.abs(Math.round(diff)):'↓+'+Math.round(diff))+'</span>';}
+        tl+='<div class="tl-c'+(isFilled?(down?' down':' filled'):'')+'"><div class="tl-wk">'+cp.label+'</div><div class="tl-p '+(isFilled?pCls:'')+'">'+( isFilled?Math.round(d.position||0):(d.skipped?'skip':'—'))+'</div>'+delta+'</div>';
+      });
+      tl+='</div>';
+      body+='<div class="pc'+(status==='spiral'?' spiral':'')+'">'
+        +'<div class="pc-url">'+page.url+'</div>'
+        +(page.keyword?'<div style="font-size:12px;font-weight:700;color:#111827;margin-top:2px;">'+page.keyword+'</div>':'')
+        +(status==='spiral'?'<div style="font-size:11px;color:#dc2626;margin-top:4px;">🚨 Negatieve spiraal — herstelaudit nodig</div>':'')
+        +tl+'</div>';
+    });
+    body+='</div>';
+  });
+  body+='<footer>ContentScale SEO Tracker · contentscale.site · '+new Date().toLocaleString('nl-NL')+'</footer>';
+  var html='<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>SEO Rapport</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='seo-rapport-'+new Date().toISOString().slice(0,10)+'.html';
+  a.click(); toast('✅ Rapport geëxporteerd');
+}
+
+// ── Init ─────────────────────────────────────────────────
+load();
+updateDomainSelect();
+checkWorkflowImport();
+render();
+startAutoSave();
+var _initKey=_getTrackerKey();
+if(domains.length>0){
+  setSyncStatus('💾 '+domains.length+' domeinen geladen — key: '+_initKey,'var(--dim)');
+  setTimeout(function(){trackerSyncToServer(true);},2000);
+} else {
+  setSyncStatus('Geen data — voeg domeinen toe of laad van server','var(--dim)');
+}
+</script>
+</body>
+</html>
+`;
