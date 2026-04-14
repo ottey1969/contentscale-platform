@@ -8797,20 +8797,36 @@ function setMode(m) {
       const gscRaw = localStorage.getItem('cs_shared_gsc');
       if (gscRaw) {
         const gscData = JSON.parse(gscRaw);
-        // Get top queries from GSC queries list
-        if (gscData.queries && gscData.queries.length && !transfer.topQueries) {
-          const topQ = gscData.queries.slice(0, 15).map(function(q){ return q.query || q; }).filter(Boolean);
-          transfer.topQueries = topQ.join('\\n');
-          // Secondary = first query that differs from primary
-          const primary = (transfer.keyword || '').toLowerCase().trim();
-          const secCandidates = topQ.filter(function(q){
-            const qn = q.toLowerCase().trim();
-            if (qn === primary) return false;
-            const pw = primary.split(' '); const qw = qn.split(' ');
-            const overlap = pw.filter(function(w){ return qw.includes(w); }).length;
-            return overlap / Math.max(pw.length, 1) < 0.8;
-          });
-          transfer.secondaryKeyword = secCandidates[0] || '';
+        // Get top queries — prefer cs_gsc_queries (Workflow Manager Queries CSV)
+        if (!transfer.topQueries) {
+          let qTextsLoad = [];
+          try {
+            const qMapRaw = localStorage.getItem('cs_gsc_queries');
+            if (qMapRaw) {
+              const qMap = JSON.parse(qMapRaw);
+              qTextsLoad = Object.entries(qMap)
+                .sort(function(a,b){ const ai=typeof a[1]==='object'?a[1].impr:0; const bi=typeof b[1]==='object'?b[1].impr:0; return bi-ai; })
+                .slice(0,15).map(function(e){ return e[0]; });
+            }
+          } catch(e) {}
+          if (!qTextsLoad.length && gscData.queries && gscData.queries.length) {
+            qTextsLoad = gscData.queries.slice(0,15).map(function(q){ return q.query||q; }).filter(Boolean);
+          }
+          if (qTextsLoad.length) {
+            transfer.topQueries = qTextsLoad.join('\\n');
+            // Secondary keyword
+            const primary2 = (transfer.keyword||'').toLowerCase().trim();
+            const pw2 = primary2.split(' ').filter(function(w){ return w.length>2; });
+            const sec2 = qTextsLoad.find(function(q){
+              const qn=q.toLowerCase().trim();
+              if(!qn||qn===primary2) return false;
+              if(pw2.length===0) return true;
+              const qw2=qn.split(' ');
+              const ov=pw2.filter(function(w){ return qw2.includes(w); }).length;
+              return ov/pw2.length < 0.75;
+            });
+            transfer.secondaryKeyword = sec2 || '';
+          }
         }
         // Get GSC data for the specific URL
         if (gscData.pages && gscData.pages.length && transfer.pageUrl) {
@@ -8857,24 +8873,9 @@ function setMode(m) {
       if (transfer.impressions) document.getElementById('dImpr').value = transfer.impressions;
       if (transfer.ctr)      document.getElementById('dCtr').value  = transfer.ctr;
 
-      // Secondary keyword — auto from transfer, fallback: derive from topQueries
-      var secKw = transfer.secondaryKeyword || '';
-      if (!secKw && transfer.topQueries) {
-        const primaryNorm = (transfer.keyword||'').toLowerCase().trim();
-        const pw2 = primaryNorm.split(' ').filter(function(w){ return w.length > 2; });
-        const qs3 = transfer.topQueries.split('\\n').filter(Boolean);
-        const sec3 = qs3.find(function(q){
-          const qn = q.toLowerCase().trim();
-          if (!qn || qn === primaryNorm) return false;
-          if (pw2.length <= 2) return qn !== primaryNorm;
-          const qw3 = qn.split(' ');
-          const overlap3 = pw2.filter(function(w){ return qw3.includes(w); }).length;
-          return overlap3 / pw2.length < 0.8;
-        });
-        if (sec3) secKw = sec3;
-      }
-      if (secKw && secKw !== transfer.keyword) {
-        document.getElementById('dKw2').value = secKw;
+      // Secondary keyword — auto from GSC queries, NOT same as primary
+      if (transfer.secondaryKeyword && transfer.secondaryKeyword !== transfer.keyword) {
+        document.getElementById('dKw2').value = transfer.secondaryKeyword;
         document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
       }
 
@@ -9097,109 +9098,109 @@ function fetchGSCData() {
   const urlNorm = function(u){ return (u||'').toLowerCase().replace(/\\/$/, '').replace(/^https?:\\/\\//, ''); };
   const uNorm = urlNorm(url);
 
-  // ── Helper: fill queries + secondary keyword from a query list ──
-  const fillQueriesAndSecondary = function(qTexts) {
-    if (!qTexts || !qTexts.length) return;
+  // ── Collect ALL available query sources ──────────────────────────
+  // Source 1: cs_gsc_queries (written by Workflow Manager Queries CSV import)
+  let allQueryTexts = [];
+  try {
+    const qRaw = localStorage.getItem('cs_gsc_queries');
+    if (qRaw) {
+      const qMap = JSON.parse(qRaw);
+      // Sort by impressions desc
+      allQueryTexts = Object.entries(qMap)
+        .sort(function(a,b){
+          const ai = typeof a[1]==='object' ? a[1].impr : 0;
+          const bi = typeof b[1]==='object' ? b[1].impr : 0;
+          return bi - ai;
+        })
+        .slice(0, 15)
+        .map(function(e){ return e[0]; });
+    }
+  } catch(e) {}
+
+  // Source 2: cs_shared_gsc.queries (fallback, same data different key)
+  let sharedData = null;
+  try {
+    const raw = localStorage.getItem('cs_shared_gsc');
+    if (raw) {
+      sharedData = JSON.parse(raw);
+      if (!allQueryTexts.length && sharedData.queries && sharedData.queries.length) {
+        allQueryTexts = sharedData.queries
+          .filter(function(q){ return q.query; })
+          .sort(function(a,b){ return (b.impressions||0)-(a.impressions||0); })
+          .slice(0, 15)
+          .map(function(q){ return q.query; });
+      }
+    }
+  } catch(e) {}
+
+  // Source 3: cs_audit_transfer (from last Workflow Manager openInAudit click)
+  try {
+    const t = JSON.parse(localStorage.getItem('cs_audit_transfer')||'{}');
+    if (!allQueryTexts.length && t.topQueries) {
+      allQueryTexts = t.topQueries.split('\\n').filter(Boolean);
+    }
+  } catch(e) {}
+
+  // ── Fill metrics from page match ─────────────────────────────────
+  if (sharedData) {
+    const match = (sharedData.pages||[]).find(function(pg){
+      const pNorm = urlNorm(pg.page||pg.url||'');
+      return pNorm === uNorm || pNorm.includes(uNorm) || uNorm.includes(pNorm);
+    });
+    if (match) {
+      if (match.impressions) { document.getElementById('dImpr').value = match.impressions; document.getElementById('imprAutoMark').style.display='inline'; }
+      if (match.ctr) { document.getElementById('dCtr').value = parseFloat(match.ctr).toFixed(1); document.getElementById('ctrAutoMark').style.display='inline'; }
+      if (match.position) { document.getElementById('dPos').value = parseFloat(match.position).toFixed(1); document.getElementById('posAutoMark').style.display='inline'; }
+      document.getElementById('gscAutoBadge').style.display = 'inline-flex';
+      status.textContent = '✓ pos ' + Math.round(match.position||0) + '  ·  ' + (match.impressions||0).toLocaleString() + ' impr  ·  ' + parseFloat(match.ctr||0).toFixed(1) + '% CTR';
+      status.style.color = 'var(--green)';
+    }
+    // Fill site URLs
+    if (!document.getElementById('dSiteUrls').value.trim() && sharedData.pages && sharedData.pages.length) {
+      const urls = sharedData.pages.map(function(pg){ return pg.page||pg.url||''; })
+        .filter(function(u){ return u.startsWith('http'); }).slice(0, 50);
+      document.getElementById('dSiteUrls').value = urls.join('\\n');
+      document.getElementById('urlCount').textContent = '✓ ' + urls.length + ' URLs loaded';
+      document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
+    }
+  }
+
+  // ── Fill queries ─────────────────────────────────────────────────
+  if (allQueryTexts.length) {
     if (!document.getElementById('dQueries').value.trim()) {
-      document.getElementById('dQueries').value = qTexts.join('\\n');
+      document.getElementById('dQueries').value = allQueryTexts.join('\\n');
       document.getElementById('queriesAutoMark').style.display = 'inline';
     }
+    // Secondary keyword — first query that differs meaningfully from primary
     if (!document.getElementById('dKw2').value.trim()) {
       const primary = (document.getElementById('dKw').value||'').toLowerCase().trim();
       const pw = primary.split(' ').filter(function(w){ return w.length > 2; });
-      const sec = qTexts.find(function(q){
+      const sec = allQueryTexts.find(function(q){
         const qn = q.toLowerCase().trim();
         if (!qn || qn === primary) return false;
-        // Always accept if primary is short (1-2 words) — avoid over-filtering
-        if (pw.length <= 2) return qn !== primary;
+        if (pw.length === 0) return true;
         const qw = qn.split(' ');
         const overlap = pw.filter(function(w){ return qw.includes(w); }).length;
-        return overlap / pw.length < 0.8;
+        return overlap / pw.length < 0.75;
       });
       if (sec) {
         document.getElementById('dKw2').value = sec;
         document.getElementById('kw2AutoBadge').style.display = 'inline-flex';
       }
     }
-  };
-
-  // ── Try Workflow Manager page-specific queries first ──
-  try {
-    const wfRaw = localStorage.getItem('cs_wf_pages');
-    if (wfRaw) {
-      const wfPages = JSON.parse(wfRaw);
-      const wfMatch = wfPages.find(function(pg){
-        const pn = urlNorm(pg.url||'');
-        return pn === uNorm || pn.includes(uNorm) || uNorm.includes(pn);
-      });
-      if (wfMatch && wfMatch.topQueries) {
-        const qTexts = wfMatch.topQueries.split('\\n').filter(Boolean);
-        if (qTexts.length) {
-          fillQueriesAndSecondary(qTexts);
-        }
-      }
-    }
-  } catch(e) {}
-
-  // ── Try cs_shared_gsc (from Workflow Manager GSC import) ──
-  const raw = (function(){ try { return localStorage.getItem('cs_shared_gsc'); } catch(e) { return null; } })();
-  if (raw) {
-    try {
-      const data = JSON.parse(raw);
-      const match = (data.pages||[]).find(function(pg){
-        const pNorm = urlNorm(pg.page||pg.url||'');
-        return pNorm === uNorm || pNorm.includes(uNorm) || uNorm.includes(pNorm);
-      });
-
-      if (match) {
-        if (match.impressions) { document.getElementById('dImpr').value = match.impressions; document.getElementById('imprAutoMark').style.display='inline'; }
-        if (match.ctr) { document.getElementById('dCtr').value = parseFloat(match.ctr).toFixed(1); document.getElementById('ctrAutoMark').style.display='inline'; }
-        if (match.position) { document.getElementById('dPos').value = parseFloat(match.position).toFixed(1); document.getElementById('posAutoMark').style.display='inline'; }
-        document.getElementById('gscAutoBadge').style.display = 'inline-flex';
-        status.textContent = '✓ pos ' + Math.round(match.position||0) + '  ·  ' + (match.impressions||0).toLocaleString() + ' impr  ·  ' + parseFloat(match.ctr||0).toFixed(1) + '% CTR';
-        status.style.color = 'var(--green)';
-      }
-
-      // Always fill queries from global GSC list if not yet filled
-      const allQueries = (data.queries||[]).filter(function(q){ return q.query; }).slice(0, 15);
-      if (allQueries.length) {
-        fillQueriesAndSecondary(allQueries.map(function(q){ return q.query; }));
-      }
-
-      // Fill site URLs if empty
-      if (!document.getElementById('dSiteUrls').value.trim() && data.pages && data.pages.length) {
-        const urls = data.pages.map(function(pg){ return pg.page||pg.url||''; })
-          .filter(function(u){ return u.startsWith('http'); }).slice(0, 50);
-        document.getElementById('dSiteUrls').value = urls.join('\\n');
-        document.getElementById('urlCount').textContent = '✓ ' + urls.length + ' URLs loaded';
-        document.getElementById('siteUrlsAutoBadge').style.display = 'inline-flex';
-      }
-
-      const filled = [];
-      if (match) filled.push('pos/impr/CTR');
-      if (document.getElementById('dQueries').value.trim()) filled.push('queries');
-      if (document.getElementById('dKw2').value.trim()) filled.push('secondary kw');
-      btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
-      toast('✅ Auto-filled: ' + (filled.length ? filled.join(' + ') : 'site URLs'));
-      return;
-    } catch(e) { console.error('fetchGSCData error:', e); }
+    btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
+    const filled = [];
+    if (status.textContent.includes('✓')) filled.push('pos/impr/CTR');
+    filled.push('queries (' + allQueryTexts.length + ')');
+    if (document.getElementById('dKw2').value.trim()) filled.push('secondary kw');
+    toast('✅ Auto-filled: ' + filled.join(' + '));
+    return;
   }
 
-  // ── Fallback: cs_audit_transfer from last Workflow Manager click ──
-  try {
-    const t = JSON.parse(localStorage.getItem('cs_audit_transfer')||'{}');
-    if (t.topQueries) {
-      fillQueriesAndSecondary(t.topQueries.split('\\n').filter(Boolean));
-      btn.textContent = '✓ GSC Data Loaded'; btn.disabled = false;
-      toast('✅ Queries loaded from last workflow transfer');
-      return;
-    }
-  } catch(e) {}
-
-  status.textContent = 'No GSC data — import CSV in Workflow Manager first';
+  status.textContent = 'No GSC data — import Queries CSV in Workflow Manager first';
   status.style.color = 'var(--amber)';
   btn.textContent = '⬇ Fetch GSC Data for this URL'; btn.disabled = false;
-  toast('⚠ No GSC data found — import via Workflow Manager first');
+  toast('⚠ Import the Queries CSV in Workflow Manager first');
 }
 
 
