@@ -8770,18 +8770,29 @@ function setMode(m) {
 
 // ── Auto-load from Workflow Manager ───────────────────────
 (function autoLoadFromWorkflow(){
-  // Try localStorage transfer object first (set by Workflow Manager openInAudit)
+  const p = new URLSearchParams(window.location.search);
+  const urlParam = p.get('url') || '';
+
+  // Try localStorage transfer object — but ONLY if URL matches current page
   let transfer = null;
   try {
     const raw = localStorage.getItem('cs_audit_transfer') || localStorage.getItem('cs_audit_transfer_2');
-    if (raw) transfer = JSON.parse(raw);
+    if (raw) {
+      const t = JSON.parse(raw);
+      const urlNormCheck = function(u){ return (u||'').toLowerCase().replace(/\/+$/,'').replace(/^https?:\/\//,''); };
+      // Use stored transfer only if URL matches (prevents stale data from previous page)
+      if (t.pageUrl && urlParam && urlNormCheck(t.pageUrl) === urlNormCheck(urlParam)) {
+        transfer = t;
+      } else if (t.pageUrl && !urlParam) {
+        transfer = t; // no URL param = direct open, use stored
+      }
+    }
   } catch(e){}
 
-  // Fallback: URL params (minimal data — enrich from localStorage GSC data)
-  const p = new URLSearchParams(window.location.search);
-  if (!transfer && p.get('url')) {
+  // Build from URL params if no valid transfer found
+  if (!transfer && urlParam) {
     transfer = {
-      pageUrl: p.get('url'),
+      pageUrl: urlParam,
       keyword: p.get('kw') || '',
       position: p.get('pos') || '',
       impressions: p.get('impr') || '',
