@@ -1115,12 +1115,24 @@ function renderAnalysis(a) {
         '</div></div>';
     }).join('') +
     '</div>' +
-    '<div class="grid-2">' +
+    '<div class="grid-2" style="margin-bottom:10px;">' +
     '<div class="research-block"><div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">AI Overview Opportunities</div>' +
     (a.ai_overview_opportunities || []).map(function(t) { return '<div style="font-size:12px;color:#e2e8f0;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
     '</div>' +
     '<div class="research-block"><div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Voice Search Phrases</div>' +
     (a.voice_search_opportunities || []).map(function(t) { return '<div style="font-size:12px;color:#e2e8f0;padding:2px 0;">🎙️ ' + t + '</div>'; }).join('') +
+    '</div></div>' +
+    '<div class="research-block" style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Secondary Keywords <span style="color:#6b7280;font-size:10px;text-transform:none;letter-spacing:0;">(auto-woven into article)</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+    (a.secondary_keywords || []).map(function(k) { return '<span class="kw-chip" style="background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3);color:#4ade80;">' + k + '</span>'; }).join('') +
+    (!(a.secondary_keywords || []).length ? '<span style="font-size:12px;color:#6b7280;">None generated — re-run Analyse</span>' : '') +
+    '</div></div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Related Keywords <span style="color:#6b7280;font-size:10px;text-transform:none;letter-spacing:0;">(used in FAQ, H2 variants, alt text)</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+    (a.related_keywords || []).map(function(k) { return '<span class="kw-chip" style="background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#a78bfa;">' + k + '</span>'; }).join('') +
+    (!(a.related_keywords || []).length ? '<span style="font-size:12px;color:#6b7280;">None generated — re-run Analyse</span>' : '') +
     '</div></div>';
 }
 
@@ -1134,6 +1146,22 @@ async function executeRewrite() {
     if (!d.success) throw new Error(d.error);
     _currentRewriteHtml = d.html;
     _currentRewriteTitle = d.title;
+
+    // ✅ FIX: auto-push to Pulse+Nexus tracker (localStorage + server queue)
+    if (d.tracker_page && d.tracker_page.url) {
+      try {
+        var wf = []; try { wf = JSON.parse(localStorage.getItem('cs_wf_pages') || '[]'); } catch(e) {}
+        if (!wf.find(function(p) { return p.url === d.tracker_page.url; })) {
+          wf.push(d.tracker_page);
+          localStorage.setItem('cs_wf_pages', JSON.stringify(wf));
+        }
+      } catch(e) {}
+      // Also push to server queue so Pulse+Nexus tracker page picks it up
+      api('/api/content/tracker-push', 'POST', {
+        user_id: ADMIN_ID,
+        page: d.tracker_page
+      }).catch(function() {});
+    }
     var el = document.getElementById('rwResult');
     el.innerHTML =
       '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
@@ -1145,7 +1173,9 @@ async function executeRewrite() {
       '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast(\'Copied!\'))">📋 Copy HTML</button>' +
       '<button class="btn btn-success" style="font-size:12px;" onclick="downloadRewriteHtml()">⬇️ Download</button>' +
       '</div></div>' +
-      '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages</div>';
+      '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages' +
+      (d.tracker_page ? ' · <span style="color:#4ade80;">✓ Added to Pulse+Nexus tracker</span>' : '') +
+      '</div>';
     document.getElementById('rwResultCard').style.display = 'block';
     document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
     toast('Rewrite complete — ' + d.word_count + ' words!');
