@@ -402,12 +402,15 @@ function showPanel(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'none'; p.classList.remove('active'); });
   document.querySelectorAll('.nav-tab').forEach(function(b) { b.classList.remove('active'); });
   var panel = document.getElementById('panel-' + name);
-  panel.style.display = 'block'; panel.classList.add('active');
+  if (panel) { panel.style.display = 'block'; panel.classList.add('active'); }
   if (btn) btn.classList.add('active');
   if (name === 'profiles') loadProfiles();
   if (name === 'engine') loadEngineProfiles();
   if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
   if (name === 'clusters') { populateClusterFilter(); }
+  if (name === 'rewrite') { populateAllSelects(); }
+  if (name === 'news') { populateAllSelects(); }
+  if (name === 'stats') { populateAllSelects(); }
 }
 
 // ── Profiles ──────────────────────────────────────────────────
@@ -1051,7 +1054,7 @@ function renderRwImages() {
   el.innerHTML = _rwImages.map(function(img, i) {
     var fn = img.url.split('/').pop().split('?')[0];
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px;background:#1e293b;border-radius:6px;margin-bottom:4px;">' +
-      '<img src="' + img.url + '" style="width:40px;height:30px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">' +
+      '<img src="' + img.url + '" style="width:40px;height:30px;object-fit:cover;border-radius:4px;" onerror="this.style.display=\'none\'">' +
       '<div style="flex:1;min-width:0;"><div style="font-size:11px;color:#60a5fa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + fn + '</div>' +
       '<div style="font-size:10px;color:#6b7280;">' + (img.alt || 'No alt text') + '</div></div>' +
       '<button onclick="_rwImages.splice(' + i + ',1);renderRwImages()" style="background:transparent;border:none;color:#7f1d1d;cursor:pointer;">✕</button>' +
@@ -1126,8 +1129,7 @@ async function executeRewrite() {
   var btn = document.getElementById('btnExecuteRewrite');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Rewriting...';
   try {
-    var imgUrls = _rwImages.map(function(i) { return i.url + (i.alt ? ' (alt: ' + i.alt + ')' : ''); }).join('
-');
+    var imgUrls = _rwImages.map(function(i) { return i.url + (i.alt ? ' (alt: ' + i.alt + ')' : ''); }).join('\n');
     var d = await api('/api/content/execute-rewrite/' + _currentRewriteId, 'POST', { keep_images_urls: imgUrls || null });
     if (!d.success) throw new Error(d.error);
     _currentRewriteHtml = d.html;
@@ -1140,7 +1142,7 @@ async function executeRewrite() {
       (d.recommendation === 'new_page_new_slug' ? '<div style="font-size:11px;color:#fbbf24;margin-top:4px;">⚠️ Also consider a new page with the stronger seed keyword</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-      '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast('Copied!')})">📋 Copy HTML</button>' +
+      '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast(\'Copied!\'))">📋 Copy HTML</button>' +
       '<button class="btn btn-success" style="font-size:12px;" onclick="downloadRewriteHtml()">⬇️ Download</button>' +
       '</div></div>' +
       '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages</div>';
@@ -1276,7 +1278,7 @@ async function loadNewsArticles() {
       '</div>' +
       '<span style="color:' + (statusColor[a.status] || '#9ca3af') + ';font-size:11px;font-weight:700;flex-shrink:0;">' + a.status + '</span>' +
       '<div style="display:flex;gap:5px;flex-shrink:0;">' +
-      '<button class="btn btn-secondary" style="font-size:10px;padding:4px 8px;" onclick="previewNewsArticle(' + a.id + ','' + (a.rewritten_title||'').replace(/'/g, '') + '')">👁</button>' +
+      '<button class="btn btn-secondary" style="font-size:10px;padding:4px 8px;" onclick="previewNewsArticle(' + a.id + ',\'' + (a.rewritten_title||'').replace(/\'/g, '') + '\')">' + '👁</button>' +
       '<button class="btn btn-success" style="font-size:10px;padding:4px 8px;" onclick="publishNewsWp(' + a.id + ')">🚀 WP</button>' +
       '<button class="btn btn-danger" style="font-size:10px;padding:4px 8px;" onclick="deleteNewsArticle(' + a.id + ')">🗑</button>' +
       '</div></div>';
@@ -1342,7 +1344,7 @@ function renderStudyResult(study, data) {
     '<div><div style="font-size:1rem;font-weight:700;color:#fbbf24;">' + study.title + '</div>' +
     '<div style="font-size:12px;color:#6b7280;margin-top:3px;">' + study.word_count + ' words · ' + (data.sources || []).length + ' sources · ' + stats.length + ' key stats</div></div>' +
     '<div style="display:flex;gap:6px;">' +
-    '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentStudyHtml).then(function(){toast('Copied!')})">📋 Copy HTML</button>' +
+    '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentStudyHtml).then(function(){toast(\'Copied!\'))">📋 Copy HTML</button>' +
     '<button class="btn btn-success" style="font-size:12px;" onclick="downloadStudyHtml()">⬇️ Download</button>' +
     '</div></div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:14px;">' +
@@ -1384,32 +1386,6 @@ async function loadStudies() {
         '<td style="font-size:11px;color:#6b7280;">' + new Date(s.created_at).toLocaleDateString() + '</td></tr>';
     }).join('') + '</tbody></table>';
 }
-
-// Override showPanel to handle phase 2 panels
-var _origShowPanel = showPanel;
-showPanel = function(name, btn) {
-  document.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'none'; p.classList.remove('active'); });
-  document.querySelectorAll('.nav-tab').forEach(function(b) { b.classList.remove('active'); });
-  var panel = document.getElementById('panel-' + name);
-  if (panel) { panel.style.display = 'block'; panel.classList.add('active'); }
-  if (btn) btn.classList.add('active');
-  if (name === 'profiles') loadProfiles();
-  if (name === 'engine') loadEngineProfiles();
-  if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
-  if (name === 'clusters') { populateClusterFilter(); }
-  if (name === 'rewrite') { populateAllSelects(); }
-  if (name === 'news') { populateAllSelects(); }
-  if (name === 'stats') { populateAllSelects(); }
-};
-
-// Extend init
-var _origInit = loadEngineProfiles;
-var _phase2Inited = false;
-var _origLoadEngineProfiles = loadEngineProfiles;
-loadEngineProfiles = async function() {
-  await _origLoadEngineProfiles();
-  if (!_phase2Inited) { populateAllSelects(); _phase2Inited = true; }
-};
 
 // ── Init ──────────────────────────────────────────────────────
 loadProfiles();
