@@ -9046,73 +9046,185 @@ app.post('/api/content/write/:jobId', verifyAdmin, async (req, res) => {
 
     const internalLinksStr = (brief.internal_links || []).map(u => `- ${u}`).join('\n');
     const h2Structure = (brief.structure || []).map((h,i) => `H2 ${i+1}: ${h}`).join('\n');
-    const templateNote = job.html_template ? `\nHTML TEMPLATE TO FOLLOW:\n${job.html_template.substring(0,2000)}` : '';
 
-    const writePrompt = `You are an expert SEO content writer specializing in BOFU (bottom of funnel) content that drives leads and sales. Write a complete, publish-ready HTML article.
+    // GSC from saved job
+    const gsc = brief.gsc || (typeof job.gsc_data === 'string' ? JSON.parse(job.gsc_data||'{}') : job.gsc_data) || {};
+    const gscQueries = (gsc.queries||[]).filter(Boolean);
+    const gscBlock = (gscQueries.length || gsc.impressions) ? `
+GSC DATA:
+Impressions: ${gsc.impressions||'—'} | Clicks: ${gsc.clicks||'—'} | Positie: ${gsc.position||'—'} | CTR: ${gsc.ctr||'—'}%
+Rankende pagina's: ${(gsc.pages||[]).join(', ')||'—'}
+Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
+` : '';
 
-BUSINESS: ${job.profile_name}
-DOMAIN: ${job.domain}
-NICHE: ${job.niche}
-TARGET AUDIENCE: ${job.target_audience}
-PRIMARY GOAL: ${job.primary_goal} (focus on conversions, not just traffic)
-LOCATIONS: ${locStrings || 'Not specified'}
-${templateNote}
+    // Verified business facts — no hallucinations
+    const bi = (typeof job.business_info === 'string' ? JSON.parse(job.business_info||'{}') : job.business_info) || {};
+    const verifiedFacts = [
+      bi.phone         ? `- Telefoon: ${bi.phone}` : null,
+      bi.email         ? `- Email: ${bi.email}` : null,
+      bi.address       ? `- Adres: ${bi.address}${bi.city ? ', '+bi.city : ''}` : null,
+      bi.kvk           ? `- KvK: ${bi.kvk}` : null,
+      bi.btw           ? `- BTW: ${bi.btw}` : null,
+      bi.founded_year  ? `- Opgericht: ${bi.founded_year}` : null,
+      bi.owner_name    ? `- Eigenaar: ${bi.owner_name}` : null,
+      bi.review_score  ? `- Reviews: ${bi.review_score} (${bi.review_count||''} op ${bi.review_platform||''})` : null,
+      bi.opening_hours ? `- Openingstijden: ${bi.opening_hours}` : null,
+      (bi.certifications||[]).length ? `- Certificaten: ${bi.certifications.join(', ')}` : null,
+      (bi.unique_selling_points||[]).length ? `- USPs: ${bi.unique_selling_points.join(' | ')}` : null,
+    ].filter(Boolean).join('\n');
 
-ARTICLE SPECS:
-- Title: ${title}
-- Primary keyword: "${brief.primary_keyword}" — use naturally throughout
-- Secondary keywords: ${(brief.secondary_keywords||[]).join(', ')}
+    const antiFacts = verifiedFacts
+      ? `GEBRUIK ALLEEN DEZE GEGEVENS. Verzin NOOIT telefoonnummers, adressen, e-mails of andere contactgegevens die niet hierboven staan. Ontbrekende gegevens = weglaten of [CONTACT] gebruiken.`
+      : `Er zijn geen bedrijfsgegevens gescrapt. Verzin GEEN telefoonnummers, adressen, e-mails of andere contactgegevens. Gebruik [CONTACT] als placeholder.`;
+
+    // Real internal links from sitemap only
+    const realLinks = (brief.internal_links || brief.sitemap_all || [])
+      .filter(u => typeof u === 'string' && u.length > 10).slice(0, 30);
+    const internalLinksBlock = realLinks.length
+      ? `Gebruik ALLEEN deze exacte URLs van de sitemap — verzin er GEEN:\n${realLinks.map(u=>`- ${u}`).join('\n')}`
+      : 'Geen sitemap-URLs beschikbaar — voeg GEEN interne links toe.';
+
+    // Build JSON-LD schema from verified data
+    const schemaType = bi.schema_type || 'LocalBusiness';
+    const schemaObj = { '@context':'https://schema.org','@type':schemaType,'name':bi.business_name||job.profile_name,'url':job.domain?(job.domain.startsWith('http')?job.domain:'https://'+job.domain):undefined };
+    if (bi.phone)   schemaObj['telephone'] = bi.phone;
+    if (bi.email)   schemaObj['email'] = bi.email;
+    if (bi.address) schemaObj['address'] = {'@type':'PostalAddress','streetAddress':bi.address,'addressLocality':bi.city,'addressCountry':bi.country};
+    if (bi.opening_hours) schemaObj['openingHours'] = bi.opening_hours;
+    if (bi.review_score)  schemaObj['aggregateRating'] = {'@type':'AggregateRating','ratingValue':bi.review_score,'reviewCount':bi.review_count||undefined};
+    if ((bi.service_areas||[]).length) schemaObj['areaServed'] = bi.service_areas;
+
+    // ── Two completely different prompts depending on whether a template exists ──
+    let writePrompt;
+
+    if (job.html_template && job.html_template.trim().length > 50) {
+      // ═══════════════════════════════════════════════════════════
+      // TEMPLATE MODE — preserve structure, only fill in content
+      // ═══════════════════════════════════════════════════════════
+      writePrompt = `Je bent een SEO-contentspecialist. Je taak is UITSLUITEND het invullen van tekst in een bestaand HTML-template. Je mag NIETS aan de HTML-structuur veranderen.
+
+═══════════════════════════════════════
+ABSOLUTE REGELS — NOOIT OVERTREDEN
+═══════════════════════════════════════
+1. VERANDER GEEN HTML-structuur — geen tags toevoegen of verwijderen
+2. VERANDER GEEN CSS-klassen, IDs of attributen
+3. VERANDER GEEN wrapper-divs, secties of layout-elementen
+4. VERANDER GEEN inline styles
+5. VOEG GEEN nieuwe HTML-elementen toe buiten de template
+6. De template bepaalt ALLES qua opmaak — jij vult alleen tekst in
+7. Verzin GEEN contactgegevens die niet in de geverifieerde gegevens staan
+
+WAT JE WEL DOET:
+- Vervang placeholder-tekst (zoals "Lorem ipsum", "[TITLE]", "[CONTENT]", "[H2]" etc.) met echte SEO-content
+- Vul lege tekstelementen in: <h1>, <h2>, <h3>, <p>, <li>, <span>, <td> etc.
+- Schrijf minimaal ${brief.target_word_count || 2500} woorden aan body-tekst verspreid over de template
+- Gebruik de exacte CSS-klassen van de template voor elementen als direct-answer, TOC, FAQ, tabellen etc.
+- Verwerk het primaire keyword en de GSC-queries natuurlijk in de tekst
+- Voeg de JSON-LD schema's in de bestaande <script> tags of voor </article>
+
+═══════════════════════════════════════
+CONTENT-INFORMATIE (alleen tekst invullen)
+═══════════════════════════════════════
+Bedrijf: ${job.profile_name} | Domein: ${job.domain} | Niche: ${job.niche}
+Doelgroep: ${job.target_audience} | Doel: ${job.primary_goal}
+Locaties: ${locStrings || 'Niet opgegeven'}
+${gscBlock}
+GEVERIFIEERDE BEDRIJFSGEGEVENS:
+${verifiedFacts || 'Geen gegevens gescrapt.'}
+${antiFacts}
+
+ARTIKEL-SPECS:
+- Titel: ${title}
+- Primair keyword: "${brief.primary_keyword}" — in eerste heading, eerste 100 woorden, één subheading, conclusie
+- Secundaire keywords: ${(brief.secondary_keywords||[]).join(', ')}
 - LSI keywords: ${(brief.lsi_keywords||[]).join(', ')}
-- Target word count: ${brief.target_word_count || 2000} words
-- Search intent: ${brief.search_intent}
+- Minimaal ${brief.target_word_count || 2500} woorden body-tekst
+- Zoekintentie: ${brief.search_intent}
+${brief.gsc_opportunity ? `- GSC kans: ${brief.gsc_opportunity}` : ''}
 
-REQUIRED STRUCTURE:
+GEWENSTE H2-ONDERWERPEN (verwerk in de bestaande template-koppen):
 ${h2Structure}
 
-INTERNAL LINKS (use these URLs as anchor text links where relevant):
-${internalLinksStr || 'None available'}
+INTERNE LINKS — STRIKT (gebruik ALLEEN deze URLs):
+${internalLinksBlock}
 
-COMPETITOR WEAKNESSES TO EXPLOIT:
-${(brief.competitor_weaknesses||[]).join('\n')}
-
-CONTENT GAPS TO FILL:
+CONTENT GAPS OM IN TE VULLEN:
 ${(brief.content_gaps_to_fill||[]).join('\n')}
 
-BOFU CTAs TO INCLUDE:
+CONCURRENTIEVOORDELEN:
+${(brief.competitor_weaknesses||[]).join('\n')}
+
+BOFU CTAs (natuurlijk verwerken):
 ${(brief.bofu_ctas||[]).join('\n')}
 
-AI OVERVIEW OPTIMISATION (apply these):
-${(brief.ai_overview_tips||[]).join('\n')}
+JSON-LD SCHEMA'S — voeg toe voor </article> of in bestaande script-tags:
+<script type="application/ld+json">
+${JSON.stringify(schemaObj, null, 2)}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"${title}","author":{"@type":"Organization","name":"${bi.business_name||job.profile_name}"},"datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}"}
+</script>
 
-LOCAL EXTERNAL LINKS: Where relevant, link to authoritative local sources for: ${locStrings}
-Suggested local sources: ${(brief.external_links_local||[]).join(', ')}
+═══════════════════════════════════════
+HET TEMPLATE — VUL DIT IN, VERANDER DE STRUCTUUR NIET
+═══════════════════════════════════════
+${job.html_template}
 
-WRITING RULES:
-1. Write for humans first, search engines second
-2. Every H2 section must provide genuine value — no filler
-3. Use short paragraphs (2-4 sentences max)
-4. Include a natural FAQ section at the end (min 4 questions)
-5. Add schema-ready FAQ (Question + Answer clearly marked)
-6. BOFU focus: guide reader toward conversion naturally — never pushy
-7. Use real specifics — no vague claims
-8. Include the primary keyword in: title, first 100 words, one H2, meta description, conclusion
-9. Internal links must use natural anchor text
-10. External local links add credibility — use them where genuinely relevant
+Geef ALLEEN de volledig ingevulde template terug. Geen uitleg, geen markdown, geen extra HTML buiten de template. Eindig met <!-- word_count: X -->.`;
 
-Return ONLY the HTML article starting with <article> tag. Include:
-- <h1> title
-- Meta description in a <div class="meta-description"> 
-- All H2/H3 sections
-- Internal links as <a href="URL">anchor text</a>
-- External links as <a href="URL" rel="noopener" target="_blank">anchor text</a>
-- FAQ section with <div class="faq"> wrapper
-- Word count estimate in a comment <!-- word_count: X -->`;
+    } else {
+      // ═══════════════════════════════════════════════════════════
+      // FREE-WRITE MODE — geen template, schrijf zelf HTML
+      // ═══════════════════════════════════════════════════════════
+      writePrompt = `Je bent een elite SEO-contentschrijver. Schrijf een compleet, publicatieklaar HTML-artikel van MINIMAAL ${brief.target_word_count || 2500} woorden. Stop NOOIT vroeg.
 
-    const geminiKey2 = process.env.GEMINI_API_KEY;
-    const writeResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey2}`, {
+BEDRIJF: ${job.profile_name} | DOMEIN: ${job.domain} | NICHE: ${job.niche}
+DOELGROEP: ${job.target_audience} | DOEL: ${job.primary_goal}
+LOCATIES: ${locStrings || 'Niet opgegeven'}
+${gscBlock}
+GEVERIFIEERDE BEDRIJFSGEGEVENS:
+${verifiedFacts || 'Geen gegevens gescrapt.'}
+${antiFacts}
+
+ARTIKEL:
+- Titel: ${title}
+- Primair keyword: "${brief.primary_keyword}"
+- Secundaire keywords: ${(brief.secondary_keywords||[]).join(', ')}
+- LSI keywords: ${(brief.lsi_keywords||[]).join(', ')}
+- Minimaal ${brief.target_word_count || 2500} woorden
+- Zoekintentie: ${brief.search_intent}
+${brief.gsc_opportunity ? `- GSC kans: ${brief.gsc_opportunity}` : ''}
+
+H2-STRUCTUUR (elk onderdeel volledig uitschrijven):
+${h2Structure}
+
+VERPLICHTE ELEMENTEN:
+1. Direct antwoord na H1: <div class="direct-answer"><strong>Direct antwoord:</strong> [2-3 zinnen]</div>
+2. Inhoudsopgave met ankerlinks: <nav class="toc">...</nav>
+3. Minimaal 1 datatable met echte getallen/vergelijking
+4. TL;DR voor de FAQ: <div class="tldr">...</div>
+5. FAQ minimaal 5 vragen, voice-search: <div class="faq">...</div>
+6. JSON-LD schema's:
+<script type="application/ld+json">${JSON.stringify(schemaObj)}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${title}","datePublished":"${new Date().toISOString().slice(0,10)}"}</script>
+
+INTERNE LINKS:
+${internalLinksBlock}
+
+AI OVERVIEW TIPS: ${(brief.ai_overview_tips||[]).join(' | ')}
+CONTENT GAPS: ${(brief.content_gaps_to_fill||[]).join(' | ')}
+BOFU CTAs: ${(brief.bofu_ctas||[]).join(' | ')}
+CONCURRENTIEGATEN: ${(brief.competitor_weaknesses||[]).filter(Boolean).join(' | ')}
+
+SCHRIJFREGELS: Korte alinea's (2-4 zinnen). Elke H2 begint met directe beantwoording. Echte getallen en prijsranges. Nooit stoppen voor alle secties af zijn.
+
+Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
+    }
+
+    const writeResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
+      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536 } })
     });
     const writeData = await writeResp.json();
     const htmlContent = writeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -9756,63 +9868,125 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
     const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
 
-    const imageNote = keep_images_urls ? `\nEXISTING IMAGES TO KEEP (use these URLs in img tags):\n${keep_images_urls}` : '';
-    const templateNote = rw.html_template ? `\nHTML TEMPLATE:\n${rw.html_template.substring(0, 1500)}` : '';
+    const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
 
-    const writePrompt = `You are an expert SEO content writer. Rewrite this page to be significantly better than the competition.
+    // Fetch business_info and sitemap for real data
+    const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain FROM content_profiles WHERE id=$1`, [rw.profile_id]);
+    const profBi = profBiR.rows[0] || {};
+    const biRW = (typeof profBi.business_info === 'string' ? JSON.parse(profBi.business_info||'{}') : profBi.business_info) || {};
+    const verifiedFactsRW = [
+      biRW.phone         ? `- Telefoon: ${biRW.phone}` : null,
+      biRW.email         ? `- Email: ${biRW.email}` : null,
+      biRW.address       ? `- Adres: ${biRW.address}${biRW.city?', '+biRW.city:''}` : null,
+      biRW.review_score  ? `- Reviews: ${biRW.review_score} (${biRW.review_count||''} op ${biRW.review_platform||''})` : null,
+      biRW.opening_hours ? `- Openingstijden: ${biRW.opening_hours}` : null,
+      (biRW.unique_selling_points||[]).length ? `- USPs: ${biRW.unique_selling_points.join(' | ')}` : null,
+    ].filter(Boolean).join('\n');
+    const antiFacts = verifiedFactsRW
+      ? `Gebruik ALLEEN deze gegevens. Verzin NOOIT contactgegevens die niet hierboven staan.`
+      : `Geen bedrijfsgegevens beschikbaar. Verzin GEEN telefoonnummers, adressen of e-mails. Gebruik [CONTACT].`;
 
-BUSINESS: ${rw.profile_name} — ${rw.niche}
-TARGET AUDIENCE: ${rw.target_audience}
-PRIMARY GOAL: ${rw.primary_goal}
-${templateNote}
+    let sitemapUrlsRW = [];
+    try {
+      if (profBi.sitemap_url) {
+        const sR = await fetch(profBi.sitemap_url, { headers: {'User-Agent':'ContentScaleBot/1.0'}, signal: AbortSignal.timeout(6000) });
+        const sXml = await sR.text();
+        sitemapUrlsRW = (sXml.match(/<loc>(.*?)<\/loc>/g)||[])
+          .map(m=>m.replace(/<\/?loc>/g,'').trim())
+          .filter(u=>!u.match(/\.(jpg|png|gif|xml|pdf)$/i)).slice(0,30);
+      }
+    } catch(e) {}
+    const internalLinksRW = sitemapUrlsRW.length
+      ? `Gebruik ALLEEN deze exacte sitemap-URLs:\n${sitemapUrlsRW.map(u=>`- ${u}`).join('\n')}`
+      : 'Geen sitemap — voeg GEEN interne links toe.';
 
-ORIGINAL SLUG: ${rw.original_slug} — DO NOT change search intent
-ORIGINAL TITLE: ${rw.original_title}
-RECOMMENDED TITLE: ${analysis.recommended_title || rw.original_title}
-TARGET WORD COUNT: ${analysis.target_word_count || 2000}
+    const schemaObjRW = {'@context':'https://schema.org','@type':biRW.schema_type||'LocalBusiness','name':biRW.business_name||rw.profile_name,'url':profBi.domain?(profBi.domain.startsWith('http')?profBi.domain:'https://'+profBi.domain):undefined};
+    if (biRW.phone)   schemaObjRW['telephone'] = biRW.phone;
+    if (biRW.email)   schemaObjRW['email'] = biRW.email;
+    if (biRW.address) schemaObjRW['address'] = {'@type':'PostalAddress','streetAddress':biRW.address,'addressLocality':biRW.city,'addressCountry':biRW.country};
 
-CONTENT STRATEGY:
+    let writePromptRW;
+
+    if (rw.html_template && rw.html_template.trim().length > 50) {
+      // ═══════════════════════════════════════════════
+      // TEMPLATE MODE — fill in, do NOT restructure
+      // ═══════════════════════════════════════════════
+      writePromptRW = `Je bent een SEO-contentspecialist. Vul dit HTML-template in met verbeterde content. Verander de HTML-structuur NIET.
+
+═══════════════════════════════════════
+ABSOLUTE REGELS
+═══════════════════════════════════════
+1. VERANDER GEEN HTML-structuur, CSS-klassen, IDs, divs of layout
+2. VERANDER GEEN inline styles of attributen
+3. Vul ALLEEN tekst in bestaande elementen in
+4. ${antiFacts}
+
+BEDRIJF: ${rw.profile_name} — ${rw.niche}
+DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
+
+GEVERIFIEERDE BEDRIJFSGEGEVENS:
+${verifiedFactsRW || 'Geen gegevens.'}
+
+REWRITE STRATEGIE:
 ${analysis.rewrite_strategy || ''}
 
-STRUCTURE:
-${(analysis.recommended_h2s || []).map((h, i) => `H2 ${i+1}: ${h}`).join('\n')}
+AANBEVOLEN TITEL: ${analysis.recommended_title || rw.original_title}
+DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
+STRUCTUUR: ${(analysis.recommended_h2s||[]).join(' | ')}
+SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
+RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
+AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
+VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
 
-CONTENT GAPS TO FILL:
-${(analysis.content_gaps || []).join('\n')}
+INTERNE LINKS (ALLEEN DEZE):
+${internalLinksRW}
 
-AI OVERVIEW OPTIMISATION:
-${(analysis.ai_overview_opportunities || []).join('\n')}
-
-VOICE SEARCH PHRASES TO INCLUDE:
-${(analysis.voice_search_opportunities || []).join('\n')}
-
-SECONDARY KEYWORDS (weave naturally into H2s and body — do NOT force, use where contextually relevant):
-${(analysis.secondary_keywords || []).join(', ')}
-
-RELATED KEYWORDS (use in supporting sections, FAQ questions, image alt text):
-${(analysis.related_keywords || []).join(', ')}
-
-MONEY PAGES TO LINK TO (use natural anchor text):
-${moneyPages}
-
-COMPETITOR WEAKNESSES TO EXPLOIT:
-${(analysis.competitor_analysis || []).map(c => `- ${c.url}: ${c.weaknesses}`).join('\n')}
+JSON-LD SCHEMA'S (toevoegen voor </article>):
+<script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}"}</script>
 ${imageNote}
 
-WRITING RULES:
-1. Keep all existing images — reference them at relevant sections
-2. Answer questions directly (first 2 sentences of each section = direct answer)
-3. Include FAQ section (min 5 questions) for AI Overviews
-4. Add structured data hints in comments
-5. Voice search: include natural conversational phrases
-6. BOFU: guide toward conversion naturally
-7. Link to money pages with natural anchor text
-8. Cite real stats and data where possible
-9. Return clean HTML starting with <article>`;
+═══════════════════════════════════════
+HET TEMPLATE — VUL IN, VERANDER STRUCTUUR NIET
+═══════════════════════════════════════
+${rw.html_template}
+
+Geef ALLEEN de ingevulde template terug. Geen uitleg, geen markdown. Eindig met <!-- word_count: X -->.`;
+
+    } else {
+      // ═══════════════════════════════════════════════
+      // FREE-WRITE MODE — schrijf nieuwe HTML
+      // ═══════════════════════════════════════════════
+      writePromptRW = `Je bent een elite SEO-contentschrijver. Herschrijf deze pagina zodat hij significant beter rankt. Minimaal ${analysis.target_word_count || 2500} woorden — stop NOOIT vroeg.
+
+BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
+GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
+${antiFacts}
+
+SLUG BEWAREN: ${rw.original_slug}
+AANBEVOLEN TITEL: ${analysis.recommended_title || rw.original_title}
+DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
+
+REWRITE STRATEGIE: ${analysis.rewrite_strategy || ''}
+STRUCTUUR: ${(analysis.recommended_h2s||[]).map((h,i)=>`H2 ${i+1}: ${h}`).join('\n')}
+
+VERPLICHTE ELEMENTEN: Direct antwoord, TOC, datatable, TL;DR, FAQ (5+ vragen, voice-search)
+JSON-LD: <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
+AI OVERVIEW: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
+VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
+SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
+
+INTERNE LINKS: ${internalLinksRW}
+MONEY PAGES: ${moneyPages}
+CONCURRENTIEGATEN: ${(analysis.competitor_analysis||[]).map(c=>c.weaknesses).filter(Boolean).join(' | ')}
+${imageNote}
+
+Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
+    }
 
     const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
+      body: JSON.stringify({ contents: [{ parts: [{ text: writePromptRW }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536 } })
     });
     const gd = await gr.json();
     const html = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -9960,7 +10134,7 @@ REQUIREMENTS:
 
     const gr2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: articlePrompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 8192 } })
+      body: JSON.stringify({ contents: [{ parts: [{ text: articlePrompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 65536 } })
     });
     const gd2 = await gr2.json();
     const htmlContent = gd2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
