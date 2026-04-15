@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Content Engine | ContentScale</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;min-height:100vh;font-family:'Inter',system-ui,sans-serif;color:#e2e8f0}
+.header{background:#0f172a;border-bottom:1px solid rgba(255,255,255,.08);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#6b7280;}
+.logo span{color:#a78bfa}
+.nav-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.nav-tab{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:transparent;color:#6b7280;transition:all .2s;}
+.nav-tab.active{background:rgba(124,58,237,.2);color:#a78bfa;border-color:rgba(124,58,237,.4);}
+.container{max-width:1100px;margin:0 auto;padding:24px;}
+.card{background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;}
+input,select,textarea{width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;outline:none;transition:border .2s;font-family:inherit;}
+input:focus,select:focus,textarea:focus{border-color:#7c3aed;}
+textarea{resize:vertical;min-height:100px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.btn{padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;}
+.btn-primary:hover{opacity:.9;}
+.btn-secondary{background:#1e293b;color:#9ca3af;border:1px solid rgba(255,255,255,.08);}
+.btn-secondary:hover{color:#e2e8f0;}
+.btn-success{background:linear-gradient(135deg,#065f46,#047857);color:#fff;}
+.btn-danger{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;}
+.badge-draft{background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.3);}
+.badge-written{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3);}
+.badge-published{background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);}
+.step-num{width:28px;height:28px;border-radius:50%;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.progress-bar{height:6px;background:#1e293b;border-radius:99px;overflow:hidden;margin:8px 0;}
+.progress-fill{height:6px;border-radius:99px;background:linear-gradient(90deg,#7c3aed,#be185d);transition:width .5s;}
+.kw-chip{display:inline-block;background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;margin:3px;}
+.research-block{background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin-bottom:10px;}
+.competitor-card{background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:8px;}
+.loc-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:6px;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.article-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05);}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#a78bfa;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.html-preview{background:#fff;color:#111;border-radius:8px;padding:20px;font-family:Georgia,serif;line-height:1.7;max-height:500px;overflow-y:auto;}
+.html-preview h1{font-size:1.8rem;margin-bottom:16px;}
+.html-preview h2{font-size:1.3rem;margin:20px 0 10px;}
+.html-preview h3{font-size:1.1rem;margin:16px 0 8px;}
+.html-preview p{margin-bottom:12px;}
+.html-preview a{color:#1d4ed8;}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;max-width:300px;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo"><span>Content</span>Scale Engine</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPanel('profiles',this)">⚙️ Profiles</button>
+    <button class="nav-tab" onclick="showPanel('engine',this)">🚀 Engine</button>
+    <button class="nav-tab" onclick="showPanel('articles',this)">📄 Articles</button>
+    <button class="nav-tab" onclick="showPanel('clusters',this)">🕸️ Clusters</button>
+  </div>
+  <a href="/admin" style="font-size:12px;color:#6b7280;text-decoration:none;">← Admin</a>
+</div>
+
+<div class="container">
+
+<!-- ══ PROFILES ══ -->
+<div id="panel-profiles" class="tab-panel active">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div><h2 style="font-size:1.3rem;font-weight:800;">Business Profiles</h2><p style="font-size:13px;color:#6b7280;margin-top:4px;">One profile per client — domain, sitemap, template, locations</p></div>
+    <button class="btn btn-primary" onclick="showProfileForm()">+ New Profile</button>
+  </div>
+  <div id="profileForm" style="display:none;" class="card">
+    <div class="card-title">⚙️ <span id="profileFormTitle">New Profile</span></div>
+    <input type="hidden" id="pfId">
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div><label>Business Name *</label><input id="pfName" placeholder="Janssen Roofing BV"></div>
+      <div><label>Domain</label><input id="pfDomain" placeholder="janssendak.nl"></div>
+      <div><label>Sitemap URL</label><input id="pfSitemap" placeholder="https://janssendak.nl/sitemap.xml"></div>
+      <div><label>Niche / Industry</label><input id="pfNiche" placeholder="Roofing company"></div>
+      <div><label>Target Audience</label><input id="pfAudience" placeholder="Homeowners looking for roof repair"></div>
+      <div><label>Primary Goal</label>
+        <select id="pfGoal"><option value="leads">Leads</option><option value="sales">Sales</option><option value="traffic">Traffic</option><option value="authority">Authority</option></select>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;"><label>HTML Writing Template (optional)</label><textarea id="pfTemplate" rows="4" placeholder="Paste your HTML template here..."></textarea></div>
+    <div class="grid-3" style="margin-bottom:14px;">
+      <div><label>WordPress URL (optional)</label><input id="pfWpUrl" placeholder="https://janssendak.nl"></div>
+      <div><label>WP Username</label><input id="pfWpUser" placeholder="admin"></div>
+      <div><label>WP App Password</label><input id="pfWpPw" type="password" placeholder="xxxx xxxx xxxx xxxx"></div>
+    </div>
+    <!-- Locations -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <label style="margin:0;">📍 Target Locations</label>
+        <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="document.getElementById('addLocForm').style.display='block'">+ Add Location</button>
+      </div>
+      <div id="pfLocations"></div>
+      <div id="addLocForm" style="display:none;background:#0a0a0f;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;margin-top:8px;">
+        <div class="grid-3" style="margin-bottom:10px;">
+          <div><label>Type</label><select id="locType"><option value="city">🏙️ City</option><option value="province">🗺️ Province</option><option value="country">🌍 Country</option></select></div>
+          <div><label>Name</label><input id="locValue" placeholder="Amsterdam"></div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px;"><input type="checkbox" id="locExternal" checked style="width:16px;height:16px;"><span style="font-size:12px;color:#9ca3af;">Ext. links</span></label>
+            <button class="btn btn-success" style="padding:6px 12px;font-size:12px;" onclick="addLocationToForm()">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('profileForm').style.display='none'">Cancel</button>
+    </div>
+  </div>
+  <div id="profilesList"></div>
+</div>
+
+<!-- ══ ENGINE ══ -->
+<div id="panel-engine" class="tab-panel">
+  <div style="margin-bottom:20px;">
+    <h2 style="font-size:1.3rem;font-weight:800;">🚀 Content Engine</h2>
+    <p style="font-size:13px;color:#6b7280;margin-top:4px;">Research → Brief → Write → Publish</p>
+  </div>
+  <!-- Step 1 -->
+  <div class="card" id="stepSelectProfile">
+    <div class="card-title"><span class="step-num">1</span> Select Profile & Seed Keyword</div>
+    <div class="grid-2">
+      <div><label>Business Profile</label><select id="engineProfile" onchange="loadProfileInfo()"><option value="">— Select a profile —</option></select></div>
+      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="dakdekker Amsterdam kosten" onkeydown="if(event.key==='Enter')startResearch()"></div>
+    </div>
+    <div id="profileInfo" style="display:none;background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-top:12px;font-size:13px;color:#9ca3af;"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="startResearch(false)" id="btnResearch">🔍 Start Research</button>
+      <button class="btn btn-secondary" onclick="startResearch(true)" id="btnResearchAll" style="font-size:12px;" title="Also research secondary + long-tail keywords">🔍🔍 Research All Keywords</button>
+    </div>
+  </div>
+  <!-- Step 2 -->
+  <div class="card" id="stepResearch" style="display:none;">
+    <div class="card-title"><span class="step-num">2</span> Research Results</div>
+    <div id="researchResults"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="generateBrief()" id="btnBrief">📋 Generate Brief</button>
+      <button class="btn btn-secondary" onclick="buildCluster()" id="btnCluster" style="background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);">🕸️ Build Cluster (1+5)</button>
+    </div>
+  </div>
+  <!-- Step 3 -->
+  <div class="card" id="stepBrief" style="display:none;">
+    <div class="card-title"><span class="step-num">3</span> Content Brief</div>
+    <div id="briefResults"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;"><label>Title Override (optional)</label><input id="titleOverride" placeholder="Leave blank to use recommended title"></div>
+      <button class="btn btn-primary" onclick="writeArticle()" id="btnWrite">✍️ Write Article</button>
+    </div>
+  </div>
+  <!-- Step 4 -->
+  <div class="card" id="stepArticle" style="display:none;">
+    <div class="card-title"><span class="step-num">4</span> Article Ready</div>
+    <div id="articleResult"></div>
+  </div>
+</div>
+
+<!-- ══ ARTICLES ══ -->
+<div id="panel-articles" class="tab-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div><h2 style="font-size:1.3rem;font-weight:800;">📄 Articles</h2><p style="font-size:13px;color:#6b7280;margin-top:4px;">All generated content</p></div>
+    <div style="display:flex;gap:8px;">
+      <select id="articlesProfileFilter" onchange="loadArticles()" style="padding:8px 12px;width:200px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
+        <option value="">All profiles</option>
+      </select>
+      <button class="btn btn-secondary" onclick="loadArticles()">↺ Refresh</button>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div id="articlesList"><div style="text-align:center;padding:40px;color:#6b7280;">Select a profile or click Refresh.</div></div>
+  </div>
+</div>
+
+<!-- ══ CLUSTERS ══ -->
+<div id="panel-clusters" class="tab-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div><h2 style="font-size:1.3rem;font-weight:800;">🕸️ Topic Clusters</h2><p style="font-size:13px;color:#6b7280;margin-top:4px;">1 pillar + 5 cluster articles — fully interlinked spiderweb</p></div>
+    <select id="clustersProfileFilter" onchange="loadClusters()" style="padding:8px 12px;width:200px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
+      <option value="">Select profile</option>
+    </select>
+  </div>
+  <div id="clustersList"><div style="text-align:center;padding:40px;color:#6b7280;">Select a profile to view clusters.</div></div>
+</div>
+
+</div><!-- /container -->
+
+<!-- Preview Modal -->
+<div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;overflow-y:auto;padding:24px;">
+  <div style="max-width:800px;margin:0 auto;background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;">
+    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);flex-wrap:wrap;gap:8px;">
+      <span style="font-weight:700;font-size:15px;" id="previewTitle">Preview</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="copyHtml()">📋 Copy HTML</button>
+        <button class="btn btn-success" style="font-size:12px;padding:6px 12px;" onclick="downloadHtml()">⬇️ Download</button>
+        <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" id="btnWpPublish" onclick="publishToWp()">🚀 Publish to WP</button>
+        <button class="btn btn-danger" style="font-size:12px;padding:6px 12px;" onclick="closePreview()">✕ Close</button>
+      </div>
+    </div>
+    <div style="padding:20px;"><div class="html-preview" id="previewContent"></div></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const ADMIN_ID = localStorage.getItem('admin_id');
+if (!ADMIN_ID) window.location.href = '/admin';
+
+let _profiles = [];
+let _pendingLocations = [];
+let _editingProfileId = null;
+let _currentJobId = null;
+let _currentArticleId = null;
+let _currentArticleHtml = '';
+let _currentArticleTitle = '';
+let _clusters = [];
+
+// ── Utils ─────────────────────────────────────────────────────
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'red' ? '#7f1d1d' : '#065f46';
+  t.style.color = type === 'red' ? '#fca5a5' : '#4ade80';
+  t.style.border = '1px solid ' + (type === 'red' ? '#dc2626' : '#16a34a');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function api(endpoint, method, body) {
+  method = method || 'GET';
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_ID } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(endpoint, opts);
+  return r.json();
+}
+
+function showPanel(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'none'; p.classList.remove('active'); });
+  document.querySelectorAll('.nav-tab').forEach(function(b) { b.classList.remove('active'); });
+  var panel = document.getElementById('panel-' + name);
+  panel.style.display = 'block'; panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'profiles') loadProfiles();
+  if (name === 'engine') loadEngineProfiles();
+  if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
+  if (name === 'clusters') { populateClusterFilter(); }
+}
+
+// ── Profiles ──────────────────────────────────────────────────
+async function loadProfiles() {
+  const d = await api('/api/content/profiles');
+  _profiles = d.profiles || [];
+  const el = document.getElementById('profilesList');
+  if (!_profiles.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No profiles yet — click + New Profile.</div>';
+    return;
+  }
+  el.innerHTML = _profiles.map(function(p) {
+    var locs = (p.locations || []).map(function(l) {
+      return '<span class="kw-chip">' + (l.location_type === 'city' ? '🏙️' : l.location_type === 'province' ? '🗺️' : '🌍') + ' ' + l.location_value + '</span>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:12px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">' +
+      '<div style="flex:1;"><div style="font-weight:700;font-size:1rem;margin-bottom:4px;">' + p.name + '</div>' +
+      '<div style="font-size:12px;color:#6b7280;margin-bottom:8px;">' + (p.domain || '') + ' · ' + (p.niche || '') + ' · ' + p.primary_goal + '</div>' +
+      '<div>' + locs + '</div>' +
+      (p.wp_url ? '<div style="font-size:11px;color:#a78bfa;margin-top:6px;">🚀 WP: ' + p.wp_url + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+      '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="editProfile(' + p.id + ')">✏️ Edit</button>' +
+      '<button class="btn btn-primary" style="font-size:12px;padding:6px 12px;" onclick="useProfile(' + p.id + ')">🚀 Use</button>' +
+      '<button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteProfile(' + p.id + ')">🗑</button>' +
+      '</div></div></div>';
+  }).join('');
+}
+
+function showProfileForm(profile) {
+  _pendingLocations = [];
+  _editingProfileId = null;
+  document.getElementById('pfId').value = '';
+  ['pfName','pfDomain','pfSitemap','pfNiche','pfAudience','pfTemplate','pfWpUrl','pfWpUser','pfWpPw'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('pfGoal').value = 'leads';
+  document.getElementById('pfLocations').innerHTML = '';
+  document.getElementById('addLocForm').style.display = 'none';
+  document.getElementById('profileFormTitle').textContent = 'New Profile';
+  if (profile) {
+    _editingProfileId = profile.id;
+    document.getElementById('pfId').value = profile.id;
+    document.getElementById('pfName').value = profile.name || '';
+    document.getElementById('pfDomain').value = profile.domain || '';
+    document.getElementById('pfSitemap').value = profile.sitemap_url || '';
+    document.getElementById('pfNiche').value = profile.niche || '';
+    document.getElementById('pfAudience').value = profile.target_audience || '';
+    document.getElementById('pfGoal').value = profile.primary_goal || 'leads';
+    document.getElementById('pfTemplate').value = profile.html_template || '';
+    document.getElementById('pfWpUrl').value = profile.wp_url || '';
+    document.getElementById('pfWpUser').value = profile.wp_user || '';
+    document.getElementById('profileFormTitle').textContent = 'Edit — ' + profile.name;
+    _pendingLocations = (profile.locations || []).map(function(l) { return Object.assign({}, l, { _saved: true }); });
+    renderPendingLocations();
+  }
+  document.getElementById('profileForm').style.display = 'block';
+  document.getElementById('profileForm').scrollIntoView({ behavior: 'smooth' });
+}
+
+function editProfile(id) {
+  var p = _profiles.find(function(x) { return x.id === id; });
+  if (p) showProfileForm(p);
+}
+
+function addLocationToForm() {
+  var type = document.getElementById('locType').value;
+  var value = document.getElementById('locValue').value.trim();
+  var ext = document.getElementById('locExternal').checked;
+  if (!value) { alert('Enter a location name'); return; }
+  _pendingLocations.push({ location_type: type, location_value: value, external_links: ext, _saved: false });
+  document.getElementById('locValue').value = '';
+  renderPendingLocations();
+  document.getElementById('addLocForm').style.display = 'none';
+}
+
+function renderPendingLocations() {
+  var el = document.getElementById('pfLocations');
+  if (!_pendingLocations.length) { el.innerHTML = '<div style="font-size:12px;color:#6b7280;">No locations added yet.</div>'; return; }
+  el.innerHTML = _pendingLocations.map(function(l, i) {
+    return '<div class="loc-row">' +
+      '<span style="font-size:14px;">' + (l.location_type === 'city' ? '🏙️' : l.location_type === 'province' ? '🗺️' : '🌍') + '</span>' +
+      '<span style="font-size:13px;font-weight:600;flex:1;">' + l.location_value + '</span>' +
+      '<span style="font-size:11px;color:#6b7280;">' + l.location_type + '</span>' +
+      '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin:0;">' +
+      '<input type="checkbox" ' + (l.external_links ? 'checked' : '') + ' onchange="_pendingLocations[' + i + '].external_links=this.checked" style="width:14px;height:14px;">' +
+      '<span style="font-size:11px;color:#9ca3af;">ext links</span></label>' +
+      '<button onclick="_pendingLocations.splice(' + i + ',1);renderPendingLocations()" style="background:transparent;border:none;color:#7f1d1d;cursor:pointer;font-size:14px;">✕</button>' +
+      '</div>';
+  }).join('');
+}
+
+async function saveProfile() {
+  var name = document.getElementById('pfName').value.trim();
+  if (!name) { alert('Business name is required'); return; }
+  var payload = {
+    name: name,
+    domain: document.getElementById('pfDomain').value.trim(),
+    sitemap_url: document.getElementById('pfSitemap').value.trim(),
+    niche: document.getElementById('pfNiche').value.trim(),
+    target_audience: document.getElementById('pfAudience').value.trim(),
+    primary_goal: document.getElementById('pfGoal').value,
+    html_template: document.getElementById('pfTemplate').value.trim(),
+    wp_url: document.getElementById('pfWpUrl').value.trim(),
+    wp_user: document.getElementById('pfWpUser').value.trim(),
+    wp_app_password: document.getElementById('pfWpPw').value.trim()
+  };
+  var d = _editingProfileId ? await api('/api/content/profiles/' + _editingProfileId, 'PUT', payload) : await api('/api/content/profiles', 'POST', payload);
+  if (!d.success) { alert('Error: ' + d.error); return; }
+  var profileId = d.profile.id;
+  var newLocs = _pendingLocations.filter(function(l) { return !l._saved; });
+  for (var i = 0; i < newLocs.length; i++) {
+    await api('/api/content/profiles/' + profileId + '/locations', 'POST', { location_type: newLocs[i].location_type, location_value: newLocs[i].location_value, external_links: newLocs[i].external_links });
+  }
+  if (_editingProfileId) {
+    var orig = (_profiles.find(function(x) { return x.id === _editingProfileId; }) || {}).locations || [];
+    var kept = _pendingLocations.filter(function(l) { return l._saved; }).map(function(l) { return l.id; });
+    for (var j = 0; j < orig.length; j++) {
+      if (kept.indexOf(orig[j].id) === -1) await api('/api/content/locations/' + orig[j].id, 'DELETE');
+    }
+  }
+  toast('Profile saved!');
+  document.getElementById('profileForm').style.display = 'none';
+  loadProfiles();
+}
+
+async function deleteProfile(id) {
+  if (!confirm('Delete this profile and all its content?')) return;
+  await api('/api/content/profiles/' + id, 'DELETE');
+  toast('Deleted'); loadProfiles();
+}
+
+function useProfile(id) {
+  showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
+  setTimeout(function() {
+    document.getElementById('engineProfile').value = id;
+    loadProfileInfo();
+  }, 100);
+}
+
+// ── Engine ────────────────────────────────────────────────────
+async function loadEngineProfiles() {
+  if (_profiles.length === 0) {
+    var d = await api('/api/content/profiles');
+    _profiles = d.profiles || [];
+  }
+  var sel = document.getElementById('engineProfile');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">— Select a profile —</option>';
+  _profiles.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.name + (p.domain ? ' (' + p.domain + ')' : '');
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+  var af = document.getElementById('articlesProfileFilter');
+  af.innerHTML = '<option value="">All profiles</option>';
+  _profiles.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name; af.appendChild(o);
+  });
+}
+
+function loadProfileInfo() {
+  var id = document.getElementById('engineProfile').value;
+  var el = document.getElementById('profileInfo');
+  if (!id) { el.style.display = 'none'; return; }
+  var p = _profiles.find(function(x) { return x.id == id; });
+  if (!p) return;
+  var locs = (p.locations || []).map(function(l) { return l.location_value; }).join(', ');
+  el.style.display = 'block';
+  el.innerHTML = '<strong style="color:#e2e8f0;">' + p.name + '</strong> · ' + (p.domain || 'no domain') + ' · ' + (p.niche || 'no niche') + ' · Goal: ' + p.primary_goal + (locs ? ' · 📍 ' + locs : '') + (p.wp_url ? ' · 🚀 WP ready' : '');
+}
+
+async function startResearch(allKeywords) {
+  var profileId = document.getElementById('engineProfile').value;
+  var seed = document.getElementById('seedKeyword').value.trim();
+  if (!profileId) { alert('Select a profile first'); return; }
+  if (!seed) { alert('Enter a seed keyword'); return; }
+  var btn = allKeywords ? document.getElementById('btnResearchAll') : document.getElementById('btnResearch');
+  document.getElementById('btnResearch').disabled = true;
+  document.getElementById('btnResearchAll').disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Researching...';
+  document.getElementById('stepResearch').style.display = 'none';
+  document.getElementById('stepBrief').style.display = 'none';
+  document.getElementById('stepArticle').style.display = 'none';
+  try {
+    var d = await api('/api/content/research', 'POST', { profile_id: profileId, seed_keyword: seed, research_all: allKeywords });
+    if (!d.success) throw new Error(d.error);
+    _currentJobId = d.job.id;
+    renderResearch(d.research, allKeywords);
+    document.getElementById('stepResearch').style.display = 'block';
+    document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
+    if (allKeywords) toast('Full keyword universe researched — ' + (d.research.all_keywords_researched || 0) + ' keywords analyzed');
+  } catch(e) { toast('Research failed: ' + e.message, 'red'); }
+  finally {
+    document.getElementById('btnResearch').disabled = false;
+    document.getElementById('btnResearchAll').disabled = false;
+    document.getElementById('btnResearch').innerHTML = '🔍 Start Research';
+    document.getElementById('btnResearchAll').innerHTML = '🔍🔍 Research All Keywords';
+  }
+}
+
+function renderResearch(r, allKeywords) {
+  var el = document.getElementById('researchResults');
+  function chips(arr) { return (arr || []).map(function(k) { return '<span class="kw-chip">' + k + '</span>'; }).join(''); }
+  var allKwSection = '';
+  if (allKeywords && r.all_keyword_data) {
+    var akd = r.all_keyword_data;
+    allKwSection = '<div class="research-block">' +
+      '<div style="font-size:11px;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">✦ Full Keyword Universe (' + (akd.total_keywords_analyzed || 0) + ' analyzed)</div>' +
+      '<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Top opportunities: ' + chips(akd.top_opportunities) + '</div>' +
+      '<div style="font-size:12px;color:#9ca3af;">Quick wins: ' + chips(akd.quick_wins) + '</div>' +
+      '</div>';
+  }
+  el.innerHTML =
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Primary Keyword</div>' +
+    '<div style="font-size:1.1rem;font-weight:700;color:#a78bfa;">' + (r.primary_keyword || '') + '</div>' +
+    '<div style="margin-top:6px;font-size:12px;color:#6b7280;">Intent: <strong style="color:#e2e8f0;">' + (r.search_intent || '') + '</strong> · Volume: <strong style="color:#e2e8f0;">' + (r.monthly_search_volume_estimate || '') + '</strong> · Difficulty: <strong style="color:#e2e8f0;">' + (r.keyword_difficulty_estimate || '') + '</strong></div>' +
+    '</div>' +
+    allKwSection +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Keywords</div>' +
+    chips(r.secondary_keywords) + chips(r.lsi_keywords) + chips(r.long_tail_variants) +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Competitor Analysis</div>' +
+    (r.competitor_analysis || []).map(function(c) {
+      return '<div class="competitor-card">' +
+        '<div style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:4px;">' + (c.title || c.url) + '</div>' +
+        '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + c.url + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">' +
+        '<div><span style="color:#4ade80;">✓ Strengths:</span> ' + c.strengths + '</div>' +
+        '<div><span style="color:#f87171;">✗ Weaknesses:</span> ' + c.weaknesses + '</div>' +
+        '</div></div>';
+    }).join('') +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Content Gaps & Opportunities</div>' +
+    (r.content_gaps || []).map(function(g) { return '<div style="font-size:13px;color:#e2e8f0;padding:4px 0;">→ ' + g + '</div>'; }).join('') +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Recommended Title</div>' +
+    '<div style="font-size:1rem;font-weight:700;color:#fbbf24;">' + (r.recommended_title || '') + '</div>' +
+    (r.title_alternatives || []).map(function(t) { return '<div style="font-size:13px;color:#9ca3af;margin-top:4px;">Alt: ' + t + '</div>'; }).join('') +
+    '</div>';
+}
+
+async function generateBrief() {
+  if (!_currentJobId) return;
+  var btn = document.getElementById('btnBrief');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating...';
+  try {
+    var d = await api('/api/content/brief/' + _currentJobId, 'POST');
+    if (!d.success) throw new Error(d.error);
+    renderBrief(d.brief);
+    document.getElementById('stepBrief').style.display = 'block';
+    document.getElementById('stepBrief').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) { toast('Brief failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.innerHTML = '📋 Generate Brief'; }
+}
+
+function renderBrief(b) {
+  var el = document.getElementById('briefResults');
+  el.innerHTML =
+    '<div style="background:#0a0a0f;border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:16px;margin-bottom:12px;">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Recommended Title</div>' +
+    '<div style="font-size:1.1rem;font-weight:700;color:#fbbf24;">' + (b.title || '') + '</div>' +
+    '</div>' +
+    '<div class="grid-2" style="margin-bottom:12px;">' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em;">Structure (H2s)</div>' +
+    (b.structure || []).map(function(h, i) {
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="step-num" style="width:22px;height:22px;font-size:11px;">' + (i+1) + '</span><span style="font-size:13px;">' + h + '</span></div>';
+    }).join('') +
+    '</div>' +
+    '<div>' +
+    '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Internal Links</div>' +
+    (b.internal_links || []).map(function(u) { return '<div style="font-size:12px;color:#60a5fa;padding:2px 0;">🔗 ' + u + '</div>'; }).join('') +
+    (!(b.internal_links || []).length ? '<span style="font-size:12px;color:#6b7280;">None from sitemap</span>' : '') +
+    '</div>' +
+    '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Local External Links</div>' +
+    (b.external_links_local || []).map(function(u) { return '<div style="font-size:12px;color:#4ade80;padding:2px 0;">🌐 ' + u + '</div>'; }).join('') +
+    (!(b.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    '</div>' +
+    '<div class="research-block"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">BOFU CTAs</div>' +
+    (b.bofu_ctas || []).map(function(c) { return '<div style="font-size:12px;color:#fbbf24;padding:2px 0;">→ ' + c + '</div>'; }).join('') +
+    '</div></div></div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">AI Overview Optimisation</div>' +
+    (b.ai_overview_tips || []).map(function(t) { return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
+    '</div>' +
+    '<div style="font-size:12px;color:#6b7280;margin-top:8px;">Target: <strong style="color:#e2e8f0;">' + (b.target_word_count || 2000) + ' words</strong></div>';
+}
+
+async function writeArticle() {
+  if (!_currentJobId) return;
+  var btn = document.getElementById('btnWrite');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Writing...';
+  var titleOverride = document.getElementById('titleOverride').value.trim();
+  try {
+    var d = await api('/api/content/write/' + _currentJobId, 'POST', { title_override: titleOverride || undefined });
+    if (!d.success) throw new Error(d.error);
+    _currentArticleId = d.article.id;
+    _currentArticleHtml = d.article.html_content;
+    _currentArticleTitle = d.article.title;
+    renderArticleReady(d.article);
+    document.getElementById('stepArticle').style.display = 'block';
+    document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth' });
+    toast('Article written — ' + d.article.word_count + ' words!');
+  } catch(e) { toast('Write failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.innerHTML = '✍️ Write Article'; }
+}
+
+function renderArticleReady(article) {
+  var el = document.getElementById('articleResult');
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
+    '<div style="flex:1;"><div style="font-size:1rem;font-weight:700;color:#fbbf24;">' + article.title + '</div>' +
+    '<div style="font-size:12px;color:#6b7280;margin-top:4px;">' + article.word_count + ' words · <span class="badge badge-written">Draft</span></div></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    '<button class="btn btn-secondary" style="font-size:12px;" onclick="openPreviewById(' + article.id + ',\'' + (article.title || '').replace(/'/g,'') + '\')">👁 Preview</button>' +
+    '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentArticleHtml).then(function(){toast(\'Copied!\')})">📋 Copy HTML</button>' +
+    '<button class="btn btn-success" style="font-size:12px;" onclick="downloadCurrentHtml()">⬇️ Download</button>' +
+    '</div></div>' +
+    '<div style="font-size:12px;color:#6b7280;">✓ Saved to database · Available in Articles tab</div>';
+}
+
+function downloadCurrentHtml() {
+  var blob = new Blob([_currentArticleHtml], { type: 'text/html' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (_currentArticleTitle || 'article').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.html';
+  a.click(); toast('Downloaded!');
+}
+
+async function buildCluster() {
+  if (!_currentJobId) { alert('Run research first'); return; }
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  var btn = document.getElementById('btnCluster');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Building cluster...';
+  try {
+    var d = await api('/api/content/clusters/generate', 'POST', { job_id: _currentJobId, profile_id: profileId, cluster_size: 5 });
+    if (!d.success) throw new Error(d.error);
+    toast('Cluster created: ' + d.cluster.cluster_name + ' — see 🕸️ Clusters tab');
+    btn.innerHTML = '✓ Cluster built';
+    setTimeout(function() { btn.disabled = false; btn.innerHTML = '🕸️ Build Cluster (1+5)'; }, 5000);
+  } catch(e) { toast('Cluster failed: ' + e.message, 'red'); btn.disabled = false; btn.innerHTML = '🕸️ Build Cluster (1+5)'; }
+}
+
+// ── Articles ──────────────────────────────────────────────────
+async function loadArticles() {
+  if (!_profiles.length) await loadEngineProfiles();
+  var profileId = document.getElementById('articlesProfileFilter').value;
+  var articles = [];
+  if (profileId) {
+    var d = await api('/api/content/articles/' + profileId);
+    articles = d.articles || [];
+    articles = articles.map(function(a) {
+      var p = _profiles.find(function(x) { return x.id == a.profile_id; });
+      return Object.assign({}, a, { _pName: p ? p.name : '' });
+    });
+  } else {
+    for (var i = 0; i < _profiles.length; i++) {
+      var pd = await api('/api/content/articles/' + _profiles[i].id);
+      var pa = (pd.articles || []).map(function(a) { return Object.assign({}, a, { _pName: _profiles[i].name }); });
+      articles = articles.concat(pa);
+    }
+    articles.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+  }
+  var el = document.getElementById('articlesList');
+  if (!articles.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No articles yet.</div>'; return; }
+  var statusClass = { draft: 'badge-draft', written: 'badge-written', published: 'badge-published' };
+  el.innerHTML = articles.map(function(a) {
+    return '<div class="article-row">' +
+      '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (a.title || 'Untitled') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:3px;">' + (a._pName || '') + ' · ' + (a.word_count || 0) + ' words · ' + new Date(a.created_at).toLocaleDateString() + '</div></div>' +
+      '<span class="badge ' + (statusClass[a.status] || 'badge-draft') + '">' + a.status + '</span>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+      '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="openPreviewById(' + a.id + ',\'' + (a.title || '').replace(/'/g, '\\\'') + '\')">👁</button>' +
+      (a.wp_url ? '<a href="' + a.wp_url + '" target="_blank" class="btn btn-secondary" style="font-size:11px;padding:5px 10px;">🌐</a>' : '') +
+      '<button class="btn btn-danger" style="font-size:11px;padding:5px 8px;" onclick="deleteArticle(' + a.id + ')">🗑</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+async function openPreviewById(id, title) {
+  _currentArticleId = id;
+  _currentArticleTitle = title;
+  if (!_profiles.length) await loadEngineProfiles();
+  var html = '';
+  for (var i = 0; i < _profiles.length; i++) {
+    var d = await api('/api/content/articles/' + _profiles[i].id);
+    var found = (d.articles || []).find(function(a) { return a.id == id; });
+    if (found) { html = found.html_content; _currentArticleHtml = html; break; }
+  }
+  document.getElementById('previewTitle').textContent = title || 'Preview';
+  document.getElementById('previewContent').innerHTML = html;
+  document.getElementById('previewModal').style.display = 'block';
+}
+
+function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
+function copyHtml() { navigator.clipboard.writeText(_currentArticleHtml).then(function() { toast('HTML copied!'); }); }
+function downloadHtml() {
+  var blob = new Blob([_currentArticleHtml], { type: 'text/html' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (_currentArticleTitle || 'article').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.html';
+  a.click(); toast('Downloaded!');
+}
+
+async function publishToWp() {
+  if (!_currentArticleId) return;
+  var btn = document.getElementById('btnWpPublish');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    var d = await api('/api/content/articles/' + _currentArticleId + '/publish-wp', 'POST');
+    if (!d.success) throw new Error(d.error);
+    toast('Published to WP! Post ID: ' + d.wp_post_id);
+    btn.innerHTML = '✓ Published';
+  } catch(e) { toast(e.message, 'red'); btn.disabled = false; btn.innerHTML = '🚀 Publish to WP'; }
+}
+
+async function deleteArticle(id) {
+  if (!confirm('Delete this article permanently?')) return;
+  await api('/api/content/articles/' + id, 'DELETE');
+  toast('Deleted'); loadArticles();
+}
+
+// ── Clusters ──────────────────────────────────────────────────
+function populateClusterFilter() {
+  if (!_profiles.length) loadEngineProfiles();
+  var sel = document.getElementById('clustersProfileFilter');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Select profile</option>';
+  _profiles.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name; sel.appendChild(o);
+  });
+  if (cur) { sel.value = cur; loadClusters(); }
+}
+
+async function loadClusters() {
+  var profileId = document.getElementById('clustersProfileFilter').value;
+  if (!profileId) return;
+  var d = await api('/api/content/clusters/' + profileId);
+  _clusters = d.clusters || [];
+  renderClusters();
+}
+
+function renderClusters() {
+  var el = document.getElementById('clustersList');
+  if (!_clusters.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">' +
+      '<div style="font-size:2rem;margin-bottom:12px;">🕸️</div>' +
+      '<div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">No clusters yet</div>' +
+      '<div style="font-size:13px;">Go to Engine tab, run research, then click Build Cluster.</div>' +
+      '</div>';
+    return;
+  }
+  el.innerHTML = _clusters.map(function(c) { return renderClusterCard(c); }).join('');
+}
+
+function renderClusterCard(c) {
+  var nodes = c.nodes || [];
+  var pillar = nodes.find(function(n) { return n.node_type === 'pillar'; });
+  var clusterNodes = nodes.filter(function(n) { return n.node_type === 'cluster'; });
+  var sitemapNodes = nodes.filter(function(n) { return n.node_type === 'sitemap'; });
+  var written = nodes.filter(function(n) { return n.status === 'written' || n.status === 'exists'; }).length;
+  var total = nodes.filter(function(n) { return n.node_type !== 'sitemap'; }).length;
+  var pct = total ? Math.round(written / total * 100) : 0;
+  var statusColor = { planned: '#6b7280', written: '#4ade80', exists: '#60a5fa', 'in-progress': '#fbbf24' };
+  var statusIcon = { planned: '⏳', written: '✅', exists: '🔗', 'in-progress': '🔄' };
+
+  var pillarHtml = '';
+  if (pillar) {
+    pillarHtml = '<div style="background:rgba(251,191,36,.08);border:2px solid rgba(251,191,36,.4);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+      '<span style="font-size:18px;">⭐</span>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;margin-bottom:3px;">Pillar</div>' +
+      '<div style="font-weight:700;color:#e2e8f0;font-size:0.88rem;">' + (pillar.title || '') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' + (pillar.target_keyword || '') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">' +
+      '<span style="color:' + (statusColor[pillar.status] || '#6b7280') + ';font-size:13px;">' + (statusIcon[pillar.status] || '⏳') + ' ' + pillar.status + '</span>' +
+      (pillar.final_url ? '<a href="' + pillar.final_url + '" target="_blank" style="font-size:11px;color:#60a5fa;">🔗 ' + pillar.final_url.substring(0, 35) + '</a>' : '<span style="font-size:11px;color:#6b7280;">' + (pillar.planned_slug || '') + '</span>') +
+      '</div>' +
+      '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;flex-shrink:0;" onclick="setEngineKeyword(\'' + (pillar.target_keyword || '').replace(/'/g, '') + '\')">✍️ Write</button>' +
+      '</div>';
+  }
+
+  var clusterGrid = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px;">' +
+    clusterNodes.map(function(n) {
+      return '<div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,' + (n.status === 'written' ? '.5' : '.2') + ');border-radius:8px;padding:10px;">' +
+        '<div style="display:flex;align-items:flex-start;gap:8px;">' +
+        '<span style="font-size:14px;margin-top:1px;">' + (statusIcon[n.status] || '⏳') + '</span>' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:0.82rem;font-weight:600;color:#e2e8f0;line-height:1.3;">' + (n.title || '') + '</div>' +
+        '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' + (n.target_keyword || '') + '</div>' +
+        (n.final_url ? '<a href="' + n.final_url + '" target="_blank" style="font-size:10px;color:#60a5fa;display:block;margin-top:2px;">' + n.final_url + '</a>' : '<span style="font-size:10px;color:#4b5563;">' + (n.planned_slug || '') + '</span>') +
+        '</div></div>' +
+        (n.status !== 'written' && n.status !== 'exists' ?
+          '<button class="btn btn-primary" style="font-size:10px;padding:4px 8px;margin-top:6px;width:100%;" onclick="setEngineKeyword(\'' + (n.target_keyword || '').replace(/'/g, '') + '\')">✍️ Write this</button>' :
+          '<div style="font-size:10px;color:#4ade80;padding:4px 8px;background:rgba(74,222,128,.1);border-radius:5px;margin-top:6px;text-align:center;">✅ Written</div>') +
+        '</div>';
+    }).join('') +
+    '</div>';
+
+  var sitemapHtml = '';
+  if (sitemapNodes.length) {
+    sitemapHtml = '<div style="margin-top:8px;padding:10px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">' +
+      '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin-bottom:8px;">🔗 Supporting Sitemap Pages</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      sitemapNodes.map(function(n) {
+        return '<a href="' + (n.final_url || n.sitemap_url || '#') + '" target="_blank" style="font-size:11px;color:#60a5fa;background:rgba(96,165,250,.1);padding:3px 8px;border-radius:99px;text-decoration:none;">' + (n.title || n.final_url || '').substring(0, 40) + '</a>';
+      }).join('') +
+      '</div></div>';
+  }
+
+  var strategyHtml = (c.cluster_data && c.cluster_data.internal_link_strategy) ?
+    '<div style="margin-top:12px;padding:10px;background:#0a0a0f;border-radius:8px;font-size:12px;color:#9ca3af;">💡 ' + c.cluster_data.internal_link_strategy + '</div>' : '';
+
+  return '<div class="card" style="margin-bottom:16px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px;">' +
+    '<div style="flex:1;"><div style="font-weight:800;font-size:1rem;color:#fbbf24;margin-bottom:4px;">' + c.cluster_name + '</div>' +
+    '<div style="font-size:12px;color:#6b7280;">Seed: "' + c.seed_keyword + '" · ' + written + '/' + total + ' written</div></div>' +
+    '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="viewLinkMap(' + c.id + ')">🗺️ Link Map</button>' +
+    '<button class="btn btn-danger" style="font-size:11px;padding:5px 8px;" onclick="deleteCluster(' + c.id + ')">🗑</button>' +
+    '</div></div>' +
+    '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+    '<div style="font-size:11px;color:#6b7280;text-align:right;margin-bottom:12px;">' + pct + '% complete</div>' +
+    pillarHtml +
+    '<div style="display:flex;justify-content:center;"><div style="width:2px;height:16px;background:rgba(124,58,237,.4);margin:4px 0;"></div></div>' +
+    clusterGrid +
+    sitemapHtml +
+    strategyHtml +
+    '</div>';
+}
+
+function setEngineKeyword(keyword) {
+  showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
+  setTimeout(function() {
+    document.getElementById('seedKeyword').value = keyword;
+    toast('Keyword set: ' + keyword + ' — select profile and click Start Research');
+  }, 100);
+}
+
+async function viewLinkMap(clusterId) {
+  var d = await api('/api/content/clusters/' + clusterId + '/linkmap');
+  if (!d.success) { toast('Failed: ' + d.error, 'red'); return; }
+  var nodes = d.nodes || [];
+  var links = d.links || [];
+  var html = '<div style="font-family:monospace;">';
+  html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:12px;">Internal Link Map</div>';
+  nodes.filter(function(n) { return n.node_type !== 'sitemap'; }).forEach(function(n) {
+    var outLinks = links.filter(function(l) { return l.from_node_id === n.id; });
+    var inLinks = links.filter(function(l) { return l.to_node_id === n.id; });
+    html += '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:8px;">' +
+      '<div style="font-weight:700;color:#fbbf24;font-size:0.85rem;margin-bottom:6px;">' + (n.node_type === 'pillar' ? '⭐' : '📄') + ' ' + n.title + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + (n.final_url || n.planned_slug || 'URL TBD') + '</div>' +
+      (outLinks.length ? '<div style="margin-bottom:4px;"><span style="font-size:10px;color:#4ade80;">→ Links TO: </span>' + outLinks.map(function(l) { return '<span style="font-size:10px;background:rgba(74,222,128,.1);color:#4ade80;padding:2px 6px;border-radius:4px;margin-right:4px;">' + (l.to_title || l.to_url || '') + '</span>'; }).join('') + '</div>' : '') +
+      (inLinks.length ? '<div><span style="font-size:10px;color:#60a5fa;">← Links FROM: </span>' + inLinks.map(function(l) { return '<span style="font-size:10px;background:rgba(96,165,250,.1);color:#60a5fa;padding:2px 6px;border-radius:4px;margin-right:4px;">' + (l.from_title || '') + '</span>'; }).join('') + '</div>' : '') +
+      '</div>';
+  });
+  html += '</div>';
+  document.getElementById('previewTitle').textContent = 'Link Map';
+  document.getElementById('previewContent').innerHTML = html;
+  document.getElementById('previewModal').style.display = 'block';
+}
+
+async function deleteCluster(id) {
+  if (!confirm('Delete this cluster?')) return;
+  await api('/api/content/clusters/' + id, 'DELETE');
+  toast('Deleted'); loadClusters();
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadProfiles();
+loadEngineProfiles();
+</script>
+</body>
+</html>
