@@ -1,5 +1,12 @@
 console.log('✅ CONTENTSCALE SERVER v3.0 - FINAL FIX - 1775546405');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
+// ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
+// ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
+// ✅ FIX v7: execute-rewrite response includes tracker_page payload
+// ✅ FIX v7: /api/content/tracker-push + tracker-queue routes added
+// ✅ FIX v7: Pulse+Nexus tracker auto-polls tracker-queue (30s interval)
+// ✅ FIX v7: Slug protection rules hardened — SLUG IS SACRED by default
+// ✅ FIX v7: 301 redirect only when redirect_confidence = 100
 // ✅ Database Migration: country VARCHAR(100) (Fixes "value too long" error)
 // ✅ Bulk Delete Routes Added (Users, Leaderboard, Freelancers)
 // ✅ Tab Refresh Logic Preserved
@@ -9681,10 +9688,12 @@ ${serpResults.map((r,i) => `${i+1}. ${r.title} — ${r.url}\n   ${r.snippet}`).j
 BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
 
 CRITICAL RULES:
-- NEVER change the slug if it would break the search intent of the phrase
-- If impressions > 1000 but clicks < 10: keep slug, rewrite content better
+- SLUG IS SACRED: keep_slug is TRUE by default — only set false when the slug is factually wrong for the intent
+- NEVER change the slug if it would break the search intent of the phrase (even partially)
+- If impressions > 1000 but clicks < 10: keep slug, rewrite content better — do NOT change slug
 - If keyword has stronger variant with different intent: suggest NEW page with 301 redirect note
-- 301 redirect only if search intent match is 100%
+- 301 redirect ONLY when redirect_confidence = 100 (full intent match, zero ambiguity)
+- new_page_new_slug only when current slug serves a completely different search intent
 
 Return ONLY valid JSON:
 {
@@ -9701,6 +9710,8 @@ Return ONLY valid JSON:
   "content_gaps": ["gap1","gap2","gap3"],
   "ai_overview_opportunities": ["how to appear in AIO 1","how to 2"],
   "voice_search_opportunities": ["conversational phrase 1","conversational phrase 2"],
+  "secondary_keywords": ["secondary kw 1","secondary kw 2","secondary kw 3"],
+  "related_keywords": ["related kw 1","related kw 2","related kw 3","related kw 4","related kw 5"],
   "gsc_insight": "what the GSC data tells us",
   "rewrite_strategy": "detailed plan for rewriting this page better",
   "recommended_title": "improved title",
@@ -9735,7 +9746,10 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res
     const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
     if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
     const rw = rwR.rows[0];
-    const analysis = rw.analysis_data;
+    // ✅ FIX: analysis_data can come back as string or object from JSONB column
+    const analysis = typeof rw.analysis_data === 'string'
+      ? JSON.parse(rw.analysis_data)
+      : rw.analysis_data;
     const geminiKey = process.env.GEMINI_API_KEY;
 
     // Get money pages for internal linking
@@ -9772,6 +9786,12 @@ ${(analysis.ai_overview_opportunities || []).join('\n')}
 VOICE SEARCH PHRASES TO INCLUDE:
 ${(analysis.voice_search_opportunities || []).join('\n')}
 
+SECONDARY KEYWORDS (weave naturally into H2s and body — do NOT force, use where contextually relevant):
+${(analysis.secondary_keywords || []).join(', ')}
+
+RELATED KEYWORDS (use in supporting sections, FAQ questions, image alt text):
+${(analysis.related_keywords || []).join(', ')}
+
 MONEY PAGES TO LINK TO (use natural anchor text):
 ${moneyPages}
 
@@ -9800,7 +9820,24 @@ WRITING RULES:
     const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
 
     await pool.query(`UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`, [html, analysis.recommended_title||rw.original_title, wc, rw.id]);
-    res.json({ success: true, html, title: analysis.recommended_title||rw.original_title, word_count: wc, slug: rw.original_slug, recommendation: analysis.recommendation });
+    // ✅ FIX: include tracker_page so frontend auto-adds to Pulse & Nexus tracker
+    const ctrCalc = (rw.gsc_clicks > 0 && rw.gsc_impressions > 0)
+      ? (rw.gsc_clicks / rw.gsc_impressions * 100).toFixed(2)
+      : null;
+    res.json({
+      success: true, html,
+      title: analysis.recommended_title || rw.original_title,
+      word_count: wc,
+      slug: rw.original_slug,
+      recommendation: analysis.recommendation,
+      tracker_page: {
+        url: rw.original_url,
+        keyword: rw.gsc_keyword || rw.new_seed_keyword || '',
+        position: rw.gsc_position || null,
+        impressions: rw.gsc_impressions || null,
+        ctr: ctrCalc
+      }
+    });
   } catch(e) { console.error('Rewrite execute error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -9808,6 +9845,31 @@ app.get('/api/content/rewrites/:profileId', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query(`SELECT * FROM content_rewrites WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 50`, [req.params.profileId]);
     res.json({ success: true, rewrites: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Tracker Push ── writes executed rewrite page into cs_wf_pages via server-stored queue
+// content-engine.html calls POST /api/content/tracker-push after Execute
+// The Pulse+Nexus tracker page reads GET /api/content/tracker-queue and auto-imports
+const _trackerQueue = {}; // in-memory per-user queue (keyed by userId)
+app.post('/api/content/tracker-push', verifyAdmin, async (req, res) => {
+  try {
+    const { user_id, page } = req.body;
+    if (!user_id || !page || !page.url) return res.status(400).json({ success: false, error: 'user_id and page.url required' });
+    if (!_trackerQueue[user_id]) _trackerQueue[user_id] = [];
+    // Deduplicate by URL
+    _trackerQueue[user_id] = _trackerQueue[user_id].filter(p => p.url !== page.url);
+    _trackerQueue[user_id].push({ url: page.url, keyword: page.keyword||'', position: page.position||null, impressions: page.impressions||null, ctr: page.ctr||null, _pushed: Date.now() });
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/content/tracker-queue', verifyAdmin, async (req, res) => {
+  try {
+    const userId = req.query.user_id || req.headers['x-user-id'] || '';
+    const pages = _trackerQueue[userId] || [];
+    // Clear after reading
+    if (pages.length) delete _trackerQueue[userId];
+    res.json({ success: true, pages });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -15165,6 +15227,34 @@ function checkWorkflowImport(){
     document.getElementById('importCount').textContent=available.length+' pagina\\'s';
   }catch(e){}
 }
+
+// ── Auto-poll tracker-queue from Execute Rewrite ─────────
+// Checks if content-engine.html pushed new pages via /api/content/tracker-push
+function pollTrackerQueue(){
+  try{
+    var uid=''; try{ uid=localStorage.getItem('cs_user_id')||''; }catch(e){}
+    if(!uid) return;
+    fetch(RAILWAY+'/api/content/tracker-queue?user_id='+encodeURIComponent(uid),{
+      headers:{'Authorization':'Bearer '+uid}
+    }).then(function(r){return r.json();}).then(function(data){
+      if(!data.success||!data.pages||!data.pages.length) return;
+      var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
+      var newPages=data.pages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
+      if(!newPages.length) return;
+      // Merge into cs_wf_pages so importFromWorkflow can pick them up
+      var wf=[]; try{ wf=JSON.parse(localStorage.getItem('cs_wf_pages')||'[]'); }catch(e){}
+      newPages.forEach(function(p){
+        if(!wf.find(function(w){return w.url===p.url;})) wf.push(p);
+      });
+      localStorage.setItem('cs_wf_pages',JSON.stringify(wf));
+      checkWorkflowImport();
+      toast('✅ '+newPages.length+' herschreven pagina\\'s klaar voor Pulse+Nexus import');
+    }).catch(function(){});
+  }catch(e){}
+}
+// Poll once on load + every 30s
+setTimeout(pollTrackerQueue, 3000);
+setInterval(pollTrackerQueue, 30000);
 
 function importFromWorkflow(){
   try{
