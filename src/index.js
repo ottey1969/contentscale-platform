@@ -759,6 +759,100 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      is_active BOOLEAN DEFAULT FALSE,
      created_at TIMESTAMP DEFAULT NOW()
    )`);
+   // Phase 2 tables
+   await client.query(`CREATE TABLE IF NOT EXISTS content_money_pages (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     url VARCHAR(1000) NOT NULL,
+     title VARCHAR(500),
+     page_type VARCHAR(50) DEFAULT 'service',
+     primary_keyword VARCHAR(500),
+     is_active BOOLEAN DEFAULT TRUE,
+     sort_order INTEGER DEFAULT 0,
+     created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_image_library (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     image_url VARCHAR(2000) NOT NULL,
+     file_name VARCHAR(500),
+     alt_text VARCHAR(500),
+     caption TEXT,
+     tags VARCHAR(500),
+     created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_news_feeds (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     feed_name VARCHAR(255) NOT NULL,
+     feed_type VARCHAR(20) DEFAULT 'rss',
+     feed_url VARCHAR(2000),
+     domain VARCHAR(500),
+     niche_keywords VARCHAR(500),
+     auto_publish BOOLEAN DEFAULT FALSE,
+     publish_interval VARCHAR(50) DEFAULT 'manual',
+     articles_per_batch INTEGER DEFAULT 1,
+     last_fetched TIMESTAMP,
+     is_active BOOLEAN DEFAULT TRUE,
+     created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_news_articles (
+     id SERIAL PRIMARY KEY,
+     feed_id INTEGER REFERENCES content_news_feeds(id) ON DELETE CASCADE,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     original_url VARCHAR(2000),
+     original_title VARCHAR(1000),
+     original_source VARCHAR(500),
+     original_date TIMESTAMP,
+     rewritten_title VARCHAR(1000),
+     rewritten_html TEXT,
+     rewritten_slug VARCHAR(500),
+     status VARCHAR(50) DEFAULT 'found',
+     word_count INTEGER DEFAULT 0,
+     wp_post_id INTEGER,
+     wp_url VARCHAR(1000),
+     published_at TIMESTAMP,
+     created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_rewrites (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     article_id INTEGER REFERENCES content_articles(id) ON DELETE SET NULL,
+     original_url VARCHAR(2000),
+     original_slug VARCHAR(500),
+     original_title VARCHAR(1000),
+     original_html TEXT,
+     gsc_impressions INTEGER DEFAULT 0,
+     gsc_clicks INTEGER DEFAULT 0,
+     gsc_position NUMERIC(6,2),
+     gsc_keyword VARCHAR(500),
+     analysis_data JSONB DEFAULT '{}',
+     recommendation VARCHAR(20) DEFAULT 'rewrite',
+     new_slug VARCHAR(500),
+     new_seed_keyword VARCHAR(500),
+     rewritten_html TEXT,
+     rewritten_title VARCHAR(1000),
+     word_count INTEGER DEFAULT 0,
+     status VARCHAR(50) DEFAULT 'pending',
+     created_at TIMESTAMP DEFAULT NOW(),
+     updated_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_stats_studies (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     topic VARCHAR(500) NOT NULL,
+     seed_keyword VARCHAR(500),
+     sources JSONB DEFAULT '[]',
+     datapoints JSONB DEFAULT '[]',
+     html_content TEXT,
+     title VARCHAR(1000),
+     slug VARCHAR(500),
+     word_count INTEGER DEFAULT 0,
+     status VARCHAR(50) DEFAULT 'draft',
+     article_id INTEGER REFERENCES content_articles(id) ON DELETE SET NULL,
+     created_at TIMESTAMP DEFAULT NOW(),
+     updated_at TIMESTAMP DEFAULT NOW()
+   )`);
    console.log('✅ All tables ready & migrated');
    } catch (error) {
    console.error('❌ DB Setup error:', error.message);
@@ -9328,6 +9422,501 @@ app.delete('/api/content/clusters/:id', verifyAdmin, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_clusters WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ============================================================
+// CONTENT ENGINE PHASE 2 API
+// ============================================================
+
+// ── Money Pages ───────────────────────────────────────────────
+app.get('/api/content/money-pages/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 ORDER BY sort_order, id`, [req.params.profileId]);
+    res.json({ success: true, pages: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/content/money-pages/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const { url, title, page_type, primary_keyword } = req.body;
+    const r = await pool.query(`INSERT INTO content_money_pages (profile_id,url,title,page_type,primary_keyword) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [req.params.profileId, url, title, page_type||'service', primary_keyword]);
+    res.json({ success: true, page: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/content/money-pages/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM content_money_pages WHERE id=$1`, [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Image Library ─────────────────────────────────────────────
+app.get('/api/content/images/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT * FROM content_image_library WHERE profile_id=$1 ORDER BY created_at DESC`, [req.params.profileId]);
+    res.json({ success: true, images: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/content/images/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const { image_url, file_name, alt_text, caption, tags } = req.body;
+    const fn = file_name || image_url.split('/').pop().split('?')[0];
+    const r = await pool.query(`INSERT INTO content_image_library (profile_id,image_url,file_name,alt_text,caption,tags) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [req.params.profileId, image_url, fn, alt_text, caption, tags]);
+    res.json({ success: true, image: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/content/images/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM content_image_library WHERE id=$1`, [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── News Feeds ────────────────────────────────────────────────
+app.get('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT f.*, COUNT(a.id) as article_count FROM content_news_feeds f LEFT JOIN content_news_articles a ON a.feed_id=f.id WHERE f.profile_id=$1 GROUP BY f.id ORDER BY f.created_at DESC`, [req.params.profileId]);
+    res.json({ success: true, feeds: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const { feed_name, feed_type, feed_url, domain, niche_keywords, auto_publish, publish_interval, articles_per_batch } = req.body;
+    const r = await pool.query(`INSERT INTO content_news_feeds (profile_id,feed_name,feed_type,feed_url,domain,niche_keywords,auto_publish,publish_interval,articles_per_batch) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [req.params.profileId, feed_name, feed_type||'rss', feed_url, domain, niche_keywords, auto_publish||false, publish_interval||'manual', articles_per_batch||1]);
+    res.json({ success: true, feed: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/content/feeds/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM content_news_feeds WHERE id=$1`, [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Fetch + Rewrite News Feed ─────────────────────────────────
+app.post('/api/content/feeds/:feedId/fetch', verifyAdmin, async (req, res) => {
+  try {
+    const { days_back = 7 } = req.body;
+    const feedR = await pool.query(`SELECT f.*, cp.niche, cp.name as profile_name, cp.domain as profile_domain FROM content_news_feeds f JOIN content_profiles cp ON cp.id=f.profile_id WHERE f.id=$1`, [req.params.feedId]);
+    if (!feedR.rows.length) return res.status(404).json({ success: false, error: 'Feed not found' });
+    const feed = feedR.rows[0];
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+
+    let articles = [];
+    const since = new Date(Date.now() - days_back * 86400000).toISOString();
+
+    // Try RSS first
+    if (feed.feed_url) {
+      try {
+        const rssResp = await fetch(feed.feed_url, { signal: AbortSignal.timeout(8000) });
+        const rssText = await rssResp.text();
+        const items = rssText.match(/<item>([\s\S]*?)<\/item>/g) || [];
+        for (const item of items.slice(0, 10)) {
+          const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/))?.[1] || '';
+          const link = (item.match(/<link>(.*?)<\/link>/) || item.match(/<guid>(.*?)<\/guid>/))?.[1] || '';
+          const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/))?.[1] || '';
+          const desc = (item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || item.match(/<description>([\s\S]*?)<\/description>/))?.[1] || '';
+          const itemDate = pubDate ? new Date(pubDate) : new Date();
+          if (itemDate >= new Date(since)) {
+            articles.push({ title: title.trim(), url: link.trim(), date: itemDate.toISOString(), snippet: desc.replace(/<[^>]+>/g, '').substring(0, 300) });
+          }
+        }
+      } catch(e) { console.warn('RSS fetch failed:', e.message); }
+    }
+
+    // If domain-based, use Google search
+    if (!articles.length && feed.domain) {
+      try {
+        const q = `site:${feed.domain} ${feed.niche_keywords || feed.niche || ''}`.trim();
+        const searchResp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5&dateRestrict=d${days_back}`);
+        if (searchResp.ok) {
+          const sd = await searchResp.json();
+          articles = (sd.items || []).map(item => ({ title: item.title, url: item.link, date: new Date().toISOString(), snippet: item.snippet }));
+        }
+      } catch(e) { console.warn('Domain search failed:', e.message); }
+    }
+
+    if (!articles.length) return res.json({ success: true, found: 0, articles: [] });
+
+    // Rewrite each article with AI
+    const rewritten = [];
+    for (const art of articles.slice(0, feed.articles_per_batch || 3)) {
+      // Fetch original content
+      let originalContent = art.snippet;
+      try {
+        const pageResp = await fetch(art.url, { signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const pageText = await pageResp.text();
+        originalContent = pageText.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 3000);
+      } catch(e) { /* use snippet */ }
+
+      const rewritePrompt = `You are an expert content writer. Rewrite this news article to be 100% original, plagiarism-free, and SEO-optimized for the niche: "${feed.niche || feed.niche_keywords}".
+
+ORIGINAL TITLE: ${art.title}
+ORIGINAL SOURCE: ${art.url}
+ORIGINAL CONTENT: ${originalContent}
+
+BUSINESS CONTEXT: ${feed.profile_name} — ${feed.niche}
+
+RULES:
+1. Completely rewrite in your own words — no plagiarism
+2. Keep all factual information accurate
+3. Add value: context, explanation, what it means for the reader
+4. Include the original source as a citation at the end
+5. Optimize for search: include relevant keywords naturally
+6. Add a FAQ section with 3 questions
+7. Write 600-900 words
+8. Return as clean HTML with h1, h2, p, and a FAQ section
+
+Return ONLY the HTML starting with <article>`;
+
+      try {
+        const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: rewritePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 4096 } })
+        });
+        const gd = await gr.json();
+        const html = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const slug = art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
+        const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
+        const dbR = await pool.query(
+          `INSERT INTO content_news_articles (feed_id,profile_id,original_url,original_title,original_source,original_date,rewritten_title,rewritten_html,rewritten_slug,status,word_count) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'rewritten',$10) RETURNING *`,
+          [feed.id, feed.profile_id, art.url, art.title, feed.domain||feed.feed_url, art.date, art.title, html, slug, wc]
+        );
+        rewritten.push(dbR.rows[0]);
+      } catch(e) { console.warn('Rewrite failed for:', art.title, e.message); }
+    }
+
+    await pool.query(`UPDATE content_news_feeds SET last_fetched=NOW() WHERE id=$1`, [feed.id]);
+    res.json({ success: true, found: articles.length, rewritten: rewritten.length, articles: rewritten });
+  } catch(e) { console.error('Feed fetch error:', e); res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/content/news-articles/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT a.*, f.feed_name FROM content_news_articles a LEFT JOIN content_news_feeds f ON f.id=a.feed_id WHERE a.profile_id=$1 ORDER BY a.created_at DESC LIMIT 50`, [req.params.profileId]);
+    res.json({ success: true, articles: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/content/news-articles/:id/publish-wp', verifyAdmin, async (req, res) => {
+  try {
+    const artR = await pool.query(`SELECT a.*, cp.wp_url, cp.wp_user, cp.wp_app_password FROM content_news_articles a JOIN content_profiles cp ON cp.id=a.profile_id WHERE a.id=$1`, [req.params.id]);
+    if (!artR.rows.length) return res.status(404).json({ success: false, error: 'Article not found' });
+    const art = artR.rows[0];
+    if (!art.wp_url || !art.wp_user || !art.wp_app_password) return res.status(400).json({ success: false, error: 'WP credentials not configured' });
+    const wpApiUrl = art.wp_url.replace(/\/$/, '') + '/wp-json/wp/v2/posts';
+    const creds = Buffer.from(`${art.wp_user}:${art.wp_app_password}`).toString('base64');
+    const wpR = await fetch(wpApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${creds}` }, body: JSON.stringify({ title: art.rewritten_title, content: art.rewritten_html, slug: art.rewritten_slug, status: 'draft' }) });
+    if (!wpR.ok) { const err = await wpR.text(); return res.status(400).json({ success: false, error: err.substring(0, 200) }); }
+    const wpData = await wpR.json();
+    await pool.query(`UPDATE content_news_articles SET wp_post_id=$1,wp_url=$2,status='published',published_at=NOW() WHERE id=$3`, [wpData.id, wpData.link, art.id]);
+    res.json({ success: true, wp_post_id: wpData.id, wp_url: wpData.link });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/content/news-articles/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM content_news_articles WHERE id=$1`, [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Rewrite Analysis ──────────────────────────────────────────
+app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
+  try {
+    const { profile_id, original_url, original_slug, original_title, original_html, gsc_impressions, gsc_clicks, gsc_position, gsc_keyword } = req.body;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+
+    const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
+    if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
+    const profile = profileR.rows[0];
+
+    // Fetch current page content if URL provided
+    let currentContent = original_html || '';
+    if (original_url && !currentContent) {
+      try {
+        const pageResp = await fetch(original_url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const pageText = await pageResp.text();
+        currentContent = pageText.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 4000);
+      } catch(e) { console.warn('Page fetch failed:', e.message); }
+    }
+
+    // Competitor research on the keyword
+    let serpResults = [];
+    const searchKw = gsc_keyword || original_title || original_slug?.replace(/-/g, ' ');
+    if (searchKw && process.env.GOOGLE_SEARCH_API_KEY) {
+      try {
+        const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchKw)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
+        if (sr.ok) { const sd = await sr.json(); serpResults = (sd.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })); }
+      } catch(e) { /* no search */ }
+    }
+
+    const gscContext = gsc_impressions ? `GSC DATA: ${gsc_impressions} impressions, ${gsc_clicks} clicks, position ${gsc_position}, primary keyword: "${gsc_keyword}"` : 'No GSC data provided';
+    const slugDecision = (gsc_impressions > 1000 && gsc_clicks < 10) ? 'HIGH_IMPRESSIONS_LOW_CLICKS' : 'NORMAL';
+
+    const analysePrompt = `You are an expert SEO strategist. Analyse this page and provide a complete rewrite strategy.
+
+PAGE: ${original_url || 'New content'}
+TITLE: ${original_title}
+SLUG: ${original_slug}
+${gscContext}
+SLUG DECISION CONTEXT: ${slugDecision}
+
+CURRENT CONTENT (first 3000 chars):
+${currentContent.substring(0, 3000)}
+
+TOP 5 COMPETITORS FOR "${searchKw}":
+${serpResults.map((r,i) => `${i+1}. ${r.title} — ${r.url}\n   ${r.snippet}`).join('\n\n')}
+
+BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
+
+CRITICAL RULES:
+- NEVER change the slug if it would break the search intent of the phrase
+- If impressions > 1000 but clicks < 10: keep slug, rewrite content better
+- If keyword has stronger variant with different intent: suggest NEW page with 301 redirect note
+- 301 redirect only if search intent match is 100%
+
+Return ONLY valid JSON:
+{
+  "recommendation": "rewrite_same_slug|new_page_same_slug|new_page_new_slug",
+  "keep_slug": true,
+  "slug_reasoning": "why slug stays or changes",
+  "redirect_suggestion": null,
+  "redirect_confidence": 0,
+  "stronger_seed_keyword": "better keyword if found",
+  "new_slug_suggestion": "only if truly different intent",
+  "competitor_analysis": [
+    { "url": "...", "what_they_do_well": "...", "weaknesses": "...", "word_count_estimate": 1500 }
+  ],
+  "content_gaps": ["gap1","gap2","gap3"],
+  "ai_overview_opportunities": ["how to appear in AIO 1","how to 2"],
+  "voice_search_opportunities": ["conversational phrase 1","conversational phrase 2"],
+  "gsc_insight": "what the GSC data tells us",
+  "rewrite_strategy": "detailed plan for rewriting this page better",
+  "recommended_title": "improved title",
+  "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4"],
+  "target_word_count": 2000,
+  "images_to_keep": ["note about keeping existing images"],
+  "internal_links_needed": ["service page 1","money page 1"]
+}`;
+
+    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } })
+    });
+    const gd = await gr.json();
+    const rawText = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const jm = rawText.match(/\{[\s\S]*\}/);
+    if (!jm) return res.status(500).json({ success: false, error: 'AI analysis failed' });
+    const analysis = JSON.parse(jm[0]);
+
+    // Save rewrite record
+    const rwR = await pool.query(
+      `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'analysed') RETURNING *`,
+      [profile_id, original_url, original_slug, original_title, original_html||'', gsc_impressions||0, gsc_clicks||0, gsc_position||0, gsc_keyword||'', JSON.stringify(analysis), analysis.recommendation, analysis.new_slug_suggestion||original_slug, analysis.stronger_seed_keyword||gsc_keyword||'']
+    );
+    res.json({ success: true, rewrite: rwR.rows[0], analysis });
+  } catch(e) { console.error('Analyse error:', e); res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res) => {
+  try {
+    const { keep_images_urls } = req.body;
+    const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
+    if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
+    const rw = rwR.rows[0];
+    const analysis = rw.analysis_data;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    // Get money pages for internal linking
+    const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
+    const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
+
+    const imageNote = keep_images_urls ? `\nEXISTING IMAGES TO KEEP (use these URLs in img tags):\n${keep_images_urls}` : '';
+    const templateNote = rw.html_template ? `\nHTML TEMPLATE:\n${rw.html_template.substring(0, 1500)}` : '';
+
+    const writePrompt = `You are an expert SEO content writer. Rewrite this page to be significantly better than the competition.
+
+BUSINESS: ${rw.profile_name} — ${rw.niche}
+TARGET AUDIENCE: ${rw.target_audience}
+PRIMARY GOAL: ${rw.primary_goal}
+${templateNote}
+
+ORIGINAL SLUG: ${rw.original_slug} — DO NOT change search intent
+ORIGINAL TITLE: ${rw.original_title}
+RECOMMENDED TITLE: ${analysis.recommended_title || rw.original_title}
+TARGET WORD COUNT: ${analysis.target_word_count || 2000}
+
+CONTENT STRATEGY:
+${analysis.rewrite_strategy || ''}
+
+STRUCTURE:
+${(analysis.recommended_h2s || []).map((h, i) => `H2 ${i+1}: ${h}`).join('\n')}
+
+CONTENT GAPS TO FILL:
+${(analysis.content_gaps || []).join('\n')}
+
+AI OVERVIEW OPTIMISATION:
+${(analysis.ai_overview_opportunities || []).join('\n')}
+
+VOICE SEARCH PHRASES TO INCLUDE:
+${(analysis.voice_search_opportunities || []).join('\n')}
+
+MONEY PAGES TO LINK TO (use natural anchor text):
+${moneyPages}
+
+COMPETITOR WEAKNESSES TO EXPLOIT:
+${(analysis.competitor_analysis || []).map(c => `- ${c.url}: ${c.weaknesses}`).join('\n')}
+${imageNote}
+
+WRITING RULES:
+1. Keep all existing images — reference them at relevant sections
+2. Answer questions directly (first 2 sentences of each section = direct answer)
+3. Include FAQ section (min 5 questions) for AI Overviews
+4. Add structured data hints in comments
+5. Voice search: include natural conversational phrases
+6. BOFU: guide toward conversion naturally
+7. Link to money pages with natural anchor text
+8. Cite real stats and data where possible
+9. Return clean HTML starting with <article>`;
+
+    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
+    });
+    const gd = await gr.json();
+    const html = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!html) return res.status(500).json({ success: false, error: 'AI did not generate content' });
+    const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
+
+    await pool.query(`UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`, [html, analysis.recommended_title||rw.original_title, wc, rw.id]);
+    res.json({ success: true, html, title: analysis.recommended_title||rw.original_title, word_count: wc, slug: rw.original_slug, recommendation: analysis.recommendation });
+  } catch(e) { console.error('Rewrite execute error:', e); res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/content/rewrites/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT * FROM content_rewrites WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 50`, [req.params.profileId]);
+    res.json({ success: true, rewrites: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Stats Study ────────────────────────────────────────────────
+app.post('/api/content/stats-study', verifyAdmin, async (req, res) => {
+  try {
+    const { profile_id, topic, seed_keyword } = req.body;
+    if (!profile_id || !topic) return res.status(400).json({ success: false, error: 'profile_id and topic required' });
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const profileR = await pool.query(`SELECT * FROM content_profiles WHERE id=$1`, [profile_id]);
+    if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
+    const profile = profileR.rows[0];
+
+    // Search for stats and data on the topic
+    let sources = [];
+    if (process.env.GOOGLE_SEARCH_API_KEY) {
+      const queries = [`${topic} statistics 2024 2025`, `${topic} research data study`, `${topic} survey report`];
+      for (const q of queries) {
+        try {
+          const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
+          if (sr.ok) { const sd = await sr.json(); sources = sources.concat((sd.items||[]).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }))); }
+        } catch(e) { /* continue */ }
+      }
+    }
+
+    const studyPrompt = `You are a data journalist and SEO expert. Create a comprehensive statistics study that people will want to link to.
+
+TOPIC: "${topic}"
+KEYWORD: "${seed_keyword || topic}"
+BUSINESS: ${profile.name} — ${profile.niche}
+
+SOURCE MATERIAL FOUND:
+${sources.slice(0,10).map((s,i) => `${i+1}. ${s.title}\n   ${s.url}\n   ${s.snippet}`).join('\n\n')}
+
+CREATE:
+1. Gather and synthesize real statistics from multiple angles
+2. Combine into one original study with proper citations
+3. Make it linkable: unique insights, comparisons, trends
+4. Include data tables, comparisons, year-over-year trends where possible
+
+Return ONLY valid JSON:
+{
+  "title": "compelling study title with year",
+  "slug": "url-slug-for-study",
+  "key_stats": [
+    { "stat": "X% of people...", "source": "Source Name", "source_url": "url", "year": 2024 }
+  ],
+  "data_tables": [
+    { "title": "table title", "headers": ["col1","col2","col3"], "rows": [["val","val","val"]] }
+  ],
+  "key_findings": ["finding 1","finding 2","finding 3","finding 4","finding 5"],
+  "expert_quotes": [
+    { "quote": "quote text", "source": "person/org", "url": "source url" }
+  ],
+  "sources": [
+    { "name": "source name", "url": "url", "year": 2024 }
+  ]
+}`;
+
+    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: studyPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096 } })
+    });
+    const gd = await gr.json();
+    const rawText = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const jm = rawText.match(/\{[\s\S]*\}/);
+    if (!jm) return res.status(500).json({ success: false, error: 'AI study generation failed' });
+    const studyData = JSON.parse(jm[0]);
+
+    // Now write the full HTML article from the study data
+    const articlePrompt = `Write a comprehensive, publication-ready statistics study article in HTML.
+
+STUDY DATA: ${JSON.stringify(studyData)}
+BUSINESS: ${profile.name} — ${profile.niche}
+SEED KEYWORD: ${seed_keyword || topic}
+
+REQUIREMENTS:
+1. Open with a compelling summary of key findings
+2. Include all data tables as proper HTML tables
+3. Cite every statistic with inline links to sources
+4. Make it scannable: clear H2s, bullet lists, callout boxes
+5. Add methodology section
+6. Add FAQ section (5 questions)
+7. End with implications for the reader
+8. Optimise for AI Overviews: direct answers, structured data
+9. ~2500 words
+10. Return clean HTML starting with <article>`;
+
+    const gr2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: articlePrompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 8192 } })
+    });
+    const gd2 = await gr2.json();
+    const htmlContent = gd2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const wc = htmlContent.replace(/<[^>]+>/g, '').split(/\s+/).length;
+
+    const studyR = await pool.query(
+      `INSERT INTO content_stats_studies (profile_id,topic,seed_keyword,sources,datapoints,html_content,title,slug,word_count,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft') RETURNING *`,
+      [profile_id, topic, seed_keyword||topic, JSON.stringify(studyData.sources||[]), JSON.stringify(studyData.key_stats||[]), htmlContent, studyData.title, studyData.slug, wc]
+    );
+
+    res.json({ success: true, study: studyR.rows[0], study_data: studyData });
+  } catch(e) { console.error('Stats study error:', e); res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/content/stats-studies/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT * FROM content_stats_studies WHERE profile_id=$1 ORDER BY created_at DESC`, [req.params.profileId]);
+    res.json({ success: true, studies: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

@@ -55,6 +55,15 @@ textarea{resize:vertical;min-height:100px;}
 .html-preview a{color:#1d4ed8;}
 .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;max-width:300px;}
 .toast.show{opacity:1;}
+
+.data-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;}
+.data-table th{background:#1e293b;color:#a78bfa;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+.data-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);color:#e2e8f0;}
+.data-table tr:hover td{background:rgba(255,255,255,.03);}
+.stat-card{background:#0a0a0f;border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:14px;margin-bottom:8px;}
+.stat-highlight{font-size:1.4rem;font-weight:900;color:#a78bfa;}
+.news-card{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);}
+.tag{display:inline-block;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:4px;}
 </style>
 </head>
 <body>
@@ -65,6 +74,9 @@ textarea{resize:vertical;min-height:100px;}
     <button class="nav-tab" onclick="showPanel('engine',this)">🚀 Engine</button>
     <button class="nav-tab" onclick="showPanel('articles',this)">📄 Articles</button>
     <button class="nav-tab" onclick="showPanel('clusters',this)">🕸️ Clusters</button>
+    <button class="nav-tab" onclick="showPanel('rewrite',this)">🔄 Rewrite</button>
+    <button class="nav-tab" onclick="showPanel('news',this)">📰 News</button>
+    <button class="nav-tab" onclick="showPanel('stats',this)">📊 Stats Study</button>
   </div>
   <a href="/admin" style="font-size:12px;color:#6b7280;text-decoration:none;">← Admin</a>
 </div>
@@ -191,6 +203,147 @@ textarea{resize:vertical;min-height:100px;}
     </select>
   </div>
   <div id="clustersList"><div style="text-align:center;padding:40px;color:#6b7280;">Select a profile to view clusters.</div></div>
+</div>
+
+
+<!-- ══ REWRITE PANEL ══ -->
+<div id="panel-rewrite" class="tab-panel" style="display:none;">
+  <div style="margin-bottom:20px;">
+    <h2 style="font-size:1.3rem;font-weight:800;">🔄 Content Rewriter</h2>
+    <p style="font-size:13px;color:#6b7280;margin-top:4px;">Analyse existing content → competitor research → rewrite better</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Page to Analyse & Rewrite</div>
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div><label>Business Profile</label><select id="rwProfile" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;"><option value="">Select profile</option></select></div>
+      <div><label>Current Page URL (optional)</label><input id="rwUrl" placeholder="https://example.com/roof-repair"></div>
+      <div><label>Current Slug</label><input id="rwSlug" placeholder="roof-repair"></div>
+      <div><label>Current Title</label><input id="rwTitle" placeholder="Roof Repair Services"></div>
+    </div>
+    <!-- GSC Data -->
+    <div style="background:#0a0a0f;border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;margin-bottom:10px;">📊 GSC Data (optional but powerful)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+        <div><label>Impressions</label><input id="rwImpressions" type="number" placeholder="10000"></div>
+        <div><label>Clicks</label><input id="rwClicks" type="number" placeholder="0"></div>
+        <div><label>Avg Position</label><input id="rwPosition" type="number" step="0.1" placeholder="8.5"></div>
+        <div><label>Top Keyword</label><input id="rwKeyword" placeholder="roof repair amsterdam"></div>
+      </div>
+    </div>
+    <!-- Existing content -->
+    <div style="margin-bottom:12px;"><label>Existing HTML Content (optional — paste to preserve images)</label><textarea id="rwHtml" rows="4" placeholder="Paste existing HTML here — images will be detected and kept..."></textarea></div>
+    <!-- Image URLs -->
+    <div style="background:#0a0a0f;border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;">🖼️ Image URLs to Keep</div>
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="detectImagesFromHtml()">Auto-detect from HTML</button>
+      </div>
+      <div id="rwImagesList" style="margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="rwNewImageUrl" placeholder="https://example.com/image.jpg" style="flex:1;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+        <input id="rwNewImageAlt" placeholder="Alt text" style="width:200px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+        <button class="btn btn-secondary" style="font-size:12px;" onclick="addRewriteImage()">+ Add</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="analyseRewrite()" id="btnAnalyse">🔍 Analyse & Plan</button>
+  </div>
+
+  <!-- Analysis Results -->
+  <div id="rwAnalysisCard" class="card" style="display:none;">
+    <div class="card-title">📊 Analysis Results</div>
+    <div id="rwAnalysisResults"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="executeRewrite()" id="btnExecuteRewrite">✍️ Execute Rewrite</button>
+    </div>
+  </div>
+
+  <!-- Rewrite Result -->
+  <div id="rwResultCard" class="card" style="display:none;">
+    <div class="card-title">✅ Rewrite Complete</div>
+    <div id="rwResult"></div>
+  </div>
+
+  <!-- Past Rewrites -->
+  <div class="card" style="margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="card-title" style="margin:0;">📋 Past Rewrites</div>
+      <button class="btn btn-secondary" style="font-size:12px;" onclick="loadRewrites()">↺ Load</button>
+    </div>
+    <div id="rwHistoryList"><div style="color:#6b7280;font-size:13px;">Select a profile and click Load.</div></div>
+  </div>
+</div>
+
+<!-- ══ NEWS PANEL ══ -->
+<div id="panel-news" class="tab-panel" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div><h2 style="font-size:1.3rem;font-weight:800;">📰 News Feeds</h2><p style="font-size:13px;color:#6b7280;margin-top:4px;">Fetch, rewrite, and publish niche news — plagiarism-free</p></div>
+    <div style="display:flex;gap:8px;">
+      <select id="newsProfileFilter" onchange="loadFeeds()" style="padding:8px 12px;width:180px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;"><option value="">Select profile</option></select>
+      <button class="btn btn-primary" onclick="document.getElementById('newFeedForm').style.display='block'">+ New Feed</button>
+    </div>
+  </div>
+
+  <!-- New Feed Form -->
+  <div id="newFeedForm" class="card" style="display:none;">
+    <div class="card-title">+ New Feed</div>
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div><label>Feed Name</label><input id="feedName" placeholder="Roofing Industry News"></div>
+      <div><label>Type</label><select id="feedType" onchange="toggleFeedType()" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;"><option value="rss">RSS Feed</option><option value="domain">Domain / Website</option><option value="keyword">Keyword Search</option></select></div>
+      <div id="feedUrlField"><label>RSS URL</label><input id="feedUrl" placeholder="https://example.com/feed.xml"></div>
+      <div id="feedDomainField" style="display:none;"><label>Domain</label><input id="feedDomain" placeholder="constructionweek.com"></div>
+      <div><label>Niche Keywords</label><input id="feedKeywords" placeholder="roofing, roof repair, dakdekker"></div>
+      <div><label>Articles per Fetch</label><input id="feedBatch" type="number" value="3" min="1" max="10"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveFeed()">Save Feed</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('newFeedForm').style.display='none'">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Feeds List -->
+  <div id="feedsList"></div>
+
+  <!-- News Articles -->
+  <div id="newsArticlesSection" style="display:none;margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="font-weight:700;font-size:1rem;">Rewritten Articles</h3>
+      <button class="btn btn-secondary" style="font-size:12px;" onclick="loadNewsArticles()">↺ Refresh</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;"><div id="newsArticlesList"></div></div>
+  </div>
+</div>
+
+<!-- ══ STATS STUDY PANEL ══ -->
+<div id="panel-stats" class="tab-panel" style="display:none;">
+  <div style="margin-bottom:20px;">
+    <h2 style="font-size:1.3rem;font-weight:800;">📊 Stats Study Builder</h2>
+    <p style="font-size:13px;color:#6b7280;margin-top:4px;">Create linkable data studies from multiple sources</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔬 New Statistics Study</div>
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div><label>Business Profile</label><select id="statsProfile" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;"><option value="">Select profile</option></select></div>
+      <div><label>Study Topic</label><input id="statsTopic" placeholder="Roofing costs in the Netherlands 2025"></div>
+      <div style="grid-column:1/-1;"><label>Seed Keyword (optional)</label><input id="statsKeyword" placeholder="roofing costs statistics"></div>
+    </div>
+    <button class="btn btn-primary" onclick="createStudy()" id="btnStudy">🔬 Build Study</button>
+  </div>
+
+  <div id="studyResult" class="card" style="display:none;">
+    <div class="card-title">📊 Study Complete</div>
+    <div id="studyContent"></div>
+  </div>
+
+  <!-- Past Studies -->
+  <div class="card" style="margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="card-title" style="margin:0;">Past Studies</div>
+      <button class="btn btn-secondary" style="font-size:12px;" onclick="loadStudies()">↺ Load</button>
+    </div>
+    <div id="studiesList"><div style="color:#6b7280;font-size:13px;">Select a profile and click Load.</div></div>
+  </div>
 </div>
 
 </div><!-- /container -->
@@ -833,6 +986,430 @@ async function deleteCluster(id) {
   await api('/api/content/clusters/' + id, 'DELETE');
   toast('Deleted'); loadClusters();
 }
+
+
+// ══ PHASE 2 JS ════════════════════════════════════════════════
+
+// Populate all secondary profile selects
+function populateAllSelects() {
+  var selects = ['rwProfile','statsProfile'];
+  selects.forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">Select profile</option>';
+    _profiles.forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name; sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  });
+  var nf = document.getElementById('newsProfileFilter');
+  if (nf) {
+    var cur2 = nf.value;
+    nf.innerHTML = '<option value="">Select profile</option>';
+    _profiles.forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name; nf.appendChild(o);
+    });
+    if (cur2) nf.value = cur2;
+  }
+}
+
+// ── Rewrite ───────────────────────────────────────────────────
+var _rwImages = [];
+var _currentRewriteId = null;
+var _currentRewriteHtml = '';
+var _currentRewriteTitle = '';
+
+function detectImagesFromHtml() {
+  var html = document.getElementById('rwHtml').value;
+  var matches = html.match(/src="([^"]+)"/g) || [];
+  matches.forEach(function(m) {
+    var url = m.replace('src="', '').replace('"', '');
+    if (url.match(/\.(jpg|jpeg|png|gif|webp|svg)/i) && !_rwImages.find(function(i) { return i.url === url; })) {
+      _rwImages.push({ url: url, alt: '' });
+    }
+  });
+  renderRwImages();
+  toast('Found ' + _rwImages.length + ' images');
+}
+
+function addRewriteImage() {
+  var url = document.getElementById('rwNewImageUrl').value.trim();
+  var alt = document.getElementById('rwNewImageAlt').value.trim();
+  if (!url) { alert('Enter an image URL'); return; }
+  _rwImages.push({ url: url, alt: alt });
+  document.getElementById('rwNewImageUrl').value = '';
+  document.getElementById('rwNewImageAlt').value = '';
+  renderRwImages();
+}
+
+function renderRwImages() {
+  var el = document.getElementById('rwImagesList');
+  if (!_rwImages.length) { el.innerHTML = '<div style="font-size:12px;color:#6b7280;">No images added yet.</div>'; return; }
+  el.innerHTML = _rwImages.map(function(img, i) {
+    var fn = img.url.split('/').pop().split('?')[0];
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px;background:#1e293b;border-radius:6px;margin-bottom:4px;">' +
+      '<img src="' + img.url + '" style="width:40px;height:30px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">' +
+      '<div style="flex:1;min-width:0;"><div style="font-size:11px;color:#60a5fa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + fn + '</div>' +
+      '<div style="font-size:10px;color:#6b7280;">' + (img.alt || 'No alt text') + '</div></div>' +
+      '<button onclick="_rwImages.splice(' + i + ',1);renderRwImages()" style="background:transparent;border:none;color:#7f1d1d;cursor:pointer;">✕</button>' +
+      '</div>';
+  }).join('');
+}
+
+async function analyseRewrite() {
+  var profileId = document.getElementById('rwProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  var btn = document.getElementById('btnAnalyse');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analysing...';
+  try {
+    var payload = {
+      profile_id: profileId,
+      original_url: document.getElementById('rwUrl').value.trim(),
+      original_slug: document.getElementById('rwSlug').value.trim(),
+      original_title: document.getElementById('rwTitle').value.trim(),
+      original_html: document.getElementById('rwHtml').value.trim(),
+      gsc_impressions: parseInt(document.getElementById('rwImpressions').value) || 0,
+      gsc_clicks: parseInt(document.getElementById('rwClicks').value) || 0,
+      gsc_position: parseFloat(document.getElementById('rwPosition').value) || 0,
+      gsc_keyword: document.getElementById('rwKeyword').value.trim()
+    };
+    var d = await api('/api/content/analyse-rewrite', 'POST', payload);
+    if (!d.success) throw new Error(d.error);
+    _currentRewriteId = d.rewrite.id;
+    renderAnalysis(d.analysis);
+    document.getElementById('rwAnalysisCard').style.display = 'block';
+    document.getElementById('rwAnalysisCard').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) { toast('Analysis failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.innerHTML = '🔍 Analyse & Plan'; }
+}
+
+function renderAnalysis(a) {
+  var rec = a.recommendation || 'rewrite_same_slug';
+  var recColor = rec === 'rewrite_same_slug' ? '#4ade80' : rec === 'new_page_same_slug' ? '#fbbf24' : '#f87171';
+  var recLabel = { rewrite_same_slug: '✅ Rewrite — keep same slug', new_page_same_slug: '⚠️ Rewrite + suggest new page', new_page_new_slug: '🔄 New page with new slug' }[rec] || rec;
+
+  var el = document.getElementById('rwAnalysisResults');
+  el.innerHTML =
+    '<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px;margin-bottom:14px;">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Recommendation</div>' +
+    '<div style="font-size:1rem;font-weight:800;color:' + recColor + ';">' + recLabel + '</div>' +
+    '<div style="font-size:12px;color:#9ca3af;margin-top:6px;">' + (a.slug_reasoning || '') + '</div>' +
+    (a.redirect_suggestion ? '<div style="font-size:12px;color:#fbbf24;margin-top:6px;">→ 301 redirect: ' + a.redirect_suggestion + ' (confidence: ' + a.redirect_confidence + '%)</div>' : '') +
+    '</div>' +
+    '<div class="grid-2" style="margin-bottom:12px;">' +
+    '<div class="research-block"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">GSC Insight</div><div style="font-size:13px;color:#e2e8f0;">' + (a.gsc_insight || 'No GSC data') + '</div></div>' +
+    '<div class="research-block"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Rewrite Strategy</div><div style="font-size:13px;color:#e2e8f0;">' + (a.rewrite_strategy || '') + '</div></div>' +
+    '</div>' +
+    '<div class="research-block" style="margin-bottom:10px;"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Competitor Analysis</div>' +
+    (a.competitor_analysis || []).map(function(c) {
+      return '<div class="competitor-card"><div style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:4px;">' + c.url + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">' +
+        '<div><span style="color:#4ade80;">✓ </span>' + c.what_they_do_well + '</div>' +
+        '<div><span style="color:#f87171;">✗ </span>' + c.weaknesses + '</div>' +
+        '</div></div>';
+    }).join('') +
+    '</div>' +
+    '<div class="grid-2">' +
+    '<div class="research-block"><div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">AI Overview Opportunities</div>' +
+    (a.ai_overview_opportunities || []).map(function(t) { return '<div style="font-size:12px;color:#e2e8f0;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
+    '</div>' +
+    '<div class="research-block"><div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Voice Search Phrases</div>' +
+    (a.voice_search_opportunities || []).map(function(t) { return '<div style="font-size:12px;color:#e2e8f0;padding:2px 0;">🎙️ ' + t + '</div>'; }).join('') +
+    '</div></div>';
+}
+
+async function executeRewrite() {
+  if (!_currentRewriteId) return;
+  var btn = document.getElementById('btnExecuteRewrite');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Rewriting...';
+  try {
+    var imgUrls = _rwImages.map(function(i) { return i.url + (i.alt ? ' (alt: ' + i.alt + ')' : ''); }).join('
+');
+    var d = await api('/api/content/execute-rewrite/' + _currentRewriteId, 'POST', { keep_images_urls: imgUrls || null });
+    if (!d.success) throw new Error(d.error);
+    _currentRewriteHtml = d.html;
+    _currentRewriteTitle = d.title;
+    var el = document.getElementById('rwResult');
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
+      '<div style="flex:1;"><div style="font-size:1rem;font-weight:700;color:#fbbf24;">' + d.title + '</div>' +
+      '<div style="font-size:12px;color:#6b7280;margin-top:4px;">' + d.word_count + ' words · slug: /' + d.slug + '</div>' +
+      (d.recommendation === 'new_page_new_slug' ? '<div style="font-size:11px;color:#fbbf24;margin-top:4px;">⚠️ Also consider a new page with the stronger seed keyword</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+      '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast('Copied!')})">📋 Copy HTML</button>' +
+      '<button class="btn btn-success" style="font-size:12px;" onclick="downloadRewriteHtml()">⬇️ Download</button>' +
+      '</div></div>' +
+      '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages</div>';
+    document.getElementById('rwResultCard').style.display = 'block';
+    document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
+    toast('Rewrite complete — ' + d.word_count + ' words!');
+  } catch(e) { toast('Rewrite failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.innerHTML = '✍️ Execute Rewrite'; }
+}
+
+function downloadRewriteHtml() {
+  var blob = new Blob([_currentRewriteHtml], { type: 'text/html' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (_currentRewriteTitle || 'rewrite').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.html';
+  a.click(); toast('Downloaded!');
+}
+
+async function loadRewrites() {
+  var profileId = document.getElementById('rwProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  var d = await api('/api/content/rewrites/' + profileId);
+  var el = document.getElementById('rwHistoryList');
+  var items = d.rewrites || [];
+  if (!items.length) { el.innerHTML = '<div style="font-size:13px;color:#6b7280;">No rewrites yet.</div>'; return; }
+  var recColor = { rewrite_same_slug: '#4ade80', new_page_same_slug: '#fbbf24', new_page_new_slug: '#f87171' };
+  el.innerHTML = '<table class="data-table"><thead><tr><th>Page</th><th>Slug</th><th>GSC</th><th>Recommendation</th><th>Status</th></tr></thead><tbody>' +
+    items.map(function(r) {
+      return '<tr><td>' + (r.original_title || r.original_url || '-').substring(0, 40) + '</td>' +
+        '<td style="font-family:monospace;font-size:11px;color:#a78bfa;">/' + (r.original_slug || '') + '</td>' +
+        '<td style="font-size:11px;">' + (r.gsc_impressions || 0) + ' impr / ' + (r.gsc_clicks || 0) + ' clk</td>' +
+        '<td style="color:' + (recColor[r.recommendation] || '#9ca3af') + ';font-size:11px;">' + (r.recommendation || '-') + '</td>' +
+        '<td><span class="badge ' + (r.status === 'rewritten' ? 'badge-written' : 'badge-draft') + '">' + r.status + '</span></td>' +
+        '</tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// ── News Feeds ────────────────────────────────────────────────
+var _currentFeedId = null;
+
+function toggleFeedType() {
+  var t = document.getElementById('feedType').value;
+  document.getElementById('feedUrlField').style.display = t === 'rss' ? 'block' : 'none';
+  document.getElementById('feedDomainField').style.display = t === 'domain' ? 'block' : 'none';
+}
+
+async function loadFeeds() {
+  var profileId = document.getElementById('newsProfileFilter').value;
+  if (!profileId) return;
+  var d = await api('/api/content/feeds/' + profileId);
+  var feeds = d.feeds || [];
+  var el = document.getElementById('feedsList');
+  if (!feeds.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;">No feeds yet — click + New Feed.</div>'; return; }
+  el.innerHTML = feeds.map(function(f) {
+    return '<div class="card" style="margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">' +
+      '<div style="flex:1;">' +
+      '<div style="font-weight:700;font-size:0.9rem;">' + f.feed_name + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' + f.feed_type + ' · ' + (f.feed_url || f.domain || '') + ' · ' + (f.article_count || 0) + ' articles</div>' +
+      (f.last_fetched ? '<div style="font-size:11px;color:#4ade80;">Last fetched: ' + new Date(f.last_fetched).toLocaleString() + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+      '<select onchange="" id="feedDays_' + f.id + '" style="padding:5px 8px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e2e8f0;font-size:11px;">' +
+      '<option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option>' +
+      '</select>' +
+      '<button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="fetchFeed(' + f.id + ')">🔍 Fetch & Rewrite</button>' +
+      '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="viewFeedArticles(' + f.id + ')">📄 Articles</button>' +
+      '<button class="btn btn-danger" style="font-size:11px;padding:5px 8px;" onclick="deleteFeed(' + f.id + ')">🗑</button>' +
+      '</div></div></div>';
+  }).join('');
+  document.getElementById('newsArticlesSection').style.display = 'block';
+  loadNewsArticles();
+}
+
+async function saveFeed() {
+  var profileId = document.getElementById('newsProfileFilter').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  var feedType = document.getElementById('feedType').value;
+  var payload = {
+    feed_name: document.getElementById('feedName').value.trim(),
+    feed_type: feedType,
+    feed_url: document.getElementById('feedUrl').value.trim(),
+    domain: document.getElementById('feedDomain').value.trim(),
+    niche_keywords: document.getElementById('feedKeywords').value.trim(),
+    articles_per_batch: parseInt(document.getElementById('feedBatch').value) || 3
+  };
+  if (!payload.feed_name) { alert('Enter a feed name'); return; }
+  var d = await api('/api/content/feeds/' + profileId, 'POST', payload);
+  if (!d.success) { toast('Error: ' + d.error, 'red'); return; }
+  toast('Feed saved!');
+  document.getElementById('newFeedForm').style.display = 'none';
+  ['feedName','feedUrl','feedDomain','feedKeywords'].forEach(function(id) { document.getElementById(id).value = ''; });
+  loadFeeds();
+}
+
+async function fetchFeed(feedId) {
+  var daysEl = document.getElementById('feedDays_' + feedId);
+  var days = daysEl ? parseInt(daysEl.value) : 7;
+  toast('Fetching and rewriting... this may take a moment');
+  var d = await api('/api/content/feeds/' + feedId + '/fetch', 'POST', { days_back: days });
+  if (!d.success) { toast('Error: ' + d.error, 'red'); return; }
+  toast('Fetched ' + d.found + ' articles, rewrote ' + d.rewritten);
+  loadFeeds();
+}
+
+async function deleteFeed(id) {
+  if (!confirm('Delete this feed and all its articles?')) return;
+  await api('/api/content/feeds/' + id, 'DELETE');
+  toast('Deleted'); loadFeeds();
+}
+
+function viewFeedArticles(feedId) {
+  _currentFeedId = feedId;
+  loadNewsArticles();
+  document.getElementById('newsArticlesSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function loadNewsArticles() {
+  var profileId = document.getElementById('newsProfileFilter').value;
+  if (!profileId) return;
+  var d = await api('/api/content/news-articles/' + profileId);
+  var articles = d.articles || [];
+  if (_currentFeedId) articles = articles.filter(function(a) { return a.feed_id == _currentFeedId; });
+  var el = document.getElementById('newsArticlesList');
+  if (!articles.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;">No articles yet — fetch a feed to get started.</div>'; return; }
+  var statusColor = { rewritten: '#4ade80', published: '#a78bfa', found: '#fbbf24' };
+  el.innerHTML = articles.map(function(a) {
+    return '<div class="news-card">' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-weight:700;font-size:0.88rem;color:#e2e8f0;margin-bottom:3px;">' + (a.rewritten_title || a.original_title || 'Untitled') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;">' + (a.feed_name || '') + ' · ' + (a.word_count || 0) + ' words · ' + new Date(a.created_at).toLocaleDateString() + '</div>' +
+      (a.original_url ? '<a href="' + a.original_url + '" target="_blank" style="font-size:10px;color:#6b7280;text-decoration:none;">Source: ' + a.original_source + '</a>' : '') +
+      '</div>' +
+      '<span style="color:' + (statusColor[a.status] || '#9ca3af') + ';font-size:11px;font-weight:700;flex-shrink:0;">' + a.status + '</span>' +
+      '<div style="display:flex;gap:5px;flex-shrink:0;">' +
+      '<button class="btn btn-secondary" style="font-size:10px;padding:4px 8px;" onclick="previewNewsArticle(' + a.id + ','' + (a.rewritten_title||'').replace(/'/g, '') + '')">👁</button>' +
+      '<button class="btn btn-success" style="font-size:10px;padding:4px 8px;" onclick="publishNewsWp(' + a.id + ')">🚀 WP</button>' +
+      '<button class="btn btn-danger" style="font-size:10px;padding:4px 8px;" onclick="deleteNewsArticle(' + a.id + ')">🗑</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+async function previewNewsArticle(id, title) {
+  var profileId = document.getElementById('newsProfileFilter').value;
+  var d = await api('/api/content/news-articles/' + profileId);
+  var found = (d.articles || []).find(function(a) { return a.id == id; });
+  if (!found) return;
+  _currentArticleId = id;
+  _currentArticleHtml = found.rewritten_html;
+  _currentArticleTitle = title;
+  document.getElementById('previewTitle').textContent = title;
+  document.getElementById('previewContent').innerHTML = found.rewritten_html;
+  document.getElementById('previewModal').style.display = 'block';
+}
+
+async function publishNewsWp(id) {
+  var d = await api('/api/content/news-articles/' + id + '/publish-wp', 'POST');
+  if (!d.success) { toast('WP Error: ' + d.error, 'red'); return; }
+  toast('Published to WP!'); loadNewsArticles();
+}
+
+async function deleteNewsArticle(id) {
+  if (!confirm('Delete this article?')) return;
+  await api('/api/content/news-articles/' + id, 'DELETE');
+  toast('Deleted'); loadNewsArticles();
+}
+
+// ── Stats Study ────────────────────────────────────────────────
+var _currentStudyHtml = '';
+var _currentStudyTitle = '';
+
+async function createStudy() {
+  var profileId = document.getElementById('statsProfile').value;
+  var topic = document.getElementById('statsTopic').value.trim();
+  if (!profileId || !topic) { alert('Select a profile and enter a topic'); return; }
+  var btn = document.getElementById('btnStudy');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Researching & building study...';
+  try {
+    var d = await api('/api/content/stats-study', 'POST', {
+      profile_id: profileId, topic: topic,
+      seed_keyword: document.getElementById('statsKeyword').value.trim()
+    });
+    if (!d.success) throw new Error(d.error);
+    _currentStudyHtml = d.study.html_content;
+    _currentStudyTitle = d.study.title;
+    renderStudyResult(d.study, d.study_data);
+    document.getElementById('studyResult').style.display = 'block';
+    document.getElementById('studyResult').scrollIntoView({ behavior: 'smooth' });
+    toast('Study created: ' + d.study.word_count + ' words!');
+  } catch(e) { toast('Study failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.innerHTML = '🔬 Build Study'; }
+}
+
+function renderStudyResult(study, data) {
+  var el = document.getElementById('studyContent');
+  var stats = (data.key_stats || []).slice(0, 6);
+  el.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">' +
+    '<div><div style="font-size:1rem;font-weight:700;color:#fbbf24;">' + study.title + '</div>' +
+    '<div style="font-size:12px;color:#6b7280;margin-top:3px;">' + study.word_count + ' words · ' + (data.sources || []).length + ' sources · ' + stats.length + ' key stats</div></div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentStudyHtml).then(function(){toast('Copied!')})">📋 Copy HTML</button>' +
+    '<button class="btn btn-success" style="font-size:12px;" onclick="downloadStudyHtml()">⬇️ Download</button>' +
+    '</div></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:14px;">' +
+    stats.map(function(s) {
+      return '<div class="stat-card"><div class="stat-highlight">' + s.stat.substring(0, 30) + '</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:4px;">' + s.source + ' ' + (s.year || '') + '</div></div>';
+    }).join('') +
+    '</div>' +
+    '<div class="research-block"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Key Findings</div>' +
+    (data.key_findings || []).map(function(f) { return '<div style="font-size:13px;color:#e2e8f0;padding:3px 0;">→ ' + f + '</div>'; }).join('') +
+    '</div>' +
+    '<div class="research-block" style="margin-top:8px;"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Sources (' + (data.sources||[]).length + ')</div>' +
+    (data.sources||[]).map(function(s) {
+      return '<div style="font-size:12px;padding:2px 0;"><a href="' + s.url + '" target="_blank" style="color:#60a5fa;">' + s.name + '</a> ' + (s.year || '') + '</div>';
+    }).join('') +
+    '</div>';
+}
+
+function downloadStudyHtml() {
+  var blob = new Blob([_currentStudyHtml], { type: 'text/html' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (_currentStudyTitle || 'study').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.html';
+  a.click(); toast('Downloaded!');
+}
+
+async function loadStudies() {
+  var profileId = document.getElementById('statsProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  var d = await api('/api/content/stats-studies/' + profileId);
+  var el = document.getElementById('studiesList');
+  var items = d.studies || [];
+  if (!items.length) { el.innerHTML = '<div style="font-size:13px;color:#6b7280;">No studies yet.</div>'; return; }
+  el.innerHTML = '<table class="data-table"><thead><tr><th>Title</th><th>Topic</th><th>Words</th><th>Created</th></tr></thead><tbody>' +
+    items.map(function(s) {
+      return '<tr><td>' + (s.title || s.topic || '-').substring(0, 50) + '</td>' +
+        '<td style="font-size:11px;color:#6b7280;">' + s.topic + '</td>' +
+        '<td>' + (s.word_count || 0) + '</td>' +
+        '<td style="font-size:11px;color:#6b7280;">' + new Date(s.created_at).toLocaleDateString() + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// Override showPanel to handle phase 2 panels
+var _origShowPanel = showPanel;
+showPanel = function(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'none'; p.classList.remove('active'); });
+  document.querySelectorAll('.nav-tab').forEach(function(b) { b.classList.remove('active'); });
+  var panel = document.getElementById('panel-' + name);
+  if (panel) { panel.style.display = 'block'; panel.classList.add('active'); }
+  if (btn) btn.classList.add('active');
+  if (name === 'profiles') loadProfiles();
+  if (name === 'engine') loadEngineProfiles();
+  if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
+  if (name === 'clusters') { populateClusterFilter(); }
+  if (name === 'rewrite') { populateAllSelects(); }
+  if (name === 'news') { populateAllSelects(); }
+  if (name === 'stats') { populateAllSelects(); }
+};
+
+// Extend init
+var _origInit = loadEngineProfiles;
+var _phase2Inited = false;
+var _origLoadEngineProfiles = loadEngineProfiles;
+loadEngineProfiles = async function() {
+  await _origLoadEngineProfiles();
+  if (!_phase2Inited) { populateAllSelects(); _phase2Inited = true; }
+};
 
 // ── Init ──────────────────────────────────────────────────────
 loadProfiles();
