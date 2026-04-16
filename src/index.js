@@ -9329,7 +9329,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
 
     const writeResult = await callGeminiWithFallback(
       process.env.GEMINI_API_KEY,
-      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }
+      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536 } }
     );
     const writeData = writeResult.data;
     if (!writeResult.ok) {
@@ -9342,6 +9342,10 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     const finishReason = writeData?.candidates?.[0]?.finishReason;
     const htmlContent = writeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if (!htmlContent) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: writeResult.modelUsed });
+    const wasTruncated = finishReason === 'MAX_TOKENS';
+    if (wasTruncated) {
+      console.warn(`⚠️ Write truncated (MAX_TOKENS) on ${writeResult.modelUsed} — ${htmlContent.length} chars produced`);
+    }
 
     const wordCountMatch = htmlContent.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
     const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(htmlContent.replace(/<[^>]+>/g,'').split(/\s+/).length);
@@ -9353,7 +9357,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       [job.id, job.profile_id, title, slug, brief.primary_keyword, JSON.stringify(brief.secondary_keywords||[]), htmlContent, wordCount]
     );
     await pool.query(`UPDATE content_jobs SET status='written', updated_at=NOW() WHERE id=$1`, [job.id]);
-    res.json({ success: true, article: articleR.rows[0] });
+    res.json({ success: true, article: articleR.rows[0], truncated: wasTruncated, finish_reason: finishReason });
   } catch(e) {
     console.error('Write error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
