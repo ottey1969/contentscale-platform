@@ -8929,13 +8929,34 @@ Return ONLY valid JSON with this exact structure:
     const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } })
+      body: JSON.stringify({ contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json' } })
     });
     const geminiData = await geminiResp.json();
+    if (!geminiResp.ok) {
+      const apiErr = geminiData?.error?.message || `Gemini HTTP ${geminiResp.status}`;
+      console.error('Gemini research API error:', apiErr, geminiData);
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: GEMINI_MODEL });
+    }
+    const blockReason = geminiData?.promptFeedback?.blockReason;
+    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the prompt: ${blockReason}` });
+    const finishReason = geminiData?.candidates?.[0]?.finishReason;
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ success: false, error: 'AI did not return valid JSON' });
-    const keywordData = JSON.parse(jsonMatch[0]);
+    if (!rawText) return res.status(502).json({ success: false, error: `Gemini returned no content (finishReason: ${finishReason || 'unknown'})`, model: GEMINI_MODEL });
+    let keywordData;
+    try {
+      // Strip code fences if present, then try direct parse, then fallback to regex extraction
+      const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      try {
+        keywordData = JSON.parse(cleaned);
+      } catch (_) {
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return res.status(502).json({ success: false, error: 'AI did not return JSON', raw_preview: rawText.slice(0, 300) });
+        keywordData = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseErr) {
+      console.error('Research JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
+      return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
+    }
 
     // Save job
     const jobR = await pool.query(
@@ -8971,24 +8992,35 @@ Return ONLY valid JSON:
         const allKwResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } })
+          body: JSON.stringify({ contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json' } })
         });
         const allKwData = await allKwResp.json();
         const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const allKwMatch = allKwText.match(/\{[\s\S]*\}/);
-        if (allKwMatch) {
-          allKeywordData = JSON.parse(allKwMatch[0]);
-          // Save back into job
-          const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed });
-          await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobR.rows[0].id]);
-          keywordData.all_keyword_data = allKeywordData;
-          keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed;
+        if (allKwText) {
+          const cleaned = allKwText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+          try {
+            allKeywordData = JSON.parse(cleaned);
+          } catch (_) {
+            const allKwMatch = cleaned.match(/\{[\s\S]*\}/);
+            if (allKwMatch) allKeywordData = JSON.parse(allKwMatch[0]);
+          }
+          if (allKeywordData) {
+            // Save back into job
+            const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed });
+            await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobR.rows[0].id]);
+            keywordData.all_keyword_data = allKeywordData;
+            keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed;
+          }
         }
       } catch(e) { console.warn('Research all keywords failed:', e.message); }
     }
 
     res.json({ success: true, job: jobR.rows[0], research: keywordData });
-  } catch(e) { console.error('Research error:', e); res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('Research error:', e);
+    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
+    res.status(500).json({ success: false, error: msg, where: 'research' });
+  }
 });
 
 // ── Generate Brief ───────────────────────────────────────────
@@ -9026,6 +9058,12 @@ app.post('/api/content/brief/:jobId', verifyAdmin, async (req, res) => {
 
 // ── Write Article ────────────────────────────────────────────
 app.post('/api/content/write/:jobId', verifyAdmin, async (req, res) => {
+  // Helper: parse a value that might be a JS object already (jsonb) or a JSON string (text column), safely
+  const safeParse = (v, fallback) => {
+    if (v == null) return fallback;
+    if (typeof v !== 'string') return v;
+    try { return JSON.parse(v); } catch (_) { return fallback; }
+  };
   try {
     const { title_override } = req.body;
     const jobR = await pool.query(
@@ -9035,11 +9073,12 @@ app.post('/api/content/write/:jobId', verifyAdmin, async (req, res) => {
     );
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
     const job = jobR.rows[0];
-    const brief = job.brief;
-    const kd = job.keyword_data;
+    const brief = safeParse(job.brief, null);
+    const kd = safeParse(job.keyword_data, {});
     if (!brief) return res.status(400).json({ success: false, error: 'Generate brief first' });
 
     const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
     const title = title_override || brief.title;
     const locations = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 AND external_links=TRUE ORDER BY sort_order`, [job.profile_id]);
     const locStrings = locations.rows.map(l => `${l.location_type}: ${l.location_value}`).join(', ');
@@ -9048,7 +9087,7 @@ app.post('/api/content/write/:jobId', verifyAdmin, async (req, res) => {
     const h2Structure = (brief.structure || []).map((h,i) => `H2 ${i+1}: ${h}`).join('\n');
 
     // GSC from saved job
-    const gsc = brief.gsc || (typeof job.gsc_data === 'string' ? JSON.parse(job.gsc_data||'{}') : job.gsc_data) || {};
+    const gsc = brief.gsc || safeParse(job.gsc_data, {}) || {};
     const gscQueries = (gsc.queries||[]).filter(Boolean);
     const gscBlock = (gscQueries.length || gsc.impressions) ? `
 GSC DATA:
@@ -9058,7 +9097,7 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
 ` : '';
 
     // Verified business facts — no hallucinations
-    const bi = (typeof job.business_info === 'string' ? JSON.parse(job.business_info||'{}') : job.business_info) || {};
+    const bi = safeParse(job.business_info, {}) || {};
     const verifiedFacts = [
       bi.phone         ? `- Telefoon: ${bi.phone}` : null,
       bi.email         ? `- Email: ${bi.email}` : null,
@@ -9224,11 +9263,19 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     const writeResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536 } })
+      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
     });
     const writeData = await writeResp.json();
+    if (!writeResp.ok) {
+      const apiErr = writeData?.error?.message || `Gemini HTTP ${writeResp.status}`;
+      console.error('Gemini write API error:', apiErr, writeData);
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: GEMINI_MODEL });
+    }
+    const blockReason = writeData?.promptFeedback?.blockReason;
+    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the prompt: ${blockReason}` });
+    const finishReason = writeData?.candidates?.[0]?.finishReason;
     const htmlContent = writeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!htmlContent) return res.status(500).json({ success: false, error: 'AI did not generate content' });
+    if (!htmlContent) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: GEMINI_MODEL });
 
     const wordCountMatch = htmlContent.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
     const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(htmlContent.replace(/<[^>]+>/g,'').split(/\s+/).length);
@@ -9241,7 +9288,11 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     );
     await pool.query(`UPDATE content_jobs SET status='written', updated_at=NOW() WHERE id=$1`, [job.id]);
     res.json({ success: true, article: articleR.rows[0] });
-  } catch(e) { console.error('Write error:', e); res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('Write error:', e);
+    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
+    res.status(500).json({ success: false, error: msg, where: 'write' });
+  }
 });
 
 // ── Articles ─────────────────────────────────────────────────
