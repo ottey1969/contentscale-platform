@@ -9220,6 +9220,33 @@ ABSOLUTE REGELS — NOOIT OVERTREDEN
 6. De template bepaalt ALLES qua opmaak — jij vult alleen tekst in
 7. Verzin GEEN contactgegevens die niet in de geverifieerde gegevens staan
 
+═══════════════════════════════════════
+CONTENT KWALITEIT — STRIKTE REGELS
+═══════════════════════════════════════
+📊 STATISTIEKEN — ECHT OF WEGLATEN:
+- Gebruik ALLEEN verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
+- NOOIT labels zoals "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[bron nodig]" toevoegen
+- NOOIT "studies tonen aan" of "onderzoek wijst uit" zonder concrete genoemde bron
+- Als er geen verifieerbare statistiek bestaat: schrijf algemene maar accurate zinnen ZONDER getallen
+- Interne bedrijfsdata labelen als: "[Bron: Bedrijfsadministratie]"
+- Alle genoemde bronnen moeten uit 2024-2026 zijn
+
+🎨 LEESBAARHEID — WCAG AA (contrast 4.5:1 minimum):
+- Check elke achtergrond/tekst combinatie in CSS voordat je output genereert
+- Bij gekleurde achtergronden: ALTIJD expliciet leesbare tekstkleuren in CSS zetten
+- NOOIT contrastproblemen noteren in commentaar — fix ze in de CSS zelf
+- Donkere tekst op lichte achtergrond of lichte tekst op donkere achtergrond
+
+📱 MOBIEL — RESPONSIVE VERPLICHT:
+- Touch targets (knoppen, links) minimaal 44px hoog/breed
+- Tekst leesbaar op 320px schermbreedte (geen overflow, geen tiny text)
+- Proactief mobiele fixes toevoegen in bestaande @media queries
+- NOOIT wachten met fixes — doe het nu
+
+✅ OUTPUT REGEL:
+Als je iets niet kunt verifiëren of de leesbaarheid/responsiveness niet kunt garanderen: LAAT HET WEG.
+Fix het in de output — plak geen waarschuwingen, disclaimers of placeholders aan het eindresultaat.
+
 WAT JE WEL DOET:
 - Vervang placeholder-tekst (zoals "Lorem ipsum", "[TITLE]", "[CONTENT]", "[H2]" etc.) met echte SEO-content
 - Vul lege tekstelementen in: <h1>, <h2>, <h3>, <p>, <li>, <span>, <td> etc.
@@ -9284,6 +9311,31 @@ Geef ALLEEN de volledig ingevulde template terug. Geen uitleg, geen markdown, ge
       // ═══════════════════════════════════════════════════════════
       writePrompt = `Je bent een elite SEO-contentschrijver. Schrijf een compleet, publicatieklaar HTML-artikel van MINIMAAL ${brief.target_word_count || 2500} woorden. Stop NOOIT vroeg.
 
+═══════════════════════════════════════
+CONTENT KWALITEIT — STRIKTE REGELS
+═══════════════════════════════════════
+📊 STATISTIEKEN — ECHT OF WEGLATEN:
+- Gebruik ALLEEN verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
+- NOOIT labels zoals "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[bron nodig]" toevoegen
+- NOOIT "studies tonen aan" of "onderzoek wijst uit" zonder concrete genoemde bron
+- Als er geen verifieerbare statistiek bestaat: schrijf algemene maar accurate zinnen ZONDER getallen
+- Interne bedrijfsdata labelen als: "[Bron: Bedrijfsadministratie]"
+- Alle genoemde bronnen moeten uit 2024-2026 zijn
+
+🎨 LEESBAARHEID — WCAG AA (contrast 4.5:1 minimum):
+- Check elke achtergrond/tekst combinatie in CSS voordat je output genereert
+- Bij gekleurde achtergronden: ALTIJD expliciet leesbare tekstkleuren in CSS zetten
+- NOOIT contrastproblemen noteren in commentaar — fix ze in de CSS zelf
+
+📱 MOBIEL — RESPONSIVE VERPLICHT:
+- Touch targets (knoppen, links) minimaal 44px hoog/breed
+- Tekst leesbaar op 320px schermbreedte — gebruik @media (max-width: 480px)
+- Proactief mobiele fixes toevoegen, niet wachten
+
+✅ OUTPUT REGEL:
+Als je iets niet kunt verifiëren of leesbaarheid/responsiveness niet kunt garanderen: LAAT HET WEG.
+Fix het in de output — plak geen waarschuwingen, disclaimers of placeholders aan het eindresultaat.
+
 BEDRIJF: ${job.profile_name} | DOMEIN: ${job.domain} | NICHE: ${job.niche}
 DOELGROEP: ${job.target_audience} | DOEL: ${job.primary_goal}
 LOCATIES: ${locStrings || 'Niet opgegeven'}
@@ -9347,14 +9399,34 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       console.warn(`⚠️ Write truncated (MAX_TOKENS) on ${writeResult.modelUsed} — ${htmlContent.length} chars produced`);
     }
 
-    const wordCountMatch = htmlContent.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
-    const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(htmlContent.replace(/<[^>]+>/g,'').split(/\s+/).length);
+    // Post-processor: strip any confidence/unverified placeholder patterns that slipped through.
+    // Covers both English and Dutch variants, case-insensitive, inside or outside tags.
+    const stripPatterns = [
+      /\s*[·\-—|]*\s*\[CONFIDENCE[^\]]*\]/gi,           // [CONFIDENCE: 8/10], [CONFIDENCE: 7/10 — FLAG FOR REVIEW]
+      /\s*[·\-—|]*\s*\[UNVERIFIED[^\]]*\]/gi,           // [UNVERIFIED], [UNVERIFIED — needs human check]
+      /\s*[·\-—|]*\s*\[FLAG[^\]]*\]/gi,                 // [FLAG FOR HUMAN REVIEW]
+      /\s*[·\-—|]*\s*\[bron\s+nodig[^\]]*\]/gi,         // Dutch: [bron nodig]
+      /\s*[·\-—|]*\s*\[citation\s+needed[^\]]*\]/gi,    // [citation needed]
+      /\s*[·\-—|]*\s*\[NEEDS\s+VERIFICATION[^\]]*\]/gi, // [NEEDS VERIFICATION]
+      /\s*[·\-—|]*\s*\[TODO[^\]]*\]/gi,                 // [TODO: add stat]
+    ];
+    let cleanedHtml = htmlContent;
+    let stripped = 0;
+    stripPatterns.forEach(re => {
+      const before = cleanedHtml.length;
+      cleanedHtml = cleanedHtml.replace(re, '');
+      if (cleanedHtml.length !== before) stripped++;
+    });
+    if (stripped) console.log(`🧹 Stripped ${stripped} placeholder pattern type(s) from article output`);
+
+    const wordCountMatch = cleanedHtml.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
+    const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(cleanedHtml.replace(/<[^>]+>/g,'').split(/\s+/).length);
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 
     const articleR = await pool.query(
       `INSERT INTO content_articles (job_id, profile_id, title, slug, primary_keyword, secondary_keywords, html_content, word_count, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
-      [job.id, job.profile_id, title, slug, brief.primary_keyword, JSON.stringify(brief.secondary_keywords||[]), htmlContent, wordCount]
+      [job.id, job.profile_id, title, slug, brief.primary_keyword, JSON.stringify(brief.secondary_keywords||[]), cleanedHtml, wordCount]
     );
     await pool.query(`UPDATE content_jobs SET status='written', updated_at=NOW() WHERE id=$1`, [job.id]);
     res.json({ success: true, article: articleR.rows[0], truncated: wasTruncated, finish_reason: finishReason });
