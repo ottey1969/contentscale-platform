@@ -860,6 +860,11 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW()
    )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_engine_drafts (
+     profile_id INTEGER PRIMARY KEY REFERENCES content_profiles(id) ON DELETE CASCADE,
+     draft JSONB DEFAULT '{}',
+     updated_at TIMESTAMP DEFAULT NOW()
+   )`);
    console.log('✅ All tables ready & migrated');
    } catch (error) {
    console.error('❌ DB Setup error:', error.message);
@@ -8840,6 +8845,38 @@ app.get('/api/content/jobs/:profileId', verifyAdmin, async (req, res) => {
     const r = await pool.query(`SELECT j.*, COUNT(a.id) AS article_count FROM content_jobs j LEFT JOIN content_articles a ON a.job_id=j.id WHERE j.profile_id=$1 GROUP BY j.id ORDER BY j.created_at DESC LIMIT 50`, [req.params.profileId]);
     res.json({ success: true, jobs: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Engine Draft (auto-save / resume) ────────────────────────
+// Stores in-progress form state (seed keyword, GSC fields, current job/article) per profile.
+// Frontend auto-saves on input, restores on load, clears on Reset.
+app.get('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT draft, updated_at FROM content_engine_drafts WHERE profile_id=$1`, [req.params.profileId]);
+    if (!r.rows.length) return res.json({ success: true, draft: null });
+    res.json({ success: true, draft: r.rows[0].draft || {}, updated_at: r.rows[0].updated_at });
+  } catch(e) { console.error('Get engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.put('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const profileId = parseInt(req.params.profileId, 10);
+    if (!profileId) return res.status(400).json({ success: false, error: 'Invalid profile_id' });
+    const draft = req.body && typeof req.body === 'object' ? req.body : {};
+    await pool.query(
+      `INSERT INTO content_engine_drafts (profile_id, draft, updated_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (profile_id) DO UPDATE SET draft=$2, updated_at=NOW()`,
+      [profileId, JSON.stringify(draft)]
+    );
+    res.json({ success: true });
+  } catch(e) { console.error('Save engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM content_engine_drafts WHERE profile_id=$1`, [req.params.profileId]);
+    res.json({ success: true });
+  } catch(e) { console.error('Delete engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.post('/api/content/research', verifyAdmin, async (req, res) => {
