@@ -402,6 +402,122 @@ let _currentArticleId = null;
 let _currentArticleHtml = '';
 let _currentArticleTitle = '';
 let _clusters = [];
+// Draft snapshot — lets us restore last research/brief/article view on refresh
+let _currentResearch = null;
+let _currentBrief = null;
+let _currentArticle = null;
+let _draftSaveTimer = null;
+let _draftLoading = false; // suppress auto-save while we restore
+
+// ── Draft persistence (server primary, localStorage fallback) ─
+function _draftFields() {
+  return {
+    seed_keyword:    document.getElementById('seedKeyword').value,
+    gsc_impressions: document.getElementById('engImpressions').value,
+    gsc_clicks:      document.getElementById('engClicks').value,
+    gsc_position:    document.getElementById('engPosition').value,
+    gsc_ctr:         document.getElementById('engCtr').value,
+    gsc_pages:       document.getElementById('engGscPages').value,
+    gsc_queries:     document.getElementById('engGscQueries').value,
+    title_override:  (document.getElementById('titleOverride') || {}).value || '',
+    current_job_id:  _currentJobId,
+    current_research: _currentResearch,
+    current_brief:    _currentBrief,
+    current_article:  _currentArticle,
+  };
+}
+
+function _draftLocalKey(profileId) { return 'cs_engine_draft_' + profileId; }
+
+async function saveDraftNow() {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId || _draftLoading) return;
+  var draft = _draftFields();
+  // Always write localStorage first — instant offline fallback
+  try { localStorage.setItem(_draftLocalKey(profileId), JSON.stringify({ draft: draft, at: Date.now() })); } catch(e) {}
+  // Best-effort server save — don't alert on failure (offline is OK)
+  try { await api('/api/content/engine-draft/' + profileId, 'PUT', draft); } catch(e) { console.warn('Draft server save failed:', e.message); }
+}
+
+function scheduleDraftSave() {
+  if (_draftLoading) return;
+  clearTimeout(_draftSaveTimer);
+  _draftSaveTimer = setTimeout(saveDraftNow, 600);
+}
+
+async function loadDraft(profileId) {
+  if (!profileId) return null;
+  // Try server first
+  try {
+    var d = await api('/api/content/engine-draft/' + profileId);
+    if (d && d.success && d.draft) return d.draft;
+  } catch(e) { console.warn('Draft server load failed, trying localStorage:', e.message); }
+  // Fallback: localStorage
+  try {
+    var raw = localStorage.getItem(_draftLocalKey(profileId));
+    if (raw) { var parsed = JSON.parse(raw); return parsed.draft || null; }
+  } catch(e) {}
+  return null;
+}
+
+async function restoreDraftForProfile(profileId) {
+  var draft = await loadDraft(profileId);
+  _draftLoading = true;
+  try {
+    // Always clear first so switching profiles doesn't leak state
+    hideAllSteps();
+    _currentJobId = null; _currentArticleId = null; _currentArticleHtml = ''; _currentArticleTitle = '';
+    _currentResearch = null; _currentBrief = null; _currentArticle = null;
+    ['seedKeyword','engImpressions','engClicks','engPosition','engCtr','engGscPages','engGscQueries','titleOverride']
+      .forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    if (!draft) return;
+    var setVal = function(id, v) { var el = document.getElementById(id); if (el && v != null) el.value = v; };
+    setVal('seedKeyword',    draft.seed_keyword);
+    setVal('engImpressions', draft.gsc_impressions);
+    setVal('engClicks',      draft.gsc_clicks);
+    setVal('engPosition',    draft.gsc_position);
+    setVal('engCtr',         draft.gsc_ctr);
+    setVal('engGscPages',    draft.gsc_pages);
+    setVal('engGscQueries',  draft.gsc_queries);
+    setVal('titleOverride',  draft.title_override);
+    _currentJobId = draft.current_job_id || null;
+    if (draft.current_research) {
+      _currentResearch = draft.current_research;
+      renderResearch(_currentResearch, !!_currentResearch.all_keyword_data);
+      document.getElementById('stepResearch').style.display = 'block';
+    }
+    if (draft.current_brief) {
+      _currentBrief = draft.current_brief;
+      renderBrief(_currentBrief);
+      document.getElementById('stepBrief').style.display = 'block';
+    }
+    if (draft.current_article) {
+      _currentArticle = draft.current_article;
+      _currentArticleId = draft.current_article.id;
+      _currentArticleHtml = draft.current_article.html_content || '';
+      _currentArticleTitle = draft.current_article.title || '';
+      renderArticleReady(draft.current_article);
+      document.getElementById('stepArticle').style.display = 'block';
+    }
+    toast('↩️ Draft hersteld');
+  } finally {
+    _draftLoading = false;
+  }
+}
+
+function hideAllSteps() {
+  ['stepResearch','stepBrief','stepArticle'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+}
+
+function attachDraftAutoSave() {
+  ['seedKeyword','engImpressions','engClicks','engPosition','engCtr','engGscPages','engGscQueries','titleOverride']
+    .forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && !el._draftBound) { el.addEventListener('input', scheduleDraftSave); el._draftBound = true; }
+    });
+}
 
 // ── Utils ─────────────────────────────────────────────────────
 function toast(msg, type) {
@@ -607,6 +723,8 @@ function loadProfileInfo() {
   var locs = (p.locations || []).map(function(l) { return l.location_value; }).join(', ');
   el.style.display = 'block';
   el.innerHTML = '<strong style="color:#e2e8f0;">' + p.name + '</strong> · ' + (p.domain || 'no domain') + ' · ' + (p.niche || 'no niche') + ' · Goal: ' + p.primary_goal + (locs ? ' · 📍 ' + locs : '') + (p.wp_url ? ' · 🚀 WP ready' : '');
+  // Restore draft for this profile (async, non-blocking)
+  restoreDraftForProfile(id);
 }
 
 async function startResearch(allKeywords) {
@@ -639,9 +757,15 @@ async function startResearch(allKeywords) {
     var d = await api('/api/content/research', 'POST', gscPayload);
     if (!d.success) throw new Error(d.error);
     _currentJobId = d.job.id;
+    _currentResearch = d.research;
+    // Research invalidates any previous brief/article
+    _currentBrief = null; _currentArticle = null;
+    document.getElementById('stepBrief').style.display = 'none';
+    document.getElementById('stepArticle').style.display = 'none';
     renderResearch(d.research, allKeywords);
     document.getElementById('stepResearch').style.display = 'block';
     document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
+    saveDraftNow();
     if (allKeywords) toast('Full keyword universe researched — ' + (d.research.all_keywords_researched || 0) + ' keywords analyzed');
     // Show GSC badge if data was used
     var hasGsc = gscPayload.gsc_queries || gscPayload.gsc_impressions;
@@ -712,9 +836,13 @@ async function generateBrief() {
   try {
     var d = await api('/api/content/brief/' + _currentJobId, 'POST');
     if (!d.success) throw new Error(d.error);
+    _currentBrief = d.brief;
+    _currentArticle = null; // brief invalidates a previous article
+    document.getElementById('stepArticle').style.display = 'none';
     renderBrief(d.brief);
     document.getElementById('stepBrief').style.display = 'block';
     document.getElementById('stepBrief').scrollIntoView({ behavior: 'smooth' });
+    saveDraftNow();
   } catch(e) { toast('Brief failed: ' + e.message, 'red'); }
   finally { btn.disabled = false; btn.innerHTML = '📋 Generate Brief'; }
 }
@@ -1444,13 +1572,28 @@ async function loadStudies() {
     }).join('') + '</tbody></table>';
 }
 
-// ── GSC reset ─────────────────────────────────────────────────
-function resetEngineGSC() {
-  ['engImpressions','engClicks','engPosition','engCtr','engGscPages','engGscQueries'].forEach(function(id) {
+// ── Reset — clears form, server draft, localStorage, and current job/brief/article view
+async function resetEngineGSC() {
+  if (!confirm('Reset: form + opgeslagen draft + huidige research/brief/artikel wissen?')) return;
+  var profileId = document.getElementById('engineProfile').value;
+  // Clear form fields
+  ['engImpressions','engClicks','engPosition','engCtr','engGscPages','engGscQueries','seedKeyword','titleOverride'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
-  toast('GSC data gereset — klaar voor nieuwe week');
+  // Clear state vars
+  _currentJobId = null; _currentArticleId = null; _currentArticleHtml = ''; _currentArticleTitle = '';
+  _currentResearch = null; _currentBrief = null; _currentArticle = null;
+  // Hide all step cards
+  hideAllSteps();
+  // Clear localStorage
+  if (profileId) { try { localStorage.removeItem(_draftLocalKey(profileId)); } catch(e) {} }
+  // Clear server draft (best-effort)
+  if (profileId) {
+    try { await api('/api/content/engine-draft/' + profileId, 'DELETE'); }
+    catch(e) { console.warn('Server draft delete failed:', e.message); }
+  }
+  toast('↺ Engine gereset — schone lei');
 }
 
 // ── Write Article ─────────────────────────────────────────────
@@ -1467,9 +1610,11 @@ async function writeArticle() {
     _currentArticleId = d.article.id;
     _currentArticleHtml = d.article.html_content;
     _currentArticleTitle = d.article.title;
+    _currentArticle = d.article;
     renderArticleReady(d.article);
     document.getElementById('stepArticle').style.display = 'block';
     document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth' });
+    saveDraftNow();
     toast('✅ Artikel klaar — ' + d.article.word_count + ' woorden!');
   } catch(e) { toast('Write failed: ' + e.message, 'red'); }
   finally { btn.disabled = false; btn.innerHTML = '✍️ Write Article'; }
@@ -1478,6 +1623,15 @@ async function writeArticle() {
 // ── Init ─────────────────────────────────────────────────────
 loadProfiles();
 loadEngineProfiles();
+attachDraftAutoSave();
+// If a profile is already pre-selected after load, restore its draft
+setTimeout(function() {
+  var sel = document.getElementById('engineProfile');
+  if (sel && sel.value) restoreDraftForProfile(sel.value);
+}, 300);
+// Save on tab hide / page unload as a final safety net
+window.addEventListener('visibilitychange', function() { if (document.hidden) saveDraftNow(); });
+window.addEventListener('beforeunload', function() { saveDraftNow(); });
 </script>
 </body>
 </html>
