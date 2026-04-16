@@ -1615,7 +1615,11 @@ async function writeArticle() {
     document.getElementById('stepArticle').style.display = 'block';
     document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth' });
     saveDraftNow();
-    toast('✅ Artikel klaar — ' + d.article.word_count + ' woorden!');
+    if (d.truncated) {
+      toast('⚠️ Artikel afgebroken bij maximum output — verkort template of splits content (' + d.article.word_count + ' woorden)', 'red');
+    } else {
+      toast('✅ Artikel klaar — ' + d.article.word_count + ' woorden!');
+    }
   } catch(e) { toast('Write failed: ' + e.message, 'red'); }
   finally { btn.disabled = false; btn.innerHTML = '✍️ Write Article'; }
 }
