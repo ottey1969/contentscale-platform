@@ -104,6 +104,38 @@ async function detectBestGeminiModel(apiKey) {
   }
 }
 
+// Call Gemini with automatic fallback to a secondary model on overload/quota errors.
+// No retry delays — just one shot on primary, one shot on fallback if primary was transient-failed.
+// Returns: { ok, status, data, modelUsed, errorMessage }
+async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel) {
+  const FALLBACK = fallbackModel || 'gemini-2.5-flash-lite';
+  const primary = primaryModel || GEMINI_MODEL;
+  const shouldFallback = (status, errMsg) => {
+    if (status === 503 || status === 429 || status === 500) return true;
+    const m = (errMsg || '').toLowerCase();
+    return m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota');
+  };
+  const tryModel = async (model) => {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => ({}));
+    return { ok: resp.ok, status: resp.status, data, modelUsed: model, errorMessage: data?.error?.message || '' };
+  };
+  const first = await tryModel(primary);
+  if (first.ok) return first;
+  if (primary !== FALLBACK && shouldFallback(first.status, first.errorMessage)) {
+    console.warn(`⚠️ Gemini primary (${primary}) failed with "${first.errorMessage || first.status}" — falling back to ${FALLBACK}`);
+    const second = await tryModel(FALLBACK);
+    if (second.ok) { console.log(`✅ Gemini fallback (${FALLBACK}) succeeded`); return second; }
+    // Return the fallback failure so the caller sees the most recent error
+    return second;
+  }
+  return first;
+}
+
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
@@ -8963,22 +8995,21 @@ Return ONLY valid JSON with this exact structure:
   "ai_overview_tips": ["tip to rank in AI overview 1","tip 2"]
 }`;
 
-    const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json' } })
-    });
-    const geminiData = await geminiResp.json();
-    if (!geminiResp.ok) {
-      const apiErr = geminiData?.error?.message || `Gemini HTTP ${geminiResp.status}`;
+    const gemResult = await callGeminiWithFallback(
+      geminiKey,
+      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json' } }
+    );
+    const geminiData = gemResult.data;
+    if (!gemResult.ok) {
+      const apiErr = gemResult.errorMessage || `Gemini HTTP ${gemResult.status}`;
       console.error('Gemini research API error:', apiErr, geminiData);
-      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: GEMINI_MODEL });
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: gemResult.modelUsed });
     }
     const blockReason = geminiData?.promptFeedback?.blockReason;
     if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the prompt: ${blockReason}` });
     const finishReason = geminiData?.candidates?.[0]?.finishReason;
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawText) return res.status(502).json({ success: false, error: `Gemini returned no content (finishReason: ${finishReason || 'unknown'})`, model: GEMINI_MODEL });
+    if (!rawText) return res.status(502).json({ success: false, error: `Gemini returned no content (finishReason: ${finishReason || 'unknown'})`, model: gemResult.modelUsed });
     let keywordData;
     try {
       // Strip code fences if present, then try direct parse, then fallback to regex extraction
@@ -9026,12 +9057,11 @@ Return ONLY valid JSON:
 }`;
 
       try {
-        const allKwResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json' } })
-        });
-        const allKwData = await allKwResp.json();
+        const allKwResult = await callGeminiWithFallback(
+          geminiKey,
+          { contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json' } }
+        );
+        const allKwData = allKwResult.data;
         const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (allKwText) {
           const cleaned = allKwText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
@@ -9297,22 +9327,21 @@ SCHRIJFREGELS: Korte alinea's (2-4 zinnen). Elke H2 begint met directe beantwoor
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
 
-    const writeResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
-    });
-    const writeData = await writeResp.json();
-    if (!writeResp.ok) {
-      const apiErr = writeData?.error?.message || `Gemini HTTP ${writeResp.status}`;
+    const writeResult = await callGeminiWithFallback(
+      process.env.GEMINI_API_KEY,
+      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }
+    );
+    const writeData = writeResult.data;
+    if (!writeResult.ok) {
+      const apiErr = writeResult.errorMessage || `Gemini HTTP ${writeResult.status}`;
       console.error('Gemini write API error:', apiErr, writeData);
-      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: GEMINI_MODEL });
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: writeResult.modelUsed });
     }
     const blockReason = writeData?.promptFeedback?.blockReason;
     if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the prompt: ${blockReason}` });
     const finishReason = writeData?.candidates?.[0]?.finishReason;
     const htmlContent = writeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!htmlContent) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: GEMINI_MODEL });
+    if (!htmlContent) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: writeResult.modelUsed });
 
     const wordCountMatch = htmlContent.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
     const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(htmlContent.replace(/<[^>]+>/g,'').split(/\s+/).length);
