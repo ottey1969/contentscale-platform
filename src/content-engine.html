@@ -1572,9 +1572,75 @@ async function loadStudies() {
     }).join('') + '</tbody></table>';
 }
 
-// ── Reset — clears form, server draft, localStorage, and current job/brief/article view
-async function resetEngineGSC() {
-  if (!confirm('Reset: form + opgeslagen draft + huidige research/brief/artikel wissen?')) return;
+// ── Reset — opens a modal that requires typing RESET to confirm
+function resetEngineGSC() {
+  // Build modal once, reuse
+  var overlay = document.getElementById('resetConfirmOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'resetConfirmOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:9999;';
+    overlay.innerHTML =
+      '<div style="background:#0f0f14;border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:28px;max-width:440px;width:92%;box-shadow:0 25px 60px rgba(0,0,0,.5);">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">' +
+          '<span style="font-size:24px;">⚠️</span>' +
+          '<div style="font-size:1.05rem;font-weight:800;color:#fca5a5;">Engine volledig resetten?</div>' +
+        '</div>' +
+        '<div style="font-size:13px;color:#9ca3af;line-height:1.6;margin-bottom:18px;">' +
+          'Dit wist <strong style="color:#e2e8f0;">alles</strong>: GSC-invoer, seed keyword, huidige research, brief, en artikel. Ook de opgeslagen draft op de server wordt verwijderd. <strong style="color:#fca5a5;">Niet terug te draaien.</strong>' +
+        '</div>' +
+        '<label style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:block;">Typ <strong style="color:#fca5a5;font-family:monospace;">RESET</strong> om te bevestigen</label>' +
+        '<input id="resetConfirmInput" type="text" placeholder="RESET" autocomplete="off" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px 14px;color:#e2e8f0;font-family:monospace;font-size:14px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:18px;">' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button id="resetCancelBtn" class="btn btn-secondary" style="font-size:13px;">Annuleren</button>' +
+          '<button id="resetConfirmBtn" class="btn btn-danger" style="font-size:13px;opacity:.4;cursor:not-allowed;" disabled>Reset alles</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    var input = overlay.querySelector('#resetConfirmInput');
+    var confirmBtn = overlay.querySelector('#resetConfirmBtn');
+    var cancelBtn = overlay.querySelector('#resetCancelBtn');
+
+    var closeModal = function() {
+      overlay.style.display = 'none';
+      input.value = '';
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '.4';
+      confirmBtn.style.cursor = 'not-allowed';
+    };
+
+    // Enable confirm only when user types RESET (case-insensitive)
+    input.addEventListener('input', function() {
+      var ok = input.value.trim().toUpperCase() === 'RESET';
+      confirmBtn.disabled = !ok;
+      confirmBtn.style.opacity = ok ? '1' : '.4';
+      confirmBtn.style.cursor = ok ? 'pointer' : 'not-allowed';
+    });
+    // Enter key submits when input is valid
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !confirmBtn.disabled) { e.preventDefault(); confirmBtn.click(); }
+      if (e.key === 'Escape') closeModal();
+    });
+    cancelBtn.addEventListener('click', closeModal);
+    // Click outside the dialog also cancels
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    confirmBtn.addEventListener('click', async function() {
+      closeModal();
+      await performEngineReset();
+    });
+  }
+
+  // Show modal and focus the input
+  overlay.style.display = 'flex';
+  setTimeout(function() {
+    var input = document.getElementById('resetConfirmInput');
+    if (input) input.focus();
+  }, 50);
+}
+
+// The actual destructive action — only called after the user confirms by typing RESET
+async function performEngineReset() {
   var profileId = document.getElementById('engineProfile').value;
   // Clear form fields
   ['engImpressions','engClicks','engPosition','engCtr','engGscPages','engGscQueries','seedKeyword','titleOverride'].forEach(function(id) {
