@@ -247,7 +247,13 @@ textarea{resize:vertical;min-height:100px;}
     </div>
     <!-- GSC Data -->
     <div style="background:#0a0a0f;border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;margin-bottom:10px;">📊 GSC Data (optional but powerful)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;">📊 GSC Data (optional but powerful)</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span id="rwGscStatus" style="font-size:11px;color:#6b7280;"></span>
+          <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="autoFillRewriteGSC()" id="btnAutoFillGSC">⚡ Auto-fill from GSC</button>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
         <div><label>Impressions</label><input id="rwImpressions" type="number" placeholder="10000"></div>
         <div><label>Clicks</label><input id="rwClicks" type="number" placeholder="0"></div>
@@ -262,9 +268,34 @@ textarea{resize:vertical;min-height:100px;}
         <label>GSC Queries — echte zoekopdrachten (één per regel) — <strong style="color:#fbbf24;">stuurt keywords en H2s</strong></label>
         <textarea id="rwGscQueries" rows="4" placeholder="dakdekker amsterdam&#10;dakdekker kosten per m2&#10;dakdekker inhuren&#10;goedkope dakdekker amsterdam" style="font-size:12px;font-family:monospace;min-height:90px;"></textarea>
       </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:8px;">💡 Tip: Enter a URL above and click Auto-fill. GSC data is pulled from your profile's sitemap via the configured service account.</div>
     </div>
+
+    <!-- Competitors (BOFU edge) -->
+    <div style="background:#0a0a0f;border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin-bottom:10px;">🎯 Competitors (optional — for BOFU edge)</div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Add up to 3. Each slot accepts a URL (auto-scanned) OR pasted HTML content. The rewriter will analyse their weaknesses and generate content that specifically beats them.</div>
+      <div id="rwCompetitorsList">
+        <div class="rw-competitor-slot" data-idx="1" style="background:#1e293b;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:10px;margin-bottom:8px;">
+          <div style="font-size:10px;color:#60a5fa;margin-bottom:6px;font-weight:700;">COMPETITOR 1</div>
+          <input class="rw-comp-url" placeholder="https://competitor.com/page" style="margin-bottom:6px;font-size:12px;">
+          <textarea class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional, overrides URL scan)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
+        </div>
+        <div class="rw-competitor-slot" data-idx="2" style="background:#1e293b;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:10px;margin-bottom:8px;">
+          <div style="font-size:10px;color:#60a5fa;margin-bottom:6px;font-weight:700;">COMPETITOR 2</div>
+          <input class="rw-comp-url" placeholder="https://competitor.com/page" style="margin-bottom:6px;font-size:12px;">
+          <textarea class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
+        </div>
+        <div class="rw-competitor-slot" data-idx="3" style="background:#1e293b;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:10px;">
+          <div style="font-size:10px;color:#60a5fa;margin-bottom:6px;font-weight:700;">COMPETITOR 3</div>
+          <input class="rw-comp-url" placeholder="https://competitor.com/page" style="margin-bottom:6px;font-size:12px;">
+          <textarea class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
+        </div>
+      </div>
+    </div>
+
     <!-- Existing content -->
-    <div style="margin-bottom:12px;"><label>Existing HTML Content (optional — paste to preserve images)</label><textarea id="rwHtml" rows="4" placeholder="Paste existing HTML here — images will be detected and kept..."></textarea></div>
+    <div style="margin-bottom:12px;"><label>Existing HTML Content (optional — paste to preserve layout, author, schema, colors)</label><textarea id="rwHtml" rows="4" placeholder="Paste existing HTML here — layout, CSS classes, author, schema and images will all be preserved exactly..."></textarea></div>
     <!-- Image URLs -->
     <div style="background:#0a0a0f;border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:14px;margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -1231,6 +1262,14 @@ async function analyseRewrite() {
   var btn = document.getElementById('btnAnalyse');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analysing...';
   try {
+    // Collect competitors — URL or pasted HTML (up to 3)
+    var competitors = [];
+    document.querySelectorAll('.rw-competitor-slot').forEach(function(slot){
+      var url = slot.querySelector('.rw-comp-url').value.trim();
+      var html = slot.querySelector('.rw-comp-html').value.trim();
+      if (url || html) competitors.push({ url: url || null, html: html || null });
+    });
+
     var payload = {
       profile_id: profileId,
       original_url: document.getElementById('rwUrl').value.trim(),
@@ -1242,16 +1281,57 @@ async function analyseRewrite() {
       gsc_position: parseFloat(document.getElementById('rwPosition').value) || 0,
       gsc_keyword: document.getElementById('rwKeyword').value.trim(),
       gsc_pages: document.getElementById('rwGscPages').value.trim(),
-      gsc_queries: document.getElementById('rwGscQueries').value.trim()
+      gsc_queries: document.getElementById('rwGscQueries').value.trim(),
+      competitors: competitors
     };
     var d = await api('/api/content/analyse-rewrite', 'POST', payload);
     if (!d.success) throw new Error(d.error);
     _currentRewriteId = d.rewrite.id;
+    // Surface what happened
+    if (d.gsc_auto_filled) toast('✅ GSC data auto-filled from service account');
+    if (d.author_detected) toast('👤 Author detected: ' + d.author_name + ' — preserved');
+    else if (d.author_name) toast('👤 Author default: ' + d.author_name);
+    if (d.competitor_count) toast('🎯 ' + d.competitor_count + ' competitor(s) analysed');
     renderAnalysis(d.analysis);
     document.getElementById('rwAnalysisCard').style.display = 'block';
     document.getElementById('rwAnalysisCard').scrollIntoView({ behavior: 'smooth' });
   } catch(e) { toast('Analysis failed: ' + e.message, 'red'); }
   finally { btn.disabled = false; btn.innerHTML = '🔍 Analyse & Plan'; }
+}
+
+// ═══ NEW: Auto-fill GSC from URL ═══
+async function autoFillRewriteGSC() {
+  var url = document.getElementById('rwUrl').value.trim();
+  var statusEl = document.getElementById('rwGscStatus');
+  var btn = document.getElementById('btnAutoFillGSC');
+  if (!url) { toast('Enter a URL first', 'red'); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  statusEl.textContent = 'Pulling GSC data...';
+  statusEl.style.color = '#fbbf24';
+  try {
+    var r = await fetch('/api/gsc/auto-fill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_ID },
+      body: JSON.stringify({ pageUrl: url })
+    });
+    var d = await r.json();
+    if (!d.success) throw new Error(d.error || 'GSC fetch failed');
+    var g = d.data;
+    document.getElementById('rwImpressions').value = g.impressions || 0;
+    document.getElementById('rwClicks').value = g.clicks || 0;
+    document.getElementById('rwPosition').value = g.position || 0;
+    document.getElementById('rwKeyword').value = g.topKeyword || '';
+    document.getElementById('rwGscQueries').value = g.topQueries || '';
+    statusEl.textContent = '✓ ' + (g.impressions || 0) + ' impr · pos ' + (g.position || 0);
+    statusEl.style.color = '#4ade80';
+    toast('✅ GSC data filled — ' + (g.queryCount || 0) + ' queries found');
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e.message;
+    statusEl.style.color = '#f87171';
+    toast('GSC autofill failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '⚡ Auto-fill from GSC';
+  }
 }
 
 function renderAnalysis(a) {
@@ -1308,6 +1388,24 @@ async function executeRewrite() {
   try {
     var imgUrls = _rwImages.map(function(i) { return i.url + (i.alt ? ' (alt: ' + i.alt + ')' : ''); }).join('\n');
     var d = await api('/api/content/execute-rewrite/' + _currentRewriteId, 'POST', { keep_images_urls: imgUrls || null });
+    // HARD FAIL — show violations inline so user can fix inputs
+    if (!d.success && d.bofu_violations) {
+      var el = document.getElementById('rwResult');
+      el.innerHTML =
+        '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:16px;margin-bottom:10px;">' +
+        '<div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:6px;">❌ Rewrite Rejected — BOFU Quality Failed</div>' +
+        '<div style="font-size:12px;color:#fca5a5;margin-bottom:10px;">Score: ' + d.bofu_score + '/100 · ' + d.regeneration_attempts + ' attempts · ' + d.word_count + ' words</div>' +
+        '<div style="font-size:11px;color:#fbbf24;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em;">Issues blocking publish:</div>' +
+        '<ul style="margin:0 0 10px 0;padding-left:18px;font-size:12px;color:#fca5a5;">' +
+        d.bofu_violations.map(function(v){ return '<li style="margin-bottom:4px;"><strong>' + v.code + '</strong>: ' + v.hint + '</li>'; }).join('') +
+        '</ul>' +
+        '<div style="font-size:11px;color:#9ca3af;padding-top:8px;border-top:1px solid rgba(248,113,113,.15);">💡 ' + (d.hint || 'Strengthen inputs and try again.') + '</div>' +
+        '</div>';
+      document.getElementById('rwResultCard').style.display = 'block';
+      document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
+      toast('Rewrite rejected — see quality issues', 'red');
+      return;
+    }
     if (!d.success) throw new Error(d.error);
     _currentRewriteHtml = d.html;
     _currentRewriteTitle = d.title;
@@ -1328,6 +1426,13 @@ async function executeRewrite() {
       }).catch(function() {});
     }
     var el = document.getElementById('rwResult');
+    // Mode label + color
+    var modeLabel = { template: '📋 Template Mode', layout_preserved: '🎨 Layout Preserved', free_write: '✍️ Free Write' }[d.mode_used] || d.mode_used;
+    var modeColor = d.mode_used === 'layout_preserved' ? '#4ade80' : d.mode_used === 'template' ? '#fbbf24' : '#60a5fa';
+    // BOFU badge color
+    var bofuColor = !d.bofu_score ? '#6b7280' : d.bofu_score >= 85 ? '#4ade80' : d.bofu_score >= 70 ? '#fbbf24' : '#f87171';
+    var bofuIcon = d.bofu_passed ? '✓' : '⚠';
+
     el.innerHTML =
       '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
       '<div style="flex:1;"><div style="font-size:1rem;font-weight:700;color:#fbbf24;">' + d.title + '</div>' +
@@ -1335,9 +1440,22 @@ async function executeRewrite() {
       (d.recommendation === 'new_page_new_slug' ? '<div style="font-size:11px;color:#fbbf24;margin-top:4px;">⚠️ Also consider a new page with the stronger seed keyword</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-      '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast(\'Copied!\'))">📋 Copy HTML</button>' +
+      '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast(\'Copied!\')})">📋 Copy HTML</button>' +
       '<button class="btn btn-success" style="font-size:12px;" onclick="downloadRewriteHtml()">⬇️ Download</button>' +
       '</div></div>' +
+      // NEW: quality + mode + author row
+      '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
+      (d.bofu_score != null ? '<span style="background:rgba(' + (d.bofu_passed?'74,222,128':'248,113,113') + ',.12);border:1px solid ' + bofuColor + ';color:' + bofuColor + ';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;">' + bofuIcon + ' BOFU ' + d.bofu_score + '/100</span>' : '') +
+      (d.mode_used ? '<span style="background:rgba(255,255,255,.04);border:1px solid ' + modeColor + ';color:' + modeColor + ';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;">' + modeLabel + '</span>' : '') +
+      (d.author_used ? '<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:11px;">👤 ' + d.author_used + (d.author_detected ? ' (detected)' : ' (default)') + '</span>' : '') +
+      (d.regeneration_attempts > 1 ? '<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:11px;">🔁 ' + d.regeneration_attempts + ' attempts</span>' : '') +
+      '</div>' +
+      // BOFU violations (when any)
+      (d.bofu_violations && d.bofu_violations.length ? '<div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:10px 12px;margin-bottom:10px;">' +
+        '<div style="font-size:11px;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">⚠ Quality Issues Remaining (' + d.bofu_violations.length + ')</div>' +
+        '<ul style="margin:0;padding-left:18px;font-size:12px;color:#fca5a5;">' +
+        d.bofu_violations.map(function(v){ return '<li style="margin-bottom:3px;"><strong>' + v.code + '</strong>: ' + v.hint + '</li>'; }).join('') +
+        '</ul></div>' : '') +
       '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages' +
       (d.tracker_page ? ' · <span style="color:#4ade80;">✓ Added to Pulse+Nexus tracker</span>' : '') +
       '</div>';
