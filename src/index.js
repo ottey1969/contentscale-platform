@@ -918,6 +918,56 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      draft JSONB DEFAULT '{}',
      updated_at TIMESTAMP DEFAULT NOW()
    )`);
+
+   // ═══ BULK AUTOPILOT TABLES ═══
+   await client.query(`CREATE TABLE IF NOT EXISTS content_bulk_jobs (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     job_type VARCHAR(20) NOT NULL,
+     mode VARCHAR(20) NOT NULL DEFAULT 'approve',
+     geo_scope VARCHAR(20) DEFAULT 'city',
+     geo_value VARCHAR(255),
+     geo_country_code VARCHAR(5),
+     budget_cap_usd NUMERIC(8,2),
+     status VARCHAR(30) NOT NULL DEFAULT 'queued',
+     total_items INTEGER DEFAULT 0,
+     analysed_items INTEGER DEFAULT 0,
+     approved_items INTEGER DEFAULT 0,
+     done_items INTEGER DEFAULT 0,
+     failed_items INTEGER DEFAULT 0,
+     estimated_cost_usd NUMERIC(8,2),
+     actual_cost_usd NUMERIC(8,2) DEFAULT 0,
+     error_message TEXT,
+     created_at TIMESTAMP DEFAULT NOW(),
+     started_at TIMESTAMP,
+     completed_at TIMESTAMP
+   )`);
+   await client.query(`CREATE TABLE IF NOT EXISTS content_bulk_items (
+     id SERIAL PRIMARY KEY,
+     bulk_job_id INTEGER REFERENCES content_bulk_jobs(id) ON DELETE CASCADE,
+     input_value TEXT NOT NULL,
+     input_type VARCHAR(20) NOT NULL,
+     status VARCHAR(30) NOT NULL DEFAULT 'queued',
+     approved BOOLEAN DEFAULT FALSE,
+     analysis_data JSONB DEFAULT '{}',
+     intent_score INTEGER,
+     intent_decision VARCHAR(30),
+     slug_decision VARCHAR(30),
+     old_slug VARCHAR(500),
+     new_slug VARCHAR(500),
+     redirect_to VARCHAR(500),
+     rewrite_id INTEGER REFERENCES content_rewrites(id) ON DELETE SET NULL,
+     article_id INTEGER REFERENCES content_articles(id) ON DELETE SET NULL,
+     result_data JSONB DEFAULT '{}',
+     bofu_score INTEGER,
+     error_message TEXT,
+     created_at TIMESTAMP DEFAULT NOW(),
+     updated_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`CREATE INDEX IF NOT EXISTS idx_bulk_items_job ON content_bulk_items(bulk_job_id)`);
+   await client.query(`CREATE INDEX IF NOT EXISTS idx_bulk_items_status ON content_bulk_items(status)`);
+   await client.query(`CREATE INDEX IF NOT EXISTS idx_bulk_jobs_status ON content_bulk_jobs(status)`);
+
    console.log('✅ All tables ready & migrated');
    } catch (error) {
    console.error('❌ DB Setup error:', error.message);
@@ -10578,6 +10628,592 @@ app.get('/api/content/rewrites/:profileId', verifyAdmin, async (req, res) => {
     res.json({ success: true, rewrites: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+// BULK AUTOPILOT SYSTEM
+// ═══════════════════════════════════════════════════════════════════════
+// Job lifecycle:
+//   1. POST /api/content/bulk/create → creates job + items, returns job_id
+//      - If mode='autopilot': worker runs analyse+execute on every item end-to-end
+//      - If mode='approve': worker runs analyse only, stops at 'awaiting_approval'
+//   2. GET /api/content/bulk/:id/status → polling (every 3s from UI)
+//   3. POST /api/content/bulk/:id/approve → { item_ids: [] } → marks items approved
+//   4. POST /api/content/bulk/:id/execute → resumes worker in execute phase
+//   5. GET /api/content/bulk/:id/report → full job report with all items
+//
+// Soft budget cap is enforced in UI before creating job (via estimateBulkCostUSD)
+// ═══════════════════════════════════════════════════════════════════════
+
+const BULK_WORKER_INTERVAL_MS = 5000;
+const BULK_CONCURRENCY_PER_TICK = 1; // process 1 item per worker tick to respect rate limits
+let _bulkWorkerRunning = false;
+
+// ── CREATE JOB ──────────────────────────────────────────────────────
+app.post('/api/content/bulk/create', verifyAdmin, async (req, res) => {
+  try {
+    const {
+      profile_id,
+      job_type,        // 'write' | 'rewrite'
+      mode,            // 'autopilot' | 'approve'
+      inputs,          // array of strings (keywords for write, URLs for rewrite)
+      geo_scope,       // 'city' | 'province' | 'country' | 'custom' | 'global'
+      geo_value,       // city/province/country name (or custom string)
+      geo_country_code,// ISO-2 like 'NL' for country scope
+      budget_cap_usd   // optional hard stop
+    } = req.body;
+
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+    if (!['write', 'rewrite'].includes(job_type)) return res.status(400).json({ success: false, error: 'job_type must be write or rewrite' });
+    if (!['autopilot', 'approve'].includes(mode)) return res.status(400).json({ success: false, error: 'mode must be autopilot or approve' });
+    if (!Array.isArray(inputs) || inputs.length === 0) return res.status(400).json({ success: false, error: 'inputs array required' });
+
+    const cleanInputs = inputs.map(s => String(s).trim()).filter(Boolean);
+    if (cleanInputs.length === 0) return res.status(400).json({ success: false, error: 'No valid inputs after cleaning' });
+    if (cleanInputs.length > 500) return res.status(400).json({ success: false, error: 'Max 500 items per job' });
+
+    const profileR = await pool.query(`SELECT id FROM content_profiles WHERE id=$1`, [profile_id]);
+    if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
+
+    const estimated = rewriterHelpers.estimateBulkCostUSD(cleanInputs.length, job_type);
+
+    const jobR = await pool.query(
+      `INSERT INTO content_bulk_jobs (profile_id, job_type, mode, geo_scope, geo_value, geo_country_code, budget_cap_usd, status, total_items, estimated_cost_usd)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'analysing',$8,$9) RETURNING *`,
+      [profile_id, job_type, mode, geo_scope || 'city', geo_value || '', geo_country_code || '',
+       budget_cap_usd || null, cleanInputs.length, estimated]
+    );
+    const job = jobR.rows[0];
+
+    const inputType = job_type === 'write' ? 'keyword' : 'url';
+    for (const val of cleanInputs) {
+      await pool.query(
+        `INSERT INTO content_bulk_items (bulk_job_id, input_value, input_type, status, approved)
+         VALUES ($1, $2, $3, 'queued', $4)`,
+        [job.id, val, inputType, mode === 'autopilot'] // autopilot = pre-approved
+      );
+    }
+
+    console.log(`[bulk] Created job ${job.id} (${job_type}/${mode}) with ${cleanInputs.length} items, est $${estimated}`);
+
+    // Kick the worker (non-blocking)
+    kickBulkWorker();
+
+    res.json({ success: true, job, estimated_cost_usd: estimated });
+  } catch(e) {
+    console.error('[bulk create]', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── STATUS POLL ─────────────────────────────────────────────────────
+app.get('/api/content/bulk/:id/status', verifyAdmin, async (req, res) => {
+  try {
+    const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [req.params.id]);
+    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+    const itemsR = await pool.query(
+      `SELECT id, input_value, input_type, status, approved, intent_score, intent_decision,
+              slug_decision, old_slug, new_slug, redirect_to, bofu_score, error_message
+       FROM content_bulk_items WHERE bulk_job_id=$1 ORDER BY id ASC`,
+      [req.params.id]
+    );
+    res.json({ success: true, job: jobR.rows[0], items: itemsR.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── APPROVE ITEMS (approve-gate mode) ────────────────────────────────
+app.post('/api/content/bulk/:id/approve', verifyAdmin, async (req, res) => {
+  try {
+    const { item_ids, approve_all } = req.body;
+    const jobId = req.params.id;
+
+    const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [jobId]);
+    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+    if (jobR.rows[0].status !== 'awaiting_approval') {
+      return res.status(400).json({ success: false, error: `Cannot approve — job status is ${jobR.rows[0].status}` });
+    }
+
+    if (approve_all) {
+      await pool.query(
+        `UPDATE content_bulk_items SET approved=TRUE WHERE bulk_job_id=$1 AND status='analysed'`,
+        [jobId]
+      );
+    } else if (Array.isArray(item_ids) && item_ids.length > 0) {
+      await pool.query(
+        `UPDATE content_bulk_items SET approved=TRUE WHERE bulk_job_id=$1 AND id=ANY($2::int[])`,
+        [jobId, item_ids]
+      );
+      // Also un-approve items not in the list
+      await pool.query(
+        `UPDATE content_bulk_items SET approved=FALSE WHERE bulk_job_id=$1 AND id<>ALL($2::int[]) AND status='analysed'`,
+        [jobId, item_ids]
+      );
+    }
+
+    const cntR = await pool.query(
+      `SELECT COUNT(*)::int as n FROM content_bulk_items WHERE bulk_job_id=$1 AND approved=TRUE`,
+      [jobId]
+    );
+    await pool.query(`UPDATE content_bulk_jobs SET approved_items=$2 WHERE id=$1`, [jobId, cntR.rows[0].n]);
+
+    res.json({ success: true, approved_count: cntR.rows[0].n });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── EXECUTE (resume approved items) ──────────────────────────────────
+app.post('/api/content/bulk/:id/execute', verifyAdmin, async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [jobId]);
+    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+    if (!['awaiting_approval', 'paused'].includes(jobR.rows[0].status)) {
+      return res.status(400).json({ success: false, error: `Cannot execute — job status is ${jobR.rows[0].status}` });
+    }
+
+    await pool.query(`UPDATE content_bulk_jobs SET status='executing', started_at=COALESCE(started_at, NOW()) WHERE id=$1`, [jobId]);
+    // Reset approved+analysed items to queued-for-execute
+    await pool.query(
+      `UPDATE content_bulk_items SET status='exec_queued' WHERE bulk_job_id=$1 AND approved=TRUE AND status='analysed'`,
+      [jobId]
+    );
+    kickBulkWorker();
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── REPORT ───────────────────────────────────────────────────────────
+app.get('/api/content/bulk/:id/report', verifyAdmin, async (req, res) => {
+  try {
+    const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [req.params.id]);
+    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+    const itemsR = await pool.query(
+      `SELECT * FROM content_bulk_items WHERE bulk_job_id=$1 ORDER BY id ASC`,
+      [req.params.id]
+    );
+    const redirects = itemsR.rows
+      .filter(r => r.slug_decision === 'redirect_301' && r.old_slug && r.new_slug)
+      .map(r => `Redirect 301 /${r.old_slug} /${r.new_slug}`);
+    res.json({ success: true, job: jobR.rows[0], items: itemsR.rows, htaccess_redirects: redirects });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── LIST JOBS FOR A PROFILE ──────────────────────────────────────────
+app.get('/api/content/bulk/list/:profileId', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT id, job_type, mode, status, total_items, analysed_items, approved_items,
+              done_items, failed_items, estimated_cost_usd, actual_cost_usd,
+              created_at, completed_at
+       FROM content_bulk_jobs WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 30`,
+      [req.params.profileId]
+    );
+    res.json({ success: true, jobs: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── DELETE / CANCEL JOB ──────────────────────────────────────────────
+app.delete('/api/content/bulk/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query(`UPDATE content_bulk_jobs SET status='cancelled' WHERE id=$1 AND status NOT IN ('done','failed','cancelled')`, [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// BULK WORKER — in-process queue
+// ═══════════════════════════════════════════════════════════════════════
+// Pulls next eligible item, runs analyse or execute, updates item + job counts.
+// Runs every BULK_WORKER_INTERVAL_MS. Only one item per tick to respect Gemini rate.
+// ═══════════════════════════════════════════════════════════════════════
+async function processBulkItemAnalyse(job, item) {
+  // Build analyse payload based on job_type
+  const profileR = await pool.query(`SELECT * FROM content_profiles WHERE id=$1`, [job.profile_id]);
+  const profile = profileR.rows[0];
+  if (!profile) throw new Error('Profile disappeared');
+
+  // Resolve domain for competitor exclusion
+  const ownDomain = profile.domain || '';
+
+  // GEO competitor finder (shared for write/rewrite)
+  const searchTerm = item.input_type === 'keyword'
+    ? item.input_value
+    : (item.input_value.replace(/^https?:\/\/[^/]+\//, '').replace(/[-/]/g, ' '));
+
+  let autoCompetitors = [];
+  if (job.geo_scope !== 'none') {
+    const geoOpts = {
+      geoScope: job.geo_scope || 'city',
+      city: job.geo_scope === 'city' ? job.geo_value : '',
+      province: job.geo_scope === 'province' ? job.geo_value : '',
+      country: job.geo_scope === 'country' ? job.geo_value : '',
+      countryCode: job.geo_country_code || '',
+      customGeo: job.geo_scope === 'custom' ? job.geo_value : '',
+      excludeDomain: ownDomain,
+      limit: 3
+    };
+    const picked = await rewriterHelpers.findCompetitorsByGeo(searchTerm, geoOpts);
+    // Fetch + analyse each competitor HTML
+    if (picked.length) {
+      autoCompetitors = await Promise.all(picked.map(p => rewriterHelpers.fetchCompetitorHtml({ url: p.url })));
+      autoCompetitors = autoCompetitors.filter(c => !c.error);
+    }
+  }
+
+  if (job.job_type === 'rewrite') {
+    // ═══ REWRITE BRANCH ═══
+    // Call internal analyse-rewrite logic by posting to our own handler
+    // We do this via direct DB + helpers instead of HTTP call to avoid loopback
+    const payload = {
+      profile_id: job.profile_id,
+      original_url: item.input_value,
+      original_slug: (function() {
+        try { return new URL(item.input_value).pathname.replace(/^\/|\/$/g, ''); }
+        catch { return ''; }
+      })(),
+      original_title: '',
+      original_html: '',
+      competitors: autoCompetitors.map(c => ({ url: c.url, html: c.html }))
+    };
+
+    // Call the analyse-rewrite endpoint internally
+    const result = await callInternalAnalyseRewrite(payload);
+    if (!result.success) throw new Error(result.error || 'Analyse failed');
+
+    // Intent match scoring
+    const intent = rewriterHelpers.scoreIntentMatch(
+      payload.original_slug,
+      result.analysis.stronger_seed_keyword || result.analysis.recommended_title || '',
+      result.analysis.gsc_queries || []
+    );
+
+    // Slug decision based on intent score
+    let slugDecision = 'keep';
+    let newSlug = payload.original_slug;
+    let redirectTo = null;
+    if (intent.decision === 'rewrite_new') {
+      slugDecision = 'rewrite_new';
+      newSlug = result.analysis.new_slug_suggestion || slugify(result.analysis.stronger_seed_keyword || '');
+    } else if (intent.decision === 'redirect_301') {
+      slugDecision = 'redirect_301';
+      newSlug = result.analysis.new_slug_suggestion || slugify(result.analysis.stronger_seed_keyword || '');
+      redirectTo = newSlug;
+    }
+
+    await pool.query(
+      `UPDATE content_bulk_items
+       SET status='analysed', analysis_data=$2, intent_score=$3, intent_decision=$4,
+           slug_decision=$5, old_slug=$6, new_slug=$7, redirect_to=$8,
+           rewrite_id=$9, updated_at=NOW()
+       WHERE id=$1`,
+      [item.id, JSON.stringify(result.analysis), intent.score, intent.decision,
+       slugDecision, payload.original_slug, newSlug, redirectTo,
+       result.rewrite.id]
+    );
+  } else {
+    // ═══ WRITE BRANCH ═══
+    // Use /api/content/research + /api/content/brief/write flow
+    // For simplicity in bulk, we store keyword and mark for execute — the execute phase runs write
+    const slug = slugify(item.input_value);
+    await pool.query(
+      `UPDATE content_bulk_items
+       SET status='analysed', analysis_data=$2, new_slug=$3, updated_at=NOW()
+       WHERE id=$1`,
+      [item.id,
+       JSON.stringify({ seed_keyword: item.input_value, competitors_manual: autoCompetitors }),
+       slug]
+    );
+  }
+}
+
+// ── INTERNAL ANALYSE-REWRITE CALLER ───────────────────────────────────
+// Instead of making an HTTP call to ourselves, we reuse the logic directly.
+// We build a fake res object and wait for its json() to be called.
+function callInternalAnalyseRewrite(body) {
+  return new Promise((resolve, reject) => {
+    const fakeReq = { body };
+    const fakeRes = {
+      statusCode: 200,
+      status(code) { this.statusCode = code; return this; },
+      json(payload) { resolve(payload); }
+    };
+    // Find the analyse-rewrite handler in the Express router
+    const stack = app._router.stack;
+    const route = stack.find(l => l.route && l.route.path === '/api/content/analyse-rewrite' && l.route.methods.post);
+    if (!route) return reject(new Error('analyse-rewrite route not mounted'));
+    // Build a middleware chain runner that skips verifyAdmin (we're internal)
+    const handlers = route.route.stack.map(s => s.handle);
+    // The last handler is our async endpoint
+    const main = handlers[handlers.length - 1];
+    Promise.resolve(main(fakeReq, fakeRes, () => {})).catch(reject);
+  });
+}
+
+function callInternalExecuteRewrite(rewriteId, body) {
+  return new Promise((resolve, reject) => {
+    const fakeReq = { body: body || {}, params: { rewriteId } };
+    const fakeRes = {
+      statusCode: 200,
+      status(code) { this.statusCode = code; return this; },
+      json(payload) { resolve({ ...payload, _statusCode: this.statusCode }); }
+    };
+    const stack = app._router.stack;
+    const route = stack.find(l => l.route && l.route.path === '/api/content/execute-rewrite/:rewriteId' && l.route.methods.post);
+    if (!route) return reject(new Error('execute-rewrite route not mounted'));
+    const handlers = route.route.stack.map(s => s.handle);
+    const main = handlers[handlers.length - 1];
+    Promise.resolve(main(fakeReq, fakeRes, () => {})).catch(reject);
+  });
+}
+
+function slugify(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 80) || 'untitled';
+}
+
+async function processBulkItemExecute(job, item) {
+  if (job.job_type === 'rewrite') {
+    // Call execute-rewrite with the stashed rewrite_id
+    if (!item.rewrite_id) throw new Error('No rewrite_id on item');
+    const result = await callInternalExecuteRewrite(item.rewrite_id, {});
+    if (result._statusCode === 422) {
+      // BOFU hard-fail — mark item as failed with details
+      await pool.query(
+        `UPDATE content_bulk_items
+         SET status='failed', bofu_score=$2, error_message=$3, result_data=$4, updated_at=NOW()
+         WHERE id=$1`,
+        [item.id, result.bofu_score || null,
+         'BOFU validation failed: ' + (result.bofu_violations || []).map(v => v.code).join(', '),
+         JSON.stringify(result)]
+      );
+      return { failed: true };
+    }
+    if (!result.success) throw new Error(result.error || 'Execute failed');
+
+    await pool.query(
+      `UPDATE content_bulk_items
+       SET status='done', bofu_score=$2, result_data=$3, updated_at=NOW()
+       WHERE id=$1`,
+      [item.id, result.bofu_score || null, JSON.stringify({
+        html_length: (result.html || '').length,
+        word_count: result.word_count,
+        mode_used: result.mode_used,
+        bofu_passed: result.bofu_passed,
+        title: result.title
+      })]
+    );
+    return { success: true };
+  } else {
+    // ═══ WRITE MODE EXECUTE ═══
+    // Use direct Gemini call — simpler than shelling through research+brief+write
+    const analysis = typeof item.analysis_data === 'string'
+      ? JSON.parse(item.analysis_data) : item.analysis_data;
+    const seedKeyword = analysis.seed_keyword || item.input_value;
+
+    const profileR = await pool.query(`SELECT * FROM content_profiles WHERE id=$1`, [job.profile_id]);
+    const profile = profileR.rows[0];
+
+    const competitorsManual = analysis.competitors_manual || [];
+    const competitorBlock = competitorsManual.length
+      ? competitorsManual.map((c, i) => `
+COMPETITOR ${i+1}: ${c.url} (${c.wordCount} words)
+Headings: ${(c.headings||[]).slice(0,5).map(h=>h.text).join(' | ')}
+Preview: ${(c.textPreview||'').slice(0,800)}`).join('\n')
+      : 'No competitors available';
+
+    const writePrompt = `You are an elite SEO content writer. Write a new BOFU-focused article for this keyword.
+
+BUSINESS: ${profile.name} — ${profile.niche || ''}
+TARGET AUDIENCE: ${profile.target_audience || ''}
+PRIMARY GOAL: ${profile.primary_goal || 'leads'}
+
+SEED KEYWORD: "${seedKeyword}"
+SLUG: ${item.new_slug}
+
+${competitorBlock}
+
+BOFU STANDARD — NON-NEGOTIABLE:
+- NO generic openers ("In today's fast-paced...", "In the ever-evolving landscape")
+- NO empty jargon ("game-changer", "leverage", "synergy", "cutting-edge", "revolutionize")
+- At least 1 named competitor/alternative with specific comparison
+- At least 1 concrete example (named client, tool, case)
+- Vary sentence openers — never 3+ sentences starting the same way
+- Every statistic MUST have source+year: "3.7× traffic lift (Source, 2026)"
+- Minimum 2000 words
+
+AUTHOR: Ottmar J.G. Francisca (default) · https://contentscale.site/about
+REQUIRED ELEMENTS: Direct answer, TL;DR, TOC, H2 structure, FAQ (5+ voice-search questions), data table
+REQUIRED JSON-LD: Article schema with author.Person
+
+Return ONLY the full HTML from <article> onwards. No markdown fences. End with <!-- word_count: X -->.`;
+
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const result = await callGeminiWithFallback(
+      geminiKey,
+      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
+    );
+    if (!result.ok) throw new Error(`Gemini: ${result.errorMessage || result.status}`);
+    const raw = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!raw) throw new Error('No content generated');
+
+    const scrubbed = stripAiPlaceholders(raw);
+    let html = rewriterHelpers.stripForbiddenPatterns(scrubbed.html);
+    const validation = rewriterHelpers.validateBofuQuality(html);
+
+    if (!validation.ok) {
+      // Hard fail on BOFU for writer too — consistent with rewriter
+      await pool.query(
+        `UPDATE content_bulk_items
+         SET status='failed', bofu_score=$2, error_message=$3, result_data=$4, updated_at=NOW()
+         WHERE id=$1`,
+        [item.id, validation.score,
+         'BOFU validation failed: ' + validation.violations.map(v => v.code).join(', '),
+         JSON.stringify({ violations: validation.violations, word_count: validation.wordCount })]
+      );
+      return { failed: true };
+    }
+
+    // Save as article
+    const title = (html.match(/<h1[^>]*>(.*?)<\/h1>/i) || [])[1]?.replace(/<[^>]+>/g, '').trim() || seedKeyword;
+    const artR = await pool.query(
+      `INSERT INTO content_articles (profile_id, title, slug, html_content, seed_keyword, word_count, status)
+       VALUES ($1,$2,$3,$4,$5,$6,'published') RETURNING id`,
+      [job.profile_id, title, item.new_slug, html, seedKeyword, validation.wordCount]
+    ).catch(async err => {
+      // Fallback if content_articles schema differs — store anyway
+      console.warn('[bulk write] content_articles insert failed:', err.message);
+      return { rows: [{ id: null }] };
+    });
+
+    await pool.query(
+      `UPDATE content_bulk_items
+       SET status='done', bofu_score=$2, article_id=$3, result_data=$4, updated_at=NOW()
+       WHERE id=$1`,
+      [item.id, validation.score, artR.rows[0].id, JSON.stringify({
+        html_length: html.length,
+        word_count: validation.wordCount,
+        bofu_passed: true,
+        title
+      })]
+    );
+    return { success: true };
+  }
+}
+
+async function bulkWorkerTick() {
+  if (_bulkWorkerRunning) return;
+  _bulkWorkerRunning = true;
+  try {
+    // ── A. ANALYSE PHASE: find queued items in analysing jobs ──
+    const qR = await pool.query(`
+      SELECT bi.*, bj.job_type, bj.mode, bj.geo_scope, bj.geo_value, bj.geo_country_code, bj.status as job_status
+      FROM content_bulk_items bi
+      JOIN content_bulk_jobs bj ON bj.id = bi.bulk_job_id
+      WHERE bi.status = 'queued'
+        AND bj.status IN ('analysing','executing')
+      ORDER BY bi.id ASC
+      LIMIT $1
+    `, [BULK_CONCURRENCY_PER_TICK]);
+
+    for (const item of qR.rows) {
+      const job = { id: item.bulk_job_id, profile_id: null, job_type: item.job_type, mode: item.mode,
+                    geo_scope: item.geo_scope, geo_value: item.geo_value, geo_country_code: item.geo_country_code };
+      // Need full job for profile_id
+      const jR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [item.bulk_job_id]);
+      const fullJob = jR.rows[0];
+      if (!fullJob || ['cancelled','failed'].includes(fullJob.status)) continue;
+
+      await pool.query(`UPDATE content_bulk_items SET status='analysing', updated_at=NOW() WHERE id=$1`, [item.id]);
+      try {
+        await processBulkItemAnalyse(fullJob, item);
+        await pool.query(`UPDATE content_bulk_jobs SET analysed_items=analysed_items+1 WHERE id=$1`, [fullJob.id]);
+        console.log(`[bulk] Analysed item ${item.id} (${item.input_value.slice(0,50)})`);
+      } catch(e) {
+        console.error(`[bulk] Analyse failed for item ${item.id}:`, e.message);
+        await pool.query(`UPDATE content_bulk_items SET status='failed', error_message=$2 WHERE id=$1`, [item.id, e.message]);
+        await pool.query(`UPDATE content_bulk_jobs SET failed_items=failed_items+1 WHERE id=$1`, [fullJob.id]);
+      }
+
+      // Check if analyse phase is complete for this job
+      const remaining = await pool.query(
+        `SELECT COUNT(*)::int as n FROM content_bulk_items WHERE bulk_job_id=$1 AND status='queued'`,
+        [fullJob.id]
+      );
+      if (remaining.rows[0].n === 0 && fullJob.status === 'analysing') {
+        if (fullJob.mode === 'autopilot') {
+          // In autopilot, approved is already TRUE — jump to execute phase
+          await pool.query(`UPDATE content_bulk_jobs SET status='executing', started_at=COALESCE(started_at,NOW()), approved_items=total_items WHERE id=$1`, [fullJob.id]);
+          await pool.query(`UPDATE content_bulk_items SET status='exec_queued' WHERE bulk_job_id=$1 AND status='analysed' AND approved=TRUE`, [fullJob.id]);
+          console.log(`[bulk] Job ${fullJob.id} moved analysing → executing (autopilot)`);
+        } else {
+          await pool.query(`UPDATE content_bulk_jobs SET status='awaiting_approval' WHERE id=$1`, [fullJob.id]);
+          console.log(`[bulk] Job ${fullJob.id} awaiting approval`);
+        }
+      }
+    }
+
+    // ── B. EXECUTE PHASE: find exec_queued items ──
+    const eR = await pool.query(`
+      SELECT bi.*, bj.job_type, bj.mode
+      FROM content_bulk_items bi
+      JOIN content_bulk_jobs bj ON bj.id = bi.bulk_job_id
+      WHERE bi.status = 'exec_queued'
+        AND bj.status = 'executing'
+      ORDER BY bi.id ASC
+      LIMIT $1
+    `, [BULK_CONCURRENCY_PER_TICK]);
+
+    for (const item of eR.rows) {
+      const jR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [item.bulk_job_id]);
+      const fullJob = jR.rows[0];
+      if (!fullJob || ['cancelled','failed'].includes(fullJob.status)) continue;
+
+      await pool.query(`UPDATE content_bulk_items SET status='executing', updated_at=NOW() WHERE id=$1`, [item.id]);
+      try {
+        const r = await processBulkItemExecute(fullJob, item);
+        if (r && r.success) {
+          await pool.query(`UPDATE content_bulk_jobs SET done_items=done_items+1 WHERE id=$1`, [fullJob.id]);
+        } else if (r && r.failed) {
+          await pool.query(`UPDATE content_bulk_jobs SET failed_items=failed_items+1 WHERE id=$1`, [fullJob.id]);
+        }
+        console.log(`[bulk] Executed item ${item.id}`);
+      } catch(e) {
+        console.error(`[bulk] Execute failed for item ${item.id}:`, e.message);
+        await pool.query(`UPDATE content_bulk_items SET status='failed', error_message=$2 WHERE id=$1`, [item.id, e.message]);
+        await pool.query(`UPDATE content_bulk_jobs SET failed_items=failed_items+1 WHERE id=$1`, [fullJob.id]);
+      }
+
+      // Check if execute phase complete
+      const remaining = await pool.query(
+        `SELECT COUNT(*)::int as n FROM content_bulk_items WHERE bulk_job_id=$1 AND status IN ('exec_queued','executing')`,
+        [fullJob.id]
+      );
+      if (remaining.rows[0].n === 0) {
+        await pool.query(`UPDATE content_bulk_jobs SET status='done', completed_at=NOW() WHERE id=$1`, [fullJob.id]);
+        console.log(`[bulk] Job ${fullJob.id} DONE`);
+      }
+    }
+  } catch(e) {
+    console.error('[bulk worker tick]', e);
+  } finally {
+    _bulkWorkerRunning = false;
+  }
+}
+
+function kickBulkWorker() {
+  // Fire one immediate tick (non-blocking); the interval keeps it running
+  setImmediate(() => bulkWorkerTick());
+}
+
+// Start the recurring worker
+setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
+console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms)`);
+
+// ═══════════════════════════════════════════════════════════════════════
+// END BULK AUTOPILOT
+// ═══════════════════════════════════════════════════════════════════════
 
 // ── Tracker Push ── writes executed rewrite page into cs_wf_pages via server-stored queue
 // content-engine.html calls POST /api/content/tracker-push after Execute
