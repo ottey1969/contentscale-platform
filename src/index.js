@@ -137,6 +137,24 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
 }
 
 
+// Strip AI-inserted placeholder/flag patterns from generated HTML content.
+// Used by both the article write endpoint and the news rewrite endpoint.
+function stripAiPlaceholders(html) {
+  if (!html) return html;
+  const patterns = [
+    /\s*[·\-—|]*\s*\[CONFIDENCE[^\]]*\]/gi,
+    /\s*[·\-—|]*\s*\[UNVERIFIED[^\]]*\]/gi,
+    /\s*[·\-—|]*\s*\[FLAG[^\]]*\]/gi,
+    /\s*[·\-—|]*\s*\[bron\s+nodig[^\]]*\]/gi,
+    /\s*[·\-—|]*\s*\[citation\s+needed[^\]]*\]/gi,
+    /\s*[·\-—|]*\s*\[NEEDS\s+VERIFICATION[^\]]*\]/gi,
+    /\s*[·\-—|]*\s*\[TODO[^\]]*\]/gi,
+  ];
+  let out = html, hits = 0;
+  patterns.forEach(re => { const b = out.length; out = out.replace(re, ''); if (out.length !== b) hits++; });
+  return { html: out, stripped: hits };
+}
+
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
 console.log('📧 SendGrid Key:', process.env.SENDGRID_API_KEY ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
@@ -9400,24 +9418,9 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     }
 
     // Post-processor: strip any confidence/unverified placeholder patterns that slipped through.
-    // Covers both English and Dutch variants, case-insensitive, inside or outside tags.
-    const stripPatterns = [
-      /\s*[·\-—|]*\s*\[CONFIDENCE[^\]]*\]/gi,           // [CONFIDENCE: 8/10], [CONFIDENCE: 7/10 — FLAG FOR REVIEW]
-      /\s*[·\-—|]*\s*\[UNVERIFIED[^\]]*\]/gi,           // [UNVERIFIED], [UNVERIFIED — needs human check]
-      /\s*[·\-—|]*\s*\[FLAG[^\]]*\]/gi,                 // [FLAG FOR HUMAN REVIEW]
-      /\s*[·\-—|]*\s*\[bron\s+nodig[^\]]*\]/gi,         // Dutch: [bron nodig]
-      /\s*[·\-—|]*\s*\[citation\s+needed[^\]]*\]/gi,    // [citation needed]
-      /\s*[·\-—|]*\s*\[NEEDS\s+VERIFICATION[^\]]*\]/gi, // [NEEDS VERIFICATION]
-      /\s*[·\-—|]*\s*\[TODO[^\]]*\]/gi,                 // [TODO: add stat]
-    ];
-    let cleanedHtml = htmlContent;
-    let stripped = 0;
-    stripPatterns.forEach(re => {
-      const before = cleanedHtml.length;
-      cleanedHtml = cleanedHtml.replace(re, '');
-      if (cleanedHtml.length !== before) stripped++;
-    });
-    if (stripped) console.log(`🧹 Stripped ${stripped} placeholder pattern type(s) from article output`);
+    const scrub = stripAiPlaceholders(htmlContent);
+    const cleanedHtml = scrub.html;
+    if (scrub.stripped) console.log(`🧹 [write] Stripped ${scrub.stripped} placeholder pattern type(s)`);
 
     const wordCountMatch = cleanedHtml.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
     const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(cleanedHtml.replace(/<[^>]+>/g,'').split(/\s+/).length);
@@ -9877,25 +9880,61 @@ ORIGINAL CONTENT: ${originalContent}
 
 BUSINESS CONTEXT: ${feed.profile_name} — ${feed.niche}
 
-RULES:
-1. Completely rewrite in your own words — no plagiarism
-2. Keep all factual information accurate
-3. Add value: context, explanation, what it means for the reader
-4. Include the original source as a citation at the end
-5. Optimize for search: include relevant keywords naturally
-6. Add a FAQ section with 3 questions
-7. Write 600-900 words
-8. Return as clean HTML with h1, h2, p, and a FAQ section
+═══════════════════════════════════════
+CONTENT QUALITY — STRICT RULES
+═══════════════════════════════════════
+📊 STATISTICS — REAL OR OMIT:
+- Only use statistics from the original source, with its URL as citation
+- NEVER insert labels like "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[citation needed]"
+- NEVER write "studies show" or "research indicates" without naming the concrete source
+- If no verifiable statistic exists, write generic-but-accurate sentences WITHOUT numbers
 
-Return ONLY the HTML starting with <article>`;
+🎨 READABILITY — WCAG AA (contrast 4.5:1 minimum):
+- If using any inline styles, ensure text is clearly readable on its background
+- Prefer semantic HTML over styled containers — body text should inherit site styles
+
+📱 MOBILE — RESPONSIVE FIRST:
+- No fixed widths in inline styles
+- Keep HTML clean and semantic so it reflows naturally on 320px screens
+
+✅ OUTPUT RULE:
+If you cannot verify a fact or cannot guarantee readability: OMIT IT.
+Fix issues in the output — do NOT attach warnings, disclaimers, or placeholder flags.
+
+═══════════════════════════════════════
+REWRITE RULES
+═══════════════════════════════════════
+1. Completely rewrite in your own words — no plagiarism, no copied phrases
+2. Keep all factual information accurate to the original
+3. Add value: context, explanation, what it means for the reader
+4. Include the original source as a <a href="${art.url}"> citation at the end
+5. Optimize for search: include relevant keywords naturally
+6. Add a FAQ section with 3 questions (100-150 words each)
+7. Write 600-900 words total
+8. Return as clean HTML with <article>, <h1>, <h2>, <p>, and a FAQ section
+
+Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
 
       try {
-        const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: rewritePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 4096 } })
-        });
-        const gd = await gr.json();
-        const html = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const newsResult = await callGeminiWithFallback(
+          geminiKey,
+          { contents: [{ parts: [{ text: rewritePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } } }
+        );
+        if (!newsResult.ok) {
+          console.warn(`Rewrite Gemini error for "${art.title}":`, newsResult.errorMessage || `HTTP ${newsResult.status}`);
+          continue;
+        }
+        const gd = newsResult.data;
+        const finishReason = gd?.candidates?.[0]?.finishReason;
+        const rawHtml = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!rawHtml) {
+          console.warn(`Rewrite empty for "${art.title}" (finishReason: ${finishReason || 'unknown'})`);
+          continue;
+        }
+        if (finishReason === 'MAX_TOKENS') console.warn(`⚠️ Rewrite truncated for "${art.title}" on ${newsResult.modelUsed}`);
+        const scrub = stripAiPlaceholders(rawHtml);
+        if (scrub.stripped) console.log(`🧹 [news] Stripped ${scrub.stripped} placeholder pattern type(s) from "${art.title}"`);
+        const html = scrub.html;
         const slug = art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
         const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
         const dbR = await pool.query(
