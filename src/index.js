@@ -46,6 +46,7 @@ const axios = require('axios');
 const multer = require('multer');
 const http   = require('http');
 const WebSocket = require('ws');
+const rewriterHelpers = require('./rewriter-helpers');
 const app = express();
 
 // ── Google Search Console API ──────────────────────────────────────────────
@@ -9989,44 +9990,122 @@ app.delete('/api/content/news-articles/:id', verifyAdmin, async (req, res) => {
 // ── Rewrite Analysis ──────────────────────────────────────────
 app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
   try {
-    const { profile_id, original_url, original_slug, original_title, original_html, gsc_impressions, gsc_clicks, gsc_position, gsc_keyword, gsc_pages, gsc_queries } = req.body;
+    const {
+      profile_id, original_url, original_slug, original_title, original_html,
+      gsc_impressions, gsc_clicks, gsc_position, gsc_keyword, gsc_pages, gsc_queries,
+      competitors  // NEW: [{ url, html? }, ...] up to 3
+    } = req.body;
+
     if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
-    const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
+    const profileR = await pool.query(
+      `SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations
+       FROM content_profiles cp
+       LEFT JOIN content_locations cl ON cl.profile_id=cp.id
+       WHERE cp.id=$1 GROUP BY cp.id`,
+      [profile_id]
+    );
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
 
-    // Normalize multi-line GSC inputs
-    const pagesList = (gsc_pages || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 30);
-    const queriesList = (gsc_queries || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 50);
-
-    // Fetch current page content if URL provided
-    let currentContent = original_html || '';
-    if (original_url && !currentContent) {
-      try {
-        const pageResp = await fetch(original_url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0' } });
-        const pageText = await pageResp.text();
-        currentContent = pageText.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 4000);
-      } catch(e) { console.warn('Page fetch failed:', e.message); }
+    // ═══ GSC AUTO-FILL when user didn't supply GSC data ═══
+    let gscData = {
+      impressions: gsc_impressions || 0,
+      clicks: gsc_clicks || 0,
+      position: gsc_position || 0,
+      keyword: gsc_keyword || '',
+      autoFilled: false
+    };
+    let topQueriesFromGSC = [];
+    if (!gsc_impressions && original_url && _gscServiceAccount) {
+      const pulled = await rewriterHelpers.autoFillGSC(original_url, _gscServiceAccount, axios);
+      if (pulled) {
+        gscData = {
+          impressions: pulled.impressions,
+          clicks: pulled.clicks,
+          position: pulled.position,
+          keyword: pulled.topKeyword,
+          autoFilled: true
+        };
+        topQueriesFromGSC = pulled.topQueries || [];
+        console.log(`[analyse-rewrite] GSC auto-filled for ${original_url}: ${pulled.impressions} impr, pos ${pulled.position}`);
+      }
     }
 
-    // Competitor research — prefer explicit GSC query, else top GSC page's query, else keyword/title
+    // Normalize manual multi-line GSC inputs + merge auto-filled queries
+    const pagesList = (gsc_pages || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 30);
+    const queriesList = [
+      ...(gsc_queries || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean),
+      ...topQueriesFromGSC
+    ].filter((q, i, arr) => q && arr.indexOf(q) === i).slice(0, 50);
+
+    // Fetch current page content if URL provided and no HTML given
+    let currentContent = original_html || '';
+    let currentContentFullHtml = original_html || '';
+    if (original_url && !currentContentFullHtml) {
+      try {
+        const pageResp = await fetch(original_url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+        currentContentFullHtml = await pageResp.text();
+        currentContent = currentContentFullHtml
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .substring(0, 4000);
+      } catch(e) { console.warn('Page fetch failed:', e.message); }
+    } else if (currentContentFullHtml) {
+      currentContent = currentContentFullHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 4000);
+    }
+
+    // ═══ AUTHOR DETECTION with Ottmar fallback ═══
+    const author = rewriterHelpers.extractAuthor(currentContentFullHtml);
+    console.log(`[analyse-rewrite] Author: ${author.name} (detected=${author.detected}, source=${author.source || 'default'})`);
+
+    // ═══ LAYOUT SKELETON for preservation ═══
+    const layoutSkeleton = rewriterHelpers.extractLayoutSkeleton(currentContentFullHtml);
+
+    // ═══ COMPETITOR ANALYSIS — accept URLs or pasted HTML ═══
+    let competitorData = [];
+    if (Array.isArray(competitors) && competitors.length > 0) {
+      const picks = competitors.slice(0, 3);
+      competitorData = await Promise.all(picks.map(c => rewriterHelpers.fetchCompetitorHtml(c)));
+      competitorData = competitorData.filter(c => !c.error);
+      console.log(`[analyse-rewrite] Fetched ${competitorData.length}/${picks.length} competitors`);
+    }
+
+    // Fallback competitor research via Google Custom Search when no manual competitors
     let serpResults = [];
-    const searchKw = gsc_keyword || queriesList[0] || original_title || original_slug?.replace(/-/g, ' ');
-    if (searchKw && process.env.GOOGLE_SEARCH_API_KEY) {
+    const searchKw = gscData.keyword || queriesList[0] || original_title || original_slug?.replace(/-/g, ' ');
+    if (competitorData.length === 0 && searchKw && process.env.GOOGLE_SEARCH_API_KEY) {
       try {
         const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchKw)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
-        if (sr.ok) { const sd = await sr.json(); serpResults = (sd.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })); }
+        if (sr.ok) {
+          const sd = await sr.json();
+          serpResults = (sd.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }));
+        }
       } catch(e) { /* no search */ }
     }
 
-    const gscContext = gsc_impressions ? `GSC DATA: ${gsc_impressions} impressions, ${gsc_clicks} clicks, position ${gsc_position}, primary keyword: "${gsc_keyword}"` : 'No GSC data provided';
+    const gscContext = gscData.impressions
+      ? `GSC DATA${gscData.autoFilled ? ' (auto-filled from profile)' : ''}: ${gscData.impressions} impressions, ${gscData.clicks} clicks, position ${gscData.position}, primary keyword: "${gscData.keyword}"`
+      : 'No GSC data available';
+
     const gscExtended = (queriesList.length || pagesList.length) ? `
 GSC RANKING PAGES (${pagesList.length}): ${pagesList.join(', ') || 'none'}
 GSC REAL QUERIES (${queriesList.length}) — use these to drive keyword + H2 decisions: ${queriesList.join(', ') || 'none'}` : '';
-    const slugDecision = (gsc_impressions > 1000 && gsc_clicks < 10) ? 'HIGH_IMPRESSIONS_LOW_CLICKS' : 'NORMAL';
+
+    const slugDecision = (gscData.impressions > 1000 && gscData.clicks < 10) ? 'HIGH_IMPRESSIONS_LOW_CLICKS' : 'NORMAL';
+
+    const competitorBlock = competitorData.length
+      ? competitorData.map((c, i) => `
+COMPETITOR ${i + 1} (MANUAL): ${c.url}
+Word count: ${c.wordCount} | Has schema: ${c.hasSchema} | Has FAQ: ${c.hasFaq} | Has table: ${c.hasTable}
+Top headings: ${c.headings.slice(0, 6).map(h => `H${h.level}: ${h.text}`).join(' | ')}
+Content preview: ${c.textPreview.slice(0, 1500)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`).join('\n')
+      : serpResults.map((r, i) => `${i+1}. ${r.title} — ${r.url}\n   ${r.snippet}`).join('\n\n');
 
     const analysePrompt = `You are an expert SEO strategist. Analyse this page and provide a complete rewrite strategy.
 
@@ -10040,8 +10119,12 @@ SLUG DECISION CONTEXT: ${slugDecision}
 CURRENT CONTENT (first 3000 chars):
 ${currentContent.substring(0, 3000)}
 
-TOP 5 COMPETITORS FOR "${searchKw}":
-${serpResults.map((r,i) => `${i+1}. ${r.title} — ${r.url}\n   ${r.snippet}`).join('\n\n')}
+${competitorData.length ? 'MANUAL COMPETITORS (fully analysed):' : `TOP 5 COMPETITORS FOR "${searchKw}":`}
+${competitorBlock}
+
+DETECTED AUTHOR: ${author.name}${author.detected ? ' (PRESERVE — do not change)' : ' (default — apply to output)'}
+
+LAYOUT SIGNATURE: ${layoutSkeleton ? `${layoutSkeleton.sectionCount} sections, ${layoutSkeleton.imageCount} images, ${layoutSkeleton.ctaCount} CTAs, fonts=${layoutSkeleton.fonts.join('/')}` : 'no original HTML'}
 
 BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
 
@@ -10051,8 +10134,8 @@ CRITICAL RULES:
 - If impressions > 1000 but clicks < 10: keep slug, rewrite content better — do NOT change slug
 - If keyword has stronger variant with different intent: suggest NEW page with 301 redirect note
 - 301 redirect ONLY when redirect_confidence = 100 (full intent match, zero ambiguity)
-- new_page_new_slug only when current slug serves a completely different search intent
 - If GSC real queries are provided: weave them literally into recommended_h2s and secondary_keywords
+- When manual competitors provided: identify SPECIFIC weaknesses to beat, not just generic gaps
 
 Return ONLY valid JSON:
 {
@@ -10064,7 +10147,7 @@ Return ONLY valid JSON:
   "stronger_seed_keyword": "better keyword if found",
   "new_slug_suggestion": "only if truly different intent",
   "competitor_analysis": [
-    { "url": "...", "what_they_do_well": "...", "weaknesses": "...", "word_count_estimate": 1500 }
+    { "url": "...", "what_they_do_well": "...", "weaknesses": "...", "word_count_estimate": 1500, "beat_strategy": "specific way we beat them" }
   ],
   "content_gaps": ["gap1","gap2","gap3"],
   "ai_overview_opportunities": ["how to appear in AIO 1","how to 2"],
@@ -10107,18 +10190,35 @@ Return ONLY valid JSON:
         analysis = JSON.parse(jm[0]);
       }
     } catch (parseErr) {
-      console.error('Analyse JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
+      console.error('Analyse JSON parse failed:', parseErr.message);
       return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
     }
 
-    // Save rewrite record (stash GSC pages/queries into analysis_data JSON so execute-rewrite can use them)
+    // ═══ Stash GSC + author + layout + competitors in analysis_data ═══
     analysis.gsc_pages = pagesList;
     analysis.gsc_queries = queriesList;
+    analysis.gsc_auto_filled = gscData.autoFilled;
+    analysis.author = author;
+    analysis.layout_skeleton = layoutSkeleton;
+    analysis.competitors_manual = competitorData;
+
     const rwR = await pool.query(
-      `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'analysed') RETURNING *`,
-      [profile_id, original_url, original_slug, original_title, original_html||'', gsc_impressions||0, gsc_clicks||0, gsc_position||0, gsc_keyword||'', JSON.stringify(analysis), analysis.recommendation, analysis.new_slug_suggestion||original_slug, analysis.stronger_seed_keyword||gsc_keyword||'']
+      `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'analysed') RETURNING *`,
+      [profile_id, original_url, original_slug, original_title, currentContentFullHtml||'',
+       gscData.impressions, gscData.clicks, gscData.position, gscData.keyword,
+       JSON.stringify(analysis), analysis.recommendation,
+       analysis.new_slug_suggestion||original_slug, analysis.stronger_seed_keyword||gscData.keyword||'']
     );
-    res.json({ success: true, rewrite: rwR.rows[0], analysis });
+    res.json({
+      success: true,
+      rewrite: rwR.rows[0],
+      analysis,
+      gsc_auto_filled: gscData.autoFilled,
+      author_detected: author.detected,
+      author_name: author.name,
+      competitor_count: competitorData.length
+    });
   } catch(e) {
     console.error('Analyse error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
@@ -10133,30 +10233,37 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res
     try { return JSON.parse(v); } catch (_) { return fallback; }
   };
   try {
-    const { keep_images_urls } = req.body;
-    const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
+    const { keep_images_urls, max_regen = 2 } = req.body;
+    const rwR = await pool.query(
+      `SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template
+       FROM content_rewrites r
+       JOIN content_profiles cp ON cp.id=r.profile_id
+       WHERE r.id=$1`,
+      [req.params.rewriteId]
+    );
     if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
     const rw = rwR.rows[0];
     const analysis = safeParse(rw.analysis_data, {});
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
-    // GSC pages/queries saved from analyse step
     const gscPagesRW = Array.isArray(analysis.gsc_pages) ? analysis.gsc_pages : [];
     const gscQueriesRW = Array.isArray(analysis.gsc_queries) ? analysis.gsc_queries : [];
+    const author = analysis.author || rewriterHelpers.DEFAULT_AUTHOR;
+    const layoutSkeleton = analysis.layout_skeleton || null;
+    const competitorsManual = Array.isArray(analysis.competitors_manual) ? analysis.competitors_manual : [];
+
     const gscBlockRW = (gscPagesRW.length || gscQueriesRW.length) ? `
 GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${gscPagesRW.join(', ') || '—'}
 GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in headings en body:
 ${gscQueriesRW.join(', ') || '—'}
 ` : '';
 
-    // Get money pages for internal linking
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
     const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
 
     const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
 
-    // Fetch business_info and sitemap for real data
     const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain FROM content_profiles WHERE id=$1`, [rw.profile_id]);
     const profBi = profBiR.rows[0] || {};
     const biRW = safeParse(profBi.business_info, {}) || {};
@@ -10172,31 +10279,31 @@ ${gscQueriesRW.join(', ') || '—'}
       ? `Gebruik ALLEEN deze gegevens. Verzin NOOIT contactgegevens die niet hierboven staan.`
       : `Geen bedrijfsgegevens beschikbaar. Verzin GEEN telefoonnummers, adressen of e-mails. Gebruik [CONTACT].`;
 
-    // Content quality rules — shared with write and news endpoints
     const qualityBlock = `
 ═══════════════════════════════════════
 CONTENT KWALITEIT — STRIKTE REGELS
 ═══════════════════════════════════════
 📊 STATISTIEKEN — ECHT OF WEGLATEN:
 - Alleen verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
-- NOOIT labels zoals "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[bron nodig]"
-- NOOIT "studies tonen aan" zonder concrete genoemde bron
-- Zonder verifieerbare stat: schrijf algemene accurate zinnen ZONDER getallen
+- Elke statistiek MOET bron+jaar hebben: "3.7× traffic lift (ContentScale, 2026)"
+- NOOIT labels zoals "[UNVERIFIED]", "[bron nodig]"
 - Bronnen uit 2024-2026
 
-🎨 LEESBAARHEID — WCAG AA (contrast 4.5:1 minimum):
-- Elke achtergrond/tekst combinatie in CSS controleren
-- Bij gekleurde achtergronden: expliciet leesbare tekstkleuren zetten
-- NOOIT contrastproblemen in commentaar noteren — fix ze
+🎯 BOFU STANDAARD — NIET ONDERHANDELBAAR:
+- GEEN generic openers: "In today's fast-paced digital world", "In the ever-evolving landscape", "Gone are the days"
+- GEEN leeg jargon: "game-changer", "unlock potential", "leverage power", "cutting-edge", "revolutionize", "synergy"
+- Minstens 1 genoemde concurrent/alternatief met specifieke vergelijking
+- Minstens 1 concreet voorbeeld (genoemde klant, tool, case)
+- Varieer zinsbeginnen — niet 3+ zinnen achter elkaar met dezelfde opener
 
-📱 MOBIEL — RESPONSIVE VERPLICHT:
-- Touch targets minimaal 44px
-- Tekst leesbaar op 320px schermbreedte
-- Proactief mobiele fixes toevoegen
+🎨 LEESBAARHEID — WCAG AA:
+- Tekst minstens 4.5:1 contrast
+- Touch targets 44px+, leesbaar op 320px
 
-✅ OUTPUT REGEL:
-Als je iets niet kunt verifiëren of leesbaarheid niet kunt garanderen: LAAT HET WEG.
-Fix issues in de output — plak GEEN waarschuwingen of placeholders aan het eindresultaat.
+✍️ AUTEUR — NOOIT AANPASSEN:
+- Auteur van deze pagina: ${author.name}
+- ${author.detected ? 'GEDETECTEERD in origineel — behoud exact' : 'STANDAARD (Ottmar) — voeg toe als niet aanwezig'}
+- Auteur-URL: ${author.url || 'https://contentscale.site/about'}
 `;
 
     let sitemapUrlsRW = [];
@@ -10213,17 +10320,32 @@ Fix issues in de output — plak GEEN waarschuwingen of placeholders aan het ein
       ? `Gebruik ALLEEN deze exacte sitemap-URLs:\n${sitemapUrlsRW.map(u=>`- ${u}`).join('\n')}`
       : 'Geen sitemap — voeg GEEN interne links toe.';
 
-    const schemaObjRW = {'@context':'https://schema.org','@type':biRW.schema_type||'LocalBusiness','name':biRW.business_name||rw.profile_name,'url':profBi.domain?(profBi.domain.startsWith('http')?profBi.domain:'https://'+profBi.domain):undefined};
+    const schemaObjRW = {
+      '@context':'https://schema.org',
+      '@type':biRW.schema_type||'LocalBusiness',
+      'name':biRW.business_name||rw.profile_name,
+      'url':profBi.domain?(profBi.domain.startsWith('http')?profBi.domain:'https://'+profBi.domain):undefined
+    };
     if (biRW.phone)   schemaObjRW['telephone'] = biRW.phone;
     if (biRW.email)   schemaObjRW['email'] = biRW.email;
     if (biRW.address) schemaObjRW['address'] = {'@type':'PostalAddress','streetAddress':biRW.address,'addressLocality':biRW.city,'addressCountry':biRW.country};
 
+    const competitorBeatBlock = competitorsManual.length
+      ? `\n═══ CONCURRENTEN DIE JE MOET VERSLAAN ═══\n${competitorsManual.map((c, i) => `
+CONCURRENT ${i+1}: ${c.url} (${c.wordCount} woorden)
+Headings: ${c.headings.slice(0,5).map(h=>h.text).join(' | ')}
+Heeft schema: ${c.hasSchema} | Heeft FAQ: ${c.hasFaq} | Heeft table: ${c.hasTable}
+VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Meer specifiek, meer cited, meer concreet'}`).join('\n')}`
+      : '';
+
+    // ═══ BUILD PROMPT — THREE MODES ═══
+    const hasTemplate = rw.html_template && rw.html_template.trim().length > 50;
+    const hasOriginalLayout = layoutSkeleton && rw.original_html && rw.original_html.length > 500;
+
     let writePromptRW;
 
-    if (rw.html_template && rw.html_template.trim().length > 50) {
-      // ═══════════════════════════════════════════════
-      // TEMPLATE MODE — fill in, do NOT restructure
-      // ═══════════════════════════════════════════════
+    if (hasTemplate) {
+      // MODE 1: TEMPLATE — fill in, do NOT restructure
       writePromptRW = `Je bent een SEO-contentspecialist. Vul dit HTML-template in met verbeterde content. Verander de HTML-structuur NIET.
 
 ═══════════════════════════════════════
@@ -10240,6 +10362,7 @@ DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
 ${gscBlockRW}
+${competitorBeatBlock}
 REWRITE STRATEGIE:
 ${analysis.rewrite_strategy || ''}
 
@@ -10256,7 +10379,7 @@ ${internalLinksRW}
 
 JSON-LD SCHEMA'S (toevoegen voor </article>):
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
 ${imageNote}
 
 ═══════════════════════════════════════
@@ -10266,16 +10389,62 @@ ${rw.html_template}
 
 Geef ALLEEN de ingevulde template terug. Geen uitleg, geen markdown. Eindig met <!-- word_count: X -->.`;
 
+    } else if (hasOriginalLayout) {
+      // MODE 2 (NEW): LAYOUT-PRESERVING REWRITE — use original HTML as skeleton
+      writePromptRW = `Je bent een elite SEO-contentschrijver. Je krijgt een bestaande pagina. Herschrijf de TEKST, behoud de LAYOUT exact.
+
+═══════════════════════════════════════
+ABSOLUTE LAYOUT-REGELS
+═══════════════════════════════════════
+1. Behoud ALLE HTML-tags, CSS-klassen, IDs exact zoals in origineel
+2. Behoud ALLE inline styles en kleurwaarden
+3. Behoud ALLE <img> tags met src/alt/positioning
+4. Behoud ALLE bestaande JSON-LD schema's (update alleen dateModified, description, wordCount)
+5. Behoud auteur-blok zoals aanwezig — vervang NIET
+6. Behoud nav/header/footer volledig — raak alleen body content aan
+7. Vervang ALLEEN tekst-inhoud van <p>, <li>, <h2>, <h3>, <h4> binnen content zones
+
+BRAND SIGNATUUR (behoud):
+- Kleuren: ${(layoutSkeleton.brandColors||[]).slice(0,8).join(', ')}
+- Fonts: ${(layoutSkeleton.fonts||[]).join(', ')}
+- CSS vars: ${(layoutSkeleton.cssVars||[]).slice(0,6).map(v=>`${v.name}=${v.value}`).join('; ')}
+- Sections: ${layoutSkeleton.sectionCount} | Images: ${layoutSkeleton.imageCount} | CTAs: ${layoutSkeleton.ctaCount}
+
+${antiFacts}
+${qualityBlock}
+BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
+GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
+${gscBlockRW}
+${competitorBeatBlock}
+SLUG BEWAREN: ${rw.original_slug}
+DOELWOORDTELLING: ${analysis.target_word_count || 2500}+ (dezelfde layout, betere tekst)
+
+REWRITE STRATEGIE: ${analysis.rewrite_strategy || ''}
+SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
+
+INTERNE LINKS: ${internalLinksRW}
+MONEY PAGES: ${moneyPages}
+${imageNote}
+
+BESTAANDE JSON-LD SCHEMA'S (behoud, update alleen dateModified):
+${(layoutSkeleton.schemaBlocks||[]).slice(0,3).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,400)}`).join('\n\n')}
+
+═══════════════════════════════════════
+ORIGINELE PAGINA — HERSCHRIJF DE TEKST, BEHOUD DE LAYOUT
+═══════════════════════════════════════
+${rw.original_html.slice(0, 50000)}
+
+Geef ALLEEN de herschreven HTML terug. Geen markdown, geen uitleg. Eindig met <!-- word_count: X -->.`;
+
     } else {
-      // ═══════════════════════════════════════════════
-      // FREE-WRITE MODE — schrijf nieuwe HTML
-      // ═══════════════════════════════════════════════
-      writePromptRW = `Je bent een elite SEO-contentschrijver. Herschrijf deze pagina zodat hij significant beter rankt. Minimaal ${analysis.target_word_count || 2500} woorden — stop NOOIT vroeg.
+      // MODE 3: FREE-WRITE
+      writePromptRW = `Je bent een elite SEO-contentschrijver. Herschrijf deze pagina zodat hij significant beter rankt. Minimaal ${analysis.target_word_count || 2500} woorden.
 ${qualityBlock}
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
 ${gscBlockRW}
+${competitorBeatBlock}
 SLUG BEWAREN: ${rw.original_slug}
 AANBEVOLEN TITEL: ${analysis.recommended_title || rw.original_title}
 DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
@@ -10283,52 +10452,111 @@ DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
 REWRITE STRATEGIE: ${analysis.rewrite_strategy || ''}
 STRUCTUUR: ${(analysis.recommended_h2s||[]).map((h,i)=>`H2 ${i+1}: ${h}`).join('\n')}
 
+AUTEUR (voeg toe aan <article> en schema):
+${author.name} · ${author.url || 'https://contentscale.site/about'}
+
 VERPLICHTE ELEMENTEN: Direct antwoord, TOC, datatable, TL;DR, FAQ (5+ vragen, voice-search)
-JSON-LD: <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
+
+JSON-LD verplicht:
+<script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
+
 AI OVERVIEW: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
 VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
 SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
-CONCURRENTIEGATEN: ${(analysis.competitor_analysis||[]).map(c=>c.weaknesses).filter(Boolean).join(' | ')}
 ${imageNote}
 
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
 
-    const rwResult = await callGeminiWithFallback(
-      geminiKey,
-      { contents: [{ parts: [{ text: writePromptRW }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
-    );
-    if (!rwResult.ok) {
-      const apiErr = rwResult.errorMessage || `Gemini HTTP ${rwResult.status}`;
-      console.error('Execute-rewrite Gemini error:', apiErr, rwResult.data);
-      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: rwResult.modelUsed });
+    // ═══ REGENERATION LOOP — HARD FAIL on final attempt ═══
+    let html = '';
+    let validationResult = null;
+    let wasTruncated = false;
+    let modelUsed = '';
+    let attemptsUsed = 0;
+    const violationHistory = [];
+
+    for (let attempt = 0; attempt <= max_regen; attempt++) {
+      attemptsUsed = attempt + 1;
+      const promptThisAttempt = attempt === 0
+        ? writePromptRW
+        : `${writePromptRW}\n\n═══ VORIGE POGING AFGEWEZEN ═══\nDe vorige poging had deze problemen — los ze op:\n${violationHistory[violationHistory.length-1].map(v => `- ${v.code}: ${v.hint}`).join('\n')}\n\nSCHRIJF NU OPNIEUW — los elk probleem op.`;
+
+      const rwResult = await callGeminiWithFallback(
+        geminiKey,
+        { contents: [{ parts: [{ text: promptThisAttempt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
+      );
+      if (!rwResult.ok) {
+        const apiErr = rwResult.errorMessage || `Gemini HTTP ${rwResult.status}`;
+        return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: rwResult.modelUsed });
+      }
+      const blockReason = rwResult.data?.promptFeedback?.blockReason;
+      if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked rewrite: ${blockReason}` });
+      const finishReason = rwResult.data?.candidates?.[0]?.finishReason;
+      const rawHtml = rwResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!rawHtml) return res.status(502).json({ success: false, error: `No content generated (finishReason: ${finishReason})` });
+
+      wasTruncated = finishReason === 'MAX_TOKENS';
+      modelUsed = rwResult.modelUsed;
+
+      const scrubbed = stripAiPlaceholders(rawHtml);
+      let candidate = rewriterHelpers.stripForbiddenPatterns(scrubbed.html);
+      validationResult = rewriterHelpers.validateBofuQuality(candidate);
+
+      console.log(`[execute-rewrite] Attempt ${attemptsUsed}: score=${validationResult.score} violations=${validationResult.violations.length}`);
+
+      if (validationResult.ok) {
+        html = candidate;
+        break;
+      }
+      violationHistory.push(validationResult.violations);
+
+      // HARD FAIL — return 422 after max_regen attempts with no pass
+      if (attempt === max_regen) {
+        console.warn(`[execute-rewrite] HARD FAIL after ${attemptsUsed} attempts — BOFU score ${validationResult.score}`);
+        return res.status(422).json({
+          success: false,
+          error: 'Rewrite failed BOFU quality validation after ' + attemptsUsed + ' attempts. Tighten profile data (niche, USPs, audience) or supply stronger competitor examples and try again.',
+          bofu_score: validationResult.score,
+          bofu_violations: validationResult.violations,
+          regeneration_attempts: attemptsUsed,
+          word_count: validationResult.wordCount,
+          hint: 'Common causes: (1) profile has empty niche/audience, (2) no verified business facts, (3) no competitors provided, (4) prompt keywords too generic.'
+        });
+      }
     }
-    const blockReason = rwResult.data?.promptFeedback?.blockReason;
-    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the rewrite prompt: ${blockReason}` });
-    const finishReason = rwResult.data?.candidates?.[0]?.finishReason;
-    const rawHtml = rwResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawHtml) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: rwResult.modelUsed });
-    const wasTruncated = finishReason === 'MAX_TOKENS';
-    if (wasTruncated) console.warn(`⚠️ Rewrite truncated (MAX_TOKENS) on ${rwResult.modelUsed}`);
-    const scrub = stripAiPlaceholders(rawHtml);
-    if (scrub.stripped) console.log(`🧹 [rewrite] Stripped ${scrub.stripped} placeholder pattern type(s)`);
-    const html = scrub.html;
+
     const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
 
-    await pool.query(`UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`, [html, analysis.recommended_title||rw.original_title, wc, rw.id]);
+    await pool.query(
+      `UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`,
+      [html, analysis.recommended_title||rw.original_title, wc, rw.id]
+    );
+
     const ctrCalc = (rw.gsc_clicks > 0 && rw.gsc_impressions > 0)
       ? (rw.gsc_clicks / rw.gsc_impressions * 100).toFixed(2)
       : null;
+
     res.json({
-      success: true, html,
+      success: true,
+      html,
       title: analysis.recommended_title || rw.original_title,
       word_count: wc,
       slug: rw.original_slug,
       recommendation: analysis.recommendation,
       truncated: wasTruncated,
+      model_used: modelUsed,
+      bofu_score: validationResult?.score,
+      bofu_passed: true,
+      bofu_violations: [],
+      regeneration_attempts: attemptsUsed,
+      mode_used: hasTemplate ? 'template' : hasOriginalLayout ? 'layout_preserved' : 'free_write',
+      author_used: author.name,
+      author_detected: author.detected,
       tracker_page: {
         url: rw.original_url,
         keyword: rw.gsc_keyword || rw.new_seed_keyword || '',
