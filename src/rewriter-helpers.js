@@ -361,6 +361,203 @@ function stripForbiddenPatterns(html) {
   return out;
 }
 
+// ── 6. INTENT MATCH SCORING ────────────────────────────────────────────────
+// Scores how well a given slug/URL matches the target keyword's search intent.
+// Used by bulk rewriter to decide: keep slug, suggest new slug, or 301 redirect.
+//
+// Returns: { score: 0-100, decision: 'keep'|'rewrite_new'|'redirect_301', reasoning }
+//
+// Scoring breakdown (100 total):
+//   - 40pts: slug word-wise match to keyword tokens
+//   - 30pts: commercial/transactional intent alignment (slug has buying markers)
+//   - 30pts: GSC queries cluster around the keyword (semantic cohesion)
+//
+// Decisions:
+//   score >= 80  → keep     (slug serves intent well, just rewrite content)
+//   50-79        → keep     (borderline — flag for review but keep by default)
+//   30-49        → rewrite_new (slug is weak — suggest new slug, keep old as content)
+//   < 30         → redirect_301 (slug is wrong for intent — redirect old to new)
+
+const COMMERCIAL_MARKERS = [
+  'kopen', 'prijs', 'kosten', 'offerte', 'buy', 'price', 'cost', 'quote',
+  'near-me', 'dichtbij', 'in-de-buurt', 'service', 'services', 'hire', 'inhuren',
+  'best', 'beste', 'top', 'review', 'reviews', 'vergelijk', 'compare',
+  'vs', 'versus', 'alternative', 'alternatief'
+];
+
+const INFORMATIONAL_MARKERS = [
+  'how', 'hoe', 'what', 'wat', 'why', 'waarom', 'when', 'wanneer',
+  'guide', 'gids', 'tutorial', 'tips', 'beginners', 'uitleg', 'explained'
+];
+
+function tokenize(s) {
+  if (!s) return [];
+  return String(s)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .split(/[\s-]+/)
+    .filter(t => t.length >= 2);
+}
+
+function scoreIntentMatch(slug, keyword, gscQueries) {
+  const slugTokens = tokenize(slug);
+  const kwTokens = tokenize(keyword);
+  const queries = Array.isArray(gscQueries) ? gscQueries.slice(0, 15) : [];
+
+  if (!kwTokens.length) {
+    return { score: 0, decision: 'rewrite_new', reasoning: 'No keyword provided' };
+  }
+
+  // 1. SLUG WORD MATCH (40 pts)
+  let wordMatchPts = 0;
+  const matched = kwTokens.filter(t => slugTokens.includes(t));
+  if (kwTokens.length > 0) {
+    wordMatchPts = Math.round((matched.length / kwTokens.length) * 40);
+  }
+
+  // 2. INTENT ALIGNMENT (30 pts)
+  // Does slug's character reflect the keyword's intent type?
+  let intentPts = 15; // neutral baseline
+  const kwHasCommercial = kwTokens.some(t => COMMERCIAL_MARKERS.includes(t));
+  const kwHasInformational = kwTokens.some(t => INFORMATIONAL_MARKERS.includes(t));
+  const slugHasCommercial = slugTokens.some(t => COMMERCIAL_MARKERS.includes(t));
+  const slugHasInformational = slugTokens.some(t => INFORMATIONAL_MARKERS.includes(t));
+
+  if (kwHasCommercial && slugHasCommercial) intentPts = 30;
+  else if (kwHasInformational && slugHasInformational) intentPts = 30;
+  else if (kwHasCommercial && slugHasInformational) intentPts = 5;   // bad mismatch
+  else if (kwHasInformational && slugHasCommercial) intentPts = 5;   // bad mismatch
+  else if (!kwHasCommercial && !kwHasInformational) intentPts = 20;  // neutral keyword
+  else if (kwTokens.length <= 2) intentPts = 25; // short kw, less strict
+
+  // 3. GSC QUERY COHESION (30 pts)
+  let cohesionPts = 0;
+  if (queries.length === 0) {
+    cohesionPts = 15; // neutral when no GSC data
+  } else {
+    // How many of the top GSC queries contain the keyword tokens?
+    const queryHits = queries.filter(q => {
+      const qTokens = tokenize(q);
+      const overlap = kwTokens.filter(t => qTokens.includes(t)).length;
+      return overlap >= Math.max(1, Math.floor(kwTokens.length * 0.5));
+    }).length;
+    cohesionPts = Math.min(30, Math.round((queryHits / queries.length) * 30));
+  }
+
+  const score = wordMatchPts + intentPts + cohesionPts;
+
+  let decision, reasoning;
+  if (score >= 80) {
+    decision = 'keep';
+    reasoning = `Strong match (${wordMatchPts}+${intentPts}+${cohesionPts}) — slug serves this keyword well.`;
+  } else if (score >= 50) {
+    decision = 'keep';
+    reasoning = `Moderate match (${wordMatchPts}+${intentPts}+${cohesionPts}) — slug works but could be sharper. Rewriting content keeps ranking authority.`;
+  } else if (score >= 30) {
+    decision = 'rewrite_new';
+    reasoning = `Weak match (${wordMatchPts}+${intentPts}+${cohesionPts}) — suggest new slug for this intent, keep old page as different variant.`;
+  } else {
+    decision = 'redirect_301';
+    reasoning = `Poor match (${wordMatchPts}+${intentPts}+${cohesionPts}) — slug wrong for intent. Publish new page and 301 redirect old slug.`;
+  }
+
+  return {
+    score,
+    decision,
+    reasoning,
+    breakdown: { word_match: wordMatchPts, intent_alignment: intentPts, gsc_cohesion: cohesionPts }
+  };
+}
+
+// ── 7. GEO COMPETITOR FINDER ───────────────────────────────────────────────
+// Auto-finds competitors via Google Custom Search, with geo scoping.
+//
+// geoScope options:
+//   'city'     → "${keyword} ${city}"
+//   'province' → "${keyword} ${province}"
+//   'country'  → "${keyword}" with cr=countryCode (e.g. 'NL')
+//   'custom'   → use customGeo string literally
+//   'global'   → just the keyword
+//
+// Returns array of {url, title, snippet} — up to `limit` results, excludes own domain.
+async function findCompetitorsByGeo(keyword, options = {}) {
+  const {
+    geoScope = 'city',
+    city = '',
+    province = '',
+    country = '',
+    countryCode = '', // ISO 3166-1 alpha-2, e.g. 'NL'
+    customGeo = '',
+    excludeDomain = '',
+    limit = 3,
+    apiKey = process.env.GOOGLE_SEARCH_API_KEY,
+    cx = process.env.GOOGLE_SEARCH_CX
+  } = options;
+
+  if (!apiKey || !cx) {
+    console.warn('[geo-competitors] GOOGLE_SEARCH_API_KEY or CX not configured');
+    return [];
+  }
+  if (!keyword) return [];
+
+  let query = keyword;
+  let crParam = '';
+
+  if (geoScope === 'city' && city) query = `${keyword} ${city}`;
+  else if (geoScope === 'province' && province) query = `${keyword} ${province}`;
+  else if (geoScope === 'country' && country) {
+    query = `${keyword} ${country}`;
+    if (countryCode) crParam = `&cr=country${countryCode.toUpperCase()}`;
+  } else if (geoScope === 'custom' && customGeo) query = `${keyword} ${customGeo}`;
+  // geoScope === 'global' → use keyword as-is
+
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&key=${apiKey}&cx=${cx}&num=${Math.min(10, limit + 3)}${crParam}`;
+
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) {
+      console.warn(`[geo-competitors] Search failed: HTTP ${r.status}`);
+      return [];
+    }
+    const data = await r.json();
+    let items = (data.items || []).map(i => ({
+      url: i.link,
+      title: i.title,
+      snippet: i.snippet || ''
+    }));
+
+    // Exclude own domain
+    if (excludeDomain) {
+      const ownHost = excludeDomain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+      items = items.filter(i => {
+        try {
+          const h = new URL(i.url).hostname.replace(/^www\./, '');
+          return !h.includes(ownHost) && !ownHost.includes(h);
+        } catch { return true; }
+      });
+    }
+
+    return items.slice(0, limit);
+  } catch (e) {
+    console.warn('[geo-competitors] Error:', e.message);
+    return [];
+  }
+}
+
+// ── 8. BULK JOB HELPERS ────────────────────────────────────────────────────
+// Simple cost estimator for a bulk job (rough, good enough for UX warnings)
+function estimateBulkCostUSD(itemCount, jobType) {
+  // Based on Gemini 2.5 Flash @ ~$0.075/1M input + $0.30/1M output
+  // analyse avg: ~3k in + 1k out = ~$0.001
+  // execute avg: ~5k in + 10k out = ~$0.004
+  // competitor fetch: ~$0.001 per competitor
+  // write mode: analyse + execute + 3 competitors = ~$0.01
+  // rewrite mode: same + GSC call (free) = ~$0.01
+  const perItem = jobType === 'write' ? 0.012 : 0.014;
+  return Math.round(itemCount * perItem * 100) / 100;
+}
+
+
 // ── EXPORTS ────────────────────────────────────────────────────────────────
 module.exports = {
   DEFAULT_AUTHOR,
@@ -369,5 +566,8 @@ module.exports = {
   extractAuthor,
   extractLayoutSkeleton,
   validateBofuQuality,
-  stripForbiddenPatterns
+  stripForbiddenPatterns,
+  scoreIntentMatch,
+  findCompetitorsByGeo,
+  estimateBulkCostUSD
 };

@@ -75,6 +75,7 @@ textarea{resize:vertical;min-height:100px;}
     <button class="nav-tab" onclick="showPanel('articles',this)">📄 Articles</button>
     <button class="nav-tab" onclick="showPanel('clusters',this)">🕸️ Clusters</button>
     <button class="nav-tab" onclick="showPanel('rewrite',this)">🔄 Rewrite</button>
+    <button class="nav-tab" onclick="showPanel('bulk',this)">⚡ Bulk Autopilot</button>
     <button class="nav-tab" onclick="showPanel('news',this)">📰 News</button>
     <button class="nav-tab" onclick="showPanel('stats',this)">📊 Stats Study</button>
   </div>
@@ -337,6 +338,135 @@ textarea{resize:vertical;min-height:100px;}
   </div>
 </div>
 
+<!-- ══ BULK AUTOPILOT PANEL ══ -->
+<div id="panel-bulk" class="tab-panel" style="display:none;">
+  <div style="margin-bottom:20px;">
+    <h2 style="font-size:1.3rem;font-weight:800;">⚡ Bulk Autopilot</h2>
+    <p style="font-size:13px;color:#6b7280;margin-top:4px;">Schrijf of rewrite honderden pagina's automatisch — met GSC auto-fill, geo-based competitors, intent scoring, BOFU validation</p>
+  </div>
+
+  <!-- Job Creator -->
+  <div class="card" id="bulkCreatorCard">
+    <div class="card-title">🆕 Create New Job</div>
+    <div class="grid-2" style="margin-bottom:14px;">
+      <div>
+        <label>Business Profile</label>
+        <select id="bulkProfile" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;">
+          <option value="">Select profile</option>
+        </select>
+      </div>
+      <div>
+        <label>Job Type</label>
+        <select id="bulkJobType" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;" onchange="bulkUpdateInputHint()">
+          <option value="rewrite">🔄 Rewrite existing pages (URLs)</option>
+          <option value="write">✍️ Write new articles (keywords)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:14px;">
+      <div>
+        <label>Execution Mode</label>
+        <select id="bulkMode" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;">
+          <option value="approve">🛡️ Approve Gate — analyse everything, I review before execute</option>
+          <option value="autopilot">🚀 Full Autopilot — analyse + execute without stopping</option>
+        </select>
+      </div>
+      <div>
+        <label>Geo Scope (for competitor auto-find)</label>
+        <select id="bulkGeoScope" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;" onchange="bulkUpdateGeoField()">
+          <option value="city">🏙️ City</option>
+          <option value="province">📍 Province/State</option>
+          <option value="country">🌍 Country</option>
+          <option value="custom">✏️ Custom term</option>
+          <option value="global">🌐 Global (no geo)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:14px;" id="bulkGeoFields">
+      <div>
+        <label id="bulkGeoValueLabel">City name</label>
+        <input id="bulkGeoValue" placeholder="Amsterdam">
+      </div>
+      <div id="bulkCountryCodeWrap" style="display:none;">
+        <label>ISO country code (optional, improves ranking scope)</label>
+        <input id="bulkCountryCode" placeholder="NL" maxlength="2" style="text-transform:uppercase;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <label id="bulkInputLabel" style="margin:0;">📝 URLs to rewrite (one per line)</label>
+        <span id="bulkInputCount" style="font-size:11px;color:#6b7280;">0 items</span>
+      </div>
+      <textarea id="bulkInputs" rows="10" placeholder="https://example.com/page-1&#10;https://example.com/page-2&#10;https://example.com/page-3" style="font-family:monospace;font-size:12px;min-height:220px;" oninput="bulkCountInputs()"></textarea>
+    </div>
+
+    <!-- Cost estimate -->
+    <div id="bulkCostBanner" style="display:none;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#fbbf24;">
+      <strong id="bulkCostAmount">$0</strong> estimated · <span id="bulkCostBreakdown"></span>
+      <span id="bulkCostWarning" style="display:none;color:#f87171;margin-left:8px;">⚠ Large batch — confirm before submit</span>
+    </div>
+
+    <button class="btn btn-primary" onclick="createBulkJob()" id="btnCreateBulk">⚡ Create Bulk Job</button>
+  </div>
+
+  <!-- Active Job Tracker -->
+  <div class="card" id="bulkActiveCard" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div>
+        <div class="card-title" style="margin:0;">🔴 Active Job — <span id="bulkActiveJobId"></span></div>
+        <div style="font-size:12px;color:#6b7280;margin-top:2px;" id="bulkActiveStatusLine"></div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="font-size:11px;" onclick="bulkStopPolling()">⏸ Stop polling</button>
+        <button class="btn btn-danger" style="font-size:11px;" onclick="bulkCancelActive()">✗ Cancel</button>
+      </div>
+    </div>
+
+    <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center;">
+        <div><div style="font-size:11px;color:#6b7280;">Total</div><div style="font-size:1.2rem;font-weight:700;" id="bulkStatTotal">0</div></div>
+        <div><div style="font-size:11px;color:#6b7280;">Analysed</div><div style="font-size:1.2rem;font-weight:700;color:#60a5fa;" id="bulkStatAnalysed">0</div></div>
+        <div><div style="font-size:11px;color:#6b7280;">Approved</div><div style="font-size:1.2rem;font-weight:700;color:#a78bfa;" id="bulkStatApproved">0</div></div>
+        <div><div style="font-size:11px;color:#6b7280;">Done</div><div style="font-size:1.2rem;font-weight:700;color:#4ade80;" id="bulkStatDone">0</div></div>
+        <div><div style="font-size:11px;color:#6b7280;">Failed</div><div style="font-size:1.2rem;font-weight:700;color:#f87171;" id="bulkStatFailed">0</div></div>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.05);border-radius:3px;margin-top:10px;overflow:hidden;">
+        <div id="bulkProgressBar" style="height:100%;background:linear-gradient(90deg,#60a5fa,#4ade80);width:0%;transition:width .4s;"></div>
+      </div>
+    </div>
+
+    <!-- Approval table (shown when awaiting_approval) -->
+    <div id="bulkApprovalBox" style="display:none;">
+      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:#a78bfa;margin-bottom:8px;">🛡️ Awaiting your approval</div>
+        <div style="font-size:12px;color:#c084fc;margin-bottom:12px;">Review the analysis below. Check items to approve, then click Execute Selected. Items left unchecked will be skipped.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="font-size:11px;" onclick="bulkToggleAll(true)">☑ Select all</button>
+          <button class="btn btn-secondary" style="font-size:11px;" onclick="bulkToggleAll(false)">☐ Deselect all</button>
+          <button class="btn btn-secondary" style="font-size:11px;" onclick="bulkSelectByDecision('keep')">✓ Only 'keep slug'</button>
+          <button class="btn btn-secondary" style="font-size:11px;" onclick="bulkSelectByIntent(80)">✓ Only intent≥80</button>
+          <button class="btn btn-success" style="font-size:12px;margin-left:auto;" onclick="bulkExecuteApproved()">▶ Execute Selected</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <div id="bulkItemsList" style="max-height:500px;overflow-y:auto;"></div>
+  </div>
+
+  <!-- Past Jobs -->
+  <div class="card" style="margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="card-title" style="margin:0;">📋 Past Jobs</div>
+      <button class="btn btn-secondary" style="font-size:12px;" onclick="loadBulkJobs()">↺ Load</button>
+    </div>
+    <div id="bulkJobsList"><div style="color:#6b7280;font-size:13px;">Select a profile and click Load.</div></div>
+  </div>
+</div>
+
 <!-- ══ NEWS PANEL ══ -->
 <div id="panel-news" class="tab-panel" style="display:none;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -588,6 +718,7 @@ function showPanel(name, btn) {
   if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
   if (name === 'clusters') { populateClusterFilter(); }
   if (name === 'rewrite') { populateAllSelects(); }
+  if (name === 'bulk') { populateAllSelects(); bulkUpdateInputHint(); bulkUpdateGeoField(); loadBulkJobs(); }
   if (name === 'news') { populateAllSelects(); }
   if (name === 'stats') { populateAllSelects(); }
 }
@@ -1189,7 +1320,7 @@ async function deleteCluster(id) {
 
 // Populate all secondary profile selects
 function populateAllSelects() {
-  var selects = ['rwProfile','statsProfile'];
+  var selects = ['rwProfile','statsProfile','bulkProfile'];
   selects.forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
@@ -1830,6 +1961,347 @@ setTimeout(function() {
 // Save on tab hide / page unload as a final safety net
 window.addEventListener('visibilitychange', function() { if (document.hidden) saveDraftNow(); });
 window.addEventListener('beforeunload', function() { saveDraftNow(); });
+
+// ═══════════════════════════════════════════════════════════════════════
+// BULK AUTOPILOT — UI
+// ═══════════════════════════════════════════════════════════════════════
+var _bulkActiveJobId = null;
+var _bulkPollTimer = null;
+var _bulkLastItems = [];
+
+function bulkUpdateInputHint() {
+  var type = document.getElementById('bulkJobType').value;
+  var label = document.getElementById('bulkInputLabel');
+  var ta = document.getElementById('bulkInputs');
+  if (type === 'write') {
+    label.textContent = '📝 Keywords for new articles (one per line)';
+    ta.placeholder = 'dakdekker amsterdam prijs\ngoedkope dakwerker noord-holland\ndakreparatie kosten\nplat dak vernieuwen';
+  } else {
+    label.textContent = '📝 URLs to rewrite (one per line)';
+    ta.placeholder = 'https://example.com/page-1\nhttps://example.com/page-2\nhttps://example.com/page-3';
+  }
+  bulkCountInputs();
+}
+
+function bulkUpdateGeoField() {
+  var scope = document.getElementById('bulkGeoScope').value;
+  var lbl = document.getElementById('bulkGeoValueLabel');
+  var inp = document.getElementById('bulkGeoValue');
+  var ccWrap = document.getElementById('bulkCountryCodeWrap');
+  var fieldsWrap = document.getElementById('bulkGeoFields');
+
+  if (scope === 'global') {
+    fieldsWrap.style.display = 'none';
+    return;
+  }
+  fieldsWrap.style.display = 'grid';
+  ccWrap.style.display = (scope === 'country') ? 'block' : 'none';
+
+  if (scope === 'city') { lbl.textContent = 'City name'; inp.placeholder = 'Amsterdam'; }
+  else if (scope === 'province') { lbl.textContent = 'Province / State'; inp.placeholder = 'Noord-Holland'; }
+  else if (scope === 'country') { lbl.textContent = 'Country name'; inp.placeholder = 'Netherlands'; }
+  else if (scope === 'custom') { lbl.textContent = 'Custom geo term'; inp.placeholder = 'EU B2B SaaS'; }
+}
+
+function bulkCountInputs() {
+  var lines = document.getElementById('bulkInputs').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  var n = lines.length;
+  document.getElementById('bulkInputCount').textContent = n + ' item' + (n === 1 ? '' : 's');
+  // Show cost banner
+  var banner = document.getElementById('bulkCostBanner');
+  if (n === 0) { banner.style.display = 'none'; return; }
+  var type = document.getElementById('bulkJobType').value;
+  // Match backend estimateBulkCostUSD
+  var perItem = type === 'write' ? 0.012 : 0.014;
+  var est = Math.round(n * perItem * 100) / 100;
+  banner.style.display = 'block';
+  document.getElementById('bulkCostAmount').textContent = '$' + est.toFixed(2);
+  document.getElementById('bulkCostBreakdown').textContent = n + ' ' + type + ' items × ~$' + perItem + ' each';
+  var warn = document.getElementById('bulkCostWarning');
+  warn.style.display = (n >= 50) ? 'inline' : 'none';
+}
+
+async function createBulkJob() {
+  var profileId = document.getElementById('bulkProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+
+  var inputs = document.getElementById('bulkInputs').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  if (inputs.length === 0) { alert('Add at least one keyword/URL'); return; }
+  if (inputs.length > 500) { alert('Max 500 items per job'); return; }
+
+  // Soft cap warning at 50+ items
+  if (inputs.length >= 50) {
+    var est = Math.round(inputs.length * (document.getElementById('bulkJobType').value === 'write' ? 0.012 : 0.014) * 100) / 100;
+    if (!confirm('You are about to submit ' + inputs.length + ' items (estimated cost $' + est.toFixed(2) + ').\n\nContinue?')) return;
+  }
+
+  var btn = document.getElementById('btnCreateBulk');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+  try {
+    var payload = {
+      profile_id: profileId,
+      job_type: document.getElementById('bulkJobType').value,
+      mode: document.getElementById('bulkMode').value,
+      geo_scope: document.getElementById('bulkGeoScope').value,
+      geo_value: document.getElementById('bulkGeoValue').value.trim(),
+      geo_country_code: document.getElementById('bulkCountryCode').value.trim().toUpperCase(),
+      inputs: inputs
+    };
+    var d = await api('/api/content/bulk/create', 'POST', payload);
+    if (!d.success) throw new Error(d.error);
+    toast('✅ Job #' + d.job.id + ' created — ' + inputs.length + ' items queued');
+    _bulkActiveJobId = d.job.id;
+    document.getElementById('bulkActiveCard').style.display = 'block';
+    document.getElementById('bulkActiveCard').scrollIntoView({ behavior: 'smooth' });
+    bulkStartPolling();
+  } catch(e) {
+    toast('Create failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '⚡ Create Bulk Job';
+  }
+}
+
+function bulkStartPolling() {
+  if (_bulkPollTimer) clearInterval(_bulkPollTimer);
+  bulkPollOnce();
+  _bulkPollTimer = setInterval(bulkPollOnce, 3000);
+}
+
+function bulkStopPolling() {
+  if (_bulkPollTimer) { clearInterval(_bulkPollTimer); _bulkPollTimer = null; }
+  toast('Polling stopped');
+}
+
+async function bulkPollOnce() {
+  if (!_bulkActiveJobId) return;
+  try {
+    var d = await api('/api/content/bulk/' + _bulkActiveJobId + '/status', 'GET');
+    if (!d.success) return;
+    _bulkLastItems = d.items || [];
+    bulkRenderStatus(d.job, d.items);
+    // Auto-stop polling on terminal states
+    if (['done','failed','cancelled'].indexOf(d.job.status) >= 0) {
+      bulkStopPolling();
+      toast('Job ' + d.job.status);
+    }
+  } catch(e) {
+    console.warn('bulk poll error', e);
+  }
+}
+
+function bulkRenderStatus(job, items) {
+  document.getElementById('bulkActiveJobId').textContent = '#' + job.id + ' (' + job.job_type + '/' + job.mode + ')';
+  var statusColor = {
+    analysing: '#60a5fa', awaiting_approval: '#a78bfa', executing: '#fbbf24',
+    done: '#4ade80', failed: '#f87171', cancelled: '#6b7280', queued: '#6b7280'
+  }[job.status] || '#9ca3af';
+  document.getElementById('bulkActiveStatusLine').innerHTML =
+    'Status: <span style="color:' + statusColor + ';font-weight:700;text-transform:uppercase;">' + job.status + '</span>' +
+    ' · Geo: ' + (job.geo_scope || 'none') + (job.geo_value ? ' (' + job.geo_value + ')' : '') +
+    ' · Est $' + (job.estimated_cost_usd || 0);
+
+  document.getElementById('bulkStatTotal').textContent = job.total_items;
+  document.getElementById('bulkStatAnalysed').textContent = job.analysed_items;
+  document.getElementById('bulkStatApproved').textContent = job.approved_items;
+  document.getElementById('bulkStatDone').textContent = job.done_items;
+  document.getElementById('bulkStatFailed').textContent = job.failed_items;
+
+  // Progress bar: analyse pct for analysing, done pct for executing
+  var pct = 0;
+  if (job.status === 'analysing') {
+    pct = job.total_items ? (job.analysed_items / job.total_items * 50) : 0;
+  } else if (job.status === 'awaiting_approval') {
+    pct = 50;
+  } else if (job.status === 'executing') {
+    pct = 50 + (job.total_items ? ((job.done_items + job.failed_items) / job.total_items * 50) : 0);
+  } else if (['done','failed','cancelled'].indexOf(job.status) >= 0) {
+    pct = 100;
+  }
+  document.getElementById('bulkProgressBar').style.width = pct + '%';
+
+  // Show approval UI only when awaiting
+  document.getElementById('bulkApprovalBox').style.display = (job.status === 'awaiting_approval') ? 'block' : 'none';
+
+  bulkRenderItems(items, job.job_type, job.status);
+}
+
+function bulkRenderItems(items, jobType, jobStatus) {
+  var showCheckboxes = (jobStatus === 'awaiting_approval');
+  var listEl = document.getElementById('bulkItemsList');
+
+  if (items.length === 0) {
+    listEl.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px;">No items yet.</div>';
+    return;
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);color:#6b7280;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">';
+  if (showCheckboxes) html += '<th style="padding:8px 6px;width:30px;"><input type="checkbox" onchange="bulkToggleAll(this.checked)" title="Select all"></th>';
+  html += '<th style="padding:8px 6px;text-align:left;">Input</th>';
+  html += '<th style="padding:8px 6px;text-align:left;">Status</th>';
+  if (jobType === 'rewrite') {
+    html += '<th style="padding:8px 6px;text-align:left;">Intent</th>';
+    html += '<th style="padding:8px 6px;text-align:left;">Decision</th>';
+    html += '<th style="padding:8px 6px;text-align:left;">New Slug</th>';
+  } else {
+    html += '<th style="padding:8px 6px;text-align:left;">Slug</th>';
+  }
+  html += '<th style="padding:8px 6px;text-align:left;">BOFU</th>';
+  html += '</tr></thead><tbody>';
+
+  items.forEach(function(it) {
+    var statusColor = {
+      queued: '#6b7280', analysing: '#60a5fa', analysed: '#a78bfa',
+      exec_queued: '#fbbf24', executing: '#fbbf24', done: '#4ade80',
+      failed: '#f87171'
+    }[it.status] || '#9ca3af';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);">';
+    if (showCheckboxes) {
+      var disabled = (it.status !== 'analysed') ? 'disabled' : '';
+      var checked = it.approved ? 'checked' : '';
+      html += '<td style="padding:8px 6px;"><input type="checkbox" class="bulk-item-chk" data-item-id="' + it.id + '" data-decision="' + (it.intent_decision||'') + '" data-intent="' + (it.intent_score||0) + '" ' + checked + ' ' + disabled + '></td>';
+    }
+    var truncated = it.input_value.length > 60 ? it.input_value.slice(0,60) + '…' : it.input_value;
+    html += '<td style="padding:8px 6px;color:#e2e8f0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(it.input_value) + '">' + escapeHtml(truncated) + '</td>';
+    html += '<td style="padding:8px 6px;color:' + statusColor + ';font-weight:600;">' + it.status + '</td>';
+    if (jobType === 'rewrite') {
+      var intentBadge = '';
+      if (it.intent_score !== null && it.intent_score !== undefined) {
+        var intentColor = it.intent_score >= 80 ? '#4ade80' : it.intent_score >= 50 ? '#fbbf24' : '#f87171';
+        intentBadge = '<span style="color:' + intentColor + ';font-weight:700;">' + it.intent_score + '/100</span>';
+      } else intentBadge = '<span style="color:#6b7280;">—</span>';
+      html += '<td style="padding:8px 6px;">' + intentBadge + '</td>';
+      var decLabel = {
+        keep: '<span style="color:#4ade80;">✓ Keep</span>',
+        rewrite_new: '<span style="color:#fbbf24;">⚠ New slug</span>',
+        redirect_301: '<span style="color:#f87171;">→ 301</span>'
+      }[it.intent_decision] || '—';
+      html += '<td style="padding:8px 6px;">' + decLabel + '</td>';
+      html += '<td style="padding:8px 6px;font-family:monospace;color:#a78bfa;font-size:11px;">' + escapeHtml(it.new_slug || '—') + '</td>';
+    } else {
+      html += '<td style="padding:8px 6px;font-family:monospace;color:#a78bfa;font-size:11px;">' + escapeHtml(it.new_slug || '—') + '</td>';
+    }
+    var bofu = '';
+    if (it.bofu_score !== null && it.bofu_score !== undefined) {
+      var bc = it.bofu_score >= 85 ? '#4ade80' : it.bofu_score >= 70 ? '#fbbf24' : '#f87171';
+      bofu = '<span style="color:' + bc + ';font-weight:700;">' + it.bofu_score + '</span>';
+    } else if (it.status === 'failed') {
+      bofu = '<span style="color:#f87171;" title="' + escapeHtml(it.error_message || '') + '">✗ fail</span>';
+    } else bofu = '<span style="color:#6b7280;">—</span>';
+    html += '<td style="padding:8px 6px;">' + bofu + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  listEl.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+
+function bulkToggleAll(checked) {
+  document.querySelectorAll('.bulk-item-chk:not([disabled])').forEach(function(chk) { chk.checked = checked; });
+}
+
+function bulkSelectByDecision(decision) {
+  document.querySelectorAll('.bulk-item-chk:not([disabled])').forEach(function(chk) {
+    chk.checked = (chk.getAttribute('data-decision') === decision);
+  });
+  toast('Selected items with decision: ' + decision);
+}
+
+function bulkSelectByIntent(minScore) {
+  document.querySelectorAll('.bulk-item-chk:not([disabled])').forEach(function(chk) {
+    chk.checked = (parseInt(chk.getAttribute('data-intent'), 10) >= minScore);
+  });
+  toast('Selected items with intent ≥ ' + minScore);
+}
+
+async function bulkExecuteApproved() {
+  if (!_bulkActiveJobId) return;
+  var checkedIds = Array.from(document.querySelectorAll('.bulk-item-chk:checked'))
+    .map(function(chk) { return parseInt(chk.getAttribute('data-item-id'), 10); });
+  if (checkedIds.length === 0) {
+    if (!confirm('No items selected — this will execute nothing. Continue?')) return;
+  } else {
+    if (!confirm('Execute ' + checkedIds.length + ' approved items?')) return;
+  }
+  try {
+    // Save approvals
+    var aR = await api('/api/content/bulk/' + _bulkActiveJobId + '/approve', 'POST', { item_ids: checkedIds });
+    if (!aR.success) throw new Error(aR.error);
+    // Kick execute
+    var eR = await api('/api/content/bulk/' + _bulkActiveJobId + '/execute', 'POST', {});
+    if (!eR.success) throw new Error(eR.error);
+    toast('▶ Executing ' + checkedIds.length + ' items...');
+    bulkStartPolling();
+  } catch(e) {
+    toast('Execute failed: ' + e.message, 'red');
+  }
+}
+
+async function bulkCancelActive() {
+  if (!_bulkActiveJobId) return;
+  if (!confirm('Cancel this job? Items still in progress will finish, but no new items start.')) return;
+  try {
+    var d = await api('/api/content/bulk/' + _bulkActiveJobId, 'DELETE');
+    if (!d.success) throw new Error(d.error);
+    toast('Job cancelled');
+    bulkStopPolling();
+  } catch(e) {
+    toast('Cancel failed: ' + e.message, 'red');
+  }
+}
+
+async function loadBulkJobs() {
+  var profileId = document.getElementById('bulkProfile').value;
+  if (!profileId) {
+    document.getElementById('bulkJobsList').innerHTML = '<div style="color:#6b7280;font-size:13px;">Select a profile first.</div>';
+    return;
+  }
+  try {
+    var d = await api('/api/content/bulk/list/' + profileId, 'GET');
+    if (!d.success) throw new Error(d.error);
+    if (!d.jobs.length) {
+      document.getElementById('bulkJobsList').innerHTML = '<div style="color:#6b7280;font-size:13px;">No jobs yet for this profile.</div>';
+      return;
+    }
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    html += '<thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);color:#6b7280;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">';
+    html += '<th style="padding:8px 6px;text-align:left;">#</th><th style="padding:8px 6px;text-align:left;">Type</th><th style="padding:8px 6px;text-align:left;">Mode</th><th style="padding:8px 6px;text-align:left;">Status</th><th style="padding:8px 6px;text-align:right;">Done/Total</th><th style="padding:8px 6px;text-align:right;">Cost</th><th style="padding:8px 6px;text-align:left;">Created</th><th></th>';
+    html += '</tr></thead><tbody>';
+    d.jobs.forEach(function(j) {
+      var statusColor = {
+        analysing: '#60a5fa', awaiting_approval: '#a78bfa', executing: '#fbbf24',
+        done: '#4ade80', failed: '#f87171', cancelled: '#6b7280', queued: '#6b7280'
+      }[j.status] || '#9ca3af';
+      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);">';
+      html += '<td style="padding:8px 6px;color:#9ca3af;">#' + j.id + '</td>';
+      html += '<td style="padding:8px 6px;">' + (j.job_type === 'write' ? '✍️ Write' : '🔄 Rewrite') + '</td>';
+      html += '<td style="padding:8px 6px;">' + (j.mode === 'autopilot' ? '🚀' : '🛡️') + ' ' + j.mode + '</td>';
+      html += '<td style="padding:8px 6px;color:' + statusColor + ';font-weight:700;">' + j.status + '</td>';
+      html += '<td style="padding:8px 6px;text-align:right;color:#9ca3af;">' + (j.done_items || 0) + '/' + j.total_items + (j.failed_items ? ' <span style="color:#f87171;">(' + j.failed_items + ' fail)</span>' : '') + '</td>';
+      html += '<td style="padding:8px 6px;text-align:right;color:#fbbf24;">$' + (j.actual_cost_usd || j.estimated_cost_usd || 0) + '</td>';
+      html += '<td style="padding:8px 6px;color:#6b7280;font-size:11px;">' + (j.created_at ? new Date(j.created_at).toLocaleString() : '') + '</td>';
+      html += '<td style="padding:8px 6px;"><button class="btn btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="bulkResumeJob(' + j.id + ')">View</button></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('bulkJobsList').innerHTML = html;
+  } catch(e) {
+    toast('Load jobs failed: ' + e.message, 'red');
+  }
+}
+
+function bulkResumeJob(jobId) {
+  _bulkActiveJobId = jobId;
+  document.getElementById('bulkActiveCard').style.display = 'block';
+  document.getElementById('bulkActiveCard').scrollIntoView({ behavior: 'smooth' });
+  bulkStartPolling();
+}
 </script>
 </body>
 </html>
