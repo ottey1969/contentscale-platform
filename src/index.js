@@ -452,7 +452,9 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    req.admin = result.rows[0];
    next();
    } catch (error) {
-   res.status(500).json({ success: false, error: 'Auth error' });
+   console.error('Auth middleware error:', error);
+   const msg = error.code ? `${error.message} (db code ${error.code})` : error.message;
+   res.status(500).json({ success: false, error: `Auth error: ${msg}` });
    }
    };
    // Puppeteer Browser
@@ -9796,7 +9798,11 @@ app.get('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query(`SELECT f.*, COUNT(a.id) as article_count FROM content_news_feeds f LEFT JOIN content_news_articles a ON a.feed_id=f.id WHERE f.profile_id=$1 GROUP BY f.id ORDER BY f.created_at DESC`, [req.params.profileId]);
     res.json({ success: true, feeds: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('Feeds GET error:', e);
+    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
+    res.status(500).json({ success: false, error: msg, where: 'feeds_get' });
+  }
 });
 
 app.post('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
@@ -9983,7 +9989,7 @@ app.delete('/api/content/news-articles/:id', verifyAdmin, async (req, res) => {
 // ── Rewrite Analysis ──────────────────────────────────────────
 app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
   try {
-    const { profile_id, original_url, original_slug, original_title, original_html, gsc_impressions, gsc_clicks, gsc_position, gsc_keyword } = req.body;
+    const { profile_id, original_url, original_slug, original_title, original_html, gsc_impressions, gsc_clicks, gsc_position, gsc_keyword, gsc_pages, gsc_queries } = req.body;
     if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
@@ -9991,6 +9997,10 @@ app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
+
+    // Normalize multi-line GSC inputs
+    const pagesList = (gsc_pages || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 30);
+    const queriesList = (gsc_queries || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 50);
 
     // Fetch current page content if URL provided
     let currentContent = original_html || '';
@@ -10002,9 +10012,9 @@ app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
       } catch(e) { console.warn('Page fetch failed:', e.message); }
     }
 
-    // Competitor research on the keyword
+    // Competitor research — prefer explicit GSC query, else top GSC page's query, else keyword/title
     let serpResults = [];
-    const searchKw = gsc_keyword || original_title || original_slug?.replace(/-/g, ' ');
+    const searchKw = gsc_keyword || queriesList[0] || original_title || original_slug?.replace(/-/g, ' ');
     if (searchKw && process.env.GOOGLE_SEARCH_API_KEY) {
       try {
         const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchKw)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
@@ -10013,6 +10023,9 @@ app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
     }
 
     const gscContext = gsc_impressions ? `GSC DATA: ${gsc_impressions} impressions, ${gsc_clicks} clicks, position ${gsc_position}, primary keyword: "${gsc_keyword}"` : 'No GSC data provided';
+    const gscExtended = (queriesList.length || pagesList.length) ? `
+GSC RANKING PAGES (${pagesList.length}): ${pagesList.join(', ') || 'none'}
+GSC REAL QUERIES (${queriesList.length}) — use these to drive keyword + H2 decisions: ${queriesList.join(', ') || 'none'}` : '';
     const slugDecision = (gsc_impressions > 1000 && gsc_clicks < 10) ? 'HIGH_IMPRESSIONS_LOW_CLICKS' : 'NORMAL';
 
     const analysePrompt = `You are an expert SEO strategist. Analyse this page and provide a complete rewrite strategy.
@@ -10021,6 +10034,7 @@ PAGE: ${original_url || 'New content'}
 TITLE: ${original_title}
 SLUG: ${original_slug}
 ${gscContext}
+${gscExtended}
 SLUG DECISION CONTEXT: ${slugDecision}
 
 CURRENT CONTENT (first 3000 chars):
@@ -10038,6 +10052,7 @@ CRITICAL RULES:
 - If keyword has stronger variant with different intent: suggest NEW page with 301 redirect note
 - 301 redirect ONLY when redirect_confidence = 100 (full intent match, zero ambiguity)
 - new_page_new_slug only when current slug serves a completely different search intent
+- If GSC real queries are provided: weave them literally into recommended_h2s and secondary_keywords
 
 Return ONLY valid JSON:
 {
@@ -10065,36 +10080,75 @@ Return ONLY valid JSON:
   "internal_links_needed": ["service page 1","money page 1"]
 }`;
 
-    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } })
-    });
-    const gd = await gr.json();
-    const rawText = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const jm = rawText.match(/\{[\s\S]*\}/);
-    if (!jm) return res.status(500).json({ success: false, error: 'AI analysis failed' });
-    const analysis = JSON.parse(jm[0]);
+    const analyseResult = await callGeminiWithFallback(
+      geminiKey,
+      { contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }
+    );
+    if (!analyseResult.ok) {
+      const apiErr = analyseResult.errorMessage || `Gemini HTTP ${analyseResult.status}`;
+      console.error('Analyse Gemini error:', apiErr, analyseResult.data);
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: analyseResult.modelUsed });
+    }
+    const blockReason = analyseResult.data?.promptFeedback?.blockReason;
+    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the analysis prompt: ${blockReason}` });
+    const rawText = analyseResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!rawText) {
+      const fr = analyseResult.data?.candidates?.[0]?.finishReason;
+      return res.status(502).json({ success: false, error: `Gemini returned no analysis (finishReason: ${fr || 'unknown'})`, model: analyseResult.modelUsed });
+    }
+    let analysis;
+    try {
+      const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      try {
+        analysis = JSON.parse(cleaned);
+      } catch (_) {
+        const jm = cleaned.match(/\{[\s\S]*\}/);
+        if (!jm) return res.status(502).json({ success: false, error: 'AI did not return valid JSON', raw_preview: rawText.slice(0, 300) });
+        analysis = JSON.parse(jm[0]);
+      }
+    } catch (parseErr) {
+      console.error('Analyse JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
+      return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
+    }
 
-    // Save rewrite record
+    // Save rewrite record (stash GSC pages/queries into analysis_data JSON so execute-rewrite can use them)
+    analysis.gsc_pages = pagesList;
+    analysis.gsc_queries = queriesList;
     const rwR = await pool.query(
       `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'analysed') RETURNING *`,
       [profile_id, original_url, original_slug, original_title, original_html||'', gsc_impressions||0, gsc_clicks||0, gsc_position||0, gsc_keyword||'', JSON.stringify(analysis), analysis.recommendation, analysis.new_slug_suggestion||original_slug, analysis.stronger_seed_keyword||gsc_keyword||'']
     );
     res.json({ success: true, rewrite: rwR.rows[0], analysis });
-  } catch(e) { console.error('Analyse error:', e); res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('Analyse error:', e);
+    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
+    res.status(500).json({ success: false, error: msg, where: 'analyse-rewrite' });
+  }
 });
 
 app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res) => {
+  const safeParse = (v, fallback) => {
+    if (v == null) return fallback;
+    if (typeof v !== 'string') return v;
+    try { return JSON.parse(v); } catch (_) { return fallback; }
+  };
   try {
     const { keep_images_urls } = req.body;
     const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
     if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
     const rw = rwR.rows[0];
-    // ✅ FIX: analysis_data can come back as string or object from JSONB column
-    const analysis = typeof rw.analysis_data === 'string'
-      ? JSON.parse(rw.analysis_data)
-      : rw.analysis_data;
+    const analysis = safeParse(rw.analysis_data, {});
     const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+
+    // GSC pages/queries saved from analyse step
+    const gscPagesRW = Array.isArray(analysis.gsc_pages) ? analysis.gsc_pages : [];
+    const gscQueriesRW = Array.isArray(analysis.gsc_queries) ? analysis.gsc_queries : [];
+    const gscBlockRW = (gscPagesRW.length || gscQueriesRW.length) ? `
+GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${gscPagesRW.join(', ') || '—'}
+GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in headings en body:
+${gscQueriesRW.join(', ') || '—'}
+` : '';
 
     // Get money pages for internal linking
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
@@ -10105,7 +10159,7 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res
     // Fetch business_info and sitemap for real data
     const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain FROM content_profiles WHERE id=$1`, [rw.profile_id]);
     const profBi = profBiR.rows[0] || {};
-    const biRW = (typeof profBi.business_info === 'string' ? JSON.parse(profBi.business_info||'{}') : profBi.business_info) || {};
+    const biRW = safeParse(profBi.business_info, {}) || {};
     const verifiedFactsRW = [
       biRW.phone         ? `- Telefoon: ${biRW.phone}` : null,
       biRW.email         ? `- Email: ${biRW.email}` : null,
@@ -10117,6 +10171,33 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res
     const antiFacts = verifiedFactsRW
       ? `Gebruik ALLEEN deze gegevens. Verzin NOOIT contactgegevens die niet hierboven staan.`
       : `Geen bedrijfsgegevens beschikbaar. Verzin GEEN telefoonnummers, adressen of e-mails. Gebruik [CONTACT].`;
+
+    // Content quality rules — shared with write and news endpoints
+    const qualityBlock = `
+═══════════════════════════════════════
+CONTENT KWALITEIT — STRIKTE REGELS
+═══════════════════════════════════════
+📊 STATISTIEKEN — ECHT OF WEGLATEN:
+- Alleen verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
+- NOOIT labels zoals "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[bron nodig]"
+- NOOIT "studies tonen aan" zonder concrete genoemde bron
+- Zonder verifieerbare stat: schrijf algemene accurate zinnen ZONDER getallen
+- Bronnen uit 2024-2026
+
+🎨 LEESBAARHEID — WCAG AA (contrast 4.5:1 minimum):
+- Elke achtergrond/tekst combinatie in CSS controleren
+- Bij gekleurde achtergronden: expliciet leesbare tekstkleuren zetten
+- NOOIT contrastproblemen in commentaar noteren — fix ze
+
+📱 MOBIEL — RESPONSIVE VERPLICHT:
+- Touch targets minimaal 44px
+- Tekst leesbaar op 320px schermbreedte
+- Proactief mobiele fixes toevoegen
+
+✅ OUTPUT REGEL:
+Als je iets niet kunt verifiëren of leesbaarheid niet kunt garanderen: LAAT HET WEG.
+Fix issues in de output — plak GEEN waarschuwingen of placeholders aan het eindresultaat.
+`;
 
     let sitemapUrlsRW = [];
     try {
@@ -10152,13 +10233,13 @@ ABSOLUTE REGELS
 2. VERANDER GEEN inline styles of attributen
 3. Vul ALLEEN tekst in bestaande elementen in
 4. ${antiFacts}
-
+${qualityBlock}
 BEDRIJF: ${rw.profile_name} — ${rw.niche}
 DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
-
+${gscBlockRW}
 REWRITE STRATEGIE:
 ${analysis.rewrite_strategy || ''}
 
@@ -10190,11 +10271,11 @@ Geef ALLEEN de ingevulde template terug. Geen uitleg, geen markdown. Eindig met 
       // FREE-WRITE MODE — schrijf nieuwe HTML
       // ═══════════════════════════════════════════════
       writePromptRW = `Je bent een elite SEO-contentschrijver. Herschrijf deze pagina zodat hij significant beter rankt. Minimaal ${analysis.target_word_count || 2500} woorden — stop NOOIT vroeg.
-
+${qualityBlock}
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
-
+${gscBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
 AANBEVOLEN TITEL: ${analysis.recommended_title || rw.original_title}
 DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
@@ -10216,17 +10297,28 @@ ${imageNote}
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
 
-    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: writePromptRW }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536 } })
-    });
-    const gd = await gr.json();
-    const html = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!html) return res.status(500).json({ success: false, error: 'AI did not generate content' });
+    const rwResult = await callGeminiWithFallback(
+      geminiKey,
+      { contents: [{ parts: [{ text: writePromptRW }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
+    );
+    if (!rwResult.ok) {
+      const apiErr = rwResult.errorMessage || `Gemini HTTP ${rwResult.status}`;
+      console.error('Execute-rewrite Gemini error:', apiErr, rwResult.data);
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: rwResult.modelUsed });
+    }
+    const blockReason = rwResult.data?.promptFeedback?.blockReason;
+    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the rewrite prompt: ${blockReason}` });
+    const finishReason = rwResult.data?.candidates?.[0]?.finishReason;
+    const rawHtml = rwResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!rawHtml) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: rwResult.modelUsed });
+    const wasTruncated = finishReason === 'MAX_TOKENS';
+    if (wasTruncated) console.warn(`⚠️ Rewrite truncated (MAX_TOKENS) on ${rwResult.modelUsed}`);
+    const scrub = stripAiPlaceholders(rawHtml);
+    if (scrub.stripped) console.log(`🧹 [rewrite] Stripped ${scrub.stripped} placeholder pattern type(s)`);
+    const html = scrub.html;
     const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
 
     await pool.query(`UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`, [html, analysis.recommended_title||rw.original_title, wc, rw.id]);
-    // ✅ FIX: include tracker_page so frontend auto-adds to Pulse & Nexus tracker
     const ctrCalc = (rw.gsc_clicks > 0 && rw.gsc_impressions > 0)
       ? (rw.gsc_clicks / rw.gsc_impressions * 100).toFixed(2)
       : null;
@@ -10236,6 +10328,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       word_count: wc,
       slug: rw.original_slug,
       recommendation: analysis.recommendation,
+      truncated: wasTruncated,
       tracker_page: {
         url: rw.original_url,
         keyword: rw.gsc_keyword || rw.new_seed_keyword || '',
@@ -10244,7 +10337,11 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
         ctr: ctrCalc
       }
     });
-  } catch(e) { console.error('Rewrite execute error:', e); res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('Rewrite execute error:', e);
+    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
+    res.status(500).json({ success: false, error: msg, where: 'execute-rewrite' });
+  }
 });
 
 app.get('/api/content/rewrites/:profileId', verifyAdmin, async (req, res) => {
@@ -10335,15 +10432,36 @@ Return ONLY valid JSON:
   ]
 }`;
 
-    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: studyPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096 } })
-    });
-    const gd = await gr.json();
-    const rawText = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const jm = rawText.match(/\{[\s\S]*\}/);
-    if (!jm) return res.status(500).json({ success: false, error: 'AI study generation failed' });
-    const studyData = JSON.parse(jm[0]);
+    const studyResult = await callGeminiWithFallback(
+      geminiKey,
+      { contents: [{ parts: [{ text: studyPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }
+    );
+    if (!studyResult.ok) {
+      const apiErr = studyResult.errorMessage || `Gemini HTTP ${studyResult.status}`;
+      console.error('Stats study Gemini error:', apiErr, studyResult.data);
+      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: studyResult.modelUsed });
+    }
+    const blockReason1 = studyResult.data?.promptFeedback?.blockReason;
+    if (blockReason1) return res.status(502).json({ success: false, error: `Gemini blocked the study prompt: ${blockReason1}` });
+    const rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!rawText) {
+      const fr = studyResult.data?.candidates?.[0]?.finishReason;
+      return res.status(502).json({ success: false, error: `Gemini returned no study content (finishReason: ${fr || 'unknown'})`, model: studyResult.modelUsed });
+    }
+    let studyData;
+    try {
+      const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      try {
+        studyData = JSON.parse(cleaned);
+      } catch (_) {
+        const jm = cleaned.match(/\{[\s\S]*\}/);
+        if (!jm) return res.status(502).json({ success: false, error: 'AI did not return valid JSON for study', raw_preview: rawText.slice(0, 300) });
+        studyData = JSON.parse(jm[0]);
+      }
+    } catch (parseErr) {
+      console.error('Stats study JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
+      return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
+    }
 
     // Now write the full HTML article from the study data
     const articlePrompt = `Write a comprehensive, publication-ready statistics study article in HTML.
@@ -10364,12 +10482,29 @@ REQUIREMENTS:
 9. ~2500 words
 10. Return clean HTML starting with <article>`;
 
-    const gr2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: articlePrompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 65536 } })
-    });
-    const gd2 = await gr2.json();
-    const htmlContent = gd2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const articleResult = await callGeminiWithFallback(
+      geminiKey,
+      { contents: [{ parts: [{ text: articlePrompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
+    );
+    if (!articleResult.ok) {
+      const apiErr = articleResult.errorMessage || `Gemini HTTP ${articleResult.status}`;
+      console.error('Stats study article Gemini error:', apiErr, articleResult.data);
+      return res.status(502).json({ success: false, error: `Gemini API error (article step): ${apiErr}`, model: articleResult.modelUsed });
+    }
+    const blockReason2 = articleResult.data?.promptFeedback?.blockReason;
+    if (blockReason2) return res.status(502).json({ success: false, error: `Gemini blocked the article prompt: ${blockReason2}` });
+    const rawHtml = articleResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!rawHtml) {
+      const fr = articleResult.data?.candidates?.[0]?.finishReason;
+      return res.status(502).json({ success: false, error: `Gemini returned no article content (finishReason: ${fr || 'unknown'})`, model: articleResult.modelUsed });
+    }
+    const finishReason = articleResult.data?.candidates?.[0]?.finishReason;
+    const wasTruncated = finishReason === 'MAX_TOKENS';
+    if (wasTruncated) console.warn(`⚠️ Stats study article truncated (MAX_TOKENS) on ${articleResult.modelUsed}`);
+    // Scrub placeholder patterns
+    const scrub = stripAiPlaceholders(rawHtml);
+    if (scrub.stripped) console.log(`🧹 [stats-study] Stripped ${scrub.stripped} placeholder pattern type(s)`);
+    const htmlContent = scrub.html;
     const wc = htmlContent.replace(/<[^>]+>/g, '').split(/\s+/).length;
 
     const studyR = await pool.query(
@@ -10377,8 +10512,12 @@ REQUIREMENTS:
       [profile_id, topic, seed_keyword||topic, JSON.stringify(studyData.sources||[]), JSON.stringify(studyData.key_stats||[]), htmlContent, studyData.title, studyData.slug, wc]
     );
 
-    res.json({ success: true, study: studyR.rows[0], study_data: studyData });
-  } catch(e) { console.error('Stats study error:', e); res.status(500).json({ success: false, error: e.message }); }
+    res.json({ success: true, study: studyR.rows[0], study_data: studyData, truncated: wasTruncated });
+  } catch(e) {
+    console.error('Stats study error:', e);
+    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
+    res.status(500).json({ success: false, error: msg, where: 'stats-study' });
+  }
 });
 
 app.get('/api/content/stats-studies/:profileId', verifyAdmin, async (req, res) => {
