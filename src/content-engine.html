@@ -248,11 +248,19 @@ textarea{resize:vertical;min-height:100px;}
     <!-- GSC Data -->
     <div style="background:#0a0a0f;border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;margin-bottom:12px;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;margin-bottom:10px;">📊 GSC Data (optional but powerful)</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
         <div><label>Impressions</label><input id="rwImpressions" type="number" placeholder="10000"></div>
         <div><label>Clicks</label><input id="rwClicks" type="number" placeholder="0"></div>
         <div><label>Avg Position</label><input id="rwPosition" type="number" step="0.1" placeholder="8.5"></div>
         <div><label>Top Keyword</label><input id="rwKeyword" placeholder="roof repair amsterdam"></div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <label>GSC Pages — rankende URL's voor dit onderwerp (één per regel)</label>
+        <textarea id="rwGscPages" rows="2" placeholder="https://example.com/dakdekker-amsterdam&#10;https://example.com/dak-reparatie" style="font-size:12px;font-family:monospace;min-height:60px;"></textarea>
+      </div>
+      <div>
+        <label>GSC Queries — echte zoekopdrachten (één per regel) — <strong style="color:#fbbf24;">stuurt keywords en H2s</strong></label>
+        <textarea id="rwGscQueries" rows="4" placeholder="dakdekker amsterdam&#10;dakdekker kosten per m2&#10;dakdekker inhuren&#10;goedkope dakdekker amsterdam" style="font-size:12px;font-family:monospace;min-height:90px;"></textarea>
       </div>
     </div>
     <!-- Existing content -->
@@ -1232,7 +1240,9 @@ async function analyseRewrite() {
       gsc_impressions: parseInt(document.getElementById('rwImpressions').value) || 0,
       gsc_clicks: parseInt(document.getElementById('rwClicks').value) || 0,
       gsc_position: parseFloat(document.getElementById('rwPosition').value) || 0,
-      gsc_keyword: document.getElementById('rwKeyword').value.trim()
+      gsc_keyword: document.getElementById('rwKeyword').value.trim(),
+      gsc_pages: document.getElementById('rwGscPages').value.trim(),
+      gsc_queries: document.getElementById('rwGscQueries').value.trim()
     };
     var d = await api('/api/content/analyse-rewrite', 'POST', payload);
     if (!d.success) throw new Error(d.error);
