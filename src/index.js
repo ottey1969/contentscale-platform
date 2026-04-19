@@ -9565,9 +9565,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     try {
       const sys = 'You are an elite SEO content writer and HTML engineer. Write complete, production-ready HTML. Return only HTML — no markdown, no code fences, no explanation.';
       htmlContent = await callClaudeForWrite(sys, writePrompt, 8000, claudeWriteKey);
-      htmlContent = htmlContent.replace(/^```html
-?/, '').replace(/
-?```$/, '').trim();
+      htmlContent = htmlContent.replace(/^```html[\n]?/, '').replace(/[\n]?```$/, '').trim();
     } catch(e) {
       return res.status(502).json({ success: false, error: 'Claude write failed: ' + e.message });
     }
@@ -10085,9 +10083,7 @@ Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
           const claudeNewsKey = resolveClaudeKey(req);
           const sys = 'You are a professional content writer. Rewrite news articles to be 100% original, plagiarism-free, and SEO-optimised. Return only clean HTML starting with <article>. No markdown, no code fences.';
           rawHtml = await callClaudeForWrite(sys, rewritePrompt, 4000, claudeNewsKey);
-          rawHtml = rawHtml.replace(/^```html
-?/, '').replace(/
-?```$/, '').trim();
+          rawHtml = rawHtml.replace(/^```html[\n]?/, '').replace(/[\n]?```$/, '').trim();
         } catch(e) { console.warn(`[news] Claude error for "${art.title}":`, e.message); continue; }
         if (!rawHtml) { console.warn(`[news] Empty for "${art.title}"`); continue; }
         const scrub = stripAiPlaceholders(rawHtml);
@@ -10643,9 +10639,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       try {
         const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
         rawHtml = await callClaudeForWrite(sys, promptThisAttempt, 8000, claudeRwKey);
-        rawHtml = rawHtml.replace(/^```html
-?/, '').replace(/
-?```$/, '').trim();
+        rawHtml = rawHtml.replace(/^```html[\n]?/, '').replace(/[\n]?```$/, '').trim();
       } catch(e) { return res.status(502).json({ success: false, error: 'Claude rewrite failed: ' + e.message }); }
       if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty rewrite' });
       wasTruncated = false; modelUsed = 'claude-sonnet-4-20250514';
@@ -11436,9 +11430,7 @@ REQUIREMENTS: 1. Open with compelling summary. 2. All data tables as proper HTML
     try {
       const sys = 'You are an expert data journalist and HTML writer. Write comprehensive statistics study articles using only the data provided. Never invent statistics. Return only clean HTML starting with <article>.';
       rawHtml = await callClaudeForWrite(sys, articlePrompt, 8000, claudeStudyKey);
-      rawHtml = rawHtml.replace(/^```html
-?/, '').replace(/
-?```$/, '').trim();
+      rawHtml = rawHtml.replace(/^```html[\n]?/, '').replace(/[\n]?```$/, '').trim();
     } catch(e) { return res.status(502).json({ success: false, error: 'Claude study generation failed: ' + e.message }); }
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty study article' });
     // Scrub placeholder patterns
