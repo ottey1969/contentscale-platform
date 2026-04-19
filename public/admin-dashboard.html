@@ -148,6 +148,7 @@
                   <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
                   <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
                   <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
+                  <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="mode-toggle"><i class="fas fa-key mr-2"></i> Engine Access</button>
                   <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
                   <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
                </div>
@@ -946,6 +947,7 @@
            if (tab === 'pending') loadPendingData();
            if (tab === 'emaillog') loadEmailLog();
            if (tab === 'niches') renderNiches();
+          if (tab === 'enginecodes') loadEngineCodes();
            if (tab === 'scanlog') {
              loadScanLog();
              const panel = document.getElementById('instantlyPanel');
@@ -2039,7 +2041,55 @@
          <div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div>
          <div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div>
          <div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button></div>
-         </body></html>`;
+         
+            <!-- ══ ENGINE ACCESS CODES TAB ══ -->
+            <div id="tab-enginecodes" class="tab-content hidden">
+              <div class="flex justify-between items-center mb-6">
+                <div>
+                  <h2 class="text-xl font-bold text-white">⚡ Engine Access Codes</h2>
+                  <p class="text-gray-400 text-sm mt-1">Create ENG-XXXX share codes. Users enter the code on the engine login page to access the content engine with their own scoped profiles.</p>
+                </div>
+                <button onclick="showCreateEngineCode()" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> New Code</button>
+              </div>
+
+              <!-- Create form -->
+              <div id="createEngineCodeForm" class="card mb-6" style="display:none;">
+                <h3 class="font-bold text-white mb-4">New Engine Access Code</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Client Name *</label>
+                    <input id="ecClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Expires (leave blank = never)</label>
+                    <input id="ecExpires" type="date" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Gemini API Key (optional — user can enter their own)</label>
+                    <input id="ecGeminiKey" type="password" placeholder="AIza... (stored encrypted, masked in UI)" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Claude API Key (optional — user can enter their own)</label>
+                    <input id="ecClaudeKey" type="password" placeholder="sk-ant-... (stored encrypted, masked in UI)" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div style="grid-column:1/-1;">
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Notes (internal)</label>
+                    <input id="ecNotes" type="text" placeholder="e.g. trial until May, roofing niche" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                </div>
+                <div class="text-xs text-gray-500 mb-4">
+                  💡 If you add API keys here, the user won't need to enter their own. If you leave them blank, the user must enter their own Gemini + Claude keys on the engine login page. Keys are never shown in full after saving.
+                </div>
+                <div class="flex gap-3">
+                  <button onclick="createEngineCode()" class="btn btn-primary">Create Code</button>
+                  <button onclick="document.getElementById('createEngineCodeForm').style.display='none'" class="btn btn-secondary">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Codes list -->
+              <div id="engineCodesList" class="space-y-3"></div>
+            </div>
+</body></html>`;
            const win = window.open('', '_blank');
            if (!win) { alert('Please allow popups to export.'); return; }
            win.document.write(html); win.document.close();
@@ -3333,6 +3383,91 @@
            switchTab('campaigns');
          }
 
+      
+        // ── Engine Access Codes ──────────────────────────────────────
+        function showCreateEngineCode() {
+          document.getElementById('createEngineCodeForm').style.display = 'block';
+          document.getElementById('createEngineCodeForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function loadEngineCodes() {
+          try {
+            const data = await apiCall('/api/admin/engine-codes');
+            const codes = data.codes || [];
+            const el = document.getElementById('engineCodesList');
+            if (!codes.length) { el.innerHTML = '<div class="text-gray-400 text-sm text-center py-8">No engine access codes yet. Create one to share the engine with users.</div>'; return; }
+            el.innerHTML = codes.map(c => `
+              <div class="card" style="border-left: 3px solid ${c.is_active ? '#a78bfa' : '#6b7280'};">
+                <div class="flex justify-between items-start flex-wrap gap-3">
+                  <div>
+                    <div class="flex items-center gap-3 mb-1">
+                      <span class="font-mono text-lg font-bold text-purple-400">${c.code}</span>
+                      <span class="text-xs px-2 py-1 rounded-full ${c.is_active ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'}">${c.is_active ? '● Active' : '○ Revoked'}</span>
+                      ${c.profile_count > 0 ? `<span class="text-xs text-gray-400">${c.profile_count} profile${c.profile_count != 1 ? 's' : ''}</span>` : ''}
+                    </div>
+                    <div class="text-white font-semibold">${c.client_name}</div>
+                    ${c.notes ? `<div class="text-gray-500 text-xs mt-1">${c.notes}</div>` : ''}
+                    <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                      <span>🔑 Gemini: ${c.gemini_key ? '<span class="text-green-400">stored</span>' : '<span class="text-yellow-400">user provides own</span>'}</span>
+                      <span>🤖 Claude: ${c.claude_key ? '<span class="text-green-400">stored</span>' : '<span class="text-yellow-400">user provides own</span>'}</span>
+                      ${c.expires_at ? `<span>⏰ Expires: ${new Date(c.expires_at).toLocaleDateString()}</span>` : '<span>No expiry</span>'}
+                    </div>
+                  </div>
+                  <div class="flex gap-2 flex-wrap">
+                    <button onclick="copyEngineCode('${c.code}')" class="btn btn-info text-xs">📋 Copy Code</button>
+                    <button onclick="copyEngineLoginUrl('${c.code}')" class="btn btn-info text-xs">🔗 Copy Login URL</button>
+                    <button onclick="toggleEngineCode(${c.id}, ${!c.is_active})" class="btn ${c.is_active ? 'btn-warning' : 'btn-success'} text-xs">${c.is_active ? 'Revoke' : 'Reactivate'}</button>
+                    <button onclick="deleteEngineCode(${c.id})" class="btn btn-danger text-xs">Delete</button>
+                  </div>
+                </div>
+              </div>
+            `).join('');
+          } catch(e) { console.error('Failed to load engine codes:', e); }
+        }
+
+        async function createEngineCode() {
+          const client_name = document.getElementById('ecClientName').value.trim();
+          if (!client_name) { alert('Enter a client name'); return; }
+          try {
+            const data = await apiCall('/api/admin/engine-codes', 'POST', {
+              client_name,
+              gemini_key: document.getElementById('ecGeminiKey').value.trim() || null,
+              claude_key: document.getElementById('ecClaudeKey').value.trim() || null,
+              expires_at: document.getElementById('ecExpires').value || null,
+              notes: document.getElementById('ecNotes').value.trim() || null,
+            });
+            if (!data.success) { alert('Error: ' + data.error); return; }
+            alert('✅ Code created: ' + data.code.code + '\n\nShare this with ' + client_name + '\nEngine login URL: ' + window.location.origin + '/engine-login');
+            document.getElementById('ecClientName').value = '';
+            document.getElementById('ecGeminiKey').value = '';
+            document.getElementById('ecClaudeKey').value = '';
+            document.getElementById('ecExpires').value = '';
+            document.getElementById('ecNotes').value = '';
+            document.getElementById('createEngineCodeForm').style.display = 'none';
+            loadEngineCodes();
+          } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function toggleEngineCode(id, newState) {
+          await apiCall('/api/admin/engine-codes/' + id, 'PATCH', { is_active: newState });
+          loadEngineCodes();
+        }
+
+        async function deleteEngineCode(id) {
+          if (!confirm('Delete this engine code? The user will lose access immediately. Their profiles will remain but be unowned.')) return;
+          await apiCall('/api/admin/engine-codes/' + id, 'DELETE');
+          loadEngineCodes();
+        }
+
+        function copyEngineCode(code) {
+          navigator.clipboard.writeText(code).then(() => alert('Code copied: ' + code));
+        }
+
+        function copyEngineLoginUrl(code) {
+          const url = window.location.origin + '/engine-login?code=' + code;
+          navigator.clipboard.writeText(url).then(() => alert('Login URL copied:\n' + url));
+        }
+
       </script>
 
       <!-- ══ NICHES TAB ══ -->
@@ -3370,5 +3505,53 @@
             </div>
          </div>
       </div>
-   </body>
+   
+            <!-- ══ ENGINE ACCESS CODES TAB ══ -->
+            <div id="tab-enginecodes" class="tab-content hidden">
+              <div class="flex justify-between items-center mb-6">
+                <div>
+                  <h2 class="text-xl font-bold text-white">⚡ Engine Access Codes</h2>
+                  <p class="text-gray-400 text-sm mt-1">Create ENG-XXXX share codes. Users enter the code on the engine login page to access the content engine with their own scoped profiles.</p>
+                </div>
+                <button onclick="showCreateEngineCode()" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> New Code</button>
+              </div>
+
+              <!-- Create form -->
+              <div id="createEngineCodeForm" class="card mb-6" style="display:none;">
+                <h3 class="font-bold text-white mb-4">New Engine Access Code</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Client Name *</label>
+                    <input id="ecClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Expires (leave blank = never)</label>
+                    <input id="ecExpires" type="date" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Gemini API Key (optional — user can enter their own)</label>
+                    <input id="ecGeminiKey" type="password" placeholder="AIza... (stored encrypted, masked in UI)" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Claude API Key (optional — user can enter their own)</label>
+                    <input id="ecClaudeKey" type="password" placeholder="sk-ant-... (stored encrypted, masked in UI)" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div style="grid-column:1/-1;">
+                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Notes (internal)</label>
+                    <input id="ecNotes" type="text" placeholder="e.g. trial until May, roofing niche" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                </div>
+                <div class="text-xs text-gray-500 mb-4">
+                  💡 If you add API keys here, the user won't need to enter their own. If you leave them blank, the user must enter their own Gemini + Claude keys on the engine login page. Keys are never shown in full after saving.
+                </div>
+                <div class="flex gap-3">
+                  <button onclick="createEngineCode()" class="btn btn-primary">Create Code</button>
+                  <button onclick="document.getElementById('createEngineCodeForm').style.display='none'" class="btn btn-secondary">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Codes list -->
+              <div id="engineCodesList" class="space-y-3"></div>
+            </div>
+</body>
 </html>
