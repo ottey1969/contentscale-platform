@@ -3507,51 +3507,6 @@
       </div>
    
             <!-- ══ ENGINE ACCESS CODES TAB ══ -->
-            <div id="tab-enginecodes" class="tab-content hidden">
-              <div class="flex justify-between items-center mb-6">
-                <div>
-                  <h2 class="text-xl font-bold text-white">⚡ Engine Access Codes</h2>
-                  <p class="text-gray-400 text-sm mt-1">Create ENG-XXXX share codes. Users enter the code on the engine login page to access the content engine with their own scoped profiles.</p>
-                </div>
-                <button onclick="showCreateEngineCode()" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> New Code</button>
-              </div>
-
-              <!-- Create form -->
-              <div id="createEngineCodeForm" class="card mb-6" style="display:none;">
-                <h3 class="font-bold text-white mb-4">New Engine Access Code</h3>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Client Name *</label>
-                    <input id="ecClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Expires (leave blank = never)</label>
-                    <input id="ecExpires" type="date" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Gemini API Key (optional — user can enter their own)</label>
-                    <input id="ecGeminiKey" type="password" placeholder="AIza... (stored encrypted, masked in UI)" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Claude API Key (optional — user can enter their own)</label>
-                    <input id="ecClaudeKey" type="password" placeholder="sk-ant-... (stored encrypted, masked in UI)" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
-                  </div>
-                  <div style="grid-column:1/-1;">
-                    <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Notes (internal)</label>
-                    <input id="ecNotes" type="text" placeholder="e.g. trial until May, roofing niche" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
-                  </div>
-                </div>
-                <div class="text-xs text-gray-500 mb-4">
-                  💡 If you add API keys here, the user won't need to enter their own. If you leave them blank, the user must enter their own Gemini + Claude keys on the engine login page. Keys are never shown in full after saving.
-                </div>
-                <div class="flex gap-3">
-                  <button onclick="createEngineCode()" class="btn btn-primary">Create Code</button>
-                  <button onclick="document.getElementById('createEngineCodeForm').style.display='none'" class="btn btn-secondary">Cancel</button>
-                </div>
-              </div>
-
-              <!-- Codes list -->
-              <div id="engineCodesList" class="space-y-3"></div>
-            </div>
+            
 </body>
 </html>
