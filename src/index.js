@@ -137,6 +137,32 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
   return first;
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// callClaudeForWrite — ALL writing goes through Claude
+// Gemini = research/JSON only · Claude = every HTML output
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, claudeKey) {
+  const anthropicKey = claudeKey || process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) throw new Error('Claude API key required — add ANTHROPIC_API_KEY to Railway or provide x-claude-key header');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120000);
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const data = await r.json();
+    if (!r.ok) throw new Error(`Claude API ${r.status}: ${data.error?.message || JSON.stringify(data)}`);
+    const text = data?.content?.[0]?.text || '';
+    if (!text) throw new Error('Claude returned empty content');
+    return text;
+  } catch(e) { clearTimeout(timer); throw e; }
+}
+
+
 
 // Strip AI-inserted placeholder/flag patterns from generated HTML content.
 // Used by both the article write endpoint and the news rewrite endpoint.
@@ -724,6 +750,20 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
    await client.query(`CREATE TABLE IF NOT EXISTS access_sessions (id SERIAL PRIMARY KEY, token VARCHAR(255) UNIQUE NOT NULL, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, created_at TIMESTAMP DEFAULT NOW(), expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days')`);
+   await client.query(`CREATE TABLE IF NOT EXISTS engine_access_codes (
+     id SERIAL PRIMARY KEY,
+     code VARCHAR(50) UNIQUE NOT NULL,
+     client_name VARCHAR(255) NOT NULL,
+     gemini_key TEXT,
+     claude_key TEXT,
+     is_active BOOLEAN DEFAULT TRUE,
+     expires_at TIMESTAMP,
+     notes TEXT,
+     created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS gemini_key TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS claude_key TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS owner_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    // Client progress tracking
    await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
    // Content Engine tables
@@ -8878,6 +8918,74 @@ function doLogin(){
 // CONTENT ENGINE API
 // ============================================================
 
+
+// ── Engine Access Middleware ──────────────────────────────────────────────────
+const verifyEngineAccess = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (adminKey) {
+    const isAdmin = await pool.query('SELECT id FROM super_admins WHERE admin_id=$1', [adminKey]).catch(()=>({rows:[]}));
+    if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
+  }
+  const engineToken = req.headers['x-engine-token'];
+  if (!engineToken) return res.status(401).json({ success: false, error: 'Engine access required' });
+  try {
+    const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [engineToken.trim().toUpperCase()]);
+    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
+    req.engineUser = { isAdmin: false, codeId: r.rows[0].id, code: r.rows[0] };
+    if (r.rows[0].gemini_key && !req.headers['x-gemini-key']) req.headers['x-gemini-key'] = r.rows[0].gemini_key;
+    if (r.rows[0].claude_key && !req.headers['x-claude-key']) req.headers['x-claude-key'] = r.rows[0].claude_key;
+    next();
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+};
+const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
+const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
+
+app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT e.*, COUNT(p.id) as profile_count FROM engine_access_codes e LEFT JOIN content_profiles p ON p.owner_code_id=e.id GROUP BY e.id ORDER BY e.created_at DESC`);
+    const codes = r.rows.map(c => ({...c, gemini_key: c.gemini_key?'***'+c.gemini_key.slice(-4):null, claude_key: c.claude_key?'***'+c.claude_key.slice(-4):null}));
+    res.json({ success: true, codes });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
+  const { client_name, gemini_key, claude_key, expires_at, notes } = req.body;
+  if (!client_name) return res.status(400).json({ success: false, error: 'client_name required' });
+  try {
+    const code = 'ENG-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
+    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [code,client_name,gemini_key||null,claude_key||null,expires_at||null,notes||null]);
+    res.json({ success: true, code: {...r.rows[0], gemini_key: gemini_key?'***'+gemini_key.slice(-4):null, claude_key: claude_key?'***'+claude_key.slice(-4):null} });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
+  const { is_active, gemini_key, claude_key, expires_at, notes } = req.body;
+  try {
+    const fields=[]; const vals=[]; let i=1;
+    if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
+    if (gemini_key!==undefined){fields.push(`gemini_key=$${i++}`);vals.push(gemini_key||null);}
+    if (claude_key!==undefined){fields.push(`claude_key=$${i++}`);vals.push(claude_key||null);}
+    if (expires_at!==undefined){fields.push(`expires_at=$${i++}`);vals.push(expires_at||null);}
+    if (notes!==undefined){fields.push(`notes=$${i++}`);vals.push(notes);}
+    if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.delete('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
+  try { await pool.query(`DELETE FROM engine_access_codes WHERE id=$1`,[req.params.id]); res.json({success:true}); }
+  catch(e) { res.status(500).json({success:false,error:e.message}); }
+});
+app.post('/api/engine/login', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ success: false, error: 'Code required' });
+  try {
+    const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
+    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
+    const ec = r.rows[0];
+    res.json({ success: true, token: ec.code, client_name: ec.client_name, has_gemini: !!ec.gemini_key, has_claude: !!ec.claude_key });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ── Profiles ─────────────────────────────────────────────────
 app.get('/api/content/profiles', verifyAdmin, async (req, res) => {
   try {
@@ -8886,7 +8994,7 @@ app.get('/api/content/profiles', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/content/profiles', verifyAdmin, async (req, res) => {
+app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
   try {
     const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password } = req.body;
     const r = await pool.query(
@@ -8897,7 +9005,7 @@ app.post('/api/content/profiles', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.put('/api/content/profiles/:id', verifyAdmin, async (req, res) => {
+app.put('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
   try {
     const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password } = req.body;
     const r = await pool.query(
@@ -8908,7 +9016,7 @@ app.put('/api/content/profiles/:id', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/profiles/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_profiles WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -8916,7 +9024,7 @@ app.delete('/api/content/profiles/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── Locations ────────────────────────────────────────────────
-app.post('/api/content/profiles/:id/locations', verifyAdmin, async (req, res) => {
+app.post('/api/content/profiles/:id/locations', verifyEngineAccess, async (req, res) => {
   try {
     const { location_type, location_value, external_links } = req.body;
     const r = await pool.query(
@@ -8935,7 +9043,7 @@ app.patch('/api/content/locations/:id', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/locations/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/locations/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_locations WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -8943,7 +9051,7 @@ app.delete('/api/content/locations/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── Jobs & Research ──────────────────────────────────────────
-app.get('/api/content/jobs/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/jobs/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT j.*, COUNT(a.id) AS article_count FROM content_jobs j LEFT JOIN content_articles a ON a.job_id=j.id WHERE j.profile_id=$1 GROUP BY j.id ORDER BY j.created_at DESC LIMIT 50`, [req.params.profileId]);
     res.json({ success: true, jobs: r.rows });
@@ -8953,7 +9061,7 @@ app.get('/api/content/jobs/:profileId', verifyAdmin, async (req, res) => {
 // ── Engine Draft (auto-save / resume) ────────────────────────
 // Stores in-progress form state (seed keyword, GSC fields, current job/article) per profile.
 // Frontend auto-saves on input, restores on load, clears on Reset.
-app.get('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/engine-draft/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT draft, updated_at FROM content_engine_drafts WHERE profile_id=$1`, [req.params.profileId]);
     if (!r.rows.length) return res.json({ success: true, draft: null });
@@ -8961,7 +9069,7 @@ app.get('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) =>
   } catch(e) { console.error('Get engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.put('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) => {
+app.put('/api/content/engine-draft/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const profileId = parseInt(req.params.profileId, 10);
     if (!profileId) return res.status(400).json({ success: false, error: 'Invalid profile_id' });
@@ -8975,14 +9083,14 @@ app.put('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) =>
   } catch(e) { console.error('Save engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/engine-draft/:profileId', verifyAdmin, async (req, res) => {
+app.delete('/api/content/engine-draft/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_engine_drafts WHERE profile_id=$1`, [req.params.profileId]);
     res.json({ success: true });
   } catch(e) { console.error('Delete engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/content/research', verifyAdmin, async (req, res) => {
+app.post('/api/content/research', verifyEngineAccess, async (req, res) => {
   try {
     const { profile_id, seed_keyword, research_all } = req.body;
     if (!profile_id || !seed_keyword) return res.status(400).json({ success: false, error: 'profile_id and seed_keyword required' });
@@ -9162,7 +9270,7 @@ Return ONLY valid JSON:
 });
 
 // ── Generate Brief ───────────────────────────────────────────
-app.post('/api/content/brief/:jobId', verifyAdmin, async (req, res) => {
+app.post('/api/content/brief/:jobId', verifyEngineAccess, async (req, res) => {
   try {
     const jobR = await pool.query(`SELECT j.*, cp.* FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`, [req.params.jobId]);
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
@@ -9195,7 +9303,7 @@ app.post('/api/content/brief/:jobId', verifyAdmin, async (req, res) => {
 });
 
 // ── Write Article ────────────────────────────────────────────
-app.post('/api/content/write/:jobId', verifyAdmin, async (req, res) => {
+app.post('/api/content/write/:jobId', verifyEngineAccess, async (req, res) => {
   // Helper: parse a value that might be a JS object already (jsonb) or a JSON string (text column), safely
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
@@ -9450,25 +9558,20 @@ SCHRIJFREGELS: Korte alinea's (2-4 zinnen). Elke H2 begint met directe beantwoor
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
 
-    const writeResult = await callGeminiWithFallback(
-      process.env.GEMINI_API_KEY,
-      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
-    );
-    const writeData = writeResult.data;
-    if (!writeResult.ok) {
-      const apiErr = writeResult.errorMessage || `Gemini HTTP ${writeResult.status}`;
-      console.error('Gemini write API error:', apiErr, writeData);
-      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: writeResult.modelUsed });
+    const claudeWriteKey = resolveClaudeKey(req);
+    if (!claudeWriteKey) return res.status(500).json({ success: false, error: 'Claude API key required' });
+    console.log('[write] Calling Claude for HTML assembly...');
+    let htmlContent, wasTruncated = false;
+    try {
+      const sys = 'You are an elite SEO content writer and HTML engineer. Write complete, production-ready HTML. Return only HTML — no markdown, no code fences, no explanation.';
+      htmlContent = await callClaudeForWrite(sys, writePrompt, 8000, claudeWriteKey);
+      htmlContent = htmlContent.replace(/^```html
+?/, '').replace(/
+?```$/, '').trim();
+    } catch(e) {
+      return res.status(502).json({ success: false, error: 'Claude write failed: ' + e.message });
     }
-    const blockReason = writeData?.promptFeedback?.blockReason;
-    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the prompt: ${blockReason}` });
-    const finishReason = writeData?.candidates?.[0]?.finishReason;
-    const htmlContent = writeData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!htmlContent) return res.status(502).json({ success: false, error: `AI did not generate content (finishReason: ${finishReason || 'unknown'})`, model: writeResult.modelUsed });
-    const wasTruncated = finishReason === 'MAX_TOKENS';
-    if (wasTruncated) {
-      console.warn(`⚠️ Write truncated (MAX_TOKENS) on ${writeResult.modelUsed} — ${htmlContent.length} chars produced`);
-    }
+    if (!htmlContent) return res.status(502).json({ success: false, error: 'Claude returned empty content' });
 
     // Post-processor: strip any confidence/unverified placeholder patterns that slipped through.
     const scrub = stripAiPlaceholders(htmlContent);
@@ -9494,7 +9597,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
 });
 
 // ── Articles ─────────────────────────────────────────────────
-app.get('/api/content/articles/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/articles/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT a.*, j.seed_keyword FROM content_articles a LEFT JOIN content_jobs j ON j.id=a.job_id WHERE a.profile_id=$1 ORDER BY a.created_at DESC`,
@@ -9512,7 +9615,7 @@ app.patch('/api/content/articles/:id/status', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/articles/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/articles/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_articles WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -9520,7 +9623,7 @@ app.delete('/api/content/articles/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── WordPress Publish ────────────────────────────────────────
-app.post('/api/content/articles/:id/publish-wp', verifyAdmin, async (req, res) => {
+app.post('/api/content/articles/:id/publish-wp', verifyEngineAccess, async (req, res) => {
   try {
     const articleR = await pool.query(
       `SELECT a.*, cp.wp_url, cp.wp_user, cp.wp_app_password FROM content_articles a JOIN content_profiles cp ON cp.id=a.profile_id WHERE a.id=$1`,
@@ -9548,6 +9651,10 @@ app.post('/api/content/articles/:id/publish-wp', verifyAdmin, async (req, res) =
 });
 
 // ── Content Engine Page ──────────────────────────────────────
+app.get('/engine-login', (req, res) => {
+  res.sendFile(require('path').join(__dirname, 'engine-login.html'));
+});
+
 app.get('/content-engine', (req, res) => {
   res.sendFile(require('path').join(__dirname, 'content-engine.html'));
 });
@@ -9556,7 +9663,7 @@ app.get('/content-engine', (req, res) => {
 // ============================================================
 
 // ── Get all clusters for a profile ───────────────────────────
-app.get('/api/content/clusters/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/clusters/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`
       SELECT cc.*,
@@ -9580,7 +9687,7 @@ app.get('/api/content/clusters/:profileId', verifyAdmin, async (req, res) => {
 });
 
 // ── Create cluster from a job (AI generates subtopics) ────────
-app.post('/api/content/clusters/generate', verifyAdmin, async (req, res) => {
+app.post('/api/content/clusters/generate', verifyEngineAccess, async (req, res) => {
   try {
     const { job_id, profile_id, cluster_size = 5 } = req.body;
     if (!job_id || !profile_id) return res.status(400).json({ success: false, error: 'job_id and profile_id required' });
@@ -9759,7 +9866,7 @@ app.patch('/api/content/cluster-nodes/:nodeId', verifyAdmin, async (req, res) =>
 });
 
 // ── Get link map for a cluster (for injecting into articles) ──
-app.get('/api/content/clusters/:clusterId/linkmap', verifyAdmin, async (req, res) => {
+app.get('/api/content/clusters/:clusterId/linkmap', verifyEngineAccess, async (req, res) => {
   try {
     const nodesR = await pool.query(`SELECT * FROM content_cluster_nodes WHERE cluster_id=$1 ORDER BY sort_order`, [req.params.clusterId]);
     const linksR = await pool.query(`
@@ -9786,7 +9893,7 @@ app.get('/api/content/clusters/:clusterId/linkmap', verifyAdmin, async (req, res
 });
 
 // ── Delete cluster ────────────────────────────────────────────
-app.delete('/api/content/clusters/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/clusters/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_clusters WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -9845,7 +9952,7 @@ app.delete('/api/content/images/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── News Feeds ────────────────────────────────────────────────
-app.get('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/feeds/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT f.*, COUNT(a.id) as article_count FROM content_news_feeds f LEFT JOIN content_news_articles a ON a.feed_id=f.id WHERE f.profile_id=$1 GROUP BY f.id ORDER BY f.created_at DESC`, [req.params.profileId]);
     res.json({ success: true, feeds: r.rows });
@@ -9856,7 +9963,7 @@ app.get('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
   }
 });
 
-app.post('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
+app.post('/api/content/feeds/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const { feed_name, feed_type, feed_url, domain, niche_keywords, auto_publish, publish_interval, articles_per_batch } = req.body;
     const r = await pool.query(`INSERT INTO content_news_feeds (profile_id,feed_name,feed_type,feed_url,domain,niche_keywords,auto_publish,publish_interval,articles_per_batch) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
@@ -9865,7 +9972,7 @@ app.post('/api/content/feeds/:profileId', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/feeds/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/feeds/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_news_feeds WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -9873,7 +9980,7 @@ app.delete('/api/content/feeds/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── Fetch + Rewrite News Feed ─────────────────────────────────
-app.post('/api/content/feeds/:feedId/fetch', verifyAdmin, async (req, res) => {
+app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, async (req, res) => {
   try {
     const { days_back = 7 } = req.body;
     const feedR = await pool.query(`SELECT f.*, cp.niche, cp.name as profile_name, cp.domain as profile_domain FROM content_news_feeds f JOIN content_profiles cp ON cp.id=f.profile_id WHERE f.id=$1`, [req.params.feedId]);
@@ -9973,22 +10080,16 @@ REWRITE RULES
 Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
 
       try {
-        const newsResult = await callGeminiWithFallback(
-          geminiKey,
-          { contents: [{ parts: [{ text: rewritePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } } }
-        );
-        if (!newsResult.ok) {
-          console.warn(`Rewrite Gemini error for "${art.title}":`, newsResult.errorMessage || `HTTP ${newsResult.status}`);
-          continue;
-        }
-        const gd = newsResult.data;
-        const finishReason = gd?.candidates?.[0]?.finishReason;
-        const rawHtml = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (!rawHtml) {
-          console.warn(`Rewrite empty for "${art.title}" (finishReason: ${finishReason || 'unknown'})`);
-          continue;
-        }
-        if (finishReason === 'MAX_TOKENS') console.warn(`⚠️ Rewrite truncated for "${art.title}" on ${newsResult.modelUsed}`);
+        let rawHtml;
+        try {
+          const claudeNewsKey = resolveClaudeKey(req);
+          const sys = 'You are a professional content writer. Rewrite news articles to be 100% original, plagiarism-free, and SEO-optimised. Return only clean HTML starting with <article>. No markdown, no code fences.';
+          rawHtml = await callClaudeForWrite(sys, rewritePrompt, 4000, claudeNewsKey);
+          rawHtml = rawHtml.replace(/^```html
+?/, '').replace(/
+?```$/, '').trim();
+        } catch(e) { console.warn(`[news] Claude error for "${art.title}":`, e.message); continue; }
+        if (!rawHtml) { console.warn(`[news] Empty for "${art.title}"`); continue; }
         const scrub = stripAiPlaceholders(rawHtml);
         if (scrub.stripped) console.log(`🧹 [news] Stripped ${scrub.stripped} placeholder pattern type(s) from "${art.title}"`);
         const html = scrub.html;
@@ -10007,14 +10108,14 @@ Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
   } catch(e) { console.error('Feed fetch error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/content/news-articles/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/news-articles/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT a.*, f.feed_name FROM content_news_articles a LEFT JOIN content_news_feeds f ON f.id=a.feed_id WHERE a.profile_id=$1 ORDER BY a.created_at DESC LIMIT 50`, [req.params.profileId]);
     res.json({ success: true, articles: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/content/news-articles/:id/publish-wp', verifyAdmin, async (req, res) => {
+app.post('/api/content/news-articles/:id/publish-wp', verifyEngineAccess, async (req, res) => {
   try {
     const artR = await pool.query(`SELECT a.*, cp.wp_url, cp.wp_user, cp.wp_app_password FROM content_news_articles a JOIN content_profiles cp ON cp.id=a.profile_id WHERE a.id=$1`, [req.params.id]);
     if (!artR.rows.length) return res.status(404).json({ success: false, error: 'Article not found' });
@@ -10030,7 +10131,7 @@ app.post('/api/content/news-articles/:id/publish-wp', verifyAdmin, async (req, r
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/news-articles/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/news-articles/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_news_articles WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -10038,7 +10139,7 @@ app.delete('/api/content/news-articles/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── Rewrite Analysis ──────────────────────────────────────────
-app.post('/api/content/analyse-rewrite', verifyAdmin, async (req, res) => {
+app.post('/api/content/analyse-rewrite', verifyEngineAccess, async (req, res) => {
   try {
     const {
       profile_id, original_url, original_slug, original_title, original_html,
@@ -10276,7 +10377,7 @@ Return ONLY valid JSON:
   }
 });
 
-app.post('/api/content/execute-rewrite/:rewriteId', verifyAdmin, async (req, res) => {
+app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, async (req, res) => {
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
     if (typeof v !== 'string') return v;
@@ -10536,22 +10637,18 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
         ? writePromptRW
         : `${writePromptRW}\n\n═══ VORIGE POGING AFGEWEZEN ═══\nDe vorige poging had deze problemen — los ze op:\n${violationHistory[violationHistory.length-1].map(v => `- ${v.code}: ${v.hint}`).join('\n')}\n\nSCHRIJF NU OPNIEUW — los elk probleem op.`;
 
-      const rwResult = await callGeminiWithFallback(
-        geminiKey,
-        { contents: [{ parts: [{ text: promptThisAttempt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
-      );
-      if (!rwResult.ok) {
-        const apiErr = rwResult.errorMessage || `Gemini HTTP ${rwResult.status}`;
-        return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: rwResult.modelUsed });
-      }
-      const blockReason = rwResult.data?.promptFeedback?.blockReason;
-      if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked rewrite: ${blockReason}` });
-      const finishReason = rwResult.data?.candidates?.[0]?.finishReason;
-      const rawHtml = rwResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (!rawHtml) return res.status(502).json({ success: false, error: `No content generated (finishReason: ${finishReason})` });
-
-      wasTruncated = finishReason === 'MAX_TOKENS';
-      modelUsed = rwResult.modelUsed;
+      const claudeRwKey = resolveClaudeKey(req);
+      if (!claudeRwKey) return res.status(500).json({ success: false, error: 'Claude API key required' });
+      let rawHtml;
+      try {
+        const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
+        rawHtml = await callClaudeForWrite(sys, promptThisAttempt, 8000, claudeRwKey);
+        rawHtml = rawHtml.replace(/^```html
+?/, '').replace(/
+?```$/, '').trim();
+      } catch(e) { return res.status(502).json({ success: false, error: 'Claude rewrite failed: ' + e.message }); }
+      if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty rewrite' });
+      wasTruncated = false; modelUsed = 'claude-sonnet-4-20250514';
 
       const scrubbed = stripAiPlaceholders(rawHtml);
       let candidate = rewriterHelpers.stripForbiddenPatterns(scrubbed.html);
@@ -10622,7 +10719,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
   }
 });
 
-app.get('/api/content/rewrites/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/rewrites/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT * FROM content_rewrites WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 50`, [req.params.profileId]);
     res.json({ success: true, rewrites: r.rows });
@@ -10649,7 +10746,7 @@ const BULK_CONCURRENCY_PER_TICK = 1; // process 1 item per worker tick to respec
 let _bulkWorkerRunning = false;
 
 // ── CREATE JOB ──────────────────────────────────────────────────────
-app.post('/api/content/bulk/create', verifyAdmin, async (req, res) => {
+app.post('/api/content/bulk/create', verifyEngineAccess, async (req, res) => {
   try {
     const {
       profile_id,
@@ -10706,7 +10803,7 @@ app.post('/api/content/bulk/create', verifyAdmin, async (req, res) => {
 });
 
 // ── STATUS POLL ─────────────────────────────────────────────────────
-app.get('/api/content/bulk/:id/status', verifyAdmin, async (req, res) => {
+app.get('/api/content/bulk/:id/status', verifyEngineAccess, async (req, res) => {
   try {
     const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [req.params.id]);
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
@@ -10721,7 +10818,7 @@ app.get('/api/content/bulk/:id/status', verifyAdmin, async (req, res) => {
 });
 
 // ── APPROVE ITEMS (approve-gate mode) ────────────────────────────────
-app.post('/api/content/bulk/:id/approve', verifyAdmin, async (req, res) => {
+app.post('/api/content/bulk/:id/approve', verifyEngineAccess, async (req, res) => {
   try {
     const { item_ids, approve_all } = req.body;
     const jobId = req.params.id;
@@ -10760,7 +10857,7 @@ app.post('/api/content/bulk/:id/approve', verifyAdmin, async (req, res) => {
 });
 
 // ── EXECUTE (resume approved items) ──────────────────────────────────
-app.post('/api/content/bulk/:id/execute', verifyAdmin, async (req, res) => {
+app.post('/api/content/bulk/:id/execute', verifyEngineAccess, async (req, res) => {
   try {
     const jobId = req.params.id;
     const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [jobId]);
@@ -10797,7 +10894,7 @@ app.get('/api/content/bulk/:id/report', verifyAdmin, async (req, res) => {
 });
 
 // ── LIST JOBS FOR A PROFILE ──────────────────────────────────────────
-app.get('/api/content/bulk/list/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/bulk/list/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, job_type, mode, status, total_items, analysed_items, approved_items,
@@ -10811,7 +10908,7 @@ app.get('/api/content/bulk/list/:profileId', verifyAdmin, async (req, res) => {
 });
 
 // ── DELETE / CANCEL JOB ──────────────────────────────────────────────
-app.delete('/api/content/bulk/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/bulk/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`UPDATE content_bulk_jobs SET status='cancelled' WHERE id=$1 AND status NOT IN ('done','failed','cancelled')`, [req.params.id]);
     res.json({ success: true });
@@ -11219,7 +11316,7 @@ console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms)
 // content-engine.html calls POST /api/content/tracker-push after Execute
 // The Pulse+Nexus tracker page reads GET /api/content/tracker-queue and auto-imports
 const _trackerQueue = {}; // in-memory per-user queue (keyed by userId)
-app.post('/api/content/tracker-push', verifyAdmin, async (req, res) => {
+app.post('/api/content/tracker-push', verifyEngineAccess, async (req, res) => {
   try {
     const { user_id, page } = req.body;
     if (!user_id || !page || !page.url) return res.status(400).json({ success: false, error: 'user_id and page.url required' });
@@ -11230,7 +11327,7 @@ app.post('/api/content/tracker-push', verifyAdmin, async (req, res) => {
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/content/tracker-queue', verifyAdmin, async (req, res) => {
+app.get('/api/content/tracker-queue', verifyEngineAccess, async (req, res) => {
   try {
     const userId = req.query.user_id || req.headers['x-user-id'] || '';
     const pages = _trackerQueue[userId] || [];
@@ -11241,7 +11338,7 @@ app.get('/api/content/tracker-queue', verifyAdmin, async (req, res) => {
 });
 
 // ── Stats Study ────────────────────────────────────────────────
-app.post('/api/content/stats-study', verifyAdmin, async (req, res) => {
+app.post('/api/content/stats-study', verifyEngineAccess, async (req, res) => {
   try {
     const { profile_id, topic, seed_keyword } = req.body;
     if (!profile_id || !topic) return res.status(400).json({ success: false, error: 'profile_id and topic required' });
@@ -11298,7 +11395,7 @@ Return ONLY valid JSON:
 
     const studyResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: studyPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }
+      { contents: [{ parts: [{ text: studyPrompt }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.1, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } } }
     );
     if (!studyResult.ok) {
       const apiErr = studyResult.errorMessage || `Gemini HTTP ${studyResult.status}`;
@@ -11329,42 +11426,21 @@ Return ONLY valid JSON:
 
     // Now write the full HTML article from the study data
     const articlePrompt = `Write a comprehensive, publication-ready statistics study article in HTML.
-
 STUDY DATA: ${JSON.stringify(studyData)}
 BUSINESS: ${profile.name} — ${profile.niche}
 SEED KEYWORD: ${seed_keyword || topic}
+REQUIREMENTS: 1. Open with compelling summary. 2. All data tables as proper HTML tables. 3. Cite every statistic with inline source links. 4. Scannable H2s, bullets, callout boxes. 5. Methodology section. 6. FAQ (5 questions). 7. ~2500 words. 8. ONLY use stats from STUDY DATA — never invent. Return clean HTML starting with <article>. No markdown.`;
 
-REQUIREMENTS:
-1. Open with a compelling summary of key findings
-2. Include all data tables as proper HTML tables
-3. Cite every statistic with inline links to sources
-4. Make it scannable: clear H2s, bullet lists, callout boxes
-5. Add methodology section
-6. Add FAQ section (5 questions)
-7. End with implications for the reader
-8. Optimise for AI Overviews: direct answers, structured data
-9. ~2500 words
-10. Return clean HTML starting with <article>`;
-
-    const articleResult = await callGeminiWithFallback(
-      geminiKey,
-      { contents: [{ parts: [{ text: articlePrompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
-    );
-    if (!articleResult.ok) {
-      const apiErr = articleResult.errorMessage || `Gemini HTTP ${articleResult.status}`;
-      console.error('Stats study article Gemini error:', apiErr, articleResult.data);
-      return res.status(502).json({ success: false, error: `Gemini API error (article step): ${apiErr}`, model: articleResult.modelUsed });
-    }
-    const blockReason2 = articleResult.data?.promptFeedback?.blockReason;
-    if (blockReason2) return res.status(502).json({ success: false, error: `Gemini blocked the article prompt: ${blockReason2}` });
-    const rawHtml = articleResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawHtml) {
-      const fr = articleResult.data?.candidates?.[0]?.finishReason;
-      return res.status(502).json({ success: false, error: `Gemini returned no article content (finishReason: ${fr || 'unknown'})`, model: articleResult.modelUsed });
-    }
-    const finishReason = articleResult.data?.candidates?.[0]?.finishReason;
-    const wasTruncated = finishReason === 'MAX_TOKENS';
-    if (wasTruncated) console.warn(`⚠️ Stats study article truncated (MAX_TOKENS) on ${articleResult.modelUsed}`);
+    const claudeStudyKey = resolveClaudeKey(req);
+    let rawHtml, wasTruncated = false;
+    try {
+      const sys = 'You are an expert data journalist and HTML writer. Write comprehensive statistics study articles using only the data provided. Never invent statistics. Return only clean HTML starting with <article>.';
+      rawHtml = await callClaudeForWrite(sys, articlePrompt, 8000, claudeStudyKey);
+      rawHtml = rawHtml.replace(/^```html
+?/, '').replace(/
+?```$/, '').trim();
+    } catch(e) { return res.status(502).json({ success: false, error: 'Claude study generation failed: ' + e.message }); }
+    if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty study article' });
     // Scrub placeholder patterns
     const scrub = stripAiPlaceholders(rawHtml);
     if (scrub.stripped) console.log(`🧹 [stats-study] Stripped ${scrub.stripped} placeholder pattern type(s)`);
@@ -11384,7 +11460,7 @@ REQUIREMENTS:
   }
 });
 
-app.get('/api/content/stats-studies/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/stats-studies/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT * FROM content_stats_studies WHERE profile_id=$1 ORDER BY created_at DESC`, [req.params.profileId]);
     res.json({ success: true, studies: r.rows });
