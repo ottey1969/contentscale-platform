@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Content Engine — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0c10;color:#eef0f5;font-family:'Barlow',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:#111418;border:1px solid #2a303a;border-radius:10px;padding:48px 40px;width:100%;max-width:440px;text-align:center;}
+.logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2rem;color:#f56d00;letter-spacing:.02em;margin-bottom:6px;}
+.logo span{color:#eef0f5;}
+.tagline{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#4a5260;margin-bottom:36px;}
+h1{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.4rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+p.sub{font-size:13px;color:#7a8494;margin-bottom:28px;line-height:1.6;}
+label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7a8494;margin-bottom:6px;text-align:left;}
+input{width:100%;background:#1a1f26;border:1px solid #2a303a;border-radius:6px;color:#eef0f5;font-family:'Barlow',sans-serif;font-size:1rem;padding:14px 16px;outline:none;transition:border-color .15s;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;}
+input:focus{border-color:#f56d00;}
+input::placeholder{text-transform:none;letter-spacing:normal;color:#3d4455;font-size:.9rem;}
+.key-fields{display:none;margin-top:16px;padding-top:16px;border-top:1px solid #2a303a;text-align:left;}
+.key-notice{background:rgba(245,109,0,.08);border:1px solid rgba(245,109,0,.25);border-radius:6px;padding:10px 14px;font-size:11px;color:#f09050;margin-bottom:14px;line-height:1.6;}
+.key-input{text-transform:none;letter-spacing:normal;font-size:.85rem;}
+.btn{width:100%;background:#f56d00;color:#fff;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:15px;cursor:pointer;transition:background .15s;margin-top:8px;}
+.btn:hover{background:#ff7a00;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:10px 14px;color:#f87171;font-size:12px;margin-top:12px;display:none;}
+.success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:10px 14px;color:#4ade80;font-size:12px;margin-top:12px;display:none;}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="logo">Content<span>Scale</span></div>
+  <div class="tagline">Content Engine</div>
+  <h1>Enter Access Code</h1>
+  <p class="sub">Enter the ENG-XXXX code you received. If API keys are not pre-configured, you'll be asked to enter your own Gemini and Claude keys.</p>
+
+  <label for="codeInput">Access Code</label>
+  <input id="codeInput" type="text" placeholder="ENG-XXXXXXXX" maxlength="16" oninput="this.value=this.value.toUpperCase()">
+
+  <div class="key-fields" id="keyFields">
+    <div class="key-notice">
+      ⚡ Your access code does not include pre-configured API keys. Enter your own Gemini and Claude keys below. They are stored only in your browser — never sent to our servers.
+    </div>
+    <label>Gemini API Key</label>
+    <input id="geminiKeyInput" type="password" placeholder="AIza... (get free at aistudio.google.com)" class="key-input">
+    <label style="margin-top:10px;">Claude (Anthropic) API Key</label>
+    <input id="claudeKeyInput" type="password" placeholder="sk-ant-... (get at console.anthropic.com)" class="key-input">
+  </div>
+
+  <button class="btn" onclick="doLogin()">Access Engine →</button>
+  <div class="error" id="errMsg"></div>
+  <div class="success" id="sucMsg"></div>
+</div>
+
+<script>
+// Pre-fill code from URL param
+var params = new URLSearchParams(window.location.search);
+var preCode = params.get('code');
+if (preCode) document.getElementById('codeInput').value = preCode.toUpperCase();
+
+async function doLogin() {
+  var code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (!code) { showErr('Enter your access code'); return; }
+  var btn = document.querySelector('.btn');
+  btn.disabled = true; btn.textContent = 'Verifying...';
+
+  try {
+    var r = await fetch('/api/engine/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ code })
+    });
+    var d = await r.json();
+    if (!d.success) { showErr(d.error || 'Invalid code'); btn.disabled=false; btn.textContent='Access Engine →'; return; }
+
+    // If code has no pre-stored keys, user must provide their own
+    if (!d.has_gemini || !d.has_claude) {
+      var keyFields = document.getElementById('keyFields');
+      if (keyFields.style.display === 'none' || keyFields.style.display === '') {
+        keyFields.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Continue →';
+        showErr('');
+        document.getElementById('geminiKeyInput').focus();
+        return;
+      }
+      // User has seen the form — validate keys entered
+      var gemKey = document.getElementById('geminiKeyInput').value.trim();
+      var claudeKey = document.getElementById('claudeKeyInput').value.trim();
+      if (!d.has_gemini && !gemKey) { showErr('Enter your Gemini API key'); btn.disabled=false; btn.textContent='Continue →'; return; }
+      if (!d.has_claude && !claudeKey) { showErr('Enter your Claude API key'); btn.disabled=false; btn.textContent='Continue →'; return; }
+      if (gemKey) sessionStorage.setItem('engine_gemini_key', gemKey);
+      if (claudeKey) sessionStorage.setItem('engine_claude_key', claudeKey);
+    }
+
+    // Store session
+    sessionStorage.setItem('engine_token', d.token);
+    sessionStorage.setItem('engine_client', d.client_name);
+    showSuccess('Welcome, ' + d.client_name + '! Redirecting...');
+    setTimeout(() => window.location.href = '/content-engine', 800);
+
+  } catch(e) { showErr('Connection error: ' + e.message); btn.disabled=false; btn.textContent='Access Engine →'; }
+}
+
+document.getElementById('codeInput').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+function showErr(msg) { var e=document.getElementById('errMsg'); e.style.display=msg?'block':'none'; e.textContent=msg; }
+function showSuccess(msg) { var e=document.getElementById('sucMsg'); e.style.display='block'; e.textContent=msg; }
+</script>
+</body>
+</html>

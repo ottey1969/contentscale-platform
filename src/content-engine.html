@@ -79,7 +79,11 @@ textarea{resize:vertical;min-height:100px;}
     <button class="nav-tab" onclick="showPanel('news',this)">📰 News</button>
     <button class="nav-tab" onclick="showPanel('stats',this)">📊 Stats Study</button>
   </div>
-  <a href="/admin" style="font-size:12px;color:#6b7280;text-decoration:none;">← Admin</a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="engineUserBadge" style="font-size:11px;color:#6b7280;display:none;"></span>
+    <a href="/admin" id="adminLink" style="font-size:12px;color:#6b7280;text-decoration:none;">← Admin</a>
+    <button id="engineLogout" onclick="engineLogout()" style="display:none;font-size:11px;color:#6b7280;background:none;border:1px solid #2a303a;border-radius:4px;padding:4px 10px;cursor:pointer;">Logout</button>
+  </div>
 </div>
 
 <div class="container">
@@ -560,8 +564,23 @@ textarea{resize:vertical;min-height:100px;}
 <div id="toast" class="toast"></div>
 
 <script>
-const ADMIN_ID = localStorage.getItem('admin_id');
-if (!ADMIN_ID) window.location.href = '/admin';
+// ── Auth: support both admin and engine share code users ──
+var ADMIN_ID = localStorage.getItem('admin_id');
+var ENGINE_TOKEN = sessionStorage.getItem('engine_token');
+var ENGINE_GEMINI_KEY = sessionStorage.getItem('engine_gemini_key');
+var ENGINE_CLAUDE_KEY = sessionStorage.getItem('engine_claude_key');
+var ENGINE_CLIENT = sessionStorage.getItem('engine_client');
+var IS_ADMIN = !!ADMIN_ID;
+
+if (!ADMIN_ID && !ENGINE_TOKEN) window.location.href = '/engine-login';
+
+// Show client name in header for non-admin users
+if (!IS_ADMIN && ENGINE_CLIENT) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var logo = document.querySelector('.logo');
+    if (logo) logo.innerHTML = '<span>Content</span>Scale Engine <span style="font-size:12px;color:#6b7280;font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px;">— ' + ENGINE_CLIENT + '</span>';
+  });
+}
 
 let _profiles = [];
 let _pendingLocations = [];
@@ -701,9 +720,18 @@ function toast(msg, type) {
 
 async function api(endpoint, method, body) {
   method = method || 'GET';
-  const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_ID } };
+  const headers = { 'Content-Type': 'application/json' };
+  if (IS_ADMIN) {
+    headers['x-admin-key'] = ADMIN_ID;
+  } else {
+    headers['x-engine-token'] = ENGINE_TOKEN;
+    if (ENGINE_GEMINI_KEY) headers['x-gemini-key'] = ENGINE_GEMINI_KEY;
+    if (ENGINE_CLAUDE_KEY) headers['x-claude-key'] = ENGINE_CLAUDE_KEY;
+  }
+  const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(endpoint, opts);
+  if (r.status === 401) { sessionStorage.clear(); window.location.href = '/engine-login'; return {}; }
   return r.json();
 }
 
@@ -2302,6 +2330,24 @@ function bulkResumeJob(jobId) {
   document.getElementById('bulkActiveCard').scrollIntoView({ behavior: 'smooth' });
   bulkStartPolling();
 }
+
+// ── Engine user session management ──────────────────────────
+function engineLogout() {
+  sessionStorage.clear();
+  window.location.href = '/engine-login';
+}
+// Show correct header elements based on auth type
+document.addEventListener('DOMContentLoaded', function() {
+  if (!IS_ADMIN) {
+    var adminLink = document.getElementById('adminLink');
+    var logoutBtn = document.getElementById('engineLogout');
+    var badge = document.getElementById('engineUserBadge');
+    if (adminLink) adminLink.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+    if (badge && ENGINE_CLIENT) { badge.textContent = '👤 ' + ENGINE_CLIENT; badge.style.display = 'inline'; }
+  }
+});
+
 </script>
 </body>
 </html>
