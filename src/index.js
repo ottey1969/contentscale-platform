@@ -17291,42 +17291,42 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-email-log" class="tab-content"><h2>Email Log</h2><div class="card" id="email-log-list">Loading email log...</div></div>
         </div>
     </div>
-       <script>
+    <script>
         // --- Helper: Robust API Call with Admin Auth ---
         async function apiCall(endpoint, method = 'GET', body = null) {
-            const headers = { 'Content-Type': 'application/json' };
-            
-            // Attach admin key for BOTH admin routes AND content engine routes
-            const adminId = localStorage.getItem('admin_id');
-            if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) {
-                headers['x-admin-key'] = adminId;
+          const headers = { 'Content-Type': 'application/json' };
+          
+          // Attach admin key for BOTH admin routes AND content engine routes
+          const adminId = localStorage.getItem('admin_id');
+          if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) {
+            headers['x-admin-key'] = adminId;
+          }
+          
+          const options = { method, headers };
+          if (body) options.body = JSON.stringify(body);
+          
+          try {
+            const res = await fetch(endpoint, options);
+            if (!res.ok) {
+              const text = await res.text();
+              // Handle HTML errors (e.g., redirected to login or server error page)
+              if (text.indexOf('<!DOCTYPE') === 0 || text.indexOf('<html') === 0) {
+                throw new Error('Server returned HTML (Status ' + res.status + '). Session may be expired.');
+              }
+              try { 
+                const errJson = JSON.parse(text); 
+                throw new Error(errJson.error || 'Error ' + res.status); 
+              } catch (e) { 
+                throw new Error(text || 'Error ' + res.status); 
+              }
             }
-            
-            const options = { method, headers };
-            if (body) options.body = JSON.stringify(body);
-            
-            try {
-                const res = await fetch(endpoint, options);
-                if (!res.ok) {
-                    const text = await res.text();
-                    // Handle HTML errors (e.g., redirected to login)
-                    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
-                        throw new Error(`Server returned HTML (Status ${res.status}). Session may be expired.`);
-                    }
-                    try { 
-                        const errJson = JSON.parse(text); 
-                        throw new Error(errJson.error || `Error ${res.status}`); 
-                    } catch (e) { 
-                        throw new Error(text || `Error ${res.status}`); 
-                    }
-                }
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error);
-                return data;
-            } catch (error) { 
-                console.error('API Call Failed:', error); 
-                throw error; 
-            }
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            return data;
+          } catch (error) { 
+            console.error('API Call Failed:', error); 
+            throw error; 
+          }
         }
 
         // --- Tab Switching Logic ---
@@ -17337,7 +17337,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const tabEl = document.getElementById('tab-' + tabName);
             if (tabEl) tabEl.classList.add('active');
             
-            // Highlight nav item
             const navItems = document.querySelectorAll('.nav-item');
             navItems.forEach(item => { 
                 if (item.textContent.toLowerCase().includes(tabName)) item.classList.add('active'); 
@@ -17357,19 +17356,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         if (res.profiles && res.profiles.length > 0) {
                             let html = '<ul style="list-style:none;padding:0;">';
                             res.profiles.forEach(p => {
-                                html += `<li style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">
-                                    <span>${p.name} <small style="color:var(--text-muted)">(${p.domain})</small></span>
-                                    <span class="badge" style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:11px;">${p.niche || 'N/A'}</span>
-                                </li>`;
+                                html += '<li style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
+                                    '<span>' + p.name + ' <small style="color:var(--text-muted)">(' + p.domain + ')</small></span>' +
+                                    '<span class="badge" style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:11px;">' + (p.niche || 'N/A') + '</span>' +
+                                '</li>';
                             });
                             html += '</ul>';
                             container.innerHTML = html;
                         } else {
-                            container.innerHTML = '<p style="color:var(--text-muted)">No profiles found. Create one in the Content Engine.</p>';
+                            container.innerHTML = '<p style="color:var(--text-muted)">No profiles found.</p>';
                         }
                     })
                     .catch(err => {
-                        container.innerHTML = `<p style="color:var(--red)">❌ Error loading profiles: ${err.message}</p>`;
+                        container.innerHTML = '<p style="color:var(--red)">❌ Error: ' + err.message + '</p>';
                     });
             } 
             else if (tab === 'engine-access') {
@@ -17382,11 +17381,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             let html = '<table style="width:100%;font-size:13px;text-align:left;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;">Code</th><th>Client</th><th>Status</th></tr></thead><tbody>';
                             res.codes.forEach(c => {
                                 const statusColor = c.is_active ? 'var(--green)' : 'var(--red)';
-                                html += `<tr style="border-bottom:1px solid var(--border);">
-                                    <td style="padding:8px;font-family:monospace;">${c.code}</td>
-                                    <td>${c.client_name || '—'}</td>
-                                    <td style="color:${statusColor}">${c.is_active ? 'Active' : 'Inactive'}</td>
-                                </tr>`;
+                                html += '<tr style="border-bottom:1px solid var(--border);">' +
+                                    '<td style="padding:8px;font-family:monospace;">' + c.code + '</td>' +
+                                    '<td>' + (c.client_name || '—') + '</td>' +
+                                    '<td style="color:' + statusColor + '">' + (c.is_active ? 'Active' : 'Inactive') + '</td>' +
+                                '</tr>';
                             });
                             html += '</tbody></table>';
                             container.innerHTML = html;
@@ -17395,21 +17394,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         }
                     })
                     .catch(err => {
-                        container.innerHTML = `<p style="color:var(--red)">❌ Error loading codes: ${err.message}</p>`;
+                        container.innerHTML = '<p style="color:var(--red)">❌ Error: ' + err.message + '</p>';
                     });
             }
         }
 
-        // --- Logout ---
         function logout() { 
             localStorage.removeItem('admin_id'); 
-            localStorage.removeItem('admin_token'); // Clear both just in case
+            localStorage.removeItem('admin_token'); 
             window.location.href = '/tools'; 
         }
 
-        // --- Init ---
         document.addEventListener('DOMContentLoaded', () => { 
-            // Check if we are logged in, if not redirect
             if (!localStorage.getItem('admin_id')) {
                 window.location.href = '/tools';
                 return;
@@ -17417,8 +17413,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             loadTabData('content'); 
         });
     </script>
-      
-      </body>
+</body>
 </html>`;
 
 // Route to serve the Admin Dashboard (replaces existing /admin route)
