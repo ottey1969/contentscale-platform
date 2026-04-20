@@ -10104,28 +10104,45 @@ Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
       try {
         let rawHtml;
         try {
+          // ✅ FORCE CLAUDE FOR NEWS REWRITING
           const claudeNewsKey = resolveClaudeKey(req);
           const sys = 'You are a professional content writer. Rewrite news articles to be 100% original, plagiarism-free, and SEO-optimised. Return only clean HTML starting with <article>. No markdown, no code fences.';
+          
           rawHtml = await callClaudeForWrite(sys, rewritePrompt, 4000, claudeNewsKey);
+          
           rawHtml = rawHtml.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-        } catch(e) { console.warn(`[news] Claude error for "${art.title}":`, e.message); continue; }
-        if (!rawHtml) { console.warn(`[news] Empty for "${art.title}"`); continue; }
+        } catch(e) { 
+          console.warn(`[news] Claude error for "${art.title}":`, e.message); 
+          continue; 
+        }
+        
+        if (!rawHtml) { 
+          console.warn(`[news] Empty for "${art.title}"`); 
+          continue; 
+        }
+        
         const scrub = stripAiPlaceholders(rawHtml);
         if (scrub.stripped) console.log(`🧹 [news] Stripped ${scrub.stripped} placeholder pattern type(s) from "${art.title}"`);
         const html = scrub.html;
         const slug = art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
         const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
+        
         const dbR = await pool.query(
           `INSERT INTO content_news_articles (feed_id,profile_id,original_url,original_title,original_source,original_date,rewritten_title,rewritten_html,rewritten_slug,status,word_count) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'rewritten',$10) RETURNING *`,
           [feed.id, feed.profile_id, art.url, art.title, feed.domain||feed.feed_url, art.date, art.title, html, slug, wc]
         );
         rewritten.push(dbR.rows[0]);
-      } catch(e) { console.warn('Rewrite failed for:', art.title, e.message); }
+      } catch(e) { 
+        console.warn('Rewrite failed for:', art.title, e.message); 
+      }
     }
 
     await pool.query(`UPDATE content_news_feeds SET last_fetched=NOW() WHERE id=$1`, [feed.id]);
     res.json({ success: true, found: articles.length, rewritten: rewritten.length, articles: rewritten });
-  } catch(e) { console.error('Feed fetch error:', e); res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) { 
+    console.error('Feed fetch error:', e); 
+    res.status(500).json({ success: false, error: e.message }); 
+  }
 });
 
 app.get('/api/content/news-articles/:profileId', verifyEngineAccess, async (req, res) => {
@@ -10141,10 +10158,29 @@ app.post('/api/content/news-articles/:id/publish-wp', verifyEngineAccess, async 
     if (!artR.rows.length) return res.status(404).json({ success: false, error: 'Article not found' });
     const art = artR.rows[0];
     if (!art.wp_url || !art.wp_user || !art.wp_app_password) return res.status(400).json({ success: false, error: 'WP credentials not configured' });
+    
     const wpApiUrl = art.wp_url.replace(/\/$/, '') + '/wp-json/wp/v2/posts';
     const creds = Buffer.from(`${art.wp_user}:${art.wp_app_password}`).toString('base64');
-    const wpR = await fetch(wpApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${creds}` }, body: JSON.stringify({ title: art.rewritten_title, content: art.rewritten_html, slug: art.rewritten_slug, status: 'draft' }) });
-    if (!wpR.ok) { const err = await wpR.text(); return res.status(400).json({ success: false, error: err.substring(0, 200) }); }
+    
+    const wpR = await fetch(wpApiUrl, { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Basic ${creds}` 
+      }, 
+      body: JSON.stringify({ 
+        title: art.rewritten_title, 
+        content: art.rewritten_html, 
+        slug: art.rewritten_slug, 
+        status: 'draft' 
+      }) 
+    });
+    
+    if (!wpR.ok) { 
+      const err = await wpR.text(); 
+      return res.status(400).json({ success: false, error: err.substring(0, 200) }); 
+    }
+    
     const wpData = await wpR.json();
     await pool.query(`UPDATE content_news_articles SET wp_post_id=$1,wp_url=$2,status='published',published_at=NOW() WHERE id=$3`, [wpData.id, wpData.link, art.id]);
     res.json({ success: true, wp_post_id: wpData.id, wp_url: wpData.link });
@@ -11360,103 +11396,75 @@ app.post('/api/content/stats-study', verifyEngineAccess, async (req, res) => {
   try {
     const { profile_id, topic, seed_keyword } = req.body;
     if (!profile_id || !topic) return res.status(400).json({ success: false, error: 'profile_id and topic required' });
+
     const geminiKey = process.env.GEMINI_API_KEY;
     const profileR = await pool.query(`SELECT * FROM content_profiles WHERE id=$1`, [profile_id]);
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
 
-    // Search for stats and data on the topic
+    // 1. RESEARCH PHASE (Gemini)
     let sources = [];
     if (process.env.GOOGLE_SEARCH_API_KEY) {
       const queries = [`${topic} statistics 2024 2025`, `${topic} research data study`, `${topic} survey report`];
       for (const q of queries) {
         try {
           const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
-          if (sr.ok) { const sd = await sr.json(); sources = sources.concat((sd.items||[]).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }))); }
-        } catch(e) { /* continue */ }
+          if (sr.ok) {
+            const sd = await sr.json();
+            sources = sources.concat((sd.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })));
+          }
+        } catch (e) { /* continue */ }
       }
     }
 
-    const studyPrompt = `You are a data journalist and SEO expert. Create a comprehensive statistics study that people will want to link to.
-
-TOPIC: "${topic}"
-KEYWORD: "${seed_keyword || topic}"
-BUSINESS: ${profile.name} — ${profile.niche}
-
-SOURCE MATERIAL FOUND:
-${sources.slice(0,10).map((s,i) => `${i+1}. ${s.title}\n   ${s.url}\n   ${s.snippet}`).join('\n\n')}
-
-CREATE:
-1. Gather and synthesize real statistics from multiple angles
-2. Combine into one original study with proper citations
-3. Make it linkable: unique insights, comparisons, trends
-4. Include data tables, comparisons, year-over-year trends where possible
-
+    // Generate Study Data Structure via Gemini
+    const studyPrompt = `Analyze the following search results for "${topic}" and extract key statistics.
 Return ONLY valid JSON:
-{
-  "title": "compelling study title with year",
-  "slug": "url-slug-for-study",
-  "key_stats": [
-    { "stat": "X% of people...", "source": "Source Name", "source_url": "url", "year": 2024 }
-  ],
-  "data_tables": [
-    { "title": "table title", "headers": ["col1","col2","col3"], "rows": [["val","val","val"]] }
-  ],
-  "key_findings": ["finding 1","finding 2","finding 3","finding 4","finding 5"],
-  "expert_quotes": [
-    { "quote": "quote text", "source": "person/org", "url": "source url" }
-  ],
-  "sources": [
-    { "name": "source name", "url": "url", "year": 2024 }
-  ]
-}`;
-
-    const studyResult = await callGeminiWithFallback(
-      geminiKey,
-      { contents: [{ parts: [{ text: studyPrompt }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.1, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } } }
-    );
-    if (!studyResult.ok) {
-      const apiErr = studyResult.errorMessage || `Gemini HTTP ${studyResult.status}`;
-      console.error('Stats study Gemini error:', apiErr, studyResult.data);
-      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: studyResult.modelUsed });
-    }
-    const blockReason1 = studyResult.data?.promptFeedback?.blockReason;
-    if (blockReason1) return res.status(502).json({ success: false, error: `Gemini blocked the study prompt: ${blockReason1}` });
-    const rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawText) {
-      const fr = studyResult.data?.candidates?.[0]?.finishReason;
-      return res.status(502).json({ success: false, error: `Gemini returned no study content (finishReason: ${fr || 'unknown'})`, model: studyResult.modelUsed });
-    }
-    let studyData;
+{"title": "compelling study title with year","slug": "url-slug-for-study","key_stats": [{ "stat": "X% of people...", "source": "Source Name", "source_url": "url", "year": 2024 }],"data_tables": [{ "title": "table title", "headers": ["col1","col2","col3"], "rows": [["val","val","val"]] }],"key_findings": ["finding 1","finding 2"],"sources": [{ "name": "source name", "url": "url", "year": 2024 }]}`;
+    
+    // Use callGeminiWithFallback for research
+    const studyResult = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: studyPrompt }] }] }, 'gemini-2.5-flash');
+    let studyData = {};
     try {
-      const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      try {
-        studyData = JSON.parse(cleaned);
-      } catch (_) {
-        const jm = cleaned.match(/\{[\s\S]*\}/);
-        if (!jm) return res.status(502).json({ success: false, error: 'AI did not return valid JSON for study', raw_preview: rawText.slice(0, 300) });
-        studyData = JSON.parse(jm[0]);
-      }
+      let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = rawText.replace(/```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      studyData = JSON.parse(cleaned);
     } catch (parseErr) {
-      console.error('Stats study JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
-      return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
+      return res.status(502).json({ success: false, error: 'AI returned invalid JSON for study data' });
     }
 
-    // Now write the full HTML article from the study data
+    // 2. WRITING PHASE (Claude)
     const articlePrompt = `Write a comprehensive, publication-ready statistics study article in HTML.
 STUDY DATA: ${JSON.stringify(studyData)}
 BUSINESS: ${profile.name} — ${profile.niche}
 SEED KEYWORD: ${seed_keyword || topic}
-REQUIREMENTS: 1. Open with compelling summary. 2. All data tables as proper HTML tables. 3. Cite every statistic with inline source links. 4. Scannable H2s, bullets, callout boxes. 5. Methodology section. 6. FAQ (5 questions). 7. ~2500 words. 8. ONLY use stats from STUDY DATA — never invent. Return clean HTML starting with <article>. No markdown.`;
+REQUIREMENTS: 
+1. Open with compelling summary. 
+2. All data tables as proper HTML tables. 
+3. Cite every statistic with inline source links. 
+4. Scannable H2s, bullets, callout boxes. 
+5. Methodology section. 
+6. FAQ (5 questions). 
+7. ~2500 words. 
+8. ONLY use stats from STUDY DATA — never invent. 
+Return clean HTML starting with <article>. No markdown.`;
 
     const claudeStudyKey = resolveClaudeKey(req);
     let rawHtml, wasTruncated = false;
+    
     try {
       const sys = 'You are an expert data journalist and HTML writer. Write comprehensive statistics study articles using only the data provided. Never invent statistics. Return only clean HTML starting with <article>.';
+      
+      // ✅ FORCE CLAUDE FOR WRITING
       rawHtml = await callClaudeForWrite(sys, articlePrompt, 8000, claudeStudyKey);
+      
       rawHtml = rawHtml.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-    } catch(e) { return res.status(502).json({ success: false, error: 'Claude study generation failed: ' + e.message }); }
+    } catch(e) { 
+      return res.status(502).json({ success: false, error: 'Claude study generation failed: ' + e.message }); 
+    }
+    
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty study article' });
+
     // Scrub placeholder patterns
     const scrub = stripAiPlaceholders(rawHtml);
     if (scrub.stripped) console.log(`🧹 [stats-study] Stripped ${scrub.stripped} placeholder pattern type(s)`);
@@ -11482,7 +11490,6 @@ app.get('/api/content/stats-studies/:profileId', verifyEngineAccess, async (req,
     res.json({ success: true, studies: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-
 
 
 
