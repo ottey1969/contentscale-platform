@@ -474,7 +474,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
-   const result = await pool.query('SELECT * FROM super_admins WHERE id = $1 AND is_active = TRUE', [adminKey]);
+   const result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
    req.admin = result.rows[0];
    next();
@@ -542,7 +542,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    try {
    client = await pool.connect();
    // 1. Super Admins
-   await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP)`);
+   await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP, session_token TEXT)`);
+   await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS session_token TEXT`);
    const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
    if (parseInt(adminCheck.rows[0].count) === 0) {
    const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -1290,8 +1291,16 @@ const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 
 if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid' });
 const valid = await bcrypt.compare(password, result.rows[0].password_hash);
 if (!valid) return res.status(401).json({ success: false, error: 'Invalid' });
-res.json({ success: true, admin_id: result.rows[0].id });
+const sessionToken = crypto.randomBytes(32).toString('hex');
+await pool.query('UPDATE super_admins SET session_token = $1 WHERE id = $2', [sessionToken, result.rows[0].id]);
+res.json({ success: true, admin_id: sessionToken });
 } catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
+});
+app.post('/api/admin/logout', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE super_admins SET session_token = NULL WHERE id = $1', [req.admin.id]);
+    res.json({ success: true });
+  } catch(e) { res.json({ success: true }); }
 });
 app.post('/api/admin/change-password', verifyAdmin, async (req, res) => {
   const { current_password, new_password } = req.body;
