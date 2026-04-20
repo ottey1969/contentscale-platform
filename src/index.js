@@ -11483,7 +11483,7 @@ app.get('/api/content/stats-studies/:profileId', verifyEngineAccess, async (req,
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-startServer();
+
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -17193,3 +17193,129 @@ if(domains.length>0){
 </body>
 </html>
 `;
+
+
+// ============================================
+// ADMIN DASHBOARD (Unified Interface)
+// ============================================
+const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | ContentScale</title>
+    <script>
+    (function(){
+        var token = localStorage.getItem('admin_token');
+        var uid = localStorage.getItem('user_id');
+        if(!token && !uid){ window.location.href = '/tools'; }
+    })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f; --surface: #14141a; --surface-hover: #1c1c24;
+            --border: #2a2a35; --text: #e4e4e7; --text-muted: #9ca3af;
+            --primary: #8b5cf6; --primary-hover: #7c3aed;
+            --green: #10b981; --red: #ef4444; --yellow: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; }
+        .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0; z-index: 10; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: 700; color: var(--primary); }
+        .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+        .nav-item { padding: 10px 14px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+        .nav-item:hover { background: var(--surface-hover); color: var(--text); }
+        .nav-item.active { background: rgba(139, 92, 246, 0.15); color: var(--primary); }
+        .nav-icon { width: 18px; text-align: center; }
+        .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+        .topbar { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 5; }
+        .content-area { flex: 1; padding: 24px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; }
+        .btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        h2 { font-size: 20px; margin-bottom: 16px; }
+        @media (max-width: 768px) { .sidebar { display: none; } .main { margin-left: 0; } .mobile-nav { display: flex; gap: 10px; overflow-x: auto; padding: 10px; background: var(--surface); border-bottom: 1px solid var(--border); } }
+        @media (min-width: 769px) { .mobile-nav { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">ContentScale Admin</div>
+        <div class="sidebar-nav">
+            <div class="nav-item active" onclick="switchTab('content')"><span class="nav-icon">📄</span> Content</div>
+            <div class="nav-item" onclick="switchTab('clients')"><span class="nav-icon">👥</span> Clients</div>
+            <div class="nav-item" onclick="switchTab('campaigns')"><span class="nav-icon">🚀</span> Campaigns</div>
+            <div class="nav-item" onclick="switchTab('engine-access')"><span class="nav-icon">🔑</span> Engine Access</div>
+            <div style="height:1px;background:var(--border);margin:8px 0;"></div>
+            <div class="nav-item" onclick="switchTab('leaderboard')"><span class="nav-icon">🏆</span> Leaderboard</div>
+            <div class="nav-item" onclick="switchTab('pending')"><span class="nav-icon">⏳</span> Pending</div>
+            <div class="nav-item" onclick="switchTab('users')"><span class="nav-icon">👤</span> Users</div>
+            <div class="nav-item" onclick="switchTab('freelancers')"><span class="nav-icon">💼</span> Freelancers</div>
+            <div class="nav-item" onclick="switchTab('messages')"><span class="nav-icon">💬</span> Messages</div>
+            <div class="nav-item" onclick="switchTab('email-log')"><span class="nav-icon">📧</span> Email Log</div>
+        </div>
+    </div>
+    <div class="main">
+        <div class="topbar">
+            <div class="mobile-nav">
+                <button class="btn btn-primary" onclick="switchTab('content')">Content</button>
+                <button class="btn" onclick="switchTab('clients')">Clients</button>
+                <button class="btn" onclick="switchTab('campaigns')">Campaigns</button>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+                <span id="admin-user" style="color:var(--text-muted);font-size:13px;">Admin</span>
+                <button class="btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        <div class="content-area">
+            <div id="tab-content" class="tab-content active"><h2>Content Management</h2><div class="card" id="content-list">Loading content...</div></div>
+            <div id="tab-clients" class="tab-content"><h2>Clients</h2><div class="card" id="clients-list">Loading clients...</div></div>
+            <div id="tab-campaigns" class="tab-content"><h2>Campaigns</h2><div class="card" id="campaigns-list">Loading campaigns...</div></div>
+            <div id="tab-engine-access" class="tab-content"><h2>Engine Access Codes</h2><div class="card" id="engine-access-list">Loading access codes...</div></div>
+            <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
+            <div id="tab-pending" class="tab-content"><h2>Pending Approvals</h2><div class="card" id="pending-list">Loading pending items...</div></div>
+            <div id="tab-users" class="tab-content"><h2>User Management</h2><div class="card" id="users-list">Loading users...</div></div>
+            <div id="tab-freelancers" class="tab-content"><h2>Freelancers</h2><div class="card" id="freelancers-list">Loading freelancers...</div></div>
+            <div id="tab-messages" class="tab-content"><h2>Messages</h2><div class="card" id="messages-list">Loading messages...</div></div>
+            <div id="tab-email-log" class="tab-content"><h2>Email Log</h2><div class="card" id="email-log-list">Loading email log...</div></div>
+        </div>
+    </div>
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const tabEl = document.getElementById('tab-' + tabName);
+            if (tabEl) tabEl.classList.add('active');
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => { if (item.textContent.toLowerCase().includes(tabName)) item.classList.add('active'); });
+            loadTabData(tabName);
+        }
+        function loadTabData(tab) {
+            if (tab === 'content') {
+                fetch('/api/content/profiles').then(r => r.json()).then(res => {
+                    if (res.success) document.getElementById('content-list').innerHTML = '<p>Loaded ' + res.profiles.length + ' profiles.</p>';
+                });
+            } else if (tab === 'engine-access') {
+                fetch('/api/admin/engine-codes').then(r => r.json()).then(res => {
+                     if (res.success) document.getElementById('engine-access-list').innerHTML = '<p>Loaded ' + res.codes.length + ' codes.</p>';
+                });
+            }
+        }
+        function logout() { localStorage.removeItem('admin_token'); window.location.href = '/tools'; }
+        document.addEventListener('DOMContentLoaded', () => { loadTabData('content'); });
+    </script>
+</body>
+</html>`;
+
+// Route to serve the Admin Dashboard (replaces existing /admin route)
+app.get('/admin', verifyAdmin, (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(_ADMIN_DASHBOARD_HTML);
+});
+
+startServer();
