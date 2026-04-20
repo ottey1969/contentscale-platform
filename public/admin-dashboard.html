@@ -126,26 +126,8 @@
                      <span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold"><span id="admin-username">Admin</span></span>
                   </div>
                   <div class="flex gap-3">
-                     <button onclick="showChangePassword()" class="btn btn-secondary" style="background:#374151;border-color:#4b5563;"><i class="fas fa-key mr-2"></i> Change Password</button>
                      <button onclick="logout()" class="btn btn-danger"><i class="fas fa-sign-out-alt mr-2"></i> Logout</button>
 
-                     <!-- Change Password Modal -->
-                     <div id="changePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
-                       <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:32px;width:100%;max-width:420px;margin:20px;">
-                         <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:20px;">🔐 Change Password</h3>
-                         <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Current Password</label>
-                         <input type="password" id="cpCurrent" placeholder="Enter current password" style="width:100%;padding:10px 14px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;margin-bottom:14px;font-size:14px;">
-                         <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">New Password</label>
-                         <input type="password" id="cpNew" placeholder="Min. 8 characters" style="width:100%;padding:10px 14px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;margin-bottom:14px;font-size:14px;">
-                         <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Confirm New Password</label>
-                         <input type="password" id="cpConfirm" placeholder="Repeat new password" style="width:100%;padding:10px 14px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;margin-bottom:16px;font-size:14px;">
-                         <div id="cpMsg" style="display:none;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;"></div>
-                         <div style="display:flex;gap:10px;">
-                           <button onclick="doChangePassword()" style="flex:1;padding:10px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">Update Password</button>
-                           <button onclick="closeChangePassword()" style="padding:10px 18px;background:#374151;border:none;border-radius:8px;color:#e5e7eb;cursor:pointer;">Cancel</button>
-                         </div>
-                       </div>
-                     </div>
                   </div>
                </div>
             </div>
@@ -2149,6 +2131,28 @@
 
               <!-- Codes list -->
               <div id="engineCodesList" class="space-y-3"></div>
+
+              <!-- Change Password Section -->
+              <div class="card mt-8" style="border-left:3px solid #7c3aed;">
+                <h3 class="font-bold text-white mb-1">🔐 Change Admin Password</h3>
+                <p class="text-gray-400 text-sm mb-4">Update your admin login password. You will be logged out after changing it.</p>
+                <div style="max-width:400px;display:flex;flex-direction:column;gap:12px;">
+                  <div>
+                    <label style="display:block;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Current Password</label>
+                    <input type="password" id="cpCurrent" placeholder="Enter current password" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">New Password</label>
+                    <input type="password" id="cpNew" placeholder="Min. 8 characters" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Confirm New Password</label>
+                    <input type="password" id="cpConfirm" placeholder="Repeat new password" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm">
+                  </div>
+                  <div id="cpMsg" style="display:none;padding:10px 14px;border-radius:6px;font-size:13px;"></div>
+                  <button onclick="doChangePassword()" class="btn btn-primary" style="background:#7c3aed;border-color:#7c3aed;width:fit-content;">Update Password</button>
+                </div>
+              </div>
             </div>
 </body></html>`;
            const win = window.open('', '_blank');
