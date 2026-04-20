@@ -17203,7 +17203,6 @@ if(domains.length>0){
 
 
 // ============================================
-// ============================================
 // ADMIN DASHBOARD (Unified Interface)
 // ============================================
 const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
@@ -17283,6 +17282,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-content" class="tab-content active"><h2>Content Management</h2><div class="card" id="content-list">Loading content...</div></div>
             <div id="tab-clients" class="tab-content"><h2>Clients</h2><div class="card" id="clients-list">Loading clients...</div></div>
             <div id="tab-campaigns" class="tab-content"><h2>Campaigns</h2><div class="card" id="campaigns-list">Loading campaigns...</div></div>
+            
+            <!-- ENGINE ACCESS TAB -->
             <div id="tab-engine-access" class="tab-content">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2>🔑 Engine Access Codes</h2>
@@ -17336,7 +17337,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     </table>
                 </div>
             </div>
-                        <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
+
+            <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
             <div id="tab-pending" class="tab-content"><h2>Pending Approvals</h2><div class="card" id="pending-list">Loading pending items...</div></div>
             <div id="tab-users" class="tab-content"><h2>User Management</h2><div class="card" id="users-list">Loading users...</div></div>
             <div id="tab-freelancers" class="tab-content"><h2>Freelancers</h2><div class="card" id="freelancers-list">Loading freelancers...</div></div>
@@ -17425,51 +17427,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     });
             } 
             else if (tab === 'engine-access') {
-            else if (tab === 'engine-access') {
                 loadEngineCodes(); // Call the new function
             }
-        }
-                const container = document.getElementById('engine-access-list');
-                container.innerHTML = '<p style="color:var(--text-muted)">Loading access codes...</p>';
-                
-                apiCall('/api/admin/engine-codes')
-                    .then(res => {
-                        if (res.codes && res.codes.length > 0) {
-                            let html = '<table style="width:100%;font-size:13px;text-align:left;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;">Code</th><th>Client</th><th>Status</th></tr></thead><tbody>';
-                            res.codes.forEach(c => {
-                                const statusColor = c.is_active ? 'var(--green)' : 'var(--red)';
-                                html += '<tr style="border-bottom:1px solid var(--border);">' +
-                                    '<td style="padding:8px;font-family:monospace;">' + c.code + '</td>' +
-                                    '<td>' + (c.client_name || '—') + '</td>' +
-                                    '<td style="color:' + statusColor + '">' + (c.is_active ? 'Active' : 'Inactive') + '</td>' +
-                                '</tr>';
-                            });
-                            html += '</tbody></table>';
-                            container.innerHTML = html;
-                        } else {
-                            container.innerHTML = '<p style="color:var(--text-muted)">No access codes found. Create one in the Engine Access tab or via SQL.</p>';
-                        }
-                    })
-                    .catch(err => {
-                        container.innerHTML = '<p style="color:var(--red)">❌ Error: ' + err.message + '</p>';
-                    });
-            }
+            // Add other tabs here if needed (e.g., leaderboard, users)
         }
 
-        function logout() { 
-            localStorage.removeItem('admin_id'); 
-            localStorage.removeItem('admin_token'); 
-            window.location.href = '/tools'; 
-        }
-
-        document.addEventListener('DOMContentLoaded', () => { 
-            if (!localStorage.getItem('admin_id')) {
-                window.location.href = '/tools';
-                return;
-            }
-            loadTabData('content'); 
-        });
-                // --- Engine Access Functions ---
+        // --- Engine Access Functions ---
         function showCreateEngineCode() {
             document.getElementById('create-engine-code-form').style.display = 'block';
             document.getElementById('ec-client-name').focus();
@@ -17489,7 +17452,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             try {
                 const res = await apiCall('/api/admin/engine-codes', 'POST', payload);
                 if (res.success) {
-                    alert(`✅ Code Created!\n\nCode: ${res.code.code}\n\nShare this with ${clientName}.\nThey can login at: ${window.location.origin}/engine-login`);
+                    alert('✅ Code Created!\\n\\nCode: ' + res.code.code + '\\n\\nShare this with ' + clientName + '.\\nThey can login at: ' + window.location.origin + '/engine-login');
                     document.getElementById('ec-client-name').value = '';
                     document.getElementById('ec-gemini-key').value = '';
                     document.getElementById('ec-claude-key').value = '';
@@ -17506,7 +17469,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         async function toggleEngineCode(id, isActive) {
             try {
-                await apiCall(`/api/admin/engine-codes/${id}`, 'PATCH', { is_active: isActive });
+                await apiCall('/api/admin/engine-codes/' + id, 'PATCH', { is_active: isActive });
                 loadEngineCodes();
             } catch (e) {
                 alert('Error updating code: ' + e.message);
@@ -17516,7 +17479,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function deleteEngineCode(id) {
             if (!confirm('Are you sure? This will revoke access immediately.')) return;
             try {
-                await apiCall(`/api/admin/engine-codes/${id}`, 'DELETE');
+                await apiCall('/api/admin/engine-codes/' + id, 'DELETE');
                 loadEngineCodes();
             } catch (e) {
                 alert('Error deleting code: ' + e.message);
@@ -17544,24 +17507,38 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         if (c.gemini_key) keysInfo.push('<span style="color:#8b5cf6">Gemini</span>');
                         if (c.claude_key) keysInfo.push('<span style="color:#f59e0b">Claude</span>');
                         
-                        return `<tr style="border-bottom:1px solid var(--border);">
-                            <td style="padding:12px;font-weight:500;">${c.client_name}</td>
-                            <td style="padding:12px;font-family:monospace;font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;width:120px;">${c.code}</td>
-                            <td style="padding:12px;font-size:11px;">${keysInfo.join(' & ') || '<span style="color:var(--text-muted)">None (Uses Env)</span>'}</td>
-                            <td style="padding:12px;"><span style="color:${statusColor};font-weight:bold;font-size:11px;">● ${statusText}</span></td>
-                            <td style="padding:12px;text-align:right;">
-                                <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="toggleEngineCode(${c.id}, ${!c.is_active})">${c.is_active ? 'Revoke' : 'Activate'}</button>
-                                <button class="btn" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:var(--red);" onclick="deleteEngineCode(${c.id})">Delete</button>
-                            </td>
-                        </tr>`;
+                        return '<tr style="border-bottom:1px solid var(--border);">' +
+                            '<td style="padding:12px;font-weight:500;">' + c.client_name + '</td>' +
+                            '<td style="padding:12px;font-family:monospace;font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;width:120px;">' + c.code + '</td>' +
+                            '<td style="padding:12px;font-size:11px;">' + (keysInfo.join(' & ') || '<span style="color:var(--text-muted)">None (Uses Env)</span>') + '</td>' +
+                            '<td style="padding:12px;"><span style="color:' + statusColor + ';font-weight:bold;font-size:11px;">● ' + statusText + '</span></td>' +
+                            '<td style="padding:12px;text-align:right;">' +
+                                '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="toggleEngineCode(' + c.id + ', ' + !c.is_active + ')">' + (c.is_active ? 'Revoke' : 'Activate') + '</button>' +
+                                '<button class="btn" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:var(--red);" onclick="deleteEngineCode(' + c.id + ')">Delete</button>' +
+                            '</td>' +
+                        '</tr>';
                     }).join('');
                 } else {
                     tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error loading codes.</td></tr>';
                 }
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error: ${e.message}</td></tr>`;
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error: ' + e.message + '</td></tr>';
             }
         }
+
+        function logout() { 
+            localStorage.removeItem('admin_id'); 
+            localStorage.removeItem('admin_token'); 
+            window.location.href = '/tools'; 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { 
+            if (!localStorage.getItem('admin_id')) {
+                window.location.href = '/tools';
+                return;
+            }
+            loadTabData('content'); 
+        });
     </script>
 </body>
 </html>`;
