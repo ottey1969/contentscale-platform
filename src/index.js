@@ -17284,31 +17284,134 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-email-log" class="tab-content"><h2>Email Log</h2><div class="card" id="email-log-list">Loading email log...</div></div>
         </div>
     </div>
-    <script>
+       <script>
+        // --- Helper: Robust API Call with Admin Auth ---
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const headers = { 'Content-Type': 'application/json' };
+            
+            // Attach admin key for BOTH admin routes AND content engine routes
+            const adminId = localStorage.getItem('admin_id');
+            if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) {
+                headers['x-admin-key'] = adminId;
+            }
+            
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+            
+            try {
+                const res = await fetch(endpoint, options);
+                if (!res.ok) {
+                    const text = await res.text();
+                    // Handle HTML errors (e.g., redirected to login)
+                    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+                        throw new Error(`Server returned HTML (Status ${res.status}). Session may be expired.`);
+                    }
+                    try { 
+                        const errJson = JSON.parse(text); 
+                        throw new Error(errJson.error || `Error ${res.status}`); 
+                    } catch (e) { 
+                        throw new Error(text || `Error ${res.status}`); 
+                    }
+                }
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                return data;
+            } catch (error) { 
+                console.error('API Call Failed:', error); 
+                throw error; 
+            }
+        }
+
+        // --- Tab Switching Logic ---
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
             const tabEl = document.getElementById('tab-' + tabName);
             if (tabEl) tabEl.classList.add('active');
+            
+            // Highlight nav item
             const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => { if (item.textContent.toLowerCase().includes(tabName)) item.classList.add('active'); });
+            navItems.forEach(item => { 
+                if (item.textContent.toLowerCase().includes(tabName)) item.classList.add('active'); 
+            });
+
             loadTabData(tabName);
         }
+
+        // --- Data Loading Logic ---
         function loadTabData(tab) {
             if (tab === 'content') {
-                fetch('/api/content/profiles').then(r => r.json()).then(res => {
-                    if (res.success) document.getElementById('content-list').innerHTML = '<p>Loaded ' + res.profiles.length + ' profiles.</p>';
-                });
-            } else if (tab === 'engine-access') {
-                fetch('/api/admin/engine-codes').then(r => r.json()).then(res => {
-                     if (res.success) document.getElementById('engine-access-list').innerHTML = '<p>Loaded ' + res.codes.length + ' codes.</p>';
-                });
+                const container = document.getElementById('content-list');
+                container.innerHTML = '<p style="color:var(--text-muted)">Loading profiles...</p>';
+                
+                apiCall('/api/content/profiles')
+                    .then(res => {
+                        if (res.profiles && res.profiles.length > 0) {
+                            let html = '<ul style="list-style:none;padding:0;">';
+                            res.profiles.forEach(p => {
+                                html += `<li style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">
+                                    <span>${p.name} <small style="color:var(--text-muted)">(${p.domain})</small></span>
+                                    <span class="badge" style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:11px;">${p.niche || 'N/A'}</span>
+                                </li>`;
+                            });
+                            html += '</ul>';
+                            container.innerHTML = html;
+                        } else {
+                            container.innerHTML = '<p style="color:var(--text-muted)">No profiles found. Create one in the Content Engine.</p>';
+                        }
+                    })
+                    .catch(err => {
+                        container.innerHTML = `<p style="color:var(--red)">❌ Error loading profiles: ${err.message}</p>`;
+                    });
+            } 
+            else if (tab === 'engine-access') {
+                const container = document.getElementById('engine-access-list');
+                container.innerHTML = '<p style="color:var(--text-muted)">Loading access codes...</p>';
+                
+                apiCall('/api/admin/engine-codes')
+                    .then(res => {
+                        if (res.codes && res.codes.length > 0) {
+                            let html = '<table style="width:100%;font-size:13px;text-align:left;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;">Code</th><th>Client</th><th>Status</th></tr></thead><tbody>';
+                            res.codes.forEach(c => {
+                                const statusColor = c.is_active ? 'var(--green)' : 'var(--red)';
+                                html += `<tr style="border-bottom:1px solid var(--border);">
+                                    <td style="padding:8px;font-family:monospace;">${c.code}</td>
+                                    <td>${c.client_name || '—'}</td>
+                                    <td style="color:${statusColor}">${c.is_active ? 'Active' : 'Inactive'}</td>
+                                </tr>`;
+                            });
+                            html += '</tbody></table>';
+                            container.innerHTML = html;
+                        } else {
+                            container.innerHTML = '<p style="color:var(--text-muted)">No access codes found.</p>';
+                        }
+                    })
+                    .catch(err => {
+                        container.innerHTML = `<p style="color:var(--red)">❌ Error loading codes: ${err.message}</p>`;
+                    });
             }
         }
-        function logout() { localStorage.removeItem('admin_token'); window.location.href = '/tools'; }
-        document.addEventListener('DOMContentLoaded', () => { loadTabData('content'); });
+
+        // --- Logout ---
+        function logout() { 
+            localStorage.removeItem('admin_id'); 
+            localStorage.removeItem('admin_token'); // Clear both just in case
+            window.location.href = '/tools'; 
+        }
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => { 
+            // Check if we are logged in, if not redirect
+            if (!localStorage.getItem('admin_id')) {
+                window.location.href = '/tools';
+                return;
+            }
+            loadTabData('content'); 
+        });
     </script>
-</body>
+      
+      </body>
 </html>`;
 
 // Route to serve the Admin Dashboard (replaces existing /admin route)
