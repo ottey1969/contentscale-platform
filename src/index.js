@@ -17202,7 +17202,7 @@ if(domains.length>0){
 `;
 
 
-// ============================================
+// ==// ============================================
 // ADMIN DASHBOARD (Unified Interface)
 // ============================================
 const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
@@ -17390,7 +17390,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             html += '</tbody></table>';
                             container.innerHTML = html;
                         } else {
-                            container.innerHTML = '<p style="color:var(--text-muted)">No access codes found.</p>';
+                            container.innerHTML = '<p style="color:var(--text-muted)">No access codes found. Create one in the Engine Access tab or via SQL.</p>';
                         }
                     })
                     .catch(err => {
