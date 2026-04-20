@@ -1293,6 +1293,21 @@ if (!valid) return res.status(401).json({ success: false, error: 'Invalid' });
 res.json({ success: true, admin_id: result.rows[0].id });
 } catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
 });
+app.post('/api/admin/change-password', verifyAdmin, async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) return res.status(400).json({ success: false, error: 'Both current and new password required' });
+  if (new_password.length < 8) return res.status(400).json({ success: false, error: 'New password must be at least 8 characters' });
+  try {
+    const result = await pool.query('SELECT * FROM super_admins WHERE id = $1', [req.admin.id]);
+    if (!result.rows.length) return res.status(404).json({ success: false, error: 'Admin not found' });
+    const valid = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!valid) return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+    const newHash = await bcrypt.hash(new_password, 12);
+    await pool.query('UPDATE super_admins SET password_hash = $1 WHERE id = $2', [newHash, req.admin.id]);
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ✅ FIX v3: Added activated_until alias + computed is_activated so admin.html renderUsers works correctly
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
 try {
