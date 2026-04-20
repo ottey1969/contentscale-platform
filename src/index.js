@@ -8938,7 +8938,7 @@ function doLogin(){
 const verifyEngineAccess = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey) {
-    const isAdmin = await pool.query('SELECT id FROM super_admins WHERE admin_id=$1', [adminKey]).catch(()=>({rows:[]}));
+    const isAdmin = await pool.query('SELECT id FROM super_admins WHERE id=$1', [adminKey]).catch(()=>({rows:[]}));
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
   const engineToken = req.headers['x-engine-token'];
