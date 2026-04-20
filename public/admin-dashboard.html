@@ -108,7 +108,7 @@
                </div>
                <div>
                   <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                  <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
+                  <input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white">
                </div>
                <button onclick="login()" id="login-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105">
                <i class="fas fa-lock mr-2"></i> Login
@@ -126,7 +126,26 @@
                      <span class="text-xs px-2 py-1 bg-purple-600 rounded text-white font-semibold"><span id="admin-username">Admin</span></span>
                   </div>
                   <div class="flex gap-3">
+                     <button onclick="showChangePassword()" class="btn btn-secondary" style="background:#374151;border-color:#4b5563;"><i class="fas fa-key mr-2"></i> Change Password</button>
                      <button onclick="logout()" class="btn btn-danger"><i class="fas fa-sign-out-alt mr-2"></i> Logout</button>
+
+                     <!-- Change Password Modal -->
+                     <div id="changePwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
+                       <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:32px;width:100%;max-width:420px;margin:20px;">
+                         <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:20px;">🔐 Change Password</h3>
+                         <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Current Password</label>
+                         <input type="password" id="cpCurrent" placeholder="Enter current password" style="width:100%;padding:10px 14px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;margin-bottom:14px;font-size:14px;">
+                         <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">New Password</label>
+                         <input type="password" id="cpNew" placeholder="Min. 8 characters" style="width:100%;padding:10px 14px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;margin-bottom:14px;font-size:14px;">
+                         <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Confirm New Password</label>
+                         <input type="password" id="cpConfirm" placeholder="Repeat new password" style="width:100%;padding:10px 14px;background:#111827;border:1px solid #374151;border-radius:8px;color:#e5e7eb;margin-bottom:16px;font-size:14px;">
+                         <div id="cpMsg" style="display:none;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;"></div>
+                         <div style="display:flex;gap:10px;">
+                           <button onclick="doChangePassword()" style="flex:1;padding:10px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">Update Password</button>
+                           <button onclick="closeChangePassword()" style="padding:10px 18px;background:#374151;border:none;border-radius:8px;color:#e5e7eb;cursor:pointer;">Cancel</button>
+                         </div>
+                       </div>
+                     </div>
                   </div>
                </div>
             </div>
@@ -916,10 +935,50 @@
          }
          
          function logout() { localStorage.removeItem('admin_id'); location.reload(); }
+
+         function showChangePassword() {
+           const m = document.getElementById("changePwModal");
+           m.style.display = "flex";
+           document.getElementById("cpCurrent").value = "";
+           document.getElementById("cpNew").value = "";
+           document.getElementById("cpConfirm").value = "";
+           document.getElementById("cpMsg").style.display = "none";
+         }
+         function closeChangePassword() {
+           document.getElementById("changePwModal").style.display = "none";
+         }
+         async function doChangePassword() {
+           const current = document.getElementById("cpCurrent").value.trim();
+           const newPw = document.getElementById("cpNew").value.trim();
+           const confirm = document.getElementById("cpConfirm").value.trim();
+           const msg = document.getElementById("cpMsg");
+           const showMsg = (text, ok) => {
+             msg.style.display = "block";
+             msg.style.background = ok ? "rgba(34,197,94,.1)" : "rgba(239,68,68,.1)";
+             msg.style.border = ok ? "1px solid rgba(34,197,94,.3)" : "1px solid rgba(239,68,68,.3)";
+             msg.style.color = ok ? "#4ade80" : "#f87171";
+             msg.textContent = text;
+           };
+           if (!current || !newPw || !confirm) return showMsg("All fields are required", false);
+           if (newPw.length < 8) return showMsg("New password must be at least 8 characters", false);
+           if (newPw !== confirm) return showMsg("New passwords do not match", false);
+           try {
+             const res = await fetch("/api/admin/change-password", {
+               method: "POST",
+               headers: { "Content-Type": "application/json", "x-admin-key": currentAdminId },
+               body: JSON.stringify({ current_password: current, new_password: newPw })
+             });
+             const data = await res.json();
+             if (data.success) {
+               showMsg("Password updated! Logging out...", true);
+               setTimeout(() => { logout(); }, 2000);
+             } else { showMsg(data.error || "Failed to update password", false); }
+           } catch(e) { showMsg("Connection error: " + e.message, false); }
+         }
          
          async function apiCall(endpoint, method = 'GET', body = null) {
            const headers = { 'Content-Type': 'application/json' };
-           if (endpoint.includes('/admin/')) headers['x-admin-key'] = currentAdminId;
+           if (currentAdminId) headers['x-admin-key'] = currentAdminId;
            const options = { method, headers };
            if (body) options.body = JSON.stringify(body);
            try {
