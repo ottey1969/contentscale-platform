@@ -17283,8 +17283,60 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-content" class="tab-content active"><h2>Content Management</h2><div class="card" id="content-list">Loading content...</div></div>
             <div id="tab-clients" class="tab-content"><h2>Clients</h2><div class="card" id="clients-list">Loading clients...</div></div>
             <div id="tab-campaigns" class="tab-content"><h2>Campaigns</h2><div class="card" id="campaigns-list">Loading campaigns...</div></div>
-            <div id="tab-engine-access" class="tab-content"><h2>Engine Access Codes</h2><div class="card" id="engine-access-list">Loading access codes...</div></div>
-            <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
+            <div id="tab-engine-access" class="tab-content">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <h2>🔑 Engine Access Codes</h2>
+                    <button class="btn btn-primary" onclick="showCreateEngineCode()">+ New Code</button>
+                </div>
+                
+                <!-- Create Code Form (Hidden by default) -->
+                <div id="create-engine-code-form" class="card" style="display:none;margin-bottom:20px;border-left:4px solid var(--primary);">
+                    <h3 style="margin-bottom:15px;font-size:16px;">Create New Engine Access Code</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                        <div>
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Client Name *</label>
+                            <input type="text" id="ec-client-name" class="btn" style="width:100%;text-align:left;" placeholder="e.g. My Agency or Self">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Expires At (Optional)</label>
+                            <input type="date" id="ec-expires" class="btn" style="width:100%;text-align:left;">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                        <div>
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Gemini Key (Optional)</label>
+                            <input type="text" id="ec-gemini-key" class="btn" style="width:100%;text-align:left;" placeholder="AIzaSy...">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Claude Key (Optional)</label>
+                            <input type="text" id="ec-claude-key" class="btn" style="width:100%;text-align:left;" placeholder="sk-ant-api03...">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button class="btn btn-primary" onclick="saveEngineCode()">Save Code</button>
+                        <button class="btn" onclick="document.getElementById('create-engine-code-form').style.display='none'">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Codes Table -->
+                <div class="card" id="engine-codes-table-container">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);">
+                                <th style="padding:12px;">Client</th>
+                                <th style="padding:12px;">Code</th>
+                                <th style="padding:12px;">Keys</th>
+                                <th style="padding:12px;">Status</th>
+                                <th style="padding:12px;text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="engine-codes-tbody">
+                            <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+                        <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
             <div id="tab-pending" class="tab-content"><h2>Pending Approvals</h2><div class="card" id="pending-list">Loading pending items...</div></div>
             <div id="tab-users" class="tab-content"><h2>User Management</h2><div class="card" id="users-list">Loading users...</div></div>
             <div id="tab-freelancers" class="tab-content"><h2>Freelancers</h2><div class="card" id="freelancers-list">Loading freelancers...</div></div>
@@ -17373,6 +17425,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     });
             } 
             else if (tab === 'engine-access') {
+            else if (tab === 'engine-access') {
+                loadEngineCodes(); // Call the new function
+            }
+        }
                 const container = document.getElementById('engine-access-list');
                 container.innerHTML = '<p style="color:var(--text-muted)">Loading access codes...</p>';
                 
@@ -17413,6 +17469,99 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }
             loadTabData('content'); 
         });
+                // --- Engine Access Functions ---
+        function showCreateEngineCode() {
+            document.getElementById('create-engine-code-form').style.display = 'block';
+            document.getElementById('ec-client-name').focus();
+        }
+
+        async function saveEngineCode() {
+            const clientName = document.getElementById('ec-client-name').value.trim();
+            if (!clientName) return alert('Client name is required');
+            
+            const payload = {
+                client_name: clientName,
+                gemini_key: document.getElementById('ec-gemini-key').value.trim() || null,
+                claude_key: document.getElementById('ec-claude-key').value.trim() || null,
+                expires_at: document.getElementById('ec-expires').value || null
+            };
+
+            try {
+                const res = await apiCall('/api/admin/engine-codes', 'POST', payload);
+                if (res.success) {
+                    alert(`✅ Code Created!\n\nCode: ${res.code.code}\n\nShare this with ${clientName}.\nThey can login at: ${window.location.origin}/engine-login`);
+                    document.getElementById('ec-client-name').value = '';
+                    document.getElementById('ec-gemini-key').value = '';
+                    document.getElementById('ec-claude-key').value = '';
+                    document.getElementById('ec-expires').value = '';
+                    document.getElementById('create-engine-code-form').style.display = 'none';
+                    loadEngineCodes(); // Refresh table
+                } else {
+                    alert('Error: ' + res.error);
+                }
+            } catch (e) {
+                alert('Failed to create code: ' + e.message);
+            }
+        }
+
+        async function toggleEngineCode(id, isActive) {
+            try {
+                await apiCall(`/api/admin/engine-codes/${id}`, 'PATCH', { is_active: isActive });
+                loadEngineCodes();
+            } catch (e) {
+                alert('Error updating code: ' + e.message);
+            }
+        }
+
+        async function deleteEngineCode(id) {
+            if (!confirm('Are you sure? This will revoke access immediately.')) return;
+            try {
+                await apiCall(`/api/admin/engine-codes/${id}`, 'DELETE');
+                loadEngineCodes();
+            } catch (e) {
+                alert('Error deleting code: ' + e.message);
+            }
+        }
+
+        async function loadEngineCodes() {
+            const tbody = document.getElementById('engine-codes-tbody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</td></tr>';
+            
+            try {
+                const res = await apiCall('/api/admin/engine-codes');
+                if (res.success && res.codes) {
+                    if (res.codes.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">No codes found. Click "+ New Code" to create one.</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = res.codes.map(c => {
+                        const statusColor = c.is_active ? 'var(--green)' : 'var(--red)';
+                        const statusText = c.is_active ? 'Active' : 'Revoked';
+                        const keysInfo = [];
+                        if (c.gemini_key) keysInfo.push('<span style="color:#8b5cf6">Gemini</span>');
+                        if (c.claude_key) keysInfo.push('<span style="color:#f59e0b">Claude</span>');
+                        
+                        return `<tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:12px;font-weight:500;">${c.client_name}</td>
+                            <td style="padding:12px;font-family:monospace;font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;width:120px;">${c.code}</td>
+                            <td style="padding:12px;font-size:11px;">${keysInfo.join(' & ') || '<span style="color:var(--text-muted)">None (Uses Env)</span>'}</td>
+                            <td style="padding:12px;"><span style="color:${statusColor};font-weight:bold;font-size:11px;">● ${statusText}</span></td>
+                            <td style="padding:12px;text-align:right;">
+                                <button class="btn" style="padding:4px 8px;font-size:11px;" onclick="toggleEngineCode(${c.id}, ${!c.is_active})">${c.is_active ? 'Revoke' : 'Activate'}</button>
+                                <button class="btn" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:var(--red);" onclick="deleteEngineCode(${c.id})">Delete</button>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error loading codes.</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error: ${e.message}</td></tr>`;
+            }
+        }
     </script>
 </body>
 </html>`;
