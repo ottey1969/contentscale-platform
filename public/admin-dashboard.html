@@ -916,9 +916,52 @@
            } catch (e) { alert('Connection error'); }
          }
          
-         function logout() { localStorage.removeItem('admin_id'); location.reload(); }
+         function logout() {
+           const token = localStorage.getItem('admin_id');
+           if (token) fetch('/api/admin/logout', { method: 'POST', headers: { 'x-admin-key': token } }).catch(() => {});
+           localStorage.removeItem('admin_id');
+           location.reload();
+         }
 
-
+         function showChangePassword() {
+           const m = document.getElementById("changePwModal");
+           m.style.display = "flex";
+           document.getElementById("cpCurrent").value = "";
+           document.getElementById("cpNew").value = "";
+           document.getElementById("cpConfirm").value = "";
+           document.getElementById("cpMsg").style.display = "none";
+         }
+         async function doChangePassword() {
+  const current = document.getElementById('cpCurrent').value.trim();
+  const newPw = document.getElementById('cpNew').value.trim();
+  const confirm = document.getElementById('cpConfirm').value.trim();
+  const msg = document.getElementById('cpMsg');
+  const showMsg = (text, ok) => {
+    msg.style.display = 'block';
+    msg.style.background = ok ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.1)';
+    msg.style.border = ok ? '1px solid rgba(34,197,94,.3)' : '1px solid rgba(239,68,68,.3)';
+    msg.style.color = ok ? '#4ade80' : '#f87171';
+    msg.textContent = text;
+  };
+  if (!current || !newPw || !confirm) return showMsg('All fields required', false);
+  if (newPw.length < 8) return showMsg('Min. 8 characters', false);
+  if (newPw !== confirm) return showMsg('Passwords do not match', false);
+  try {
+    const res = await fetch('/api/admin/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify({ current_password: current, new_password: newPw })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg('✅ Password updated! Logging out...', true);
+      setTimeout(() => logout(), 2000);
+    } else { showMsg(data.error || 'Failed', false); }
+  } catch(e) { showMsg('Connection error: ' + e.message, false); }
+}
+         function closeChangePassword() {
+           document.getElementById("changePwModal").style.display = "none";
+         }
          async function doChangePassword() {
            const current = document.getElementById("cpCurrent").value.trim();
            const newPw = document.getElementById("cpNew").value.trim();
@@ -3521,6 +3564,34 @@
           navigator.clipboard.writeText(code).then(() => alert('Code copied: ' + code));
         }
 
+         async function doChangePassword() {
+  const current = document.getElementById('cpCurrent').value.trim();
+  const newPw = document.getElementById('cpNew').value.trim();
+  const confirm = document.getElementById('cpConfirm').value.trim();
+  const msg = document.getElementById('cpMsg');
+  const showMsg = (text, ok) => {
+    msg.style.display = 'block';
+    msg.style.background = ok ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.1)';
+    msg.style.border = ok ? '1px solid rgba(34,197,94,.3)' : '1px solid rgba(239,68,68,.3)';
+    msg.style.color = ok ? '#4ade80' : '#f87171';
+    msg.textContent = text;
+  };
+  if (!current || !newPw || !confirm) return showMsg('All fields required', false);
+  if (newPw.length < 8) return showMsg('Min. 8 characters', false);
+  if (newPw !== confirm) return showMsg('Passwords do not match', false);
+  try {
+    const res = await fetch('/api/admin/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': currentAdminId },
+      body: JSON.stringify({ current_password: current, new_password: newPw })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg('✅ Password updated! Logging out...', true);
+      setTimeout(() => logout(), 2000);
+    } else { showMsg(data.error || 'Failed', false); }
+  } catch(e) { showMsg('Connection error: ' + e.message, false); }
+}
 
         function copyEngineLoginUrl(code) {
           const url = window.location.origin + '/engine-login?code=' + code;
