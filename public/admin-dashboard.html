@@ -992,23 +992,40 @@
          }
          
          async function apiCall(endpoint, method = 'GET', body = null) {
-           const headers = { 'Content-Type': 'application/json' };
-           if (currentAdminId) headers['x-admin-key'] = currentAdminId;
-           const options = { method, headers };
-           if (body) options.body = JSON.stringify(body);
-           try {
-             const res = await fetch(endpoint, options);
-             if (!res.ok) {
-               const text = await res.text();
-               if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) throw new Error(`Server returned HTML (Status ${res.status}). Endpoint may be missing.`);
-               try { const errJson = JSON.parse(text); throw new Error(errJson.error || `Error ${res.status}`); }
-               catch (e) { throw new Error(text || `Error ${res.status}`); }
-             }
-             const data = await res.json();
-             if (!data.success) throw new Error(data.error);
-             return data;
-           } catch (error) { console.error('API Call Failed:', error); throw error; }
-         }
+  const headers = { 'Content-Type': 'application/json' };
+  
+  // ✅ FIX: Attach admin key for BOTH admin routes AND content engine routes
+  const adminId = localStorage.getItem('admin_id');
+  if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) {
+    headers['x-admin-key'] = adminId;
+  }
+  
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+  
+  try {
+    const res = await fetch(endpoint, options);
+    if (!res.ok) {
+      const text = await res.text();
+      // Handle HTML errors (e.g., redirected to login or server error page)
+      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+        throw new Error(`Server returned HTML (Status ${res.status}). Session may be expired.`);
+      }
+      try { 
+        const errJson = JSON.parse(text); 
+        throw new Error(errJson.error || `Error ${res.status}`); 
+      } catch (e) { 
+        throw new Error(text || `Error ${res.status}`); 
+      }
+    }
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data;
+  } catch (error) { 
+    console.error('API Call Failed:', error); 
+    throw error; 
+  }
+}
          
          function switchTab(tab) {
            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
