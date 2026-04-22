@@ -9020,7 +9020,50 @@ app.post('/api/engine/login', async (req, res) => {
     const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
     if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
     const ec = r.rows[0];
-    res.json({ success: true, token: ec.code, client_name: ec.client_name, has_gemini: !!ec.gemini_key, has_claude: !!ec.claude_key });
+
+    // Create a session token
+    const sessionToken = require('crypto').randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 day session
+
+    await pool.query(
+      `INSERT INTO access_sessions (code_id, session_token, ip_address, user_agent, expires_at) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ec.id, sessionToken, req.ip, req.headers['user-agent'] || null, expiresAt]
+    );
+
+    res.json({
+      success: true,
+      token: sessionToken,
+      client_name: ec.client_name,
+      has_gemini: !!ec.gemini_key,
+      has_claude: !!ec.claude_key,
+      expires_at: expiresAt
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Engine Token Verification ─────────────────────────────────
+app.get('/api/engine/verify', verifyEngineAccess, async (req, res) => {
+  try {
+    if (req.engineUser.isAdmin) {
+      return res.json({ success: true, isAdmin: true });
+    }
+
+    // Get profiles for this code
+    const profilesR = await pool.query(
+      `SELECT id, name, domain, niche FROM content_profiles WHERE owner_code_id = $1 ORDER BY created_at DESC`,
+      [req.engineUser.codeId]
+    );
+
+    res.json({
+      success: true,
+      isAdmin: false,
+      client_name: req.engineUser.code.client_name || req.engineUser.code.access_code,
+      profiles: profilesR.rows,
+      has_gemini: !!req.engineUser.code.gemini_key,
+      has_claude: !!req.engineUser.code.claude_key
+    });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -9418,213 +9461,11 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
     if ((bi.service_areas||[]).length) schemaObj['areaServed'] = bi.service_areas;
 
     // ── Two completely different prompts depending on whether a template exists ──
-    let writePrompt;
+        // Research complete — brief saved, job updated
+    // NOTE: HTML content generation moved to /api/content/write/:jobId (Claude)
+    await pool.query(`UPDATE content_jobs SET status='completed', result_data=$1, completed_at=NOW() WHERE id=$2`, [JSON.stringify(brief), jobId]);
 
-    if (job.html_template && job.html_template.trim().length > 50) {
-      // ═══════════════════════════════════════════════════════════
-      // TEMPLATE MODE — preserve structure, only fill in content
-      // ═══════════════════════════════════════════════════════════
-      writePrompt = `Je bent een SEO-contentspecialist. Je taak is UITSLUITEND het invullen van tekst in een bestaand HTML-template. Je mag NIETS aan de HTML-structuur veranderen.
-
-═══════════════════════════════════════
-ABSOLUTE REGELS — NOOIT OVERTREDEN
-═══════════════════════════════════════
-1. VERANDER GEEN HTML-structuur — geen tags toevoegen of verwijderen
-2. VERANDER GEEN CSS-klassen, IDs of attributen
-3. VERANDER GEEN wrapper-divs, secties of layout-elementen
-4. VERANDER GEEN inline styles
-5. VOEG GEEN nieuwe HTML-elementen toe buiten de template
-6. De template bepaalt ALLES qua opmaak — jij vult alleen tekst in
-7. Verzin GEEN contactgegevens die niet in de geverifieerde gegevens staan
-
-═══════════════════════════════════════
-CONTENT KWALITEIT — STRIKTE REGELS
-═══════════════════════════════════════
-📊 STATISTIEKEN — ECHT OF WEGLATEN:
-- Gebruik ALLEEN verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
-- NOOIT labels zoals "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[bron nodig]" toevoegen
-- NOOIT "studies tonen aan" of "onderzoek wijst uit" zonder concrete genoemde bron
-- Als er geen verifieerbare statistiek bestaat: schrijf algemene maar accurate zinnen ZONDER getallen
-- Interne bedrijfsdata labelen als: "[Bron: Bedrijfsadministratie]"
-- Alle genoemde bronnen moeten uit 2024-2026 zijn
-
-🎨 LEESBAARHEID — WCAG AA (contrast 4.5:1 minimum):
-- Check elke achtergrond/tekst combinatie in CSS voordat je output genereert
-- Bij gekleurde achtergronden: ALTIJD expliciet leesbare tekstkleuren in CSS zetten
-- NOOIT contrastproblemen noteren in commentaar — fix ze in de CSS zelf
-- Donkere tekst op lichte achtergrond of lichte tekst op donkere achtergrond
-
-📱 MOBIEL — RESPONSIVE VERPLICHT:
-- Touch targets (knoppen, links) minimaal 44px hoog/breed
-- Tekst leesbaar op 320px schermbreedte (geen overflow, geen tiny text)
-- Proactief mobiele fixes toevoegen in bestaande @media queries
-- NOOIT wachten met fixes — doe het nu
-
-✅ OUTPUT REGEL:
-Als je iets niet kunt verifiëren of de leesbaarheid/responsiveness niet kunt garanderen: LAAT HET WEG.
-Fix het in de output — plak geen waarschuwingen, disclaimers of placeholders aan het eindresultaat.
-
-WAT JE WEL DOET:
-- Vervang placeholder-tekst (zoals "Lorem ipsum", "[TITLE]", "[CONTENT]", "[H2]" etc.) met echte SEO-content
-- Vul lege tekstelementen in: <h1>, <h2>, <h3>, <p>, <li>, <span>, <td> etc.
-- Schrijf minimaal ${brief.target_word_count || 2500} woorden aan body-tekst verspreid over de template
-- Gebruik de exacte CSS-klassen van de template voor elementen als direct-answer, TOC, FAQ, tabellen etc.
-- Verwerk het primaire keyword en de GSC-queries natuurlijk in de tekst
-- Voeg de JSON-LD schema's in de bestaande <script> tags of voor </article>
-
-═══════════════════════════════════════
-CONTENT-INFORMATIE (alleen tekst invullen)
-═══════════════════════════════════════
-Bedrijf: ${job.profile_name} | Domein: ${job.domain} | Niche: ${job.niche}
-Doelgroep: ${job.target_audience} | Doel: ${job.primary_goal}
-Locaties: ${locStrings || 'Niet opgegeven'}
-${gscBlock}
-GEVERIFIEERDE BEDRIJFSGEGEVENS:
-${verifiedFacts || 'Geen gegevens gescrapt.'}
-${antiFacts}
-
-ARTIKEL-SPECS:
-- Titel: ${title}
-- Primair keyword: "${brief.primary_keyword}" — in eerste heading, eerste 100 woorden, één subheading, conclusie
-- Secundaire keywords: ${(brief.secondary_keywords||[]).join(', ')}
-- LSI keywords: ${(brief.lsi_keywords||[]).join(', ')}
-- Minimaal ${brief.target_word_count || 2500} woorden body-tekst
-- Zoekintentie: ${brief.search_intent}
-${brief.gsc_opportunity ? `- GSC kans: ${brief.gsc_opportunity}` : ''}
-
-GEWENSTE H2-ONDERWERPEN (verwerk in de bestaande template-koppen):
-${h2Structure}
-
-INTERNE LINKS — STRIKT (gebruik ALLEEN deze URLs):
-${internalLinksBlock}
-
-CONTENT GAPS OM IN TE VULLEN:
-${(brief.content_gaps_to_fill||[]).join('\n')}
-
-CONCURRENTIEVOORDELEN:
-${(brief.competitor_weaknesses||[]).join('\n')}
-
-BOFU CTAs (natuurlijk verwerken):
-${(brief.bofu_ctas||[]).join('\n')}
-
-JSON-LD SCHEMA'S — voeg toe voor </article> of in bestaande script-tags:
-<script type="application/ld+json">
-${JSON.stringify(schemaObj, null, 2)}
-</script>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Article","headline":"${title}","author":{"@type":"Organization","name":"${bi.business_name||job.profile_name}"},"datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}"}
-</script>
-
-═══════════════════════════════════════
-HET TEMPLATE — VUL DIT IN, VERANDER DE STRUCTUUR NIET
-═══════════════════════════════════════
-${job.html_template}
-
-Geef ALLEEN de volledig ingevulde template terug. Geen uitleg, geen markdown, geen extra HTML buiten de template. Eindig met <!-- word_count: X -->.`;
-
-    } else {
-      // ═══════════════════════════════════════════════════════════
-      // FREE-WRITE MODE — geen template, schrijf zelf HTML
-      // ═══════════════════════════════════════════════════════════
-      writePrompt = `Je bent een elite SEO-contentschrijver. Schrijf een compleet, publicatieklaar HTML-artikel van MINIMAAL ${brief.target_word_count || 2500} woorden. Stop NOOIT vroeg.
-
-═══════════════════════════════════════
-CONTENT KWALITEIT — STRIKTE REGELS
-═══════════════════════════════════════
-📊 STATISTIEKEN — ECHT OF WEGLATEN:
-- Gebruik ALLEEN verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
-- NOOIT labels zoals "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[bron nodig]" toevoegen
-- NOOIT "studies tonen aan" of "onderzoek wijst uit" zonder concrete genoemde bron
-- Als er geen verifieerbare statistiek bestaat: schrijf algemene maar accurate zinnen ZONDER getallen
-- Interne bedrijfsdata labelen als: "[Bron: Bedrijfsadministratie]"
-- Alle genoemde bronnen moeten uit 2024-2026 zijn
-
-🎨 LEESBAARHEID — WCAG AA (contrast 4.5:1 minimum):
-- Check elke achtergrond/tekst combinatie in CSS voordat je output genereert
-- Bij gekleurde achtergronden: ALTIJD expliciet leesbare tekstkleuren in CSS zetten
-- NOOIT contrastproblemen noteren in commentaar — fix ze in de CSS zelf
-
-📱 MOBIEL — RESPONSIVE VERPLICHT:
-- Touch targets (knoppen, links) minimaal 44px hoog/breed
-- Tekst leesbaar op 320px schermbreedte — gebruik @media (max-width: 480px)
-- Proactief mobiele fixes toevoegen, niet wachten
-
-✅ OUTPUT REGEL:
-Als je iets niet kunt verifiëren of leesbaarheid/responsiveness niet kunt garanderen: LAAT HET WEG.
-Fix het in de output — plak geen waarschuwingen, disclaimers of placeholders aan het eindresultaat.
-
-BEDRIJF: ${job.profile_name} | DOMEIN: ${job.domain} | NICHE: ${job.niche}
-DOELGROEP: ${job.target_audience} | DOEL: ${job.primary_goal}
-LOCATIES: ${locStrings || 'Niet opgegeven'}
-${gscBlock}
-GEVERIFIEERDE BEDRIJFSGEGEVENS:
-${verifiedFacts || 'Geen gegevens gescrapt.'}
-${antiFacts}
-
-ARTIKEL:
-- Titel: ${title}
-- Primair keyword: "${brief.primary_keyword}"
-- Secundaire keywords: ${(brief.secondary_keywords||[]).join(', ')}
-- LSI keywords: ${(brief.lsi_keywords||[]).join(', ')}
-- Minimaal ${brief.target_word_count || 2500} woorden
-- Zoekintentie: ${brief.search_intent}
-${brief.gsc_opportunity ? `- GSC kans: ${brief.gsc_opportunity}` : ''}
-
-H2-STRUCTUUR (elk onderdeel volledig uitschrijven):
-${h2Structure}
-
-VERPLICHTE ELEMENTEN:
-1. Direct antwoord na H1: <div class="direct-answer"><strong>Direct antwoord:</strong> [2-3 zinnen]</div>
-2. Inhoudsopgave met ankerlinks: <nav class="toc">...</nav>
-3. Minimaal 1 datatable met echte getallen/vergelijking
-4. TL;DR voor de FAQ: <div class="tldr">...</div>
-5. FAQ minimaal 5 vragen, voice-search: <div class="faq">...</div>
-6. JSON-LD schema's:
-<script type="application/ld+json">${JSON.stringify(schemaObj)}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${title}","datePublished":"${new Date().toISOString().slice(0,10)}"}</script>
-
-INTERNE LINKS:
-${internalLinksBlock}
-
-AI OVERVIEW TIPS: ${(brief.ai_overview_tips||[]).join(' | ')}
-CONTENT GAPS: ${(brief.content_gaps_to_fill||[]).join(' | ')}
-BOFU CTAs: ${(brief.bofu_ctas||[]).join(' | ')}
-CONCURRENTIEGATEN: ${(brief.competitor_weaknesses||[]).filter(Boolean).join(' | ')}
-
-SCHRIJFREGELS: Korte alinea's (2-4 zinnen). Elke H2 begint met directe beantwoording. Echte getallen en prijsranges. Nooit stoppen voor alle secties af zijn.
-
-Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
-    }
-
-    const claudeWriteKey = resolveClaudeKey(req);
-    if (!claudeWriteKey) return res.status(500).json({ success: false, error: 'Claude API key required' });
-    console.log('[write] Calling Claude for HTML assembly...');
-    let htmlContent, wasTruncated = false;
-    try {
-      const sys = 'You are an elite SEO content writer and HTML engineer. Write complete, production-ready HTML. Return only HTML — no markdown, no code fences, no explanation.';
-      htmlContent = await callClaudeForWrite(sys, writePrompt, 8000, claudeWriteKey);
-      htmlContent = htmlContent.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-    } catch(e) {
-      return res.status(502).json({ success: false, error: 'Claude write failed: ' + e.message });
-    }
-    if (!htmlContent) return res.status(502).json({ success: false, error: 'Claude returned empty content' });
-
-    // Post-processor: strip any confidence/unverified placeholder patterns that slipped through.
-    const scrub = stripAiPlaceholders(htmlContent);
-    const cleanedHtml = scrub.html;
-    if (scrub.stripped) console.log(`🧹 [write] Stripped ${scrub.stripped} placeholder pattern type(s)`);
-
-    const wordCountMatch = cleanedHtml.match(/<!--\s*word_count:\s*(\d+)\s*-->/);
-    const wordCount = wordCountMatch ? parseInt(wordCountMatch[1]) : Math.round(cleanedHtml.replace(/<[^>]+>/g,'').split(/\s+/).length);
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-
-    const articleR = await pool.query(
-      `INSERT INTO content_articles (job_id, profile_id, title, slug, primary_keyword, secondary_keywords, html_content, word_count, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
-      [job.id, job.profile_id, title, slug, brief.primary_keyword, JSON.stringify(brief.secondary_keywords||[]), cleanedHtml, wordCount]
-    );
-    await pool.query(`UPDATE content_jobs SET status='written', updated_at=NOW() WHERE id=$1`, [job.id]);
-    res.json({ success: true, article: articleR.rows[0], truncated: wasTruncated, finish_reason: finishReason });
+    res.json({ success: true, brief, jobId: job.id, message: 'Research complete. Use Writer to generate HTML content.' });
   } catch(e) {
     console.error('Write error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
