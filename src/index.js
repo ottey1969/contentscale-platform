@@ -282,7 +282,8 @@ res.getHeader('Content-Type')?.includes('text/html')) {
 const lastIdx = body.lastIndexOf('</body>');
 if (lastIdx !== -1) {
 body = body.slice(0, lastIdx) +
-'<script src="https://app.contentscale.site/badge-loader.js?v=3"></script></body>' +
+'<script src="https://app.contentscale.site/badge-loader.js?v=3"></script>' +
+'<script src="https://app.contentscale.site/consent-widget.js?v=1"></script></body>' +
 body.slice(lastIdx + 7);
 }
 }
@@ -4083,6 +4084,19 @@ res.json({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contents
 } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 // ── Badge loader script ──────────────────────────────────────────────────────
+app.get('/consent-widget.js', (req, res) => {
+const fs = require('fs');
+const path = require('path');
+res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+res.setHeader('Access-Control-Allow-Origin', '*');
+const filePath = [
+  path.join(__dirname, 'consent-widget.js'),
+].find(p => fs.existsSync(p));
+if (filePath) return res.sendFile(filePath);
+res.send("console.warn('consent-widget.js not found');");
+});
+
 app.get('/badge-loader.js', (req, res) => {
 res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
 res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
