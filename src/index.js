@@ -762,7 +762,10 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
-   await client.query(`CREATE TABLE IF NOT EXISTS access_sessions (id SERIAL PRIMARY KEY, token VARCHAR(255) UNIQUE NOT NULL, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, created_at TIMESTAMP DEFAULT NOW(), expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days')`);
+   await client.query(`CREATE TABLE IF NOT EXISTS access_sessions (id SERIAL PRIMARY KEY, token VARCHAR(255), session_token VARCHAR(255), code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, ip_address VARCHAR(100), user_agent TEXT, created_at TIMESTAMP DEFAULT NOW(), expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days')`);
+   await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS session_token VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS ip_address VARCHAR(100)`).catch(()=>{});
+   await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS engine_access_codes (
      id SERIAL PRIMARY KEY,
      code VARCHAR(50) UNIQUE NOT NULL,
@@ -17090,6 +17093,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | ContentScale</title>
+    <script>
+    (function(){
+        var token = localStorage.getItem('admin_id');
+        var uid = localStorage.getItem('user_id');
+        if(!token && !uid){ window.location.href = '/tools'; }
+    })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17113,19 +17123,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; }
         .btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-hover); }
-        .btn-danger { color: var(--red); border-color: var(--red); }
-        .btn-danger:hover { background: rgba(239, 68, 68, 0.1); }
         h2 { font-size: 20px; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--text-muted); font-weight: 500; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: var(--surface-hover); }
-        .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--green); }
-        .badge-inactive { background: rgba(239, 68, 68, 0.2); color: var(--red); }
-        .loading { color: var(--text-muted); text-align: center; padding: 40px; }
         @media (max-width: 768px) { .sidebar { display: none; } .main { margin-left: 0; } .mobile-nav { display: flex; gap: 10px; overflow-x: auto; padding: 10px; background: var(--surface); border-bottom: 1px solid var(--border); } }
         @media (min-width: 769px) { .mobile-nav { display: none; } }
     </style>
@@ -17134,45 +17135,44 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="sidebar">
         <div class="sidebar-header">ContentScale Admin</div>
         <div class="sidebar-nav">
-            <div class="nav-item active" data-tab="content"><span class="nav-icon">📄</span> Content</div>
-            <div class="nav-item" data-tab="clients"><span class="nav-icon">👥</span> Clients</div>
-            <div class="nav-item" data-tab="campaigns"><span class="nav-icon">🚀</span> Campaigns</div>
-            <div class="nav-item" data-tab="engine-access"><span class="nav-icon">🔑</span> Engine Access</div>
+            <div class="nav-item active" onclick="switchTab('content')"><span class="nav-icon">📄</span> Content</div>
+            <div class="nav-item" onclick="switchTab('clients')"><span class="nav-icon">👥</span> Clients</div>
+            <div class="nav-item" onclick="switchTab('campaigns')"><span class="nav-icon">🚀</span> Campaigns</div>
+            <div class="nav-item" onclick="switchTab('engine-access')"><span class="nav-icon">🔑</span> Engine Access</div>
             <div style="height:1px;background:var(--border);margin:8px 0;"></div>
-            <div class="nav-item" data-tab="leaderboard"><span class="nav-icon">🏆</span> Leaderboard</div>
-            <div class="nav-item" data-tab="pending"><span class="nav-icon">⏳</span> Pending</div>
-            <div class="nav-item" data-tab="users"><span class="nav-icon">👤</span> Users</div>
-            <div class="nav-item" data-tab="freelancers"><span class="nav-icon">💼</span> Freelancers</div>
-            <div class="nav-item" data-tab="messages"><span class="nav-icon">💬</span> Messages</div>
-            <div class="nav-item" data-tab="email-log"><span class="nav-icon">📧</span> Email Log</div>
+            <div class="nav-item" onclick="switchTab('leaderboard')"><span class="nav-icon">🏆</span> Leaderboard</div>
+            <div class="nav-item" onclick="switchTab('pending')"><span class="nav-icon">⏳</span> Pending</div>
+            <div class="nav-item" onclick="switchTab('users')"><span class="nav-icon">👤</span> Users</div>
+            <div class="nav-item" onclick="switchTab('freelancers')"><span class="nav-icon">💼</span> Freelancers</div>
+            <div class="nav-item" onclick="switchTab('messages')"><span class="nav-icon">💬</span> Messages</div>
+            <div class="nav-item" onclick="switchTab('email-log')"><span class="nav-icon">📧</span> Email Log</div>
         </div>
     </div>
     <div class="main">
         <div class="topbar">
-            <div class="mobile-nav"></div>
+            <div class="mobile-nav">
+                <button class="btn btn-primary" onclick="switchTab('content')">Content</button>
+                <button class="btn" onclick="switchTab('clients')">Clients</button>
+                <button class="btn" onclick="switchTab('campaigns')">Campaigns</button>
+            </div>
             <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
                 <span id="admin-user" style="color:var(--text-muted);font-size:13px;">Admin</span>
-                <button class="btn" onclick="window.logout()">Logout</button>
+                <button class="btn" onclick="logout()">Logout</button>
             </div>
         </div>
         <div class="content-area">
-            <div id="tab-content" class="tab-content active">
-                <h2>Content Management</h2>
-                <div class="card" id="content-list">Loading content...</div>
-            </div>
-            <div id="tab-clients" class="tab-content">
-                <h2>Clients</h2>
-                <div class="card" id="clients-list">Loading clients...</div>
-            </div>
-            <div id="tab-campaigns" class="tab-content">
-                <h2>Campaigns</h2>
-                <div class="card" id="campaigns-list">Loading campaigns...</div>
-            </div>
+            <div id="tab-content" class="tab-content active"><h2>Content Management</h2><div class="card" id="content-list">Loading content...</div></div>
+            <div id="tab-clients" class="tab-content"><h2>Clients</h2><div class="card" id="clients-list">Loading clients...</div></div>
+            <div id="tab-campaigns" class="tab-content"><h2>Campaigns</h2><div class="card" id="campaigns-list">Loading campaigns...</div></div>
+            
+            <!-- ENGINE ACCESS TAB -->
             <div id="tab-engine-access" class="tab-content">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2>🔑 Engine Access Codes</h2>
-                    <button class="btn btn-primary" onclick="window.showCreateEngineCode()">+ New Code</button>
+                    <button class="btn btn-primary" onclick="showCreateEngineCode()">+ New Code</button>
                 </div>
+                
+                <!-- Create Code Form (Hidden by default) -->
                 <div id="create-engine-code-form" class="card" style="display:none;margin-bottom:20px;border-left:4px solid var(--primary);">
                     <h3 style="margin-bottom:15px;font-size:16px;">Create New Engine Access Code</h3>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
@@ -17196,14 +17196,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         </div>
                     </div>
                     <div style="display:flex;gap:10px;">
-                        <button class="btn btn-primary" onclick="window.saveEngineCode()">Save Code</button>
+                        <button class="btn btn-primary" onclick="saveEngineCode()">Save Code</button>
                         <button class="btn" onclick="document.getElementById('create-engine-code-form').style.display='none'">Cancel</button>
                     </div>
                 </div>
+
+                <!-- Codes Table -->
                 <div class="card" id="engine-codes-table-container">
-                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
                         <thead>
-                            <tr style="border-bottom:1px solid var(--border);">
+                            <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);">
                                 <th style="padding:12px;">Client</th>
                                 <th style="padding:12px;">Code</th>
                                 <th style="padding:12px;">Keys</th>
@@ -17212,50 +17214,119 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             </tr>
                         </thead>
                         <tbody id="engine-codes-tbody">
-                            <tr><td colspan="5" class="loading">Loading codes...</td></tr>
+                            <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div id="tab-leaderboard" class="tab-content">
-                <h2>Leaderboard</h2>
-                <div class="card" id="leaderboard-list">Loading leaderboard...</div>
-            </div>
-            <div id="tab-pending" class="tab-content">
-                <h2>Pending Approvals</h2>
-                <div class="card" id="pending-list">Loading pending items...</div>
-            </div>
-            <div id="tab-users" class="tab-content">
-                <h2>User Management</h2>
-                <div class="card" id="users-list">Loading users...</div>
-            </div>
-            <div id="tab-freelancers" class="tab-content">
-                <h2>Freelancers</h2>
-                <div class="card" id="freelancers-list">Loading freelancers...</div>
-            </div>
-            <div id="tab-messages" class="tab-content">
-                <h2>Messages</h2>
-                <div class="card" id="messages-list">Loading messages...</div>
-            </div>
-            <div id="tab-email-log" class="tab-content">
-                <h2>Email Log</h2>
-                <div class="card" id="email-log-list">Loading email log...</div>
-            </div>
+
+            <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
+            <div id="tab-pending" class="tab-content"><h2>Pending Approvals</h2><div class="card" id="pending-list">Loading pending items...</div></div>
+            <div id="tab-users" class="tab-content"><h2>User Management</h2><div class="card" id="users-list">Loading users...</div></div>
+            <div id="tab-freelancers" class="tab-content"><h2>Freelancers</h2><div class="card" id="freelancers-list">Loading freelancers...</div></div>
+            <div id="tab-messages" class="tab-content"><h2>Messages</h2><div class="card" id="messages-list">Loading messages...</div></div>
+            <div id="tab-email-log" class="tab-content"><h2>Email Log</h2><div class="card" id="email-log-list">Loading email log...</div></div>
         </div>
     </div>
     <script>
-        // Global functions for onclick handlers
-        window.logout = function() {
-            localStorage.removeItem('admin_id');
-            window.location.href = '/tools';
-        };
+        // --- Helper: Robust API Call with Admin Auth ---
+        async function apiCall(endpoint, method = 'GET', body = null) {
+          const headers = { 'Content-Type': 'application/json' };
+          
+          // Attach admin key for BOTH admin routes AND content engine routes
+          const adminId = localStorage.getItem('admin_id');
+          if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) {
+            headers['x-admin-key'] = adminId;
+          }
+          
+          const options = { method, headers };
+          if (body) options.body = JSON.stringify(body);
+          
+          try {
+            const res = await fetch(endpoint, options);
+            if (!res.ok) {
+              const text = await res.text();
+              // Handle HTML errors (e.g., redirected to login or server error page)
+              if (text.indexOf('<!DOCTYPE') === 0 || text.indexOf('<html') === 0) {
+                throw new Error('Server returned HTML (Status ' + res.status + '). Session may be expired.');
+              }
+              try { 
+                const errJson = JSON.parse(text); 
+                throw new Error(errJson.error || 'Error ' + res.status); 
+              } catch (e) {
+                // Only fall back to raw text when JSON.parse itself failed.
+                // Re-throw everything else (including the Error we just built).
+                if (e instanceof SyntaxError) {
+                  throw new Error(text || 'Error ' + res.status);
+                }
+                throw e;
+              }
+            }
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            return data;
+          } catch (error) { 
+            console.error('API Call Failed:', error); 
+            throw error; 
+          }
+        }
 
-        window.showCreateEngineCode = function() {
+        // --- Tab Switching Logic ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            const tabEl = document.getElementById('tab-' + tabName);
+            if (tabEl) tabEl.classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => { 
+                if (item.textContent.toLowerCase().includes(tabName)) item.classList.add('active'); 
+            });
+
+            loadTabData(tabName);
+        }
+        window.switchTab = switchTab; // ensure inline onclick handlers can always reach it
+
+        // --- Data Loading Logic ---
+        function loadTabData(tab) {
+            if (tab === 'content') {
+                const container = document.getElementById('content-list');
+                container.innerHTML = '<p style="color:var(--text-muted)">Loading profiles...</p>';
+                
+                apiCall('/api/content/profiles')
+                    .then(res => {
+                        if (res.profiles && res.profiles.length > 0) {
+                            let html = '<ul style="list-style:none;padding:0;">';
+                            res.profiles.forEach(p => {
+                                html += '<li style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
+                                    '<span>' + p.name + ' <small style="color:var(--text-muted)">(' + p.domain + ')</small></span>' +
+                                    '<span class="badge" style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:11px;">' + (p.niche || 'N/A') + '</span>' +
+                                '</li>';
+                            });
+                            html += '</ul>';
+                            container.innerHTML = html;
+                        } else {
+                            container.innerHTML = '<p style="color:var(--text-muted)">No profiles found.</p>';
+                        }
+                    })
+                    .catch(err => {
+                        container.innerHTML = '<p style="color:var(--red)">❌ Error: ' + err.message + '</p>';
+                    });
+            } 
+            else if (tab === 'engine-access') {
+                loadEngineCodes(); // Call the new function
+            }
+            // Add other tabs here if needed (e.g., leaderboard, users)
+        }
+
+        // --- Engine Access Functions ---
+        function showCreateEngineCode() {
             document.getElementById('create-engine-code-form').style.display = 'block';
             document.getElementById('ec-client-name').focus();
-        };
+        }
 
-        window.saveEngineCode = async function() {
+        async function saveEngineCode() {
             const clientName = document.getElementById('ec-client-name').value.trim();
             if (!clientName) return alert('Client name is required');
             
@@ -17267,62 +17338,57 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             };
 
             try {
-                const res = await window.apiCall('/api/admin/engine-codes', 'POST', payload);
+                const res = await apiCall('/api/admin/engine-codes', 'POST', payload);
                 if (res.success) {
-                    alert('✅ Code Created!\\n\\nCode: ' + res.code.code + '\\n\\nShare this with ' + clientName + '.\\nThey can login at: ' + window.location.origin + '/engine-login');
+                    alert('✅ Code Created!\n\nCode: ' + res.code.code + '\n\nShare this with ' + clientName + '.\nThey can login at: ' + window.location.origin + '/engine-login');
                     document.getElementById('ec-client-name').value = '';
                     document.getElementById('ec-gemini-key').value = '';
                     document.getElementById('ec-claude-key').value = '';
                     document.getElementById('ec-expires').value = '';
                     document.getElementById('create-engine-code-form').style.display = 'none';
-                    window.loadEngineCodes();
+                    loadEngineCodes(); // Refresh table
                 } else {
-                    alert('Error: ' + (res.error || 'Unknown error'));
+                    alert('Error: ' + res.error);
                 }
             } catch (e) {
                 alert('Failed to create code: ' + e.message);
             }
-        };
+        }
 
-        window.toggleEngineCode = async function(id, isActive) {
+        async function toggleEngineCode(id, isActive) {
             try {
-                await window.apiCall('/api/admin/engine-codes/' + id, 'PATCH', { is_active: isActive });
-                window.loadEngineCodes();
+                await apiCall('/api/admin/engine-codes/' + id, 'PATCH', { is_active: isActive });
+                loadEngineCodes();
             } catch (e) {
                 alert('Error updating code: ' + e.message);
             }
-        };
+        }
 
-        window.deleteEngineCode = async function(id) {
+        async function deleteEngineCode(id) {
             if (!confirm('Are you sure? This will revoke access immediately.')) return;
             try {
-                await window.apiCall('/api/admin/engine-codes/' + id, 'DELETE');
-                window.loadEngineCodes();
+                await apiCall('/api/admin/engine-codes/' + id, 'DELETE');
+                loadEngineCodes();
             } catch (e) {
                 alert('Error deleting code: ' + e.message);
             }
-        };
+        }
 
-        window.copyEngineUrl = function(code) {
-            const url = window.location.origin + '/engine-login?code=' + code;
-            navigator.clipboard.writeText(url).then(() => alert('✅ Login URL copied:\\n' + url));
-        };
-
-        window.loadEngineCodes = async function() {
+        async function loadEngineCodes() {
             const tbody = document.getElementById('engine-codes-tbody');
             if (!tbody) return;
             
-            tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading codes...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</td></tr>';
             
             try {
-                const res = await window.apiCall('/api/admin/engine-codes');
+                const res = await apiCall('/api/admin/engine-codes');
                 if (res.success && res.codes) {
                     if (res.codes.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">No codes found. Click "+ New Code" to create one.</td></tr>';
                         return;
                     }
                     
-                    tbody.innerHTML = res.codes.map(function(c) {
+                    tbody.innerHTML = res.codes.map(c => {
                         const statusColor = c.is_active ? 'var(--green)' : 'var(--red)';
                         const statusText = c.is_active ? 'Active' : 'Revoked';
                         const keysInfo = [];
@@ -17330,14 +17396,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         if (c.claude_key) keysInfo.push('<span style="color:#f59e0b">Claude</span>');
                         
                         return '<tr style="border-bottom:1px solid var(--border);">' +
-                            '<td style="padding:12px;font-weight:500;">' + window.escapeHtml(c.client_name) + '</td>' +
-                            '<td style="padding:12px;font-family:monospace;font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;">' + c.code + '</td>' +
+                            '<td style="padding:12px;font-weight:500;">' + c.client_name + '</td>' +
+                            '<td style="padding:12px;font-family:monospace;font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;width:120px;">' + c.code + '</td>' +
                             '<td style="padding:12px;font-size:11px;">' + (keysInfo.join(' & ') || '<span style="color:var(--text-muted)">None (Uses Env)</span>') + '</td>' +
                             '<td style="padding:12px;"><span style="color:' + statusColor + ';font-weight:bold;font-size:11px;">● ' + statusText + '</span></td>' +
                             '<td style="padding:12px;text-align:right;">' +
-                                '<button class="btn" style="padding:4px 8px;font-size:11px;background:#0f766e;color:#fff;border-color:#0f766e;" onclick="window.copyEngineUrl(\\'' + c.code + '\\')">🔗 URL</button> ' +
-                                '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="window.toggleEngineCode(' + c.id + ', ' + !c.is_active + ')">' + (c.is_active ? 'Revoke' : 'Activate') + '</button> ' +
-                                '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="window.deleteEngineCode(' + c.id + ')">Delete</button>' +
+                                '<button class="btn" style="padding:4px 8px;font-size:11px;background:#0f766e;color:#fff;border-color:#0f766e;" onclick="copyEngineUrl(\'' + c.code + '\')">🔗 URL</button>' +
+                                '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="toggleEngineCode(' + c.id + ', ' + !c.is_active + ')">' + (c.is_active ? 'Revoke' : 'Activate') + '</button>' +
+                                '<button class="btn" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:var(--red);" onclick="deleteEngineCode(' + c.id + ')">Delete</button>' +
                             '</td>' +
                         '</tr>';
                     }).join('');
@@ -17345,125 +17411,34 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error loading codes.</td></tr>';
                 }
             } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error: ' + window.escapeHtml(e.message) + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error: ' + e.message + '</td></tr>';
             }
-        };
+        }
 
-        window.apiCall = async function(endpoint, method, body) {
-            method = method || 'GET';
-            const headers = { 'Content-Type': 'application/json' };
-            const adminId = localStorage.getItem('admin_id');
-            if (adminId) {
-                headers['x-admin-key'] = adminId;
-            }
-            
-            const options = { method: method, headers: headers };
-            if (body) options.body = JSON.stringify(body);
-            
-            const res = await fetch(endpoint, options);
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'HTTP ' + res.status);
-            }
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error || 'Request failed');
-            return data;
-        };
+        function copyEngineUrl(code) {
+            const url = window.location.origin + '/engine-login?code=' + code;
+            navigator.clipboard.writeText(url).then(() => alert('✅ Login URL copied:\n' + url));
+        }
 
-        window.escapeHtml = function(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        };
+        function logout() { 
+            localStorage.removeItem('admin_id'); 
+            window.location.href = '/tools'; 
+        }
 
-        window.switchTab = function(tabName) {
-            document.querySelectorAll('.tab-content').forEach(function(el) {
-                el.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-item').forEach(function(el) {
-                el.classList.remove('active');
-            });
-            
-            const tabEl = document.getElementById('tab-' + tabName);
-            if (tabEl) tabEl.classList.add('active');
-            
-            const activeNav = document.querySelector('.nav-item[data-tab="' + tabName + '"]');
-            if (activeNav) activeNav.classList.add('active');
-            
-            window.loadTabData(tabName);
-        };
-
-        window.loadTabData = function(tab) {
-            if (tab === 'content') {
-                const container = document.getElementById('content-list');
-                container.innerHTML = '<div class="loading">Loading profiles...</div>';
-                
-                window.apiCall('/api/content/profiles')
-                    .then(function(res) {
-                        if (res.profiles && res.profiles.length > 0) {
-                            let html = '<ul style="list-style:none;padding:0;">';
-                            res.profiles.forEach(function(p) {
-                                html += '<li style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
-                                    '<span>' + window.escapeHtml(p.name) + ' <small style="color:var(--text-muted)">(' + window.escapeHtml(p.domain) + ')</small></span>' +
-                                    '<span class="badge">' + window.escapeHtml(p.niche || 'N/A') + '</span>' +
-                                '</li>';
-                            });
-                            html += '</ul>';
-                            container.innerHTML = html;
-                        } else {
-                            container.innerHTML = '<div class="loading">No profiles found.</div>';
-                        }
-                    })
-                    .catch(function(err) {
-                        container.innerHTML = '<div style="color:var(--red);">❌ Error: ' + window.escapeHtml(err.message) + '</div>';
-                    });
-            } else if (tab === 'engine-access') {
-                window.loadEngineCodes();
-            } else {
-                const el = document.getElementById(tab + '-list');
-                if (el) {
-                    el.innerHTML = '<div class="loading">Loading ' + tab + ' data...</div><div class="loading" style="margin-top:20px;color:var(--text-muted);">Coming soon...</div>';
-                }
-            }
-        };
-
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', function() {
-            const adminId = localStorage.getItem('admin_id');
-            if (!adminId) {
+        document.addEventListener('DOMContentLoaded', () => { 
+            if (!localStorage.getItem('admin_id')) {
                 window.location.href = '/tools';
                 return;
             }
-            
-            const adminEl = document.getElementById('admin-user');
-            if (adminEl) adminEl.textContent = 'Admin (' + adminId.substring(0,8) + '...)';
-            
-            // Set up navigation click handlers
-            document.querySelectorAll('.nav-item').forEach(function(item) {
-                item.addEventListener('click', function() {
-                    const tab = this.getAttribute('data-tab');
-                    if (tab) window.switchTab(tab);
-                });
-            });
-            
-            // Generate mobile nav buttons
-            const mobileNav = document.querySelector('.mobile-nav');
-            if (mobileNav) {
-                const tabs = ['content', 'clients', 'campaigns', 'engine-access', 'leaderboard', 'pending', 'users', 'freelancers', 'messages', 'email-log'];
-                mobileNav.innerHTML = tabs.map(function(t) {
-                    return '<button class="btn ' + (t === 'content' ? 'btn-primary' : '') + '" onclick="window.switchTab(\\'' + t + '\\')">' + 
-                        (t === 'content' ? '📄' : t === 'clients' ? '👥' : t === 'campaigns' ? '🚀' : t === 'engine-access' ? '🔑' : 
-                         t === 'leaderboard' ? '🏆' : t === 'pending' ? '⏳' : t === 'users' ? '👤' : t === 'freelancers' ? '💼' : 
-                         t === 'messages' ? '💬' : '📧') + ' ' + t.charAt(0).toUpperCase() + t.slice(1).replace('-', ' ') + 
-                    '</button>';
-                }).join('');
+            // Show admin username if available
+            const adminId = localStorage.getItem('admin_id');
+            if (adminId) {
+              const el = document.getElementById('admin-user');
+              if (el) el.textContent = 'Admin (' + adminId.substring(0,8) + '...)';
             }
-            
-            window.switchTab('content');
+            loadTabData('content');
+            // Pre-load engine codes so the tab is ready
+            setTimeout(() => loadEngineCodes(), 500);
         });
     </script>
 </body>
