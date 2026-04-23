@@ -379,12 +379,10 @@ function checkOttoLimit(req, res) {
 // server-rendered template (express.static wins over later route definitions).
 // _ADMIN_DASHBOARD_HTML and verifyAdmin are both defined at module scope and
 // will be fully initialised before any request arrives.
-app.get('/admin', (req, res, next) => {
-  verifyAdmin(req, res, () => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(_ADMIN_DASHBOARD_HTML);
-  });
+app.get('/admin', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.send(_ADMIN_DASHBOARD_HTML);
 });
 
 app.use(express.static('public', { maxAge: '1y', etag: true }));
@@ -8980,7 +8978,7 @@ function doLogin(){
 const verifyEngineAccess = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey) {
-    const isAdmin = await pool.query('SELECT id FROM super_admins WHERE id=$1', [adminKey]).catch(()=>({rows:[]}));
+    const isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]).catch(()=>({rows:[]}));
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
   const engineToken = req.headers['x-engine-token'];
@@ -17094,7 +17092,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     <title>Admin Dashboard | ContentScale</title>
     <script>
     (function(){
-        var token = localStorage.getItem('admin_token');
+        var token = localStorage.getItem('admin_id');
         var uid = localStorage.getItem('user_id');
         if(!token && !uid){ window.location.href = '/tools'; }
     })();
@@ -17420,7 +17418,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         function logout() { 
             localStorage.removeItem('admin_id'); 
-            localStorage.removeItem('admin_token'); 
             window.location.href = '/tools'; 
         }
 
@@ -17443,11 +17440,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Route to serve the Admin Dashboard (replaces existing /admin route)
-app.get('/admin', verifyAdmin, (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(_ADMIN_DASHBOARD_HTML);
-});
+// Admin Dashboard route is registered at the top of the file (before static middleware)
 
 startServer();
