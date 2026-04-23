@@ -17681,7 +17681,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="font-size:2.5rem;font-weight:900;">'+e.score+'/100</div>' +
                     '<div style="margin:8px 0;">'+getFlag(e.country)+' '+e.country+'</div>' +
                     '<button onclick="editLeaderboard('+e.id+')" style="width:100%;background:#2563eb;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;margin-bottom:6px;"><i class="fas fa-edit"></i> Edit</button>' +
-                    '<button onclick="deleteItem(\x27leaderboard\x27,'+e.id+')" style="width:100%;background:#dc2626;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button></div>').join('');
+                    '<button onclick="deleteItem(&apos;leaderboard&apos;,'+e.id+')" style="width:100%;background:#dc2626;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button></div>').join('');
                 document.getElementById('rankings4to15Grid').innerHTML = window.allLeaderboard.slice(3,15).map((e,i) =>
                     '<div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1rem;text-align:center;">' +
                     '<div style="font-size:1.5rem;font-weight:700;color:#9ca3af;">#'+(i+4)+'</div>' +
@@ -17690,14 +17690,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="font-size:0.75rem;color:#9ca3af;margin:4px 0;">'+getFlag(e.country)+' '+e.country+'</div>' +
                     '<div style="display:flex;gap:8px;justify-content:center;">' +
                     '<button onclick="editLeaderboard('+e.id+')" style="color:#60a5fa;background:none;border:none;cursor:pointer;font-size:0.8rem;"><i class="fas fa-edit"></i> Edit</button>' +
-                    '<button onclick="deleteItem(\x27leaderboard\x27,'+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i> Del</button>' +
+                    '<button onclick="deleteItem(&apos;leaderboard&apos;,'+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i> Del</button>' +
                     '</div></div>').join('');
                 document.getElementById('rankingsTbody').innerHTML = window.allLeaderboard.slice(15,35).map((e,i) =>
-                    '<tr><td><input type="checkbox" class="lb-checkbox" data-id="'+e.id+'" onchange="toggleSelection(\x27leaderboard\x27,'+e.id+')"></td>' +
+                    '<tr><td><input type="checkbox" class="lb-checkbox" data-id="'+e.id+'" onchange="toggleSelection(&apos;leaderboard&apos;,'+e.id+')"></td>' +
                     '<td style="padding:8px;">'+(i+16)+'</td><td style="padding:8px;">'+(e.company_name||extractDomain(e.url))+'</td>' +
                     '<td style="padding:8px;"><span style="font-weight:700;color:'+(e.score>=85?'#4ade80':'#fbbf24')+';">'+e.score+'</span></td>' +
                     '<td style="padding:8px;"><button onclick="editLeaderboard('+e.id+')" style="color:#60a5fa;background:none;border:none;cursor:pointer;margin-right:8px;"><i class="fas fa-edit"></i></button>' +
-                    '<button onclick="deleteItem(\x27leaderboard\x27,'+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>').join('');
+                    '<button onclick="deleteItem(&apos;leaderboard&apos;,'+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>').join('');
             } catch(e) { console.error(e); }
         }
 
@@ -17710,11 +17710,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (q) {
                 document.getElementById('top3-container').innerHTML=''; document.getElementById('rankings4to15Grid').innerHTML='';
                 document.getElementById('rankingsTbody').innerHTML = filtered.map(e =>
-                    '<tr><td><input type="checkbox" data-id="'+e.id+'" onchange="toggleSelection(\x27leaderboard\x27,'+e.id+')"></td>' +
+                    '<tr><td><input type="checkbox" data-id="'+e.id+'" onchange="toggleSelection(&apos;leaderboard&apos;,'+e.id+')"></td>' +
                     '<td style="padding:8px;">#'+(all.indexOf(e)+1)+'</td><td style="padding:8px;">'+(e.company_name||extractDomain(e.url))+'</td>' +
                     '<td style="padding:8px;"><span style="font-weight:700;color:'+(e.score>=85?'#4ade80':e.score>=70?'#fbbf24':'#f87171')+';">'+e.score+'</span></td>' +
                     '<td style="padding:8px;"><button onclick="editLeaderboard('+e.id+')" style="color:#60a5fa;background:none;border:none;cursor:pointer;margin-right:8px;"><i class="fas fa-edit"></i></button>' +
-                    '<button onclick="deleteItem(\x27leaderboard\x27,'+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>').join('');
+                    '<button onclick="deleteItem(&apos;leaderboard&apos;,'+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>').join('');
             } else { loadLeaderboard(); }
         }
 
@@ -17760,8 +17760,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<p style="font-size:0.875rem;color:#9ca3af;margin-bottom:16px;">'+(f.title||'Specialist')+'</p>' +
                     '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
                     '<button onclick="editFreelancer('+f.id+')" class="btn btn-info" style="flex:1;font-size:0.75rem;"><i class="fas fa-edit mr-1"></i> Edit</button>' +
-                    '<button onclick="deleteItem(\x27freelancers\x27,'+f.id+')" class="btn btn-danger" style="flex:1;font-size:0.75rem;"><i class="fas fa-trash mr-1"></i> Del</button>' +
-                    '</div><div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" onchange="toggleSelection(\x27freelancers\x27,'+f.id+')"><span style="font-size:0.75rem;color:#9ca3af;">Select</span></div></div>').join('');
+                    '<button onclick="deleteItem(&apos;freelancers&apos;,'+f.id+')" class="btn btn-danger" style="flex:1;font-size:0.75rem;"><i class="fas fa-trash mr-1"></i> Del</button>' +
+                    '</div><div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" onchange="toggleSelection(&apos;freelancers&apos;,'+f.id+')"><span style="font-size:0.75rem;color:#9ca3af;">Select</span></div></div>').join('');
             } catch(e) { console.error(e); }
         }
 
@@ -17807,12 +17807,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         } else badge='<span style="background:#10b981;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Active</span>';
                     }
                     return '<div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">' +
-                        '<div style="display:flex;align-items:center;gap:12px;flex:1;"><input type="checkbox" onchange="toggleSelection(\x27users\x27,\x27'+u.id+'\x27)">' +
+                        '<div style="display:flex;align-items:center;gap:12px;flex:1;"><input type="checkbox" onchange="toggleSelection(&apos;users&apos;,&apos;'+u.id+'&apos;)">' +
                         '<div><div style="font-weight:600;">'+(u.ip_address||'Unknown')+'</div>' +
                         '<div style="font-size:0.75rem;color:#9ca3af;">ID: '+u.id.substring(0,8)+'... | '+new Date(u.created_at).toLocaleDateString()+'</div></div></div>' +
                         '<div style="display:flex;align-items:center;gap:8px;">'+badge+
-                        (u.is_activated?'<button onclick="extendUserAccess(\x27'+u.id+'\x27)" style="color:#60a5fa;background:none;border:none;cursor:pointer;font-size:0.75rem;">Extend</button>':'<button onclick="activateSingleUser(\x27'+u.id+'\x27)" style="color:#4ade80;background:none;border:none;cursor:pointer;font-size:0.75rem;">Activate</button>')+
-                        '<button onclick="openMessageModal(\x27single\x27,\x27'+u.id+'\x27)" style="color:#60a5fa;background:none;border:none;cursor:pointer;"><i class="fas fa-envelope"></i></button></div></div>';
+                        (u.is_activated?'<button onclick="extendUserAccess(&apos;'+u.id+'&apos;)" style="color:#60a5fa;background:none;border:none;cursor:pointer;font-size:0.75rem;">Extend</button>':'<button onclick="activateSingleUser(&apos;'+u.id+'&apos;)" style="color:#4ade80;background:none;border:none;cursor:pointer;font-size:0.75rem;">Activate</button>')+
+                        '<button onclick="openMessageModal(&apos;single&apos;,&apos;'+u.id+'&apos;)" style="color:#60a5fa;background:none;border:none;cursor:pointer;"><i class="fas fa-envelope"></i></button></div></div>';
                 }).join('');
             } catch(e) { console.error('Failed to load users:', e); }
         }
@@ -17898,14 +17898,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="font-size:1.5rem;font-weight:900;color:'+(p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171')+';">'+p.score+'/100</div>' +
                     '<div style="display:flex;gap:8px;margin-top:12px;">' +
                     '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">✅ Approve</button>' +
-                    '<button onclick="apiCall(\x27/api/admin/leaderboard/'+p.id+'/reject\x27,\x27POST\x27).then(()=>loadPendingData())" class="btn btn-danger">✗ Reject</button>' +
+                    '<button onclick="apiCall(&apos;/api/admin/leaderboard/'+p.id+'/reject&apos;,&apos;POST&apos;).then(()=>loadPendingData())" class="btn btn-danger">✗ Reject</button>' +
                     '</div></div>').join('') : '<p style="color:#9ca3af;">✅ No pending submissions</p>';
                 document.getElementById('pending-freelancers-container').innerHTML = frData.pending.length ? frData.pending.map(p =>
                     '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
                     '<h4 style="font-weight:700;">'+p.name+'</h4><p style="font-size:0.875rem;color:#9ca3af;">'+p.email+'</p>' +
                     '<div style="display:flex;gap:8px;margin-top:8px;">' +
-                    '<button onclick="apiCall(\x27/api/admin/freelancers/'+p.id+'/approve\x27,\x27POST\x27).then(()=>{loadPendingData();loadFreelancers();})" class="btn btn-success" style="flex:1;">Approve</button>' +
-                    '<button onclick="apiCall(\x27/api/admin/freelancers/'+p.id+'\x27,\x27DELETE\x27).then(()=>loadPendingData())" class="btn btn-danger" style="flex:1;">Reject</button>' +
+                    '<button onclick="apiCall(&apos;/api/admin/freelancers/'+p.id+'/approve&apos;,&apos;POST&apos;).then(()=>{loadPendingData();loadFreelancers();})" class="btn btn-success" style="flex:1;">Approve</button>' +
+                    '<button onclick="apiCall(&apos;/api/admin/freelancers/'+p.id+'&apos;,&apos;DELETE&apos;).then(()=>loadPendingData())" class="btn btn-danger" style="flex:1;">Reject</button>' +
                     '</div></div>').join('') : '<p style="color:#9ca3af;">No pending applications</p>';
             } catch(e) { console.error(e); }
         }
@@ -18061,7 +18061,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function renderNiches(){
             const grid=document.getElementById('nicheGrid');if(!grid)return;
             grid.innerHTML=NICHES_DATA.map(cat=>'<div style="background:#0d1f14;border:1px solid #065f46;border-radius:12px;padding:16px;"><div style="font-weight:800;color:#6ee7b7;margin-bottom:12px;">'+cat.category+'</div>'+
-                cat.niches.map(n=>'<div onclick="toggleNiche(\x27'+n.apify+'\x27)" style="padding:10px;border-radius:8px;cursor:pointer;background:'+(selectedNiches.has(n.apify)?'#052e16':'#0d1f14')+';border:1px solid '+(selectedNiches.has(n.apify)?'#16a34a':'#064e3b')+';margin-bottom:6px;"><span style="color:#e5e7eb;">'+n.name+'</span>'+(selectedNiches.has(n.apify)?' ✅':'')+'</div>').join('')+'</div>').join('');
+                cat.niches.map(n=>'<div onclick="toggleNiche(&apos;'+n.apify+'&apos;)" style="padding:10px;border-radius:8px;cursor:pointer;background:'+(selectedNiches.has(n.apify)?'#052e16':'#0d1f14')+';border:1px solid '+(selectedNiches.has(n.apify)?'#16a34a':'#064e3b')+';margin-bottom:6px;"><span style="color:#e5e7eb;">'+n.name+'</span>'+(selectedNiches.has(n.apify)?' ✅':'')+'</div>').join('')+'</div>').join('');
         }
         function toggleNiche(apify){if(selectedNiches.has(apify))selectedNiches.delete(apify);else selectedNiches.add(apify);renderNiches();}
 
@@ -18077,7 +18077,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span></div>' +
                     '<div style="font-weight:600;">'+c.client_name+'</div></div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-                    '<button onclick="copyEngineCode(\x27'+c.code+'\x27)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy Code</button>' +
+                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy Code</button>' +
                     '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
                     '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
                     '</div></div></div>').join('');
@@ -18120,7 +18120,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="font-weight:700;color:#f1f5f9;margin-top:4px;">'+c.client_name+'</div>' +
                     '<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#64748b;">🔗 '+loginUrl+'</div></div>' +
                     '<div style="display:flex;flex-direction:column;gap:8px;">' +
-                    '<button onclick="gaCopyLoginUrl(\x27'+c.code+'\x27)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;">📋 Copy Login URL</button>' +
+                    '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;">📋 Copy Login URL</button>' +
                     '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">✕ Revoke Access</button>' +
                     '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
         }
