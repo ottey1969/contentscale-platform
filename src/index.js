@@ -9036,25 +9036,15 @@ app.post('/api/engine/login', async (req, res) => {
     const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
     if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
     const ec = r.rows[0];
-
-    // Create a session token
-    const sessionToken = require('crypto').randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 day session
-
-    await pool.query(
-      `INSERT INTO access_sessions (code_id, session_token, ip_address, user_agent, expires_at) 
-       VALUES ($1, $2, $3, $4, $5)`,
-      [ec.id, sessionToken, req.ip, req.headers['user-agent'] || null, expiresAt]
-    );
-
+    // verifyEngineAccess uses the raw ENG-XXXX code as the token (x-engine-token header),
+    // so return the code itself — no access_sessions insert needed.
     res.json({
       success: true,
-      token: sessionToken,
+      token: ec.code,
       client_name: ec.client_name,
       has_gemini: !!ec.gemini_key,
       has_claude: !!ec.claude_key,
-      expires_at: expiresAt
+      expires_at: ec.expires_at || null
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
