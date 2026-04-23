@@ -17283,6 +17283,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
             loadTabData(tabName);
         }
+        window.switchTab = switchTab; // ensure inline onclick handlers can always reach it
 
         // --- Data Loading Logic ---
         function loadTabData(tab) {
@@ -17336,7 +17337,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             try {
                 const res = await apiCall('/api/admin/engine-codes', 'POST', payload);
                 if (res.success) {
-                    alert('✅ Code Created!\\n\\nCode: ' + res.code.code + '\\n\\nShare this with ' + clientName + '.\\nThey can login at: ' + window.location.origin + '/engine-login');
+                    alert('✅ Code Created!\n\nCode: ' + res.code.code + '\n\nShare this with ' + clientName + '.\nThey can login at: ' + window.location.origin + '/engine-login');
                     document.getElementById('ec-client-name').value = '';
                     document.getElementById('ec-gemini-key').value = '';
                     document.getElementById('ec-claude-key').value = '';
