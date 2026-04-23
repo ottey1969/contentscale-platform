@@ -1,4 +1,4 @@
-console.log('✅ CONTENTSCALE SERVER v3.0 - FINAL FIX - 1775546405');
+console.log('✅ CONTENTSCALE SERVER v4.0 - ' + new Date().toISOString());
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
