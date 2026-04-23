@@ -17948,7 +17948,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function exportEmailLog() {
             const rows=[['Date','Time','To Email','Business','Score','Type','URL']];
             allEmailLogs.forEach(e=>{const dt=new Date(e.sent_at||e.created_at);rows.push([dt.toLocaleDateString('nl-NL'),dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}),e.to_email||e.email||'',e.business_name||'',e.score||'',e.template_type||'',e.business_url||'']);});
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
             const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='email-log-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
         }
 
@@ -17992,7 +17992,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(!toExport.length){alert('Selecteer eerst scans met de checkboxes.');return;}
             const rows=[['first_name','business_name','email','website','score','city','country','scan_date']];
             toExport.forEach(s=>{let fn=s.business_name?s.business_name.split(' ')[0]:'';fn=fn.charAt(0).toUpperCase()+fn.slice(1).toLowerCase();rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',new Date(s.created_at).toLocaleDateString('nl-NL')]);});
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
             const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scan-export-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
         }
 
