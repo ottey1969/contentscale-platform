@@ -9068,7 +9068,14 @@ app.get('/api/engine/verify', verifyEngineAccess, async (req, res) => {
 });
 
 // ── Profiles ─────────────────────────────────────────────────
-app.get('/api/content/profiles', verifyAdmin, async (req, res) => {
+app.get('/api/content/profiles', async (req, res, next) => {
+  // Accept both admin key and engine token
+  const adminKey = req.headers['x-admin-key'];
+  const engineToken = req.headers['x-engine-token'];
+  if (adminKey) return verifyAdmin(req, res, next);
+  if (engineToken) return verifyEngineAccess(req, res, next);
+  return res.status(401).json({ success: false, error: 'Auth required' });
+}, async (req, res) => {
   try {
     const r = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id GROUP BY cp.id ORDER BY cp.created_at DESC`);
     res.json({ success: true, profiles: r.rows });
@@ -17368,6 +17375,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             '<td style="padding:12px;font-size:11px;">' + (keysInfo.join(' & ') || '<span style="color:var(--text-muted)">None (Uses Env)</span>') + '</td>' +
                             '<td style="padding:12px;"><span style="color:' + statusColor + ';font-weight:bold;font-size:11px;">● ' + statusText + '</span></td>' +
                             '<td style="padding:12px;text-align:right;">' +
+                                '<button class="btn" style="padding:4px 8px;font-size:11px;background:#0f766e;color:#fff;border-color:#0f766e;" onclick="copyEngineUrl(\'' + c.code + '\')">🔗 URL</button>' +
                                 '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="toggleEngineCode(' + c.id + ', ' + !c.is_active + ')">' + (c.is_active ? 'Revoke' : 'Activate') + '</button>' +
                                 '<button class="btn" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:var(--red);" onclick="deleteEngineCode(' + c.id + ')">Delete</button>' +
                             '</td>' +
@@ -17381,6 +17389,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }
         }
 
+        function copyEngineUrl(code) {
+            const url = window.location.origin + '/engine-login?code=' + code;
+            navigator.clipboard.writeText(url).then(() => alert('✅ Login URL copied:\n' + url));
+        }
+
         function logout() { 
             localStorage.removeItem('admin_id'); 
             localStorage.removeItem('admin_token'); 
@@ -17392,7 +17405,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 window.location.href = '/tools';
                 return;
             }
-            loadTabData('content'); 
+            // Show admin username if available
+            const adminId = localStorage.getItem('admin_id');
+            if (adminId) {
+              const el = document.getElementById('admin-user');
+              if (el) el.textContent = 'Admin (' + adminId.substring(0,8) + '...)';
+            }
+            loadTabData('content');
+            // Pre-load engine codes so the tab is ready
+            setTimeout(() => loadEngineCodes(), 500);
         });
     </script>
 </body>
