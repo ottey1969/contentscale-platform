@@ -7194,16 +7194,19 @@ function renderMd(t) {
 </body>
 </html>
 `;
-// SEO-AUDIT — served from public/ folder on Railway
+// SEO-AUDIT — served from public/ folder on Railway, falls back to embedded HTML
 app.get('/seo-audit', (req, res) => {
   const tryPaths = [
     require('path').join(__dirname, '../public/seo-audit.html'),
     require('path').join(__dirname, 'public/seo-audit.html'),
   ];
   const filePath = tryPaths.find(p => require('fs').existsSync(p));
-  if (!filePath) return res.status(404).send('<h2>seo-audit.html not found — upload it to public/ on Railway</h2>');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  if (!filePath) {
+    // Fall back to embedded variable
+    return res.send(_SEO_AUDIT_FINAL_HTML);
+  }
   return res.send(require('fs').readFileSync(filePath, 'utf8'));
 });
 // /audit-seo now redirects above
@@ -17088,362 +17091,1116 @@ if(domains.length>0){
 // ADMIN DASHBOARD (Unified Interface)
 // ============================================
 const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
+<!-- v2 build 2026-04-19 08:56 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | ContentScale</title>
+    <title>Admin Dashboard - ContentScale</title>
+    <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
     <script>
-    (function(){
-        var token = localStorage.getItem('admin_id');
-        var uid = localStorage.getItem('user_id');
-        if(!token && !uid){ window.location.href = '/tools'; }
-    })();
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        (function() {
+            const favicons = [
+                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237e22ce'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23be185d'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E",
+                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f59e0b'/%3E%3Ctext x='50' y='68' font-family='Arial,sans-serif' font-size='58' font-weight='900' text-anchor='middle' fill='white'%3ECS%3C/text%3E%3C/svg%3E"
+            ];
+            let blinkInterval = null, idx = 0;
+            function startBlink() {
+                if (blinkInterval) return;
+                blinkInterval = setInterval(function() {
+                    idx = (idx + 1) % favicons.length;
+                    var el = document.getElementById('dynamicFavicon');
+                    if (el) el.href = favicons[idx];
+                }, 800);
+            }
+            function stopBlink() {
+                if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
+                idx = 0;
+                var el = document.getElementById('dynamicFavicon');
+                if (el) el.href = favicons[0];
+            }
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) { startBlink(); } else { stopBlink(); }
+            });
+        })();
+    <\/script>
+    <script src="https://cdn.tailwindcss.com"><\/script>
     <style>
-        :root {
-            --bg: #0a0a0f; --surface: #14141a; --surface-hover: #1c1c24;
-            --border: #2a2a35; --text: #e4e4e7; --text-muted: #9ca3af;
-            --primary: #8b5cf6; --primary-hover: #7c3aed;
-            --green: #10b981; --red: #ef4444; --yellow: #f59e0b;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; }
-        .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0; z-index: 10; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: 700; color: var(--primary); }
-        .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
-        .nav-item { padding: 10px 14px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
-        .nav-item:hover { background: var(--surface-hover); color: var(--text); }
-        .nav-item.active { background: rgba(139, 92, 246, 0.15); color: var(--primary); }
-        .nav-icon { width: 18px; text-align: center; }
-        .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-        .topbar { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 5; }
-        .content-area { flex: 1; padding: 24px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; }
-        .btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        h2 { font-size: 20px; margin-bottom: 16px; }
-        @media (max-width: 768px) { .sidebar { display: none; } .main { margin-left: 0; } .mobile-nav { display: flex; gap: 10px; overflow-x: auto; padding: 10px; background: var(--surface); border-bottom: 1px solid var(--border); } }
-        @media (min-width: 769px) { .mobile-nav { display: none; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #030712; color: white; line-height: 1.6; }
+        h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select, label, li { color: white !important; }
+        input, textarea, select { color: #000000 !important; background-color: #ffffff !important; border: 1px solid #d1d5db !important; }
+        input::placeholder, textarea::placeholder { color: #6b7280 !important; opacity: 1 !important; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; }
+        .btn-primary { background: linear-gradient(135deg, #7e22ce, #be185d); color: white; }
+        .btn-success { background: #0f7b3a !important; color: white !important; }
+        .btn-info { background: linear-gradient(135deg, #1e40af, #0891b2); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #b45309, #d97706); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #991b1b, #dc2626); color: white; }
+        .mode-toggle { position: relative; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #374151; color: white; border: 2px solid transparent; transition: all 0.2s; cursor: pointer; }
+        .mode-toggle.active { background: linear-gradient(135deg, #7e22ce, #be185d); border: 2px solid rgba(255,255,255,0.3); }
+        .mode-toggle.active::after { content: '✓'; position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #0f7b3a; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 2px solid white; }
+        .card { background: #111827; border: 1px solid #374151; border-radius: 1rem; padding: 1.5rem; transition: all 0.2s; }
+        .stat-card { position: relative; border-radius: 1rem; padding: 1.25rem; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #7e22ce, #6b21a8); opacity: 0.9; }
+        .stat-card > div { position: relative; z-index: 10; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        @media (max-width: 768px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+        .hidden { display: none; }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2, .modal-content label, .modal-content p { color: #111827 !important; }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
-    <div class="sidebar">
-        <div class="sidebar-header">ContentScale Admin</div>
-        <div class="sidebar-nav">
-            <div class="nav-item active" onclick="switchTab('content')"><span class="nav-icon">📄</span> Content</div>
-            <div class="nav-item" onclick="switchTab('clients')"><span class="nav-icon">👥</span> Clients</div>
-            <div class="nav-item" onclick="switchTab('campaigns')"><span class="nav-icon">🚀</span> Campaigns</div>
-            <div class="nav-item" onclick="switchTab('engine-access')"><span class="nav-icon">🔑</span> Engine Access</div>
-            <div style="height:1px;background:var(--border);margin:8px 0;"></div>
-            <div class="nav-item" onclick="switchTab('leaderboard')"><span class="nav-icon">🏆</span> Leaderboard</div>
-            <div class="nav-item" onclick="switchTab('pending')"><span class="nav-icon">⏳</span> Pending</div>
-            <div class="nav-item" onclick="switchTab('users')"><span class="nav-icon">👤</span> Users</div>
-            <div class="nav-item" onclick="switchTab('freelancers')"><span class="nav-icon">💼</span> Freelancers</div>
-            <div class="nav-item" onclick="switchTab('messages')"><span class="nav-icon">💬</span> Messages</div>
-            <div class="nav-item" onclick="switchTab('email-log')"><span class="nav-icon">📧</span> Email Log</div>
+<body class="bg-gray-900">
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-purple-500">
+            <div class="flex items-center justify-center mb-6">
+                <span class="text-5xl">👑</span>
+                <h1 class="text-3xl font-bold ml-3">Admin</h1>
+            </div>
+            <p class="text-center mb-8" style="color:#9ca3af;">ContentScale Platform Control</p>
+            <div class="space-y-6">
+                <div><label class="block text-sm font-medium mb-2">Username</label><input type="text" id="login-username" value="ot" class="w-full px-4 py-3 rounded-lg"></div>
+                <div><label class="block text-sm font-medium mb-2">Password</label><input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 rounded-lg"></div>
+                <button onclick="login()" class="w-full py-4 btn btn-primary text-lg"><i class="fas fa-lock mr-2"></i> Login</button>
+            </div>
         </div>
     </div>
-    <div class="main">
-        <div class="topbar">
-            <div class="mobile-nav">
-                <button class="btn btn-primary" onclick="switchTab('content')">Content</button>
-                <button class="btn" onclick="switchTab('clients')">Clients</button>
-                <button class="btn" onclick="switchTab('campaigns')">Campaigns</button>
-            </div>
-            <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
-                <span id="admin-user" style="color:var(--text-muted);font-size:13px;">Admin</span>
-                <button class="btn" onclick="logout()">Logout</button>
-            </div>
-        </div>
-        <div class="content-area">
-            <div id="tab-content" class="tab-content active"><h2>Content Management</h2><div class="card" id="content-list">Loading content...</div></div>
-            <div id="tab-clients" class="tab-content"><h2>Clients</h2><div class="card" id="clients-list">Loading clients...</div></div>
-            <div id="tab-campaigns" class="tab-content"><h2>Campaigns</h2><div class="card" id="campaigns-list">Loading campaigns...</div></div>
-            
-            <!-- ENGINE ACCESS TAB -->
-            <div id="tab-engine-access" class="tab-content">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <h2>🔑 Engine Access Codes</h2>
-                    <button class="btn btn-primary" onclick="showCreateEngineCode()">+ New Code</button>
-                </div>
-                
-                <!-- Create Code Form (Hidden by default) -->
-                <div id="create-engine-code-form" class="card" style="display:none;margin-bottom:20px;border-left:4px solid var(--primary);">
-                    <h3 style="margin-bottom:15px;font-size:16px;">Create New Engine Access Code</h3>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                        <div>
-                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Client Name *</label>
-                            <input type="text" id="ec-client-name" class="btn" style="width:100%;text-align:left;" placeholder="e.g. My Agency or Self">
-                        </div>
-                        <div>
-                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Expires At (Optional)</label>
-                            <input type="date" id="ec-expires" class="btn" style="width:100%;text-align:left;">
-                        </div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                        <div>
-                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Gemini Key (Optional)</label>
-                            <input type="text" id="ec-gemini-key" class="btn" style="width:100%;text-align:left;" placeholder="AIzaSy...">
-                        </div>
-                        <div>
-                            <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;">Claude Key (Optional)</label>
-                            <input type="text" id="ec-claude-key" class="btn" style="width:100%;text-align:left;" placeholder="sk-ant-api03...">
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:10px;">
-                        <button class="btn btn-primary" onclick="saveEngineCode()">Save Code</button>
-                        <button class="btn" onclick="document.getElementById('create-engine-code-form').style.display='none'">Cancel</button>
-                    </div>
-                </div>
 
-                <!-- Codes Table -->
-                <div class="card" id="engine-codes-table-container">
-                    <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
-                        <thead>
-                            <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);">
-                                <th style="padding:12px;">Client</th>
-                                <th style="padding:12px;">Code</th>
-                                <th style="padding:12px;">Keys</th>
-                                <th style="padding:12px;">Status</th>
-                                <th style="padding:12px;text-align:right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="engine-codes-tbody">
-                            <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
-                        </tbody>
-                    </table>
+    <div id="main-dashboard" class="hidden">
+        <nav class="sticky top-0 z-50 bg-gray-900/95 border-b-2 border-purple-600 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl font-bold">Admin Dashboard</span>
+                    <span class="text-xs px-2 py-1 bg-purple-600 rounded font-semibold"><span id="admin-username">Admin</span></span>
+                </div>
+                <button onclick="logout()" class="btn btn-danger"><i class="fas fa-sign-out-alt mr-2"></i> Logout</button>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <div style="margin-bottom:8px;">
+                <div class="flex justify-center gap-2 mb-2 flex-wrap">
+                    <span style="font-size:0.68rem;color:#4b5563;align-self:center;font-weight:700;text-transform:uppercase;margin-right:4px;">Lead Flow →</span>
+                    <button onclick="switchTab('niches')" id="tabNichesBtn" class="mode-toggle" style="background:linear-gradient(135deg,#065f46,#0f766e);border-color:#0f766e;"><i class="fas fa-bullseye mr-2"></i> 1. Niches</button>
+                    <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle"><i class="fas fa-search mr-2"></i> 2. Scanner</button>
+                    <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> 3. Scan Log</button>
+                    <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="mode-toggle" style="background:linear-gradient(135deg,#0f4c8a,#7e22ce);border-color:#7e22ce;"><i class="fas fa-sitemap mr-2"></i> 4. Sitemap Scanner</button>
+                </div>
+                <div class="flex justify-center gap-2 flex-wrap">
+                    <span style="font-size:0.68rem;color:#4b5563;align-self:center;font-weight:700;text-transform:uppercase;margin-right:4px;">Admin →</span>
+                    <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
+                    <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
+                    <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
+                    <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
+                    <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="mode-toggle"><i class="fas fa-key mr-2"></i> Engine Access</button>
+                    <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="mode-toggle" style="background:linear-gradient(135deg,#064e3b,#0f766e);border-color:#0f766e;"><i class="fas fa-share-alt mr-2"></i> Give Access</button>
+                    <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
+                    <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
                 </div>
             </div>
 
-            <div id="tab-leaderboard" class="tab-content"><h2>Leaderboard</h2><div class="card" id="leaderboard-list">Loading leaderboard...</div></div>
-            <div id="tab-pending" class="tab-content"><h2>Pending Approvals</h2><div class="card" id="pending-list">Loading pending items...</div></div>
-            <div id="tab-users" class="tab-content"><h2>User Management</h2><div class="card" id="users-list">Loading users...</div></div>
-            <div id="tab-freelancers" class="tab-content"><h2>Freelancers</h2><div class="card" id="freelancers-list">Loading freelancers...</div></div>
-            <div id="tab-messages" class="tab-content"><h2>Messages</h2><div class="card" id="messages-list">Loading messages...</div></div>
-            <div id="tab-email-log" class="tab-content"><h2>Email Log</h2><div class="card" id="email-log-list">Loading email log...</div></div>
+            <!-- LEADERBOARD -->
+            <div id="tab-leaderboard" class="tab-content">
+                <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">🏆 Leaderboard</h2>
+                        <div class="flex gap-3">
+                            <button onclick="showAddLeaderboardModal()" class="btn btn-success"><i class="fas fa-plus-circle mr-2"></i> Add New</button>
+                            <button onclick="loadLeaderboard()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div class="grid-4 mb-8">
+                        <div class="stat-card"><div><div class="text-4xl mb-2">🏢</div><div class="text-3xl font-bold" id="stat-total-agencies">0</div><div class="text-sm">Agencies</div></div></div>
+                        <div class="stat-card"><div><div class="text-4xl mb-2">📊</div><div class="text-3xl font-bold" id="stat-avg-score">0</div><div class="text-sm">Avg. Score</div></div></div>
+                        <div class="stat-card"><div><div class="text-4xl mb-2">🌍</div><div class="text-3xl font-bold" id="stat-countries">0</div><div class="text-sm">Countries</div></div></div>
+                        <div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-verified">0</div><div class="text-sm">Verified</div></div></div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="select-all-leaderboard" onchange="toggleSelectAll('leaderboard')" class="w-5 h-5">
+                            <label class="text-sm">Select All</label>
+                        </div>
+                        <button onclick="bulkDelete('leaderboard')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-leaderboard">0</span>)</button>
+                        <div class="flex-1" style="min-width:200px;">
+                            <input type="text" id="leaderboard-search" placeholder="Search domain, company, country..." oninput="filterLeaderboard(this.value)" class="w-full rounded-lg px-4 py-2 text-sm">
+                        </div>
+                        <div id="leaderboard-search-count" class="text-sm" style="color:#9ca3af;"></div>
+                    </div>
+                    <div id="top3-container" class="grid-3 mb-10"></div>
+                    <div id="rankings4to15Container" class="mb-10">
+                        <h3 class="text-2xl font-bold mb-6">Rankings 4-15</h3>
+                        <div id="rankings4to15Grid" class="grid-3"></div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+                        <button onclick="toggleRankings()" class="w-full bg-gray-700 px-4 py-3 rounded-lg font-semibold flex items-center justify-between">
+                            <span id="rankingsToggleText">📊 Show Rankings 16+</span><span id="rankingsToggleArrow">▼</span>
+                        </button>
+                        <div id="rankingsContainer" class="hidden mt-4">
+                            <table class="w-full bg-gray-900 rounded-lg overflow-hidden">
+                                <thead class="bg-gray-800"><tr><th class="p-3 w-10"></th><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Company</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Actions</th></tr></thead>
+                                <tbody id="rankingsTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FREELANCERS -->
+            <div id="tab-freelancers" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">🎯 Freelancers</h2>
+                        <button onclick="loadFreelancers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="select-all-freelancers" onchange="toggleSelectAll('freelancers')" class="w-5 h-5">
+                            <label class="text-sm">Select All</label>
+                        </div>
+                        <button onclick="bulkDelete('freelancers')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete Selected (<span id="selected-count-freelancers">0</span>)</button>
+                    </div>
+                    <div id="freelancersGrid" class="grid-3"></div>
+                </div>
+            </div>
+
+            <!-- USERS -->
+            <div id="tab-users" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">👥 User Management</h2>
+                        <button onclick="loadUsers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+                    </div>
+                    <div class="grid-4 mb-8">
+                        <div class="stat-card"><div><div class="text-4xl mb-2">👥</div><div class="text-3xl font-bold" id="stat-total-users">0</div><div class="text-sm">Total Users</div></div></div>
+                        <div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-active-users">0</div><div class="text-sm">Active</div></div></div>
+                        <div class="stat-card"><div><div class="text-4xl mb-2">⏳</div><div class="text-3xl font-bold" id="stat-expiring-users">0</div><div class="text-sm">Expiring Soon</div></div></div>
+                        <div class="stat-card"><div><div class="text-4xl mb-2">❌</div><div class="text-3xl font-bold" id="stat-inactive-users">0</div><div class="text-sm">Inactive/Expired</div></div></div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="select-all-users" onchange="toggleSelectAll('users')" class="w-5 h-5">
+                            <label class="text-sm">Select All</label>
+                        </div>
+                        <button onclick="bulkActionUsers('activate')" class="btn btn-success"><i class="fas fa-check mr-2"></i> Activate (7 Days)</button>
+                        <button onclick="bulkActionUsers('deactivate')" class="btn btn-warning"><i class="fas fa-times mr-2"></i> Deactivate</button>
+                        <button onclick="openMessageModal('selected')" class="btn btn-info"><i class="fas fa-envelope mr-2"></i> Message Selected</button>
+                        <button onclick="bulkDelete('users')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete (<span id="selected-count-users">0</span>)</button>
+                    </div>
+                    <div id="usersContainer" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- MESSAGES -->
+            <div id="tab-messages" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">📧 Message History</h2>
+                        <button onclick="openMessageModal('all')" class="btn btn-primary"><i class="fas fa-paper-plane mr-2"></i> New Broadcast</button>
+                    </div>
+                    <div id="messagesContainer" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- PENDING -->
+            <div id="tab-pending" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">⏳ Pending Approvals</h2>
+                        <button onclick="loadPendingData()" class="btn btn-warning"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4" style="color:#fbbf24;">🏆 Pending Leaderboard Submissions</h3>
+                        <div id="pending-leaderboard-container" class="space-y-4"></div>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4" style="color:#fbbf24;">🎯 Pending Freelancer Applications</h3>
+                        <div id="pending-freelancers-container" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EMAIL LOG -->
+            <div id="tab-emaillog" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="grid grid-cols-4 gap-4 mb-6">
+                        <div class="rounded-lg p-4 text-center" style="background:#0f2d1a;border:1px solid #166534;"><div id="statSentToday" class="text-3xl font-black" style="color:#4ade80;">—</div><div class="text-xs mt-1" style="color:#86efac;">Sent Today</div></div>
+                        <div class="rounded-lg p-4 text-center" style="background:#1e1b4b;border:1px solid #4c1d95;"><div id="statRemaining" class="text-3xl font-black" style="color:#a78bfa;">—</div><div class="text-xs mt-1" style="color:#c4b5fd;">Remaining Today</div></div>
+                        <div class="rounded-lg p-4 text-center" style="background:#1c0a00;border:1px solid #92400e;"><div id="statQueued" class="text-3xl font-black" style="color:#fbbf24;">—</div><div class="text-xs mt-1" style="color:#fde68a;">Queued</div></div>
+                        <div class="rounded-lg p-4 text-center" style="background:#0f172a;border:1px solid #334155;"><div id="statTotal" class="text-3xl font-black" style="color:#94a3b8;">—</div><div class="text-xs mt-1" style="color:#cbd5e1;">Total Sent</div></div>
+                    </div>
+                    <div class="mb-6">
+                        <div class="flex justify-between text-xs mb-1" style="color:#9ca3af;"><span>Daily SendGrid usage</span><span id="statLimitLabel">— / 100</span></div>
+                        <div class="w-full rounded-full h-3" style="background:#1f2937;"><div id="statProgressBar" class="h-3 rounded-full transition-all" style="background:linear-gradient(90deg,#4ade80,#f59e0b);width:0%;"></div></div>
+                    </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">📧 Email Log</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="emailLogSearch" placeholder="Search..." class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;width:240px;" oninput="filterEmailLog()">
+                            <button onclick="loadEmailLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+                            <button onclick="exportEmailLog()" class="btn btn-success text-sm px-4 py-2"><i class="fas fa-download mr-1"></i> CSV</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="w-full text-sm" style="border-collapse:collapse;">
+                            <thead><tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;"><th class="pb-2 pr-4">Date</th><th class="pb-2 pr-4">Email</th><th class="pb-2 pr-4">Business</th><th class="pb-2 pr-4">Score</th><th class="pb-2 pr-4">Type</th><th class="pb-2">URL</th></tr></thead>
+                            <tbody id="emailLogBody"><tr><td colspan="6" class="py-8 text-center" style="color:#6b7280;">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCAN LOG -->
+            <div id="tab-scanlog" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <h3 class="text-lg font-bold">🔍 Scan Log</h3>
+                            <span id="scanLogCount" style="font-size:0.75rem;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:2px 10px;"></span>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="loadScanLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+                            <button id="exportScanBtn" onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2">⬇ Export CSV</button>
+                            <button onclick="pushToInstantly()" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0f4c8a,#1d6cc8);color:white;border:none;">⚡ Push to Instantly</button>
+                            <button onclick="findEmailsForLeads()" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0369a1,#0284c7);color:white;border:none;">🔍 Find Emails</button>
+                            <button onclick="bulkDeleteScans()" class="btn btn-danger text-sm px-4 py-2"><i class="fas fa-trash mr-1"></i> Delete selected</button>
+                            <button onclick="deleteAllScans()" class="btn btn-danger text-sm px-4 py-2" style="background:#7f1d1d;">🗑 Delete All</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="w-full text-sm" style="border-collapse:collapse;">
+                            <thead><tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;"><th class="pb-2 pr-2" style="width:30px;"></th><th class="pb-2 pr-3">Date</th><th class="pb-2 pr-2">Source</th><th class="pb-2 pr-3">Business & URL</th><th class="pb-2 pr-3">Score</th><th class="pb-2 pr-3">City</th><th class="pb-2 pr-3">Email</th><th class="pb-2 pr-3">Status</th><th class="pb-2">Del</th></tr></thead>
+                            <tbody id="scanLogBody"><tr><td colspan="9" class="py-8 text-center" style="color:#6b7280;">Click Refresh to load.</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCANNER -->
+            <div id="tab-scanner" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                        <h3 class="text-xl font-bold">🔍 SEO Scanner</h3>
+                        <div style="display:flex;gap:8px;">
+                            <button id="adminScanModeBtn_single" onclick="adminSetScanMode('single')" style="padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;">🔗 Single URL</button>
+                            <button id="adminScanModeBtn_batch" onclick="adminSetScanMode('batch')" style="padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;">🚀 Batch</button>
+                        </div>
+                    </div>
+                    <div id="adminModeSingle">
+                        <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+                            <input type="text" id="adminScanUrl" placeholder="https://example.com" style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;font-size:0.95rem;" onkeydown="if(event.key==='Enter')adminRunScan()">
+                            <button onclick="adminRunScan()" id="adminScanBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-weight:700;cursor:pointer;">🔍 Scan</button>
+                        </div>
+                        <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
+                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                                <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                                <span id="adminScanProgressText" style="color:#a78bfa;">Scanning...</span>
+                            </div>
+                            <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;"><div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div></div>
+                        </div>
+                        <div id="adminScanResults" style="display:none;"></div>
+                    </div>
+                    <div id="adminModeBatch" style="display:none;"><p style="color:#6b7280;text-align:center;padding:40px;">Batch mode - use the Scanner UI for batch lead discovery.</p></div>
+                </div>
+            </div>
+
+            <!-- CAMPAIGNS -->
+            <div id="tab-campaigns" class="tab-content hidden">
+                <div style="background:linear-gradient(135deg,#0a0a1a,#0f1629);border:1px solid #1d4ed8;border-radius:16px;padding:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                        <h3 class="font-bold">🗺️ Sitemap Scanner</h3>
+                        <button onclick="loadCampaignsList()" style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>
+                    </div>
+                    <div id="campList" style="color:#6b7280;font-size:0.85rem;">Loading campaigns...</div>
+                </div>
+            </div>
+
+            <!-- NICHES -->
+            <div id="tab-niches" class="tab-content hidden">
+                <div style="background:#0a1a12;border:1px solid #065f46;border-radius:16px;padding:28px;">
+                    <h3 class="font-bold mb-4">🎯 Beste Niches voor ContentScale</h3>
+                    <p style="color:#6b7280;">Select niches to load into Scanner or Campaign tabs.</p>
+                    <div id="nicheGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:20px;"></div>
+                </div>
+            </div>
+
+            <!-- ENGINE ACCESS CODES -->
+            <div id="tab-enginecodes" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold">⚡ Engine Access Codes</h2>
+                            <p class="text-sm mt-1" style="color:#9ca3af;">Create ENG-XXXX access codes for engine-login.</p>
+                        </div>
+                        <button onclick="showCreateEngineCode()" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> New Code</button>
+                    </div>
+                    <div id="createEngineCodeForm" class="card mb-6" style="display:none;">
+                        <h3 class="font-bold mb-4">New Engine Access Code</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Client Name *</label><input id="ecClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Expires</label><input id="ecExpires" type="date" class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Gemini API Key</label><input id="ecGeminiKey" type="password" placeholder="AIza..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Claude API Key</label><input id="ecClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div style="grid-column:1/-1;"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Notes</label><input id="ecNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="createEngineCode()" class="btn btn-primary">Create Code</button>
+                            <button onclick="document.getElementById('createEngineCodeForm').style.display='none'" class="btn" style="background:#374151;">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="engineCodesList" class="space-y-3"></div>
+                    <div class="card mt-8" style="border-left:3px solid #7c3aed;">
+                        <h3 class="font-bold mb-1">🔐 Change Admin Password</h3>
+                        <div style="max-width:400px;display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+                            <div><label style="font-size:11px;color:#9ca3af;">Current Password</label><input type="password" id="cpCurrent" class="w-full rounded-lg px-3 py-2 text-sm mt-1"></div>
+                            <div><label style="font-size:11px;color:#9ca3af;">New Password</label><input type="password" id="cpNew" class="w-full rounded-lg px-3 py-2 text-sm mt-1"></div>
+                            <div><label style="font-size:11px;color:#9ca3af;">Confirm New Password</label><input type="password" id="cpConfirm" class="w-full rounded-lg px-3 py-2 text-sm mt-1"></div>
+                            <div id="cpMsg" style="display:none;padding:10px 14px;border-radius:6px;font-size:13px;"></div>
+                            <button onclick="doChangePassword()" class="btn btn-primary" style="background:#7c3aed;">Update Password</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GIVE ACCESS -->
+            <div id="tab-giveaccess" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <h2 class="text-xl font-bold">🔑 Give Client Access</h2>
+                            <p style="color:#6b7280;font-size:0.85rem;">Create an access code and share the login URL.</p>
+                        </div>
+                        <button onclick="document.getElementById('gaCreateForm').style.display='block'" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> New Access Code</button>
+                    </div>
+                    <div id="gaCreateForm" class="card mb-6" style="border-left:4px solid #0f766e;display:none;">
+                        <h3 style="font-weight:700;margin-bottom:16px;">New Engine Access Code</h3>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px;">
+                            <div><label style="font-size:11px;color:#9ca3af;">Client Name *</label><input id="gaClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div><label style="font-size:11px;color:#9ca3af;">Expires</label><input id="gaExpires" type="date" class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div><label style="font-size:11px;color:#9ca3af;">Gemini API Key</label><input id="gaGeminiKey" type="password" placeholder="AIza..." class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div><label style="font-size:11px;color:#9ca3af;">Claude API Key</label><input id="gaClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div style="grid-column:1/-1;"><label style="font-size:11px;color:#9ca3af;">Notes</label><input id="gaNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded px-3 py-2 mt-1"></div>
+                        </div>
+                        <div style="display:flex;gap:10px;">
+                            <button id="gaCreateBtn" onclick="gaCreateCode()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:11px 22px;font-weight:700;cursor:pointer;">🔑 Create & Get Login URL</button>
+                            <button onclick="document.getElementById('gaCreateForm').style.display='none'" style="background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:6px;padding:11px 18px;cursor:pointer;">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="gaSuccessPanel" style="display:none;background:#0a2010;border:2px solid #16a34a;border-radius:12px;padding:24px;margin-bottom:24px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><span style="font-size:1.5rem;">✅</span><div style="font-weight:800;color:#4ade80;">Access code created for <span id="gaSuccessName"></span></div></div>
+                        <div style="background:#030712;border:1px solid #166534;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-size:0.72rem;color:#6b7280;">Engine Code</div>
+                            <div id="gaSuccessCode" style="font-family:monospace;font-size:1.4rem;font-weight:900;color:#4ade80;"></div>
+                        </div>
+                        <div style="background:#030712;border:1px solid #166534;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-size:0.72rem;color:#6b7280;">Login URL</div>
+                            <div id="gaSuccessUrl" style="font-family:monospace;font-size:0.82rem;color:#34d399;word-break:break-all;"></div>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button onclick="gaCopySuccess()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;">📋 Copy Login URL</button>
+                            <button onclick="document.getElementById('gaSuccessPanel').style.display='none'" style="background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:6px;padding:10px 14px;cursor:pointer;">Done</button>
+                        </div>
+                    </div>
+                    <div id="giveAccessCodesList"><div style="color:#6b7280;text-align:center;padding:20px;">Loading active codes...</div></div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- MODALS -->
+    <div id="activateModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Activate Users</h2>
+            <p class="mb-4" style="color:#374151;">How many days should these users remain active?</p>
+            <input type="number" id="activateDays" value="7" min="1" class="w-full p-3 border rounded mb-4">
+            <div class="flex gap-3">
+                <button onclick="confirmActivate()" class="btn btn-success flex-1">Confirm</button>
+                <button onclick="closeModal('activateModal')" class="btn btn-danger flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Send Message</h2>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Subject</label><input type="text" id="msgSubject" class="w-full p-3 border rounded"></div>
+                <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Message</label><textarea id="msgBody" rows="6" class="w-full p-3 border rounded"></textarea></div>
+                <div class="flex gap-3">
+                    <button onclick="sendMessage()" class="btn btn-primary flex-1">Send</button>
+                    <button onclick="closeModal('messageModal')" class="btn btn-danger flex-1">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="addLeaderboardModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4" id="lbModalTitle">Add Entry</h2>
+            <input type="hidden" id="edit-lb-id">
+            <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Company Name</label><input type="text" id="lb-company" class="w-full p-2 mb-2 border"></div>
+            <div><label class="block text-sm font-bold mb-1" style="color:#374151;">URL</label><input type="text" id="lb-url" class="w-full p-2 mb-2 border"></div>
+            <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Score (0-100)</label><input type="number" id="lb-score" class="w-full p-2 mb-2 border"></div>
+            <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Country</label><select id="lb-country" class="w-full p-2 mb-2 border"></select></div>
+            <button onclick="saveLeaderboardEntry()" class="btn btn-success w-full">Save Changes</button>
+            <button onclick="closeModal('addLeaderboardModal')" class="btn btn-danger w-full mt-2">Cancel</button>
+        </div>
+    </div>
+    <div id="editFreelancerModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4" style="color:#111827;">Edit Freelancer</h2>
+            <input type="hidden" id="edit-fr-id">
+            <div class="space-y-3">
+                <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Full Name *</label><input type="text" id="fr-name" class="w-full p-2 border"></div>
+                <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Email *</label><input type="email" id="fr-email" class="w-full p-2 border"></div>
+                <div><label class="block text-sm font-bold mb-1" style="color:#374151;">Title</label><input type="text" id="fr-title" class="w-full p-2 border"></div>
+                <button onclick="saveFreelancerEntry()" class="btn btn-primary w-full mt-4">Save Changes</button>
+                <button onclick="closeModal('editFreelancerModal')" class="btn btn-danger w-full mt-2">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // --- Helper: Robust API Call with Admin Auth ---
-        async function apiCall(endpoint, method = 'GET', body = null) {
-          const headers = { 'Content-Type': 'application/json' };
-          
-          // Attach admin key for BOTH admin routes AND content engine routes
-          const adminId = localStorage.getItem('admin_id');
-          if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) {
-            headers['x-admin-key'] = adminId;
-          }
-          
-          const options = { method, headers };
-          if (body) options.body = JSON.stringify(body);
-          
-          try {
+        let currentAdminId = localStorage.getItem('admin_id');
+        let allUsers = [];
+        let selectedIds = { leaderboard: new Set(), freelancers: new Set(), users: new Set() };
+        let messageTarget = null;
+        window.allLeaderboard = [];
+        window.allFreelancers = [];
+
+        const COUNTRY_LIST = [
+            {code:'NL',name:'Netherlands'},{code:'BE',name:'Belgium'},{code:'US',name:'United States'},
+            {code:'UK',name:'United Kingdom'},{code:'DE',name:'Germany'},{code:'FR',name:'France'},
+            {code:'ES',name:'Spain'},{code:'IT',name:'Italy'},{code:'AU',name:'Australia'},
+            {code:'CA',name:'Canada'},{code:'IE',name:'Ireland'},{code:'SE',name:'Sweden'},
+            {code:'NO',name:'Norway'},{code:'DK',name:'Denmark'},{code:'FI',name:'Finland'},
+            {code:'CH',name:'Switzerland'},{code:'AT',name:'Austria'},{code:'PT',name:'Portugal'},
+            {code:'PL',name:'Poland'},{code:'IN',name:'India'},{code:'SG',name:'Singapore'},
+            {code:'JP',name:'Japan'},{code:'BR',name:'Brazil'},{code:'MX',name:'Mexico'},
+            {code:'AE',name:'UAE'},{code:'ZA',name:'South Africa'}
+        ];
+        const FLAGS = {NL:'🇳🇱',BE:'🇧🇪',US:'🇺🇸',UK:'🇬🇧',DE:'🇩🇪',FR:'🇫🇷',ES:'🇪🇸',IT:'🇮🇹',AU:'🇦🇺',CA:'🇨🇦',IE:'🇮🇪',SE:'🇸🇪',NO:'🇳🇴',DK:'🇩🇰',FI:'🇫🇮',CH:'🇨🇭',AT:'🇦🇹',PT:'🇵🇹',PL:'🇵🇱',IN:'🇮🇳',SG:'🇸🇬',JP:'🇯🇵',BR:'🇧🇷',MX:'🇲🇽',AE:'🇦🇪',ZA:'🇿🇦'};
+
+        window.onload = function() {
+            populateCountryDropdown();
+            if (currentAdminId) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-dashboard').classList.remove('hidden');
+                loadAllData();
+            }
+        };
+
+        function populateCountryDropdown() {
+            const select = document.getElementById('lb-country');
+            if (!select) return;
+            select.innerHTML = '<option value="">Select Country...</option>';
+            COUNTRY_LIST.forEach(c => { const opt = document.createElement('option'); opt.value = c.name; opt.textContent = getFlag(c.code) + ' ' + c.name; select.appendChild(opt); });
+        }
+
+        async function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            try {
+                const res = await fetch('/api/setup/verify-admin', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username,password}) });
+                const data = await res.json();
+                if (data.success) { localStorage.setItem('admin_id', data.admin_id); currentAdminId = data.admin_id; location.reload(); }
+                else { alert('Login failed: ' + data.error); }
+            } catch (e) { alert('Connection error'); }
+        }
+
+        function logout() {
+            const token = localStorage.getItem('admin_id');
+            if (token) fetch('/api/admin/logout', {method:'POST',headers:{'x-admin-key':token}}).catch(()=>{});
+            localStorage.removeItem('admin_id'); location.reload();
+        }
+
+        async function apiCall(endpoint, method='GET', body=null) {
+            const headers = {'Content-Type':'application/json'};
+            const adminId = localStorage.getItem('admin_id');
+            if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) headers['x-admin-key'] = adminId;
+            const options = {method, headers};
+            if (body) options.body = JSON.stringify(body);
             const res = await fetch(endpoint, options);
             if (!res.ok) {
-              const text = await res.text();
-              // Handle HTML errors (e.g., redirected to login or server error page)
-              if (text.indexOf('<!DOCTYPE') === 0 || text.indexOf('<html') === 0) {
-                throw new Error('Server returned HTML (Status ' + res.status + '). Session may be expired.');
-              }
-              try { 
-                const errJson = JSON.parse(text); 
-                throw new Error(errJson.error || 'Error ' + res.status); 
-              } catch (e) {
-                // Only fall back to raw text when JSON.parse itself failed.
-                // Re-throw everything else (including the Error we just built).
-                if (e instanceof SyntaxError) {
-                  throw new Error(text || 'Error ' + res.status);
-                }
-                throw e;
-              }
+                const text = await res.text();
+                if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) throw new Error('Server returned HTML (Status ' + res.status + '). Session may be expired.');
+                try { const err = JSON.parse(text); throw new Error(err.error || 'Error ' + res.status); } catch(e) { throw new Error(text || 'Error ' + res.status); }
             }
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             return data;
-          } catch (error) { 
-            console.error('API Call Failed:', error); 
-            throw error; 
-          }
         }
 
-        // --- Tab Switching Logic ---
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            const tabEl = document.getElementById('tab-' + tabName);
-            if (tabEl) tabEl.classList.add('active');
-            
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => { 
-                if (item.textContent.toLowerCase().includes(tabName)) item.classList.add('active'); 
-            });
-
-            loadTabData(tabName);
-        }
-        window.switchTab = switchTab; // ensure inline onclick handlers can always reach it
-
-        // --- Data Loading Logic ---
-        function loadTabData(tab) {
-            if (tab === 'content') {
-                const container = document.getElementById('content-list');
-                container.innerHTML = '<p style="color:var(--text-muted)">Loading profiles...</p>';
-                
-                apiCall('/api/content/profiles')
-                    .then(res => {
-                        if (res.profiles && res.profiles.length > 0) {
-                            let html = '<ul style="list-style:none;padding:0;">';
-                            res.profiles.forEach(p => {
-                                html += '<li style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
-                                    '<span>' + p.name + ' <small style="color:var(--text-muted)">(' + p.domain + ')</small></span>' +
-                                    '<span class="badge" style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:11px;">' + (p.niche || 'N/A') + '</span>' +
-                                '</li>';
-                            });
-                            html += '</ul>';
-                            container.innerHTML = html;
-                        } else {
-                            container.innerHTML = '<p style="color:var(--text-muted)">No profiles found.</p>';
-                        }
-                    })
-                    .catch(err => {
-                        container.innerHTML = '<p style="color:var(--red)">❌ Error: ' + err.message + '</p>';
-                    });
-            } 
-            else if (tab === 'engine-access') {
-                loadEngineCodes(); // Call the new function
-            }
-            // Add other tabs here if needed (e.g., leaderboard, users)
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.mode-toggle').forEach(el => el.classList.remove('active'));
+            const tabEl = document.getElementById('tab-' + tab);
+            if (tabEl) tabEl.classList.remove('hidden');
+            const btnEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn');
+            if (btnEl) btnEl.classList.add('active');
+            if (tab==='leaderboard') loadLeaderboard();
+            if (tab==='freelancers') loadFreelancers();
+            if (tab==='users') loadUsers();
+            if (tab==='messages') loadMessages();
+            if (tab==='pending') loadPendingData();
+            if (tab==='emaillog') loadEmailLog();
+            if (tab==='niches') renderNiches();
+            if (tab==='enginecodes') loadEngineCodes();
+            if (tab==='giveaccess') loadGiveAccess();
+            if (tab==='scanlog') loadScanLog();
+            if (tab==='campaigns') loadCampaignsList();
         }
 
-        // --- Engine Access Functions ---
-        function showCreateEngineCode() {
-            document.getElementById('create-engine-code-form').style.display = 'block';
-            document.getElementById('ec-client-name').focus();
+        function loadAllData() { loadLeaderboard(); loadFreelancers(); loadUsers(); }
+
+        function getFlag(code) {
+            if (!code) return '🌐';
+            if (FLAGS[code.toUpperCase()]) return FLAGS[code.toUpperCase()];
+            const found = COUNTRY_LIST.find(c => c.name.toUpperCase() === code.toUpperCase());
+            return found ? (FLAGS[found.code] || '🌐') : '🌐';
         }
+        function extractDomain(url) { try { return new URL(url).hostname.replace('www.',''); } catch { return 'Unknown'; } }
 
-        async function saveEngineCode() {
-            const clientName = document.getElementById('ec-client-name').value.trim();
-            if (!clientName) return alert('Client name is required');
-            
-            const payload = {
-                client_name: clientName,
-                gemini_key: document.getElementById('ec-gemini-key').value.trim() || null,
-                claude_key: document.getElementById('ec-claude-key').value.trim() || null,
-                expires_at: document.getElementById('ec-expires').value || null
-            };
-
+        async function loadLeaderboard() {
             try {
-                const res = await apiCall('/api/admin/engine-codes', 'POST', payload);
-                if (res.success) {
-                    alert('✅ Code Created!\n\nCode: ' + res.code.code + '\n\nShare this with ' + clientName + '.\nThey can login at: ' + window.location.origin + '/engine-login');
-                    document.getElementById('ec-client-name').value = '';
-                    document.getElementById('ec-gemini-key').value = '';
-                    document.getElementById('ec-claude-key').value = '';
-                    document.getElementById('ec-expires').value = '';
-                    document.getElementById('create-engine-code-form').style.display = 'none';
-                    loadEngineCodes(); // Refresh table
-                } else {
-                    alert('Error: ' + res.error);
-                }
-            } catch (e) {
-                alert('Failed to create code: ' + e.message);
-            }
+                const data = await apiCall('/api/leaderboard');
+                window.allLeaderboard = data.entries || [];
+                document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
+                document.getElementById('stat-avg-score').textContent = data.averageScore;
+                document.getElementById('stat-verified').textContent = data.stats.verifiedCount;
+                const uniqueCountries = [...new Set(window.allLeaderboard.filter(e=>e.country&&e.country.trim()).map(e=>e.country))];
+                document.getElementById('stat-countries').textContent = uniqueCountries.length;
+                document.getElementById('top3-container').innerHTML = window.allLeaderboard.slice(0,3).map((e,i) =>
+                    '<div style="border-radius:1rem;padding:1.5rem;text-align:center;background:linear-gradient(135deg,'+(i===0?'#fbbf24,#d97706':i===1?'#e5e7eb,#6b7280':'#f97316,#c2410c')+');">' +
+                    '<div style="font-size:3rem;">'+(i===0?'🥇':i===1?'🥈':'🥉')+'</div>' +
+                    '<h3 style="font-weight:700;font-size:1.1rem;margin:8px 0;">'+(e.company_name||extractDomain(e.url))+'</h3>' +
+                    '<div style="font-size:2.5rem;font-weight:900;">'+e.score+'/100</div>' +
+                    '<div style="margin:8px 0;">'+getFlag(e.country)+' '+e.country+'</div>' +
+                    '<button onclick="editLeaderboard('+e.id+')" style="width:100%;background:#2563eb;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;margin-bottom:6px;"><i class="fas fa-edit"></i> Edit</button>' +
+                    '<button onclick="deleteItem(\'leaderboard\','+e.id+')" style="width:100%;background:#dc2626;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button></div>').join('');
+                document.getElementById('rankings4to15Grid').innerHTML = window.allLeaderboard.slice(3,15).map((e,i) =>
+                    '<div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1rem;text-align:center;">' +
+                    '<div style="font-size:1.5rem;font-weight:700;color:#9ca3af;">#'+(i+4)+'</div>' +
+                    '<div style="font-weight:700;font-size:0.9rem;margin:6px 0;">'+(e.company_name||extractDomain(e.url))+'</div>' +
+                    '<div style="font-size:1.5rem;font-weight:900;color:#4ade80;">'+e.score+'</div>' +
+                    '<div style="font-size:0.75rem;color:#9ca3af;margin:4px 0;">'+getFlag(e.country)+' '+e.country+'</div>' +
+                    '<div style="display:flex;gap:8px;justify-content:center;">' +
+                    '<button onclick="editLeaderboard('+e.id+')" style="color:#60a5fa;background:none;border:none;cursor:pointer;font-size:0.8rem;"><i class="fas fa-edit"></i> Edit</button>' +
+                    '<button onclick="deleteItem(\'leaderboard\','+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i> Del</button>' +
+                    '</div></div>').join('');
+                document.getElementById('rankingsTbody').innerHTML = window.allLeaderboard.slice(15,35).map((e,i) =>
+                    '<tr><td><input type="checkbox" class="lb-checkbox" data-id="'+e.id+'" onchange="toggleSelection(\'leaderboard\','+e.id+')"></td>' +
+                    '<td style="padding:8px;">'+(i+16)+'</td><td style="padding:8px;">'+(e.company_name||extractDomain(e.url))+'</td>' +
+                    '<td style="padding:8px;"><span style="font-weight:700;color:'+(e.score>=85?'#4ade80':'#fbbf24')+';">'+e.score+'</span></td>' +
+                    '<td style="padding:8px;"><button onclick="editLeaderboard('+e.id+')" style="color:#60a5fa;background:none;border:none;cursor:pointer;margin-right:8px;"><i class="fas fa-edit"></i></button>' +
+                    '<button onclick="deleteItem(\'leaderboard\','+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>').join('');
+            } catch(e) { console.error(e); }
         }
 
-        async function toggleEngineCode(id, isActive) {
-            try {
-                await apiCall('/api/admin/engine-codes/' + id, 'PATCH', { is_active: isActive });
-                loadEngineCodes();
-            } catch (e) {
-                alert('Error updating code: ' + e.message);
-            }
+        function filterLeaderboard(query) {
+            const q = query.toLowerCase().trim();
+            const all = window.allLeaderboard || [];
+            const filtered = q ? all.filter(e=>(e.url||'').toLowerCase().includes(q)||(e.company_name||'').toLowerCase().includes(q)||(e.country||'').toLowerCase().includes(q)) : all;
+            document.getElementById('leaderboard-search-count').textContent = q ? filtered.length+' of '+all.length+' results' : '';
+            if (q && !filtered.length) { document.getElementById('top3-container').innerHTML=''; document.getElementById('rankings4to15Grid').innerHTML=''; document.getElementById('rankingsTbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">No results for "'+query+'"</td></tr>'; return; }
+            if (q) {
+                document.getElementById('top3-container').innerHTML=''; document.getElementById('rankings4to15Grid').innerHTML='';
+                document.getElementById('rankingsTbody').innerHTML = filtered.map(e =>
+                    '<tr><td><input type="checkbox" data-id="'+e.id+'" onchange="toggleSelection(\'leaderboard\','+e.id+')"></td>' +
+                    '<td style="padding:8px;">#'+(all.indexOf(e)+1)+'</td><td style="padding:8px;">'+(e.company_name||extractDomain(e.url))+'</td>' +
+                    '<td style="padding:8px;"><span style="font-weight:700;color:'+(e.score>=85?'#4ade80':e.score>=70?'#fbbf24':'#f87171')+';">'+e.score+'</span></td>' +
+                    '<td style="padding:8px;"><button onclick="editLeaderboard('+e.id+')" style="color:#60a5fa;background:none;border:none;cursor:pointer;margin-right:8px;"><i class="fas fa-edit"></i></button>' +
+                    '<button onclick="deleteItem(\'leaderboard\','+e.id+')" style="color:#f87171;background:none;border:none;cursor:pointer;"><i class="fas fa-trash"></i></button></td></tr>').join('');
+            } else { loadLeaderboard(); }
         }
 
-        async function deleteEngineCode(id) {
-            if (!confirm('Are you sure? This will revoke access immediately.')) return;
-            try {
-                await apiCall('/api/admin/engine-codes/' + id, 'DELETE');
-                loadEngineCodes();
-            } catch (e) {
-                alert('Error deleting code: ' + e.message);
-            }
+        function showAddLeaderboardModal() {
+            document.getElementById('lbModalTitle').textContent = 'Add New Entry';
+            ['edit-lb-id','lb-company','lb-url','lb-score','lb-country'].forEach(id => document.getElementById(id).value='');
+            document.getElementById('addLeaderboardModal').classList.add('active');
         }
 
-        async function loadEngineCodes() {
-            const tbody = document.getElementById('engine-codes-tbody');
-            if (!tbody) return;
-            
-            tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">Loading...</td></tr>';
-            
+        function editLeaderboard(id) {
+            const e = window.allLeaderboard.find(e=>e.id===id);
+            if (!e) return;
+            document.getElementById('lbModalTitle').textContent = 'Edit Leaderboard Entry';
+            document.getElementById('edit-lb-id').value = e.id;
+            document.getElementById('lb-company').value = e.company_name||'';
+            document.getElementById('lb-url').value = e.url;
+            document.getElementById('lb-score').value = e.score;
+            document.getElementById('lb-country').value = e.country||'';
+            document.getElementById('addLeaderboardModal').classList.add('active');
+        }
+
+        async function saveLeaderboardEntry() {
+            const id = document.getElementById('edit-lb-id').value;
+            const company = document.getElementById('lb-company').value;
+            const url = document.getElementById('lb-url').value;
+            const score = parseInt(document.getElementById('lb-score').value);
+            const country = document.getElementById('lb-country').value;
+            if (!company||!url||!score) return alert('Company, URL and Score are required');
             try {
-                const res = await apiCall('/api/admin/engine-codes');
-                if (res.success && res.codes) {
-                    if (res.codes.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">No codes found. Click "+ New Code" to create one.</td></tr>';
-                        return;
+                const payload = {company_name:company, url, score, country};
+                if (id) { await apiCall('/api/admin/leaderboard/'+id,'PUT',payload); } else { await apiCall('/api/admin/leaderboard/manual-add','POST',payload); }
+                closeModal('addLeaderboardModal'); loadLeaderboard();
+            } catch(e) { alert('Error: '+e.message); }
+        }
+
+        async function loadFreelancers() {
+            try {
+                const data = await apiCall('/api/freelancers');
+                window.allFreelancers = data.freelancers||[];
+                document.getElementById('freelancersGrid').innerHTML = window.allFreelancers.map(f =>
+                    '<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+                    '<h3 style="font-weight:700;font-size:1.1rem;">'+f.name+'</h3>'+(f.is_featured?'<span style="color:#fbbf24;font-size:0.75rem;">⭐ Featured</span>':'')+'</div>' +
+                    '<p style="font-size:0.875rem;color:#9ca3af;margin-bottom:16px;">'+(f.title||'Specialist')+'</p>' +
+                    '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+                    '<button onclick="editFreelancer('+f.id+')" class="btn btn-info" style="flex:1;font-size:0.75rem;"><i class="fas fa-edit mr-1"></i> Edit</button>' +
+                    '<button onclick="deleteItem(\'freelancers\','+f.id+')" class="btn btn-danger" style="flex:1;font-size:0.75rem;"><i class="fas fa-trash mr-1"></i> Del</button>' +
+                    '</div><div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" onchange="toggleSelection(\'freelancers\','+f.id+')"><span style="font-size:0.75rem;color:#9ca3af;">Select</span></div></div>').join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function editFreelancer(id) {
+            const f = window.allFreelancers.find(x=>x.id===id);
+            if (!f) return;
+            document.getElementById('edit-fr-id').value = f.id;
+            document.getElementById('fr-name').value = f.name;
+            document.getElementById('fr-email').value = f.email;
+            document.getElementById('fr-title').value = f.title||'';
+            document.getElementById('editFreelancerModal').classList.add('active');
+        }
+
+        async function saveFreelancerEntry() {
+            const id = document.getElementById('edit-fr-id').value;
+            const name = document.getElementById('fr-name').value;
+            const email = document.getElementById('fr-email').value;
+            if (!name||!email) return alert('Name and Email are required');
+            try { await apiCall('/api/admin/freelancers/'+id,'PUT',{name,email,title:document.getElementById('fr-title').value}); closeModal('editFreelancerModal'); loadFreelancers(); }
+            catch(e) { alert('Error: '+e.message); }
+        }
+
+        async function loadUsers() {
+            try {
+                const data = await apiCall('/api/admin/users');
+                allUsers = data.users||[];
+                const total = allUsers.length, active = allUsers.filter(u=>u.is_activated).length;
+                const now = new Date();
+                const expiring = allUsers.filter(u => { if (!u.activated_until||!u.is_activated) return false; const d = Math.ceil((new Date(u.activated_until)-now)/86400000); return d>0&&d<=7; }).length;
+                document.getElementById('stat-total-users').textContent = total;
+                document.getElementById('stat-active-users').textContent = active;
+                document.getElementById('stat-expiring-users').textContent = expiring;
+                document.getElementById('stat-inactive-users').textContent = total-active;
+                if (!total) { document.getElementById('usersContainer').innerHTML='<p style="text-align:center;color:#9ca3af;">No users found.</p>'; return; }
+                document.getElementById('usersContainer').innerHTML = allUsers.map(u => {
+                    let badge = '<span style="background:#6b7280;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Inactive</span>';
+                    if (u.is_activated) {
+                        if (u.activated_until) {
+                            const d = Math.ceil((new Date(u.activated_until)-new Date())/86400000);
+                            if (d<=0) badge='<span style="background:#6b7280;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Expired</span>';
+                            else if (d<=7) badge='<span style="background:#f59e0b;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Expiring Soon</span>';
+                            else badge='<span style="background:#10b981;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Active</span>';
+                        } else badge='<span style="background:#10b981;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Active</span>';
                     }
-                    
-                    tbody.innerHTML = res.codes.map(c => {
-                        const statusColor = c.is_active ? 'var(--green)' : 'var(--red)';
-                        const statusText = c.is_active ? 'Active' : 'Revoked';
-                        const keysInfo = [];
-                        if (c.gemini_key) keysInfo.push('<span style="color:#8b5cf6">Gemini</span>');
-                        if (c.claude_key) keysInfo.push('<span style="color:#f59e0b">Claude</span>');
-                        
-                        return '<tr style="border-bottom:1px solid var(--border);">' +
-                            '<td style="padding:12px;font-weight:500;">' + c.client_name + '</td>' +
-                            '<td style="padding:12px;font-family:monospace;font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;width:120px;">' + c.code + '</td>' +
-                            '<td style="padding:12px;font-size:11px;">' + (keysInfo.join(' & ') || '<span style="color:var(--text-muted)">None (Uses Env)</span>') + '</td>' +
-                            '<td style="padding:12px;"><span style="color:' + statusColor + ';font-weight:bold;font-size:11px;">● ' + statusText + '</span></td>' +
-                            '<td style="padding:12px;text-align:right;">' +
-                                '<button class="btn" style="padding:4px 8px;font-size:11px;background:#0f766e;color:#fff;border-color:#0f766e;" onclick="copyEngineUrl(\'' + c.code + '\')">🔗 URL</button>' +
-                                '<button class="btn" style="padding:4px 8px;font-size:11px;" onclick="toggleEngineCode(' + c.id + ', ' + !c.is_active + ')">' + (c.is_active ? 'Revoke' : 'Activate') + '</button>' +
-                                '<button class="btn" style="padding:4px 8px;font-size:11px;color:var(--red);border-color:var(--red);" onclick="deleteEngineCode(' + c.id + ')">Delete</button>' +
-                            '</td>' +
-                        '</tr>';
-                    }).join('');
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error loading codes.</td></tr>';
+                    return '<div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">' +
+                        '<div style="display:flex;align-items:center;gap:12px;flex:1;"><input type="checkbox" onchange="toggleSelection(\'users\',\''+u.id+'\')">' +
+                        '<div><div style="font-weight:600;">'+(u.ip_address||'Unknown')+'</div>' +
+                        '<div style="font-size:0.75rem;color:#9ca3af;">ID: '+u.id.substring(0,8)+'... | '+new Date(u.created_at).toLocaleDateString()+'</div></div></div>' +
+                        '<div style="display:flex;align-items:center;gap:8px;">'+badge+
+                        (u.is_activated?'<button onclick="extendUserAccess(\''+u.id+'\')" style="color:#60a5fa;background:none;border:none;cursor:pointer;font-size:0.75rem;">Extend</button>':'<button onclick="activateSingleUser(\''+u.id+'\')" style="color:#4ade80;background:none;border:none;cursor:pointer;font-size:0.75rem;">Activate</button>')+
+                        '<button onclick="openMessageModal(\'single\',\''+u.id+'\')" style="color:#60a5fa;background:none;border:none;cursor:pointer;"><i class="fas fa-envelope"></i></button></div></div>';
+                }).join('');
+            } catch(e) { console.error('Failed to load users:', e); }
+        }
+
+        async function activateSingleUser(id) { try { await apiCall('/api/admin/users/'+id+'/activate','POST',{days:7}); loadUsers(); } catch(e) { alert('Error: '+e.message); } }
+        async function extendUserAccess(id) { const days=prompt('How many days?','7'); if (!days) return; try { await apiCall('/api/admin/users/'+id+'/activate','POST',{days:parseInt(days)}); loadUsers(); } catch(e) { alert('Error: '+e.message); } }
+
+        function toggleSelection(type, id) { if (selectedIds[type].has(id)) selectedIds[type].delete(id); else selectedIds[type].add(id); updateCounts(); }
+        function toggleSelectAll(type) {
+            const cb = document.getElementById('select-all-'+type);
+            const list = type==='leaderboard'?window.allLeaderboard:type==='freelancers'?window.allFreelancers:allUsers;
+            if (cb.checked) list.forEach(item=>selectedIds[type].add(item.id)); else selectedIds[type].clear();
+            if (type==='users') loadUsers();
+            updateCounts();
+        }
+        function updateCounts() {
+            document.getElementById('selected-count-leaderboard').textContent = selectedIds.leaderboard.size;
+            document.getElementById('selected-count-freelancers').textContent = selectedIds.freelancers.size;
+            document.getElementById('selected-count-users').textContent = selectedIds.users.size;
+        }
+
+        function bulkActionUsers(action) {
+            if (!selectedIds.users.size) return alert('Select users first');
+            if (action==='activate') { document.getElementById('activateModal').classList.add('active'); return; }
+            if (action==='deactivate') {
+                if (!confirm('Deactivate selected users?')) return;
+                Promise.all(Array.from(selectedIds.users).map(id=>apiCall('/api/admin/users/'+id+'/deactivate','POST')))
+                    .then(()=>{ loadUsers(); selectedIds.users.clear(); updateCounts(); }).catch(e=>alert(e.message));
+            }
+        }
+
+        async function confirmActivate() {
+            const days = document.getElementById('activateDays').value;
+            closeModal('activateModal');
+            if (!confirm('Activate '+selectedIds.users.size+' users for '+days+' days?')) return;
+            try { await Promise.all(Array.from(selectedIds.users).map(id=>apiCall('/api/admin/users/'+id+'/activate','POST',{days:parseInt(days)}))); loadUsers(); selectedIds.users.clear(); updateCounts(); }
+            catch(e) { alert(e.message); }
+        }
+
+        async function bulkDelete(type) {
+            const ids = Array.from(selectedIds[type]);
+            if (!ids.length) return alert('Select items first');
+            if (!confirm('Delete '+ids.length+' items permanently?')) return;
+            const ep = type==='leaderboard'?'/api/admin/leaderboard/bulk-delete':type==='freelancers'?'/api/admin/freelancers/bulk-delete':'/api/admin/users/bulk-delete';
+            try { await apiCall(ep,'POST',{ids}); selectedIds[type].clear(); updateCounts(); loadAllData(); } catch(e) { alert('Delete failed: '+e.message); }
+        }
+
+        function openMessageModal(targetType, userId) { messageTarget=(targetType==='single')?userId:targetType; document.getElementById('messageModal').classList.add('active'); }
+
+        async function sendMessage() {
+            const subject=document.getElementById('msgSubject').value, body=document.getElementById('msgBody').value;
+            if (!subject||!body) return alert('Fill all fields');
+            try {
+                let payload={subject,body};
+                if (messageTarget==='all') payload.recipients='all';
+                else if (messageTarget==='selected') { payload.recipients='selected'; payload.user_ids=Array.from(selectedIds.users); }
+                else payload.recipientUserId=messageTarget;
+                await apiCall('/api/admin/messages/send','POST',payload);
+                closeModal('messageModal'); loadMessages();
+            } catch(e) { alert(e.message); }
+        }
+
+        async function loadMessages() {
+            try {
+                const data = await apiCall('/api/admin/messages');
+                const container = document.getElementById('messagesContainer');
+                if (!data.messages||!data.messages.length) { container.innerHTML='<p style="text-align:center;color:#9ca3af;">No messages yet.</p>'; return; }
+                container.innerHTML = data.messages.map(m =>
+                    '<div style="background:#1f2937;border-left:4px solid '+(m.sender_type==='admin'?'#10b981':'#3b82f6')+';border-radius:0.5rem;padding:1rem;margin-bottom:1rem;">' +
+                    '<div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#9ca3af;margin-bottom:4px;"><span>'+(m.sender_type==='admin'?'You':'User')+' • '+new Date(m.created_at).toLocaleString()+'</span><span style="font-weight:700;">'+(m.subject||'No Subject')+'</span></div>' +
+                    '<p style="font-size:0.875rem;">'+m.body+'</p></div>').join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadPendingData() {
+            try {
+                const lbData = await apiCall('/api/admin/leaderboard/pending');
+                const frData = await apiCall('/api/admin/freelancers/pending');
+                document.getElementById('pending-leaderboard-container').innerHTML = lbData.pending.length ? lbData.pending.map(p =>
+                    '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
+                    '<h4 style="font-weight:700;">'+(p.company_name||extractDomain(p.url))+'</h4>' +
+                    '<a href="'+p.url+'" target="_blank" style="color:#60a5fa;font-size:0.8rem;">'+p.url+'</a>' +
+                    '<div style="font-size:1.5rem;font-weight:900;color:'+(p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171')+';">'+p.score+'/100</div>' +
+                    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+                    '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">✅ Approve</button>' +
+                    '<button onclick="apiCall(\'/api/admin/leaderboard/'+p.id+'/reject\',\'POST\').then(()=>loadPendingData())" class="btn btn-danger">✗ Reject</button>' +
+                    '</div></div>').join('') : '<p style="color:#9ca3af;">✅ No pending submissions</p>';
+                document.getElementById('pending-freelancers-container').innerHTML = frData.pending.length ? frData.pending.map(p =>
+                    '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
+                    '<h4 style="font-weight:700;">'+p.name+'</h4><p style="font-size:0.875rem;color:#9ca3af;">'+p.email+'</p>' +
+                    '<div style="display:flex;gap:8px;margin-top:8px;">' +
+                    '<button onclick="apiCall(\'/api/admin/freelancers/'+p.id+'/approve\',\'POST\').then(()=>{loadPendingData();loadFreelancers();})" class="btn btn-success" style="flex:1;">Approve</button>' +
+                    '<button onclick="apiCall(\'/api/admin/freelancers/'+p.id+'\',\'DELETE\').then(()=>loadPendingData())" class="btn btn-danger" style="flex:1;">Reject</button>' +
+                    '</div></div>').join('') : '<p style="color:#9ca3af;">No pending applications</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        function approveLB(id) { apiCall('/api/admin/leaderboard/'+id+'/approve','POST',{final_country:null,city:null,niche:null}).then(()=>{ loadPendingData(); loadLeaderboard(); }); }
+        function deleteItem(type, id) { if (!confirm('Delete this item permanently?')) return; apiCall(type==='leaderboard'?'/api/admin/leaderboard/'+id:'/api/admin/freelancers/'+id,'DELETE').then(()=>loadAllData()).catch(e=>alert(e.message)); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?'📊 Show Rankings 16+':'📊 Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'▼':'▲'; }
+
+        let allEmailLogs = [];
+        async function loadEmailLog() {
+            try {
+                const stats = await apiCall('/api/admin/email-stats');
+                if (stats.success) {
+                    document.getElementById('statSentToday').textContent = stats.sentToday;
+                    document.getElementById('statRemaining').textContent = stats.remainingToday;
+                    document.getElementById('statQueued').textContent = stats.queued;
+                    document.getElementById('statTotal').textContent = stats.totalSent;
+                    document.getElementById('statLimitLabel').textContent = stats.sentToday+' / '+stats.dailyLimit;
+                    document.getElementById('statProgressBar').style.width = Math.min(100,Math.round(stats.sentToday/stats.dailyLimit*100))+'%';
                 }
-            } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--red);">Error: ' + e.message + '</td></tr>';
-            }
+            } catch(e) { console.warn('Email stats failed'); }
+            try {
+                const data = await apiCall('/api/admin/email-log?limit=200');
+                if (data.success) { allEmailLogs=data.emails; renderEmailLog(allEmailLogs); }
+            } catch(e) { document.getElementById('emailLogBody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#f87171;padding:20px;">Error loading email log</td></tr>'; }
         }
 
-        function copyEngineUrl(code) {
-            const url = window.location.origin + '/engine-login?code=' + code;
-            navigator.clipboard.writeText(url).then(() => alert('✅ Login URL copied:\n' + url));
+        function renderEmailLog(emails) {
+            const tbody = document.getElementById('emailLogBody');
+            if (!emails.length) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:20px;">No emails sent yet.</td></tr>'; return; }
+            tbody.innerHTML = emails.map(e => {
+                const dt = new Date(e.sent_at||e.created_at);
+                const score = e.score?'<span style="color:'+(e.score>=70?'#4ade80':e.score>=50?'#fbbf24':'#f87171')+';font-weight:700;">'+e.score+'</span>':'—';
+                return '<tr style="border-bottom:1px solid #1f2937;">' +
+                    '<td style="padding:8px;color:#9ca3af;font-size:0.75rem;white-space:nowrap;">'+dt.toLocaleDateString('nl-NL',{day:'2-digit',month:'short'})+'<br>'+dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})+'</td>' +
+                    '<td style="padding:8px;">'+( e.to_email||e.email||e.recipient_email||'—')+'</td>' +
+                    '<td style="padding:8px;color:#d1d5db;">'+(e.business_name||'—')+'</td>' +
+                    '<td style="padding:8px;">'+score+'</td>' +
+                    '<td style="padding:8px;color:#9ca3af;font-size:0.75rem;">'+(e.template_type||'—')+'</td>' +
+                    '<td style="padding:8px;">'+(e.business_url?'<a href="'+e.business_url+'" target="_blank" style="color:#60a5fa;">link</a>':'—')+'</td></tr>';
+            }).join('');
         }
 
-        function logout() { 
-            localStorage.removeItem('admin_id'); 
-            window.location.href = '/tools'; 
+        function filterEmailLog() { const q=document.getElementById('emailLogSearch').value.toLowerCase(); if (!q){renderEmailLog(allEmailLogs);return;} renderEmailLog(allEmailLogs.filter(e=>(e.to_email||e.email||'').toLowerCase().includes(q)||(e.business_name||'').toLowerCase().includes(q))); }
+
+        function exportEmailLog() {
+            const rows=[['Date','Time','To Email','Business','Score','Type','URL']];
+            allEmailLogs.forEach(e=>{const dt=new Date(e.sent_at||e.created_at);rows.push([dt.toLocaleDateString('nl-NL'),dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}),e.to_email||e.email||'',e.business_name||'',e.score||'',e.template_type||'',e.business_url||'']);});
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+            const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='email-log-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
         }
 
-        document.addEventListener('DOMContentLoaded', () => { 
-            if (!localStorage.getItem('admin_id')) {
-                window.location.href = '/tools';
-                return;
-            }
-            // Show admin username if available
-            const adminId = localStorage.getItem('admin_id');
-            if (adminId) {
-              const el = document.getElementById('admin-user');
-              if (el) el.textContent = 'Admin (' + adminId.substring(0,8) + '...)';
-            }
-            loadTabData('content');
-            // Pre-load engine codes so the tab is ready
-            setTimeout(() => loadEngineCodes(), 500);
-        });
-    </script>
+        let allScanLogs=[], selectedScanIds=new Set();
+        async function loadScanLog() {
+            try {
+                const data = await apiCall('/api/admin/scan-log?limit=500');
+                if (data.success) { allScanLogs=data.scans; renderScanLog(allScanLogs); document.getElementById('scanLogCount').textContent=allScanLogs.length+' scans'; }
+            } catch(e) { document.getElementById('scanLogBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:#f87171;padding:20px;">Failed to load scan log</td></tr>'; }
+        }
+
+        function renderScanLog(scans) {
+            const tbody=document.getElementById('scanLogBody');
+            if (!scans.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#6b7280;padding:20px;">No scans.</td></tr>';return;}
+            tbody.innerHTML=scans.map(s=>{
+                const dt=new Date(s.created_at);
+                const ds=dt.toLocaleDateString('nl-NL',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+                const sv=s.score!==null?s.score:null;
+                const sc=sv===null?'#9ca3af':sv>=85?'#4ade80':sv>=70?'#a3e635':sv>=50?'#fbbf24':'#f87171';
+                const score=sv!==null?'<span style="color:'+sc+';font-weight:700;">'+sv+'</span>':'—';
+                const badge=s.email_status==='has_email'?'<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✉ Found</span>':'<span style="background:#1c1917;color:#9ca3af;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✗ None</span>';
+                const urlD=s.business_url?'<a href="'+s.business_url+'" target="_blank" style="color:#60a5fa;font-size:0.75rem;">'+s.business_url+'</a>':'—';
+                return '<tr style="border-bottom:1px solid #1f2937;">' +
+                    '<td style="padding:6px;"><input type="checkbox" '+(selectedScanIds.has(String(s.id))?'checked':'')+' onchange="toggleScanRow('+s.id+',this.checked)"></td>' +
+                    '<td style="padding:6px;color:#9ca3af;font-size:0.72rem;white-space:nowrap;">'+ds+'</td>' +
+                    '<td style="padding:6px;font-size:0.65rem;color:#a78bfa;">'+(s.source||'single')+'</td>' +
+                    '<td style="padding:6px;max-width:260px;"><div style="font-weight:600;">'+(s.business_name||'<span style="color:#6b7280;">No name</span>')+'</div>'+urlD+'</td>' +
+                    '<td style="padding:6px;">'+score+'</td>' +
+                    '<td style="padding:6px;font-size:0.78rem;">'+(s.city||'—')+'</td>' +
+                    '<td style="padding:6px;color:#60a5fa;font-size:0.75rem;">'+(s.email_found||'—')+'</td>' +
+                    '<td style="padding:6px;">'+badge+'</td>' +
+                    '<td style="padding:6px;"><button onclick="deleteSingleScan('+s.id+',this)" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;">🗑</button></td></tr>';
+            }).join('');
+        }
+
+        function toggleScanRow(id,checked){if(checked)selectedScanIds.add(String(id));else selectedScanIds.delete(String(id));updateScanExportBtn();}
+        function updateScanExportBtn(){const btn=document.getElementById('exportScanBtn');const n=selectedScanIds.size;if(btn)btn.textContent=n>0?'⬇ Export '+n+' selected':'⬇ Export CSV';}
+
+        function exportScanLog(){
+            const toExport=allScanLogs.filter(s=>selectedScanIds.has(String(s.id)));
+            if(!toExport.length){alert('Selecteer eerst scans met de checkboxes.');return;}
+            const rows=[['first_name','business_name','email','website','score','city','country','scan_date']];
+            toExport.forEach(s=>{let fn=s.business_name?s.business_name.split(' ')[0]:'';fn=fn.charAt(0).toUpperCase()+fn.slice(1).toLowerCase();rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',new Date(s.created_at).toLocaleDateString('nl-NL')]);});
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+            const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scan-export-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+        }
+
+        async function bulkDeleteScans(){
+            const ids=Array.from(selectedScanIds);if(!ids.length){alert('Select scans first.');return;}if(!confirm('Permanently delete '+ids.length+' scan(s)?'))return;
+            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids})});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
+        }
+
+        async function deleteSingleScan(id,btn){
+            if(!confirm('Delete this scan?'))return;
+            if(btn){btn.disabled=true;btn.textContent='⏳';}
+            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids:[id]})});const d=await r.json();
+            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);renderScanLog(allScanLogs);}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='🗑';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='🗑';}}
+        }
+
+        async function deleteAllScans(){
+            if(!confirm('⚠️ Delete ALL scans? This cannot be undone.'))return;
+            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
+        }
+
+        let adminLastScanResult=null;
+        function adminSetScanMode(mode){
+            document.getElementById('adminModeSingle').style.display=mode==='single'?'block':'none';
+            document.getElementById('adminModeBatch').style.display=mode==='batch'?'block':'none';
+            const sBtn=document.getElementById('adminScanModeBtn_single'),bBtn=document.getElementById('adminScanModeBtn_batch');
+            if(mode==='single'){sBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;';bBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;';}
+            else{bBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;';sBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;';}
+        }
+
+        async function adminRunScan(){
+            const url=document.getElementById('adminScanUrl').value.trim();if(!url)return;
+            const btn=document.getElementById('adminScanBtn'),prog=document.getElementById('adminScanProgress'),res=document.getElementById('adminScanResults');
+            btn.disabled=true;btn.textContent='⏳ Scanning...';prog.style.display='block';res.style.display='none';
+            let pct=0;const interval=setInterval(()=>{pct=Math.min(pct+Math.random()*12,90);document.getElementById('adminScanBar').style.width=pct+'%';},600);
+            try{
+                const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+                const data=await r.json();clearInterval(interval);document.getElementById('adminScanBar').style.width='100%';
+                if(!data.success)throw new Error(data.error||'Scan failed');
+                adminLastScanResult=data;
+                setTimeout(()=>{prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';res.style.display='block';
+                    res.innerHTML='<div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;padding:28px;text-align:center;"><div style="font-size:5rem;font-weight:900;color:'+(data.score>=85?'#4ade80':data.score>=70?'#fbbf24':'#f87171')+';">'+data.score+'</div><div style="color:#6b7280;">/ 100</div><p style="color:#e5e7eb;margin-top:12px;">'+data.url+'</p></div>';},400);
+            }catch(e){clearInterval(interval);prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';alert('Scan failed: '+e.message);}
+        }
+
+        async function loadCampaignsList(){
+            const el=document.getElementById('campList');if(!el)return;
+            try{const r=await fetch('/api/campaign',{headers:{'x-admin-key':currentAdminId}});const data=await r.json();
+            if(!data.success||!data.campaigns.length){el.textContent='No campaigns yet.';return;}
+            el.innerHTML=data.campaigns.map(c=>'<div style="background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:700;color:#e5e7eb;">'+c.name+'</div><div style="font-size:0.72rem;color:#6b7280;">'+c.totalDomains+' domains · '+c.doneDomains+'/'+c.totalDomains+' done</div></div><span style="color:'+(c.status==='done'?'#4ade80':c.status==='running'?'#60a5fa':'#9ca3af')+';">'+c.status+'</span></div>').join('');}
+            catch(e){el.textContent='Error loading campaigns.';}
+        }
+
+        let selectedNiches=new Set();
+        const NICHES_DATA=[
+            {category:'⚖️ Legal & Finance',niches:[{apify:'law firm',name:'Law firm'},{apify:'accountant',name:'Accountant'}]},
+            {category:'🏥 Health & Medical',niches:[{apify:'physiotherapist',name:'Physiotherapist'},{apify:'dentist',name:'Dentist'}]},
+        ];
+
+        function renderNiches(){
+            const grid=document.getElementById('nicheGrid');if(!grid)return;
+            grid.innerHTML=NICHES_DATA.map(cat=>'<div style="background:#0d1f14;border:1px solid #065f46;border-radius:12px;padding:16px;"><div style="font-weight:800;color:#6ee7b7;margin-bottom:12px;">'+cat.category+'</div>'+
+                cat.niches.map(n=>'<div onclick="toggleNiche(\''+n.apify+'\')" style="padding:10px;border-radius:8px;cursor:pointer;background:'+(selectedNiches.has(n.apify)?'#052e16':'#0d1f14')+';border:1px solid '+(selectedNiches.has(n.apify)?'#16a34a':'#064e3b')+';margin-bottom:6px;"><span style="color:#e5e7eb;">'+n.name+'</span>'+(selectedNiches.has(n.apify)?' ✅':'')+'</div>').join('')+'</div>').join('');
+        }
+        function toggleNiche(apify){if(selectedNiches.has(apify))selectedNiches.delete(apify);else selectedNiches.add(apify);renderNiches();}
+
+        function showCreateEngineCode(){document.getElementById('createEngineCodeForm').style.display='block';}
+
+        async function loadEngineCodes(){
+            try{
+                const data=await apiCall('/api/admin/engine-codes');const codes=data.codes||[];const el=document.getElementById('engineCodesList');
+                if(!codes.length){el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:32px;">No engine access codes yet.</div>';return;}
+                el.innerHTML=codes.map(c=>'<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
+                    '<div><div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
+                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span></div>' +
+                    '<div style="font-weight:600;">'+c.client_name+'</div></div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                    '<button onclick="copyEngineCode(\''+c.code+'\')" class="btn btn-info" style="font-size:0.75rem;">📋 Copy Code</button>' +
+                    '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
+                    '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
+                    '</div></div></div>').join('');
+            }catch(e){console.error('Failed to load engine codes:',e);}
+        }
+
+        async function createEngineCode(){
+            const client_name=document.getElementById('ecClientName').value.trim();if(!client_name){alert('Enter a client name');return;}
+            try{
+                const data=await apiCall('/api/admin/engine-codes','POST',{client_name,gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,claude_key:document.getElementById('ecClaudeKey').value.trim()||null,expires_at:document.getElementById('ecExpires').value||null,notes:document.getElementById('ecNotes').value.trim()||null});
+                if(!data.success){alert('Error: '+data.error);return;}
+                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';loadEngineCodes();
+            }catch(e){alert('Error: '+e.message);}
+        }
+
+        async function toggleEngineCode(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:newState});loadEngineCodes();}
+        async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
+        function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
+
+        async function doChangePassword(){
+            const current=document.getElementById('cpCurrent').value.trim(),newPw=document.getElementById('cpNew').value.trim(),conf=document.getElementById('cpConfirm').value.trim();
+            const msg=document.getElementById('cpMsg');
+            const showMsg=(text,ok)=>{msg.style.display='block';msg.style.background=ok?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)';msg.style.border=ok?'1px solid rgba(34,197,94,.3)':'1px solid rgba(239,68,68,.3)';msg.style.color=ok?'#4ade80':'#f87171';msg.textContent=text;};
+            if(!current||!newPw||!conf)return showMsg('All fields required',false);
+            if(newPw.length<8)return showMsg('Min. 8 characters',false);
+            if(newPw!==conf)return showMsg('Passwords do not match',false);
+            try{const res=await fetch('/api/admin/change-password',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({current_password:current,new_password:newPw})});const data=await res.json();
+            if(data.success){showMsg('✅ Password updated! Logging out...',true);setTimeout(()=>logout(),2000);}else{showMsg(data.error||'Failed',false);}}catch(e){showMsg('Connection error: '+e.message,false);}
+        }
+
+        async function loadGiveAccess(){
+            const el=document.getElementById('giveAccessCodesList');if(!el)return;
+            try{const data=await apiCall('/api/admin/engine-codes');const codes=(data.codes||[]).filter(c=>c.is_active);
+            if(!codes.length){el.innerHTML='<div style="color:#6b7280;text-align:center;padding:20px;">No active codes.</div>';return;}
+            el.innerHTML=codes.map(c=>{const loginUrl=window.location.origin+'/engine-login?code='+c.code;
+                return '<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid #0f766e;border-radius:10px;padding:18px 20px;margin-bottom:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
+                    '<div><span style="font-family:monospace;font-size:1.1rem;font-weight:800;color:#34d399;">'+c.code+'</span>' +
+                    '<span style="background:#064e3b;color:#6ee7b7;border-radius:99px;padding:2px 10px;font-size:0.72rem;margin-left:8px;">● Active</span>' +
+                    '<div style="font-weight:700;color:#f1f5f9;margin-top:4px;">'+c.client_name+'</div>' +
+                    '<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#64748b;">🔗 '+loginUrl+'</div></div>' +
+                    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+                    '<button onclick="gaCopyLoginUrl(\''+c.code+'\')" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;">📋 Copy Login URL</button>' +
+                    '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">✕ Revoke Access</button>' +
+                    '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
+        }
+
+        function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
+
+        async function gaRevoke(id){if(!confirm('Revoke this access code?'))return;try{await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:false});loadGiveAccess();loadEngineCodes();}catch(e){alert('Error: '+e.message);}}
+
+        async function gaCreateCode(){
+            const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
+            const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent='⏳ Creating...';
+            try{const data=await apiCall('/api/admin/engine-codes','POST',{client_name:name,gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,claude_key:document.getElementById('gaClaudeKey').value.trim()||null,expires_at:document.getElementById('gaExpires').value||null,notes:document.getElementById('gaNotes').value.trim()||null});
+            if(!data.success){alert('Error: '+data.error);return;}
+            const code=data.code.code,url=window.location.origin+'/engine-login?code='+code;
+            document.getElementById('gaSuccessCode').textContent=code;document.getElementById('gaSuccessUrl').textContent=url;document.getElementById('gaSuccessName').textContent=name;
+            document.getElementById('gaSuccessPanel').style.display='block';document.getElementById('gaCreateForm').style.display='none';loadGiveAccess();
+            }catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='🔑 Create & Get Login URL';}
+        }
+
+        function gaCopySuccess(){navigator.clipboard.writeText(document.getElementById('gaSuccessUrl').textContent).then(()=>alert('Login URL copied!'));}
+        function pushToInstantly(){alert('Select Instantly API key and campaign in the Scan Log settings panel.');}
+        function findEmailsForLeads(){alert('Find Emails feature - configure Apify token first.');}
+
+        console.log('✅ Admin Dashboard v2 loaded — all tabs ready');
+    <\/script>
 </body>
 </html>`;
 
 // Admin Dashboard route is registered at the top of the file (before static middleware)
+
+// ── TRACKER SERVER PERSISTENCE ─────────────────────────────────────────────
+app.post('/api/tracker/save', async (req, res) => {
+  const { key, pages, savedAt } = req.body;
+  if (!key) return res.status(400).json({ success: false, error: 'key required' });
+  const data = JSON.stringify({ pages, savedAt });
+  if (pool) {
+    try {
+      await pool.query(
+        `CREATE TABLE IF NOT EXISTS tracker_saves (
+          key VARCHAR(200) PRIMARY KEY,
+          data TEXT NOT NULL,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      );
+      await pool.query(
+        `INSERT INTO tracker_saves (key, data, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET data = $2, updated_at = NOW()`,
+        [key, data]
+      );
+      return res.json({ success: true, key, storage: 'db' });
+    } catch (e) {
+      console.warn('[tracker] DB save failed:', e.message);
+    }
+  }
+  // Fallback to memory
+  if (!global._trackerStore) global._trackerStore = new Map();
+  global._trackerStore.set(key, { data, savedAt });
+  res.json({ success: true, key, storage: 'memory' });
+});
+
+app.get('/api/tracker/load', async (req, res) => {
+  const key = req.query.key;
+  if (!key) return res.status(400).json({ success: false, error: 'key required' });
+  if (pool) {
+    try {
+      const r = await pool.query('SELECT data FROM tracker_saves WHERE key = $1', [key]);
+      if (r.rows.length) {
+        const d = JSON.parse(r.rows[0].data);
+        return res.json({ success: true, data: d, storage: 'db' });
+      }
+    } catch (e) {
+      console.warn('[tracker] DB load failed:', e.message);
+    }
+  }
+  // Fallback to memory
+  if (global._trackerStore && global._trackerStore.has(key)) {
+    const entry = global._trackerStore.get(key);
+    return res.json({ success: true, data: JSON.parse(entry.data), storage: 'memory' });
+  }
+  res.json({ success: false, error: 'Not found: ' + key });
+});
 
 startServer();
