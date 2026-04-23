@@ -17069,10 +17069,137 @@ if(domains.length>0){
 </html>
 `;
 
-
 // ============================================
 // ADMIN DASHBOARD (Unified Interface)
 // ============================================
+
+const _ADMIN_LOGIN_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login — ContentScale</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: #030712; 
+            color: #e5e7eb; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+        }
+        .login-box {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 1rem;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+        }
+        h1 { 
+            font-size: 1.5rem; 
+            margin-bottom: 1.5rem; 
+            background: linear-gradient(135deg, #7e22ce, #be185d); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            color: white;
+            font-size: 0.95rem;
+        }
+        input:focus { outline: none; border-color: #7e22ce; }
+        button {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #7e22ce, #be185d);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover { opacity: 0.9; }
+        #error { 
+            display: none; 
+            color: #f87171; 
+            font-size: 0.875rem; 
+            margin-bottom: 1rem; 
+            padding: 0.5rem; 
+            background: rgba(248,113,113,0.1); 
+            border-radius: 0.375rem; 
+        }
+        .logo { font-size: 2rem; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo">⚡</div>
+        <h1>ContentScale Admin</h1>
+        <div id="error"></div>
+        <input type="text" id="username" placeholder="Username" value="ot">
+        <input type="password" id="password" placeholder="Password" value="admin123">
+        <button onclick="login()">Login</button>
+    </div>
+    <script>
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error');
+            
+            try {
+                const res = await fetch('/api/setup/verify-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('admin_id', data.admin_id);
+                    location.reload();
+                } else {
+                    errorEl.textContent = data.error || 'Login failed';
+                    errorEl.style.display = 'block';
+                }
+            } catch(e) {
+                errorEl.textContent = 'Connection error';
+                errorEl.style.display = 'block';
+            }
+        }
+        
+        // If already logged in, fetch dashboard with token
+        const token = localStorage.getItem('admin_id');
+        if (token) {
+            fetch('/admin', { headers: { 'x-admin-key': token } })
+                .then(r => {
+                    if (r.ok && r.headers.get('content-type')?.includes('text/html')) {
+                        return r.text();
+                    }
+                    throw new Error('Invalid session');
+                })
+                .then(html => {
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(() => {
+                    localStorage.removeItem('admin_id');
+                });
+        }
+    </script>
+</body>
+</html>`;
+
+
 const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17425,11 +17552,41 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Route to serve the Admin Dashboard (replaces existing /admin route)
-app.get('/admin', verifyAdmin, (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(_ADMIN_DASHBOARD_HTML);
+// Serve login page to unauthenticated, dashboard to valid admins
+app.get('/admin', async (req, res) => {
+    const adminKey = req.headers['x-admin-key'];
+    
+    // No key provided → serve login HTML
+    if (!adminKey) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(_ADMIN_LOGIN_HTML);
+        return;
+    }
+    
+    // Key provided → verify it against database
+    if (!pool) return res.status(503).send('Database unavailable');
+    
+    try {
+        const result = await pool.query(
+            'SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', 
+            [adminKey]
+        );
+        
+        if (result.rows.length === 0) {
+            // Invalid/expired key → back to login
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.send(_ADMIN_LOGIN_HTML);
+            return;
+        }
+        
+        // Valid admin → serve full dashboard
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(_ADMIN_DASHBOARD_HTML);
+        
+    } catch (error) {
+        console.error('Admin auth error:', error);
+        res.status(500).send('Server error');
+    }
 });
 
 startServer();
