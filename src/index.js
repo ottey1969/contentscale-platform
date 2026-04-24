@@ -780,6 +780,17 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS gemini_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS claude_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS use_platform_keys BOOLEAN DEFAULT FALSE`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS platform_credits INTEGER DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS deal_type VARCHAR(50) DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS deal_purchased_at TIMESTAMPTZ DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS deal_label VARCHAR(255) DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS graaf_auto_scan BOOLEAN DEFAULT FALSE`).catch(()=>{});
+   await client.query(`ALTER TABLE content_articles ADD COLUMN IF NOT EXISTS graaf_scan_result JSONB DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE content_articles ADD COLUMN IF NOT EXISTS graaf_scan_url TEXT DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_scan_result JSONB DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_scan_url TEXT DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS credits_used INTEGER DEFAULT 0`).catch(()=>{});
+   await client.query(`CREATE TABLE IF NOT EXISTS credit_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, credits_spent INTEGER NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS owner_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    // Client progress tracking
    await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
@@ -9008,6 +9019,352 @@ const verifyEngineAccess = async (req, res, next) => {
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
 
+// ── CREDITS SYSTEM ────────────────────────────────────────────────────────────
+// Only charged when use_platform_keys=true AND platform_credits is not NULL
+const CREDIT_COSTS = {
+  'research':        3,
+  'brief':           2,
+  'write':          10,
+  'clusters':        3,
+  'analyse-rewrite': 2,
+  'execute-rewrite': 8,
+  'stats-study':     2,
+  'bulk-create':     5,
+  'news-generate':   4,   // AI news article generation per batch (up to 3 articles)
+};
+
+async function spendCredits(codeId, action) {
+  const cost = CREDIT_COSTS[action] || 1;
+  try {
+    const r = await pool.query(
+      `UPDATE engine_access_codes SET credits_used = credits_used + $1 WHERE id = $2 AND use_platform_keys = TRUE AND (platform_credits IS NULL OR (platform_credits - credits_used) >= $1) RETURNING platform_credits, credits_used`,
+      [cost, codeId]
+    );
+    if (!r.rows.length) {
+      const check = await pool.query(`SELECT platform_credits, credits_used FROM engine_access_codes WHERE id=$1`, [codeId]);
+      const row = check.rows[0];
+      if (row && row.platform_credits !== null && (row.platform_credits - row.credits_used) < cost) {
+        return { ok: false, error: `Not enough credits. Need ${cost}, have ${row.platform_credits - row.credits_used}.` };
+      }
+      return { ok: false, error: 'Credit deduction failed' };
+    }
+    const row = r.rows[0];
+    const left = row.platform_credits === null ? null : (row.platform_credits - row.credits_used);
+    await pool.query(`INSERT INTO credit_log (code_id, action, credits_spent) VALUES ($1,$2,$3)`, [codeId, action, cost]).catch(()=>{});
+    return { ok: true, credits_left: left, cost };
+  } catch(e) {
+    // Fail open on DB connection errors so platform users aren't blocked by infra issues
+    // Only fail closed on legitimate logic errors
+    const isConnErr = e.code === 'ECONNREFUSED' || e.code === '57P01' || e.message.includes('connect');
+    if (isConnErr) {
+      console.warn('[credits] DB unavailable — failing open:', e.message);
+      return { ok: true, credits_left: null, cost: 0, failedOpen: true };
+    }
+    return { ok: false, error: e.message };
+  }
+}
+
+function requireCredits(action) {
+  return async (req, res, next) => {
+    const eu = req.engineUser;
+    // ── Never charge credits to: admins, unauthenticated, own-API-key users ──
+    if (!eu) return next();                          // unauthenticated (shouldn't reach here)
+    if (eu.isAdmin) return next();                   // admin — always free
+    if (!eu.code) return next();                     // safety guard
+    if (!eu.code.use_platform_keys) return next();   // own key OR lifetime deal — no credits, ever
+    // ── Platform key user ──
+    if (eu.code.platform_credits === null) return next(); // platform key + unlimited credits
+    // Platform key + credit cap — deduct
+    const result = await spendCredits(eu.codeId, action);
+    if (!result.ok) return res.status(402).json({ success: false, error: result.error, code: 'NO_CREDITS' });
+    req.creditsSpent = result.cost;
+    req.creditsLeft = result.credits_left;
+    next();
+  };
+}
+
+app.get('/api/engine/credits', verifyEngineAccess, async (req, res) => {
+  const eu = req.engineUser;
+  // Admins and own-key users: no credit system applies
+  if (eu.isAdmin) return res.json({ success: true, credits_apply: false, unlimited: true });
+  const code = eu.code;
+  if (!code.use_platform_keys) {
+    return res.json({ success: true, credits_apply: false, unlimited: true,
+      is_lifetime: code.deal_type === 'lifetime',
+      deal_label: code.deal_label || null,
+      message: code.deal_type === 'lifetime'
+        ? 'Lifetime deal — own API keys, no credit system'
+        : 'Own API key — credit system does not apply' });
+  }
+  // Platform key user
+  const used = code.credits_used || 0;
+  const total = code.platform_credits;  // null = unlimited
+  const left = total === null ? null : Math.max(0, total - used);
+  const isLifetime = code.deal_type === 'lifetime';
+  res.json({
+    success: true,
+    credits_apply: true,
+    unlimited: total === null,
+    platform_credits: total,
+    credits_used: used,
+    credits_left: left,
+    deal_type: code.deal_type || null,
+    deal_label: code.deal_label || null,
+    is_lifetime: isLifetime,
+    costs: CREDIT_COSTS
+  });
+});
+
+app.patch('/api/admin/engine-codes/:id/credits', verifyAdmin, async (req, res) => {
+  const { platform_credits, reset_used } = req.body;
+  try {
+    const fields = []; const vals = []; let i = 1;
+    if (platform_credits !== undefined) { fields.push(`platform_credits=$${i++}`); vals.push(platform_credits === null ? null : parseInt(platform_credits)); }
+    if (reset_used) { fields.push(`credits_used=$${i++}`); vals.push(0); }
+    if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/admin/engine-codes/:id/credit-log', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT * FROM credit_log WHERE code_id=$1 ORDER BY created_at DESC LIMIT 100`, [req.params.id]);
+    res.json({ success: true, log: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// ── GRAAF POST-WRITE SCAN SYSTEM ─────────────────────────────────────────────
+
+// Serve a temporary HTML page for internal scanning (no WP publish needed)
+// The engine writes content to a temp slot; Puppeteer scans it; slot auto-expires.
+const _graafTempSlots = new Map(); // token -> { html, expires }
+app.get('/internal/graaf-preview/:token', (req, res) => {
+  const slot = _graafTempSlots.get(req.params.token);
+  if (!slot || Date.now() > slot.expires) {
+    _graafTempSlots.delete(req.params.token);
+    return res.status(404).send('<html><body>Preview expired</body></html>');
+  }
+  res.setHeader('Content-Type', 'text/html');
+  res.send(slot.html);
+});
+
+// POST /api/content/graaf-scan
+// body: { html?, article_id?, rewrite_id?, url?, scan_type: 'internal'|'url' }
+// - scan_type='internal': renders html into temp slot and scans it via Puppeteer
+// - scan_type='url': scans the provided live url directly
+app.post('/api/content/graaf-scan', verifyEngineAccess, async (req, res) => {
+  try {
+    const { html, article_id, rewrite_id, url, scan_type = 'internal', save_result = true } = req.body;
+
+    let scanUrl, htmlContent = html;
+
+    // If no html passed directly, load from DB
+    if (!htmlContent && article_id) {
+      const r = await pool.query('SELECT html_content FROM content_articles WHERE id=$1', [article_id]);
+      if (r.rows.length) htmlContent = r.rows[0].html_content;
+    }
+    if (!htmlContent && rewrite_id) {
+      const r = await pool.query('SELECT rewritten_html FROM content_rewrites WHERE id=$1', [rewrite_id]);
+      if (r.rows.length) htmlContent = r.rows[0].rewritten_html;
+    }
+
+    if (scan_type === 'internal' && htmlContent) {
+      // Create temp slot
+      const token = require('crypto').randomBytes(12).toString('hex');
+      _graafTempSlots.set(token, { html: htmlContent, expires: Date.now() + 5 * 60 * 1000 });
+      const baseUrl = process.env.APP_URL || ('http://localhost:' + (process.env.PORT || 3000));
+      scanUrl = baseUrl + '/internal/graaf-preview/' + token;
+    } else if (scan_type === 'url' && url) {
+      scanUrl = url.startsWith('http') ? url : 'https://' + url;
+    } else {
+      return res.status(400).json({ success: false, error: 'Provide html/article_id/rewrite_id for internal scan, or url for live scan' });
+    }
+
+    // Launch puppeteer and run the existing internalScanPage logic
+    const { executablePath } = require('puppeteer');
+    let browser;
+    if (browserInstance) {
+      browser = browserInstance;
+    } else {
+      browser = await puppeteer.launch({ executablePath: executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
+    }
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+    try {
+      await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    } catch(e) {
+      await page.close();
+      // Clean up temp slot even on error
+      if (scan_type === 'internal') {
+        const errToken = scanUrl.split('/').pop();
+        _graafTempSlots.delete(errToken);
+      }
+      return res.status(500).json({ success: false, error: 'Page load failed: ' + e.message });
+    }
+
+    // Run the same analysis as the main scanner
+    const analysis = await page.evaluate((su) => {
+      const text = document.body ? document.body.innerText : '';
+      const cleanText = text.replace(/\s+/g, ' ').trim();
+      const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+      const rawHtml = document.documentElement.outerHTML;
+      const h1Els = document.querySelectorAll('h1'); let h1Text=''; let h1VisibleCount=0; let h1IsHidden=false;
+      h1Els.forEach(el => { const s=window.getComputedStyle(el); const hidden=s.display==='none'||s.visibility==='hidden'; if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
+      const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test'];
+      const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g);
+      const h1IsTooShort=h1Text.length>0&&h1Text.length<10;
+      const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length;
+      const listItemCount=document.querySelectorAll('li').length;
+      const paragraphs=Array.from(document.querySelectorAll('p'));
+      const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
+      const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length;
+      const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
+      const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
+      const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
+      const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
+      const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
+      const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage');
+      const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
+      const bodyText=cleanText.toLowerCase();
+      const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
+      const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
+      const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
+      const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
+      const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema;
+      const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
+      let host=''; try{host=new URL(su).hostname;}catch(e){}
+      const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
+      const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
+      const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length;
+      const expertQuoteCount=Math.max(bqCount, citeCount);
+      const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
+      const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
+      return {wordCount,h1Text,h1VisibleCount,h1IsGeneric,h1IsTooShort,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound};
+    }, scanUrl).catch(e => null);
+
+    await page.close();
+    if (!analysis) return res.status(500).json({ success: false, error: 'Page evaluation failed' });
+
+    // Clean up temp slot
+    if (scan_type === 'internal') {
+      const token = scanUrl.split('/').pop();
+      _graafTempSlots.delete(token);
+    }
+
+    const scanResult = computeScore(scanUrl, analysis, []);
+    scanResult.scanned_url = scanUrl;
+    scanResult.scan_type = scan_type;
+    scanResult.scanned_at = new Date().toISOString();
+
+    // Save result back to article or rewrite
+    if (save_result) {
+      if (article_id) {
+        await pool.query('UPDATE content_articles SET graaf_scan_result=$1, graaf_scan_url=$2, updated_at=NOW() WHERE id=$3', [JSON.stringify(scanResult), scanUrl, article_id]).catch(()=>{});
+      }
+      if (rewrite_id) {
+        await pool.query('UPDATE content_rewrites SET graaf_scan_result=$1, graaf_scan_url=$2, updated_at=NOW() WHERE id=$3', [JSON.stringify(scanResult), scanUrl, rewrite_id]).catch(()=>{});
+      }
+    }
+
+    res.json({ success: true, result: scanResult });
+  } catch(e) {
+    console.error('[graaf-scan]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/content/articles/:id/apply-recommendation
+// Uses Gemini to apply a specific recommendation to the article HTML
+app.post('/api/content/articles/:id/apply-recommendation', verifyEngineAccess, async (req, res) => {
+  const { recommendation } = req.body;
+  if (!recommendation) return res.status(400).json({ success: false, error: 'recommendation required' });
+  try {
+    const r = await pool.query('SELECT * FROM content_articles WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Article not found' });
+    const article = r.rows[0];
+    const geminiKey = resolveGeminiKey(req);
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'No Gemini key available' });
+
+    const prompt = `You are an expert SEO content editor. Apply the following improvement to the HTML article below.
+
+RECOMMENDATION TO APPLY:
+Title: ${recommendation.title}
+Action: ${recommendation.action}
+Target: ${recommendation.target || ''}
+
+RULES:
+- Apply ONLY the specific change described. Do not rewrite unrelated sections.
+- Return ONLY the complete updated HTML. No explanation, no markdown fences.
+- Preserve all existing structure, headings, images, and links.
+- If adding statistics: use the format "X% of [group] [outcome] ([Source, Year])"
+- If adding FAQ: use proper <section> with <h2>FAQ</h2> and question/answer pairs in <h3>/<p>
+- If adding expert quote: use <blockquote><p>"quote"</p><cite>— Name, Title</cite></blockquote>
+
+CURRENT HTML:
+${(article.html_content || '').substring(0, 12000)}`;
+
+    const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 } });
+    if (!resp.ok) return res.status(500).json({ success: false, error: resp.errorMessage || 'Gemini error' });
+
+    let newHtml = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    newHtml = newHtml.replace(/^```html\n?/i, '').replace(/```$/,'').trim();
+    if (!newHtml) return res.status(500).json({ success: false, error: 'No HTML returned' });
+
+    await pool.query('UPDATE content_articles SET html_content=$1, updated_at=NOW() WHERE id=$2', [newHtml, req.params.id]);
+    res.json({ success: true, html_content: newHtml, recommendation_applied: recommendation.title });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/content/rewrites/:id/apply-recommendation
+app.post('/api/content/rewrites/:id/apply-recommendation', verifyEngineAccess, async (req, res) => {
+  const { recommendation } = req.body;
+  if (!recommendation) return res.status(400).json({ success: false, error: 'recommendation required' });
+  try {
+    const r = await pool.query('SELECT * FROM content_rewrites WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
+    const rw = r.rows[0];
+    const geminiKey = resolveGeminiKey(req);
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'No Gemini key available' });
+
+    const prompt = `You are an expert SEO content editor. Apply the following improvement to the HTML content below.
+
+RECOMMENDATION TO APPLY:
+Title: ${recommendation.title}
+Action: ${recommendation.action}
+Target: ${recommendation.target || ''}
+
+RULES:
+- Apply ONLY the specific change described. Do not rewrite unrelated sections.
+- Return ONLY the complete updated HTML. No explanation, no markdown fences.
+- Preserve all existing structure, headings, images, schema, and internal links.
+
+CURRENT HTML:
+${(rw.rewritten_html || '').substring(0, 12000)}`;
+
+    const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 } });
+    if (!resp.ok) return res.status(500).json({ success: false, error: resp.errorMessage || 'Gemini error' });
+
+    let newHtml = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    newHtml = newHtml.replace(/^```html\n?/i, '').replace(/```$/,'').trim();
+    if (!newHtml) return res.status(500).json({ success: false, error: 'No HTML returned' });
+
+    await pool.query('UPDATE content_rewrites SET rewritten_html=$1, updated_at=NOW() WHERE id=$2', [newHtml, req.params.id]);
+    res.json({ success: true, rewritten_html: newHtml, recommendation_applied: recommendation.title });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/content/profiles/:id/graaf-settings  { graaf_auto_scan: true/false }
+app.patch('/api/content/profiles/:id/graaf-settings', verifyEngineAccess, async (req, res) => {
+  const { graaf_auto_scan } = req.body;
+  try {
+    await pool.query('UPDATE content_profiles SET graaf_auto_scan=$1 WHERE id=$2', [!!graaf_auto_scan, req.params.id]);
+    res.json({ success: true, graaf_auto_scan: !!graaf_auto_scan });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+
+
 app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query(`SELECT e.*, COUNT(p.id) as profile_count FROM engine_access_codes e LEFT JOIN content_profiles p ON p.owner_code_id=e.id GROUP BY e.id ORDER BY e.created_at DESC`);
@@ -9016,16 +9373,23 @@ app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
-  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys } = req.body;
+  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, deal_type, deal_label } = req.body;
   if (!client_name) return res.status(400).json({ success: false, error: 'client_name required' });
   try {
     const code = 'ENG-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
-    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [code,client_name,gemini_key||null,claude_key||null,expires_at||null,notes||null,!!use_platform_keys]);
+    // Lifetime deal = client brings own keys, never expires, no credit system
+    // Platform keys = you provide AI keys + credit allowance
+    const isLifetimeDeal = deal_type === 'lifetime';
+    const effectivePlatformKeys = isLifetimeDeal ? false : !!use_platform_keys;
+    const effectiveExpiry = isLifetimeDeal ? null : (expires_at || null);
+    const effectiveCredits = isLifetimeDeal ? null : (platform_credits || null);
+    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys,platform_credits,deal_type,deal_label,deal_purchased_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [code,client_name,gemini_key||null,claude_key||null,effectiveExpiry,notes||null,effectivePlatformKeys,effectiveCredits,deal_type||null,deal_label||null,isLifetimeDeal?new Date():null]);
     res.json({ success: true, code: {...r.rows[0], gemini_key: gemini_key?'***'+gemini_key.slice(-4):null, claude_key: claude_key?'***'+claude_key.slice(-4):null} });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
-  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys } = req.body;
+  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
     if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
@@ -9034,6 +9398,10 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (expires_at!==undefined){fields.push(`expires_at=$${i++}`);vals.push(expires_at||null);}
     if (notes!==undefined){fields.push(`notes=$${i++}`);vals.push(notes);}
     if (use_platform_keys!==undefined){fields.push(`use_platform_keys=$${i++}`);vals.push(!!use_platform_keys);}
+    if (platform_credits!==undefined){fields.push(`platform_credits=$${i++}`);vals.push(platform_credits===null?null:parseInt(platform_credits));}
+    if (reset_used){fields.push(`credits_used=$${i++}`);vals.push(0);}
+    if (deal_type!==undefined){fields.push(`deal_type=$${i++}`);vals.push(deal_type||null);}
+    if (deal_label!==undefined){fields.push(`deal_label=$${i++}`);vals.push(deal_label||null);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -9053,12 +9421,22 @@ app.post('/api/engine/login', async (req, res) => {
     const ec = r.rows[0];
     // verifyEngineAccess uses the raw ENG-XXXX code as the token (x-engine-token header),
     // so return the code itself — no access_sessions insert needed.
+    const creditsLeft = ec.platform_credits === null ? null : Math.max(0, ec.platform_credits - (ec.credits_used||0));
+    const isLifetime = ec.deal_type === 'lifetime'; // lifetime = own keys, never expires
     res.json({
       success: true,
       token: ec.code,
       client_name: ec.client_name,
-      has_gemini: !!ec.gemini_key,
-      has_claude: !!ec.claude_key,
+      has_gemini: !!ec.gemini_key || !!ec.use_platform_keys,
+      has_claude: !!ec.claude_key || !!ec.use_platform_keys,
+      use_platform_keys: !!ec.use_platform_keys,
+      platform_credits: ec.platform_credits,
+      credits_used: ec.credits_used || 0,
+      credits_left: creditsLeft,
+      credits_unlimited: !ec.use_platform_keys || ec.platform_credits === null,
+      deal_type: ec.deal_type || null,
+      deal_label: ec.deal_label || null,
+      is_lifetime: isLifetime,
       expires_at: ec.expires_at || null
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -9077,13 +9455,24 @@ app.get('/api/engine/verify', verifyEngineAccess, async (req, res) => {
       [req.engineUser.codeId]
     );
 
+    const eu = req.engineUser.code;
+    const credLeft = eu.platform_credits === null ? null : Math.max(0, eu.platform_credits - (eu.credits_used||0));
+    const isLifetime = eu.deal_type === 'lifetime';
     res.json({
       success: true,
       isAdmin: false,
-      client_name: req.engineUser.code.client_name || req.engineUser.code.access_code,
+      client_name: eu.client_name || eu.access_code,
       profiles: profilesR.rows,
-      has_gemini: !!req.engineUser.code.gemini_key,
-      has_claude: !!req.engineUser.code.claude_key
+      has_gemini: !!eu.gemini_key || !!eu.use_platform_keys,
+      has_claude: !!eu.claude_key || !!eu.use_platform_keys,
+      use_platform_keys: !!eu.use_platform_keys,
+      platform_credits: eu.platform_credits,
+      credits_used: eu.credits_used || 0,
+      credits_left: credLeft,
+      credits_unlimited: !eu.use_platform_keys || eu.platform_credits === null,
+      deal_type: eu.deal_type || null,
+      deal_label: eu.deal_label || null,
+      is_lifetime: isLifetime
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -9144,7 +9533,7 @@ app.post('/api/content/profiles/:id/locations', verifyEngineAccess, async (req, 
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/content/locations/:id', verifyAdmin, async (req, res) => {
+app.patch('/api/content/locations/:id', verifyEngineAccess, async (req, res) => {
   try {
     const { external_links } = req.body;
     await pool.query(`UPDATE content_locations SET external_links=$1 WHERE id=$2`, [external_links, req.params.id]);
@@ -9199,7 +9588,7 @@ app.delete('/api/content/engine-draft/:profileId', verifyEngineAccess, async (re
   } catch(e) { console.error('Delete engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/content/research', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/research', verifyEngineAccess, requireCredits('research'), async (req, res) => {
   try {
     const { profile_id, seed_keyword, research_all } = req.body;
     if (!profile_id || !seed_keyword) return res.status(400).json({ success: false, error: 'profile_id and seed_keyword required' });
@@ -9379,7 +9768,7 @@ Return ONLY valid JSON:
 });
 
 // ── Generate Brief ───────────────────────────────────────────
-app.post('/api/content/brief/:jobId', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'), async (req, res) => {
   try {
     const jobR = await pool.query(`SELECT j.*, cp.* FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`, [req.params.jobId]);
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
@@ -9412,7 +9801,7 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, async (req, res) => {
 });
 
 // ── Write Article ────────────────────────────────────────────
-app.post('/api/content/write/:jobId', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'), async (req, res) => {
   // Helper: parse a value that might be a JS object already (jsonb) or a JSON string (text column), safely
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
@@ -9512,7 +9901,7 @@ app.get('/api/content/articles/:profileId', verifyEngineAccess, async (req, res)
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/content/articles/:id/status', verifyAdmin, async (req, res) => {
+app.patch('/api/content/articles/:id/status', verifyEngineAccess, async (req, res) => {
   try {
     const { status } = req.body;
     await pool.query(`UPDATE content_articles SET status=$1, updated_at=NOW() WHERE id=$2`, [status, req.params.id]);
@@ -9592,7 +9981,7 @@ app.get('/api/content/clusters/:profileId', verifyEngineAccess, async (req, res)
 });
 
 // ── Create cluster from a job (AI generates subtopics) ────────
-app.post('/api/content/clusters/generate', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/clusters/generate', verifyEngineAccess, requireCredits('clusters'), async (req, res) => {
   try {
     const { job_id, profile_id, cluster_size = 5 } = req.body;
     if (!job_id || !profile_id) return res.status(400).json({ success: false, error: 'job_id and profile_id required' });
@@ -9755,7 +10144,7 @@ Return ONLY valid JSON:
 });
 
 // ── Update node status when article is written ────────────────
-app.patch('/api/content/cluster-nodes/:nodeId', verifyAdmin, async (req, res) => {
+app.patch('/api/content/cluster-nodes/:nodeId', verifyEngineAccess, async (req, res) => {
   try {
     const { article_id, final_url, status } = req.body;
     await pool.query(
@@ -9810,14 +10199,14 @@ app.delete('/api/content/clusters/:id', verifyEngineAccess, async (req, res) => 
 // ============================================================
 
 // ── Money Pages ───────────────────────────────────────────────
-app.get('/api/content/money-pages/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/money-pages/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 ORDER BY sort_order, id`, [req.params.profileId]);
     res.json({ success: true, pages: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/content/money-pages/:profileId', verifyAdmin, async (req, res) => {
+app.post('/api/content/money-pages/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const { url, title, page_type, primary_keyword } = req.body;
     const r = await pool.query(`INSERT INTO content_money_pages (profile_id,url,title,page_type,primary_keyword) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [req.params.profileId, url, title, page_type||'service', primary_keyword]);
@@ -9825,7 +10214,7 @@ app.post('/api/content/money-pages/:profileId', verifyAdmin, async (req, res) =>
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/money-pages/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/money-pages/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_money_pages WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -9833,14 +10222,14 @@ app.delete('/api/content/money-pages/:id', verifyAdmin, async (req, res) => {
 });
 
 // ── Image Library ─────────────────────────────────────────────
-app.get('/api/content/images/:profileId', verifyAdmin, async (req, res) => {
+app.get('/api/content/images/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(`SELECT * FROM content_image_library WHERE profile_id=$1 ORDER BY created_at DESC`, [req.params.profileId]);
     res.json({ success: true, images: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/content/images/:profileId', verifyAdmin, async (req, res) => {
+app.post('/api/content/images/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const { image_url, file_name, alt_text, caption, tags } = req.body;
     const fn = file_name || image_url.split('/').pop().split('?')[0];
@@ -9849,7 +10238,7 @@ app.post('/api/content/images/:profileId', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/content/images/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/content/images/:id', verifyEngineAccess, async (req, res) => {
   try {
     await pool.query(`DELETE FROM content_image_library WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
@@ -9885,7 +10274,7 @@ app.delete('/api/content/feeds/:id', verifyEngineAccess, async (req, res) => {
 });
 
 // ── Fetch + Rewrite News Feed ─────────────────────────────────
-app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, requireCredits('news-generate'), async (req, res) => {
   try {
     const { days_back = 7 } = req.body;
     const feedR = await pool.query(`SELECT f.*, cp.niche, cp.name as profile_name, cp.domain as profile_domain FROM content_news_feeds f JOIN content_profiles cp ON cp.id=f.profile_id WHERE f.id=$1`, [req.params.feedId]);
@@ -10078,7 +10467,7 @@ app.delete('/api/content/news-articles/:id', verifyEngineAccess, async (req, res
 });
 
 // ── Rewrite Analysis ──────────────────────────────────────────
-app.post('/api/content/analyse-rewrite', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('analyse-rewrite'), async (req, res) => {
   try {
     const {
       profile_id, original_url, original_slug, original_title, original_html,
@@ -10316,7 +10705,7 @@ Return ONLY valid JSON:
   }
 });
 
-app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireCredits('execute-rewrite'), async (req, res) => {
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
     if (typeof v !== 'string') return v;
@@ -10625,6 +11014,35 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       ? (rw.gsc_clicks / rw.gsc_impressions * 100).toFixed(2)
       : null;
 
+    // Auto-scan: if profile has graaf_auto_scan enabled, run GRAAF scan async
+    let graafScanQueued = false;
+    try {
+      const profR = await pool.query('SELECT graaf_auto_scan FROM content_profiles WHERE id=$1', [rw.profile_id]);
+      if (profR.rows[0]?.graaf_auto_scan) {
+        graafScanQueued = true;
+        setImmediate(async () => {
+          try {
+            const token = require('crypto').randomBytes(12).toString('hex');
+            _graafTempSlots.set(token, { html, expires: Date.now() + 5 * 60 * 1000 });
+            const baseUrl = process.env.APP_URL || ('http://localhost:' + (process.env.PORT || 3000));
+            const scanUrl = baseUrl + '/internal/graaf-preview/' + token;
+            const browser2 = browserInstance || await puppeteer.launch({ executablePath: require('puppeteer').executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
+            const pg2 = await browser2.newPage();
+            await pg2.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            const an2 = await pg2.evaluate((su) => { const text=document.body?document.body.innerText:''; const cleanText=text.replace(/\s+/g,' ').trim(); const wordCount=cleanText.split(/\s+/).filter(w=>w.length>0).length; const rawHtml=document.documentElement.outerHTML; const h1Els=document.querySelectorAll('h1'); let h1Text='',h1VisibleCount=0; h1Els.forEach(el=>{const s=window.getComputedStyle(el);if(s.display!=='none'&&s.visibility!=='hidden'){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}}); const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length; const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0; const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length; const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescriptionLength=metaDescEl?(metaDescEl.getAttribute('content')||'').length:0; const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]'); const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean); const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s])); const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type'])); const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]'); const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300)); const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText); const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase()); const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase()); const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema; const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length; let host='';try{host=new URL(su).hostname;}catch(e){} const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length; const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length; const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length; const expertQuoteCount=Math.max(bqCount,citeCount); const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length; const statsRegex=/\d+(\.\d+)?%|\d{4,}|\d+x|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length; return {wordCount,h1Text,h1VisibleCount,h1IsGeneric:false,h1IsTooShort:h1Text.length>0&&h1Text.length<10,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound}; }, scanUrl).catch(()=>null);
+            await pg2.close();
+            _graafTempSlots.delete(token);
+            if (an2) {
+              const scanResult = computeScore(scanUrl, an2, []);
+              scanResult.scanned_at = new Date().toISOString();
+              scanResult.scan_type = 'auto';
+              await pool.query('UPDATE content_rewrites SET graaf_scan_result=$1, graaf_scan_url=$2, updated_at=NOW() WHERE id=$3', [JSON.stringify(scanResult), scanUrl, rw.id]).catch(()=>{});
+            }
+          } catch(e2) { console.warn('[graaf-auto-scan rewrite]', e2.message); }
+        });
+      }
+    } catch(e3) { console.warn('[graaf-auto-scan check]', e3.message); }
+
     res.json({
       success: true,
       html,
@@ -10641,6 +11059,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       mode_used: hasTemplate ? 'template' : hasOriginalLayout ? 'layout_preserved' : 'free_write',
       author_used: author.name,
       author_detected: author.detected,
+      graaf_scan_queued: graafScanQueued,
       tracker_page: {
         url: rw.original_url,
         keyword: rw.gsc_keyword || rw.new_seed_keyword || '',
@@ -10683,7 +11102,7 @@ const BULK_CONCURRENCY_PER_TICK = 1; // process 1 item per worker tick to respec
 let _bulkWorkerRunning = false;
 
 // ── CREATE JOB ──────────────────────────────────────────────────────
-app.post('/api/content/bulk/create', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/bulk/create', verifyEngineAccess, requireCredits('bulk-create'), async (req, res) => {
   try {
     const {
       profile_id,
@@ -10815,7 +11234,7 @@ app.post('/api/content/bulk/:id/execute', verifyEngineAccess, async (req, res) =
 });
 
 // ── REPORT ───────────────────────────────────────────────────────────
-app.get('/api/content/bulk/:id/report', verifyAdmin, async (req, res) => {
+app.get('/api/content/bulk/:id/report', verifyEngineAccess, async (req, res) => {
   try {
     const jobR = await pool.query(`SELECT * FROM content_bulk_jobs WHERE id=$1`, [req.params.id]);
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
@@ -11132,6 +11551,32 @@ Return ONLY the full HTML from <article> onwards. No markdown fences. End with <
         title
       })]
     );
+    // Auto-scan: run GRAAF scan if profile has graaf_auto_scan enabled
+    try {
+      const profAutoR = await pool.query('SELECT graaf_auto_scan FROM content_profiles WHERE id=$1', [job.profile_id]);
+      if (profAutoR.rows[0]?.graaf_auto_scan && artR.rows[0]?.id) {
+        const articleId = artR.rows[0].id;
+        setImmediate(async () => {
+          try {
+            const token = require('crypto').randomBytes(12).toString('hex');
+            _graafTempSlots.set(token, { html, expires: Date.now() + 5 * 60 * 1000 });
+            const baseUrl = process.env.APP_URL || ('http://localhost:' + (process.env.PORT || 3000));
+            const scanUrl = baseUrl + '/internal/graaf-preview/' + token;
+            const browser3 = browserInstance || await puppeteer.launch({ executablePath: require('puppeteer').executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
+            const pg3 = await browser3.newPage();
+            await pg3.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            const an3 = await pg3.evaluate((su) => { const text=document.body?document.body.innerText:''; const cleanText=text.replace(/\s+/g,' ').trim(); const wordCount=cleanText.split(/\s+/).filter(w=>w.length>0).length; const rawHtml=document.documentElement.outerHTML; const h1Els=document.querySelectorAll('h1'); let h1Text='',h1VisibleCount=0; h1Els.forEach(el=>{const s=window.getComputedStyle(el);if(s.display!=='none'){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}}); const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length; const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0; const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length; const metaDescriptionLength=(document.querySelector('meta[name="description"]')?.getAttribute('content')||'').length; const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]'); const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean); const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s])); const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type'])); const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]'); const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300)); const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText); const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase()); const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase()); const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema; const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length; const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length; const expertQuoteCount=Math.max(bqCount,citeCount); const caseStudyCount=(bodyText.match(/case study|client result|challenge|solution|results|roi/g)||[]).length; const statsRegex=/\d+(\.\d+)?%|\d{4,}|\d+x|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length; return {wordCount,h1Text,h1VisibleCount,h1IsGeneric:false,h1IsTooShort:h1Text.length>0&&h1Text.length<10,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks:0,externalLinks:0,expertQuoteCount,caseStudyCount,statsFound}; }, scanUrl).catch(()=>null);
+            await pg3.close();
+            _graafTempSlots.delete(token);
+            if (an3) {
+              const sr3 = computeScore(scanUrl, an3, []);
+              sr3.scanned_at = new Date().toISOString(); sr3.scan_type = 'auto';
+              await pool.query('UPDATE content_articles SET graaf_scan_result=$1, graaf_scan_url=$2, updated_at=NOW() WHERE id=$3', [JSON.stringify(sr3), scanUrl, articleId]).catch(()=>{});
+            }
+          } catch(e4) { console.warn('[graaf-auto-scan bulk]', e4.message); }
+        });
+      }
+    } catch(e5) { console.warn('[graaf-auto-scan bulk check]', e5.message); }
     return { success: true };
   }
 }
@@ -11275,7 +11720,7 @@ app.get('/api/content/tracker-queue', verifyEngineAccess, async (req, res) => {
 });
 
 // ── Stats Study ────────────────────────────────────────────────
-app.post('/api/content/stats-study', verifyEngineAccess, async (req, res) => {
+app.post('/api/content/stats-study', verifyEngineAccess, requireCredits('stats-study'), async (req, res) => {
   try {
     const { profile_id, topic, seed_keyword } = req.body;
     if (!profile_id || !topic) return res.status(400).json({ success: false, error: 'profile_id and topic required' });
@@ -17182,27 +17627,65 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
         </nav>
 
-        <div class="max-w-7xl mx-auto px-6 py-8">
-            <div style="margin-bottom:8px;">
-                <div class="flex justify-center gap-2 mb-2 flex-wrap">
-                    <span style="font-size:0.68rem;color:#4b5563;align-self:center;font-weight:700;text-transform:uppercase;margin-right:4px;">Lead Flow →</span>
-                    <button onclick="switchTab('niches')" id="tabNichesBtn" class="mode-toggle" style="background:linear-gradient(135deg,#065f46,#0f766e);border-color:#0f766e;"><i class="fas fa-bullseye mr-2"></i> 1. Niches</button>
-                    <button onclick="switchTab('scanner')" id="tabScannerBtn" class="mode-toggle"><i class="fas fa-search mr-2"></i> 2. Scanner</button>
-                    <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="mode-toggle"><i class="fas fa-list mr-2"></i> 3. Scan Log</button>
-                    <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="mode-toggle" style="background:linear-gradient(135deg,#0f4c8a,#7e22ce);border-color:#7e22ce;"><i class="fas fa-sitemap mr-2"></i> 4. Sitemap Scanner</button>
-                </div>
-                <div class="flex justify-center gap-2 flex-wrap">
-                    <span style="font-size:0.68rem;color:#4b5563;align-self:center;font-weight:700;text-transform:uppercase;margin-right:4px;">Admin →</span>
-                    <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="mode-toggle active"><i class="fas fa-trophy mr-2"></i> Leaderboard</button>
-                    <button onclick="switchTab('pending')" id="tabPendingBtn" class="mode-toggle"><i class="fas fa-clock mr-2"></i> Pending</button>
-                    <button onclick="switchTab('users')" id="tabUsersBtn" class="mode-toggle"><i class="fas fa-user-cog mr-2"></i> Users</button>
-                    <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="mode-toggle"><i class="fas fa-users mr-2"></i> Freelancers</button>
-                    <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="mode-toggle"><i class="fas fa-key mr-2"></i> Engine Access</button>
-                    <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="mode-toggle" style="background:linear-gradient(135deg,#064e3b,#0f766e);border-color:#0f766e;"><i class="fas fa-share-alt mr-2"></i> Give Access</button>
-                    <button onclick="switchTab('messages')" id="tabMessagesBtn" class="mode-toggle"><i class="fas fa-envelope mr-2"></i> Messages</button>
-                    <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="mode-toggle"><i class="fas fa-paper-plane mr-2"></i> Email Log</button>
-                </div>
-            </div>
+        <style>
+            /* ── SIDEBAR LAYOUT ────────────────────────────────── */
+            #dashboard-layout { display: flex; min-height: calc(100vh - 65px); }
+            #sidebar {
+                width: 240px; min-width: 240px; background: #111827;
+                border-right: 1px solid #1f2937;
+                display: flex; flex-direction: column;
+                position: sticky; top: 65px; height: calc(100vh - 65px);
+                overflow-y: auto; padding: 16px 0;
+            }
+            .sidebar-section-label {
+                font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+                text-transform: uppercase; color: #4b5563 !important;
+                padding: 12px 20px 6px;
+            }
+            .sidebar-btn {
+                display: flex; align-items: center; gap: 11px;
+                width: 100%; padding: 10px 20px; border: none; background: transparent;
+                color: #9ca3af !important; font-size: 0.875rem; font-weight: 500;
+                cursor: pointer; border-radius: 0; text-align: left;
+                transition: background 0.15s, color 0.15s;
+                border-left: 3px solid transparent;
+            }
+            .sidebar-btn:hover { background: #1f2937; color: #e5e7eb !important; }
+            .sidebar-btn.active {
+                background: #1e293b; color: #fff !important;
+                border-left-color: #7e22ce; font-weight: 600;
+            }
+            .sidebar-btn.active i { color: #a855f7 !important; }
+            .sidebar-btn i { width: 16px; text-align: center; font-size: 0.8rem; color: #6b7280 !important; }
+            .sidebar-divider { border: none; border-top: 1px solid #1f2937; margin: 10px 0; }
+            #tab-area { flex: 1; padding: 28px 32px; overflow-x: auto; }
+            @media (max-width: 900px) {
+                #sidebar { width: 56px; min-width: 56px; }
+                .sidebar-btn span, .sidebar-section-label { display: none; }
+                .sidebar-btn { justify-content: center; padding: 12px; }
+                #tab-area { padding: 16px; }
+            }
+        </style>
+        <div id="dashboard-layout">
+            <!-- SIDEBAR -->
+            <nav id="sidebar">
+                <div class="sidebar-section-label">Lead Flow</div>
+                <button onclick="switchTab('niches')" id="tabNichesBtn" class="sidebar-btn"><i class="fas fa-bullseye"></i><span>1. Niches</span></button>
+                <button onclick="switchTab('scanner')" id="tabScannerBtn" class="sidebar-btn"><i class="fas fa-search"></i><span>2. Scanner</span></button>
+                <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="sidebar-btn"><i class="fas fa-list"></i><span>3. Scan Log</span></button>
+                <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="sidebar-btn"><i class="fas fa-sitemap"></i><span>4. Sitemap Scanner</span></button>
+                <hr class="sidebar-divider">
+                <div class="sidebar-section-label">Admin</div>
+                <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="sidebar-btn active"><i class="fas fa-trophy"></i><span>Leaderboard</span></button>
+                <button onclick="switchTab('pending')" id="tabPendingBtn" class="sidebar-btn"><i class="fas fa-clock"></i><span>Pending</span></button>
+                <button onclick="switchTab('users')" id="tabUsersBtn" class="sidebar-btn"><i class="fas fa-user-cog"></i><span>Users</span></button>
+                <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Freelancers</span></button>
+                <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
+                <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
+                <button onclick="switchTab('messages')" id="tabMessagesBtn" class="sidebar-btn"><i class="fas fa-envelope"></i><span>Messages</span></button>
+                <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="sidebar-btn"><i class="fas fa-paper-plane"></i><span>Email Log</span></button>
+            </nav>
+            <div id="tab-area">
 
             <!-- LEADERBOARD -->
             <div id="tab-leaderboard" class="tab-content">
@@ -17443,13 +17926,32 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div class="grid grid-cols-2 gap-4 mb-4">
                             <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Client Name *</label><input id="ecClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full rounded-lg px-3 py-2 text-sm"></div>
                             <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Expires</label><input id="ecExpires" type="date" class="w-full rounded-lg px-3 py-2 text-sm"></div>
-                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Gemini API Key</label><input id="ecGeminiKey" type="password" placeholder="AIza..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
-                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Claude API Key</label><input id="ecClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
-                            <div style="grid-column:1/-1;"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Notes</label><input id="ecNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded-lg px-3 py-2 text-sm"></div>
                             <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;">
-                                <input type="checkbox" id="ecUsePlatformKeys" style="width:18px;height:18px;accent-color:#0891b2;cursor:pointer;">
-                                <div><label for="ecUsePlatformKeys" style="font-weight:600;color:#38bdf8;cursor:pointer;">🔑 Use Platform API Keys</label><div style="font-size:11px;color:#64748b;margin-top:2px;">Client uses your Gemini + Claude keys (paid plan, no own API key)</div></div>
+                                <input type="checkbox" id="ecUsePlatformKeys" onchange="toggleEcKeyFields(this.checked)" style="width:18px;height:18px;accent-color:#0891b2;cursor:pointer;">
+                                <div><label for="ecUsePlatformKeys" style="font-weight:600;color:#38bdf8;cursor:pointer;">🔑 Use Platform API Keys</label><div style="font-size:11px;color:#64748b;margin-top:2px;">Client uses your server Gemini + Claude keys — no personal key needed</div></div>
                             </div>
+                            <div id="ecCreditsWrap" style="display:none;grid-column:1/-1;">
+                                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                                    <label style="font-size:11px;color:#9ca3af;align-self:center;">Deal type:</label>
+                                    <button type="button" onclick="setEcDealType('credits')" id="ecDealCredits" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#0891b2;color:#fff;border:1px solid #0284c7;cursor:pointer;">💳 Credit Pack</button>
+                                    <button type="button" onclick="setEcDealType('lifetime')" id="ecDealLifetime" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#1e293b;color:#94a3b8;border:1px solid #334155;cursor:pointer;">♾️ Lifetime Deal</button>
+                                </div>
+                                <div id="ecCreditPackWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Platform Credits <span style="color:#38bdf8;">(leave blank = unlimited)</span></label><input id="ecPlatformCredits" type="number" min="1" placeholder="e.g. 50 — leave blank for unlimited" class="w-full rounded-lg px-3 py-2 text-sm"><div style="font-size:11px;color:#64748b;margin-top:4px;">Research=3 · Brief=2 · Write=10 · Rewrite=8 · Cluster=3 · Analyse=2 · News=4 · Stats=2 · Bulk=5</div></div>
+                                <div id="ecLifetimeWrap" style="display:none;padding:12px 14px;background:#0c1a0c;border:1px solid #166534;border-radius:8px;margin-top:8px;">
+                                    <div style="font-size:12px;font-weight:600;color:#4ade80;margin-bottom:4px;">♾️ Lifetime Deal — Client Brings Own API Keys</div>
+                                    <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">No cost to you · Client gets unlimited access forever · They pay their own API bills directly</div>
+                                    <div style="font-size:11px;padding:8px 10px;background:#030712;border:1px solid #166534;border-radius:6px;margin-bottom:10px;">
+                                        <div style="color:#4ade80;font-weight:600;margin-bottom:4px;">Where clients get their keys:</div>
+                                        <div style="color:#6b7280;">🔵 Gemini — <span style="color:#38bdf8;">aistudio.google.com → Get API key</span> (free tier available)</div>
+                                        <div style="color:#6b7280;margin-top:2px;">🟠 Claude — <span style="color:#38bdf8;">console.anthropic.com → API Keys</span> (pay-as-you-go)</div>
+                                    </div>
+                                    <input id="ecDealLabel" type="text" placeholder="Deal label e.g. AppSumo Tier 2, LTD Launch" class="w-full rounded-lg px-3 py-2 text-sm">
+                                </div>
+                                <input type="hidden" id="ecDealType" value="credits">
+                            </div>
+                            <div id="ecGeminiWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Gemini API Key</label><input id="ecGeminiKey" type="password" placeholder="AIza..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div id="ecClaudeWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Claude API Key</label><input id="ecClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div style="grid-column:1/-1;"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Notes</label><input id="ecNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded-lg px-3 py-2 text-sm"></div>
                         </div>
                         <div class="flex gap-3">
                             <button onclick="createEngineCode()" class="btn btn-primary">Create Code</button>
@@ -17485,13 +17987,32 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px;">
                             <div><label style="font-size:11px;color:#9ca3af;">Client Name *</label><input id="gaClientName" type="text" placeholder="e.g. Jan de Vries" class="w-full rounded px-3 py-2 mt-1"></div>
                             <div><label style="font-size:11px;color:#9ca3af;">Expires</label><input id="gaExpires" type="date" class="w-full rounded px-3 py-2 mt-1"></div>
-                            <div><label style="font-size:11px;color:#9ca3af;">Gemini API Key</label><input id="gaGeminiKey" type="password" placeholder="AIza..." class="w-full rounded px-3 py-2 mt-1"></div>
-                            <div><label style="font-size:11px;color:#9ca3af;">Claude API Key</label><input id="gaClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded px-3 py-2 mt-1"></div>
-                            <div style="grid-column:1/-1;"><label style="font-size:11px;color:#9ca3af;">Notes</label><input id="gaNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded px-3 py-2 mt-1"></div>
                             <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;">
-                                <input type="checkbox" id="gaUsePlatformKeys" style="width:18px;height:18px;accent-color:#0891b2;cursor:pointer;">
-                                <div><label for="gaUsePlatformKeys" style="font-weight:600;color:#38bdf8;cursor:pointer;">🔑 Use Platform API Keys</label><div style="font-size:11px;color:#64748b;margin-top:2px;">Client uses your Gemini + Claude keys (paid plan, no own API key)</div></div>
+                                <input type="checkbox" id="gaUsePlatformKeys" onchange="toggleGaKeyFields(this.checked)" style="width:18px;height:18px;accent-color:#0891b2;cursor:pointer;">
+                                <div><label for="gaUsePlatformKeys" style="font-weight:600;color:#38bdf8;cursor:pointer;">🔑 Use Platform API Keys</label><div style="font-size:11px;color:#64748b;margin-top:2px;">Client uses your server Gemini + Claude keys — no personal key needed</div></div>
                             </div>
+                            <div id="gaCreditsWrap" style="display:none;grid-column:1/-1;padding:12px 14px;background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;">
+                                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                                    <label style="font-size:11px;color:#9ca3af;align-self:center;">Deal type:</label>
+                                    <button type="button" onclick="setGaDealType('credits')" id="gaDealCredits" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#0891b2;color:#fff;border:1px solid #0284c7;cursor:pointer;">💳 Credit Pack</button>
+                                    <button type="button" onclick="setGaDealType('lifetime')" id="gaDealLifetime" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#1e293b;color:#94a3b8;border:1px solid #334155;cursor:pointer;">♾️ Lifetime Deal</button>
+                                </div>
+                                <div id="gaCreditPackWrap"><label style="font-size:11px;color:#38bdf8;font-weight:600;">🎯 Platform Credits <span style="color:#64748b;font-weight:400;">(leave blank = unlimited)</span></label><input id="gaPlatformCredits" type="number" min="1" placeholder="e.g. 50 credits — blank = unlimited" class="w-full rounded px-3 py-2 mt-1"><div style="font-size:11px;color:#64748b;margin-top:4px;">Research=3 · Brief=2 · Write=10 · Rewrite=8 · Cluster=3 · Analyse=2 · News=4 · Stats=2 · Bulk=5</div></div>
+                                <div id="gaLifetimeWrap" style="display:none;padding:10px 12px;background:#0c1a0c;border:1px solid #166534;border-radius:8px;margin-top:8px;">
+                                    <div style="font-size:12px;font-weight:600;color:#4ade80;margin-bottom:4px;">♾️ Lifetime Deal — Client Brings Own API Keys</div>
+                                    <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">No cost to you · Unlimited access forever · Client pays their own API bills</div>
+                                    <div style="font-size:11px;padding:8px 10px;background:#030712;border:1px solid #166534;border-radius:6px;margin-bottom:8px;">
+                                        <div style="color:#4ade80;font-weight:600;margin-bottom:3px;">Where clients get their keys:</div>
+                                        <div style="color:#6b7280;">🔵 Gemini — <span style="color:#38bdf8;">aistudio.google.com → Get API key</span></div>
+                                        <div style="color:#6b7280;margin-top:2px;">🟠 Claude — <span style="color:#38bdf8;">console.anthropic.com → API Keys</span></div>
+                                    </div>
+                                    <input id="gaDealLabel" type="text" placeholder="Deal label e.g. AppSumo Tier 2, LTD Launch" class="w-full rounded px-3 py-2">
+                                </div>
+                                <input type="hidden" id="gaDealType" value="credits">
+                            </div>
+                            <div id="gaGeminiWrap"><label style="font-size:11px;color:#9ca3af;">Gemini API Key</label><input id="gaGeminiKey" type="password" placeholder="AIza..." class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div id="gaClaudeWrap"><label style="font-size:11px;color:#9ca3af;">Claude API Key</label><input id="gaClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div style="grid-column:1/-1;"><label style="font-size:11px;color:#9ca3af;">Notes</label><input id="gaNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded px-3 py-2 mt-1"></div>
                         </div>
                         <div style="display:flex;gap:10px;">
                             <button id="gaCreateBtn" onclick="gaCreateCode()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:11px 22px;font-weight:700;cursor:pointer;">🔑 Create & Get Login URL</button>
@@ -17500,14 +18021,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     </div>
                     <div id="gaSuccessPanel" style="display:none;background:#0a2010;border:2px solid #16a34a;border-radius:12px;padding:24px;margin-bottom:24px;">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><span style="font-size:1.5rem;">✅</span><div style="font-weight:800;color:#4ade80;">Access code created for <span id="gaSuccessName"></span></div></div>
-                        <div style="background:#030712;border:1px solid #166534;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                        <div style="background:#030712;border:1px solid #166534;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
                             <div style="font-size:0.72rem;color:#6b7280;">Engine Code</div>
                             <div id="gaSuccessCode" style="font-family:monospace;font-size:1.4rem;font-weight:900;color:#4ade80;"></div>
                         </div>
-                        <div style="background:#030712;border:1px solid #166534;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                        <div style="background:#030712;border:1px solid #166534;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
                             <div style="font-size:0.72rem;color:#6b7280;">Login URL</div>
                             <div id="gaSuccessUrl" style="font-family:monospace;font-size:0.82rem;color:#34d399;word-break:break-all;"></div>
                         </div>
+                        <div id="gaSuccessKeyType" style="background:#030712;border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#6b7280;"></div>
                         <div style="display:flex;gap:10px;flex-wrap:wrap;">
                             <button onclick="gaCopySuccess()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;">📋 Copy Login URL</button>
                             <button onclick="document.getElementById('gaSuccessPanel').style.display='none'" style="background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:6px;padding:10px 14px;cursor:pointer;">Done</button>
@@ -17517,7 +18039,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
             </div>
         </div>
-    </div>
+    </div></div><!-- /tab-area /dashboard-layout -->
+    </div><!-- /main-dashboard -->
 
     <!-- MODALS -->
     <div id="activateModal" class="modal">
@@ -17643,7 +18166,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.mode-toggle').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.mode-toggle, .sidebar-btn').forEach(el => el.classList.remove('active'));
             const tabEl = document.getElementById('tab-' + tab);
             if (tabEl) tabEl.classList.remove('hidden');
             const btnEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn');
@@ -18078,29 +18601,92 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const data=await apiCall('/api/admin/engine-codes');const codes=data.codes||[];const el=document.getElementById('engineCodesList');
                 if(!codes.length){el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:32px;">No engine access codes yet.</div>';return;}
                 el.innerHTML=codes.map(c=>{
-                    const pkBadge=c.use_platform_keys?'<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>':'';
+                    const isLifetime = c.deal_type === 'lifetime';
+                    const pkBadge = isLifetime
+                        ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#064e3b;color:#4ade80;margin-left:6px;">♾️ Lifetime'+(c.deal_label?' · '+c.deal_label:'')+'</span>'
+                        : c.use_platform_keys
+                            ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>'
+                            : '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#1e293b;color:#94a3b8;margin-left:6px;">Own Keys</span>';
                     const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
+                    // Credits display
+                    let creditBar = '';
+                    if(c.use_platform_keys){
+                        const total = c.platform_credits;
+                        const used = c.credits_used||0;
+                        const left = total===null ? null : Math.max(0, total - used);
+                        const pct = total ? Math.min(100,Math.round((used/total)*100)) : 0;
+                        const barColor = left===null?'#38bdf8':left<10?'#ef4444':left<30?'#f59e0b':'#22c55e';
+                        creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                            '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Platform Credits</span>' +
+                            (total===null ? '<span style="font-size:12px;color:#38bdf8;font-weight:700;">∞ Unlimited</span>' :
+                             '<span style="font-size:12px;font-weight:700;color:'+barColor+';">'+left+' / '+total+' left</span>') +
+                            '</div>' +
+                            (total!==null ? '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:'+barColor+';width:'+pct+'%;transition:width .3s;"></div></div>' : '') +
+                            '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
+                            '<input type="number" id="topup_'+c.id+'" placeholder="Add credits" min="1" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
+                            '<button onclick="topUpCredits('+c.id+')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">+ Add Credits</button>' +
+                            '<button onclick="resetCredits('+c.id+')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
+                            '<button onclick="setUnlimited('+c.id+')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;">∞ Set Unlimited</button>' +
+                            '</div></div>';
+                    }
                     return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
-                    '<div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
+                    '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
                     '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span>'+pkBadge+'</div>' +
-                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>'+keyInfo+'</div>' +
-                    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-                    '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform Keys ON':'🔑 Use Platform Keys')+'</button>' +
-                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy Code</button>' +
+                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>'+keyInfo+creditBar+'</div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
+                    '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
+                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy</button>' +
                     '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
                     '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
                     '</div></div></div>';}).join('');
             }catch(e){console.error('Failed to load engine codes:',e);}
         }
 
+        async function topUpCredits(id){
+            const inp=document.getElementById('topup_'+id);const add=parseInt(inp.value);
+            if(!add||add<1){alert('Enter a valid credit amount');return;}
+            // Get current total, add to it
+            const data=await apiCall('/api/admin/engine-codes');
+            const code=(data.codes||[]).find(c=>c.id===id);
+            const newTotal=(code&&code.platform_credits!==null)?((code.platform_credits||0)+add):add;
+            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{platform_credits:newTotal});
+            loadEngineCodes();
+        }
+        async function resetCredits(id){
+            if(!confirm('Reset used credits to 0 for this code?'))return;
+            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{reset_used:true});
+            loadEngineCodes();
+        }
+        async function setUnlimited(id){
+            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{platform_credits:null});
+            loadEngineCodes();
+        }
+
         async function createEngineCode(){
             const client_name=document.getElementById('ecClientName').value.trim();if(!client_name){alert('Enter a client name');return;}
             try{
                 const use_platform_keys=document.getElementById('ecUsePlatformKeys').checked;
-                const data=await apiCall('/api/admin/engine-codes','POST',{client_name,gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,claude_key:document.getElementById('ecClaudeKey').value.trim()||null,expires_at:document.getElementById('ecExpires').value||null,notes:document.getElementById('ecNotes').value.trim()||null,use_platform_keys});
+                const pc=document.getElementById('ecPlatformCredits').value.trim();
+                const dealType=document.getElementById('ecDealType').value;
+                const dealLabel=document.getElementById('ecDealLabel')?.value.trim()||null;
+                const isLifetime=dealType==='lifetime';
+                // Lifetime: own keys (use_platform_keys=false), no expiry, deal_type='lifetime'
+                // Credit pack: platform keys, credit allowance
+                const data=await apiCall('/api/admin/engine-codes','POST',{
+                    client_name,
+                    gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,
+                    claude_key:document.getElementById('ecClaudeKey').value.trim()||null,
+                    expires_at:isLifetime?null:(document.getElementById('ecExpires').value||null),
+                    notes:document.getElementById('ecNotes').value.trim()||null,
+                    use_platform_keys:isLifetime?false:use_platform_keys,
+                    platform_credits:use_platform_keys&&pc&&!isLifetime?parseInt(pc):null,
+                    deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
+                    deal_label:dealLabel||null
+                });
                 if(!data.success){alert('Error: '+data.error);return;}
-                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';document.getElementById('ecUsePlatformKeys').checked=false;loadEngineCodes();
+                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';document.getElementById('ecUsePlatformKeys').checked=false;toggleEcKeyFields(false);loadEngineCodes();
             }catch(e){alert('Error: '+e.message);}
         }
 
@@ -18108,6 +18694,56 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState});loadEngineCodes();}
         async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
         function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
+
+        function toggleEcKeyFields(usePlatform) {
+            const g=document.getElementById('ecGeminiWrap'), c=document.getElementById('ecClaudeWrap'), cr=document.getElementById('ecCreditsWrap');
+            if(g) g.style.display = usePlatform ? 'none' : '';
+            if(c) c.style.display = usePlatform ? 'none' : '';
+            if(cr) cr.style.display = usePlatform ? '' : 'none';
+        }
+        function toggleGaKeyFields(usePlatform) {
+            const g=document.getElementById('gaGeminiWrap'), c=document.getElementById('gaClaudeWrap'), cr=document.getElementById('gaCreditsWrap');
+            if(g) g.style.display = usePlatform ? 'none' : '';
+            if(c) c.style.display = usePlatform ? 'none' : '';
+            if(cr) cr.style.display = usePlatform ? '' : 'none';
+            if(!usePlatform) setGaDealType('credits'); // reset deal type when unchecking platform keys
+        }
+
+        function setEcDealType(type) {
+            document.getElementById('ecDealType').value = type;
+            const cp = document.getElementById('ecCreditPackWrap');
+            const lw = document.getElementById('ecLifetimeWrap');
+            const btnC = document.getElementById('ecDealCredits');
+            const btnL = document.getElementById('ecDealLifetime');
+            const gWrap = document.getElementById('ecGeminiWrap');
+            const cWrap = document.getElementById('ecClaudeWrap');
+            const isLifetime = type === 'lifetime';
+            // Credit pack: show credit fields, hide lifetime info, hide key fields (platform pays)
+            // Lifetime: show key fields (client brings own), show lifetime info, hide credit fields
+            cp.style.display = isLifetime ? 'none' : '';
+            lw.style.display = isLifetime ? '' : 'none';
+            if(gWrap) gWrap.style.display = isLifetime ? '' : 'none';
+            if(cWrap) cWrap.style.display = isLifetime ? '' : 'none';
+            btnC.style.cssText += ';background:'+(isLifetime?'#1e293b':'#0891b2')+';color:'+(isLifetime?'#94a3b8':'#fff')+';border-color:'+(isLifetime?'#334155':'#0284c7');
+            btnL.style.cssText += ';background:'+(isLifetime?'#064e3b':'#1e293b')+';color:'+(isLifetime?'#4ade80':'#94a3b8')+';border-color:'+(isLifetime?'#166534':'#334155');
+        }
+
+        function setGaDealType(type) {
+            document.getElementById('gaDealType').value = type;
+            const cp = document.getElementById('gaCreditPackWrap');
+            const lw = document.getElementById('gaLifetimeWrap');
+            const btnC = document.getElementById('gaDealCredits');
+            const btnL = document.getElementById('gaDealLifetime');
+            const gWrap = document.getElementById('gaGeminiWrap');
+            const cWrap = document.getElementById('gaClaudeWrap');
+            const isLifetime = type === 'lifetime';
+            cp.style.display = isLifetime ? 'none' : '';
+            lw.style.display = isLifetime ? '' : 'none';
+            if(gWrap) gWrap.style.display = isLifetime ? '' : 'none';
+            if(cWrap) cWrap.style.display = isLifetime ? '' : 'none';
+            btnC.style.cssText += ';background:'+(isLifetime?'#1e293b':'#0891b2')+';color:'+(isLifetime?'#94a3b8':'#fff')+';border-color:'+(isLifetime?'#334155':'#0284c7');
+            btnL.style.cssText += ';background:'+(isLifetime?'#064e3b':'#1e293b')+';color:'+(isLifetime?'#4ade80':'#94a3b8')+';border-color:'+(isLifetime?'#166534':'#334155');
+        }
 
         async function doChangePassword(){
             const current=document.getElementById('cpCurrent').value.trim(),newPw=document.getElementById('cpNew').value.trim(),conf=document.getElementById('cpConfirm').value.trim();
@@ -18145,10 +18781,39 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
             const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent='⏳ Creating...';
             const use_platform_keys=document.getElementById('gaUsePlatformKeys').checked;
-            try{const data=await apiCall('/api/admin/engine-codes','POST',{client_name:name,gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,claude_key:document.getElementById('gaClaudeKey').value.trim()||null,expires_at:document.getElementById('gaExpires').value||null,notes:document.getElementById('gaNotes').value.trim()||null,use_platform_keys});
+            try{const pc=document.getElementById('gaPlatformCredits').value.trim();
+            const dealType=document.getElementById('gaDealType').value;
+            const dealLabel=document.getElementById('gaDealLabel')?.value.trim()||null;
+            const isLifetime=dealType==='lifetime';
+            const data=await apiCall('/api/admin/engine-codes','POST',{
+                client_name:name,
+                gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,
+                claude_key:document.getElementById('gaClaudeKey').value.trim()||null,
+                expires_at:isLifetime?null:(document.getElementById('gaExpires').value||null),
+                notes:document.getElementById('gaNotes').value.trim()||null,
+                use_platform_keys:isLifetime?false:use_platform_keys,
+                platform_credits:use_platform_keys&&pc&&!isLifetime?parseInt(pc):null,
+                deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
+                deal_label:dealLabel||null
+            });
             if(!data.success){alert('Error: '+data.error);return;}
             const code=data.code.code,url=window.location.origin+'/engine-login?code='+code;
-            document.getElementById('gaSuccessCode').textContent=code;document.getElementById('gaSuccessUrl').textContent=url;document.getElementById('gaSuccessName').textContent=name;
+            document.getElementById('gaSuccessCode').textContent=code;
+            document.getElementById('gaSuccessUrl').textContent=url;
+            document.getElementById('gaSuccessName').textContent=name;
+            const keyTypeEl=document.getElementById('gaSuccessKeyType');
+            if(use_platform_keys){
+                const dealType=document.getElementById('gaDealType').value;
+                const pc=document.getElementById('gaPlatformCredits').value.trim();
+                const dealLabel=document.getElementById('gaDealLabel')?.value.trim();
+                if(dealType==='lifetime'){
+                    keyTypeEl.innerHTML='♾️ <strong style="color:#4ade80;">Lifetime Deal</strong>'+(dealLabel?' — '+dealLabel:'')+' · Own API keys · Never expires · Zero cost to you';
+                } else {
+                    keyTypeEl.innerHTML='🔑 <strong style="color:#38bdf8;">Platform API Keys</strong> — ' + (pc?'<strong style="color:#4ade80;">'+pc+' credits</strong> assigned':'<strong style="color:#38bdf8;">Unlimited credits</strong>');
+                }
+            } else {
+                keyTypeEl.innerHTML='🔑 <strong style="color:#a78bfa;">Own API Keys</strong> — no credit system, client uses their own Gemini/Claude keys';
+            }
             document.getElementById('gaSuccessPanel').style.display='block';document.getElementById('gaCreateForm').style.display='none';loadGiveAccess();
             }catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='🔑 Create & Get Login URL';}
         }
