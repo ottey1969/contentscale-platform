@@ -19095,9 +19095,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 : '';
 
             // Pending changes button
-            const safeTitle = (p.title||p.url||'').replace(/'/g,"\\'");
             const changesBtn = pending > 0
-                ? '<button onclick="openChangesModal('+p.id+',\''+safeTitle+'\') " class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
+                ? '<button onclick="openChangesModalById('+p.id+')" class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
                 : '';
 
             const borderColor = p.is_active ? '#7e22ce' : '#374151';
@@ -19179,6 +19178,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 alert('Check failed: '+e.message);
                 if(btn){btn.disabled=false;btn.textContent='Check now';}
             }
+        }
+
+        function openChangesModalById(pageId) {
+            const page = allTrackerPages.find(p => p.id === pageId);
+            const title = page ? (page.title || page.url || 'Page') : 'Page';
+            openChangesModal(pageId, title);
         }
 
         async function openChangesModal(pageId, title) {
