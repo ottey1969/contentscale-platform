@@ -566,6 +566,66 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`CREATE TABLE IF NOT EXISTS users (id VARCHAR(255) PRIMARY KEY, ip_address VARCHAR(50), is_activated BOOLEAN DEFAULT FALSE, activation_expires TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
    // 🛠️ MIGRATION: add activation_expires if table existed before this column was added
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_expires TIMESTAMP`).catch(() => {});;
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100)`).catch(()=>{});
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country_code VARCHAR(10)`).catch(()=>{});
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
+
+   // ── CONTENT LIFECYCLE TRACKER ──────────────────────────────────────────────
+   await client.query(`CREATE TABLE IF NOT EXISTS tracker_pages (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     url TEXT NOT NULL,
+     slug VARCHAR(500),
+     title TEXT,
+     keyword VARCHAR(500),
+     html_content TEXT,
+     check_frequency VARCHAR(20) DEFAULT '3days',
+     next_check_at TIMESTAMPTZ DEFAULT NOW(),
+     last_checked_at TIMESTAMPTZ,
+     is_active BOOLEAN DEFAULT TRUE,
+     gsc_connected BOOLEAN DEFAULT FALSE,
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   )`).catch(()=>{});
+
+   await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
+     id SERIAL PRIMARY KEY,
+     page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
+     checked_at TIMESTAMPTZ DEFAULT NOW(),
+     google_position NUMERIC(6,1),
+     google_impressions INTEGER,
+     google_clicks INTEGER,
+     google_ctr NUMERIC(5,2),
+     ai_google_overview_found BOOLEAN DEFAULT FALSE,
+     ai_google_overview_cited BOOLEAN DEFAULT FALSE,
+     ai_google_overview_text TEXT,
+     ai_perplexity_found BOOLEAN DEFAULT FALSE,
+     ai_perplexity_cited BOOLEAN DEFAULT FALSE,
+     ai_perplexity_text TEXT,
+     ai_bing_found BOOLEAN DEFAULT FALSE,
+     ai_bing_cited BOOLEAN DEFAULT FALSE,
+     ai_bing_text TEXT,
+     recommendations JSONB,
+     html_hash VARCHAR(64),
+     score INTEGER,
+     notes TEXT
+   )`).catch(()=>{});
+
+   await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
+     id SERIAL PRIMARY KEY,
+     page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
+     snapshot_id INTEGER REFERENCES tracker_snapshots(id) ON DELETE SET NULL,
+     changed_at TIMESTAMPTZ DEFAULT NOW(),
+     change_type VARCHAR(50),
+     field_name VARCHAR(100),
+     value_before TEXT,
+     value_after TEXT,
+     delta NUMERIC,
+     is_significant BOOLEAN DEFAULT FALSE,
+     recommendations JSONB,
+     applied BOOLEAN DEFAULT FALSE,
+     applied_at TIMESTAMPTZ
+   )`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`);
    await client.query(`CREATE TABLE IF NOT EXISTS user_email_templates (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, template_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, template_type))`);
    await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
@@ -1049,8 +1109,21 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    app.post('/api/user/register', async (req, res) => {
    try {
    const userId = crypto.randomUUID();
-   const ip = req.ip || req.connection.remoteAddress;
-   await pool.query(`INSERT INTO users (id, ip_address, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING`, [userId, ip]);
+   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection.remoteAddress || 'unknown';
+  const ua = req.headers['user-agent'] || '';
+  await pool.query(`INSERT INTO users (id, ip_address, user_agent, last_seen_at, created_at) VALUES ($1, $2, $3, NOW(), NOW()) ON CONFLICT (id) DO UPDATE SET last_seen_at=NOW(), user_agent=EXCLUDED.user_agent`, [userId, ip, ua]);
+  // Async IP geo lookup (non-blocking)
+  if (ip && ip !== 'unknown' && !ip.startsWith('127.') && !ip.startsWith('::')) {
+    setImmediate(async () => {
+      try {
+        const geo = await fetch('http://ip-api.com/json/'+ip+'?fields=country,countryCode,status');
+        const gd = await geo.json();
+        if (gd.status === 'success') {
+          await pool.query('UPDATE users SET country=$1, country_code=$2 WHERE id=$3', [gd.country, gd.countryCode, userId]).catch(()=>{});
+        }
+      } catch(e) {}
+    });
+  }
    const defaultTemplates = [
    { type: 'congrats', subject: '🎉 Congratulations!', body: `
    <h1>Congratulations!</h1>
@@ -1355,20 +1428,31 @@ app.post('/api/admin/change-password', verifyAdmin, async (req, res) => {
 app.get('/api/admin/users', verifyAdmin, async (req, res) => {
 try {
 const r = await pool.query(`
-SELECT 
-u.*,
-u.activation_expires AS activated_until,
-CASE WHEN u.activation_expires > NOW() THEN TRUE ELSE FALSE END AS is_activated,
-COUNT(s.id) AS scan_count,
-MAX(s.created_at) AS last_scan_at,
-(SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
-(SELECT s3.score FROM scan_log s3 WHERE s3.user_id = u.id ORDER BY s3.created_at DESC LIMIT 1) AS last_scan_score
+SELECT
+  u.*,
+  u.activation_expires AS activated_until,
+  CASE WHEN u.activation_expires > NOW() THEN TRUE ELSE FALSE END AS is_activated,
+  COUNT(s.id) AS scan_count,
+  MAX(s.created_at) AS last_scan_at,
+  (SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
+  (SELECT s3.score FROM scan_log s3 WHERE s3.user_id = u.id ORDER BY s3.created_at DESC LIMIT 1) AS last_scan_score
 FROM users u
 LEFT JOIN scan_log s ON s.user_id = u.id
 GROUP BY u.id
 ORDER BY u.created_at DESC
 `);
-res.json({ success: true, users: r.rows });
+// Classify bot vs human based on user_agent
+const classifyUA = (ua) => {
+  if (!ua) return { is_bot: true, label: 'Unknown', icon: '❓' };
+  const u = ua.toLowerCase();
+  const bots = ['bot','crawler','spider','scraper','headless','phantom','selenium','puppeteer','python-requests','curl','wget','java/','go-http','axios/','okhttp','libwww','facebookexternalhit','twitterbot','linkedinbot','slurp','baiduspider','yandexbot'];
+  if (bots.some(b => u.includes(b))) return { is_bot: true, label: 'Bot/Crawler', icon: '🤖' };
+  if (u.includes('mobile') || u.includes('android') || u.includes('iphone')) return { is_bot: false, label: 'Mobile', icon: '📱' };
+  if (u.includes('mozilla') || u.includes('chrome') || u.includes('safari') || u.includes('firefox') || u.includes('edge')) return { is_bot: false, label: 'Browser', icon: '🌐' };
+  return { is_bot: true, label: 'Automated', icon: '⚙️' };
+};
+const users = r.rows.map(u => ({ ...u, _ua: classifyUA(u.user_agent) }));
+res.json({ success: true, users });
 }
 catch (e) { res.json({ success: false, error: e.message }); }
 });
@@ -17670,20 +17754,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <!-- SIDEBAR -->
             <nav id="sidebar">
                 <div class="sidebar-section-label">Lead Flow</div>
-                <button onclick="switchTab('niches')" id="tabNichesBtn" class="sidebar-btn"><i class="fas fa-bullseye"></i><span>1. Niches</span></button>
-                <button onclick="switchTab('scanner')" id="tabScannerBtn" class="sidebar-btn"><i class="fas fa-search"></i><span>2. Scanner</span></button>
-                <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="sidebar-btn"><i class="fas fa-list"></i><span>3. Scan Log</span></button>
-                <button onclick="switchTab('campaigns')" id="tabCampaignsBtn" class="sidebar-btn"><i class="fas fa-sitemap"></i><span>4. Sitemap Scanner</span></button>
+                <button onclick="switchTab('scanner')" id="tabScannerBtn" class="sidebar-btn"><i class="fas fa-search"></i><span>Scanner</span></button>
+                <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="sidebar-btn"><i class="fas fa-table"></i><span>Scan Log</span></button>
                 <hr class="sidebar-divider">
                 <div class="sidebar-section-label">Admin</div>
                 <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="sidebar-btn active"><i class="fas fa-trophy"></i><span>Leaderboard</span></button>
                 <button onclick="switchTab('pending')" id="tabPendingBtn" class="sidebar-btn"><i class="fas fa-clock"></i><span>Pending</span></button>
                 <button onclick="switchTab('users')" id="tabUsersBtn" class="sidebar-btn"><i class="fas fa-user-cog"></i><span>Users</span></button>
                 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Freelancers</span></button>
+                <button onclick="switchTab('tracker')" id="tabTrackerBtn" class="sidebar-btn"><i class="fas fa-chart-line"></i><span>Content Tracker</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
                 <button onclick="switchTab('messages')" id="tabMessagesBtn" class="sidebar-btn"><i class="fas fa-envelope"></i><span>Messages</span></button>
-                <button onclick="switchTab('emaillog')" id="tabEmaillogBtn" class="sidebar-btn"><i class="fas fa-paper-plane"></i><span>Email Log</span></button>
+
             </nav>
             <div id="tab-area">
 
@@ -17753,28 +17836,80 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
             <!-- USERS -->
             <div id="tab-users" class="tab-content hidden">
-                <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-3xl font-bold">👥 User Management</h2>
-                        <button onclick="loadUsers()" class="btn btn-info"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+                <style>
+                    .ut-stat { background:#0d1117; border:1px solid #1f2937; border-radius:8px; padding:14px 18px; }
+                    .ut-stat .val { font-size:1.6rem; font-weight:700; color:#f1f5f9; line-height:1; }
+                    .ut-stat .lbl { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; margin-top:4px; }
+                    .ut-table { width:100%; border-collapse:collapse; font-size:13px; }
+                    .ut-table th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#6b7280; padding:10px 12px; border-bottom:1px solid #1f2937; text-align:left; white-space:nowrap; }
+                    .ut-table td { padding:10px 12px; border-bottom:1px solid #0d1117; vertical-align:middle; }
+                    .ut-table tr:hover td { background:#0d1117; }
+                    .ut-badge { display:inline-block; font-size:11px; font-weight:600; padding:2px 9px; border-radius:99px; }
+                    .ut-action { background:transparent; border:1px solid #374151; border-radius:5px; padding:4px 10px; font-size:11px; font-weight:600; color:#9ca3af; cursor:pointer; }
+                    .ut-action:hover { border-color:#6b7280; color:#e5e7eb; }
+                    .ut-action.green { border-color:#166534; color:#4ade80; }
+                    .ut-action.green:hover { background:#052e16; }
+                    .ut-action.red { border-color:#7f1d1d; color:#f87171; }
+                    .ut-action.red:hover { background:#2d0a0a; }
+                    .ut-filter { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:6px 10px; font-size:13px; color:#e5e7eb; outline:none; }
+                    .ut-filter:focus { border-color:#7e22ce; }
+                </style>
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Users</h2>
+                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">All visitors who accessed the scanner tool</p>
                     </div>
-                    <div class="grid-4 mb-8">
-                        <div class="stat-card"><div><div class="text-4xl mb-2">👥</div><div class="text-3xl font-bold" id="stat-total-users">0</div><div class="text-sm">Total Users</div></div></div>
-                        <div class="stat-card"><div><div class="text-4xl mb-2">✅</div><div class="text-3xl font-bold" id="stat-active-users">0</div><div class="text-sm">Active</div></div></div>
-                        <div class="stat-card"><div><div class="text-4xl mb-2">⏳</div><div class="text-3xl font-bold" id="stat-expiring-users">0</div><div class="text-sm">Expiring Soon</div></div></div>
-                        <div class="stat-card"><div><div class="text-4xl mb-2">❌</div><div class="text-3xl font-bold" id="stat-inactive-users">0</div><div class="text-sm">Inactive/Expired</div></div></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button onclick="loadUsers()" class="ut-action" id="utRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
+                        <button onclick="bulkActionUsers('activate')" class="ut-action green">Activate 7d</button>
+                        <button onclick="bulkActionUsers('deactivate')" class="ut-action">Deactivate</button>
+                        <button onclick="bulkDelete('users')" class="ut-action red">Delete (<span id="selected-count-users">0</span>)</button>
                     </div>
-                    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4 border border-gray-700 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="select-all-users" onchange="toggleSelectAll('users')" class="w-5 h-5">
-                            <label class="text-sm">Select All</label>
-                        </div>
-                        <button onclick="bulkActionUsers('activate')" class="btn btn-success"><i class="fas fa-check mr-2"></i> Activate (7 Days)</button>
-                        <button onclick="bulkActionUsers('deactivate')" class="btn btn-warning"><i class="fas fa-times mr-2"></i> Deactivate</button>
-                        <button onclick="openMessageModal('selected')" class="btn btn-info"><i class="fas fa-envelope mr-2"></i> Message Selected</button>
-                        <button onclick="bulkDelete('users')" class="btn btn-danger"><i class="fas fa-trash mr-2"></i> Delete (<span id="selected-count-users">0</span>)</button>
-                    </div>
-                    <div id="usersContainer" class="space-y-4"></div>
+                </div>
+                <!-- Stats -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
+                    <div class="ut-stat"><div class="val" id="stat-total-users">0</div><div class="lbl">Total</div></div>
+                    <div class="ut-stat"><div class="val" id="stat-active-users" style="color:#4ade80;">0</div><div class="lbl">Active</div></div>
+                    <div class="ut-stat"><div class="val" id="stat-expiring-users" style="color:#fbbf24;">0</div><div class="lbl">Expiring soon</div></div>
+                    <div class="ut-stat"><div class="val" id="stat-inactive-users" style="color:#6b7280;">0</div><div class="lbl">Inactive</div></div>
+                    <div class="ut-stat"><div class="val" id="stat-bot-users" style="color:#f87171;">0</div><div class="lbl">Bots</div></div>
+                    <div class="ut-stat"><div class="val" id="stat-human-users" style="color:#a78bfa;">0</div><div class="lbl">Real humans</div></div>
+                </div>
+                <!-- Filters -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+                    <input type="text" id="utSearch" class="ut-filter" placeholder="Search IP, country, user agent..." style="flex:1;min-width:200px;" oninput="renderUsers()">
+                    <select id="utFilterStatus" class="ut-filter" onchange="renderUsers()">
+                        <option value="">All status</option>
+                        <option value="active">Active</option>
+                        <option value="expiring">Expiring soon</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <select id="utFilterType" class="ut-filter" onchange="renderUsers()">
+                        <option value="">Bots + humans</option>
+                        <option value="human">Human only</option>
+                        <option value="bot">Bots only</option>
+                    </select>
+                </div>
+                <!-- Table -->
+                <div style="overflow-x:auto;">
+                    <table class="ut-table">
+                        <thead>
+                            <tr>
+                                <th style="width:28px;"><input type="checkbox" id="select-all-users" onchange="toggleSelectAll('users')"></th>
+                                <th>Type</th>
+                                <th>IP Address</th>
+                                <th>Country</th>
+                                <th>Browser / Agent</th>
+                                <th>Status</th>
+                                <th>Scans</th>
+                                <th>Last seen</th>
+                                <th>Joined</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersContainer"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -17807,107 +17942,249 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- EMAIL LOG -->
-            <div id="tab-emaillog" class="tab-content hidden">
-                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div class="grid grid-cols-4 gap-4 mb-6">
-                        <div class="rounded-lg p-4 text-center" style="background:#0f2d1a;border:1px solid #166534;"><div id="statSentToday" class="text-3xl font-black" style="color:#4ade80;">—</div><div class="text-xs mt-1" style="color:#86efac;">Sent Today</div></div>
-                        <div class="rounded-lg p-4 text-center" style="background:#1e1b4b;border:1px solid #4c1d95;"><div id="statRemaining" class="text-3xl font-black" style="color:#a78bfa;">—</div><div class="text-xs mt-1" style="color:#c4b5fd;">Remaining Today</div></div>
-                        <div class="rounded-lg p-4 text-center" style="background:#1c0a00;border:1px solid #92400e;"><div id="statQueued" class="text-3xl font-black" style="color:#fbbf24;">—</div><div class="text-xs mt-1" style="color:#fde68a;">Queued</div></div>
-                        <div class="rounded-lg p-4 text-center" style="background:#0f172a;border:1px solid #334155;"><div id="statTotal" class="text-3xl font-black" style="color:#94a3b8;">—</div><div class="text-xs mt-1" style="color:#cbd5e1;">Total Sent</div></div>
-                    </div>
-                    <div class="mb-6">
-                        <div class="flex justify-between text-xs mb-1" style="color:#9ca3af;"><span>Daily SendGrid usage</span><span id="statLimitLabel">— / 100</span></div>
-                        <div class="w-full rounded-full h-3" style="background:#1f2937;"><div id="statProgressBar" class="h-3 rounded-full transition-all" style="background:linear-gradient(90deg,#4ade80,#f59e0b);width:0%;"></div></div>
-                    </div>
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold">📧 Email Log</h3>
-                        <div class="flex gap-2">
-                            <input type="text" id="emailLogSearch" placeholder="Search..." class="p-2 rounded text-sm" style="background:#111827;border:1px solid #374151;width:240px;" oninput="filterEmailLog()">
-                            <button onclick="loadEmailLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
-                            <button onclick="exportEmailLog()" class="btn btn-success text-sm px-4 py-2"><i class="fas fa-download mr-1"></i> CSV</button>
-                        </div>
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table class="w-full text-sm" style="border-collapse:collapse;">
-                            <thead><tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;"><th class="pb-2 pr-4">Date</th><th class="pb-2 pr-4">Email</th><th class="pb-2 pr-4">Business</th><th class="pb-2 pr-4">Score</th><th class="pb-2 pr-4">Type</th><th class="pb-2">URL</th></tr></thead>
-                            <tbody id="emailLogBody"><tr><td colspan="6" class="py-8 text-center" style="color:#6b7280;">Loading...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- SCAN LOG -->
             <div id="tab-scanlog" class="tab-content hidden">
-                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                <style>
+                    .sl-card { background: var(--sl-surface, #111827); border: 1px solid #1f2937; border-radius: 12px; padding: 24px; }
+                    .sl-stat { background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; padding: 12px 16px; }
+                    .sl-stat .val { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; line-height: 1; }
+                    .sl-stat .lbl { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+                    .sl-filter { background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #e5e7eb; outline: none; }
+                    .sl-filter:focus { border-color: #7e22ce; }
+                    .sl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                    .sl-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; padding: 10px 12px; border-bottom: 1px solid #1f2937; text-align: left; white-space: nowrap; }
+                    .sl-table td { padding: 10px 12px; border-bottom: 1px solid #0d1117; vertical-align: middle; }
+                    .sl-table tr:hover td { background: #0d1117; }
+                    .sl-table tr.sl-new td { background: rgba(126,34,206,0.07); }
+                    .sl-score-pill { display:inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 99px; }
+                    .sl-src-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .05em; }
+                    .sl-new-dot { width: 7px; height: 7px; border-radius: 50%; background: #a78bfa; display: inline-block; margin-right: 6px; animation: sl-pulse 2s infinite; }
+                    @keyframes sl-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+                    .sl-empty { text-align:center; padding: 60px 20px; color: #6b7280; }
+                    .sl-action-btn { background: transparent; border: 1px solid #374151; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: #9ca3af; cursor: pointer; transition: all .15s; }
+                    .sl-action-btn:hover { border-color: #6b7280; color: #e5e7eb; }
+                    .sl-action-btn.danger:hover { border-color: #ef4444; color: #f87171; background: rgba(239,68,68,0.08); }
+                    .sl-action-btn.primary { background: #7e22ce; border-color: #7e22ce; color: #fff; }
+                    .sl-action-btn.primary:hover { background: #9333ea; }
+                </style>
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                    <div>
                         <div style="display:flex;align-items:center;gap:10px;">
-                            <h3 class="text-lg font-bold">🔍 Scan Log</h3>
-                            <span id="scanLogCount" style="font-size:0.75rem;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:2px 10px;"></span>
+                            <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Scan Log</h2>
+                            <span id="scanLogCount" style="font-size:11px;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:2px 10px;font-weight:600;"></span>
+                            <span id="scanNewBadge" style="display:none;font-size:11px;background:#2d1b4e;color:#c084fc;border:1px solid #7e22ce;border-radius:99px;padding:2px 10px;font-weight:600;"></span>
                         </div>
-                        <div class="flex gap-2 flex-wrap">
-                            <button onclick="loadScanLog()" class="btn btn-warning text-sm px-4 py-2"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
-                            <button id="exportScanBtn" onclick="exportScanLog()" class="btn btn-success text-sm px-4 py-2">⬇ Export CSV</button>
-                            <button onclick="pushToInstantly()" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0f4c8a,#1d6cc8);color:white;border:none;">⚡ Push to Instantly</button>
-                            <button onclick="findEmailsForLeads()" class="btn text-sm px-4 py-2" style="background:linear-gradient(135deg,#0369a1,#0284c7);color:white;border:none;">🔍 Find Emails</button>
-                            <button onclick="bulkDeleteScans()" class="btn btn-danger text-sm px-4 py-2"><i class="fas fa-trash mr-1"></i> Delete selected</button>
-                            <button onclick="deleteAllScans()" class="btn btn-danger text-sm px-4 py-2" style="background:#7f1d1d;">🗑 Delete All</button>
-                        </div>
+                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">Live lead scanner results — auto-refreshes every 30s</p>
                     </div>
-                    <div style="overflow-x:auto;">
-                        <table class="w-full text-sm" style="border-collapse:collapse;">
-                            <thead><tr style="border-bottom:1px solid #374151;color:#9ca3af;text-align:left;"><th class="pb-2 pr-2" style="width:30px;"></th><th class="pb-2 pr-3">Date</th><th class="pb-2 pr-2">Source</th><th class="pb-2 pr-3">Business & URL</th><th class="pb-2 pr-3">Score</th><th class="pb-2 pr-3">City</th><th class="pb-2 pr-3">Email</th><th class="pb-2 pr-3">Status</th><th class="pb-2">Del</th></tr></thead>
-                            <tbody id="scanLogBody"><tr><td colspan="9" class="py-8 text-center" style="color:#6b7280;">Click Refresh to load.</td></tr></tbody>
-                        </table>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <button onclick="loadScanLog()" class="sl-action-btn" id="slRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
+                        <button id="exportScanBtn" onclick="exportScanLog()" class="sl-action-btn">Export CSV</button>
+                        <button onclick="pushToInstantly()" class="sl-action-btn" style="border-color:#1d4ed8;color:#60a5fa;">Push to Instantly</button>
+                        <button onclick="bulkDeleteScans()" class="sl-action-btn danger">Delete selected</button>
+                        <button onclick="deleteAllScans()" class="sl-action-btn danger">Delete all</button>
                     </div>
                 </div>
+                <!-- Stats row -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px;" id="slStatsRow">
+                    <div class="sl-stat"><div class="val" id="slStatTotal">—</div><div class="lbl">Total scans</div></div>
+                    <div class="sl-stat"><div class="val" id="slStatEmails" style="color:#4ade80;">—</div><div class="lbl">Emails found</div></div>
+                    <div class="sl-stat"><div class="val" id="slStatAvgScore">—</div><div class="lbl">Avg score</div></div>
+                    <div class="sl-stat"><div class="val" id="slStatToday" style="color:#a78bfa;">—</div><div class="lbl">Today</div></div>
+                    <div class="sl-stat"><div class="val" id="slStatBulk">—</div><div class="lbl">Bulk / Single</div></div>
+                </div>
+                <!-- Filters -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+                    <input type="text" id="slSearch" class="sl-filter" placeholder="Search business, URL, email, city..." style="flex:1;min-width:220px;" oninput="filterScanLog()">
+                    <select id="slFilterSource" class="sl-filter" onchange="filterScanLog()">
+                        <option value="">All sources</option>
+                        <option value="single">Single</option>
+                        <option value="bulk">Bulk</option>
+                        <option value="discover">Discover</option>
+                    </select>
+                    <select id="slFilterEmail" class="sl-filter" onchange="filterScanLog()">
+                        <option value="">All</option>
+                        <option value="has_email">Email found</option>
+                        <option value="no_email">No email</option>
+                    </select>
+                    <select id="slFilterScore" class="sl-filter" onchange="filterScanLog()">
+                        <option value="">Any score</option>
+                        <option value="85">85+ Elite</option>
+                        <option value="70">70+ Good</option>
+                        <option value="50">50+ Average</option>
+                        <option value="0_50">Below 50</option>
+                    </select>
+                </div>
+                <!-- Table -->
+                <div style="overflow-x:auto;">
+                    <table class="sl-table">
+                        <thead>
+                            <tr>
+                                <th style="width:28px;"><input type="checkbox" id="slSelectAll" onchange="toggleAllScans(this.checked)"></th>
+                                <th></th>
+                                <th onclick="sortScanLog('created_at')" style="cursor:pointer;">Time <span id="slSortCreated">↓</span></th>
+                                <th>Source</th>
+                                <th onclick="sortScanLog('business_name')" style="cursor:pointer;">Business</th>
+                                <th onclick="sortScanLog('score')" style="cursor:pointer;">Score <span id="slSortScore"></span></th>
+                                <th>Location</th>
+                                <th>Email</th>
+                                <th>Niche</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="scanLogBody">
+                            <tr><td colspan="10" class="sl-empty"><i class="fas fa-database" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px;"></i>Click Refresh to load scans</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="slPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#6b7280;"></div>
             </div>
 
             <!-- SCANNER -->
             <div id="tab-scanner" class="tab-content hidden">
                 <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                        <h3 class="text-xl font-bold">🔍 SEO Scanner</h3>
-                        <div style="display:flex;gap:8px;">
-                            <button id="adminScanModeBtn_single" onclick="adminSetScanMode('single')" style="padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;">🔗 Single URL</button>
-                            <button id="adminScanModeBtn_batch" onclick="adminSetScanMode('batch')" style="padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;">🚀 Batch</button>
-                        </div>
+                        <h3 class="text-xl font-bold">SEO Scanner</h3>
                     </div>
-                    <div id="adminModeSingle">
-                        <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
-                            <input type="text" id="adminScanUrl" placeholder="https://example.com" style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;font-size:0.95rem;" onkeydown="if(event.key==='Enter')adminRunScan()">
-                            <button onclick="adminRunScan()" id="adminScanBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-weight:700;cursor:pointer;">🔍 Scan</button>
+                    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+                        <input type="text" id="adminScanUrl" placeholder="https://example.com" style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;font-size:0.95rem;" onkeydown="if(event.key==='Enter')adminRunScan()">
+                        <button onclick="adminRunScan()" id="adminScanBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-weight:700;cursor:pointer;">Scan</button>
+                    </div>
+                    <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                            <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                            <span id="adminScanProgressText" style="color:#a78bfa;">Scanning...</span>
                         </div>
-                        <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
-                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-                                <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-                                <span id="adminScanProgressText" style="color:#a78bfa;">Scanning...</span>
+                        <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;"><div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div></div>
+                    </div>
+                    <div id="adminScanResults" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- CONTENT LIFECYCLE TRACKER -->
+            <div id="tab-tracker" class="tab-content hidden">
+                <style>
+                    .tr-card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:18px; margin-bottom:12px; }
+                    .tr-stat { background:#0d1117; border:1px solid #1f2937; border-radius:8px; padding:12px 16px; }
+                    .tr-stat .val { font-size:1.4rem; font-weight:700; color:#f1f5f9; }
+                    .tr-stat .lbl { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+                    .tr-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; }
+                    .tr-badge.up { background:#052e16; color:#4ade80; }
+                    .tr-badge.down { background:#2d0a0a; color:#f87171; }
+                    .tr-badge.cited { background:#0c4a6e; color:#38bdf8; }
+                    .tr-badge.notcited { background:#1f2937; color:#6b7280; }
+                    .tr-badge.new { background:#1e1b4b; color:#a78bfa; }
+                    .tr-btn { background:transparent; border:1px solid #374151; border-radius:5px; padding:5px 12px; font-size:12px; font-weight:600; color:#9ca3af; cursor:pointer; }
+                    .tr-btn:hover { border-color:#6b7280; color:#e5e7eb; }
+                    .tr-btn.primary { background:#7e22ce; border-color:#7e22ce; color:#fff; }
+                    .tr-btn.primary:hover { background:#9333ea; }
+                    .tr-btn.green { border-color:#166534; color:#4ade80; }
+                    .tr-btn.danger { border-color:#7f1d1d; color:#f87171; }
+                    .tr-input { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:8px 12px; font-size:13px; color:#e5e7eb; outline:none; width:100%; }
+                    .tr-input:focus { border-color:#7e22ce; }
+                    .tr-select { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:8px 10px; font-size:13px; color:#e5e7eb; outline:none; }
+                    .tr-change-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+                    .tr-pulse { animation: tr-blink 2s infinite; }
+                    @keyframes tr-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+                    .tr-timeline { border-left:2px solid #1f2937; margin-left:12px; padding-left:18px; }
+                    .tr-timeline-item { position:relative; padding:10px 0; }
+                    .tr-timeline-item::before { content:''; position:absolute; left:-23px; top:14px; width:8px; height:8px; border-radius:50%; background:#374151; }
+                    .tr-timeline-item.sig::before { background:#a78bfa; }
+                </style>
+
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Content Lifecycle Tracker</h2>
+                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">Track Google position, AI Overview citations, and content changes over time</p>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="loadTrackerPages()" class="tr-btn" id="trRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
+                        <button onclick="openAddPageModal()" class="tr-btn primary">+ Add URL</button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+                    <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">AI Overview cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
+                </div>
+
+                <!-- Pages list -->
+                <div id="trPagesList"></div>
+
+                <!-- Add URL modal -->
+                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(580px,95vw);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="font-weight:700;font-size:1rem;">Add URL to Tracker</h3>
+                            <button onclick="closeAddPageModal()" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:14px;">
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">URL (with slug) *</label>
+                                <input id="trAddUrl" type="url" class="tr-input" placeholder="https://yoursite.com/blog/your-article">
                             </div>
-                            <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;"><div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div></div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Target Keyword *</label>
+                                <input id="trAddKeyword" type="text" class="tr-input" placeholder="e.g. best SEO tools 2025">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Page Title</label>
+                                <input id="trAddTitle" type="text" class="tr-input" placeholder="Optional — auto-detected if empty">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Check Frequency</label>
+                                <select id="trAddFreq" class="tr-select" style="width:100%;">
+                                    <option value="1day">Daily (heavy usage)</option>
+                                    <option value="3days" selected>Every 3 days ← recommended</option>
+                                    <option value="1week">Weekly</option>
+                                    <option value="2weeks">Every 2 weeks (stable pages)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Paste Current HTML (optional — enables change detection)</label>
+                                <textarea id="trAddHtml" class="tr-input" rows="4" placeholder="Paste the current published HTML of this page..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:4px;">
+                                <button onclick="submitAddPage()" class="tr-btn primary" id="trAddSubmitBtn">Add & Run First Check</button>
+                                <button onclick="closeAddPageModal()" class="tr-btn">Cancel</button>
+                            </div>
                         </div>
-                        <div id="adminScanResults" style="display:none;"></div>
                     </div>
-                    <div id="adminModeBatch" style="display:none;"><p style="color:#6b7280;text-align:center;padding:40px;">Batch mode - use the Scanner UI for batch lead discovery.</p></div>
                 </div>
-            </div>
 
-            <!-- CAMPAIGNS -->
-            <div id="tab-campaigns" class="tab-content hidden">
-                <div style="background:linear-gradient(135deg,#0a0a1a,#0f1629);border:1px solid #1d4ed8;border-radius:16px;padding:28px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                        <h3 class="font-bold">🗺️ Sitemap Scanner</h3>
-                        <button onclick="loadCampaignsList()" style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e40af;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>
+                <!-- Changes popup -->
+                <div id="trChangesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trChangesModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 id="trChangesTitle" style="font-weight:700;">Changes & Recommendations</h3>
+                            <button onclick="document.getElementById('trChangesModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div id="trChangesBody"></div>
                     </div>
-                    <div id="campList" style="color:#6b7280;font-size:0.85rem;">Loading campaigns...</div>
                 </div>
-            </div>
 
-            <!-- NICHES -->
-            <div id="tab-niches" class="tab-content hidden">
-                <div style="background:#0a1a12;border:1px solid #065f46;border-radius:16px;padding:28px;">
-                    <h3 class="font-bold mb-4">🎯 Beste Niches voor ContentScale</h3>
-                    <p style="color:#6b7280;">Select niches to load into Scanner or Campaign tabs.</p>
-                    <div id="nicheGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:20px;"></div>
+                <!-- HTML update modal -->
+                <div id="trHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trHtmlModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="font-weight:700;">Update Page HTML</h3>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Paste the updated published HTML. The system will detect what changed and generate new recommendations.</p>
+                        <input type="hidden" id="trHtmlPageId">
+                        <textarea id="trHtmlContent" class="tr-input" rows="10" placeholder="Paste new HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                        <div style="display:flex;gap:10px;margin-top:14px;">
+                            <button onclick="submitHtmlUpdate()" class="tr-btn primary">Save & Re-check</button>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" class="tr-btn">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -18174,17 +18451,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='leaderboard') loadLeaderboard();
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
+            if (tab==='tracker') loadTrackerPages();
             if (tab==='messages') loadMessages();
             if (tab==='pending') loadPendingData();
-            if (tab==='emaillog') loadEmailLog();
-            if (tab==='niches') renderNiches();
+
+            
             if (tab==='enginecodes') loadEngineCodes();
             if (tab==='giveaccess') loadGiveAccess();
-            if (tab==='scanlog') loadScanLog();
-            if (tab==='campaigns') loadCampaignsList();
+            if (tab==='scanlog') { loadScanLog(); startScanLogAutoRefresh(); }
+            else { stopScanLogAutoRefresh(); }
+            
         }
 
-        function loadAllData() { loadLeaderboard(); loadFreelancers(); loadUsers(); }
+        function loadAllData() { loadLeaderboard(); loadFreelancers(); }
 
         function getFlag(code) {
             if (!code) return '🌐';
@@ -18314,36 +18593,137 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         async function loadUsers() {
+            const btn = document.getElementById('utRefreshBtn');
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Loading...';}
             try {
                 const data = await apiCall('/api/admin/users');
-                allUsers = data.users||[];
-                const total = allUsers.length, active = allUsers.filter(u=>u.is_activated).length;
+                allUsers = data.users || [];
                 const now = new Date();
-                const expiring = allUsers.filter(u => { if (!u.activated_until||!u.is_activated) return false; const d = Math.ceil((new Date(u.activated_until)-now)/86400000); return d>0&&d<=7; }).length;
-                document.getElementById('stat-total-users').textContent = total;
+                const active = allUsers.filter(u=>u.is_activated).length;
+                const expiring = allUsers.filter(u=>{
+                    if(!u.activated_until||!u.is_activated) return false;
+                    const d=Math.ceil((new Date(u.activated_until)-now)/86400000);
+                    return d>0&&d<=7;
+                }).length;
+                const bots = allUsers.filter(u=>u._ua?.is_bot).length;
+                const humans = allUsers.length - bots;
+                document.getElementById('stat-total-users').textContent = allUsers.length;
                 document.getElementById('stat-active-users').textContent = active;
                 document.getElementById('stat-expiring-users').textContent = expiring;
-                document.getElementById('stat-inactive-users').textContent = total-active;
-                if (!total) { document.getElementById('usersContainer').innerHTML='<p style="text-align:center;color:#9ca3af;">No users found.</p>'; return; }
-                document.getElementById('usersContainer').innerHTML = allUsers.map(u => {
-                    let badge = '<span style="background:#6b7280;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Inactive</span>';
-                    if (u.is_activated) {
-                        if (u.activated_until) {
-                            const d = Math.ceil((new Date(u.activated_until)-new Date())/86400000);
-                            if (d<=0) badge='<span style="background:#6b7280;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Expired</span>';
-                            else if (d<=7) badge='<span style="background:#f59e0b;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Expiring Soon</span>';
-                            else badge='<span style="background:#10b981;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Active</span>';
-                        } else badge='<span style="background:#10b981;color:white;padding:2px 12px;border-radius:9999px;font-size:0.75rem;">Active</span>';
-                    }
-                    return '<div style="background:#1f2937;border:1px solid #374151;border-radius:0.75rem;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">' +
-                        '<div style="display:flex;align-items:center;gap:12px;flex:1;"><input type="checkbox" onchange="toggleSelection(&apos;users&apos;,&apos;'+u.id+'&apos;)">' +
-                        '<div><div style="font-weight:600;">'+(u.ip_address||'Unknown')+'</div>' +
-                        '<div style="font-size:0.75rem;color:#9ca3af;">ID: '+u.id.substring(0,8)+'... | '+new Date(u.created_at).toLocaleDateString()+'</div></div></div>' +
-                        '<div style="display:flex;align-items:center;gap:8px;">'+badge+
-                        (u.is_activated?'<button onclick="extendUserAccess(&apos;'+u.id+'&apos;)" style="color:#60a5fa;background:none;border:none;cursor:pointer;font-size:0.75rem;">Extend</button>':'<button onclick="activateSingleUser(&apos;'+u.id+'&apos;)" style="color:#4ade80;background:none;border:none;cursor:pointer;font-size:0.75rem;">Activate</button>')+
-                        '<button onclick="openMessageModal(&apos;single&apos;,&apos;'+u.id+'&apos;)" style="color:#60a5fa;background:none;border:none;cursor:pointer;"><i class="fas fa-envelope"></i></button></div></div>';
-                }).join('');
-            } catch(e) { console.error('Failed to load users:', e); }
+                document.getElementById('stat-inactive-users').textContent = allUsers.length - active;
+                document.getElementById('stat-bot-users').textContent = bots;
+                document.getElementById('stat-human-users').textContent = humans;
+                renderUsers();
+            } catch(e) {
+                document.getElementById('usersContainer').innerHTML = '<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load users — '+e.message+'</td></tr>';
+            } finally {
+                if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
+            }
+        }
+
+        function renderUsers() {
+            const q = (document.getElementById('utSearch')?.value||'').toLowerCase();
+            const statusF = document.getElementById('utFilterStatus')?.value||'';
+            const typeF = document.getElementById('utFilterType')?.value||'';
+            const now = new Date();
+
+            const filtered = allUsers.filter(u => {
+                // type filter
+                if(typeF==='human' && u._ua?.is_bot) return false;
+                if(typeF==='bot' && !u._ua?.is_bot) return false;
+                // status filter
+                if(statusF) {
+                    const d = u.activated_until ? Math.ceil((new Date(u.activated_until)-now)/86400000) : -1;
+                    const isActive = u.is_activated && d > 0;
+                    const isExpiring = isActive && d <= 7;
+                    if(statusF==='active' && (!isActive||isExpiring)) return false;
+                    if(statusF==='expiring' && !isExpiring) return false;
+                    if(statusF==='inactive' && isActive) return false;
+                }
+                // text search
+                if(q) {
+                    const hay = [u.ip_address, u.country, u.country_code, u.user_agent].filter(Boolean).join(' ').toLowerCase();
+                    if(!hay.includes(q)) return false;
+                }
+                return true;
+            });
+
+            const tbody = document.getElementById('usersContainer');
+            if(!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7280;padding:40px;">No users match your filters</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(u => {
+                const d = u.activated_until ? Math.ceil((new Date(u.activated_until)-now)/86400000) : -1;
+                const isActive = u.is_activated && d > 0;
+                const isExpiring = isActive && d <= 7;
+
+                // Status badge
+                let statusBadge;
+                if(isExpiring) statusBadge = '<span class="ut-badge" style="background:#2d1f00;color:#fbbf24;">Expiring '+d+'d</span>';
+                else if(isActive) statusBadge = '<span class="ut-badge" style="background:#052e16;color:#4ade80;">Active</span>';
+                else statusBadge = '<span class="ut-badge" style="background:#1f2937;color:#6b7280;">Inactive</span>';
+
+                // Type badge
+                const ua = u._ua || {is_bot:true, label:'Unknown', icon:'❓'};
+                const typeBadge = ua.is_bot
+                    ? '<span class="ut-badge" style="background:#2d0a0a;color:#f87171;">'+ua.icon+' '+ua.label+'</span>'
+                    : '<span class="ut-badge" style="background:#1e1b4b;color:#a78bfa;">'+ua.icon+' '+ua.label+'</span>';
+
+                // Country flag (using flag emoji from country code)
+                const flag = u.country_code ? String.fromCodePoint(...[...u.country_code.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65)) : '';
+                const country = u.country ? flag+' '+u.country : '<span style="color:#4b5563;">—</span>';
+
+                // Browser extract from UA
+                let browser = '—';
+                if(u.user_agent) {
+                    const ua2 = u.user_agent;
+                    if(ua2.includes('Edg/')) browser = 'Edge';
+                    else if(ua2.includes('Chrome/')) browser = 'Chrome';
+                    else if(ua2.includes('Firefox/')) browser = 'Firefox';
+                    else if(ua2.includes('Safari/') && !ua2.includes('Chrome')) browser = 'Safari';
+                    else if(ua2.includes('curl')) browser = 'curl';
+                    else if(ua2.includes('python')) browser = 'Python';
+                    else if(ua2.includes('bot')||ua2.includes('Bot')) browser = ua2.substring(0,30);
+                    else browser = ua2.substring(0,30)+'…';
+                    // Mobile OS
+                    if(ua2.includes('Android')) browser += ' · Android';
+                    else if(ua2.includes('iPhone')||ua2.includes('iPad')) browser += ' · iOS';
+                    else if(ua2.includes('Windows')) browser += ' · Win';
+                    else if(ua2.includes('Mac')) browser += ' · Mac';
+                }
+
+                // Last seen
+                const lastSeen = u.last_seen_at ? getTimeAgo(new Date(u.last_seen_at)) : (u.last_scan_at ? getTimeAgo(new Date(u.last_scan_at)) : '—');
+                const joined = new Date(u.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+                // Actions
+                const actionBtn = isActive
+                    ? '<button onclick="extendUserAccess(&apos;'+u.id+'&apos;)" class="ut-action">Extend</button>'
+                    : '<button onclick="activateSingleUser(&apos;'+u.id+'&apos;)" class="ut-action green">Activate</button>';
+
+                return '<tr>'
+                    +'<td><input type="checkbox" onchange="toggleSelection(&apos;users&apos;,&apos;'+u.id+'&apos;)" '+(selectedIds.users.has(u.id)?'checked':'')+'></td>'
+                    +'<td>'+typeBadge+'</td>'
+                    +'<td style="font-family:monospace;font-size:12px;color:#60a5fa;">'+( u.ip_address||'—')+'</td>'
+                    +'<td style="font-size:12px;white-space:nowrap;">'+country+'</td>'
+                    +'<td style="font-size:11px;color:#9ca3af;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(u.user_agent||'')+'">'+browser+'</td>'
+                    +'<td>'+statusBadge+'</td>'
+                    +'<td style="font-size:12px;color:#9ca3af;text-align:center;">'+(u.scan_count||0)+'</td>'
+                    +'<td style="font-size:12px;color:#9ca3af;white-space:nowrap;">'+lastSeen+'</td>'
+                    +'<td style="font-size:12px;color:#6b7280;white-space:nowrap;">'+joined+'</td>'
+                    +'<td style="display:flex;gap:6px;align-items:center;">'+actionBtn
+                        +'<button onclick="openMessageModal(&apos;single&apos;,&apos;'+u.id+'&apos;)" class="ut-action" title="Message"><i class="fas fa-envelope"></i></button>'
+                        +'<button onclick="deleteSingleUser(&apos;'+u.id+'&apos;)" class="ut-action red" title="Delete">✕</button>'
+                    +'</td>'
+                    +'</tr>';
+            }).join('');
+        }
+
+        async function deleteSingleUser(id) {
+            if(!confirm('Delete this user?')) return;
+            try { await apiCall('/api/admin/users/'+id,'DELETE'); allUsers=allUsers.filter(u=>u.id!==id); renderUsers(); } catch(e) { alert('Error: '+e.message); }
         }
 
         async function activateSingleUser(id) { try { await apiCall('/api/admin/users/'+id+'/activate','POST',{days:7}); loadUsers(); } catch(e) { alert('Error: '+e.message); } }
@@ -18445,109 +18825,166 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?'📊 Show Rankings 16+':'📊 Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'▼':'▲'; }
 
         let allEmailLogs = [];
-        async function loadEmailLog() {
+
+        async function loadScanLog(silent=false) {
+            if(!silent){const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Loading...';}}
             try {
-                const stats = await apiCall('/api/admin/email-stats');
-                if (stats.success) {
-                    document.getElementById('statSentToday').textContent = stats.sentToday;
-                    document.getElementById('statRemaining').textContent = stats.remainingToday;
-                    document.getElementById('statQueued').textContent = stats.queued;
-                    document.getElementById('statTotal').textContent = stats.totalSent;
-                    document.getElementById('statLimitLabel').textContent = stats.sentToday+' / '+stats.dailyLimit;
-                    document.getElementById('statProgressBar').style.width = Math.min(100,Math.round(stats.sentToday/stats.dailyLimit*100))+'%';
+                const data = await apiCall('/api/admin/scan-log?limit=1000');
+                if (data.success) {
+                    const newIds = new Set(data.scans.map(s=>s.id));
+                    const brand_new = silent ? data.scans.filter(s=>!slSeenIds.has(s.id)) : [];
+                    allScanLogs = data.scans; slSeenIds = newIds;
+                    filterScanLog(); updateSlStats();
+                    const nb=document.getElementById('scanNewBadge');
+                    if(brand_new.length&&silent&&nb){nb.textContent='+'+brand_new.length+' new';nb.style.display='inline';setTimeout(()=>nb.style.display='none',8000);}
                 }
-            } catch(e) { console.warn('Email stats failed'); }
-            try {
-                const data = await apiCall('/api/admin/email-log?limit=200');
-                if (data.success) { allEmailLogs=data.emails; renderEmailLog(allEmailLogs); }
-            } catch(e) { document.getElementById('emailLogBody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#f87171;padding:20px;">Error loading email log</td></tr>'; }
+            } catch(e) {
+                document.getElementById('scanLogBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</td></tr>';
+            } finally {
+                const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
+            }
         }
 
-        function renderEmailLog(emails) {
-            const tbody = document.getElementById('emailLogBody');
-            if (!emails.length) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:20px;">No emails sent yet.</td></tr>'; return; }
-            tbody.innerHTML = emails.map(e => {
-                const dt = new Date(e.sent_at||e.created_at);
-                const score = e.score?'<span style="color:'+(e.score>=70?'#4ade80':e.score>=50?'#fbbf24':'#f87171')+';font-weight:700;">'+e.score+'</span>':'—';
-                return '<tr style="border-bottom:1px solid #1f2937;">' +
-                    '<td style="padding:8px;color:#9ca3af;font-size:0.75rem;white-space:nowrap;">'+dt.toLocaleDateString('nl-NL',{day:'2-digit',month:'short'})+'<br>'+dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})+'</td>' +
-                    '<td style="padding:8px;">'+( e.to_email||e.email||e.recipient_email||'—')+'</td>' +
-                    '<td style="padding:8px;color:#d1d5db;">'+(e.business_name||'—')+'</td>' +
-                    '<td style="padding:8px;">'+score+'</td>' +
-                    '<td style="padding:8px;color:#9ca3af;font-size:0.75rem;">'+(e.template_type||'—')+'</td>' +
-                    '<td style="padding:8px;">'+(e.business_url?'<a href="'+e.business_url+'" target="_blank" style="color:#60a5fa;">link</a>':'—')+'</td></tr>';
-            }).join('');
+        function updateSlStats() {
+            const s=allScanLogs;
+            const withEmail=s.filter(x=>x.email_status==='has_email').length;
+            const scores=s.filter(x=>x.score!==null).map(x=>x.score);
+            const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+            const today=new Date().toDateString();
+            const todayCount=s.filter(x=>new Date(x.created_at).toDateString()===today).length;
+            const bulkCount=s.filter(x=>(x.source||'single')==='bulk').length;
+            const el=id=>document.getElementById(id);
+            if(el('slStatTotal'))el('slStatTotal').textContent=s.length.toLocaleString();
+            if(el('slStatEmails'))el('slStatEmails').textContent=withEmail.toLocaleString();
+            if(el('slStatAvgScore'))el('slStatAvgScore').textContent=avg||'—';
+            if(el('slStatToday'))el('slStatToday').textContent=todayCount.toLocaleString();
+            if(el('slStatBulk'))el('slStatBulk').textContent=bulkCount+' / '+(s.length-bulkCount);
+            if(el('scanLogCount'))el('scanLogCount').textContent=s.length+' scans';
         }
 
-        function filterEmailLog() { const q=document.getElementById('emailLogSearch').value.toLowerCase(); if (!q){renderEmailLog(allEmailLogs);return;} renderEmailLog(allEmailLogs.filter(e=>(e.to_email||e.email||'').toLowerCase().includes(q)||(e.business_name||'').toLowerCase().includes(q))); }
-
-        function exportEmailLog() {
-            const rows=[['Date','Time','To Email','Business','Score','Type','URL']];
-            allEmailLogs.forEach(e=>{const dt=new Date(e.sent_at||e.created_at);rows.push([dt.toLocaleDateString('nl-NL'),dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}),e.to_email||e.email||'',e.business_name||'',e.score||'',e.template_type||'',e.business_url||'']);});
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
-            const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='email-log-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
+        function filterScanLog() {
+            const q=(document.getElementById('slSearch')?.value||'').toLowerCase();
+            const src=document.getElementById('slFilterSource')?.value||'';
+            const em=document.getElementById('slFilterEmail')?.value||'';
+            const sc=document.getElementById('slFilterScore')?.value||'';
+            filteredScanLogs=allScanLogs.filter(s=>{
+                if(q&&!['business_name','business_url','email_found','city','niche'].some(k=>String(s[k]||'').toLowerCase().includes(q)))return false;
+                if(src&&(s.source||'single')!==src)return false;
+                if(em&&s.email_status!==em)return false;
+                if(sc){const sv=s.score||0;if(sc==='0_50'&&sv>=50)return false;else if(sc!=='0_50'&&sv<parseInt(sc))return false;}
+                return true;
+            });
+            sortAndRenderScanLog();
         }
 
-        let allScanLogs=[], selectedScanIds=new Set();
-        async function loadScanLog() {
-            try {
-                const data = await apiCall('/api/admin/scan-log?limit=500');
-                if (data.success) { allScanLogs=data.scans; renderScanLog(allScanLogs); document.getElementById('scanLogCount').textContent=allScanLogs.length+' scans'; }
-            } catch(e) { document.getElementById('scanLogBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:#f87171;padding:20px;">Failed to load scan log</td></tr>'; }
+        function sortScanLog(field) {
+            if(slSortField===field)slSortDir=slSortDir==='asc'?'desc':'asc';
+            else{slSortField=field;slSortDir='desc';}
+            sortAndRenderScanLog();
         }
 
-        function renderScanLog(scans) {
+        function sortAndRenderScanLog() {
+            const d=slSortDir==='asc'?1:-1;
+            filteredScanLogs.sort((a,b)=>{
+                const av=a[slSortField]||'', bv=b[slSortField]||'';
+                return typeof av==='number'?(av-bv)*d:String(av).localeCompare(String(bv))*d;
+            });
+            slPage=0; renderScanLogPage();
+        }
+
+        function renderScanLogPage() {
             const tbody=document.getElementById('scanLogBody');
-            if (!scans.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#6b7280;padding:20px;">No scans.</td></tr>';return;}
-            tbody.innerHTML=scans.map(s=>{
+            const start=slPage*slPageSize, chunk=filteredScanLogs.slice(start,start+slPageSize);
+            if(!chunk.length){
+                tbody.innerHTML='<tr><td colspan="10" class="sl-empty"><i class="fas fa-search" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px;"></i>'+(allScanLogs.length?'No results match your filters':'No scans yet')+'</td></tr>';
+                document.getElementById('slPagination').innerHTML=''; return;
+            }
+            const now=Date.now();
+            tbody.innerHTML=chunk.map(s=>{
+                const isNew=(now-new Date(s.created_at).getTime())<3600000;
                 const dt=new Date(s.created_at);
-                const ds=dt.toLocaleDateString('nl-NL',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-                const sv=s.score!==null?s.score:null;
-                const sc=sv===null?'#9ca3af':sv>=85?'#4ade80':sv>=70?'#a3e635':sv>=50?'#fbbf24':'#f87171';
-                const score=sv!==null?'<span style="color:'+sc+';font-weight:700;">'+sv+'</span>':'—';
-                const badge=s.email_status==='has_email'?'<span style="background:#0f2d1a;color:#4ade80;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✉ Found</span>':'<span style="background:#1c1917;color:#9ca3af;padding:2px 7px;border-radius:99px;font-size:0.7rem;">✗ None</span>';
-                const urlD=s.business_url?'<a href="'+s.business_url+'" target="_blank" style="color:#60a5fa;font-size:0.75rem;">'+s.business_url+'</a>':'—';
-                return '<tr style="border-bottom:1px solid #1f2937;">' +
-                    '<td style="padding:6px;"><input type="checkbox" '+(selectedScanIds.has(String(s.id))?'checked':'')+' onchange="toggleScanRow('+s.id+',this.checked)"></td>' +
-                    '<td style="padding:6px;color:#9ca3af;font-size:0.72rem;white-space:nowrap;">'+ds+'</td>' +
-                    '<td style="padding:6px;font-size:0.65rem;color:#a78bfa;">'+(s.source||'single')+'</td>' +
-                    '<td style="padding:6px;max-width:260px;"><div style="font-weight:600;">'+(s.business_name||'<span style="color:#6b7280;">No name</span>')+'</div>'+urlD+'</td>' +
-                    '<td style="padding:6px;">'+score+'</td>' +
-                    '<td style="padding:6px;font-size:0.78rem;">'+(s.city||'—')+'</td>' +
-                    '<td style="padding:6px;color:#60a5fa;font-size:0.75rem;">'+(s.email_found||'—')+'</td>' +
-                    '<td style="padding:6px;">'+badge+'</td>' +
-                    '<td style="padding:6px;"><button onclick="deleteSingleScan('+s.id+',this)" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;">🗑</button></td></tr>';
+                const timeAgo=getTimeAgo(dt);
+                const fullDate=dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+                const sv=s.score;
+                const [scoreColor,scoreBg]=sv===null?['#6b7280','#1f2937']:sv>=85?['#4ade80','#052e16']:sv>=70?['#a3e635','#1a2e05']:sv>=50?['#fbbf24','#2d1f00']:['#f87171','#2d0a0a'];
+                const score=sv!==null?'<span class="sl-score-pill" style="color:'+scoreColor+';background:'+scoreBg+';">'+sv+'</span>':'<span style="color:#4b5563;">—</span>';
+                const src=s.source||'single';
+                const srcColor=src==='bulk'?'#93c5fd':src==='discover'?'#86efac':'#c4b5fd';
+                const srcBg=src==='bulk'?'#0c2340':src==='discover'?'#0a2010':'#1e1b4b';
+                const emailBadge=s.email_status==='has_email'?'<span style="color:#4ade80;font-size:12px;">'+( s.email_found||'Found')+'</span>':'<span style="color:#4b5563;font-size:12px;">—</span>';
+                const loc=[s.city,s.country].filter(Boolean).join(', ')||'—';
+                const urlShort=s.business_url?s.business_url.replace(/^https?:[\/][\/](www\.)?/,'').split('/')[0]:'';
+                return '<tr class="'+(isNew?'sl-new':'')+'" style="border-bottom:1px solid #0d1117;">'
+                    +'<td style="padding:10px 12px;"><input type="checkbox" '+(selectedScanIds.has(String(s.id))?'checked':'')+' onchange="toggleScanRow('+s.id+',this.checked)"></td>'
+                    +'<td style="padding:10px 4px;">'+(isNew?'<span class="sl-new-dot" title="New"></span>':'')+'</td>'
+                    +'<td style="padding:10px 12px;white-space:nowrap;" title="'+fullDate+'">'
+                        +'<div style="font-size:12px;color:#e5e7eb;font-weight:500;">'+timeAgo+'</div>'
+                        +'<div style="font-size:11px;color:#6b7280;">'+dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+'</div></td>'
+                    +'<td style="padding:10px 12px;"><span class="sl-src-badge" style="color:'+srcColor+';background:'+srcBg+';">'+src+'</span></td>'
+                    +'<td style="padding:10px 12px;max-width:220px;">'
+                        +'<div style="font-weight:600;font-size:13px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(s.business_name||'<span style="color:#4b5563;">—</span>')+'</div>'
+                        +(urlShort?'<a href="'+s.business_url+'" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none;opacity:.8;">'+urlShort+'</a>':'')+'</td>'
+                    +'<td style="padding:10px 12px;">'+score+'</td>'
+                    +'<td style="padding:10px 12px;font-size:12px;color:#9ca3af;white-space:nowrap;">'+loc+'</td>'
+                    +'<td style="padding:10px 12px;">'+emailBadge+'</td>'
+                    +'<td style="padding:10px 12px;font-size:11px;color:#6b7280;">'+(s.niche||'—')+'</td>'
+                    +'<td style="padding:10px 12px;"><button onclick="deleteSingleScan('+s.id+',this)" class="sl-action-btn danger" style="padding:4px 8px;font-size:11px;">✕</button></td>'
+                    +'</tr>';
             }).join('');
+            const total=filteredScanLogs.length, pages=Math.ceil(total/slPageSize);
+            const pag=document.getElementById('slPagination');
+            if(pag){pag.innerHTML=pages>1?'<span>Showing '+(start+1)+'–'+Math.min(start+slPageSize,total)+' of '+total+'</span><div style="display:flex;gap:6px;">'+(slPage>0?'<button onclick="slChangePage(-1)" class="sl-action-btn" style="padding:3px 10px;">← Prev</button>':'')+'<span style="align-self:center;">Page '+(slPage+1)+'/'+pages+'</span>'+(slPage<pages-1?'<button onclick="slChangePage(1)" class="sl-action-btn" style="padding:3px 10px;">Next →</button>':'')+'</div>':'';}
+        }
+
+        function slChangePage(dir){slPage=Math.max(0,slPage+dir);renderScanLogPage();}
+
+        function getTimeAgo(dt) {
+            const s=Math.floor((Date.now()-dt.getTime())/1000);
+            if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';
+            if(s<86400)return Math.floor(s/3600)+'h ago';if(s<604800)return Math.floor(s/86400)+'d ago';
+            return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
         }
 
         function toggleScanRow(id,checked){if(checked)selectedScanIds.add(String(id));else selectedScanIds.delete(String(id));updateScanExportBtn();}
-        function updateScanExportBtn(){const btn=document.getElementById('exportScanBtn');const n=selectedScanIds.size;if(btn)btn.textContent=n>0?'⬇ Export '+n+' selected':'⬇ Export CSV';}
+        function toggleAllScans(checked){filteredScanLogs.slice(slPage*slPageSize,(slPage+1)*slPageSize).forEach(s=>checked?selectedScanIds.add(String(s.id)):selectedScanIds.delete(String(s.id)));updateScanExportBtn();renderScanLogPage();}
+        function updateScanExportBtn(){const btn=document.getElementById('exportScanBtn');const n=selectedScanIds.size;if(btn)btn.textContent=n>0?'Export '+n+' selected':'Export CSV';}
 
         function exportScanLog(){
             const toExport=allScanLogs.filter(s=>selectedScanIds.has(String(s.id)));
-            if(!toExport.length){alert('Selecteer eerst scans met de checkboxes.');return;}
-            const rows=[['first_name','business_name','email','website','score','city','country','scan_date']];
-            toExport.forEach(s=>{let fn=s.business_name?s.business_name.split(' ')[0]:'';fn=fn.charAt(0).toUpperCase()+fn.slice(1).toLowerCase();rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',new Date(s.created_at).toLocaleDateString('nl-NL')]);});
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
-            const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scan-export-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+            if(!toExport.length){alert('Select scans first.');return;}
+            const rows=[['first_name','business_name','email','website','score','city','country','niche','source','scan_date','scan_time']];
+            toExport.forEach(s=>{
+                let fn=s.business_name?s.business_name.split(' ')[0]:'';fn=fn.charAt(0).toUpperCase()+fn.slice(1).toLowerCase();
+                const dt=new Date(s.created_at);
+                rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',s.niche||'',s.source||'single',dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})]);
+            });
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+            const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scans-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
         }
 
         async function bulkDeleteScans(){
-            const ids=Array.from(selectedScanIds);if(!ids.length){alert('Select scans first.');return;}if(!confirm('Permanently delete '+ids.length+' scan(s)?'))return;
+            const ids=Array.from(selectedScanIds);if(!ids.length){alert('Select scans first.');return;}if(!confirm('Delete '+ids.length+' scan(s)?'))return;
             try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids})});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
         }
 
         async function deleteSingleScan(id,btn){
-            if(!confirm('Delete this scan?'))return;
-            if(btn){btn.disabled=true;btn.textContent='⏳';}
+            if(!confirm('Delete this scan?'))return;if(btn){btn.disabled=true;btn.textContent='...';}
             try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids:[id]})});const d=await r.json();
-            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);renderScanLog(allScanLogs);}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='🗑';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='🗑';}}
+            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);filterScanLog();updateSlStats();}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='✕';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='✕';}}
         }
 
         async function deleteAllScans(){
-            if(!confirm('⚠️ Delete ALL scans? This cannot be undone.'))return;
-            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
+            if(!confirm('Delete ALL scans permanently?'))return;
+            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');allScanLogs=[];filteredScanLogs=[];selectedScanIds.clear();updateScanExportBtn();filterScanLog();updateSlStats();}catch(e){alert('❌ '+e.message);}
         }
+
+        function startScanLogAutoRefresh(){
+            stopScanLogAutoRefresh();
+            slAutoRefreshTimer=setInterval(()=>{
+                if(document.getElementById('tab-scanlog')&&!document.getElementById('tab-scanlog').classList.contains('hidden')){loadScanLog(true);}
+            },30000);
+        }
+        function stopScanLogAutoRefresh(){if(slAutoRefreshTimer){clearInterval(slAutoRefreshTimer);slAutoRefreshTimer=null;}}
 
         let adminLastScanResult=null;
         function adminSetScanMode(mode){
@@ -18573,26 +19010,336 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }catch(e){clearInterval(interval);prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';alert('Scan failed: '+e.message);}
         }
 
-        async function loadCampaignsList(){
-            const el=document.getElementById('campList');if(!el)return;
-            try{const r=await fetch('/api/campaign',{headers:{'x-admin-key':currentAdminId}});const data=await r.json();
-            if(!data.success||!data.campaigns.length){el.textContent='No campaigns yet.';return;}
-            el.innerHTML=data.campaigns.map(c=>'<div style="background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:700;color:#e5e7eb;">'+c.name+'</div><div style="font-size:0.72rem;color:#6b7280;">'+c.totalDomains+' domains · '+c.doneDomains+'/'+c.totalDomains+' done</div></div><span style="color:'+(c.status==='done'?'#4ade80':c.status==='running'?'#60a5fa':'#9ca3af')+';">'+c.status+'</span></div>').join('');}
-            catch(e){el.textContent='Error loading campaigns.';}
+        async function loadCampaignsList(){} // removed
+
+
+        // ── CONTENT LIFECYCLE TRACKER JS ────────────────────────────────────────
+        let allTrackerPages = [];
+        let _trProfileId = null;
+
+        async function loadTrackerPages() {
+            const btn = document.getElementById('trRefreshBtn');
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Refreshing...';}
+            try {
+                const data = await apiCall('/api/tracker/pages' + (_trProfileId ? '?profile_id='+_trProfileId : ''));
+                allTrackerPages = data.pages || [];
+                renderTrackerStats();
+                renderTrackerPages();
+            } catch(e) {
+                document.getElementById('trPagesList').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</div>';
+            } finally {
+                if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
+            }
         }
 
-        let selectedNiches=new Set();
-        const NICHES_DATA=[
-            {category:'⚖️ Legal & Finance',niches:[{apify:'law firm',name:'Law firm'},{apify:'accountant',name:'Accountant'}]},
-            {category:'🏥 Health & Medical',niches:[{apify:'physiotherapist',name:'Physiotherapist'},{apify:'dentist',name:'Dentist'}]},
-        ];
-
-        function renderNiches(){
-            const grid=document.getElementById('nicheGrid');if(!grid)return;
-            grid.innerHTML=NICHES_DATA.map(cat=>'<div style="background:#0d1f14;border:1px solid #065f46;border-radius:12px;padding:16px;"><div style="font-weight:800;color:#6ee7b7;margin-bottom:12px;">'+cat.category+'</div>'+
-                cat.niches.map(n=>'<div onclick="toggleNiche(&apos;'+n.apify+'&apos;)" style="padding:10px;border-radius:8px;cursor:pointer;background:'+(selectedNiches.has(n.apify)?'#052e16':'#0d1f14')+';border:1px solid '+(selectedNiches.has(n.apify)?'#16a34a':'#064e3b')+';margin-bottom:6px;"><span style="color:#e5e7eb;">'+n.name+'</span>'+(selectedNiches.has(n.apify)?' ✅':'')+'</div>').join('')+'</div>').join('');
+        function renderTrackerStats() {
+            const pages = allTrackerPages;
+            const withLatest = pages.filter(p => p.latest_snapshot);
+            const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
+            const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
+            const today = new Date().toDateString();
+            const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
+            const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
+            const el = id => document.getElementById(id);
+            if(el('trStatPages')) el('trStatPages').textContent = pages.length;
+            if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
+            if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
+            if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
+            if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
         }
-        function toggleNiche(apify){if(selectedNiches.has(apify))selectedNiches.delete(apify);else selectedNiches.add(apify);renderNiches();}
+
+        function renderTrackerPages() {
+            const el = document.getElementById('trPagesList');
+            if(!allTrackerPages.length) {
+                el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
+                return;
+            }
+            el.innerHTML = allTrackerPages.map(p => renderTrackerPageCard(p)).join('');
+        }
+
+        function renderTrackerPageCard(p) {
+            const snap = p.latest_snapshot;
+            const pending = parseInt(p.pending_changes||0);
+            const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks'};
+            const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '—';
+            const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
+
+            // Position pill
+            let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
+            if(snap?.google_position) {
+                const pos = snap.google_position;
+                const posColor = pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+                const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
+                posPill = '<span class="tr-badge" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;">#'+pos+'</span>';
+            }
+
+            // AI citation badges
+            const gBadge = snap
+                ? (snap.ai_google_overview_cited
+                    ? '<span class="tr-badge cited">✦ AI Overview cited</span>'
+                    : snap.ai_google_overview_found
+                        ? '<span class="tr-badge notcited">AI Overview — not cited</span>'
+                        : '<span class="tr-badge notcited">No AI Overview</span>')
+                : '<span class="tr-badge notcited">Not checked</span>';
+
+            const pBadge = snap
+                ? (snap.ai_perplexity_cited
+                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;">✦ Perplexity cited</span>'
+                    : '<span class="tr-badge notcited">Perplexity — not cited</span>')
+                : '';
+
+            const bBadge = snap
+                ? (snap.ai_bing_cited
+                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;">✦ Bing cited</span>'
+                    : '')
+                : '';
+
+            // Pending changes button
+            const safeTitle = (p.title||p.url||'').replace(/'/g,"\\'");
+            const changesBtn = pending > 0
+                ? '<button onclick="openChangesModal('+p.id+',\''+safeTitle+'\') " class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
+                : '';
+
+            const borderColor = p.is_active ? '#7e22ce' : '#374151';
+            const dotHtml = p.is_active
+                ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
+                : '<span class="tr-change-dot" style="background:#374151;"></span>';
+            const kwHtml = p.keyword ? '<span style="font-size:11px;color:#6b7280;margin-left:8px;">keyword: '+p.keyword+'</span>' : '';
+            const recsHtml = snap && snap.recommendations ? renderTrackerRecommendations(snap.recommendations, p.id) : '';
+            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';">'
+                +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
+                +'<div style="flex:1;min-width:0;">'
+                +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+                +dotHtml
+                +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
+                +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
+                +'</div>'
+                +'<div style="margin-bottom:8px;">'
+                +'<a href="'+p.url+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;">'+p.url+'</a>'
+                +kwHtml
+                +'</div>'
+                +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+                +posPill+gBadge+pBadge+bBadge
+                +'</div></div>'
+                +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
+                +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
+                +changesBtn
+                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'">Check now</button>'
+                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn">Update HTML</button>'
+                +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
+                +'</div>'
+                +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
+                +'Last checked: '+lastCheck+' · Next: '+nextCheck+' · '+(p.snapshot_count||0)+' snapshots'
+                +'</div></div></div>'
+                +recsHtml
+                +'</div>';
+        }
+
+        function renderTrackerRecommendations(recs, pageId) {
+            if(!recs||!recs.length) return '';
+            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
+            const rows = recs.slice(0,3).map(function(r) {
+                const pc = priorityColor[r.priority]||'#6b7280';
+                return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1f2937;">'
+                    +'<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:'+pc+'22;color:'+pc+';white-space:nowrap;margin-top:1px;">'+(r.priority||'').toUpperCase()+'</span>'
+                    +'<div style="flex:1;">'
+                    +'<div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+(r.title||'')+'</div>'
+                    +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+(r.action||'')+'</div>'
+                    +'</div></div>';
+            }).join('');
+            const moreRow = recs.length > 3 ? '<div style="font-size:11px;color:#6b7280;margin-top:6px;">+'+(recs.length-3)+' more — click See changes to view all</div>' : '';
+            return '<div style="margin-top:14px;padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;">'
+                +'<div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Latest Recommendations</div>'
+                +rows+moreRow+'</div>';
+        }
+
+        async function runManualCheck(pageId) {
+            const btn = document.getElementById('trCheckBtn_'+pageId);
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:4px;"></i>Checking...';}
+            try {
+                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
+                // Show running indicator — poll for result
+                let polls = 0;
+                const poll = setInterval(async () => {
+                    polls++;
+                    if(polls > 12) { clearInterval(poll); if(btn){btn.disabled=false;btn.textContent='Check now';} return; }
+                    const data = await apiCall('/api/tracker/pages?profile_id='+(_trProfileId||'')).catch(()=>null);
+                    if(data?.pages) {
+                        const updated = data.pages.find(p=>p.id===pageId);
+                        if(updated?.last_checked_at && new Date(updated.last_checked_at) > new Date(Date.now()-120000)) {
+                            clearInterval(poll);
+                            allTrackerPages = data.pages;
+                            renderTrackerStats();
+                            renderTrackerPages();
+                            if(btn){btn.disabled=false;btn.textContent='Check now';}
+                        }
+                    }
+                }, 10000);
+            } catch(e) {
+                alert('Check failed: '+e.message);
+                if(btn){btn.disabled=false;btn.textContent='Check now';}
+            }
+        }
+
+        async function openChangesModal(pageId, title) {
+            document.getElementById('trChangesTitle').textContent = 'Changes — '+title;
+            document.getElementById('trChangesBody').innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            document.getElementById('trChangesModal').style.display = 'flex';
+            try {
+                const [changesData, snapsData] = await Promise.all([
+                    apiCall('/api/tracker/pages/'+pageId+'/changes'),
+                    apiCall('/api/tracker/pages/'+pageId+'/snapshots')
+                ]);
+                const changes = changesData.changes || [];
+                const snaps = snapsData.snapshots || [];
+                if(!changes.length && !snaps.length) {
+                    document.getElementById('trChangesBody').innerHTML = '<p style="color:#6b7280;text-align:center;padding:30px;">No changes or snapshots yet. Run a check first.</p>';
+                    return;
+                }
+                renderChangesModal(changes, snaps, pageId);
+            } catch(e) {
+                document.getElementById('trChangesBody').innerHTML = '<p style="color:#f87171;">Error: '+e.message+'</p>';
+            }
+        }
+
+        function renderChangesModal(changes, snaps, pageId) {
+            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
+            const sigChanges = changes.filter(function(c){return c.is_significant;});
+            const latestSnap = snaps[0];
+            const recs = (latestSnap && latestSnap.recommendations) ? latestSnap.recommendations : [];
+
+            let html = '';
+
+            // History table
+            if(snaps.length) {
+                const rows = snaps.slice(0,10).map(function(s,i) {
+                    const prev = snaps[i+1];
+                    const posChange = (prev && prev.google_position && s.google_position) ? (prev.google_position - s.google_position) : null;
+                    const posArrow = posChange === null ? '' : posChange > 0
+                        ? '<span style="color:#4ade80;margin-left:4px;">↑'+posChange+'</span>'
+                        : posChange < 0 ? '<span style="color:#f87171;margin-left:4px;">↓'+Math.abs(posChange)+'</span>' : '';
+                    return '<tr style="border-bottom:1px solid #0d1117;">'
+                        +'<td style="padding:7px 10px;color:#9ca3af;">'+new Date(s.checked_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</td>'
+                        +'<td style="padding:7px 10px;font-weight:600;">'+(s.google_position?'#'+s.google_position:'—')+posArrow+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">✦ Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'</tr>';
+                }).join('');
+                html += '<div style="margin-bottom:20px;">'
+                    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:12px;">Position & Citation History</div>'
+                    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                    +'<thead><tr style="border-bottom:1px solid #1f2937;color:#6b7280;">'
+                    +'<th style="padding:6px 10px;text-align:left;">Date</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Position</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Google AI</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Perplexity</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Bing</th>'
+                    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+            }
+
+            // Significant changes
+            if(sigChanges.length) {
+                const changeRows = sigChanges.map(function(c) {
+                    const isGood = (c.change_type==='position'&&c.delta>0)||(c.change_type==='ai_citation'&&c.delta>0);
+                    const borderColor = isGood?'#4ade80':'#f87171';
+                    const doneBtn = !c.applied
+                        ? '<button onclick="markChangeApplied('+c.id+')" class="tr-btn" style="font-size:11px;padding:3px 10px;">Mark done</button>'
+                        : '<span style="font-size:11px;color:#4ade80;">✓ Applied</span>';
+                    return '<div style="padding:10px 12px;background:#0d1117;border-radius:6px;border-left:3px solid '+borderColor+';margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">'
+                        +'<div><div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+c.field_name.replace(/_/g,' ')+' — '+c.value_before+' → '+c.value_after+'</div>'
+                        +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+new Date(c.changed_at).toLocaleDateString('en-GB')+'</div></div>'
+                        +doneBtn+'</div>';
+                }).join('');
+                html += '<div style="margin-bottom:20px;">'
+                    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:10px;">Significant Changes</div>'
+                    +changeRows+'</div>';
+            }
+
+            // Recommendations
+            if(recs.length) {
+                const recRows = recs.map(function(r) {
+                    const pc = priorityColor[r.priority]||'#6b7280';
+                    return '<div style="padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;margin-bottom:8px;">'
+                        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                        +'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:'+pc+'22;color:'+pc+';">'+(r.priority||'').toUpperCase()+'</span>'
+                        +'<span style="font-size:13px;font-weight:600;color:#f1f5f9;">'+(r.title||'')+'</span>'
+                        +'</div>'
+                        +'<div style="font-size:12px;color:#9ca3af;margin-bottom:4px;">'+(r.action||'')+'</div>'
+                        +(r.expected_impact?'<div style="font-size:11px;color:#6b7280;">Expected: '+r.expected_impact+'</div>':'')
+                        +'</div>';
+                }).join('');
+                html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:10px;">What to Do Next</div>'+recRows+'</div>';
+            }
+
+            document.getElementById('trChangesBody').innerHTML = html || '<p style="color:#6b7280;text-align:center;">No data yet.</p>';
+        }
+
+        async function markChangeApplied(changeId) {
+            try {
+                await apiCall('/api/tracker/changes/'+changeId+'/apply','PATCH');
+                loadTrackerPages();
+            } catch(e) { alert('Error: '+e.message); }
+        }
+
+        function openAddPageModal() {
+            document.getElementById('trAddUrl').value='';
+            document.getElementById('trAddKeyword').value='';
+            document.getElementById('trAddTitle').value='';
+            document.getElementById('trAddHtml').value='';
+            document.getElementById('trAddFreq').value='3days';
+            document.getElementById('trAddModal').style.display='flex';
+        }
+        function closeAddPageModal() { document.getElementById('trAddModal').style.display='none'; }
+
+        async function submitAddPage() {
+            const url = document.getElementById('trAddUrl').value.trim();
+            const keyword = document.getElementById('trAddKeyword').value.trim();
+            if(!url) return alert('URL is required');
+            const btn = document.getElementById('trAddSubmitBtn');
+            btn.disabled=true; btn.textContent='Adding...';
+            try {
+                const data = await apiCall('/api/tracker/pages','POST',{
+                    url, keyword, title: document.getElementById('trAddTitle').value.trim()||null,
+                    html_content: document.getElementById('trAddHtml').value.trim()||null,
+                    check_frequency: document.getElementById('trAddFreq').value,
+                    profile_id: _trProfileId||null
+                });
+                closeAddPageModal();
+                if(data.page) {
+                    // Run first check immediately
+                    await apiCall('/api/tracker/pages/'+data.page.id+'/check','POST').catch(()=>{});
+                    await loadTrackerPages();
+                }
+            } catch(e) { alert('Error: '+e.message); }
+            finally { btn.disabled=false; btn.textContent='Add & Run First Check'; }
+        }
+
+        function openHtmlModal(pageId, currentHtml) {
+            document.getElementById('trHtmlPageId').value = pageId;
+            document.getElementById('trHtmlContent').value = '';
+            document.getElementById('trHtmlModal').style.display = 'flex';
+        }
+
+        async function submitHtmlUpdate() {
+            const pageId = document.getElementById('trHtmlPageId').value;
+            const html = document.getElementById('trHtmlContent').value.trim();
+            if(!html) return alert('Paste your updated HTML first');
+            try {
+                await apiCall('/api/tracker/pages/'+pageId,'PATCH',{ html_content: html });
+                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
+                document.getElementById('trHtmlModal').style.display='none';
+                setTimeout(loadTrackerPages, 3000);
+            } catch(e) { alert('Error: '+e.message); }
+        }
+
+        async function deleteTrackerPage(pageId) {
+            if(!confirm('Remove this page from tracking?')) return;
+            try {
+                await apiCall('/api/tracker/pages/'+pageId,'DELETE');
+                loadTrackerPages();
+            } catch(e) { alert('Error: '+e.message); }
+        }
 
         function showCreateEngineCode(){document.getElementById('createEngineCodeForm').style.display='block';}
 
@@ -18880,5 +19627,357 @@ app.get('/api/tracker/load', async (req, res) => {
   }
   res.json({ success: false, error: 'Not found: ' + key });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONTENT LIFECYCLE TRACKER — Pages, Snapshots, AI Checks, Position Tracking
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── CRUD: tracker pages ──────────────────────────────────────────────────────
+
+app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+  try {
+    const profileId = req.query.profile_id;
+    const q = profileId
+      ? `SELECT p.*, 
+           (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
+           (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
+           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes
+         FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`
+      : `SELECT p.*,
+           (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
+           (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
+           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes
+         FROM tracker_pages p ORDER BY p.created_at DESC`;
+    const r = profileId ? await pool.query(q, [profileId]) : await pool.query(q);
+    res.json({ success: true, pages: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+  const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days' } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'url required' });
+  try {
+    const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
+    const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
+    const r = await pool.query(
+      `INSERT INTO tracker_pages (profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7, NOW()) RETURNING *`,
+      [profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency]
+    );
+    res.json({ success: true, page: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
+  const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected } = req.body;
+  try {
+    const fields=[]; const vals=[]; let i=1;
+    if(url!==undefined){fields.push(`url=$${i++}`);vals.push(url);}
+    if(title!==undefined){fields.push(`title=$${i++}`);vals.push(title);}
+    if(keyword!==undefined){fields.push(`keyword=$${i++}`);vals.push(keyword);}
+    if(html_content!==undefined){fields.push(`html_content=$${i++}`);vals.push(html_content);}
+    if(check_frequency!==undefined){fields.push(`check_frequency=$${i++}`);vals.push(check_frequency);}
+    if(is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(!!is_active);}
+    if(gsc_connected!==undefined){fields.push(`gsc_connected=$${i++}`);vals.push(!!gsc_connected);}
+    if(!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Snapshots & change history for a page ───────────────────────────────────
+
+app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 50`,
+      [req.params.id]
+    );
+    res.json({ success: true, snapshots: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at DESC LIMIT 100`,
+      [req.params.id]
+    );
+    res.json({ success: true, changes: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE tracker_changes SET applied=TRUE, applied_at=NOW() WHERE id=$1`,
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Manual check trigger ─────────────────────────────────────────────────────
+
+app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [req.params.id]);
+    if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const page = r.rows[0];
+
+    // Run the check (non-blocking return — result stored in DB)
+    res.json({ success: true, message: 'Check started', page_id: page.id });
+
+    setImmediate(() => runTrackerCheck(page, resolveGeminiKey(req)).catch(e => console.warn('[tracker-check]', e.message)));
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Core check function ──────────────────────────────────────────────────────
+
+async function runTrackerCheck(page, geminiKey) {
+  const crypto = require('crypto');
+  const snapshot = {
+    page_id: page.id,
+    checked_at: new Date(),
+    html_hash: null,
+    google_position: null,
+    google_impressions: null,
+    ai_google_overview_found: false,
+    ai_google_overview_cited: false,
+    ai_google_overview_text: null,
+    ai_perplexity_found: false,
+    ai_perplexity_cited: false,
+    ai_perplexity_text: null,
+    ai_bing_found: false,
+    ai_bing_cited: false,
+    ai_bing_text: null,
+    recommendations: null,
+    score: null
+  };
+
+  // 1. Hash current HTML to detect changes
+  if(page.html_content) {
+    snapshot.html_hash = crypto.createHash('sha256').update(page.html_content).digest('hex').substring(0,16);
+  }
+
+  // 2. Check Google AI Overview (via SerpAPI-compatible endpoint or Puppeteer)
+  if(page.keyword) {
+    try {
+      // Use Puppeteer to search Google and check for AI Overview
+      const browser2 = browserInstance || await puppeteer.launch({ executablePath: require('puppeteer').executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
+      const pg = await browser2.newPage();
+      await pg.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await pg.goto('https://www.google.com/search?q='+encodeURIComponent(page.keyword)+'&hl=en&gl=us', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await new Promise(r => setTimeout(r, 2000));
+
+      const gResult = await pg.evaluate((pageUrl) => {
+        // AI Overview detection (Google SGE/AI Overview)
+        const aiSelectors = ['[data-attrid="SGEResult"]', '.YzKPF', '[jsname="rFBNVb"]', '.wDYxhc', '[data-sgai-box]', '.kno-result', '#rso .Jb0Zif'];
+        let aiText = '';
+        let aiFound = false;
+        for(const sel of aiSelectors) {
+          const el = document.querySelector(sel);
+          if(el && el.innerText && el.innerText.length > 50) { aiText = el.innerText.substring(0,800); aiFound = true; break; }
+        }
+        // Check if our URL is cited in AI overview
+        const aiCited = aiFound && !!document.querySelector('[data-attrid="SGEResult"] a[href*="'+pageUrl+'"], .YzKPF a[href*="'+pageUrl+'"]');
+        // Regular position — find our URL in organic results
+        const results = Array.from(document.querySelectorAll('#rso .g, #rso [data-hveid]'));
+        let position = null;
+        for(let i=0; i<results.length; i++) {
+          if(results[i].innerHTML && results[i].innerHTML.includes(pageUrl)) { position = i + 1; break; }
+        }
+        return { aiFound, aiCited, aiText, position };
+      }, page.url).catch(() => null);
+
+      await pg.close();
+
+      if(gResult) {
+        snapshot.ai_google_overview_found = gResult.aiFound;
+        snapshot.ai_google_overview_cited = gResult.aiCited;
+        snapshot.ai_google_overview_text = gResult.aiText || null;
+        snapshot.google_position = gResult.position;
+      }
+    } catch(e) { console.warn('[tracker] Google check failed:', e.message); }
+
+    // 3. Check Perplexity (public search, no API key needed)
+    try {
+      const pResp = await fetch('https://www.perplexity.ai/search?q='+encodeURIComponent(page.keyword), {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/1.0)' },
+        signal: AbortSignal.timeout(10000)
+      }).catch(() => null);
+      if(pResp && pResp.ok) {
+        const pText = await pResp.text();
+        const cited = pText.includes(page.url.replace(/^https?:\/\//, ''));
+        snapshot.ai_perplexity_found = pText.length > 500;
+        snapshot.ai_perplexity_cited = cited;
+        snapshot.ai_perplexity_text = cited ? 'URL found in Perplexity results' : null;
+      }
+    } catch(e) { console.warn('[tracker] Perplexity check failed:', e.message); }
+
+    // 4. Check Bing (Copilot/AI answers) 
+    try {
+      const bResp = await fetch('https://www.bing.com/search?q='+encodeURIComponent(page.keyword)+'&setlang=en', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        signal: AbortSignal.timeout(10000)
+      }).catch(() => null);
+      if(bResp && bResp.ok) {
+        const bText = await bResp.text();
+        const cited = bText.includes(page.url.replace(/^https?:\/\//, ''));
+        // Bing AI answer detected if it has certain markers
+        const bingAI = bText.includes('sydney-answer') || bText.includes('b_algo copilot') || bText.includes('copilot-answer');
+        snapshot.ai_bing_found = bingAI;
+        snapshot.ai_bing_cited = cited && bingAI;
+        if(cited) snapshot.ai_bing_text = 'URL found in Bing results';
+      }
+    } catch(e) { console.warn('[tracker] Bing check failed:', e.message); }
+  }
+
+  // 5. Generate recommendations via Gemini based on findings
+  if(geminiKey && (snapshot.google_position || snapshot.ai_google_overview_found !== undefined)) {
+    try {
+      const findings = [
+        snapshot.google_position ? `Google position: #${snapshot.google_position}` : 'Not found in Google top results',
+        snapshot.ai_google_overview_found ? (snapshot.ai_google_overview_cited ? '✅ CITED in Google AI Overview' : '⚠️ AI Overview exists but URL not cited') : '❌ No Google AI Overview for this keyword',
+        snapshot.ai_perplexity_cited ? '✅ CITED in Perplexity' : '❌ Not cited in Perplexity',
+        snapshot.ai_bing_cited ? '✅ CITED in Bing AI' : '❌ Not cited in Bing AI',
+      ].join('\n');
+
+      const prompt = `You are an SEO expert. Based on these findings for the page "${page.url}" targeting keyword "${page.keyword||'unknown'}", generate 3-5 specific, actionable recommendations to improve AI citation presence and Google ranking.
+
+CURRENT STATUS:
+${findings}
+
+Return ONLY a JSON array of recommendation objects. Each object must have:
+- title: short action title (max 8 words)  
+- priority: "high" | "medium" | "low"
+- action: specific instruction (1-2 sentences)
+- expected_impact: what this will improve
+
+Example format:
+[{"title":"Add FAQ schema markup","priority":"high","action":"Add FAQPage schema with 5 Q&As targeting the main keyword and related questions","expected_impact":"Increases chance of AI Overview citation by 40%"}]
+
+Return ONLY the JSON array, no other text.`;
+
+      const resp = await callGeminiWithFallback(geminiKey, {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
+      });
+      if(resp.ok) {
+        let recs = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        recs = recs.replace(/^```json\n?/i,'').replace(/```$/,'').trim();
+        try { snapshot.recommendations = JSON.parse(recs); } catch(e) {}
+      }
+    } catch(e) { console.warn('[tracker] Gemini recommendations failed:', e.message); }
+  }
+
+  // 6. Save snapshot
+  const snapR = await pool.query(
+    `INSERT INTO tracker_snapshots
+      (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
+       ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
+       recommendations,html_hash)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+    [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
+     snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
+     snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
+     snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null, snapshot.html_hash]
+  );
+  const snapId = snapR.rows[0].id;
+
+  // 7. Compare with previous snapshot — detect significant changes
+  const prevR = await pool.query(
+    `SELECT * FROM tracker_snapshots WHERE page_id=$1 AND id!=$2 ORDER BY checked_at DESC LIMIT 1`,
+    [page.id, snapId]
+  );
+
+  if(prevR.rows.length) {
+    const prev = prevR.rows[0];
+    const changes = [];
+
+    // Position change
+    if(snapshot.google_position !== null && prev.google_position !== null) {
+      const delta = prev.google_position - snapshot.google_position; // positive = moved up
+      if(Math.abs(delta) >= 3) { // significant = 3+ positions
+        changes.push({ change_type: 'position', field_name: 'google_position',
+          value_before: String(prev.google_position), value_after: String(snapshot.google_position),
+          delta, is_significant: true });
+      }
+    } else if(snapshot.google_position !== null && prev.google_position === null) {
+      changes.push({ change_type: 'position', field_name: 'google_position',
+        value_before: 'not ranked', value_after: String(snapshot.google_position),
+        delta: 0, is_significant: true });
+    }
+
+    // AI Overview citation gained/lost
+    if(snapshot.ai_google_overview_cited !== prev.ai_google_overview_cited) {
+      changes.push({ change_type: 'ai_citation', field_name: 'google_ai_overview',
+        value_before: prev.ai_google_overview_cited ? 'cited' : 'not cited',
+        value_after: snapshot.ai_google_overview_cited ? 'cited' : 'not cited',
+        delta: snapshot.ai_google_overview_cited ? 1 : -1, is_significant: true });
+    }
+
+    // Perplexity citation gained/lost
+    if(snapshot.ai_perplexity_cited !== prev.ai_perplexity_cited) {
+      changes.push({ change_type: 'ai_citation', field_name: 'perplexity',
+        value_before: prev.ai_perplexity_cited ? 'cited' : 'not cited',
+        value_after: snapshot.ai_perplexity_cited ? 'cited' : 'not cited',
+        delta: snapshot.ai_perplexity_cited ? 1 : -1, is_significant: true });
+    }
+
+    // Save all significant changes
+    for(const ch of changes) {
+      await pool.query(
+        `INSERT INTO tracker_changes (page_id,snapshot_id,change_type,field_name,value_before,value_after,delta,is_significant,recommendations)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [page.id, snapId, ch.change_type, ch.field_name, ch.value_before, ch.value_after,
+         ch.delta, ch.is_significant, snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null]
+      ).catch(()=>{});
+    }
+  }
+
+  // 8. Update page last_checked_at + schedule next check
+  const freqMap = { '1day': 1, '3days': 3, '1week': 7, '2weeks': 14 };
+  const days = freqMap[page.check_frequency] || 3;
+  await pool.query(
+    `UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NOW() + INTERVAL '${days} days' WHERE id=$1`,
+    [page.id]
+  ).catch(()=>{});
+
+  console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, AI Overview:${snapshot.ai_google_overview_cited}`);
+}
+
+// ── Automated scheduler — runs every hour, checks pages due for checking ──────
+
+let _trackerSchedulerTimer = null;
+function startTrackerScheduler() {
+  if(_trackerSchedulerTimer) return;
+  _trackerSchedulerTimer = setInterval(async () => {
+    if(!pool) return;
+    try {
+      const due = await pool.query(
+        `SELECT p.* FROM tracker_pages p WHERE p.is_active=TRUE AND p.next_check_at <= NOW() ORDER BY p.next_check_at ASC LIMIT 5`
+      );
+      for(const page of due.rows) {
+        console.log('[tracker-scheduler] Running check for:', page.url);
+        await runTrackerCheck(page, process.env.GEMINI_API_KEY).catch(e => console.warn('[tracker-scheduler]', e.message));
+        await new Promise(r => setTimeout(r, 5000)); // 5s between checks
+      }
+    } catch(e) { console.warn('[tracker-scheduler]', e.message); }
+  }, 60 * 60 * 1000); // every hour
+  console.log('[tracker-scheduler] Started');
+}
+
+// Start scheduler after DB is ready (called from startServer)
+setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
+
 
 startServer();
