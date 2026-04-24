@@ -18119,7 +18119,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <div id="trPagesList"></div>
 
                 <!-- Add URL modal -->
-                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
+                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
                     <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(580px,95vw);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                             <h3 style="font-weight:700;font-size:1rem;">Add URL to Tracker</h3>
