@@ -18824,7 +18824,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?'📊 Show Rankings 16+':'📊 Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'▼':'▲'; }
 
-        let allEmailLogs = [];
+        // Scan log state
+        let allScanLogs = [], filteredScanLogs = [], selectedScanIds = new Set();
+        let slSortField = 'created_at', slSortDir = 'desc', slPage = 0, slPageSize = 100;
+        let slSeenIds = new Set(), slAutoRefreshTimer = null;
 
         async function loadScanLog(silent=false) {
             if(!silent){const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Loading...';}}
