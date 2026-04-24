@@ -18958,7 +18958,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const dt=new Date(s.created_at);
                 rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',s.niche||'',s.source||'single',dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})]);
             });
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
             const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scans-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
         }
 
@@ -19849,7 +19849,7 @@ async function runTrackerCheck(page, geminiKey) {
         snapshot.ai_google_overview_found ? (snapshot.ai_google_overview_cited ? '✅ CITED in Google AI Overview' : '⚠️ AI Overview exists but URL not cited') : '❌ No Google AI Overview for this keyword',
         snapshot.ai_perplexity_cited ? '✅ CITED in Perplexity' : '❌ Not cited in Perplexity',
         snapshot.ai_bing_cited ? '✅ CITED in Bing AI' : '❌ Not cited in Bing AI',
-      ].join('\n');
+      ].join('\\n');
 
       const prompt = `You are an SEO expert. Based on these findings for the page "${page.url}" targeting keyword "${page.keyword||'unknown'}", generate 3-5 specific, actionable recommendations to improve AI citation presence and Google ranking.
 
