@@ -779,6 +779,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    )`);
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS gemini_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS claude_key TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS use_platform_keys BOOLEAN DEFAULT FALSE`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS owner_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    // Client progress tracking
    await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
@@ -1306,8 +1307,15 @@ const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 
 if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid' });
 const valid = await bcrypt.compare(password, result.rows[0].password_hash);
 if (!valid) return res.status(401).json({ success: false, error: 'Invalid' });
-const sessionToken = crypto.randomBytes(32).toString('hex');
-await pool.query('UPDATE super_admins SET session_token = $1 WHERE id = $2', [sessionToken, result.rows[0].id]);
+// Reuse existing token if present — never regenerate unless logout is called.
+// This keeps localStorage valid across server restarts and multiple devices.
+let sessionToken = result.rows[0].session_token;
+if (!sessionToken) {
+  sessionToken = crypto.randomBytes(32).toString('hex');
+  await pool.query('UPDATE super_admins SET session_token = $1, last_login = NOW() WHERE id = $2', [sessionToken, result.rows[0].id]);
+} else {
+  await pool.query('UPDATE super_admins SET last_login = NOW() WHERE id = $1', [result.rows[0].id]);
+}
 res.json({ success: true, admin_id: sessionToken });
 } catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
 });
@@ -8986,8 +8994,14 @@ const verifyEngineAccess = async (req, res, next) => {
     const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [engineToken.trim().toUpperCase()]);
     if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
     req.engineUser = { isAdmin: false, codeId: r.rows[0].id, code: r.rows[0] };
-    if (r.rows[0].gemini_key && !req.headers['x-gemini-key']) req.headers['x-gemini-key'] = r.rows[0].gemini_key;
-    if (r.rows[0].claude_key && !req.headers['x-claude-key']) req.headers['x-claude-key'] = r.rows[0].claude_key;
+    // Inject API keys: use_platform_keys=true → use server env keys (paid users without own keys)
+    if (r.rows[0].use_platform_keys) {
+      if (!req.headers['x-gemini-key']) req.headers['x-gemini-key'] = process.env.GEMINI_API_KEY || r.rows[0].gemini_key || '';
+      if (!req.headers['x-claude-key']) req.headers['x-claude-key'] = process.env.ANTHROPIC_API_KEY || r.rows[0].claude_key || '';
+    } else {
+      if (r.rows[0].gemini_key && !req.headers['x-gemini-key']) req.headers['x-gemini-key'] = r.rows[0].gemini_key;
+      if (r.rows[0].claude_key && !req.headers['x-claude-key']) req.headers['x-claude-key'] = r.rows[0].claude_key;
+    }
     next();
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 };
@@ -9002,16 +9016,16 @@ app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
-  const { client_name, gemini_key, claude_key, expires_at, notes } = req.body;
+  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys } = req.body;
   if (!client_name) return res.status(400).json({ success: false, error: 'client_name required' });
   try {
     const code = 'ENG-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
-    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [code,client_name,gemini_key||null,claude_key||null,expires_at||null,notes||null]);
+    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [code,client_name,gemini_key||null,claude_key||null,expires_at||null,notes||null,!!use_platform_keys]);
     res.json({ success: true, code: {...r.rows[0], gemini_key: gemini_key?'***'+gemini_key.slice(-4):null, claude_key: claude_key?'***'+claude_key.slice(-4):null} });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
-  const { is_active, gemini_key, claude_key, expires_at, notes } = req.body;
+  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
     if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
@@ -9019,6 +9033,7 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (claude_key!==undefined){fields.push(`claude_key=$${i++}`);vals.push(claude_key||null);}
     if (expires_at!==undefined){fields.push(`expires_at=$${i++}`);vals.push(expires_at||null);}
     if (notes!==undefined){fields.push(`notes=$${i++}`);vals.push(notes);}
+    if (use_platform_keys!==undefined){fields.push(`use_platform_keys=$${i++}`);vals.push(!!use_platform_keys);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -17431,6 +17446,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Gemini API Key</label><input id="ecGeminiKey" type="password" placeholder="AIza..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
                             <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Claude API Key</label><input id="ecClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
                             <div style="grid-column:1/-1;"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Notes</label><input id="ecNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;">
+                                <input type="checkbox" id="ecUsePlatformKeys" style="width:18px;height:18px;accent-color:#0891b2;cursor:pointer;">
+                                <div><label for="ecUsePlatformKeys" style="font-weight:600;color:#38bdf8;cursor:pointer;">🔑 Use Platform API Keys</label><div style="font-size:11px;color:#64748b;margin-top:2px;">Client uses your Gemini + Claude keys (paid plan, no own API key)</div></div>
+                            </div>
                         </div>
                         <div class="flex gap-3">
                             <button onclick="createEngineCode()" class="btn btn-primary">Create Code</button>
@@ -17469,6 +17488,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <div><label style="font-size:11px;color:#9ca3af;">Gemini API Key</label><input id="gaGeminiKey" type="password" placeholder="AIza..." class="w-full rounded px-3 py-2 mt-1"></div>
                             <div><label style="font-size:11px;color:#9ca3af;">Claude API Key</label><input id="gaClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded px-3 py-2 mt-1"></div>
                             <div style="grid-column:1/-1;"><label style="font-size:11px;color:#9ca3af;">Notes</label><input id="gaNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded px-3 py-2 mt-1"></div>
+                            <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;">
+                                <input type="checkbox" id="gaUsePlatformKeys" style="width:18px;height:18px;accent-color:#0891b2;cursor:pointer;">
+                                <div><label for="gaUsePlatformKeys" style="font-weight:600;color:#38bdf8;cursor:pointer;">🔑 Use Platform API Keys</label><div style="font-size:11px;color:#64748b;margin-top:2px;">Client uses your Gemini + Claude keys (paid plan, no own API key)</div></div>
+                            </div>
                         </div>
                         <div style="display:flex;gap:10px;">
                             <button id="gaCreateBtn" onclick="gaCreateCode()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:11px 22px;font-weight:700;cursor:pointer;">🔑 Create & Get Login URL</button>
@@ -18054,29 +18077,35 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             try{
                 const data=await apiCall('/api/admin/engine-codes');const codes=data.codes||[];const el=document.getElementById('engineCodesList');
                 if(!codes.length){el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:32px;">No engine access codes yet.</div>';return;}
-                el.innerHTML=codes.map(c=>'<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
+                el.innerHTML=codes.map(c=>{
+                    const pkBadge=c.use_platform_keys?'<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>':'';
+                    const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
+                    return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
-                    '<div><div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
-                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span></div>' +
-                    '<div style="font-weight:600;">'+c.client_name+'</div></div>' +
+                    '<div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
+                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span>'+pkBadge+'</div>' +
+                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>'+keyInfo+'</div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                    '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform Keys ON':'🔑 Use Platform Keys')+'</button>' +
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy Code</button>' +
                     '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
                     '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
-                    '</div></div></div>').join('');
+                    '</div></div></div>';}).join('');
             }catch(e){console.error('Failed to load engine codes:',e);}
         }
 
         async function createEngineCode(){
             const client_name=document.getElementById('ecClientName').value.trim();if(!client_name){alert('Enter a client name');return;}
             try{
-                const data=await apiCall('/api/admin/engine-codes','POST',{client_name,gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,claude_key:document.getElementById('ecClaudeKey').value.trim()||null,expires_at:document.getElementById('ecExpires').value||null,notes:document.getElementById('ecNotes').value.trim()||null});
+                const use_platform_keys=document.getElementById('ecUsePlatformKeys').checked;
+                const data=await apiCall('/api/admin/engine-codes','POST',{client_name,gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,claude_key:document.getElementById('ecClaudeKey').value.trim()||null,expires_at:document.getElementById('ecExpires').value||null,notes:document.getElementById('ecNotes').value.trim()||null,use_platform_keys});
                 if(!data.success){alert('Error: '+data.error);return;}
-                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';loadEngineCodes();
+                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';document.getElementById('ecUsePlatformKeys').checked=false;loadEngineCodes();
             }catch(e){alert('Error: '+e.message);}
         }
 
         async function toggleEngineCode(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:newState});loadEngineCodes();}
+        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState});loadEngineCodes();}
         async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
         function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
 
@@ -18115,7 +18144,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function gaCreateCode(){
             const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
             const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent='⏳ Creating...';
-            try{const data=await apiCall('/api/admin/engine-codes','POST',{client_name:name,gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,claude_key:document.getElementById('gaClaudeKey').value.trim()||null,expires_at:document.getElementById('gaExpires').value||null,notes:document.getElementById('gaNotes').value.trim()||null});
+            const use_platform_keys=document.getElementById('gaUsePlatformKeys').checked;
+            try{const data=await apiCall('/api/admin/engine-codes','POST',{client_name:name,gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,claude_key:document.getElementById('gaClaudeKey').value.trim()||null,expires_at:document.getElementById('gaExpires').value||null,notes:document.getElementById('gaNotes').value.trim()||null,use_platform_keys});
             if(!data.success){alert('Error: '+data.error);return;}
             const code=data.code.code,url=window.location.origin+'/engine-login?code='+code;
             document.getElementById('gaSuccessCode').textContent=code;document.getElementById('gaSuccessUrl').textContent=url;document.getElementById('gaSuccessName').textContent=name;
