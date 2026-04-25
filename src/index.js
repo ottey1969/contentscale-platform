@@ -18427,7 +18427,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function apiCall(endpoint, method='GET', body=null) {
             const headers = {'Content-Type':'application/json'};
             const adminId = localStorage.getItem('admin_id');
-            if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/'))) headers['x-admin-key'] = adminId;
+            if (adminId && (endpoint.includes('/admin/') || endpoint.includes('/api/content/') || endpoint.includes('/api/tracker/'))) headers['x-admin-key'] = adminId;
             const options = {method, headers};
             if (body) options.body = JSON.stringify(body);
             const res = await fetch(endpoint, options);
@@ -19642,7 +19642,7 @@ app.get('/api/tracker/load', async (req, res) => {
 
 // ── CRUD: tracker pages ──────────────────────────────────────────────────────
 
-app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+app.get('/api/tracker/pages', verifyAdmin, async (req, res) => {
   try {
     const profileId = req.query.profile_id;
     const q = profileId
@@ -19661,7 +19661,7 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+app.post('/api/tracker/pages', verifyAdmin, async (req, res) => {
   const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days' } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'url required' });
   try {
@@ -19676,7 +19676,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
+app.patch('/api/tracker/pages/:id', verifyAdmin, async (req, res) => {
   const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
@@ -19694,7 +19694,7 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
+app.delete('/api/tracker/pages/:id', verifyAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
     res.json({ success: true });
@@ -19703,7 +19703,7 @@ app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
 
 // ── Snapshots & change history for a page ───────────────────────────────────
 
-app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res) => {
+app.get('/api/tracker/pages/:id/snapshots', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 50`,
@@ -19713,7 +19713,7 @@ app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res)
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) => {
+app.get('/api/tracker/pages/:id/changes', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at DESC LIMIT 100`,
@@ -19723,7 +19723,7 @@ app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) =
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res) => {
+app.patch('/api/tracker/changes/:id/apply', verifyAdmin, async (req, res) => {
   try {
     await pool.query(
       `UPDATE tracker_changes SET applied=TRUE, applied_at=NOW() WHERE id=$1`,
@@ -19735,7 +19735,7 @@ app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res)
 
 // ── Manual check trigger ─────────────────────────────────────────────────────
 
-app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) => {
+app.post('/api/tracker/pages/:id/check', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [req.params.id]);
     if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
