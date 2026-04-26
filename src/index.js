@@ -20077,6 +20077,11 @@ async function runTrackerCheck(page, geminiKey, keys) {
             snapshot.ai_google_overview_text = ('Knowledge Graph: ' + (kg.title || kg.description || '')).substring(0, 600);
           }
 
+          // Capture top 5 competitor snippets for Gemini to analyze
+          snapshot._competitors = organic.slice(0, 5).map(function(r) {
+            return { url: r.link, title: r.title, snippet: r.snippet || '', position: r.position };
+          });
+
           const posLabel = snapshot.google_position ? '#' + snapshot.google_position : 'not in top 10';
           const aiLabel  = snapshot.ai_google_overview_cited ? '✅ AI Overview cited' : (snapshot.ai_google_overview_found ? '⚠️ AI Overview exists (not cited)' : '❌ No AI Overview');
           _trSetStep(pageId, 'google', 'done', `Position: ${posLabel} · ${aiLabel}`);
@@ -20205,25 +20210,39 @@ async function runTrackerCheck(page, geminiKey, keys) {
         snapshot.ai_bing_cited ? '✅ CITED in You.com AI' : '❌ Not cited in You.com AI',
       ].join('\\n');
 
-      const prompt = `You are an SEO expert. Based on these findings for the page "${page.url}" targeting keyword "${page.keyword||'unknown'}", generate 3-5 specific, actionable recommendations to improve AI citation presence and Google ranking.
+      // Extract useful context from the page HTML if available
+      let pageContext = '';
+      if(page.html_content) {
+        // Strip tags, get first ~600 chars of readable text as context
+        const textOnly = page.html_content.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,600);
+        if(textOnly.length > 50) pageContext = '\n\nPAGE CONTENT EXCERPT:\n' + textOnly + (page.html_content.length > 600 ? '...' : '');
+      }
 
-CURRENT STATUS:
+      const kw = page.keyword || 'unknown';
+      const prompt = `You are an SEO specialist. Analyze this specific page and give CONCRETE recommendations — not generic SEO tips.
+
+URL: ${page.url}
+TARGET KEYWORD: "${kw}"
+PAGE TITLE: ${page.title||'(not set)'}${pageContext}
+
+WHAT THE CHECK FOUND:
 ${findings}
 
-Return ONLY a JSON array of recommendation objects. Each object must have:
-- title: short action title (max 8 words)  
-- priority: "high" | "medium" | "low"
-- action: specific instruction (1-2 sentences)
-- expected_impact: what this will improve
+Your job: explain WHY this page is not ranking/cited, and give 3-5 specific fixes.
 
-Example format:
-[{"title":"Add FAQ schema markup","priority":"high","action":"Add FAQPage schema with 5 Q&As targeting the main keyword and related questions","expected_impact":"Increases chance of AI Overview citation by 40%"}]
+For each recommendation:
+- Title: name the SPECIFIC thing to fix (e.g. "Add direct answer for '${kw}' in first paragraph" not "Improve content")
+- Action: tell EXACTLY what to write/change — reference the actual keyword "${kw}", the actual URL, and actual content gaps you can see above
+- If no page content is stored: base recommendations on the URL structure, keyword, and check results only — still be specific
 
-Return ONLY the JSON array, no other text.`;
+Return ONLY a JSON array, no markdown:
+[{"title":"...","priority":"high"|"medium"|"low","action":"2-3 sentence specific instruction","expected_impact":"specific outcome"}]
+
+No generic advice. Every recommendation must be actionable for THIS page today.`;
 
       const resp = await callGeminiWithFallback(geminiKey, {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
       });
       if(resp.ok) {
         let recs = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -20237,7 +20256,7 @@ Return ONLY the JSON array, no other text.`;
           _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated');
         } catch(e) {
           // Gemini returned non-JSON — store as a single text recommendation
-          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,300), expected_impact: 'See above' }];
+          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,800), expected_impact: 'See full text above' }];
           _trSetStep(pageId, 'recommendations', 'done', '1 recommendation (text)');
         }
       } else {
