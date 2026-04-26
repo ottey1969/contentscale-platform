@@ -17752,6 +17752,62 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
         </nav>
 
+        <!-- ── Timezone Business Hours Bar ─────────────────────────────── -->
+        <div id="tz-bar" style="background:#0a0f1a;border-bottom:1px solid #1f2937;padding:6px 24px;display:flex;align-items:center;gap:6px;overflow-x:auto;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;">
+            <span style="color:#4b5563;font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-right:6px;flex-shrink:0;">Business Hours 8am–8pm</span>
+            <div id="tz-clocks" style="display:flex;gap:6px;"></div>
+        </div>
+        <script>
+        (function() {
+            var ZONES = [
+                { label: 'New York',    tz: 'America/New_York' },
+                { label: 'Chicago',     tz: 'America/Chicago' },
+                { label: 'Denver',      tz: 'America/Denver' },
+                { label: 'Los Angeles', tz: 'America/Los_Angeles' },
+                { label: 'Vancouver',   tz: 'America/Vancouver' },
+                { label: 'Toronto',     tz: 'America/Toronto' },
+                { label: 'Luxembourg',  tz: 'Europe/Luxembourg' },
+                { label: 'Sydney',      tz: 'Australia/Sydney' },
+                { label: 'Auckland',    tz: 'Pacific/Auckland' },
+            ];
+            function isOpen(tz) {
+                var now = new Date();
+                var parts = {};
+                new Intl.DateTimeFormat('en-US', {
+                    timeZone: tz, hour: 'numeric', minute: '2-digit',
+                    hour12: false, weekday: 'short'
+                }).formatToParts(now).forEach(function(p) { parts[p.type] = p.value; });
+                var h = parseInt(parts.hour);
+                var day = parts.weekday;
+                if (day === 'Sat' || day === 'Sun') return false;
+                return h >= 8 && h < 20;
+            }
+            function getTime(tz) {
+                return new Intl.DateTimeFormat('en-US', {
+                    timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false
+                }).format(new Date());
+            }
+            function render() {
+                var el = document.getElementById('tz-clocks');
+                if (!el) return;
+                el.innerHTML = ZONES.map(function(z) {
+                    var open = isOpen(z.tz);
+                    var time = getTime(z.tz);
+                    var bg  = open ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.08)';
+                    var col = open ? '#4ade80' : '#f87171';
+                    var dot = open ? '●' : '○';
+                    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;border:1px solid ' + (open ? 'rgba(74,222,128,.25)' : 'rgba(248,113,113,.2)') + ';background:' + bg + ';color:' + col + ';flex-shrink:0;">' +
+                        '<span style="font-size:8px;">' + dot + '</span>' +
+                        '<span style="color:#9ca3af;">' + z.label + '</span>' +
+                        '<span style="font-weight:700;">' + time + '</span>' +
+                    '</span>';
+                }).join('');
+            }
+            render();
+            setInterval(render, 30000);
+        })();
+        </script>
+
         <style>
             /* ── SIDEBAR LAYOUT ────────────────────────────────── */
             #dashboard-layout { display: flex; min-height: calc(100vh - 65px); }
