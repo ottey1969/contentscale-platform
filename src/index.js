@@ -18212,6 +18212,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
                 </div>
 
+                <!-- Client filter -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Filter by client:</label>
+                    <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
+                        <option value="">All clients</option>
+                    </select>
+                    <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
+                </div>
+
                 <!-- Pages list -->
                 <div id="trPagesList"></div>
 
@@ -19120,6 +19129,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         // ── CONTENT LIFECYCLE TRACKER JS ────────────────────────────────────────
         let allTrackerPages = [];
         let _trProfileId = null;
+        let _trClientFilter = '';
 
         async function loadTrackerPages() {
             const btn = document.getElementById('trRefreshBtn');
@@ -19127,6 +19137,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             try {
                 const data = await apiCall('/api/tracker/pages' + (_trProfileId ? '?profile_id='+_trProfileId : ''));
                 allTrackerPages = data.pages || [];
+                populateClientFilter();
                 renderTrackerStats();
                 renderTrackerPages();
             } catch(e) {
@@ -19134,6 +19145,34 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             } finally {
                 if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
             }
+        }
+
+        function populateClientFilter() {
+            const sel = document.getElementById('trClientFilter');
+            if(!sel) return;
+            // Collect unique clients
+            const clients = {};
+            allTrackerPages.forEach(function(p) {
+                const key = p.engine_client_name || '__admin__';
+                const label = p.engine_client_name || 'Admin';
+                clients[key] = label;
+            });
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">All clients (' + allTrackerPages.length + ' pages)</option>';
+            Object.keys(clients).sort().forEach(function(k) {
+                const count = allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === k; }).length;
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = clients[k] + ' (' + count + ')';
+                sel.appendChild(opt);
+            });
+            sel.value = prev || '';
+        }
+
+        function filterTrackerByClient() {
+            const sel = document.getElementById('trClientFilter');
+            _trClientFilter = sel ? sel.value : '';
+            renderTrackerPages();
         }
 
         function renderTrackerStats() {
@@ -19158,7 +19197,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
                 return;
             }
-            el.innerHTML = allTrackerPages.map(p => renderTrackerPageCard(p)).join('');
+            // Apply client filter
+            const filtered = _trClientFilter
+                ? allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; })
+                : allTrackerPages;
+            const countEl = document.getElementById('trFilterCount');
+            if(countEl) countEl.textContent = _trClientFilter ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
+            if(!filtered.length) {
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages for this client.</div>';
+                return;
+            }
+            el.innerHTML = filtered.map(p => renderTrackerPageCard(p)).join('');
         }
 
         function renderTrackerPageCard(p) {
@@ -19217,6 +19266,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
                 +dotHtml
                 +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
+                +clientHtml
                 +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
                 +'</div>'
                 +'<div style="margin-bottom:8px;">'
@@ -19760,11 +19810,12 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
            (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
            (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
            (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes`;
+    const ADMIN_COLS = COLS + `, ec.client_name AS engine_client_name, ec.code AS engine_code`;
     let q, params = [];
     if (isAdmin) {
-      // Admin sees all pages, optionally filtered by profile
-      if (profileId) { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`; params = [profileId]; }
-      else { q = `SELECT ${COLS} FROM tracker_pages p ORDER BY p.created_at DESC`; }
+      // Admin sees all pages with client name, optionally filtered by profile
+      if (profileId) { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id WHERE p.profile_id=$1 ORDER BY p.created_at DESC`; params = [profileId]; }
+      else { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id ORDER BY p.created_at DESC`; }
     } else {
       // Engine users see only their own pages
       if (profileId) { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`; params = [codeId, profileId]; }
