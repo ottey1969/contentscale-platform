@@ -575,6 +575,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_pages (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL,
      url TEXT NOT NULL,
      slug VARCHAR(500),
      title TEXT,
@@ -587,6 +588,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      gsc_connected BOOLEAN DEFAULT FALSE,
      created_at TIMESTAMPTZ DEFAULT NOW()
    )`).catch(()=>{});
+   // Migration: add engine_code_id to existing tracker_pages if missing
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -19642,43 +19645,57 @@ app.get('/api/tracker/load', async (req, res) => {
 
 // ── CRUD: tracker pages ──────────────────────────────────────────────────────
 
-app.get('/api/tracker/pages', verifyAdmin, async (req, res) => {
+app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   try {
     const profileId = req.query.profile_id;
-    const q = profileId
-      ? `SELECT p.*, 
+    const eu = req.engineUser;
+    const isAdmin = eu && eu.isAdmin;
+    const codeId = eu && eu.codeId;
+    const COLS = `p.*,
            (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
            (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
-           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes
-         FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`
-      : `SELECT p.*,
-           (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
-           (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
-           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes
-         FROM tracker_pages p ORDER BY p.created_at DESC`;
-    const r = profileId ? await pool.query(q, [profileId]) : await pool.query(q);
+           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes`;
+    let q, params = [];
+    if (isAdmin) {
+      // Admin sees all pages, optionally filtered by profile
+      if (profileId) { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`; params = [profileId]; }
+      else { q = `SELECT ${COLS} FROM tracker_pages p ORDER BY p.created_at DESC`; }
+    } else {
+      // Engine users see only their own pages
+      if (profileId) { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`; params = [codeId, profileId]; }
+      else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
+    }
+    const r = await pool.query(q, params);
     res.json({ success: true, pages: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/tracker/pages', verifyAdmin, async (req, res) => {
+app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days' } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'url required' });
   try {
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
     const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
     const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
     const r = await pool.query(
-      `INSERT INTO tracker_pages (profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7, NOW()) RETURNING *`,
-      [profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency]
+      `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW()) RETURNING *`,
+      [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency]
     );
     res.json({ success: true, page: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/tracker/pages/:id', verifyAdmin, async (req, res) => {
+app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected } = req.body;
   try {
+    // Ownership check for non-admins
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
     const fields=[]; const vals=[]; let i=1;
     if(url!==undefined){fields.push(`url=$${i++}`);vals.push(url);}
     if(title!==undefined){fields.push(`title=$${i++}`);vals.push(title);}
@@ -19694,8 +19711,13 @@ app.patch('/api/tracker/pages/:id', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/tracker/pages/:id', verifyAdmin, async (req, res) => {
+app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
     await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -19703,8 +19725,13 @@ app.delete('/api/tracker/pages/:id', verifyAdmin, async (req, res) => {
 
 // ── Snapshots & change history for a page ───────────────────────────────────
 
-app.get('/api/tracker/pages/:id/snapshots', verifyAdmin, async (req, res) => {
+app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res) => {
   try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
     const r = await pool.query(
       `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 50`,
       [req.params.id]
@@ -19713,8 +19740,13 @@ app.get('/api/tracker/pages/:id/snapshots', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/tracker/pages/:id/changes', verifyAdmin, async (req, res) => {
+app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) => {
   try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
     const r = await pool.query(
       `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at DESC LIMIT 100`,
       [req.params.id]
@@ -19723,8 +19755,17 @@ app.get('/api/tracker/pages/:id/changes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/tracker/changes/:id/apply', verifyAdmin, async (req, res) => {
+app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res) => {
   try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      // Verify the change belongs to a page owned by this engine user
+      const own = await pool.query(
+        `SELECT tc.id FROM tracker_changes tc JOIN tracker_pages tp ON tp.id=tc.page_id WHERE tc.id=$1 AND tp.engine_code_id=$2`,
+        [req.params.id, eu.codeId]
+      );
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
     await pool.query(
       `UPDATE tracker_changes SET applied=TRUE, applied_at=NOW() WHERE id=$1`,
       [req.params.id]
@@ -19735,10 +19776,16 @@ app.patch('/api/tracker/changes/:id/apply', verifyAdmin, async (req, res) => {
 
 // ── Manual check trigger ─────────────────────────────────────────────────────
 
-app.post('/api/tracker/pages/:id/check', verifyAdmin, async (req, res) => {
+app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) => {
   try {
-    const r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [req.params.id]);
-    if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const eu = req.engineUser;
+    let r;
+    if (eu.isAdmin) {
+      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [req.params.id]);
+    } else {
+      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+    }
+    if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
     const page = r.rows[0];
 
     // Run the check (non-blocking return — result stored in DB)
