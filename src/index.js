@@ -853,6 +853,10 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_scan_result JSONB DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_scan_url TEXT DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS credits_used INTEGER DEFAULT 0`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS google_search_key TEXT DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS google_search_cx TEXT DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS you_api_key TEXT DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS perplexity_key TEXT DEFAULT NULL`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS credit_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, credits_spent INTEGER NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS owner_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    // Client progress tracking
@@ -9100,11 +9104,21 @@ const verifyEngineAccess = async (req, res, next) => {
       if (r.rows[0].gemini_key && !req.headers['x-gemini-key']) req.headers['x-gemini-key'] = r.rows[0].gemini_key;
       if (r.rows[0].claude_key && !req.headers['x-claude-key']) req.headers['x-claude-key'] = r.rows[0].claude_key;
     }
+    // Always inject tracker search keys — per-user keys override platform keys
+    const ec = r.rows[0];
+    if (!req.headers['x-google-search-key']) req.headers['x-google-search-key'] = ec.google_search_key || process.env.GOOGLE_SEARCH_API_KEY || '';
+    if (!req.headers['x-google-search-cx'])  req.headers['x-google-search-cx']  = ec.google_search_cx  || process.env.GOOGLE_SEARCH_CX  || '';
+    if (!req.headers['x-you-api-key'])        req.headers['x-you-api-key']        = ec.you_api_key        || process.env.YOU_API_KEY        || '';
+    if (!req.headers['x-perplexity-key'])     req.headers['x-perplexity-key']     = ec.perplexity_key     || process.env.PERPLEXITY_API_KEY || '';
     next();
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 };
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
+const resolveGoogleSearchKey = (req) => req.headers['x-google-search-key'] || process.env.GOOGLE_SEARCH_API_KEY;
+const resolveGoogleSearchCx  = (req) => req.headers['x-google-search-cx']  || process.env.GOOGLE_SEARCH_CX;
+const resolveYouApiKey       = (req) => req.headers['x-you-api-key']        || process.env.YOU_API_KEY;
+const resolvePerplexityKey   = (req) => req.headers['x-perplexity-key']     || process.env.PERPLEXITY_API_KEY;
 
 // ── CREDITS SYSTEM ────────────────────────────────────────────────────────────
 // Only charged when use_platform_keys=true AND platform_credits is not NULL
@@ -9460,7 +9474,7 @@ app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
-  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, deal_type, deal_label } = req.body;
+  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, deal_type, deal_label, google_search_key, google_search_cx, perplexity_key, you_api_key } = req.body;
   if (!client_name) return res.status(400).json({ success: false, error: 'client_name required' });
   try {
     const code = 'ENG-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
@@ -9470,13 +9484,13 @@ app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
     const effectivePlatformKeys = isLifetimeDeal ? false : !!use_platform_keys;
     const effectiveExpiry = isLifetimeDeal ? null : (expires_at || null);
     const effectiveCredits = isLifetimeDeal ? null : (platform_credits || null);
-    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys,platform_credits,deal_type,deal_label,deal_purchased_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-      [code,client_name,gemini_key||null,claude_key||null,effectiveExpiry,notes||null,effectivePlatformKeys,effectiveCredits,deal_type||null,deal_label||null,isLifetimeDeal?new Date():null]);
+    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys,platform_credits,deal_type,deal_label,deal_purchased_at,google_search_key,google_search_cx,perplexity_key,you_api_key) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [code,client_name,gemini_key||null,claude_key||null,effectiveExpiry,notes||null,effectivePlatformKeys,effectiveCredits,deal_type||null,deal_label||null,isLifetimeDeal?new Date():null,google_search_key||null,google_search_cx||null,perplexity_key||null,you_api_key||null]);
     res.json({ success: true, code: {...r.rows[0], gemini_key: gemini_key?'***'+gemini_key.slice(-4):null, claude_key: claude_key?'***'+claude_key.slice(-4):null} });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
-  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label } = req.body;
+  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, google_search_key, google_search_cx, perplexity_key, you_api_key } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
     if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
@@ -9488,7 +9502,11 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (platform_credits!==undefined){fields.push(`platform_credits=$${i++}`);vals.push(platform_credits===null?null:parseInt(platform_credits));}
     if (reset_used){fields.push(`credits_used=$${i++}`);vals.push(0);}
     if (deal_type!==undefined){fields.push(`deal_type=$${i++}`);vals.push(deal_type||null);}
-    if (deal_label!==undefined){fields.push(`deal_label=$${i++}`);vals.push(deal_label||null);}
+    if (deal_label!==undefined){fields.push(`deal_label=${i++}`);vals.push(deal_label||null);}
+    if (google_search_key!==undefined){fields.push(`google_search_key=${i++}`);vals.push(google_search_key||null);}
+    if (google_search_cx!==undefined){fields.push(`google_search_cx=${i++}`);vals.push(google_search_cx||null);}
+    if (perplexity_key!==undefined){fields.push(`perplexity_key=${i++}`);vals.push(perplexity_key||null);}
+    if (you_api_key!==undefined){fields.push(`you_api_key=${i++}`);vals.push(you_api_key||null);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -18231,6 +18249,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             </div>
                             <div id="ecGeminiWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Gemini API Key</label><input id="ecGeminiKey" type="password" placeholder="AIza..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
                             <div id="ecClaudeWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Claude API Key</label><input id="ecClaudeKey" type="password" placeholder="sk-ant-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div style="grid-column:1/-1;border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:4px;"><label class="block text-xs uppercase tracking-wider mb-1" style="color:#a78bfa;font-weight:700;">📡 Tracker API Keys (optional — overrides platform keys)</label></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Google Search API Key</label><input id="ecGoogleSearchKey" type="password" placeholder="AIza... (Custom Search)" class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Google Search CX</label><input id="ecGoogleSearchCx" type="text" placeholder="cx:..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Perplexity API Key</label><input id="ecPerplexityKey" type="password" placeholder="pplx-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">You.com API Key</label><input id="ecYouApiKey" type="password" placeholder="you-..." class="w-full rounded-lg px-3 py-2 text-sm"></div>
                             <div style="grid-column:1/-1;"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Notes</label><input id="ecNotes" type="text" placeholder="e.g. trial until May" class="w-full rounded-lg px-3 py-2 text-sm"></div>
                         </div>
                         <div class="flex gap-3">
@@ -19436,6 +19459,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     client_name,
                     gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,
                     claude_key:document.getElementById('ecClaudeKey').value.trim()||null,
+                    google_search_key:document.getElementById('ecGoogleSearchKey').value.trim()||null,
+                    google_search_cx:document.getElementById('ecGoogleSearchCx').value.trim()||null,
+                    perplexity_key:document.getElementById('ecPerplexityKey').value.trim()||null,
+                    you_api_key:document.getElementById('ecYouApiKey').value.trim()||null,
                     expires_at:isLifetime?null:(document.getElementById('ecExpires').value||null),
                     notes:document.getElementById('ecNotes').value.trim()||null,
                     use_platform_keys:isLifetime?false:use_platform_keys,
@@ -19810,8 +19837,9 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
     if(existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
     _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null });
     res.json({ success: true, message: 'Check started', page_id: pageId });
+    const _checkKeys = { gemini: resolveGeminiKey(req), googleKey: resolveGoogleSearchKey(req), googleCx: resolveGoogleSearchCx(req), youKey: resolveYouApiKey(req), perplexityKey: resolvePerplexityKey(req) };
     setImmediate(async () => {
-      try { await runTrackerCheck(page, resolveGeminiKey(req)); }
+      try { await runTrackerCheck(page, _checkKeys.gemini, _checkKeys); }
       catch(e) { console.warn('[tracker-check]', e.message); }
       finally {
         const st = _trackerCheckStatus.get(pageId);
@@ -19825,7 +19853,13 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
 // ── Core check function ───────────────────────────────────────────────────────
 // Real APIs: Google CSE · Perplexity Sonar · You.com · Bing (optional)
 
-async function runTrackerCheck(page, geminiKey) {
+async function runTrackerCheck(page, geminiKey, keys) {
+  keys = keys || {};
+  const _gk  = keys.googleKey     || process.env.GOOGLE_SEARCH_API_KEY || '';
+  const _gcx = keys.googleCx      || process.env.GOOGLE_SEARCH_CX      || '';
+  const _yk  = keys.youKey        || process.env.YOU_API_KEY            || '';
+  const _pk  = keys.perplexityKey || process.env.PERPLEXITY_API_KEY     || '';
+  geminiKey  = geminiKey || process.env.GEMINI_API_KEY;
   const crypto = require('crypto');
   const pageId = page.id;
   const snapshot = {
@@ -19864,10 +19898,9 @@ async function runTrackerCheck(page, geminiKey) {
   if(keyword) {
 
     // ── 2. Google: position + AI Overview via Custom Search API ──────────────
-    const googleKey = process.env.GOOGLE_SEARCH_API_KEY;
-    const googleCx  = process.env.GOOGLE_SEARCH_CX;
     _trSetStep(pageId, 'google', 'running', 'Searching Google for: ' + keyword);
-    if(googleKey && googleCx) {
+    if(_gk && _gcx) {
+    const googleKey = _gk; const googleCx = _gcx;
       try {
         const gUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(keyword)}&key=${googleKey}&cx=${googleCx}&num=10`;
         const gResp = await fetch(gUrl, { signal: AbortSignal.timeout(12000) });
@@ -19907,13 +19940,12 @@ async function runTrackerCheck(page, geminiKey) {
         console.warn('[tracker] Google CSE failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'google', 'error', 'GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_CX not set');
+      _trSetStep(pageId, 'google', 'error', 'Google keys not configured — add GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX to Railway or your engine code settings');
     }
 
     // ── 3. Perplexity citation via Sonar API ─────────────────────────────────
-    const perplexityKey = process.env.PERPLEXITY_API_KEY;
     _trSetStep(pageId, 'perplexity', 'running', 'Asking Perplexity Sonar: ' + keyword);
-    if(perplexityKey) {
+    if(_pk) { const perplexityKey = _pk;
       try {
         const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
@@ -19950,43 +19982,55 @@ async function runTrackerCheck(page, geminiKey) {
         console.warn('[tracker] Perplexity Sonar failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'perplexity', 'error', 'PERPLEXITY_API_KEY not set');
+      _trSetStep(pageId, 'perplexity', 'error', 'Perplexity key not set — add PERPLEXITY_API_KEY to Railway or engine settings');
     }
 
-    // ── 4. You.com AI Search citation ─────────────────────────────────────────
-    // You.com Web Search API — free tier at app.you.com/api-dashboard
-    const youKey = process.env.YOU_API_KEY;
+    // ── 4. You.com Smart API citation ────────────────────────────────────────
+    // You.com Smart API v2 — get key at app.you.com/api-dashboard (free tier)
+    // Auth: Bearer token. Endpoint: https://api.ydc-index.io/search (v1 compat)
+    //       OR https://api.you.com/v2/search (v2)
+    // We try v1 first (wider free tier), fall back to v2 on 403/404.
     _trSetStep(pageId, 'youcom', 'running', 'Checking You.com AI Search: ' + keyword);
-    if(youKey) {
+    if(_yk) { const youKey = _yk;
       try {
-        const yResp = await fetch(
+        // Try v1 endpoint with Bearer auth (most common for free tier keys)
+        let yResp = await fetch(
           `https://api.ydc-index.io/search?query=${encodeURIComponent(keyword)}&num_web_results=10`,
-          { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(12000) }
-        );
-        if(yResp.ok) {
+          { headers: { 'Authorization': 'Bearer ' + youKey, 'X-API-Key': youKey }, signal: AbortSignal.timeout(12000) }
+        ).catch(() => null);
+        // If v1 returns 403/404, try v2
+        if(!yResp || (!yResp.ok && (yResp.status === 403 || yResp.status === 404 || yResp.status === 401))) {
+          yResp = await fetch(
+            `https://api.you.com/v2/search?query=${encodeURIComponent(keyword)}&num_web_results=10`,
+            { headers: { 'Authorization': 'Bearer ' + youKey }, signal: AbortSignal.timeout(12000) }
+          ).catch(() => null);
+        }
+        if(yResp && yResp.ok) {
           const yData = await yResp.json();
-          // hits = web results, each has url + snippets
-          const hits = yData.hits || [];
-          const allText = JSON.stringify(yData);
+          // v1: hits[] with url. v2: results[] or web_results[] with url
+          const hits = yData.hits || yData.results || yData.web_results || [];
           const inResults = hits.some(function(h){ return (h.url||'').replace(/^https?:\/\//, '').startsWith(domain); });
-          // AI snippets array contains what You.com AI surfaced
-          const aiSnippets = yData.ai_snippets || [];
-          const inAI = aiSnippets.some(function(s){ return (s.url||s.source_url||'').includes(domain) || (s.snippet||'').includes(domain); });
-          snapshot.ai_bing_found = hits.length > 0;   // re-using bing fields for You.com
+          // AI snippets / answer
+          const aiSnippets = yData.ai_snippets || yData.ai_answer || [];
+          const aiText = typeof aiSnippets === 'string' ? aiSnippets : JSON.stringify(aiSnippets);
+          const inAI = (Array.isArray(aiSnippets) && aiSnippets.some(function(s){ return (s.url||s.source_url||s.snippet||'').includes(domain); }))
+            || aiText.includes(domain);
+          snapshot.ai_bing_found = hits.length > 0;
           snapshot.ai_bing_cited = inResults || inAI;
-          if(inResults || inAI) snapshot.ai_bing_text = inAI ? 'Cited in You.com AI snippet' : 'Found in You.com top results';
-          const label = inAI ? '✅ Cited in AI snippet' : (inResults ? '⚠️ In results (not AI snippet)' : '❌ Not found');
+          if(inResults || inAI) snapshot.ai_bing_text = inAI ? 'Cited in You.com AI answer' : 'Found in You.com top results';
+          const label = inAI ? '✅ Cited in AI answer' : (inResults ? '⚠️ In results (not in AI answer)' : '❌ Not found');
           _trSetStep(pageId, 'youcom', 'done', label);
         } else {
-          const err = await yResp.text().catch(()=>'');
-          _trSetStep(pageId, 'youcom', 'error', `You.com API ${yResp.status}: ${err.substring(0,120)}`);
+          const status = yResp ? yResp.status : 'timeout';
+          const err = yResp ? await yResp.text().catch(()=>'') : 'Request failed';
+          _trSetStep(pageId, 'youcom', 'error', `You.com API ${status}: ${err.substring(0,120)}`);
         }
       } catch(e) {
         _trSetStep(pageId, 'youcom', 'error', e.message);
         console.warn('[tracker] You.com failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'youcom', 'error', 'YOU_API_KEY not set — skipped');
+      _trSetStep(pageId, 'youcom', 'error', 'You.com key not set — add YOU_API_KEY to Railway or engine settings');
     }
   } else {
     _trSetStep(pageId, 'google', 'error', 'No keyword set — add a target keyword to this page');
@@ -20026,9 +20070,22 @@ Return ONLY the JSON array, no other text.`;
         generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
       });
       if(resp.ok) {
-        let recs = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        recs = recs.replace(/^```json\n?/i,'').replace(/```$/,'').trim();
-        try { snapshot.recommendations = JSON.parse(recs); _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated'); } catch(e) { _trSetStep(pageId, 'recommendations', 'error', 'Parse failed'); }
+        let recs = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        // Strip markdown fences and extract JSON array robustly
+        recs = recs.replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
+        // Extract first [...] block if there's extra text
+        const arrMatch = recs.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if(arrMatch) recs = arrMatch[0];
+        try {
+          snapshot.recommendations = JSON.parse(recs);
+          _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated');
+        } catch(e) {
+          // Gemini returned non-JSON — store as a single text recommendation
+          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,300), expected_impact: 'See above' }];
+          _trSetStep(pageId, 'recommendations', 'done', '1 recommendation (text)');
+        }
+      } else {
+        _trSetStep(pageId, 'recommendations', 'error', 'Gemini API ' + resp.status + ': ' + (resp.errorMessage||'').substring(0,80));
       }
     } catch(e) { _trSetStep(pageId, 'recommendations', 'error', e.message); console.warn('[tracker] Gemini recommendations failed:', e.message); }
   } else {
@@ -20127,7 +20184,8 @@ function startTrackerScheduler() {
       );
       for(const page of due.rows) {
         console.log('[tracker-scheduler] Running check for:', page.url);
-        await runTrackerCheck(page, process.env.GEMINI_API_KEY).catch(e => console.warn('[tracker-scheduler]', e.message));
+        const _sk = { gemini: process.env.GEMINI_API_KEY, googleKey: process.env.GOOGLE_SEARCH_API_KEY, googleCx: process.env.GOOGLE_SEARCH_CX, youKey: process.env.YOU_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY };
+        await runTrackerCheck(page, _sk.gemini, _sk).catch(e => console.warn('[tracker-scheduler]', e.message));
         await new Promise(r => setTimeout(r, 5000)); // 5s between checks
       }
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
