@@ -2539,10 +2539,13 @@ function renderTrackerPagesList() {
     var topRec = Array.isArray(recs) && recs.length ? recs[0] : null;
     var recHtml = topRec ? (function() {
       var col = topRec.priority === 'high' ? '#f87171' : topRec.priority === 'medium' ? '#fbbf24' : '#4ade80';
-      return '<div style="margin-top:6px;background:#0a0f1a;border-left:2px solid ' + col + ';border-radius:4px;padding:6px 10px;font-size:11px;">' +
-        '<span style="color:' + col + ';font-weight:700;text-transform:uppercase;font-size:10px;margin-right:6px;">' + (topRec.priority||'') + '</span>' +
-        '<span style="color:#9ca3af;">' + (topRec.title||'') + '</span>' +
-        (recs.length > 1 ? '<span style="color:#4b5563;margin-left:6px;">+' + (recs.length-1) + ' more</span>' : '') +
+      return '<div style="margin-top:6px;background:#0a0f1a;border-left:2px solid ' + col + ';border-radius:4px;padding:7px 10px;font-size:11px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:' + (topRec.action ? '4px' : '0') + ';">' +
+          '<span style="color:' + col + ';font-weight:700;text-transform:uppercase;font-size:10px;flex-shrink:0;">' + (topRec.priority||'') + '</span>' +
+          '<span style="color:#e2e8f0;font-weight:600;">' + (topRec.title||'') + '</span>' +
+          (recs.length > 1 ? '<span style="color:#4b5563;margin-left:auto;font-size:10px;">+' + (recs.length-1) + ' more → Details</span>' : '') +
+        '</div>' +
+        (topRec.action ? '<div style="color:#9ca3af;line-height:1.4;">' + (topRec.action||'') + '</div>' : '') +
       '</div>';
     })() : '';
     return '<div data-tracker-page-id="' + p.id + '" style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
