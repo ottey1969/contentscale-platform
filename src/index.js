@@ -10390,35 +10390,49 @@ app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, requireCredits(
     let articles = [];
     const since = new Date(Date.now() - days_back * 86400000).toISOString();
 
-    // Try RSS first
+    // Try RSS / Atom feed first
     if (feed.feed_url) {
       try {
-        const rssResp = await fetch(feed.feed_url, { signal: AbortSignal.timeout(8000) });
+        const rssResp = await fetch(feed.feed_url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)' } });
         const rssText = await rssResp.text();
-        const items = rssText.match(/<item>([\s\S]*?)<\/item>/g) || [];
-        for (const item of items.slice(0, 10)) {
-          const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/))?.[1] || '';
-          const link = (item.match(/<link>(.*?)<\/link>/) || item.match(/<guid>(.*?)<\/guid>/))?.[1] || '';
-          const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/))?.[1] || '';
-          const desc = (item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || item.match(/<description>([\s\S]*?)<\/description>/))?.[1] || '';
+        // Support both RSS <item> and Atom <entry>
+        const isAtom = rssText.includes('<entry>');
+        const itemTag = isAtom ? 'entry' : 'item';
+        const items = rssText.match(new RegExp(`<${itemTag}>([\\s\\S]*?)<\/${itemTag}>`, 'g')) || [];
+        for (const item of items.slice(0, 15)) {
+          const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/s) || item.match(/<title[^>]*>([^<]*)<\/title>/s))?.[1]?.trim() || '';
+          // Atom uses <link href="..."/> RSS uses <link>...</link>
+          const link = isAtom
+            ? (item.match(/<link[^>]+href=["\'](.*?)["\'][^>]*\/>/)?.[1] || item.match(/<link[^>]*rel=["\'alternate["\'][^>]+href=["\'](.*?)["\'][^>]*>/)?.[1] || '')
+            : ((item.match(/<link>(.*?)<\/link>/s) || item.match(/<guid[^>]*>(https?:\/\/[^<]+)<\/guid>/s))?.[1] || '');
+          const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/s) || item.match(/<published>(.*?)<\/published>/s) || item.match(/<updated>(.*?)<\/updated>/s))?.[1] || '';
+          const desc = (item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/s) || item.match(/<description[^>]*>([\s\S]*?)<\/description>/s) || item.match(/<summary[^>]*>([\s\S]*?)<\/summary>/s) || item.match(/<content[^>]*>([\s\S]*?)<\/content>/s))?.[1] || '';
           const itemDate = pubDate ? new Date(pubDate) : new Date();
-          if (itemDate >= new Date(since)) {
-            articles.push({ title: title.trim(), url: link.trim(), date: itemDate.toISOString(), snippet: desc.replace(/<[^>]+>/g, '').substring(0, 300) });
+          if (isNaN(itemDate.getTime()) || itemDate >= new Date(since)) {
+            articles.push({ title: title.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim(), url: link.trim(), date: itemDate.toISOString(), snippet: desc.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').substring(0, 400) });
           }
         }
-      } catch(e) { console.warn('RSS fetch failed:', e.message); }
+        console.log(`[news-feed] ${isAtom?'Atom':'RSS'} parsed: ${items.length} items, ${articles.length} in date range`);
+      } catch(e) { console.warn('[news-feed] RSS/Atom fetch failed:', e.message); }
     }
 
-    // If domain-based, use Google search
-    if (!articles.length && feed.domain) {
+    // Fallback: Serper keyword search when no feed URL or feed returned nothing
+    const _newsSerpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
+    if (!articles.length && _newsSerpKey) {
       try {
-        const q = `site:${feed.domain} ${feed.niche_keywords || feed.niche || ''}`.trim();
-        const searchResp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5&dateRestrict=d${days_back}`);
-        if (searchResp.ok) {
-          const sd = await searchResp.json();
-          articles = (sd.items || []).map(item => ({ title: item.title, url: item.link, date: new Date().toISOString(), snippet: item.snippet }));
+        const q = feed.domain ? `site:${feed.domain} ${feed.niche_keywords || feed.niche || ''}`.trim() : `${feed.niche_keywords || feed.niche || ''} news`.trim();
+        const sr = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': _newsSerpKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q, num: 8, tbs: `qdr:d${days_back}` }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (sr.ok) {
+          const sd = await sr.json();
+          articles = (sd.organic || []).slice(0,8).map(i => ({ title: i.title, url: i.link, date: new Date().toISOString(), snippet: i.snippet || '' }));
+          console.log(`[news-feed] Serper fallback: ${articles.length} results for "${q}"`);
         }
-      } catch(e) { console.warn('Domain search failed:', e.message); }
+      } catch(e) { console.warn('[news-feed] Serper fallback failed:', e.message); }
     }
 
     if (!articles.length) return res.json({ success: true, found: 0, articles: [] });
@@ -10434,46 +10448,40 @@ app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, requireCredits(
         originalContent = pageText.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 3000);
       } catch(e) { /* use snippet */ }
 
-      const rewritePrompt = `You are an expert content writer. Rewrite this news article to be 100% original, plagiarism-free, and SEO-optimized for the niche: "${feed.niche || feed.niche_keywords}".
+      // Detect language for news rewrite
+      const newsLang = detectContentLanguage(originalContent) !== 'en' ? detectContentLanguage(originalContent) : (detectContentLanguage(feed.niche || '') || 'en');
+      const newsLangNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
+      const newsLangName = newsLangNames[newsLang] || 'English';
+
+      const rewritePrompt = `You are an expert SEO content writer writing in ${newsLangName}. Rewrite this news article to be 100% original, plagiarism-free, and highly valuable for readers in the niche: "${feed.niche || feed.niche_keywords}".
+
+LANGUAGE: Write the ENTIRE article in ${newsLangName}. All headings, body, FAQ in ${newsLangName}.
 
 ORIGINAL TITLE: ${art.title}
 ORIGINAL SOURCE: ${art.url}
 ORIGINAL CONTENT: ${originalContent}
-
-BUSINESS CONTEXT: ${feed.profile_name} — ${feed.niche}
-
-═══════════════════════════════════════
-CONTENT QUALITY — STRICT RULES
-═══════════════════════════════════════
-📊 STATISTICS — REAL OR OMIT:
-- Only use statistics from the original source, with its URL as citation
-- NEVER insert labels like "[UNVERIFIED]", "[CONFIDENCE: X/10]", "[FLAG FOR REVIEW]", "[citation needed]"
-- NEVER write "studies show" or "research indicates" without naming the concrete source
-- If no verifiable statistic exists, write generic-but-accurate sentences WITHOUT numbers
-
-🎨 READABILITY — WCAG AA (contrast 4.5:1 minimum):
-- If using any inline styles, ensure text is clearly readable on its background
-- Prefer semantic HTML over styled containers — body text should inherit site styles
-
-📱 MOBILE — RESPONSIVE FIRST:
-- No fixed widths in inline styles
-- Keep HTML clean and semantic so it reflows naturally on 320px screens
-
-✅ OUTPUT RULE:
-If you cannot verify a fact or cannot guarantee readability: OMIT IT.
-Fix issues in the output — do NOT attach warnings, disclaimers, or placeholder flags.
+BUSINESS: ${feed.profile_name} — ${feed.niche}
 
 ═══════════════════════════════════════
-REWRITE RULES
+STRICT CONTENT RULES
 ═══════════════════════════════════════
-1. Completely rewrite in your own words — no plagiarism, no copied phrases
-2. Keep all factual information accurate to the original
-3. Add value: context, explanation, what it means for the reader
-4. Include the original source as a <a href="${art.url}"> citation at the end
-5. Optimize for search: include relevant keywords naturally
-6. Add a FAQ section with 3 questions (100-150 words each)
-7. Write 600-900 words total
-8. Return as clean HTML with <article>, <h1>, <h2>, <p>, and a FAQ section
+- Only use statistics that appear in the original content, cite with source URL
+- NEVER invent numbers, dates, or claims not in the original
+- NEVER add "[UNVERIFIED]" or "[citation needed]" labels — just omit unverifiable claims
+- NO generic openers ("In today's fast-paced world...", "In an era of...")
+- NO empty jargon ("game-changer", "leverage", "synergy")
+
+═══════════════════════════════════════
+CONTENT REQUIREMENTS
+═══════════════════════════════════════
+1. Open with the most important fact or insight from the article (triggers AI Overview)
+2. Add business context: what does this news mean for ${feed.niche} professionals?
+3. Include original source citation: <a href="${art.url}" rel="nofollow">[Source name]</a>
+4. Add 3 practical takeaways as a numbered list
+5. FAQ section: 3 questions readers would actually ask, 80-120 words each
+6. Write 700-1000 words total
+7. Return clean HTML: <article>, <h1>, <h2>, <p>, <ol>, <section class="faq">
+8. No inline styles, no fixed widths — semantic HTML only
 
 Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
 
@@ -12038,81 +12046,189 @@ app.post('/api/content/stats-study', verifyEngineAccess, requireCredits('stats-s
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
 
-    // 1. RESEARCH PHASE (Gemini)
+    // ── 1. RESEARCH: Serper searches for real stats sources ──────────────────
+    const _statsSerpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
     let sources = [];
-    if (process.env.GOOGLE_SEARCH_API_KEY) {
-      const queries = [`${topic} statistics 2024 2025`, `${topic} research data study`, `${topic} survey report`];
-      for (const q of queries) {
-        try {
-          const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
+    const statsQueries = [
+      `${topic} statistics ${new Date().getFullYear()}`,
+      `${topic} research data report`,
+      `${topic} survey study findings`
+    ];
+    for (const q of statsQueries) {
+      try {
+        if (_statsSerpKey) {
+          const sr = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: { 'X-API-KEY': _statsSerpKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ q, num: 5 }),
+            signal: AbortSignal.timeout(10000)
+          });
           if (sr.ok) {
             const sd = await sr.json();
-            sources = sources.concat((sd.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })));
+            sources = sources.concat((sd.organic||[]).slice(0,5).map(i => ({ title: i.title, url: i.link, snippet: i.snippet||'' })));
+            // Check for AI Overview answer — very valuable as a stat summary
+            if (sd.answerBox?.answer) sources.push({ title: 'Google AI Overview', url: '', snippet: sd.answerBox.answer });
           }
-        } catch (e) { /* continue */ }
-      }
+        }
+      } catch(e) { console.warn('[stats] Serper failed for:', q); }
     }
+    // Deduplicate sources by URL
+    const seenUrls = new Set();
+    sources = sources.filter(s => { if (!s.url || seenUrls.has(s.url)) return false; seenUrls.add(s.url); return true; });
+    console.log(`[stats-study] Found ${sources.length} sources for "${topic}"`);
 
-    // Generate Study Data Structure via Gemini
-    const studyPrompt = `Analyze the following search results for "${topic}" and extract key statistics.
+    // ── 2. EXTRACT structured stats via Gemini ───────────────────────────────
+    const studyPrompt = `You are a data researcher. Extract real, citable statistics from these search results about "${topic}".
+
+SEARCH RESULTS:
+${sources.map((s,i) => `${i+1}. ${s.title}\n   URL: ${s.url}\n   Snippet: ${s.snippet}`).join('\n\n')}
+
+TODAY: ${new Date().toISOString().slice(0,10)}
+BUSINESS CONTEXT: ${profile.name} — ${profile.niche}
+
+Extract ONLY facts that appear in the search results. Do not invent statistics.
 Return ONLY valid JSON:
-{"title": "compelling study title with year","slug": "url-slug-for-study","key_stats": [{ "stat": "X% of people...", "source": "Source Name", "source_url": "url", "year": 2024 }],"data_tables": [{ "title": "table title", "headers": ["col1","col2","col3"], "rows": [["val","val","val"]] }],"key_findings": ["finding 1","finding 2"],"sources": [{ "name": "source name", "url": "url", "year": 2024 }]}`;
-    
-    // Use callGeminiWithFallback for research
-    const studyResult = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: studyPrompt }] }] }, 'gemini-2.5-flash');
+{
+  "title": "compelling link-worthy study title with year — e.g. '47 ${topic} Statistics That Will Change How You Think in ${new Date().getFullYear()}'",
+  "slug": "url-slug-stats-study",
+  "hero_stat": { "number": "73%", "label": "most striking single stat for the hero section", "source": "Source Name", "source_url": "url" },
+  "key_stats": [
+    { "stat": "X% of...", "context": "what this means in plain English", "source": "Source Name", "source_url": "url", "year": 2026, "category": "category name", "color": "one of: purple|blue|green|orange|red|amber" }
+  ],
+  "data_tables": [
+    { "title": "table title", "headers": ["col1","col2","col3"], "rows": [["val","val","val"]] }
+  ],
+  "bar_chart_data": [
+    { "label": "Category", "value": 73, "color": "#7c3aed" }
+  ],
+  "key_findings": ["specific finding 1", "specific finding 2", "specific finding 3"],
+  "sources": [{ "name": "source name", "url": "url", "year": 2026 }],
+  "methodology": "Brief note on how these stats were collected and from which types of sources"
+}`;
+
+    const studyResult = await callGeminiWithFallback(geminiKey, {
+      contents: [{ role: 'user', parts: [{ text: studyPrompt }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+    });
     let studyData = {};
     try {
       let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleaned = rawText.replace(/```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      const cleaned = rawText.replace(/```json\s*/i,'').replace(/```\s*$/i,'').trim();
       studyData = JSON.parse(cleaned);
-    } catch (parseErr) {
-      return res.status(502).json({ success: false, error: 'AI returned invalid JSON for study data' });
+    } catch(parseErr) {
+      return res.status(502).json({ success: false, error: 'Gemini returned invalid JSON for study data' });
     }
 
-    // 2. WRITING PHASE (Claude)
-    const articlePrompt = `Write a comprehensive, publication-ready statistics study article in HTML.
-STUDY DATA: ${JSON.stringify(studyData)}
-BUSINESS: ${profile.name} — ${profile.niche}
+    // ── 3. WRITE — visually stunning, link-worthy HTML (Claude) ──────────────
+    const colorMap = { purple:'#7c3aed', blue:'#2563eb', green:'#16a34a', orange:'#ea580c', red:'#dc2626', amber:'#d97706' };
+    const statCards = (studyData.key_stats||[]).slice(0,12).map(s => {
+      const col = colorMap[s.color] || '#7c3aed';
+      const light = s.color === 'amber' ? '#fef3c7' : s.color === 'green' ? '#dcfce7' : s.color === 'blue' ? '#dbeafe' : s.color === 'red' ? '#fee2e2' : s.color === 'orange' ? '#ffedd5' : '#ede9fe';
+      return `<div style="background:${light};border-left:4px solid ${col};border-radius:8px;padding:20px 24px;break-inside:avoid;">
+  <div style="font-size:2.2rem;font-weight:800;color:${col};line-height:1;margin-bottom:6px;">${s.stat}</div>
+  <div style="font-size:0.95rem;color:#374151;font-weight:500;margin-bottom:8px;">${s.context||''}</div>
+  <div style="font-size:0.75rem;color:#6b7280;">Source: ${s.source_url ? `<a href="${s.source_url}" rel="nofollow" style="color:#6b7280;">${s.source}</a>` : s.source} (${s.year||''})</div>
+</div>`;
+    }).join('\n');
+
+    const barChart = (studyData.bar_chart_data||[]).length ? `<div style="margin:32px 0;background:#f9fafb;border-radius:12px;padding:24px;">
+  <h3 style="font-size:1.1rem;font-weight:700;color:#111827;margin-bottom:20px;">${topic} — Key Metrics Comparison</h3>
+  ${(studyData.bar_chart_data||[]).map(b => `<div style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <span style="font-size:0.85rem;font-weight:600;color:#374151;">${b.label}</span>
+      <span style="font-size:0.85rem;font-weight:700;color:${b.color||'#7c3aed'};">${b.value}%</span>
+    </div>
+    <div style="background:#e5e7eb;border-radius:999px;height:12px;overflow:hidden;">
+      <div style="background:${b.color||'#7c3aed'};height:100%;width:${Math.min(b.value,100)}%;border-radius:999px;transition:width 1s ease;"></div>
+    </div>
+  </div>`).join('')}
+</div>` : '';
+
+    const articlePrompt = `You are an expert data journalist writing a visually stunning, link-worthy statistics study that people will want to share and cite.
+
+TOPIC: "${topic}"
 SEED KEYWORD: ${seed_keyword || topic}
-REQUIREMENTS: 
-1. Open with compelling summary. 
-2. All data tables as proper HTML tables. 
-3. Cite every statistic with inline source links. 
-4. Scannable H2s, bullets, callout boxes. 
-5. Methodology section. 
-6. FAQ (5 questions). 
-7. ~2500 words. 
-8. ONLY use stats from STUDY DATA — never invent. 
-Return clean HTML starting with <article>. No markdown.`;
+BUSINESS: ${profile.name} — ${profile.niche}
+
+STUDY DATA (use ONLY these stats — never invent):
+${JSON.stringify(studyData, null, 2)}
+
+PRE-BUILT VISUAL COMPONENTS (insert these into the article):
+STAT CARDS GRID — insert after the introduction:
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:32px 0;">
+${statCards}
+</div>
+
+BAR CHART — insert in the middle of the article:
+${barChart}
+
+WRITE A COMPLETE STATISTICS STUDY with this exact structure:
+1. HERO SECTION — H1 title, then a big hero stat in a styled box:
+   <div style="background:linear-gradient(135deg,#4c1d95,#1d4ed8);color:white;border-radius:16px;padding:48px;text-align:center;margin:32px 0;">
+     <div style="font-size:5rem;font-weight:900;line-height:1;">[HERO NUMBER]</div>
+     <div style="font-size:1.2rem;opacity:0.9;margin-top:12px;">[HERO LABEL]</div>
+     <div style="font-size:0.8rem;opacity:0.7;margin-top:8px;">[SOURCE]</div>
+   </div>
+   Then 2-3 sentence intro explaining why this study matters.
+
+2. TABLE OF CONTENTS — anchor links to each H2 section
+
+3. INSERT THE STAT CARDS GRID HERE (copy the pre-built HTML above exactly)
+
+4. KEY FINDINGS — H2 section with the top 5 findings as styled callout boxes:
+   <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:16px 20px;margin:12px 0;">
+     <span style="font-weight:700;color:#854d0e;">Finding ${i+1}:</span> [finding text]
+   </div>
+
+5. DETAILED ANALYSIS — 3-4 H2 sections each analysing a different aspect of the data with context and what it means for ${profile.niche} professionals. Each section 200-300 words.
+
+6. INSERT THE BAR CHART HTML HERE (copy the pre-built HTML above exactly)
+
+7. DATA TABLES — for each table in study data, use this styling:
+   <div style="overflow-x:auto;margin:24px 0;">
+   <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+   <thead><tr style="background:#1e1b4b;color:white;">
+   <th style="padding:12px 16px;text-align:left;">[header]</th>...</tr></thead>
+   <tbody>[alternate row background: #f9fafb and white]</tbody>
+   </table></div>
+
+8. METHODOLOGY — brief section on how these stats were sourced
+
+9. FAQ — 5 questions people ask about ${topic}, 100-150 words each answer
+
+10. SOURCES — numbered list with linked citations
+
+WRITING RULES:
+- ONLY use statistics from STUDY DATA — never invent numbers
+- Write in a data-driven, authoritative journalistic style
+- Make every H2 specific and stat-driven (e.g. "73% of Companies Now Use X — Here's Why")
+- Target 2500-3000 words total
+- Include anchor IDs on H2s for the TOC: <h2 id="section-name">
+- Return ONLY clean HTML starting with <article>. No markdown, no code fences.`;
 
     const claudeStudyKey = resolveClaudeKey(req);
-    let rawHtml, wasTruncated = false;
-    
+    let rawHtml;
     try {
-      const sys = 'You are an expert data journalist and HTML writer. Write comprehensive statistics study articles using only the data provided. Never invent statistics. Return only clean HTML starting with <article>.';
-      
-      // ✅ FORCE CLAUDE FOR WRITING
-      rawHtml = await callClaudeForWrite(sys, articlePrompt, 8000, claudeStudyKey);
-      
-      rawHtml = rawHtml.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-    } catch(e) { 
-      return res.status(502).json({ success: false, error: 'Claude study generation failed: ' + e.message }); 
+      const sys = 'You are an expert data journalist and visual HTML designer. Write link-worthy statistics studies with bold visual design — colourful stat cards, charts, styled callouts. Return only clean HTML from <article>. Never invent statistics.';
+      rawHtml = await callClaudeForWrite(sys, articlePrompt, 12000, claudeStudyKey);
+      rawHtml = rawHtml.replace(/^```html\n?/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    } catch(e) {
+      return res.status(502).json({ success: false, error: 'Claude study generation failed: ' + e.message });
     }
-    
-    if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty study article' });
 
-    // Scrub placeholder patterns
+    if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty study' });
+
     const scrub = stripAiPlaceholders(rawHtml);
-    if (scrub.stripped) console.log(`🧹 [stats-study] Stripped ${scrub.stripped} placeholder pattern type(s)`);
     const htmlContent = scrub.html;
-    const wc = htmlContent.replace(/<[^>]+>/g, '').split(/\s+/).length;
+    const wc = htmlContent.replace(/<[^>]+>/g,'').split(/\s+/).length;
+    console.log(`[stats-study] Generated ${wc} words, ${htmlContent.length} chars`);
 
     const studyR = await pool.query(
       `INSERT INTO content_stats_studies (profile_id,topic,seed_keyword,sources,datapoints,html_content,title,slug,word_count,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft') RETURNING *`,
-      [profile_id, topic, seed_keyword||topic, JSON.stringify(studyData.sources||[]), JSON.stringify(studyData.key_stats||[]), htmlContent, studyData.title, studyData.slug, wc]
+      [profile_id, topic, seed_keyword||topic, JSON.stringify(studyData.sources||[]), JSON.stringify(studyData.key_stats||[]), htmlContent, studyData.title||topic, studyData.slug||(topic.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-statistics'), wc]
     );
 
-    res.json({ success: true, study: studyR.rows[0], study_data: studyData, truncated: wasTruncated });
+    res.json({ success: true, study: studyR.rows[0], study_data: studyData, sources_found: sources.length });
   } catch(e) {
     console.error('Stats study error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
