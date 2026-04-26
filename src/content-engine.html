@@ -55,6 +55,7 @@ textarea{resize:vertical;min-height:100px;}
 .html-preview a{color:#1d4ed8;}
 .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;max-width:300px;}
 .toast.show{opacity:1;}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 .data-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;}
 .data-table th{background:#1e293b;color:#a78bfa;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
@@ -2482,24 +2483,28 @@ function renderTrackerPagesList() {
     var pos = snap.google_position ? '#' + snap.google_position : '—';
     var aiG = snap.ai_google_overview_cited ? '<span style="color:#4ade80;">✅ AI Overview</span>' : (snap.ai_google_overview_found ? '<span style="color:#fbbf24;">⚠️ Overview (not cited)</span>' : '<span style="color:#6b7280;">— AI Overview</span>');
     var aiP = snap.ai_perplexity_cited ? '<span style="color:#4ade80;">✅ Perplexity</span>' : '<span style="color:#6b7280;">— Perplexity</span>';
-    var lastChecked = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never';
+    var aiY = snap.ai_bing_cited ? '<span style="color:#4ade80;">✅ You.com</span>' : '<span style="color:#6b7280;">— You.com</span>';
+    var lastChecked = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never checked';
     var pending = parseInt(p.pending_changes || 0);
-    return '<div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + '</div>' +
-        '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + '</div>' +
-        '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + '</div>' +
+    return '<div data-tracker-page-id="' + p.id + '" style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
+      '<div style="display:flex;align-items:center;gap:12px;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + '</div>' +
+          '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + ' · ' + lastChecked + '</div>' +
+          '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + ' ' + aiY + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0;">' +
+          '<div style="font-size:1.1rem;font-weight:700;color:#a78bfa;">' + pos + '</div>' +
+          '<div style="font-size:11px;color:#6b7280;">Google</div>' +
+          (pending ? '<div style="margin-top:4px;font-size:10px;background:#854d0e;color:#fef9c3;border-radius:4px;padding:2px 6px;">' + pending + ' change' + (pending > 1 ? 's' : '') + '</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
+          '<button onclick="openTrackerDetail(' + p.id + ')" style="font-size:11px;padding:5px 10px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e2e8f0;cursor:pointer;">Details</button>' +
+          '<button onclick="runTrackerCheck(' + p.id + ',this)" style="font-size:11px;padding:5px 10px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#a78bfa;cursor:pointer;">▶ Check</button>' +
+          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:11px;padding:5px 10px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f87171;cursor:pointer;">✕</button>' +
+        '</div>' +
       '</div>' +
-      '<div style="text-align:right;flex-shrink:0;">' +
-        '<div style="font-size:1.1rem;font-weight:700;color:#a78bfa;">' + pos + '</div>' +
-        '<div style="font-size:11px;color:#6b7280;">Google</div>' +
-        (pending ? '<div style="margin-top:4px;font-size:10px;background:#854d0e;color:#fef9c3;border-radius:4px;padding:2px 6px;">' + pending + ' change' + (pending > 1 ? 's' : '') + '</div>' : '') +
-      '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
-        '<button onclick="openTrackerDetail(' + p.id + ')" style="font-size:11px;padding:5px 10px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e2e8f0;cursor:pointer;">Details</button>' +
-        '<button onclick="runTrackerCheck(' + p.id + ',this)" style="font-size:11px;padding:5px 10px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#a78bfa;cursor:pointer;">▶ Check</button>' +
-        '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:11px;padding:5px 10px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#f87171;cursor:pointer;">✕</button>' +
-      '</div>' +
+      '<div class="tr-status"></div>' +
     '</div>';
   }).join('');
   el.innerHTML = html;
@@ -2543,16 +2548,67 @@ async function submitTrackerAdd() {
 }
 
 async function runTrackerCheck(pageId, btn) {
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
   try {
-    await api('/api/tracker/pages/' + pageId + '/check', 'POST');
-    toast('✅ Check started — results update in ~30s');
-    setTimeout(loadTrackerPages, 35000);
+    var resp = await api('/api/tracker/pages/' + pageId + '/check', 'POST');
+    if (!resp.success) throw new Error(resp.error || 'Failed to start');
+    if (resp.already_running) { toast('Already running — see progress below'); }
+    // Show live progress panel for this page
+    _startTrackerStatusPoll(pageId);
   } catch(e) {
     toast('Error: ' + e.message);
-  } finally {
     if (btn) { btn.disabled = false; btn.textContent = '▶ Check'; }
   }
+}
+
+var _trStatusPollers = {}; // pageId -> intervalId
+
+function _startTrackerStatusPoll(pageId) {
+  // Show inline status in the pages list
+  var row = document.querySelector('[data-tracker-page-id="' + pageId + '"]');
+  if (!row) { loadTrackerPages(); return; }
+  var statusEl = row.querySelector('.tr-status');
+  if (!statusEl) return;
+
+  // Clear any existing poller
+  if (_trStatusPollers[pageId]) clearInterval(_trStatusPollers[pageId]);
+
+  var pollCount = 0;
+  _trStatusPollers[pageId] = setInterval(async function() {
+    pollCount++;
+    try {
+      var data = await api('/api/tracker/pages/' + pageId + '/check-status');
+      _renderTrackerStatus(statusEl, data);
+      if (!data.running && pollCount > 1) {
+        clearInterval(_trStatusPollers[pageId]);
+        delete _trStatusPollers[pageId];
+        // Reload the full list after a short delay so stats update
+        setTimeout(loadTrackerPages, 1500);
+      }
+    } catch(e) {
+      clearInterval(_trStatusPollers[pageId]);
+    }
+    if (pollCount > 120) { clearInterval(_trStatusPollers[pageId]); } // 2min max
+  }, 1500);
+}
+
+function _renderTrackerStatus(el, data) {
+  var ICONS = { pending: '⬜', running: '<span style="animation:spin 1s linear infinite;display:inline-block;">⟳</span>', done: '✅', error: '❌' };
+  var NAMES = { html_hash: 'Content hash', google: 'Google Search', perplexity: 'Perplexity', youcom: 'You.com AI', recommendations: 'AI Recommendations', save: 'Save', complete: 'Complete' };
+  if (!data || (!data.running && !data.steps.length)) { el.innerHTML = ''; return; }
+  var html = '<div style="margin-top:8px;background:#0a0f1a;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:12px;">';
+  html += '<div style="font-weight:700;color:#a78bfa;margin-bottom:6px;">' + (data.running ? '⏳ Checking…' : '✅ Check complete') + '</div>';
+  data.steps.forEach(function(s) {
+    var icon = ICONS[s.status] || '⬜';
+    var name = NAMES[s.name] || s.name;
+    var color = s.status === 'error' ? '#f87171' : s.status === 'done' ? '#e2e8f0' : '#9ca3af';
+    html += '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:3px;">';
+    html += '<span style="flex-shrink:0;">' + icon + '</span>';
+    html += '<span style="color:' + color + ';"><b>' + name + '</b>' + (s.detail ? ' — ' + s.detail : '') + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 async function deleteTrackerPage(pageId) {
