@@ -10035,7 +10035,12 @@ app.post('/api/content/articles/:id/publish-wp', verifyEngineAccess, async (req,
     const wpResp = await fetch(wpApiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
-      body: JSON.stringify({ title: article.title, content: article.html_content, slug: article.slug, status: 'draft' })
+      body: JSON.stringify({
+          title: article.title,
+          slug: article.slug,
+          status: 'draft',
+          content: '<!-- wp:html -->\n' + (article.html_content || '').trim() + '\n<!-- /wp:html -->'
+        })
     });
     if (!wpResp.ok) {
       const err = await wpResp.text();
@@ -10044,6 +10049,38 @@ app.post('/api/content/articles/:id/publish-wp', verifyEngineAccess, async (req,
     const wpData = await wpResp.json();
     await pool.query(`UPDATE content_articles SET wp_post_id=$1, wp_url=$2, status='published', published_at=NOW(), updated_at=NOW() WHERE id=$3`,
       [wpData.id, wpData.link, article.id]);
+    res.json({ success: true, wp_post_id: wpData.id, wp_url: wpData.link });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Publish rewrite to WordPress ─────────────────────────────
+app.post('/api/content/rewrites/:id/publish-wp', verifyEngineAccess, async (req, res) => {
+  try {
+    const rwR = await pool.query(
+      `SELECT r.*, cp.wp_url, cp.wp_user, cp.wp_app_password FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`,
+      [req.params.id]
+    );
+    if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
+    const rw = rwR.rows[0];
+    if (!rw.wp_url || !rw.wp_user || !rw.wp_app_password) return res.status(400).json({ success: false, error: 'WordPress credentials not configured for this profile. Add WP URL, username and app password in the profile settings.' });
+    const wpApiUrl = rw.wp_url.replace(/\/$/, '') + '/wp-json/wp/v2/posts';
+    const credentials = Buffer.from(`${rw.wp_user}:${rw.wp_app_password}`).toString('base64');
+    const wpResp = await fetch(wpApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+      body: JSON.stringify({
+          title: rw.rewritten_title || rw.original_title,
+          slug: rw.original_slug,
+          status: 'draft',
+          content: '<!-- wp:html -->\n' + (rw.rewritten_html || '').trim() + '\n<!-- /wp:html -->'
+        })
+    });
+    if (!wpResp.ok) {
+      const err = await wpResp.text();
+      return res.status(400).json({ success: false, error: `WordPress error: ${err.substring(0,200)}` });
+    }
+    const wpData = await wpResp.json();
+    await pool.query(`UPDATE content_rewrites SET status='published', updated_at=NOW() WHERE id=$1`, [rw.id]);
     res.json({ success: true, wp_post_id: wpData.id, wp_url: wpData.link });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -10552,12 +10589,12 @@ app.post('/api/content/news-articles/:id/publish-wp', verifyEngineAccess, async 
         'Content-Type': 'application/json', 
         'Authorization': `Basic ${creds}` 
       }, 
-      body: JSON.stringify({ 
-        title: art.rewritten_title, 
-        content: art.rewritten_html, 
-        slug: art.rewritten_slug, 
-        status: 'draft' 
-      }) 
+      body: JSON.stringify({
+          title: art.rewritten_title,
+          slug: art.rewritten_slug,
+          status: 'draft',
+          content: '<!-- wp:html -->\n' + (art.rewritten_html || '').trim() + '\n<!-- /wp:html -->'
+        })
     });
     
     if (!wpR.ok) { 
