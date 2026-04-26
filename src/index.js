@@ -10615,6 +10615,266 @@ app.delete('/api/content/news-articles/:id', verifyEngineAccess, async (req, res
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// VIDEO → ARTICLE  (YouTube transcript → SEO article)
+// Uses: Serper for video search · YouTube Data API v3 for transcripts
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Search YouTube for videos on a topic ──────────────────────────────────
+app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
+  try {
+    const { query, lang = 'en' } = req.body;
+    if (!query) return res.status(400).json({ success: false, error: 'query required' });
+
+    const serpKey = req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '';
+    const ytKey   = process.env.YOUTUBE_API_KEY || '';
+
+    let videos = [];
+
+    // 1. Try YouTube Data API v3 (best — returns transcript availability)
+    if (ytKey) {
+      try {
+        const ytResp = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=8&relevanceLanguage=${lang}&videoCaption=closedCaption&key=${ytKey}`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+        if (ytResp.ok) {
+          const ytData = await ytResp.json();
+          videos = (ytData.items || []).map(item => ({
+            id: item.id?.videoId,
+            url: `https://www.youtube.com/watch?v=${item.id?.videoId}`,
+            title: item.snippet?.title || '',
+            channel: item.snippet?.channelTitle || '',
+            thumbnail: item.snippet?.thumbnails?.medium?.url || '',
+            published: item.snippet?.publishedAt || '',
+            has_transcript: true, // filter=closedCaption means transcript exists
+            source: 'youtube_api'
+          }));
+        }
+      } catch(e) { console.warn('[video-search] YT API failed:', e.message); }
+    }
+
+    // 2. Fallback: Serper YouTube search
+    if (!videos.length && serpKey) {
+      try {
+        const sr = await fetch('https://google.serper.dev/videos', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serpKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: query + ' tutorial', gl: lang === 'nl' ? 'nl' : lang === 'de' ? 'de' : 'us', hl: lang }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (sr.ok) {
+          const sd = await sr.json();
+          videos = (sd.videos || []).slice(0, 8).map(v => {
+            // Extract YouTube video ID from link
+            const idMatch = (v.link || '').match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            return {
+              id: idMatch ? idMatch[1] : null,
+              url: v.link || '',
+              title: v.title || '',
+              channel: v.channel || '',
+              thumbnail: v.thumbnailUrl || v.imageUrl || '',
+              duration: v.duration || '',
+              views: v.views || null,
+              has_transcript: !!idMatch, // can only get transcript if we have video ID
+              source: 'serper'
+            };
+          }).filter(v => v.url);
+        }
+      } catch(e) { console.warn('[video-search] Serper video search failed:', e.message); }
+    }
+
+    // 3. You.com fallback
+    const youKey = req.headers['x-you-api-key'] || process.env.YOU_API_KEY || '';
+    if (!videos.length && youKey) {
+      try {
+        const yr = await fetch(`https://api.ydc-index.io/search?query=${encodeURIComponent(query + ' youtube')}&num_web_results=5`,
+          { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(10000) }
+        );
+        if (yr.ok) {
+          const yd = await yr.json();
+          videos = (yd.hits || []).filter(h => (h.url||'').includes('youtube.com/watch')).slice(0,5).map(h => {
+            const idMatch = (h.url||'').match(/v=([a-zA-Z0-9_-]{11})/);
+            return { id: idMatch?.[1], url: h.url, title: h.title||'', channel: '', thumbnail: '', has_transcript: !!idMatch, source: 'youcom' };
+          });
+        }
+      } catch(e) { console.warn('[video-search] You.com failed:', e.message); }
+    }
+
+    res.json({ success: true, videos, query, source: videos[0]?.source || 'none' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Fetch transcript + rewrite video as SEO article ────────────────────────
+app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
+  try {
+    const { video_id, video_url, video_title, profile_id } = req.body;
+    if (!video_id && !video_url) return res.status(400).json({ success: false, error: 'video_id or video_url required' });
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+
+    const profileR = await pool.query('SELECT * FROM content_profiles WHERE id=$1', [profile_id]);
+    if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
+    const profile = profileR.rows[0];
+
+    const ytKey = process.env.YOUTUBE_API_KEY || '';
+    let transcript = '';
+    let actualTitle = video_title || '';
+    let channelName = '';
+    let sourceUrl = video_url || (video_id ? `https://www.youtube.com/watch?v=${video_id}` : '');
+
+    // Extract video ID from URL if not provided
+    let vid = video_id;
+    if (!vid && video_url) {
+      const m = video_url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+      vid = m ? m[1] : null;
+    }
+    if (!vid) return res.status(400).json({ success: false, error: 'Could not extract YouTube video ID from URL' });
+
+    // 1. Get video metadata + check captions exist
+    if (ytKey) {
+      try {
+        const metaR = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(8000) });
+        if (metaR.ok) {
+          const metaD = await metaR.json();
+          const item = metaD.items?.[0];
+          if (item) {
+            actualTitle = item.snippet?.title || actualTitle;
+            channelName = item.snippet?.channelTitle || '';
+          }
+        }
+      } catch(e) { console.warn('[video-rewrite] metadata fetch failed:', e.message); }
+
+      // 2. Get captions list
+      try {
+        const capR = await fetch(`https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(8000) });
+        if (capR.ok) {
+          const capD = await capR.json();
+          const caps = (capD.items || []);
+          const autoEn = caps.find(c => c.snippet?.trackKind === 'asr' && (c.snippet?.language || '').startsWith('en'));
+          const manualEn = caps.find(c => c.snippet?.trackKind !== 'asr' && (c.snippet?.language || '').startsWith('en'));
+          const best = manualEn || autoEn || caps[0];
+          if (best) {
+            // Download caption as SRT/timedtext
+            try {
+              const dlR = await fetch(`https://www.googleapis.com/youtube/v3/captions/${best.id}?tfmt=srt&key=${ytKey}`, {
+                headers: { 'Authorization': 'Bearer ' + ytKey },
+                signal: AbortSignal.timeout(15000)
+              });
+              if (dlR.ok) {
+                const srt = await dlR.text();
+                // Strip SRT timing lines — keep only text
+                transcript = srt.replace(/^\d+$/gm,'').replace(/^\d{2}:\d{2}:\d{2},\d{3} --> .+$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
+              }
+            } catch(e2) { console.warn('[video-rewrite] caption download failed:', e2.message); }
+          }
+        }
+      } catch(e) { console.warn('[video-rewrite] captions list failed:', e.message); }
+    }
+
+    // 3. Fallback: scrape YouTube page description + auto-generated transcript via timedtext API
+    if (!transcript) {
+      try {
+        // YouTube's unofficial timedtext endpoint (no API key needed for auto-captions)
+        const ttR = await fetch(`https://www.youtube.com/api/timedtext?v=${vid}&lang=en&fmt=json3`, { signal: AbortSignal.timeout(10000) });
+        if (ttR.ok) {
+          const ttD = await ttR.json();
+          const events = ttD.events || [];
+          transcript = events
+            .filter(e => e.segs)
+            .map(e => e.segs.map(s => s.utf8 || '').join(''))
+            .join(' ')
+            .replace(/\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+      } catch(e) { console.warn('[video-rewrite] timedtext fallback failed:', e.message); }
+    }
+
+    // 4. If still no transcript, use page description
+    if (!transcript) {
+      try {
+        const pageR = await fetch(`https://www.youtube.com/watch?v=${vid}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000)
+        });
+        if (pageR.ok) {
+          const html = await pageR.text();
+          const descMatch = html.match(/"description":{"simpleText":"(.*?)"}/);
+          if (descMatch) transcript = descMatch[1].replace(/\\n/g,'\n').substring(0, 3000);
+        }
+      } catch(e) { console.warn('[video-rewrite] page scrape failed:', e.message); }
+    }
+
+    if (!transcript || transcript.length < 100) {
+      return res.status(400).json({ success: false, error: 'Could not retrieve transcript for this video. The video may have no captions, or captions are disabled. Try a different video or add YOUTUBE_API_KEY to Railway env vars.' });
+    }
+
+    // Detect language
+    const detectedLang = detectContentLanguage(transcript);
+    const langNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
+    const langName = langNames[profile.content_language || detectedLang] || 'English';
+
+    // Sitemap for internal links
+    let sitemapUrls = [];
+    if (profile.sitemap_url) {
+      try {
+        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(6000) });
+        if (sr.ok) {
+          const sx = await sr.text();
+          sitemapUrls = (sx.match(/<loc>(.*?)<\/loc>/g)||[]).map(m=>m.replace(/<\/?loc>/g,'')).filter(u=>!u.match(/\.(jpg|png|gif|xml)$/i)).slice(0,20);
+        }
+      } catch(e) {}
+    }
+    const internalLinks = sitemapUrls.length ? `INTERNAL LINKS (use only these URLs):\n${sitemapUrls.map(u=>`- ${u}`).join('\n')}` : 'No sitemap — do not invent URLs.';
+
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const claudeKey = resolveClaudeKey(req);
+    if (!claudeKey) return res.status(500).json({ success: false, error: 'Claude API key required for writing' });
+
+    const writePrompt = `You are an expert SEO content writer converting a YouTube video transcript into a high-quality, original SEO article.
+
+LANGUAGE: Write the ENTIRE article in ${langName}. All headings, body, FAQ — everything in ${langName}.
+
+VIDEO: ${actualTitle}
+CHANNEL: ${channelName}
+SOURCE: ${sourceUrl}
+BUSINESS: ${profile.name} — ${profile.niche || ''}
+TARGET AUDIENCE: ${profile.target_audience || ''}
+PRIMARY GOAL: ${profile.primary_goal || 'leads'}
+
+VIDEO TRANSCRIPT:
+${transcript.substring(0, 8000)}
+
+REQUIREMENTS:
+1. Rewrite as a complete, original SEO article — do NOT copy transcript verbatim
+2. Structure: H1 title → direct answer (2 sentences) → TL;DR → TOC → H2 sections → FAQ (5 Q&As) → conclusion + CTA
+3. Add context and expertise beyond what was said in the video
+4. Every H2 should answer a specific question from the transcript
+5. Add a "Watch the original video" link: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch: ${actualTitle}</a>
+6. Include FAQPage JSON-LD schema with 5 questions from the content
+7. Minimum 1200 words
+8. BOFU quality: no generic openers, no jargon, concrete examples
+
+${internalLinks}
+
+Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
+
+    const sys = 'You are an expert SEO content writer converting video transcripts into original, rankable articles. Return only clean HTML from <article>. Never copy transcript verbatim.';
+    let rawHtml = await callClaudeForWrite(sys, writePrompt, 8000, claudeKey);
+    rawHtml = rawHtml.replace(/^```html\n?/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+
+    if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty article' });
+
+    const scrub = stripAiPlaceholders(rawHtml);
+    const html = scrub.html;
+    const wc = html.replace(/<[^>]+>/g,'').split(/\s+/).length;
+
+    res.json({ success: true, html, title: actualTitle, word_count: wc, transcript_chars: transcript.length, source_url: sourceUrl, channel: channelName, detected_language: detectedLang });
+  } catch(e) {
+    console.error('[video-rewrite]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── Rewrite Analysis ──────────────────────────────────────────
 app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('analyse-rewrite'), async (req, res) => {
   try {

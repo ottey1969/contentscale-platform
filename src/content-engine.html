@@ -562,6 +562,56 @@ textarea{resize:vertical;min-height:100px;}
   <!-- Feeds List -->
   <div id="feedsList"></div>
 
+  <!-- ── Video to Article ──────────────────────────────────────────────── -->
+  <div style="margin-top:24px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+    <h3 style="font-size:1rem;font-weight:800;">🎬 Video → Article</h3>
+    <span style="font-size:11px;color:#6b7280;">YouTube transcript → rewrite as SEO article</span>
+  </div>
+
+  <!-- Video search + direct URL -->
+  <div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <button id="btnVideoTab1" onclick="switchVideoTab('search')" style="padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4);">🔍 Search Videos</button>
+      <button id="btnVideoTab2" onclick="switchVideoTab('url')" style="padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;border:1px solid rgba(255,255,255,.08);">🔗 Direct URL</button>
+    </div>
+
+    <!-- Search tab -->
+    <div id="videoTabSearch">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <input id="videoSearchQuery" placeholder="roofing tutorial, SEO tips 2025, dakdekker..." style="flex:1;min-width:200px;padding:10px 12px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;" onkeydown="if(event.key==='Enter')searchVideos()">
+        <select id="videoSearchLang" style="padding:10px 12px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
+          <option value="en">English</option>
+          <option value="nl">Nederlands</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="es">Español</option>
+        </select>
+        <button class="btn btn-primary" onclick="searchVideos()" id="btnSearchVideos">🔍 Find Videos</button>
+      </div>
+      <div id="videoSearchResults" style="display:none;"></div>
+    </div>
+
+    <!-- Direct URL tab -->
+    <div id="videoTabUrl" style="display:none;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="videoDirectUrl" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;padding:10px 12px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
+        <button class="btn btn-primary" onclick="rewriteVideoUrl()" id="btnRewriteUrl">🎬 Rewrite This Video</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video rewrite result -->
+  <div id="videoRewriteResult" style="display:none;" class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin:0;">🎬 Video Article Ready</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentVideoHtml||'').then(function(){toast('Copied!')})">📋 Copy HTML</button>
+        <button class="btn btn-success" style="font-size:12px;" onclick="downloadVideoHtml()">⬇️ Download</button>
+      </div>
+    </div>
+    <div id="videoRewriteContent"></div>
+  </div>
+
   <!-- News Articles -->
   <div id="newsArticlesSection" style="display:none;margin-top:16px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1753,7 +1803,35 @@ async function executeRewrite() {
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
       '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast(\'Copied!\')})">📋 Copy HTML</button>' +
       '<button class="btn btn-success" style="font-size:12px;" onclick="downloadRewriteHtml()">⬇️ Download</button>' +
+      '<button class="btn btn-secondary" style="font-size:12px;" onclick="publishRewriteToWp()" id="btnRwWp">🚀 WP</button>' +
       '</div></div>' +
+
+      // Score Before → After banner
+      (d.graaf_original_score != null ? (function() {
+        var before = d.graaf_original_score;
+        var after = d.graaf_score || before;
+        var diff = after - before;
+        var diffColor = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#6b7280';
+        var diffStr = diff > 0 ? '+' + diff : String(diff);
+        return '<div style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(37,99,235,.08));border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">' +
+          '<div style="text-align:center;">' +
+            '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Score Before</div>' +
+            '<div style="font-size:2rem;font-weight:800;color:#6b7280;">' + before + '</div>' +
+            '<div style="font-size:10px;color:#4b5563;">/ 100</div>' +
+          '</div>' +
+          '<div style="font-size:1.5rem;color:#4b5563;">→</div>' +
+          '<div style="text-align:center;">' +
+            '<div style="font-size:10px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Score After</div>' +
+            '<div style="font-size:2rem;font-weight:800;color:' + (after >= 80 ? '#4ade80' : after >= 60 ? '#fbbf24' : '#f87171') + ';">' + after + '</div>' +
+            '<div style="font-size:10px;color:#4b5563;">/ 100</div>' +
+          '</div>' +
+          '<div style="flex:1;min-width:120px;">' +
+            '<div style="font-size:1.3rem;font-weight:800;color:' + diffColor + ';">' + diffStr + ' pts</div>' +
+            '<div style="font-size:11px;color:#6b7280;margin-top:2px;">ContentScore improvement</div>' +
+          '</div>' +
+        '</div>';
+      })() : '') +
+
       '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
       (d.bofu_score != null ? '<span style="background:rgba(' + (d.bofu_passed?'74,222,128':'248,113,113') + ',.12);border:1px solid ' + bofuColor + ';color:' + bofuColor + ';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;">' + bofuIcon + ' BOFU ' + d.bofu_score + '/100</span>' : '') +
       (d.mode_used ? '<span style="background:rgba(255,255,255,.04);border:1px solid ' + modeColor + ';color:' + modeColor + ';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;">' + modeLabel + '</span>' : '') +
@@ -1761,7 +1839,24 @@ async function executeRewrite() {
       (d.author_used ? '<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:11px;">👤 ' + d.author_used + (d.author_detected ? ' (detected)' : ' (default)') + '</span>' : '') +
       (d.regeneration_attempts > 1 ? '<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:11px;">🔁 ' + d.regeneration_attempts + ' attempts</span>' : '') +
       '</div>' +
-      '<div style="font-size:12px;color:#6b7280;margin-bottom:14px;">✓ Saved · Images preserved · Linked to money pages</div>' +
+
+      // Next steps checklist — matches handleiding flow
+      '<div style="background:#0a0f1a;border:1px solid #1f2937;border-radius:8px;padding:14px 18px;margin-bottom:12px;">' +
+      '<div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:10px;">✅ Volgende stappen</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;">' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af;cursor:pointer;"><input type="checkbox" onchange="this.parentElement.style.textDecoration=this.checked?\'line-through\':\'none\';this.parentElement.style.color=this.checked?\'#4b5563\':\'#9ca3af\';"> ✓ HTML gepubliceerd op de website</label>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af;cursor:pointer;"><input type="checkbox" onchange="this.parentElement.style.textDecoration=this.checked?\'line-through\':\'none\';this.parentElement.style.color=this.checked?\'#4b5563\':\'#9ca3af\';"> ✓ Timestamp vernieuwd (dateModified in schema)</label>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af;cursor:pointer;"><input type="checkbox" id="cbGscReindex" onchange="this.parentElement.style.textDecoration=this.checked?\'line-through\':\'none\';this.parentElement.style.color=this.checked?\'#4b5563\':\'#9ca3af\';"> ✓ GSC indexering aangevraagd' +
+        (d.tracker_page && d.tracker_page.url ? ' <a href="https://search.google.com/search-console/inspect?resource_id=' + encodeURIComponent(d.tracker_page.url.replace(/^https?:\/\//, 'sc-domain:').split('/')[0]) + '&id=' + encodeURIComponent(d.tracker_page.url) + '" target="_blank" rel="noopener" style="color:#60a5fa;font-size:11px;margin-left:4px;">→ Open GSC</a>' : '') +
+      '</label>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af;cursor:pointer;"><input type="checkbox" onchange="this.parentElement.style.textDecoration=this.checked?\'line-through\':\'none\';this.parentElement.style.color=this.checked?\'#4b5563\':\'#9ca3af\';"> ✓ Hercheck ingepland over 14 dagen in Gab Tracker</label>' +
+      '</div>' +
+      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1f2937;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+      (d.tracker_page && d.tracker_page.url ? '<a href="https://search.google.com/search-console/inspect?resource_id=sc-domain%3A' + encodeURIComponent((d.tracker_page.url||'').replace(/^https?:\/\//,'').split('/')[0]) + '&id=' + encodeURIComponent(d.tracker_page.url||'') + '" target="_blank" rel="noopener" class="btn btn-secondary" style="font-size:11px;">🔍 GSC URL Inspectie →</a>' : '<span style="font-size:11px;color:#4b5563;">GSC link beschikbaar na opslaan URL</span>') +
+      '<span style="font-size:11px;color:#4b5563;">⏱ Hercheck na 14 dagen in GSC voor positieverandering</span>' +
+      '</div>' +
+      '</div>' +
+
       // SEO ContentScore scan — runs automatically
       '<div id="rwGraafScan" style="background:#0a0f1a;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:12px;">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
@@ -1772,7 +1867,7 @@ async function executeRewrite() {
       '</div>' +
       // Gab Tracker link — shown after scan
       (d.tracker_page ? '<div id="rwTrackerLink" style="display:none;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">' +
-      '<span style="font-size:12px;color:#4ade80;">📡 Auto-added to Gab Tracker · Monitoring started</span>' +
+      '<span style="font-size:12px;color:#4ade80;">📡 Auto-added to Gab Tracker · Monitoring started · 14-day recheck scheduled</span>' +
       '<button class="btn btn-secondary" style="font-size:11px;" onclick="showPanel(\'tracker\',document.querySelector(\'.nav-tab:last-child\'));loadTrackerPages();">Open Gab Tracker →</button>' +
       '</div>' : '');
 
@@ -1827,6 +1922,24 @@ function downloadRewriteHtml() {
   a.href = URL.createObjectURL(blob);
   a.download = (_currentRewriteTitle || 'rewrite').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.html';
   a.click(); toast('Downloaded!');
+}
+
+async function publishRewriteToWp() {
+  if (!_currentRewriteId) { toast('No rewrite loaded', 'red'); return; }
+  var btn = document.getElementById('btnRwWp');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Publishing...'; }
+  try {
+    var d = await api('/api/content/rewrites/' + _currentRewriteId + '/publish-wp', 'POST');
+    if (d.success) {
+      toast('✅ Published to WordPress! Post ID: ' + (d.wp_post_id || '?'));
+      if (btn) btn.innerHTML = '✅ Published';
+    } else {
+      throw new Error(d.error || 'WP publish failed');
+    }
+  } catch(e) {
+    toast('WP Error: ' + e.message, 'red');
+    if (btn) { btn.disabled = false; btn.innerHTML = '🚀 WP'; }
+  }
 }
 
 async function loadRewrites() {
@@ -2063,6 +2176,106 @@ function viewFeedArticles(feedId) {
   _currentFeedId = feedId;
   loadNewsArticles();
   document.getElementById('newsArticlesSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Video → Article ─────────────────────────────────────────────────────────
+var _currentVideoHtml = '';
+
+function switchVideoTab(tab) {
+  document.getElementById('videoTabSearch').style.display = tab === 'search' ? 'block' : 'none';
+  document.getElementById('videoTabUrl').style.display = tab === 'url' ? 'block' : 'none';
+  document.getElementById('btnVideoTab1').style.cssText = tab === 'search'
+    ? 'padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4);'
+    : 'padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;border:1px solid rgba(255,255,255,.08);';
+  document.getElementById('btnVideoTab2').style.cssText = tab === 'url'
+    ? 'padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4);'
+    : 'padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;border:1px solid rgba(255,255,255,.08);';
+}
+
+async function searchVideos() {
+  var q = document.getElementById('videoSearchQuery').value.trim();
+  if (!q) { toast('Enter a search query', 'red'); return; }
+  var lang = document.getElementById('videoSearchLang').value;
+  var btn = document.getElementById('btnSearchVideos');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Searching...';
+  var resEl = document.getElementById('videoSearchResults');
+  resEl.style.display = 'block';
+  resEl.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0;">Searching YouTube for: <strong style="color:#e2e8f0;">' + q + '</strong>...</div>';
+  try {
+    var d = await api('/api/content/video-search', 'POST', { query: q, lang });
+    var videos = d.videos || [];
+    if (!videos.length) { resEl.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0;">No videos found. Try a different query.</div>'; return; }
+    resEl.innerHTML = videos.map(function(v) {
+      var dur = v.duration ? ' · ' + v.duration : '';
+      var views = v.views ? ' · ' + Number(v.views).toLocaleString() + ' views' : '';
+      var hasTranscript = v.has_transcript !== false;
+      return '<div style="background:#0a0f1a;border:1px solid #1f2937;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">' +
+        (v.thumbnail ? '<img src="' + v.thumbnail + '" style="width:120px;height:68px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">' : '<div style="width:120px;height:68px;background:#1f2937;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:24px;">▶</div>') +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:4px;line-height:1.3;">' + (v.title || '') + '</div>' +
+          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">' + (v.channel || '') + dur + views + '</div>' +
+          (hasTranscript
+            ? '<button onclick="rewriteVideoFromSearch(' + JSON.stringify(v).replace(/"/g,'&quot;') + ')" style="padding:6px 14px;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4);border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;">🎬 Rewrite as Article</button>'
+            : '<span style="font-size:11px;color:#4b5563;">⚠️ No transcript available</span>') +
+          (v.url ? ' <a href="' + v.url + '" target="_blank" rel="noopener" style="font-size:11px;color:#60a5fa;margin-left:8px;">▶ Watch</a>' : '') +
+        '</div></div>';
+    }).join('');
+  } catch(e) { resEl.innerHTML = '<div style="color:#f87171;font-size:13px;padding:12px 0;">Search failed: ' + e.message + '</div>'; }
+  finally { btn.disabled = false; btn.innerHTML = '🔍 Find Videos'; }
+}
+
+async function rewriteVideoFromSearch(video) {
+  var profileId = document.getElementById('newsProfileFilter').value;
+  if (!profileId) { toast('Select a profile first', 'red'); return; }
+  await _doVideoRewrite({ video_id: video.id, video_url: video.url, video_title: video.title, profile_id: profileId });
+}
+
+async function rewriteVideoUrl() {
+  var url = document.getElementById('videoDirectUrl').value.trim();
+  var profileId = document.getElementById('newsProfileFilter').value;
+  if (!url) { toast('Enter a YouTube URL', 'red'); return; }
+  if (!profileId) { toast('Select a profile first', 'red'); return; }
+  // Extract video ID from URL
+  var match = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+  var videoId = match ? match[1] : null;
+  await _doVideoRewrite({ video_id: videoId, video_url: url, profile_id: profileId });
+}
+
+async function _doVideoRewrite(payload) {
+  var resultEl = document.getElementById('videoRewriteResult');
+  var contentEl = document.getElementById('videoRewriteContent');
+  resultEl.style.display = 'block';
+  contentEl.innerHTML = '<div style="display:flex;align-items:center;gap:10px;color:#6b7280;font-size:13px;padding:20px 0;"><span class="spinner"></span> Fetching transcript and rewriting — this takes 30-60 seconds...</div>';
+  resultEl.scrollIntoView({ behavior: 'smooth' });
+  try {
+    var d = await api('/api/content/video-rewrite', 'POST', payload);
+    if (!d.success) throw new Error(d.error || 'Rewrite failed');
+    _currentVideoHtml = d.html || '';
+    contentEl.innerHTML =
+      '<div style="margin-bottom:12px;">' +
+        '<div style="font-size:1rem;font-weight:700;color:#fbbf24;margin-bottom:4px;">' + (d.title || 'Article ready') + '</div>' +
+        '<div style="font-size:12px;color:#6b7280;">' + (d.word_count || '?') + ' words' +
+          (d.transcript_chars ? ' · transcript: ' + Math.round(d.transcript_chars/1000) + 'k chars' : '') +
+          (d.source_url ? ' · <a href="' + d.source_url + '" target="_blank" rel="noopener" style="color:#60a5fa;">▶ Original video</a>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:12px;max-height:300px;overflow-y:auto;font-size:11px;color:#6b7280;font-family:monospace;line-height:1.5;">' +
+        (_currentVideoHtml || '').substring(0, 2000).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '...' +
+      '</div>';
+    toast('✅ Video article ready — ' + (d.word_count || '?') + ' words');
+  } catch(e) {
+    contentEl.innerHTML = '<div style="color:#f87171;font-size:13px;padding:12px 0;">❌ ' + e.message + '</div>';
+    toast('Video rewrite failed: ' + e.message, 'red');
+  }
+}
+
+function downloadVideoHtml() {
+  if (!_currentVideoHtml) { toast('No video article to download', 'red'); return; }
+  var blob = new Blob([_currentVideoHtml], { type: 'text/html' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'video-article-' + Date.now() + '.html';
+  a.click(); toast('Downloaded!');
 }
 
 async function loadNewsArticles() {
