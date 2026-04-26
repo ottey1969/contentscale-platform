@@ -10623,7 +10623,7 @@ app.delete('/api/content/news-articles/:id', verifyEngineAccess, async (req, res
 // ── Search YouTube for videos on a topic ──────────────────────────────────
 app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
   try {
-    const { query, lang = 'en' } = req.body;
+    const { query, lang = 'en', sort = 'views' } = req.body;
     if (!query) return res.status(400).json({ success: false, error: 'query required' });
 
     const serpKey = req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '';
@@ -10631,43 +10631,100 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
 
     let videos = [];
 
-    // 1. Try YouTube Data API v3 (best — returns transcript availability)
+    // ── 1. YouTube Data API v3 — search by viewCount, fetch statistics in one batch ──
     if (ytKey) {
       try {
-        const ytResp = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=8&relevanceLanguage=${lang}&videoCaption=closedCaption&key=${ytKey}`,
-          { signal: AbortSignal.timeout(10000) }
+        // Search: order=viewCount gives highest-viewed first, date=past year keeps it fresh
+        const searchResp = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=12&order=viewCount&relevanceLanguage=${lang}&videoCaption=closedCaption&publishedAfter=${new Date(Date.now()-365*2*86400000).toISOString()}&key=${ytKey}`,
+          { signal: AbortSignal.timeout(12000) }
         );
-        if (ytResp.ok) {
-          const ytData = await ytResp.json();
-          videos = (ytData.items || []).map(item => ({
-            id: item.id?.videoId,
-            url: `https://www.youtube.com/watch?v=${item.id?.videoId}`,
-            title: item.snippet?.title || '',
-            channel: item.snippet?.channelTitle || '',
-            thumbnail: item.snippet?.thumbnails?.medium?.url || '',
-            published: item.snippet?.publishedAt || '',
-            has_transcript: true, // filter=closedCaption means transcript exists
-            source: 'youtube_api'
-          }));
+        if (searchResp.ok) {
+          const searchData = await searchResp.json();
+          const items = searchData.items || [];
+          const ids = items.map(i => i.id?.videoId).filter(Boolean).join(',');
+
+          // Fetch view counts + durations in one batch call
+          let statsMap = {};
+          if (ids) {
+            try {
+              const statsResp = await fetch(
+                `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${ids}&key=${ytKey}`,
+                { signal: AbortSignal.timeout(10000) }
+              );
+              if (statsResp.ok) {
+                const statsData = await statsResp.json();
+                (statsData.items || []).forEach(v => {
+                  // Parse ISO 8601 duration e.g. PT14M33S → "14:33"
+                  const dur = v.contentDetails?.duration || '';
+                  const durMatch = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                  const h = parseInt(durMatch?.[1] || 0);
+                  const m = parseInt(durMatch?.[2] || 0);
+                  const s = parseInt(durMatch?.[3] || 0);
+                  const durStr = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+                  statsMap[v.id] = {
+                    views: parseInt(v.statistics?.viewCount || 0),
+                    likes: parseInt(v.statistics?.likeCount || 0),
+                    comments: parseInt(v.statistics?.commentCount || 0),
+                    duration: durStr,
+                    duration_secs: h*3600 + m*60 + s,
+                    subscriber_count: null // would need channel lookup
+                  };
+                });
+              }
+            } catch(e) { console.warn('[video-search] stats fetch failed:', e.message); }
+          }
+
+          videos = items.map(item => {
+            const vid = item.id?.videoId;
+            const stats = statsMap[vid] || {};
+            return {
+              id: vid,
+              url: `https://www.youtube.com/watch?v=${vid}`,
+              title: item.snippet?.title || '',
+              channel: item.snippet?.channelTitle || '',
+              thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+              published: item.snippet?.publishedAt || '',
+              views: stats.views || 0,
+              likes: stats.likes || 0,
+              duration: stats.duration || '',
+              duration_secs: stats.duration_secs || 0,
+              has_transcript: true,
+              source: 'youtube_api'
+            };
+          }).filter(v => v.id)
+            // Filter out very short videos (< 3 min) — not enough content
+            .filter(v => !v.duration_secs || v.duration_secs >= 180)
+            // Sort by view count descending
+            .sort((a, b) => b.views - a.views)
+            .slice(0, 8);
+
+          console.log(`[video-search] YT API: ${videos.length} videos, top: ${videos[0]?.title} (${videos[0]?.views?.toLocaleString()} views)`);
         }
       } catch(e) { console.warn('[video-search] YT API failed:', e.message); }
     }
 
-    // 2. Fallback: Serper YouTube search
+    // ── 2. Serper fallback — parse view counts from snippet text ──
     if (!videos.length && serpKey) {
       try {
         const sr = await fetch('https://google.serper.dev/videos', {
           method: 'POST',
           headers: { 'X-API-KEY': serpKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: query + ' tutorial', gl: lang === 'nl' ? 'nl' : lang === 'de' ? 'de' : 'us', hl: lang }),
+          body: JSON.stringify({ q: query + ' tutorial', gl: lang === 'nl' ? 'nl' : lang === 'de' ? 'de' : 'us', hl: lang, num: 10 }),
           signal: AbortSignal.timeout(10000)
         });
         if (sr.ok) {
           const sd = await sr.json();
-          videos = (sd.videos || []).slice(0, 8).map(v => {
-            // Extract YouTube video ID from link
+          videos = (sd.videos || []).map(v => {
             const idMatch = (v.link || '').match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            // Parse views from Serper snippet — formats like "1.2M views", "456K views", "12,345 views"
+            let views = 0;
+            if (v.views) {
+              const vm = String(v.views).replace(/,/g,'').match(/([\d.]+)([MKB]?)/i);
+              if (vm) {
+                views = parseFloat(vm[1]) * ({ M:1000000, K:1000, B:1000000000 }[vm[2]?.toUpperCase()] || 1);
+              }
+            }
             return {
               id: idMatch ? idMatch[1] : null,
               url: v.link || '',
@@ -10675,33 +10732,35 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
               channel: v.channel || '',
               thumbnail: v.thumbnailUrl || v.imageUrl || '',
               duration: v.duration || '',
-              views: v.views || null,
-              has_transcript: !!idMatch, // can only get transcript if we have video ID
+              views: Math.round(views),
+              has_transcript: !!idMatch,
               source: 'serper'
             };
-          }).filter(v => v.url);
+          }).filter(v => v.url && v.id)
+            .sort((a, b) => b.views - a.views)
+            .slice(0, 8);
         }
-      } catch(e) { console.warn('[video-search] Serper video search failed:', e.message); }
+      } catch(e) { console.warn('[video-search] Serper failed:', e.message); }
     }
 
-    // 3. You.com fallback
+    // ── 3. You.com fallback ──
     const youKey = req.headers['x-you-api-key'] || process.env.YOU_API_KEY || '';
     if (!videos.length && youKey) {
       try {
-        const yr = await fetch(`https://api.ydc-index.io/search?query=${encodeURIComponent(query + ' youtube')}&num_web_results=5`,
+        const yr = await fetch(`https://api.ydc-index.io/search?query=${encodeURIComponent(query + ' youtube tutorial')}&num_web_results=8`,
           { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(10000) }
         );
         if (yr.ok) {
           const yd = await yr.json();
-          videos = (yd.hits || []).filter(h => (h.url||'').includes('youtube.com/watch')).slice(0,5).map(h => {
+          videos = (yd.hits || []).filter(h => (h.url||'').includes('youtube.com/watch')).slice(0,6).map(h => {
             const idMatch = (h.url||'').match(/v=([a-zA-Z0-9_-]{11})/);
-            return { id: idMatch?.[1], url: h.url, title: h.title||'', channel: '', thumbnail: '', has_transcript: !!idMatch, source: 'youcom' };
+            return { id: idMatch?.[1], url: h.url, title: h.title||'', channel: '', thumbnail: '', views: 0, has_transcript: !!idMatch, source: 'youcom' };
           });
         }
       } catch(e) { console.warn('[video-search] You.com failed:', e.message); }
     }
 
-    res.json({ success: true, videos, query, source: videos[0]?.source || 'none' });
+    res.json({ success: true, videos, query, sort_by: 'views', source: videos[0]?.source || 'none' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

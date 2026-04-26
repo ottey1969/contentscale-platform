@@ -2205,15 +2205,29 @@ async function searchVideos() {
     var d = await api('/api/content/video-search', 'POST', { query: q, lang });
     var videos = d.videos || [];
     if (!videos.length) { resEl.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0;">No videos found. Try a different query.</div>'; return; }
-    resEl.innerHTML = videos.map(function(v) {
+    resEl.innerHTML = '<div style="font-size:11px;color:#6b7280;margin-bottom:10px;display:flex;align-items:center;gap:8px;">' +
+      '<span>' + videos.length + ' videos found</span>' +
+      '<span style="color:#4b5563;">·</span>' +
+      '<span style="color:#4ade80;">↓ sorted by views (highest first)</span>' +
+      (d.source === 'youtube_api' ? '<span style="color:#4b5563;">·</span><span style="color:#a78bfa;">via YouTube API · captions verified</span>' : '') +
+      '</div>' +
+      videos.map(function(v) {
       var dur = v.duration ? ' · ' + v.duration : '';
-      var views = v.views ? ' · ' + Number(v.views).toLocaleString() + ' views' : '';
+      var viewsNum = parseInt(v.views || 0);
+      var viewsStr = viewsNum >= 1000000 ? (viewsNum/1000000).toFixed(1) + 'M views'
+                   : viewsNum >= 1000 ? Math.round(viewsNum/1000) + 'K views'
+                   : viewsNum > 0 ? viewsNum.toLocaleString() + ' views' : '';
       var hasTranscript = v.has_transcript !== false;
+      // Quality badge based on view count
+      var qualBadge = viewsNum >= 1000000 ? '<span style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">🔥 VIRAL</span>'
+                    : viewsNum >= 100000  ? '<span style="background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.3);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">⭐ HIGH</span>'
+                    : viewsNum >= 10000   ? '<span style="background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.3);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">✓ GOOD</span>'
+                    : '';
       return '<div style="background:#0a0f1a;border:1px solid #1f2937;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">' +
         (v.thumbnail ? '<img src="' + v.thumbnail + '" style="width:120px;height:68px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">' : '<div style="width:120px;height:68px;background:#1f2937;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:24px;">▶</div>') +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:4px;line-height:1.3;">' + (v.title || '') + '</div>' +
-          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">' + (v.channel || '') + dur + views + '</div>' +
+          '<div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:4px;line-height:1.3;">' + (v.title || '') + qualBadge + '</div>' +
+          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">' + (v.channel || '') + dur + (viewsStr ? ' · <strong style="color:#9ca3af;">' + viewsStr + '</strong>' : '') + '</div>' +
           (hasTranscript
             ? '<button onclick="rewriteVideoFromSearch(' + JSON.stringify(v).replace(/"/g,'&quot;') + ')" style="padding:6px 14px;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.4);border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;">🎬 Rewrite as Article</button>'
             : '<span style="font-size:11px;color:#4b5563;">⚠️ No transcript available</span>') +
