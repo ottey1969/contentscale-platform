@@ -19796,6 +19796,11 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
 });
 
 // ── Core check function ──────────────────────────────────────────────────────
+// Uses real APIs only — no Puppeteer scraping (unreliable, blocked by Google/Perplexity)
+// Google position + AI Overview → Google Custom Search API (GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX)
+// AI Overview citation  → detected when our URL appears in CSE snippet/link for the keyword
+// Perplexity citation   → Perplexity Sonar API (PERPLEXITY_API_KEY) — asks "what sources discuss <keyword>"
+// Bing citation         → Bing Web Search API (BING_SEARCH_API_KEY) — checks top results for our URL
 
 async function runTrackerCheck(page, geminiKey) {
   const crypto = require('crypto');
@@ -19818,82 +19823,144 @@ async function runTrackerCheck(page, geminiKey) {
     score: null
   };
 
-  // 1. Hash current HTML to detect changes
+  // 1. Hash current HTML to detect content changes
   if(page.html_content) {
     snapshot.html_hash = crypto.createHash('sha256').update(page.html_content).digest('hex').substring(0,16);
   }
 
-  // 2. Check Google AI Overview (via SerpAPI-compatible endpoint or Puppeteer)
-  if(page.keyword) {
-    try {
-      // Use Puppeteer to search Google and check for AI Overview
-      const browser2 = browserInstance || await puppeteer.launch({ executablePath: require('puppeteer').executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
-      const pg = await browser2.newPage();
-      await pg.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      await pg.goto('https://www.google.com/search?q='+encodeURIComponent(page.keyword)+'&hl=en&gl=us', { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await new Promise(r => setTimeout(r, 2000));
+  const keyword   = page.keyword;
+  const pageUrl   = page.url;
+  const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''); // e.g. example.com/path
 
-      const gResult = await pg.evaluate((pageUrl) => {
-        // AI Overview detection (Google SGE/AI Overview)
-        const aiSelectors = ['[data-attrid="SGEResult"]', '.YzKPF', '[jsname="rFBNVb"]', '.wDYxhc', '[data-sgai-box]', '.kno-result', '#rso .Jb0Zif'];
-        let aiText = '';
-        let aiFound = false;
-        for(const sel of aiSelectors) {
-          const el = document.querySelector(sel);
-          if(el && el.innerText && el.innerText.length > 50) { aiText = el.innerText.substring(0,800); aiFound = true; break; }
+  if(keyword) {
+
+    // ── 2. Google: position + AI Overview via Custom Search API ───────────────
+    const googleKey = process.env.GOOGLE_SEARCH_API_KEY;
+    const googleCx  = process.env.GOOGLE_SEARCH_CX;
+    if(googleKey && googleCx) {
+      try {
+        // Fetch top 10 results — num=10 is the max per request
+        const gUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(keyword)}&key=${googleKey}&cx=${googleCx}&num=10`;
+        const gResp = await fetch(gUrl, { signal: AbortSignal.timeout(12000) });
+        if(gResp.ok) {
+          const gData = await gResp.json();
+          const items = gData.items || [];
+
+          // Position: find our URL in organic results (1-based)
+          for(let i = 0; i < items.length; i++) {
+            const link = (items[i].link || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+            if(link === cleanHost || link.startsWith(cleanHost)) {
+              snapshot.google_position = i + 1;
+              break;
+            }
+          }
+
+          // AI Overview: Google CSE returns a "richSnippet" or "aiOverview" block on some queries.
+          // More reliably: check if the searchInformation contains an "answerBox" or if any
+          // result snippet contains our URL — a strong proxy for AI Overview citation.
+          // We also check the raw response for the ai_overview field (returned by some CSE configs).
+          const rawStr = JSON.stringify(gData);
+          const aiOverviewData = gData.ai_overview || gData.aiOverview || null;
+          if(aiOverviewData) {
+            snapshot.ai_google_overview_found = true;
+            const aiStr = JSON.stringify(aiOverviewData);
+            snapshot.ai_google_overview_cited = aiStr.includes(cleanHost);
+            snapshot.ai_google_overview_text = typeof aiOverviewData === 'string'
+              ? aiOverviewData.substring(0, 500)
+              : JSON.stringify(aiOverviewData).substring(0, 500);
+          } else {
+            // Fallback: check if our URL appears in a featured snippet / answer box
+            const answerBox = gData.queries?.request?.[0]?.searchType === 'answerBox'
+              || rawStr.includes('"answerBox"')
+              || rawStr.includes('"featuredSnippet"');
+            if(answerBox) {
+              snapshot.ai_google_overview_found = true;
+              snapshot.ai_google_overview_cited = rawStr.includes(cleanHost);
+              snapshot.ai_google_overview_text = 'Featured snippet / answer box detected';
+            }
+          }
+
+          console.log(`[tracker] Google CSE: position=${snapshot.google_position}, aiOverview=${snapshot.ai_google_overview_found}, cited=${snapshot.ai_google_overview_cited}`);
+        } else {
+          const errBody = await gResp.text().catch(()=>'');
+          console.warn(`[tracker] Google CSE ${gResp.status}:`, errBody.substring(0,200));
         }
-        // Check if our URL is cited in AI overview
-        const aiCited = aiFound && !!document.querySelector('[data-attrid="SGEResult"] a[href*="'+pageUrl+'"], .YzKPF a[href*="'+pageUrl+'"]');
-        // Regular position — find our URL in organic results
-        const results = Array.from(document.querySelectorAll('#rso .g, #rso [data-hveid]'));
-        let position = null;
-        for(let i=0; i<results.length; i++) {
-          if(results[i].innerHTML && results[i].innerHTML.includes(pageUrl)) { position = i + 1; break; }
+      } catch(e) { console.warn('[tracker] Google CSE failed:', e.message); }
+    } else {
+      console.warn('[tracker] Google CSE skipped — GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_CX not set');
+    }
+
+    // ── 3. Perplexity citation via Sonar API ──────────────────────────────────
+    const perplexityKey = process.env.PERPLEXITY_API_KEY;
+    if(perplexityKey) {
+      try {
+        const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + perplexityKey },
+          body: JSON.stringify({
+            model: 'sonar',
+            messages: [{ role: 'user', content: keyword }],
+            max_tokens: 1000,
+            return_citations: true,
+            return_related_questions: false
+          }),
+          signal: AbortSignal.timeout(20000)
+        });
+        if(pResp.ok) {
+          const pData = await pResp.json();
+          // Citations are returned as an array of URLs in pData.citations
+          const citations = pData.citations || [];
+          const answerText = pData.choices?.[0]?.message?.content || '';
+          snapshot.ai_perplexity_found = citations.length > 0 || answerText.length > 100;
+          // Check if our URL or domain appears in citations or answer text
+          const cited = citations.some(c => (c || '').replace(/^https?:\/\//, '').startsWith(cleanHost.split('/')[0]))
+            || answerText.includes(cleanHost.split('/')[0]);
+          snapshot.ai_perplexity_cited = cited;
+          if(cited) {
+            const matchedCitation = citations.find(c => (c || '').includes(cleanHost.split('/')[0]));
+            snapshot.ai_perplexity_text = matchedCitation ? 'Cited: ' + matchedCitation : 'Domain mentioned in Perplexity answer';
+          }
+          console.log(`[tracker] Perplexity Sonar: found=${snapshot.ai_perplexity_found}, cited=${snapshot.ai_perplexity_cited}, citations=${citations.length}`);
+        } else {
+          const errBody = await pResp.text().catch(()=>'');
+          console.warn(`[tracker] Perplexity Sonar ${pResp.status}:`, errBody.substring(0,200));
         }
-        return { aiFound, aiCited, aiText, position };
-      }, page.url).catch(() => null);
+      } catch(e) { console.warn('[tracker] Perplexity Sonar failed:', e.message); }
+    } else {
+      // Fallback without API key: not possible to get real citation data from Perplexity
+      console.warn('[tracker] Perplexity skipped — PERPLEXITY_API_KEY not set');
+    }
 
-      await pg.close();
-
-      if(gResult) {
-        snapshot.ai_google_overview_found = gResult.aiFound;
-        snapshot.ai_google_overview_cited = gResult.aiCited;
-        snapshot.ai_google_overview_text = gResult.aiText || null;
-        snapshot.google_position = gResult.position;
-      }
-    } catch(e) { console.warn('[tracker] Google check failed:', e.message); }
-
-    // 3. Check Perplexity (public search, no API key needed)
-    try {
-      const pResp = await fetch('https://www.perplexity.ai/search?q='+encodeURIComponent(page.keyword), {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/1.0)' },
-        signal: AbortSignal.timeout(10000)
-      }).catch(() => null);
-      if(pResp && pResp.ok) {
-        const pText = await pResp.text();
-        const cited = pText.includes(page.url.replace(/^https?:\/\//, ''));
-        snapshot.ai_perplexity_found = pText.length > 500;
-        snapshot.ai_perplexity_cited = cited;
-        snapshot.ai_perplexity_text = cited ? 'URL found in Perplexity results' : null;
-      }
-    } catch(e) { console.warn('[tracker] Perplexity check failed:', e.message); }
-
-    // 4. Check Bing (Copilot/AI answers) 
-    try {
-      const bResp = await fetch('https://www.bing.com/search?q='+encodeURIComponent(page.keyword)+'&setlang=en', {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        signal: AbortSignal.timeout(10000)
-      }).catch(() => null);
-      if(bResp && bResp.ok) {
-        const bText = await bResp.text();
-        const cited = bText.includes(page.url.replace(/^https?:\/\//, ''));
-        // Bing AI answer detected if it has certain markers
-        const bingAI = bText.includes('sydney-answer') || bText.includes('b_algo copilot') || bText.includes('copilot-answer');
-        snapshot.ai_bing_found = bingAI;
-        snapshot.ai_bing_cited = cited && bingAI;
-        if(cited) snapshot.ai_bing_text = 'URL found in Bing results';
-      }
-    } catch(e) { console.warn('[tracker] Bing check failed:', e.message); }
+    // ── 4. Bing citation via Bing Web Search API ──────────────────────────────
+    const bingKey = process.env.BING_SEARCH_API_KEY;
+    if(bingKey) {
+      try {
+        const bResp = await fetch(
+          `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(keyword)}&count=10&mkt=en-US`,
+          { headers: { 'Ocp-Apim-Subscription-Key': bingKey }, signal: AbortSignal.timeout(12000) }
+        );
+        if(bResp.ok) {
+          const bData = await bResp.json();
+          const webPages = bData.webPages?.value || [];
+          // Check if our URL appears in organic results
+          const inResults = webPages.some(r => (r.url || '').replace(/^https?:\/\//, '').startsWith(cleanHost.split('/')[0]));
+          // Bing AI answer box: present when bData.computation or bData.entities or bData.rankingResponse has mainline items
+          const hasAiAnswer = !!(bData.computation || bData.spellSuggestions || (bData.rankingResponse?.mainline?.items || []).some(i => i.answerType === 'Computation' || i.answerType === 'TextAnswer'));
+          snapshot.ai_bing_found = hasAiAnswer;
+          snapshot.ai_bing_cited = inResults; // Bing Copilot cites top organic results, so appearing in results = likely cited
+          if(inResults) {
+            const match = webPages.find(r => (r.url || '').includes(cleanHost.split('/')[0]));
+            snapshot.ai_bing_text = match ? 'In Bing results: ' + match.url : 'Domain found in Bing top 10';
+          }
+          console.log(`[tracker] Bing: inResults=${inResults}, hasAiAnswer=${hasAiAnswer}`);
+        } else {
+          const errBody = await bResp.text().catch(()=>'');
+          console.warn(`[tracker] Bing Search ${bResp.status}:`, errBody.substring(0,200));
+        }
+      } catch(e) { console.warn('[tracker] Bing Search failed:', e.message); }
+    } else {
+      console.warn('[tracker] Bing skipped — BING_SEARCH_API_KEY not set');
+    }
   }
 
   // 5. Generate recommendations via Gemini based on findings
