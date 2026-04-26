@@ -593,10 +593,19 @@ textarea{resize:vertical;min-height:100px;}
 
     <!-- Direct URL tab -->
     <div id="videoTabUrl" style="display:none;">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
         <input id="videoDirectUrl" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;padding:10px 12px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
         <button class="btn btn-primary" onclick="rewriteVideoUrl()" id="btnRewriteUrl">🎬 Rewrite This Video</button>
       </div>
+    </div>
+
+    <!-- Template option -->
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);margin-top:4px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af;cursor:pointer;">
+        <input type="checkbox" id="videoUseTemplate" style="width:16px;height:16px;" checked>
+        <span>Use profile HTML template (if set)</span>
+      </label>
+      <span style="font-size:11px;color:#4b5563;">· Short paragraphs always enforced · Best insights extracted from transcript</span>
     </div>
   </div>
 
@@ -981,6 +990,7 @@ async function loadProfiles() {
       (p.wp_url ? '<div style="font-size:11px;color:#a78bfa;margin-top:6px;">🚀 WP: ' + p.wp_url + '</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+      '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="refreshSitemap(' + p.id + ', this)" title="Re-fetch sitemap URLs">🗺️ Refresh Sitemap</button>' +
       '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="editProfile(' + p.id + ')">✏️ Edit</button>' +
       '<button class="btn btn-primary" style="font-size:12px;padding:6px 12px;" onclick="useProfile(' + p.id + ')">🚀 Use</button>' +
       '<button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteProfile(' + p.id + ')">🗑</button>' +
@@ -1049,6 +1059,28 @@ function renderPendingLocations() {
       '<button onclick="_pendingLocations.splice(' + i + ',1);renderPendingLocations()" style="background:transparent;border:none;color:#7f1d1d;cursor:pointer;font-size:14px;">✕</button>' +
       '</div>';
   }).join('');
+}
+
+async function refreshSitemap(profileId, btn) {
+  var origText = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Fetching...';
+  try {
+    var p = _profiles.find(function(x) { return x.id === profileId; });
+    if (!p || !p.sitemap_url) { toast('No sitemap URL set — edit the profile first', 'red'); return; }
+    var d = await api('/api/fetch-sitemap?url=' + encodeURIComponent(p.sitemap_url));
+    var count = (d.urls || []).length;
+    if (count > 0) {
+      toast('✅ Sitemap refreshed — ' + count + ' URLs found · Will be used in next write/rewrite');
+      btn.innerHTML = '✅ ' + count + ' URLs';
+      setTimeout(function() { btn.innerHTML = origText; btn.disabled = false; }, 3000);
+    } else {
+      toast('Sitemap fetched but no URLs found — check the URL in profile settings', 'red');
+      btn.innerHTML = origText; btn.disabled = false;
+    }
+  } catch(e) {
+    toast('Sitemap fetch failed: ' + e.message, 'red');
+    btn.innerHTML = origText; btn.disabled = false;
+  }
 }
 
 async function saveProfile() {
@@ -2241,7 +2273,8 @@ async function searchVideos() {
 async function rewriteVideoFromSearch(video) {
   var profileId = document.getElementById('newsProfileFilter').value;
   if (!profileId) { toast('Select a profile first', 'red'); return; }
-  await _doVideoRewrite({ video_id: video.id, video_url: video.url, video_title: video.title, published: video.published, profile_id: profileId });
+  var useTemplate = document.getElementById('videoUseTemplate')?.checked !== false;
+  await _doVideoRewrite({ video_id: video.id, video_url: video.url, video_title: video.title, published: video.published, profile_id: profileId, use_template: useTemplate });
 }
 
 async function rewriteVideoUrl() {
@@ -2249,10 +2282,10 @@ async function rewriteVideoUrl() {
   var profileId = document.getElementById('newsProfileFilter').value;
   if (!url) { toast('Enter a YouTube URL', 'red'); return; }
   if (!profileId) { toast('Select a profile first', 'red'); return; }
-  // Extract video ID from URL
   var match = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
   var videoId = match ? match[1] : null;
-  await _doVideoRewrite({ video_id: videoId, video_url: url, profile_id: profileId });
+  var useTemplate = document.getElementById('videoUseTemplate')?.checked !== false;
+  await _doVideoRewrite({ video_id: videoId, video_url: url, profile_id: profileId, use_template: useTemplate });
 }
 
 async function _doVideoRewrite(payload) {

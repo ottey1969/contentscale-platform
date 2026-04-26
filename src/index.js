@@ -10772,7 +10772,7 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
 // ── Fetch transcript + rewrite video as SEO article ────────────────────────
 app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
   try {
-    const { video_id, video_url, video_title, profile_id } = req.body;
+    const { video_id, video_url, video_title, profile_id, use_template = true } = req.body;
     if (!video_id && !video_url) return res.status(400).json({ success: false, error: 'video_id or video_url required' });
     if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
 
@@ -10914,13 +10914,67 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     const claudeKey = resolveClaudeKey(req);
     if (!claudeKey) return res.status(500).json({ success: false, error: 'Claude API key required for writing' });
 
+    // Fetch money pages for CTA strategy
+    const mpVideoR = await pool.query('SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 6', [profile_id]);
+    const videoMoneyPages = mpVideoR.rows.map(p => `${p.title||p.url}: ${p.url} (keyword: ${p.primary_keyword||''})`).join('\n') || '';
+
     // Dates: video original publish date for datePublished, today for dateModified
     const videoPublishedDate = req._videoPublishedAt
       || (req.body.published ? new Date(req.body.published).toISOString().slice(0,10) : null)
       || new Date().toISOString().slice(0,10);
     const videoDateModified = new Date().toISOString().slice(0,10);
 
-    const writePrompt = `You are an expert SEO content writer converting a YouTube video transcript into a high-quality, original SEO article.
+    // Check if profile has a template and user wants to use it
+    const hasVideoTemplate = use_template && profile.html_template && profile.html_template.trim().length > 50;
+
+    let writePrompt, sys;
+
+    if (hasVideoTemplate) {
+      // MODE: Fill template with video content
+      writePrompt = `You are an expert SEO content writer. Fill this HTML template with a complete article based on the YouTube video below. Keep ALL HTML structure, CSS classes, IDs and layout EXACTLY — only replace text content.
+
+LANGUAGE: Write ALL text in ${langName}.
+
+VIDEO: ${actualTitle}
+CHANNEL: ${channelName}
+SOURCE: ${sourceUrl}
+BUSINESS: ${profile.name} — ${profile.niche || ''}
+TARGET AUDIENCE: ${profile.target_audience || ''}
+
+VIDEO TRANSCRIPT (extract the best insights, key facts, specific examples, and notable statements — use these as the backbone of the article):
+${transcript.substring(0, 8000)}
+
+PARAGRAPH RULE: Keep ALL paragraphs SHORT — maximum 2-3 sentences each. Never write a paragraph longer than 60 words. Break up long explanations into multiple short paragraphs. This is non-negotiable.
+
+CONTENT REQUIREMENTS:
+1. Extract the BEST insights from the transcript — key facts, specific numbers, notable quotes, concrete examples
+2. Add your own expertise and context around those insights — do not just paraphrase
+3. Every H2 answers a specific question a reader would ask
+4. Include: direct answer in first 2 sentences, TL;DR, TOC, 5-question FAQ
+5. Add: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a>
+6. Add Article + FAQPage JSON-LD schema with datePublished="${videoPublishedDate}" and dateModified="${videoDateModified}"
+
+${internalLinks}
+
+CTA STRATEGY — CRITICAL:
+Weave ${profile.name} naturally throughout — not only at the end:
+- After TL;DR: connect the video topic to ${profile.name}\'s expertise
+- In relevant H2 sections: show how ${profile.name} helps with this topic
+- Mid-article: add a CTA box linking to the main service
+${videoMoneyPages ? '- Link to these money pages naturally:\n' + videoMoneyPages : ''}
+- Final CTA: strong pitch for ${profile.name}\'s core service
+
+═══════════════════════════════════════
+THE TEMPLATE — FILL IN, DO NOT CHANGE STRUCTURE
+═══════════════════════════════════════
+${profile.html_template}
+
+Return ONLY the filled template HTML. No markdown, no explanation. End with <!-- word_count: X -->.`;
+      sys = 'You are an expert SEO content writer filling HTML templates with video-based content. Preserve ALL HTML structure exactly. Return only the filled HTML. Short paragraphs — max 2-3 sentences each.';
+
+    } else {
+      // MODE: Free write
+      writePrompt = `You are an expert SEO content writer converting a YouTube video into a high-quality, original SEO article.
 
 LANGUAGE: Write the ENTIRE article in ${langName}. All headings, body, FAQ — everything in ${langName}.
 
@@ -10931,27 +10985,47 @@ BUSINESS: ${profile.name} — ${profile.niche || ''}
 TARGET AUDIENCE: ${profile.target_audience || ''}
 PRIMARY GOAL: ${profile.primary_goal || 'leads'}
 
-VIDEO TRANSCRIPT:
+VIDEO TRANSCRIPT (extract the BEST from this — key insights, specific facts, real examples, notable statements):
 ${transcript.substring(0, 8000)}
 
-REQUIREMENTS:
-1. Rewrite as a complete, original SEO article — do NOT copy transcript verbatim
-2. Structure: H1 title → direct answer (2 sentences) → TL;DR → TOC → H2 sections → FAQ (5 Q&As) → conclusion + CTA
-3. Add context and expertise beyond what was said in the video
-4. Every H2 should answer a specific question from the transcript
-5. Add a "Watch the original video" link: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch: ${actualTitle}</a>
-6. Include FAQPage JSON-LD schema with 5 questions from the content
-7. Minimum 1200 words
-8. BOFU quality: no generic openers, no jargon, concrete examples
-9. Add Article JSON-LD schema with correct dates:
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[USE ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
-datePublished = ${videoPublishedDate} (original video date), dateModified = ${videoDateModified} (article written today)
+═══════════════════════════════════════
+PARAGRAPH RULE — NON-NEGOTIABLE
+═══════════════════════════════════════
+Keep ALL paragraphs SHORT: maximum 2-3 sentences, never more than 60 words per paragraph.
+Break long explanations into multiple short paragraphs.
+Readers scan — short paragraphs make content readable and increase engagement.
+
+═══════════════════════════════════════
+CONTENT REQUIREMENTS
+═══════════════════════════════════════
+1. Extract and USE the best insights from the transcript — specific facts, numbers, quotes, examples — these are the backbone
+2. Add your own expertise around those insights — do not just paraphrase the transcript
+3. Structure: H1 → direct answer (2 short sentences) → TL;DR bullets → TOC → H2 sections → FAQ (5 Q&As) → CTA
+4. Every H2 answers a specific question from the transcript content
+5. Include: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a>
+6. Minimum 1500 words
+7. No generic openers ("In today's world...", "In an era of..."), no empty jargon
 
 ${internalLinks}
 
-Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
+CTA STRATEGY — CRITICAL — people find this via Google, pull them to ${profile.name}:
+- After the TL;DR: one sentence connecting the video topic to what ${profile.name} does
+- In 2-3 relevant H2 sections: a short paragraph showing how ${profile.name} helps with this specific topic (natural, not salesy)
+- Mid-article CTA box (use this HTML):
+  <div style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(37,99,235,.08));border:1px solid rgba(124,58,237,.25);border-radius:12px;padding:24px;margin:32px 0;text-align:center;">
+    <strong style="color:#a78bfa;font-size:1.1rem;">${profile.name}</strong>
+    <p style="color:#9ca3af;margin:8px 0;">Need help with ${profile.niche || 'your content strategy'}? We help businesses rank higher and get more leads.</p>
+    <a href="${profile.domain ? (profile.domain.startsWith('http') ? profile.domain : 'https://'+profile.domain) : '#'}" style="display:inline-block;background:#7c3aed;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Get a Free Consultation →</a>
+  </div>
+${videoMoneyPages ? '- Link naturally to these service pages throughout:\n' + videoMoneyPages : ''}
+- Final H2 "How ${profile.name} Can Help": strong closing section with concrete offer and CTA
 
-    const sys = 'You are an expert SEO content writer converting video transcripts into original, rankable articles. Return only clean HTML from <article>. Never copy transcript verbatim.';
+REQUIRED JSON-LD (add before </article>):
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
+
+Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
+      sys = 'You are an expert SEO content writer converting video transcripts into original, rankable articles. Short paragraphs — max 2-3 sentences. Weave the business naturally throughout. Return only clean HTML from <article>.';
+    }
     let rawHtml = await callClaudeForWrite(sys, writePrompt, 8000, claudeKey);
     rawHtml = rawHtml.replace(/^```html\n?/i,'').replace(/^```/,'').replace(/```$/,'').trim();
 
@@ -11406,6 +11480,10 @@ ABSOLUTE REGELS
 3. Vul ALLEEN tekst in bestaande elementen in
 4. ${antiFacts}
 ${qualityBlock}${graafReqBlock}
+ALINEA-REGEL — NIET ONDERHANDELBAAR:
+Houd ALLE alinea's KORT: maximaal 2-3 zinnen per alinea, nooit meer dan 60 woorden.
+Splits lange uitleg op in meerdere korte alinea's.
+Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche}
 DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 
@@ -11472,6 +11550,10 @@ BRAND SIGNATUUR (behoud):
 
 ${antiFacts}
 ${qualityBlock}${graafReqBlock}
+ALINEA-REGEL — NIET ONDERHANDELBAAR:
+Houd ALLE alinea's KORT: maximaal 2-3 zinnen per alinea, nooit meer dan 60 woorden.
+Splits lange uitleg op in meerdere korte alinea's.
+Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
@@ -11504,6 +11586,10 @@ Geef ALLEEN de herschreven HTML terug. Geen markdown, geen uitleg. Eindig met <!
 
 TAAL: Schrijf ALLE tekst in ${detectedLangName}. Titels, body, FAQ, CTA — alles in ${detectedLangName}.
 ${qualityBlock}${graafReqBlock}
+ALINEA-REGEL — NIET ONDERHANDELBAAR:
+Houd ALLE alinea's KORT: maximaal 2-3 zinnen per alinea, nooit meer dan 60 woorden.
+Splits lange uitleg op in meerdere korte alinea's.
+Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
@@ -12183,6 +12269,12 @@ SEED KEYWORD: "${seedKeyword}"
 SLUG: ${item.new_slug}
 
 ${competitorBlock}
+
+
+PARAGRAPH RULE — NON-NEGOTIABLE:
+Keep ALL paragraphs SHORT: maximum 2-3 sentences, never more than 60 words per paragraph.
+Break long explanations into multiple short paragraphs.
+Readers scan — short paragraphs make content readable and increase engagement.
 
 BOFU STANDARD — NON-NEGOTIABLE:
 - NO generic openers ("In today's fast-paced...", "In the ever-evolving landscape")
