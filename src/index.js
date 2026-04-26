@@ -10490,6 +10490,8 @@ app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, requireCredits(
       const newsLangNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
       const newsLangName = newsLangNames[newsLang] || 'English';
 
+      const newsDatePublished = art.date ? new Date(art.date).toISOString().slice(0,10) : new Date().toISOString().slice(0,10);
+      const newsDateModified = new Date().toISOString().slice(0,10);
       const rewritePrompt = `You are an expert SEO content writer writing in ${newsLangName}. Rewrite this news article to be 100% original, plagiarism-free, and highly valuable for readers in the niche: "${feed.niche || feed.niche_keywords}".
 
 LANGUAGE: Write the ENTIRE article in ${newsLangName}. All headings, body, FAQ in ${newsLangName}.
@@ -10519,6 +10521,8 @@ CONTENT REQUIREMENTS
 6. Write 700-1000 words total
 7. Return clean HTML: <article>, <h1>, <h2>, <p>, <ol>, <section class="faq">
 8. No inline styles, no fixed widths — semantic HTML only
+9. Add Article JSON-LD schema with correct dates — datePublished = original article date, dateModified = today:
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"NewsArticle","headline":"[USE ACTUAL H1]","datePublished":"${newsDatePublished}","dateModified":"${newsDateModified}","author":{"@type":"Organization","name":"${feed.profile_name}"}}</script>
 
 Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
 
@@ -10733,6 +10737,7 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
               thumbnail: v.thumbnailUrl || v.imageUrl || '',
               duration: v.duration || '',
               views: Math.round(views),
+              published: v.date || v.publishedDate || null,
               has_transcript: !!idMatch,
               source: 'serper'
             };
@@ -10799,6 +10804,10 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
           if (item) {
             actualTitle = item.snippet?.title || actualTitle;
             channelName = item.snippet?.channelTitle || '';
+            // Store original publish date from YouTube
+            if (item.snippet?.publishedAt) {
+              req._videoPublishedAt = item.snippet.publishedAt.slice(0,10);
+            }
           }
         }
       } catch(e) { console.warn('[video-rewrite] metadata fetch failed:', e.message); }
@@ -10889,6 +10898,12 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     const claudeKey = resolveClaudeKey(req);
     if (!claudeKey) return res.status(500).json({ success: false, error: 'Claude API key required for writing' });
 
+    // Dates: video original publish date for datePublished, today for dateModified
+    const videoPublishedDate = req._videoPublishedAt
+      || (req.body.published ? new Date(req.body.published).toISOString().slice(0,10) : null)
+      || new Date().toISOString().slice(0,10);
+    const videoDateModified = new Date().toISOString().slice(0,10);
+
     const writePrompt = `You are an expert SEO content writer converting a YouTube video transcript into a high-quality, original SEO article.
 
 LANGUAGE: Write the ENTIRE article in ${langName}. All headings, body, FAQ — everything in ${langName}.
@@ -10912,6 +10927,9 @@ REQUIREMENTS:
 6. Include FAQPage JSON-LD schema with 5 questions from the content
 7. Minimum 1200 words
 8. BOFU quality: no generic openers, no jargon, concrete examples
+9. Add Article JSON-LD schema with correct dates:
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[USE ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
+datePublished = ${videoPublishedDate} (original video date), dateModified = ${videoDateModified} (article written today)
 
 ${internalLinks}
 
@@ -11232,6 +11250,29 @@ ${origGraafRecs.filter(r => r.priority === 'high' || r.priority === 'medium').sl
 ).join('\n')}
 ═══════════════════════════════════════` : '';
 
+    // Extract original publication date from existing schema — preserve for SEO authority
+    let originalDatePublished = '';
+    try {
+      // Try schema first (most reliable)
+      const dpMatch = (rw.original_html || '').match(/"datePublished"\s*:\s*"(\d{4}-\d{2}-\d{2})/);
+      if (dpMatch) originalDatePublished = dpMatch[1];
+      // Fallback: meta og:published or article:published_time
+      if (!originalDatePublished) {
+        const metaMatch = (rw.original_html || '').match(/(?:article:published_time|og:published_time)[^>]+content="(\d{4}-\d{2}-\d{2})/i);
+        if (metaMatch) originalDatePublished = metaMatch[1];
+      }
+      // Fallback: time element with datetime
+      if (!originalDatePublished) {
+        const timeMatch = (rw.original_html || '').match(/<time[^>]+datetime="(\d{4}-\d{2}-\d{2})/i);
+        if (timeMatch) originalDatePublished = timeMatch[1];
+      }
+    } catch(e) {}
+    const today = new Date().toISOString().slice(0,10);
+    // datePublished = original date (preserves age authority) | dateModified = today (signals freshness)
+    const schemaDatePublished = originalDatePublished || today;
+    const schemaDateModified  = today;
+    console.log(`[execute-rewrite] dates: published=${schemaDatePublished} modified=${schemaDateModified}`);
+
     // Detect content language from original HTML — auto, no manual setting needed
     const detectedLang = detectContentLanguage(rw.original_html || '');
     const langNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
@@ -11380,7 +11421,7 @@ ${internalLinksRW}
 
 JSON-LD SCHEMA'S (toevoegen voor </article>):
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${schemaDatePublished}","dateModified":"${schemaDateModified}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
 ${imageNote}
 
 ═══════════════════════════════════════
@@ -11402,7 +11443,7 @@ ABSOLUTE LAYOUT-REGELS
 1. Behoud ALLE HTML-tags, CSS-klassen, IDs exact zoals in origineel
 2. Behoud ALLE inline styles en kleurwaarden
 3. Behoud ALLE <img> tags met src/alt/positioning
-4. Behoud ALLE bestaande JSON-LD schema's (update alleen dateModified, description, wordCount)
+4. Behoud ALLE bestaande JSON-LD schema's — update ALLEEN "dateModified" naar "${schemaDateModified}" — verander "datePublished" NOOIT
 5. Behoud auteur-blok zoals aanwezig — vervang NIET
 6. Behoud nav/header/footer volledig — raak alleen body content aan
 7. Vervang ALLEEN tekst-inhoud van <p>, <li>, <h2>, <h3>, <h4> binnen content zones
@@ -11431,7 +11472,7 @@ INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
 ${imageNote}
 
-BESTAANDE JSON-LD SCHEMA'S (behoud, update alleen dateModified):
+BESTAANDE JSON-LD SCHEMA'S (behoud exact — update ALLEEN dateModified naar "${schemaDateModified}", datePublished NOOIT aanpassen):
 ${(layoutSkeleton.schemaBlocks||[]).slice(0,3).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,400)}`).join('\n\n')}
 
 ═══════════════════════════════════════
@@ -11466,7 +11507,7 @@ VERPLICHTE ELEMENTEN: Direct antwoord, TOC, datatable, TL;DR, FAQ (5+ vragen, vo
 
 JSON-LD verplicht:
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${new Date().toISOString().slice(0,10)}","dateModified":"${new Date().toISOString().slice(0,10)}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${schemaDatePublished}","dateModified":"${schemaDateModified}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
 
 AI OVERVIEW: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
 VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
