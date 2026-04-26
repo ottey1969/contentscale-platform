@@ -2519,7 +2519,7 @@ function closeTrackerAddModal() {
 
 async function submitTrackerAdd() {
   var url = document.getElementById('trAddUrl').value.trim();
-  if (!url) { showToast('URL is required'); return; }
+  if (!url) { toast('URL is required'); return; }
   var btn = document.getElementById('trAddBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
@@ -2531,12 +2531,12 @@ async function submitTrackerAdd() {
     });
     if (!data.success) throw new Error(data.error || 'Failed');
     closeTrackerAddModal();
-    showToast('✅ Page added! Running first check…');
+    toast('✅ Page added! Running first check…');
     // Trigger first check immediately
     await api('/api/tracker/pages/' + data.page.id + '/check', 'POST').catch(function(){});
     await loadTrackerPages();
   } catch(e) {
-    showToast('Error: ' + e.message);
+    toast('Error: ' + e.message);
   } finally {
     btn.disabled = false; btn.textContent = 'Add & Start Tracking';
   }
@@ -2546,10 +2546,10 @@ async function runTrackerCheck(pageId, btn) {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
     await api('/api/tracker/pages/' + pageId + '/check', 'POST');
-    showToast('✅ Check started — results update in ~30s');
+    toast('✅ Check started — results update in ~30s');
     setTimeout(loadTrackerPages, 35000);
   } catch(e) {
-    showToast('Error: ' + e.message);
+    toast('Error: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '▶ Check'; }
   }
@@ -2560,10 +2560,10 @@ async function deleteTrackerPage(pageId) {
   try {
     var data = await api('/api/tracker/pages/' + pageId, 'DELETE');
     if (!data.success) throw new Error(data.error || 'Failed');
-    showToast('Page removed from tracker');
+    toast('Page removed from tracker');
     await loadTrackerPages();
   } catch(e) {
-    showToast('Error: ' + e.message);
+    toast('Error: ' + e.message);
   }
 }
 
