@@ -19208,7 +19208,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
                 : '<span class="tr-change-dot" style="background:#374151;"></span>';
             const kwHtml = p.keyword ? '<span style="font-size:11px;color:#6b7280;margin-left:8px;">keyword: '+p.keyword+'</span>' : '';
-            const recsHtml = snap && snap.recommendations ? renderTrackerRecommendations(snap.recommendations, p.id) : '';
+            let _recs = snap && snap.recommendations ? snap.recommendations : null;
+            if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
+            const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
             return '<div class="tr-card" style="border-left:3px solid '+borderColor+';">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
                 +'<div style="flex:1;min-width:0;">'
@@ -19239,7 +19241,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         function renderTrackerRecommendations(recs, pageId) {
-            if(!recs||!recs.length) return '';
+            if(!recs) return '';
+            if(typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { return ''; } }
+            if(!Array.isArray(recs)||!recs.length) return '';
             const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
             const rows = recs.slice(0,3).map(function(r) {
                 const pc = priorityColor[r.priority]||'#6b7280';
@@ -20082,35 +20086,40 @@ async function runTrackerCheck(page, geminiKey, keys) {
     }
 
     // ── 4. You.com Smart API citation ────────────────────────────────────────
-    // You.com Smart API v2 — get key at app.you.com/api-dashboard (free tier)
-    // Auth: Bearer token. Endpoint: https://api.ydc-index.io/search (v1 compat)
-    //       OR https://api.you.com/v2/search (v2)
-    // We try v1 first (wider free tier), fall back to v2 on 403/404.
+    // You.com Smart API — get key at app.you.com/api-dashboard (free tier)
+    // Correct auth: X-API-Key header only (no Bearer prefix)
+    // Endpoints to try in order:
+    //   1. https://api.ydc-index.io/search  (web search, returns hits[])
+    //   2. https://api.ydc-index.io/rag     (AI answer, returns answer + sources[])
     _trSetStep(pageId, 'youcom', 'running', 'Checking You.com AI Search: ' + keyword);
     if(_yk) { const youKey = _yk;
       try {
-        // Try v1 endpoint with Bearer auth (most common for free tier keys)
+        // Primary: web search endpoint — X-API-Key only
         let yResp = await fetch(
           `https://api.ydc-index.io/search?query=${encodeURIComponent(keyword)}&num_web_results=10`,
-          { headers: { 'Authorization': 'Bearer ' + youKey, 'X-API-Key': youKey }, signal: AbortSignal.timeout(12000) }
+          { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(12000) }
         ).catch(() => null);
-        // If v1 returns 403/404, try v2
+        // Fallback: RAG endpoint (returns AI answer + sources)
         if(!yResp || (!yResp.ok && (yResp.status === 403 || yResp.status === 404 || yResp.status === 401))) {
           yResp = await fetch(
-            `https://api.you.com/v2/search?query=${encodeURIComponent(keyword)}&num_web_results=10`,
-            { headers: { 'Authorization': 'Bearer ' + youKey }, signal: AbortSignal.timeout(12000) }
+            `https://api.ydc-index.io/rag?query=${encodeURIComponent(keyword)}`,
+            { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(15000) }
           ).catch(() => null);
         }
         if(yResp && yResp.ok) {
           const yData = await yResp.json();
-          // v1: hits[] with url. v2: results[] or web_results[] with url
-          const hits = yData.hits || yData.results || yData.web_results || [];
-          const inResults = hits.some(function(h){ return (h.url||'').replace(/^https?:\/\//, '').startsWith(domain); });
-          // AI snippets / answer
-          const aiSnippets = yData.ai_snippets || yData.ai_answer || [];
-          const aiText = typeof aiSnippets === 'string' ? aiSnippets : JSON.stringify(aiSnippets);
-          const inAI = (Array.isArray(aiSnippets) && aiSnippets.some(function(s){ return (s.url||s.source_url||s.snippet||'').includes(domain); }))
-            || aiText.includes(domain);
+          // /search endpoint: hits[] each with {url, title, snippets[]}
+          // /rag endpoint:    answer (string) + sources[] each with {url, snippet}
+          const hits = yData.hits || yData.results || [];
+          const sources = yData.sources || [];
+          const allUrls = [...hits, ...sources].map(function(h){ return (h.url||''); });
+          const inResults = allUrls.some(function(u){ return u.replace(/^https?:\/\//, '').startsWith(domain); });
+          // AI answer text — check if domain is mentioned
+          const aiAnswer = yData.answer || '';
+          const aiSnippets = yData.ai_snippets || [];
+          const inAI = aiAnswer.includes(domain)
+            || (Array.isArray(aiSnippets) && aiSnippets.some(function(s){ return (s.url||s.snippet||'').includes(domain); }))
+            || sources.some(function(s){ return (s.url||'').includes(domain); });
           snapshot.ai_bing_found = hits.length > 0;
           snapshot.ai_bing_cited = inResults || inAI;
           if(inResults || inAI) snapshot.ai_bing_text = inAI ? 'Cited in You.com AI answer' : 'Found in You.com top results';

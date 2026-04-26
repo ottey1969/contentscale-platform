@@ -2533,12 +2533,25 @@ function renderTrackerPagesList() {
     var aiY = snap.ai_bing_cited ? '<span style="color:#4ade80;">✅ You.com</span>' : '<span style="color:#6b7280;">— You.com</span>';
     var lastChecked = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never checked';
     var pending = parseInt(p.pending_changes || 0);
+    // Parse recommendations safely
+    var recs = snap.recommendations || null;
+    if (recs && typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { recs = null; } }
+    var topRec = Array.isArray(recs) && recs.length ? recs[0] : null;
+    var recHtml = topRec ? (function() {
+      var col = topRec.priority === 'high' ? '#f87171' : topRec.priority === 'medium' ? '#fbbf24' : '#4ade80';
+      return '<div style="margin-top:6px;background:#0a0f1a;border-left:2px solid ' + col + ';border-radius:4px;padding:6px 10px;font-size:11px;">' +
+        '<span style="color:' + col + ';font-weight:700;text-transform:uppercase;font-size:10px;margin-right:6px;">' + (topRec.priority||'') + '</span>' +
+        '<span style="color:#9ca3af;">' + (topRec.title||'') + '</span>' +
+        (recs.length > 1 ? '<span style="color:#4b5563;margin-left:6px;">+' + (recs.length-1) + ' more</span>' : '') +
+      '</div>';
+    })() : '';
     return '<div data-tracker-page-id="' + p.id + '" style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
       '<div style="display:flex;align-items:center;gap:12px;">' +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + '</div>' +
           '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + ' · ' + lastChecked + '</div>' +
           '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + ' ' + aiY + '</div>' +
+          recHtml +
         '</div>' +
         '<div style="text-align:right;flex-shrink:0;">' +
           '<div style="font-size:1.1rem;font-weight:700;color:#a78bfa;">' + pos + '</div>' +
@@ -2774,10 +2787,12 @@ async function openTrackerDetail(pageId) {
     // ── Recommendations ──────────────────────────────────────────────────────
     var recsHtml = '';
     var latestWithRecs = snapList.slice().reverse().find(function(s) {
-      return s.recommendations && (Array.isArray(s.recommendations) ? s.recommendations.length : true);
+      if (!s.recommendations) return false;
+      if (typeof s.recommendations === 'string') { try { s.recommendations = JSON.parse(s.recommendations); } catch(e) { s.recommendations = null; } }
+      return Array.isArray(s.recommendations) && s.recommendations.length;
     });
     if (latestWithRecs && latestWithRecs.recommendations) {
-      var recs = Array.isArray(latestWithRecs.recommendations) ? latestWithRecs.recommendations : [latestWithRecs.recommendations];
+      var recs = Array.isArray(latestWithRecs.recommendations) ? latestWithRecs.recommendations : [];
       recsHtml = '<div>' +
         '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">💡 AI Recommendations</div>' +
         recs.map(function(r) {
