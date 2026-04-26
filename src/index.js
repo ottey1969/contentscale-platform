@@ -10794,7 +10794,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     }
     if (!vid) return res.status(400).json({ success: false, error: 'Could not extract YouTube video ID from URL' });
 
-    // 1. Get video metadata + check captions exist
+    // 1. Get video metadata via YouTube Data API (title, channel, publish date)
     if (ytKey) {
       try {
         const metaR = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(8000) });
@@ -10804,72 +10804,88 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
           if (item) {
             actualTitle = item.snippet?.title || actualTitle;
             channelName = item.snippet?.channelTitle || '';
-            // Store original publish date from YouTube
-            if (item.snippet?.publishedAt) {
-              req._videoPublishedAt = item.snippet.publishedAt.slice(0,10);
-            }
+            if (item.snippet?.publishedAt) req._videoPublishedAt = item.snippet.publishedAt.slice(0,10);
           }
         }
       } catch(e) { console.warn('[video-rewrite] metadata fetch failed:', e.message); }
+    }
 
-      // 2. Get captions list
+    // 2. Best method: fetch transcript via YouTube's watch page (works for auto-captions without OAuth)
+    // YouTube embeds caption track URLs in the page's initial data — extract and fetch directly
+    if (!transcript) {
       try {
-        const capR = await fetch(`https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(8000) });
-        if (capR.ok) {
-          const capD = await capR.json();
-          const caps = (capD.items || []);
-          const autoEn = caps.find(c => c.snippet?.trackKind === 'asr' && (c.snippet?.language || '').startsWith('en'));
-          const manualEn = caps.find(c => c.snippet?.trackKind !== 'asr' && (c.snippet?.language || '').startsWith('en'));
-          const best = manualEn || autoEn || caps[0];
-          if (best) {
-            // Download caption as SRT/timedtext
+        const watchR = await fetch(`https://www.youtube.com/watch?v=${vid}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          },
+          signal: AbortSignal.timeout(15000)
+        });
+        if (watchR.ok) {
+          const watchHtml = await watchR.text();
+
+          // Extract video description (always available)
+          const descMatch = watchHtml.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+          if (descMatch) {
+            const desc = descMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+            if (desc.length > 100) sourceUrl = sourceUrl; // keep, description stored separately
+          }
+
+          // Extract caption track URL from page data (YouTube embeds this for auto-captions)
+          const captionMatch = watchHtml.match(/"captionTracks":\s*\[([^\]]+)\]/);
+          if (captionMatch) {
             try {
-              const dlR = await fetch(`https://www.googleapis.com/youtube/v3/captions/${best.id}?tfmt=srt&key=${ytKey}`, {
-                headers: { 'Authorization': 'Bearer ' + ytKey },
-                signal: AbortSignal.timeout(15000)
-              });
-              if (dlR.ok) {
-                const srt = await dlR.text();
-                // Strip SRT timing lines — keep only text
-                transcript = srt.replace(/^\d+$/gm,'').replace(/^\d{2}:\d{2}:\d{2},\d{3} --> .+$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
+              const tracksJson = '[' + captionMatch[1] + ']';
+              const tracks = JSON.parse(tracksJson.replace(/,\s*}/g,'}').replace(/,\s*]/g,']'));
+              // Prefer: manual English > auto English > any auto > any track
+              const pickTrack = (kind, lang) => tracks.find(t =>
+                (kind ? (t.kind||'') === kind : true) &&
+                (lang ? (t.languageCode||'').startsWith(lang) : true)
+              );
+              const best = pickTrack('','en') || pickTrack('asr','en') || pickTrack('asr','') || tracks[0];
+              if (best && best.baseUrl) {
+                const capUrl = best.baseUrl + '&fmt=json3';
+                const capR = await fetch(capUrl, { signal: AbortSignal.timeout(12000) });
+                if (capR.ok) {
+                  const capD = await capR.json();
+                  transcript = (capD.events || [])
+                    .filter(e => e.segs)
+                    .map(e => e.segs.map(s => (s.utf8||'').replace(/\n/g,' ')).join(''))
+                    .filter(t => t.trim())
+                    .join(' ')
+                    .replace(/\s+/g,' ')
+                    .trim();
+                  console.log(`[video-rewrite] Transcript via captionTrack: ${transcript.length} chars, lang=${best.languageCode}, kind=${best.kind||'manual'}`);
+                }
               }
-            } catch(e2) { console.warn('[video-rewrite] caption download failed:', e2.message); }
+            } catch(parseErr) { console.warn('[video-rewrite] captionTrack parse failed:', parseErr.message); }
+          }
+
+          // If no caption track found, extract description as fallback content
+          if (!transcript && descMatch) {
+            transcript = descMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').substring(0, 5000);
+            console.log(`[video-rewrite] Using description as transcript fallback: ${transcript.length} chars`);
           }
         }
-      } catch(e) { console.warn('[video-rewrite] captions list failed:', e.message); }
+      } catch(e) { console.warn('[video-rewrite] watch page fetch failed:', e.message); }
     }
 
-    // 3. Fallback: scrape YouTube page description + auto-generated transcript via timedtext API
-    if (!transcript) {
+    // 3. Timedtext API fallback (older videos)
+    if (!transcript || transcript.length < 200) {
       try {
-        // YouTube's unofficial timedtext endpoint (no API key needed for auto-captions)
-        const ttR = await fetch(`https://www.youtube.com/api/timedtext?v=${vid}&lang=en&fmt=json3`, { signal: AbortSignal.timeout(10000) });
-        if (ttR.ok) {
-          const ttD = await ttR.json();
-          const events = ttD.events || [];
-          transcript = events
-            .filter(e => e.segs)
-            .map(e => e.segs.map(s => s.utf8 || '').join(''))
-            .join(' ')
-            .replace(/\n/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        const langs = ['en','en-US','en-GB','a.en'];
+        for (const lang of langs) {
+          const ttR = await fetch(`https://www.youtube.com/api/timedtext?v=${vid}&lang=${lang}&fmt=json3`, { signal: AbortSignal.timeout(8000) });
+          if (ttR.ok) {
+            const ttD = await ttR.json().catch(()=>null);
+            if (ttD?.events?.length) {
+              const tt = ttD.events.filter(e=>e.segs).map(e=>e.segs.map(s=>s.utf8||'').join('')).join(' ').replace(/\s+/g,' ').trim();
+              if (tt.length > transcript.length) { transcript = tt; console.log(`[video-rewrite] timedtext ${lang}: ${tt.length} chars`); break; }
+            }
+          }
         }
-      } catch(e) { console.warn('[video-rewrite] timedtext fallback failed:', e.message); }
-    }
-
-    // 4. If still no transcript, use page description
-    if (!transcript) {
-      try {
-        const pageR = await fetch(`https://www.youtube.com/watch?v=${vid}`, {
-          headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000)
-        });
-        if (pageR.ok) {
-          const html = await pageR.text();
-          const descMatch = html.match(/"description":{"simpleText":"(.*?)"}/);
-          if (descMatch) transcript = descMatch[1].replace(/\\n/g,'\n').substring(0, 3000);
-        }
-      } catch(e) { console.warn('[video-rewrite] page scrape failed:', e.message); }
+      } catch(e) { console.warn('[video-rewrite] timedtext failed:', e.message); }
     }
 
     if (!transcript || transcript.length < 100) {
