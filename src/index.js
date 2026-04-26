@@ -590,6 +590,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    )`).catch(()=>{});
    // Migration: add engine_code_id to existing tracker_pages if missing
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
+   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_engine_url_idx ON tracker_pages(engine_code_id, url) WHERE engine_code_id IS NOT NULL`).catch(()=>{});
+   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_null_engine_url_idx ON tracker_pages(url) WHERE engine_code_id IS NULL`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -11169,6 +11171,28 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
         ctr: ctrCalc
       }
     });
+
+    // ── Auto-add to tracker_pages (every 3 days, scoped to engine user) ──────
+    if(rw.original_url) {
+      try {
+        const eu = req.engineUser;
+        const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+        const tUrl = rw.original_url.startsWith('http') ? rw.original_url : 'https://' + rw.original_url;
+        const tKeyword = rw.gsc_keyword || rw.new_seed_keyword || null;
+        // Upsert: update keyword/frequency if URL already tracked, else insert
+        const conflictClause = codeId
+          ? `ON CONFLICT (engine_code_id, url) WHERE engine_code_id IS NOT NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days'`
+          : `ON CONFLICT (url) WHERE engine_code_id IS NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days'`;
+        await pool.query(
+          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at)
+           VALUES ($1,$2,$3,$4,$5,'3days',NOW()) ` + conflictClause,
+          [codeId, rw.profile_id||null, tUrl,
+           tUrl.split('/').filter(Boolean).pop()||'/',
+           tKeyword]
+        ).catch(()=>{});
+        console.log('[tracker] Auto-added from rewrite:', tUrl);
+      } catch(e) { console.warn('[tracker] Auto-add failed:', e.message); }
+    }
   } catch(e) {
     console.error('Rewrite execute error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;

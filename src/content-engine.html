@@ -626,10 +626,10 @@ textarea{resize:vertical;min-height:100px;}
 
 <!-- Tracker Detail Modal -->
 <div id="trackerDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9200;overflow-y:auto;padding:24px;">
-  <div style="max-width:720px;margin:0 auto;background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;">
-    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);">
-      <span id="trDetailTitle" style="font-weight:700;font-size:15px;">Page Details</span>
-      <button onclick="closeTrackerDetail()" style="background:none;border:none;color:#6b7280;font-size:20px;cursor:pointer;">✕</button>
+  <div style="max-width:820px;margin:0 auto;background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;">
+    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);flex-wrap:wrap;gap:8px;">
+      <span id="trDetailTitle" style="font-weight:700;font-size:15px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">Page Details</span>
+      <button onclick="closeTrackerDetail()" style="background:none;border:none;color:#6b7280;font-size:20px;cursor:pointer;flex-shrink:0;">✕</button>
     </div>
     <div style="padding:20px;" id="trDetailBody">Loading…</div>
   </div>
@@ -1659,20 +1659,11 @@ async function executeRewrite() {
     _currentRewriteHtml = d.html;
     _currentRewriteTitle = d.title;
 
-    // ✅ FIX: auto-push to Pulse+Nexus tracker (localStorage + server queue)
+    // ── Auto-added to tracker — server handles DB insert automatically ────────
     if (d.tracker_page && d.tracker_page.url) {
-      try {
-        var wf = []; try { wf = JSON.parse(localStorage.getItem('cs_wf_pages') || '[]'); } catch(e) {}
-        if (!wf.find(function(p) { return p.url === d.tracker_page.url; })) {
-          wf.push(d.tracker_page);
-          localStorage.setItem('cs_wf_pages', JSON.stringify(wf));
-        }
-      } catch(e) {}
-      // Also push to server queue so Pulse+Nexus tracker page picks it up
-      api('/api/content/tracker-push', 'POST', {
-        user_id: ADMIN_ID,
-        page: d.tracker_page
-      }).catch(function() {});
+      // Server already inserted into tracker_pages on execute-rewrite.
+      // Just show a confirmation link to the Tracker tab.
+      console.log('[tracker] Auto-tracked:', d.tracker_page.url);
     }
     var el = document.getElementById('rwResult');
     // Mode label + color
@@ -1706,7 +1697,7 @@ async function executeRewrite() {
         d.bofu_violations.map(function(v){ return '<li style="margin-bottom:3px;"><strong>' + v.code + '</strong>: ' + v.hint + '</li>'; }).join('') +
         '</ul></div>' : '') +
       '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages' +
-      (d.tracker_page ? ' · <span style="color:#4ade80;">✓ Added to Pulse+Nexus tracker</span>' : '') +
+      (d.tracker_page ? ' · <span style="color:#4ade80;cursor:pointer;" onclick="showPanel(\'tracker\',document.querySelector(\'.nav-tab:last-child\'));loadTrackerPages();">📡 Auto-added to Tracker (every 3 days)</span>' : '') +
       '</div>';
     document.getElementById('rwResultCard').style.display = 'block';
     document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
@@ -2623,53 +2614,154 @@ async function deleteTrackerPage(pageId) {
   }
 }
 
+var _trDetailPageId = null;
+
 async function openTrackerDetail(pageId) {
+  _trDetailPageId = pageId;
   var modal = document.getElementById('trackerDetailModal');
   var body = document.getElementById('trDetailBody');
   var page = _trPages.find(function(p) { return p.id === pageId; });
-  if (page) document.getElementById('trDetailTitle').textContent = page.title || page.url;
+  var titleEl = document.getElementById('trDetailTitle');
+  if (page) titleEl.innerHTML =
+    '<span>' + (page.title || page.url) + '</span>' +
+    (page.keyword ? '<span style="font-size:12px;color:#6b7280;font-weight:400;margin-left:8px;">🔑 ' + page.keyword + '</span>' : '') +
+    '<button onclick="deleteTrackerPageFromDetail(' + pageId + ')" style="margin-left:12px;font-size:11px;padding:4px 10px;background:#7f1d1d;border:1px solid #f87171;border-radius:6px;color:#f87171;cursor:pointer;">🗑 Delete</button>';
   modal.style.display = 'block';
-  body.innerHTML = '<div style="color:#6b7280;padding:20px 0;">Loading snapshots…</div>';
+  body.innerHTML = '<div style="color:#6b7280;padding:40px;text-align:center;">⏳ Loading…</div>';
   try {
     var snaps = await api('/api/tracker/pages/' + pageId + '/snapshots');
-    var changes = await api('/api/tracker/pages/' + pageId + '/changes');
-    var snapRows = (snaps.snapshots || []).slice(0, 10).map(function(s) {
-      var d = new Date(s.checked_at).toLocaleString();
-      var pos = s.google_position ? '#' + s.google_position : '—';
-      var aiG = s.ai_google_overview_cited ? '✅' : (s.ai_google_overview_found ? '⚠️' : '❌');
-      var aiP = s.ai_perplexity_cited ? '✅' : '❌';
-      return '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">' +
-        '<td style="padding:8px 4px;font-size:12px;color:#9ca3af;">' + d + '</td>' +
-        '<td style="padding:8px 4px;font-size:13px;font-weight:700;color:#a78bfa;">' + pos + '</td>' +
-        '<td style="padding:8px 4px;text-align:center;">' + aiG + '</td>' +
-        '<td style="padding:8px 4px;text-align:center;">' + aiP + '</td>' +
-      '</tr>';
-    }).join('');
-    var recsHtml = '';
-    var latestWithRecs = (snaps.snapshots || []).find(function(s) { return s.recommendations && s.recommendations.length; });
-    if (latestWithRecs) {
-      recsHtml = '<div style="margin-top:20px;"><div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#e2e8f0;">💡 Recommendations</div>' +
-        latestWithRecs.recommendations.map(function(r) {
-          var col = r.priority === 'high' ? '#f87171' : r.priority === 'medium' ? '#fbbf24' : '#4ade80';
-          return '<div style="background:#1e293b;border-radius:8px;padding:12px;margin-bottom:8px;border-left:3px solid ' + col + ';">' +
-            '<div style="font-weight:600;font-size:13px;color:#e2e8f0;">' + r.title + '</div>' +
-            '<div style="font-size:12px;color:#9ca3af;margin-top:4px;">' + r.action + '</div>' +
-            '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Expected: ' + (r.expected_impact || '') + '</div>' +
-          '</div>';
-        }).join('') + '</div>';
+    var snapList = (snaps.snapshots || []).slice(0, 20).reverse(); // oldest first for chart
+
+    // ── Position history chart (SVG) ────────────────────────────────────────
+    var chartHtml = '';
+    var posSnaps = snapList.filter(function(s) { return s.google_position !== null; });
+    if (posSnaps.length >= 2) {
+      var W = 620, H = 140, PAD = 32;
+      var positions = posSnaps.map(function(s) { return parseFloat(s.google_position); });
+      var maxPos = Math.max.apply(null, positions);
+      var minPos = Math.min.apply(null, positions);
+      // Invert Y: lower position number = higher on chart
+      var range = maxPos - minPos || 1;
+      var xStep = (W - PAD * 2) / (posSnaps.length - 1);
+      var pts = posSnaps.map(function(s, i) {
+        var x = PAD + i * xStep;
+        var y = PAD + ((parseFloat(s.google_position) - minPos) / range) * (H - PAD * 2);
+        // Invert so #1 is at top
+        y = H - y + PAD - PAD;
+        return { x: x, y: y, pos: s.google_position, date: new Date(s.checked_at).toLocaleDateString() };
+      });
+      var polyline = pts.map(function(p) { return p.x + ',' + p.y; }).join(' ');
+      // Fill area under line
+      var fillPts = 'M' + pts[0].x + ',' + H + ' L' + polyline.split(' ').map(function(p){ return 'L'+p; }).join(' ').replace(/^L/,'') + ' L' + pts[pts.length-1].x + ',' + H + ' Z';
+      var dots = pts.map(function(p) {
+        return '<circle cx="' + p.x + '" cy="' + p.y + '" r="4" fill="#a78bfa" stroke="#0f172a" stroke-width="2">' +
+          '<title>#' + p.pos + ' — ' + p.date + '</title></circle>' +
+          '<text x="' + p.x + '" y="' + (p.y - 8) + '" text-anchor="middle" font-size="10" fill="#a78bfa">#' + p.pos + '</text>';
+      }).join('');
+      var labels = pts.filter(function(p,i){ return i===0 || i===pts.length-1 || i % Math.ceil(pts.length/4) === 0; }).map(function(p){
+        return '<text x="' + p.x + '" y="' + (H + 14) + '" text-anchor="middle" font-size="9" fill="#4b5563">' + p.date + '</text>';
+      }).join('');
+      // Y axis labels
+      var yLabels = '<text x="' + (PAD-4) + '" y="' + (PAD+4) + '" text-anchor="end" font-size="9" fill="#4b5563">#' + minPos + '</text>' +
+        '<text x="' + (PAD-4) + '" y="' + (H-PAD/2) + '" text-anchor="end" font-size="9" fill="#4b5563">#' + maxPos + '</text>';
+      chartHtml = '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">📈 Google Position History</div>' +
+        '<div style="background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px;overflow-x:auto;">' +
+        '<svg viewBox="0 0 ' + (W+16) + ' ' + (H+24) + '" style="width:100%;min-width:300px;height:auto;">' +
+        '<defs><linearGradient id="posGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs>' +
+        '<path d="' + fillPts + '" fill="url(#posGrad)"/>' +
+        '<polyline points="' + polyline + '" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+        dots + labels + yLabels +
+        '</svg></div>' +
+        '<div style="font-size:11px;color:#4b5563;margin-top:4px;">Lower number = better rank. Hover dots for details.</div>' +
+        '</div>';
+    } else if (posSnaps.length === 1) {
+      chartHtml = '<div style="margin-bottom:16px;background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px;text-align:center;">' +
+        '<div style="font-size:2rem;font-weight:800;color:#a78bfa;">#' + posSnaps[0].google_position + '</div>' +
+        '<div style="font-size:12px;color:#6b7280;margin-top:4px;">Current Google position · Need 2+ checks for history chart</div>' +
+        '</div>';
     }
-    body.innerHTML =
-      '<table style="width:100%;border-collapse:collapse;">' +
-        '<thead><tr style="border-bottom:1px solid rgba(255,255,255,.1);">' +
-          '<th style="text-align:left;padding:6px 4px;font-size:11px;color:#6b7280;font-weight:600;">Date</th>' +
-          '<th style="text-align:left;padding:6px 4px;font-size:11px;color:#6b7280;font-weight:600;">Google Pos.</th>' +
-          '<th style="text-align:center;padding:6px 4px;font-size:11px;color:#6b7280;font-weight:600;">AI Overview</th>' +
-          '<th style="text-align:center;padding:6px 4px;font-size:11px;color:#6b7280;font-weight:600;">Perplexity</th>' +
-        '</tr></thead>' +
-        '<tbody>' + (snapRows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#6b7280;font-size:13px;">No snapshots yet — click ▶ Check to run the first check</td></tr>') + '</tbody>' +
-      '</table>' + recsHtml;
+
+    // ── AI citation timeline ─────────────────────────────────────────────────
+    var timelineHtml = '';
+    if (snapList.length) {
+      var recent = snapList.slice(-10).reverse(); // most recent first
+      timelineHtml = '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🤖 AI Citation History</div>' +
+        '<div style="overflow-x:auto;">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        '<thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);">' +
+        '<th style="text-align:left;padding:6px 8px;color:#6b7280;font-weight:600;white-space:nowrap;">Date</th>' +
+        '<th style="text-align:center;padding:6px 8px;color:#6b7280;font-weight:600;">Google Pos</th>' +
+        '<th style="text-align:center;padding:6px 8px;color:#6b7280;font-weight:600;">AI Overview</th>' +
+        '<th style="text-align:center;padding:6px 8px;color:#6b7280;font-weight:600;">Perplexity</th>' +
+        '<th style="text-align:center;padding:6px 8px;color:#6b7280;font-weight:600;">You.com</th>' +
+        '</tr></thead><tbody>' +
+        recent.map(function(s) {
+          var pos = s.google_position ? '<b style="color:#a78bfa;">#' + s.google_position + '</b>' : '<span style="color:#4b5563;">—</span>';
+          var aio = s.ai_google_overview_cited ? '✅' : (s.ai_google_overview_found ? '⚠️' : '❌');
+          var ppl = s.ai_perplexity_cited ? '✅' : '❌';
+          var you = s.ai_bing_cited ? '✅' : '❌';
+          var d = new Date(s.checked_at);
+          var dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+          return '<tr style="border-bottom:1px solid rgba(255,255,255,.04);">' +
+            '<td style="padding:7px 8px;color:#9ca3af;white-space:nowrap;">' + dateStr + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;">' + pos + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;">' + aio + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;">' + ppl + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;">' + you + '</td>' +
+          '</tr>';
+        }).join('') +
+        '</tbody></table></div></div>';
+    }
+
+    // ── Recommendations ──────────────────────────────────────────────────────
+    var recsHtml = '';
+    var latestWithRecs = snapList.slice().reverse().find(function(s) {
+      return s.recommendations && (Array.isArray(s.recommendations) ? s.recommendations.length : true);
+    });
+    if (latestWithRecs && latestWithRecs.recommendations) {
+      var recs = Array.isArray(latestWithRecs.recommendations) ? latestWithRecs.recommendations : [latestWithRecs.recommendations];
+      recsHtml = '<div>' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">💡 AI Recommendations</div>' +
+        recs.map(function(r) {
+          var col = r.priority === 'high' ? '#f87171' : r.priority === 'medium' ? '#fbbf24' : '#4ade80';
+          var badge = '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:' + col + '22;color:' + col + ';font-weight:700;text-transform:uppercase;">' + (r.priority||'') + '</span>';
+          return '<div style="background:#0f172a;border:1px solid rgba(255,255,255,.06);border-left:3px solid ' + col + ';border-radius:8px;padding:12px 14px;margin-bottom:8px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' + badge + '<span style="font-weight:600;font-size:13px;color:#e2e8f0;">' + (r.title||'') + '</span></div>' +
+            '<div style="font-size:12px;color:#9ca3af;line-height:1.5;">' + (r.action||r.text||'') + '</div>' +
+            (r.expected_impact ? '<div style="font-size:11px;color:#6b7280;margin-top:6px;">📈 ' + r.expected_impact + '</div>' : '') +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+
+    // ── Empty state ──────────────────────────────────────────────────────────
+    if (!snapList.length) {
+      body.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">' +
+        '<div style="font-size:2rem;margin-bottom:12px;">📡</div>' +
+        '<div style="font-weight:600;color:#9ca3af;">No checks yet</div>' +
+        '<div style="font-size:13px;margin-top:6px;">Click ▶ Check on this page to run the first check</div>' +
+        '</div>';
+      return;
+    }
+
+    body.innerHTML = chartHtml + timelineHtml + recsHtml;
   } catch(e) {
     body.innerHTML = '<div style="color:#f87171;padding:20px 0;">Error: ' + e.message + '</div>';
+  }
+}
+
+async function deleteTrackerPageFromDetail(pageId) {
+  if (!confirm('Remove this page from tracking? All history will be lost.')) return;
+  try {
+    var data = await api('/api/tracker/pages/' + pageId, 'DELETE');
+    if (!data.success) throw new Error(data.error || 'Failed');
+    closeTrackerDetail();
+    toast('Page removed from tracker');
+    await loadTrackerPages();
+  } catch(e) {
+    toast('Error: ' + e.message);
   }
 }
 
