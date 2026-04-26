@@ -79,7 +79,7 @@ textarea{resize:vertical;min-height:100px;}
     <button class="nav-tab" onclick="showPanel('bulk',this)">⚡ Bulk Autopilot</button>
     <button class="nav-tab" onclick="showPanel('news',this)">📰 News</button>
     <button class="nav-tab" onclick="showPanel('stats',this)">📊 Stats Study</button>
-    <button class="nav-tab" onclick="showPanel('tracker',this);loadTrackerPages();">📡 Tracker</button>
+    <button class="nav-tab" onclick="showPanel('tracker',this);loadTrackerPages();">📡 Gab Tracker</button>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="engineUserBadge" style="font-size:11px;color:#6b7280;display:none;"></span>
@@ -152,8 +152,9 @@ textarea{resize:vertical;min-height:100px;}
       <div><label>Niche / Industry</label><input id="pfNiche" placeholder="Roofing company"></div>
       <div><label>Target Audience</label><input id="pfAudience" placeholder="Homeowners looking for roof repair"></div>
       <div><label>Primary Goal</label>
-        <select id="pfGoal"><option value="leads">Leads</option><option value="sales">Sales</option><option value="traffic">Traffic</option><option value="authority">Authority</option></select>
-      </div>
+        <select id="pfGoal"><option value="leads">Leads</option><option value="sales">Sales</option><option value="traffic">Traffic</option><option value="authority">Authority</option></select>      </div>
+      <div><label>Content Language</label>
+        <select id="pfLang"><option value="en">English</option><option value="nl">Nederlands (Dutch)</option><option value="de">Deutsch (German)</option><option value="fr">Français (French)</option><option value="es">Español (Spanish)</option><option value="it">Italiano (Italian)</option><option value="pt">Português (Portuguese)</option></select></div>
     </div>
     <div style="margin-bottom:12px;"><label>HTML Writing Template (optional)</label><textarea id="pfTemplate" rows="4" placeholder="Paste your HTML template here..."></textarea></div>
     <div class="grid-3" style="margin-bottom:14px;">
@@ -931,6 +932,7 @@ function showProfileForm(profile) {
   document.getElementById('pfId').value = '';
   ['pfName','pfDomain','pfSitemap','pfNiche','pfAudience','pfTemplate','pfWpUrl','pfWpUser','pfWpPw'].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('pfGoal').value = 'leads';
+  document.getElementById('pfLang').value = 'en';
   document.getElementById('pfLocations').innerHTML = '';
   document.getElementById('addLocForm').style.display = 'none';
   document.getElementById('profileFormTitle').textContent = 'New Profile';
@@ -943,6 +945,7 @@ function showProfileForm(profile) {
     document.getElementById('pfNiche').value = profile.niche || '';
     document.getElementById('pfAudience').value = profile.target_audience || '';
     document.getElementById('pfGoal').value = profile.primary_goal || 'leads';
+    document.getElementById('pfLang').value = profile.content_language || 'en';
     document.getElementById('pfTemplate').value = profile.html_template || '';
     document.getElementById('pfWpUrl').value = profile.wp_url || '';
     document.getElementById('pfWpUser').value = profile.wp_user || '';
@@ -996,6 +999,7 @@ async function saveProfile() {
     niche: document.getElementById('pfNiche').value.trim(),
     target_audience: document.getElementById('pfAudience').value.trim(),
     primary_goal: document.getElementById('pfGoal').value,
+    content_language: document.getElementById('pfLang').value || 'en',
     html_template: document.getElementById('pfTemplate').value.trim(),
     wp_url: document.getElementById('pfWpUrl').value.trim(),
     wp_user: document.getElementById('pfWpUser').value.trim(),
@@ -1717,17 +1721,16 @@ async function executeRewrite() {
 
     // ── Auto-added to tracker — server handles DB insert automatically ────────
     if (d.tracker_page && d.tracker_page.url) {
-      // Server already inserted into tracker_pages on execute-rewrite.
-      // Just show a confirmation link to the Tracker tab.
       console.log('[tracker] Auto-tracked:', d.tracker_page.url);
     }
     var el = document.getElementById('rwResult');
-    // Mode label + color
     var modeLabel = { template: '📋 Template Mode', layout_preserved: '🎨 Layout Preserved', free_write: '✍️ Free Write' }[d.mode_used] || d.mode_used;
     var modeColor = d.mode_used === 'layout_preserved' ? '#4ade80' : d.mode_used === 'template' ? '#fbbf24' : '#60a5fa';
-    // BOFU badge color
     var bofuColor = !d.bofu_score ? '#6b7280' : d.bofu_score >= 85 ? '#4ade80' : d.bofu_score >= 70 ? '#fbbf24' : '#f87171';
     var bofuIcon = d.bofu_passed ? '✓' : '⚠';
+    var langBadge = d.detected_language && d.detected_language !== 'en'
+      ? '<span style="background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:#a78bfa;padding:4px 10px;border-radius:6px;font-size:11px;">🌐 ' + d.detected_language_name + '</span>'
+      : '';
 
     el.innerHTML =
       '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
@@ -1739,25 +1742,69 @@ async function executeRewrite() {
       '<button class="btn btn-secondary" style="font-size:12px;" onclick="navigator.clipboard.writeText(_currentRewriteHtml).then(function(){toast(\'Copied!\')})">📋 Copy HTML</button>' +
       '<button class="btn btn-success" style="font-size:12px;" onclick="downloadRewriteHtml()">⬇️ Download</button>' +
       '</div></div>' +
-      // NEW: quality + mode + author row
       '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
       (d.bofu_score != null ? '<span style="background:rgba(' + (d.bofu_passed?'74,222,128':'248,113,113') + ',.12);border:1px solid ' + bofuColor + ';color:' + bofuColor + ';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;">' + bofuIcon + ' BOFU ' + d.bofu_score + '/100</span>' : '') +
       (d.mode_used ? '<span style="background:rgba(255,255,255,.04);border:1px solid ' + modeColor + ';color:' + modeColor + ';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;">' + modeLabel + '</span>' : '') +
+      langBadge +
       (d.author_used ? '<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:11px;">👤 ' + d.author_used + (d.author_detected ? ' (detected)' : ' (default)') + '</span>' : '') +
       (d.regeneration_attempts > 1 ? '<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:11px;">🔁 ' + d.regeneration_attempts + ' attempts</span>' : '') +
       '</div>' +
-      // BOFU violations (when any)
-      (d.bofu_violations && d.bofu_violations.length ? '<div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:10px 12px;margin-bottom:10px;">' +
-        '<div style="font-size:11px;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">⚠ Quality Issues Remaining (' + d.bofu_violations.length + ')</div>' +
-        '<ul style="margin:0;padding-left:18px;font-size:12px;color:#fca5a5;">' +
-        d.bofu_violations.map(function(v){ return '<li style="margin-bottom:3px;"><strong>' + v.code + '</strong>: ' + v.hint + '</li>'; }).join('') +
-        '</ul></div>' : '') +
-      '<div style="font-size:12px;color:#6b7280;">✓ Saved · Images preserved · Linked to money pages' +
-      (d.tracker_page ? ' · <span style="color:#4ade80;cursor:pointer;" onclick="showPanel(\'tracker\',document.querySelector(\'.nav-tab:last-child\'));loadTrackerPages();">📡 Auto-added to Tracker (every 3 days)</span>' : '') +
-      '</div>';
+      '<div style="font-size:12px;color:#6b7280;margin-bottom:14px;">✓ Saved · Images preserved · Linked to money pages</div>' +
+      // SEO ContentScore scan — runs automatically
+      '<div id="rwGraafScan" style="background:#0a0f1a;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:12px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+      '<span style="font-size:13px;font-weight:600;color:#e2e8f0;">📊 SEO ContentScore Scan</span>' +
+      '<span id="rwGraafStatus" style="font-size:11px;color:#6b7280;">Running automatically...</span>' +
+      '</div>' +
+      '<div id="rwGraafBody"><div style="display:flex;align-items:center;gap:8px;color:#6b7280;font-size:12px;"><span class="spinner"></span> Scanning rewritten content...</div></div>' +
+      '</div>' +
+      // Gab Tracker link — shown after scan
+      (d.tracker_page ? '<div id="rwTrackerLink" style="display:none;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">' +
+      '<span style="font-size:12px;color:#4ade80;">📡 Auto-added to Gab Tracker · Monitoring started</span>' +
+      '<button class="btn btn-secondary" style="font-size:11px;" onclick="showPanel(\'tracker\',document.querySelector(\'.nav-tab:last-child\'));loadTrackerPages();">Open Gab Tracker →</button>' +
+      '</div>' : '');
+
     document.getElementById('rwResultCard').style.display = 'block';
     document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
-    toast('Rewrite complete — ' + d.word_count + ' words!');
+    toast('Rewrite complete — ' + d.word_count + ' words · Running SEO scan...');
+
+    // ── Show GRAAF ContentScore — already in response, no extra call needed ──
+    var scanEl = document.getElementById('rwGraafBody');
+    var statusEl = document.getElementById('rwGraafStatus');
+    if (d.graaf_score != null) {
+      var scoreColor = d.graaf_score >= 80 ? '#4ade80' : d.graaf_score >= 60 ? '#fbbf24' : '#f87171';
+      var recs = (d.graaf_recommendations || []).slice(0, 5);
+      statusEl.textContent = 'Complete · ' + d.graaf_score + '/100';
+      statusEl.style.color = scoreColor;
+      var origBadge = d.graaf_original_score != null
+        ? '<span style="font-size:10px;color:#6b7280;margin-left:8px;">original: ' + d.graaf_original_score + '/100 → now: ' + d.graaf_score + '/100</span>'
+        : '';
+      scanEl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap;">' +
+        '<div style="text-align:center;">' +
+        '<div style="font-size:2rem;font-weight:700;color:' + scoreColor + ';">' + d.graaf_score + '</div>' +
+        '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">/ 100</div>' +
+        '</div>' +
+        '<div style="flex:1;">' + origBadge +
+        '<div style="font-size:11px;color:#6b7280;margin-top:4px;">' + (recs.length ? recs.length + ' remaining items' : '✅ All GRAAF requirements met') + '</div>' +
+        '</div></div>' +
+        (recs.length ? '<div style="border-top:1px solid #1f2937;padding-top:10px;">' +
+        recs.map(function(rec) {
+          var pc = rec.priority === 'high' ? '#f87171' : rec.priority === 'medium' ? '#fbbf24' : '#4ade80';
+          return '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);align-items:flex-start;">' +
+            '<span style="color:' + pc + ';font-size:10px;font-weight:700;text-transform:uppercase;min-width:46px;padding-top:2px;">' + (rec.priority||'') + '</span>' +
+            '<div><div style="font-size:12px;color:#e2e8f0;font-weight:500;margin-bottom:2px;">' + (rec.title||'') + '</div>' +
+            '<div style="font-size:11px;color:#6b7280;line-height:1.4;">' + (rec.action||rec.description||'') + '</div></div></div>';
+        }).join('') + '</div>' : '');
+      if (document.getElementById('rwTrackerLink')) document.getElementById('rwTrackerLink').style.display = 'flex';
+      toast('Rewrite complete · GRAAF score: ' + d.graaf_score + '/100');
+    } else {
+      statusEl.textContent = 'Score unavailable';
+      scanEl.innerHTML = '<div style="font-size:12px;color:#6b7280;">GRAAF scan ran server-side. Check Rewrites tab for stored results.</div>';
+      if (document.getElementById('rwTrackerLink')) document.getElementById('rwTrackerLink').style.display = 'flex';
+      toast('Rewrite complete — ' + d.word_count + ' words!');
+    }
+
   } catch(e) { toast('Rewrite failed: ' + e.message, 'red'); }
   finally { btn.disabled = false; btn.innerHTML = '✍️ Execute Rewrite'; }
 }

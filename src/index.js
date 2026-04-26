@@ -860,6 +860,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS perplexity_key TEXT DEFAULT NULL`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS credit_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, credits_spent INTEGER NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS owner_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS content_language VARCHAR(10) DEFAULT 'en'`).catch(()=>{});
    // Client progress tracking
    await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
    // Content Engine tables
@@ -7106,9 +7107,9 @@ const DEEP_STEPS=[
   {id:'d5',icon:'🫀',label:'PULSE Optimization — before/after rewrites',badge:'b-pulse'},
   {id:'d6',icon:'🔗',label:'NEXUS Signals + Internal Link Finder',badge:'b-nexus'},
   {id:'d7',icon:'🏗️',label:'Architecture Blueprint — H1-H3 restructure',badge:'b-nexus'},
-  {id:'d8',icon:'🛠️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
-  {id:'d9',icon:'📊',label:'Before/After Score + Traffic Projection',badge:'b-gold'},
-  {id:'d10',icon:'📈',label:'90-Day Ranking Plan — by week',badge:'b-win'},
+  {id:'d8',icon:'⚙️',label:'Technical Checklist + Schema JSON-LD',badge:'b-tech'},
+  {id:'d9',icon:'🎙️',label:'Voice Search Optimization — conversational queries',badge:'b-voice'},
+  {id:'d10',icon:'📈',label:'Before/After Score + Traffic Projection + 90-Day Plan',badge:'b-gold'},
 ];
 
 async function runDeepAudit() {
@@ -7188,9 +7189,9 @@ TOP QUERIES: \${inp.queries||'not provided'}
 
     d8:\`\${base}\\n\\nSTEP 8 — TECHNICAL CHECKLIST:\\n1. Keyword "\${inp.kw}" placement audit:\\n   □ In H1? □ First 100 words? □ URL? □ Meta title? □ Image alt?\\n   → Fix for each missing item\\n\\n2. Missing LSI/semantic keywords (8 terms not found in content)\\n\\n3. Technical issues found in HTML:\\n   - Duplicate tags, missing alt, schema errors, etc.\\n\\n4. Mobile optimization gaps (page is \${inp.mob||'?'}% mobile)\\n\\n5. Core Web Vitals recommendations based on page structure\`,
 
-    d9:\`\${base}\\n\\nSTEP 9 — BEFORE/AFTER SCORE PROJECTION:\\n\\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\\n\\nCURRENT estimated score:\\n- GRAAF: [score]/50 — [what's missing]\\n- CRAFT: [score]/30 — [what's missing]\\n- Technical: [score]/20 — [what's missing]\\n- TOTAL: [score]/100\\n\\nAFTER implementing all recommendations:\\n- GRAAF: [new score]/50 — [what improved]\\n- CRAFT: [new score]/30 — [what improved]\\n- Technical: [new score]/20 — [what improved]\\n- TOTAL: [new score]/100\\n\\nTraffic projection:\\n- Current position \${inp.pos} → Expected new position: [X]\\n- Current CTR \${inp.ctr}% → Expected new CTR: [X]%\\n- Current clicks per month: [calc] → New estimated clicks: [calc]\`,
+    d9:\`\${base}\\n\\nSTEP 9 — VOICE SEARCH OPTIMIZATION:\\n\\nVoice search = conversational, question-based, local intent. Target device: \${inp.voiceDevice}.\\n\\n1. ELIGIBILITY CHECK — Does this page qualify for voice answer?\\n   - Answer box potential: Yes/No + why\\n   - Conversational readability score: [1-10]\\n   - Local voice intent: Yes/No (is "\${inp.kw}" a local voice query?)\\n\\n2. TOP 5 VOICE QUERIES for this page in \${inp.geo}:\\n   | Voice Query | Current Answer on Page | Gap | Fix |\\n   |-------------|----------------------|-----|-----|\\n   | [query] | [current] | [gap] | [fix] |\\n\\n3. REWRITES — Convert 3 existing sentences to voice-friendly format:\\n   Before: [current sentence]\\n   After: [conversational, direct answer version]\\n\\n4. FEATURED SNIPPET optimization for voice:\\n   - Write the perfect 40-word answer that Siri/Google will read aloud\\n   - Format: [write it]\\n\\n5. Local near-me queries (if applicable for \${inp.geo}):\\n   - Best 3 "near me" variations for this business type\\n   - Schema additions needed for local voice: [list]\`,
+    d10:\`\${base}\\n\\nSTEP 10 — SCORE + PROJECTION + 90-DAY PLAN:\\n\\nContentScale scoring: GRAAF (50pts) + CRAFT (30pts) + Technical (20pts) = 100\\n\\n**CURRENT estimated score:**\\n| Component | Score | Missing |\\n|-----------|-------|--------|\\n| GRAAF | /50 | [what's missing] |\\n| CRAFT | /30 | [what's missing] |\\n| Technical | /20 | [what's missing] |\\n| **TOTAL** | **/100** | |\\n\\n**AFTER implementing all recommendations:**\\n| Component | New Score | Improved |\\n|-----------|-----------|----------|\\n| GRAAF | /50 | [what improved] |\\n| CRAFT | /30 | [what improved] |\\n| Technical | /20 | [what improved] |\\n| **TOTAL** | **/100** | |\\n\\n**Traffic projection:**\\n| Metric | Current | Expected (90 days) |\\n|--------|---------|--------------------|\\n| Position | \${inp.pos} | [target] |\\n| CTR | \${inp.ctr}% | [target]% |\\n| Monthly clicks | [calc] | [calc] |\\n\\n**90-Day Plan:**\\n- **WEEK 1** (Quick Wins): [5 specific changes, each under 30 min]\\n- **WEEK 2-3** (Content Upgrades): [3-4 content additions]\\n- **WEEK 4** (Technical + Schema): [specific implementations]\\n- **MONTH 2** (Authority Building): [link building, E-E-A-T signals]\\n- **MONTH 3** (Measurement): [GSC checkpoints — Day 7, Day 30, Day 90]\\n\\nSUCCESS DEFINITION: Position \${inp.pos} → [target] for "\${inp.kw}" in \${inp.geo} within 90 days\`,
 
-    d10:\`\${base}\\n\\nSTEP 10 — 90-DAY PLAN (week by week):\\n\\n**WEEK 1 — Quick Wins (do today):**\\n[List 5 specific changes, each under 30 min]\\n\\n**WEEK 2-3 — Content Upgrades:**\\n[List 3-4 content additions/rewrites]\\n\\n**WEEK 4 — Technical + Schema:**\\n[Schema implementation, internal links, technical fixes]\\n\\n**MONTH 2 — Authority Building:**\\n[Link building, content expansion, E-E-A-T signals]\\n\\n**MONTH 3 — Measurement + Iteration:**\\n[What to check in GSC, when to expect results]\\n\\n**GSC Checkpoints:**\\n- Day 7: [what metric to check]\\n- Day 30: [target position + CTR]\\n- Day 90: [end goal for "\${inp.kw}"]\\n\\nSUCCESS DEFINITION: Position \${inp.pos} → [target] within 90 days\`,
   };
 
   for (let i=0;i<DEEP_STEPS.length;i++) {
@@ -9402,7 +9403,7 @@ RULES:
 - If adding expert quote: use <blockquote><p>"quote"</p><cite>— Name, Title</cite></blockquote>
 
 CURRENT HTML:
-${(article.html_content || '').substring(0, 12000)}`;
+${(article.html_content || '').substring(0, 40000)}`;
 
     const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 } });
     if (!resp.ok) return res.status(500).json({ success: false, error: resp.errorMessage || 'Gemini error' });
@@ -9440,7 +9441,7 @@ RULES:
 - Preserve all existing structure, headings, images, schema, and internal links.
 
 CURRENT HTML:
-${(rw.rewritten_html || '').substring(0, 12000)}`;
+${(rw.rewritten_html || '').substring(0, 40000)}`;
 
     const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 } });
     if (!resp.ok) return res.status(500).json({ success: false, error: resp.errorMessage || 'Gemini error' });
@@ -9599,8 +9600,8 @@ app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
   try {
     const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password } = req.body;
     const r = await pool.query(
-      `INSERT INTO content_profiles (name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal||'leads',html_template,wp_url,wp_user,wp_app_password]
+      `INSERT INTO content_profiles (name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal||'leads',html_template,wp_url,wp_user,wp_app_password,content_language||'en']
     );
     res.json({ success: true, profile: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -9610,8 +9611,8 @@ app.put('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
   try {
     const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password } = req.body;
     const r = await pool.query(
-      `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,updated_at=NOW() WHERE id=$12 RETURNING *`,
-      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,req.params.id]
+      `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,content_language=$12,updated_at=NOW() WHERE id=$13 RETURNING *`,
+      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language||'en',req.params.id]
     );
     res.json({ success: true, profile: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -10657,17 +10658,28 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
       console.log(`[analyse-rewrite] Fetched ${competitorData.length}/${picks.length} competitors`);
     }
 
-    // Fallback competitor research via Google Custom Search when no manual competitors
+    // Fallback competitor research via Serper.dev when no manual competitors
     let serpResults = [];
     const searchKw = gscData.keyword || queriesList[0] || original_title || original_slug?.replace(/-/g, ' ');
-    if (competitorData.length === 0 && searchKw && process.env.GOOGLE_SEARCH_API_KEY) {
+    const _serpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
+    if (competitorData.length === 0 && searchKw && _serpKey) {
       try {
-        const sr = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchKw)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
+        const sr = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': _serpKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: searchKw, num: 5, hl: 'en' }),
+          signal: AbortSignal.timeout(10000)
+        });
         if (sr.ok) {
           const sd = await sr.json();
-          serpResults = (sd.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }));
+          serpResults = (sd.organic || []).slice(0,5).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }));
+          // Also check for AI Overview
+          if (sd.answerBox) {
+            serpResults.unshift({ title: 'AI Overview / Answer Box', url: sd.answerBox.link||'', snippet: sd.answerBox.answer || sd.answerBox.snippet || '' });
+          }
+          console.log(`[analyse-rewrite] Serper found ${serpResults.length} results for "${searchKw}"`);
         }
-      } catch(e) { /* no search */ }
+      } catch(e) { console.warn('[analyse-rewrite] Serper fallback failed:', e.message); }
     }
 
     const gscContext = gscData.impressions
@@ -10688,6 +10700,15 @@ Top headings: ${c.headings.slice(0, 6).map(h => `H${h.level}: ${h.text}`).join('
 Content preview: ${c.textPreview.slice(0, 1500)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`).join('\n')
       : serpResults.map((r, i) => `${i+1}. ${r.title} — ${r.url}\n   ${r.snippet}`).join('\n\n');
+
+    // ═══ GRAAF scan original page FIRST — informs the Gemini analyse strategy ═══
+    let originalGraafScan = null;
+    try {
+      if (currentContentFullHtml && currentContentFullHtml.length > 200) {
+        originalGraafScan = graafScanHtml(currentContentFullHtml, original_url || '');
+        console.log(`[analyse-rewrite] GRAAF original scan: ${originalGraafScan?.contentScore}/100, ${originalGraafScan?.recommendations?.length} recs`);
+      }
+    } catch(ge) { console.warn('[analyse-rewrite] GRAAF scan failed:', ge.message); }
 
     const analysePrompt = `You are an expert SEO strategist. Analyse this page and provide a complete rewrite strategy.
 
@@ -10710,6 +10731,9 @@ LAYOUT SIGNATURE: ${layoutSkeleton ? `${layoutSkeleton.sectionCount} sections, $
 
 BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
 
+GRAAF CONTENT SCORE (original page): ${originalGraafScan?.contentScore || 'not scanned'}/100
+GRAAF GAPS TO FIX IN REWRITE: ${(originalGraafScan?.recommendations||[]).filter(r=>r.priority==='high'||r.priority==='medium').slice(0,5).map(r=>'['+r.priority.toUpperCase()+'] '+r.title).join(' | ') || 'none detected'}
+
 CRITICAL RULES:
 - SLUG IS SACRED: keep_slug is TRUE by default — only set false when the slug is factually wrong for the intent
 - NEVER change the slug if it would break the search intent of the phrase (even partially)
@@ -10718,6 +10742,7 @@ CRITICAL RULES:
 - 301 redirect ONLY when redirect_confidence = 100 (full intent match, zero ambiguity)
 - If GSC real queries are provided: weave them literally into recommended_h2s and secondary_keywords
 - When manual competitors provided: identify SPECIFIC weaknesses to beat, not just generic gaps
+- Account for the GRAAF gaps listed above — the rewrite strategy MUST close all high-priority gaps
 
 Return ONLY valid JSON:
 {
@@ -10776,13 +10801,15 @@ Return ONLY valid JSON:
       return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
     }
 
-    // ═══ Stash GSC + author + layout + competitors in analysis_data ═══
+    // ═══ Stash GSC + author + layout + competitors + GRAAF recs in analysis_data ═══
     analysis.gsc_pages = pagesList;
     analysis.gsc_queries = queriesList;
     analysis.gsc_auto_filled = gscData.autoFilled;
     analysis.author = author;
     analysis.layout_skeleton = layoutSkeleton;
     analysis.competitors_manual = competitorData;
+    analysis.original_graaf_score = originalGraafScan?.contentScore || null;
+    analysis.original_graaf_recs = originalGraafScan?.recommendations || [];
 
     const rwR = await pool.query(
       `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status)
@@ -10828,6 +10855,24 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireC
     const analysis = safeParse(rw.analysis_data, {});
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+
+    // ═══ GRAAF recommendations from original scan — bake into rewrite ═══
+    const origGraafRecs = Array.isArray(analysis.original_graaf_recs) ? analysis.original_graaf_recs : [];
+    const origGraafScore = analysis.original_graaf_score || null;
+    const graafReqBlock = origGraafRecs.length ? `
+═══════════════════════════════════════
+GRAAF CONTENT SCORE ORIGINAL: ${origGraafScore || '?'}/100
+VERPLICHT OP TE LOSSEN IN DIT HERSCHRIJVEN:
+${origGraafRecs.filter(r => r.priority === 'high' || r.priority === 'medium').slice(0, 8).map(r =>
+  `• [${(r.priority||'').toUpperCase()}] ${r.title}: ${r.action || r.description || ''}`
+).join('\n')}
+═══════════════════════════════════════` : '';
+
+    // Detect content language from original HTML — auto, no manual setting needed
+    const detectedLang = detectContentLanguage(rw.original_html || '');
+    const langNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
+    const detectedLangName = langNames[detectedLang] || 'English';
+    console.log(`[execute-rewrite] Detected language: ${detectedLang} (${detectedLangName})`);
 
     const gscPagesRW = Array.isArray(analysis.gsc_pages) ? analysis.gsc_pages : [];
     const gscQueriesRW = Array.isArray(analysis.gsc_queries) ? analysis.gsc_queries : [];
@@ -10928,7 +10973,9 @@ VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Me
 
     if (hasTemplate) {
       // MODE 1: TEMPLATE — fill in, do NOT restructure
-      writePromptRW = `Je bent een SEO-contentspecialist. Vul dit HTML-template in met verbeterde content. Verander de HTML-structuur NIET.
+      writePromptRW = `Je bent een SEO-contentspecialist die schrijft in ${detectedLangName}. Vul dit HTML-template in met verbeterde content in ${detectedLangName}. Verander de HTML-structuur NIET.
+
+TAAL: Schrijf ALLE tekst in ${detectedLangName}. Titels, body, FAQ, CTA — alles in ${detectedLangName}.
 
 ═══════════════════════════════════════
 ABSOLUTE REGELS
@@ -10937,7 +10984,7 @@ ABSOLUTE REGELS
 2. VERANDER GEEN inline styles of attributen
 3. Vul ALLEEN tekst in bestaande elementen in
 4. ${antiFacts}
-${qualityBlock}
+${qualityBlock}${graafReqBlock}
 BEDRIJF: ${rw.profile_name} — ${rw.niche}
 DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 
@@ -10956,6 +11003,14 @@ RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
 AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
 VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
 
+AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
+VOICE SEARCH (verwerk als FAQ-vragen): ${(analysis.voice_search_opportunities||[]).join(' | ')}
+SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
+RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
+
+MONEY PAGES (link hier naartoe):
+${moneyPages || 'Geen money pages geconfigureerd.'}
+
 INTERNE LINKS (ALLEEN DEZE):
 ${internalLinksRW}
 
@@ -10973,7 +11028,9 @@ Geef ALLEEN de ingevulde template terug. Geen uitleg, geen markdown. Eindig met 
 
     } else if (hasOriginalLayout) {
       // MODE 2 (NEW): LAYOUT-PRESERVING REWRITE — use original HTML as skeleton
-      writePromptRW = `Je bent een elite SEO-contentschrijver. Je krijgt een bestaande pagina. Herschrijf de TEKST, behoud de LAYOUT exact.
+      writePromptRW = `Je bent een elite SEO-contentschrijver die schrijft in ${detectedLangName}. Je krijgt een bestaande pagina. Herschrijf de TEKST in ${detectedLangName}, behoud de LAYOUT exact.
+
+TAAL: Schrijf ALLE tekst in ${detectedLangName}. Titels, body, FAQ, CTA — alles in ${detectedLangName}.
 
 ═══════════════════════════════════════
 ABSOLUTE LAYOUT-REGELS
@@ -10993,7 +11050,7 @@ BRAND SIGNATUUR (behoud):
 - Sections: ${layoutSkeleton.sectionCount} | Images: ${layoutSkeleton.imageCount} | CTAs: ${layoutSkeleton.ctaCount}
 
 ${antiFacts}
-${qualityBlock}
+${qualityBlock}${graafReqBlock}
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
@@ -11003,6 +11060,8 @@ DOELWOORDTELLING: ${analysis.target_word_count || 2500}+ (dezelfde layout, beter
 
 REWRITE STRATEGIE: ${analysis.rewrite_strategy || ''}
 SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
+AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
+VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(analysis.voice_search_opportunities||[]).join(' | ')}
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
@@ -11020,8 +11079,10 @@ Geef ALLEEN de herschreven HTML terug. Geen markdown, geen uitleg. Eindig met <!
 
     } else {
       // MODE 3: FREE-WRITE
-      writePromptRW = `Je bent een elite SEO-contentschrijver. Herschrijf deze pagina zodat hij significant beter rankt. Minimaal ${analysis.target_word_count || 2500} woorden.
-${qualityBlock}
+      writePromptRW = `Je bent een elite SEO-contentschrijver die schrijft in ${detectedLangName}. Herschrijf deze pagina in ${detectedLangName} zodat hij significant beter rankt. Minimaal ${analysis.target_word_count || 2500} woorden.
+
+TAAL: Schrijf ALLE tekst in ${detectedLangName}. Titels, body, FAQ, CTA — alles in ${detectedLangName}.
+${qualityBlock}${graafReqBlock}
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
@@ -11106,6 +11167,46 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       }
     }
 
+    // ═══ GRAAF scan the rewritten output — apply remaining high-priority recs ═══
+    let finalGraafResult = null;
+    try {
+      finalGraafResult = graafScanHtml(html, rw.original_url || '');
+      const remainingHighRecs = (finalGraafResult?.recommendations || [])
+        .filter(r => r.priority === 'high').slice(0, 3);
+
+      if (remainingHighRecs.length > 0 && geminiKey) {
+        console.log(`[execute-rewrite] GRAAF post-scan: ${finalGraafResult.contentScore}/100 — ${remainingHighRecs.length} high-priority gaps remaining, applying...`);
+        const fixPrompt = `You are an expert SEO content editor. The following content has been rewritten but still has GRAAF quality gaps. Apply ALL the fixes listed below to the HTML. Do not change structure or layout.
+
+GAPS TO FIX (apply all):
+${remainingHighRecs.map(r => `• ${r.title}: ${r.action || r.description || ''}`).join('\n')}
+
+LANGUAGE: ${detectedLangName} — write all additions in ${detectedLangName}
+
+CURRENT HTML:
+${html.substring(0, 40000)}
+
+Return ONLY the complete updated HTML. No markdown, no explanation.`;
+
+        const fixResp = await callGeminiWithFallback(geminiKey, {
+          contents: [{ role: 'user', parts: [{ text: fixPrompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } }
+        });
+        if (fixResp.ok) {
+          let fixedHtml = fixResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          fixedHtml = fixedHtml.replace(/^```html\n?/i,'').replace(/```$/,'').trim();
+          if (fixedHtml && fixedHtml.length > 500) {
+            html = fixedHtml;
+            // Re-scan to get final score
+            finalGraafResult = graafScanHtml(html, rw.original_url || '');
+            console.log(`[execute-rewrite] After GRAAF fix: ${finalGraafResult?.contentScore}/100`);
+          }
+        }
+      } else {
+        console.log(`[execute-rewrite] GRAAF post-scan: ${finalGraafResult?.contentScore}/100 — output clean`);
+      }
+    } catch(ge) { console.warn('[execute-rewrite] GRAAF post-scan failed:', ge.message); }
+
     const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
 
     await pool.query(
@@ -11163,6 +11264,11 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       author_used: author.name,
       author_detected: author.detected,
       graaf_scan_queued: graafScanQueued,
+      graaf_score: finalGraafResult?.contentScore || null,
+      graaf_recommendations: (finalGraafResult?.recommendations || []).slice(0, 8),
+      graaf_original_score: origGraafScore,
+      detected_language: detectedLang,
+      detected_language_name: detectedLangName,
       tracker_page: {
         url: rw.original_url,
         keyword: rw.gsc_keyword || rw.new_seed_keyword || '',
@@ -11598,14 +11704,59 @@ async function processBulkItemExecute(job, item) {
       ? competitorsManual.map((c, i) => `
 COMPETITOR ${i+1}: ${c.url} (${c.wordCount} words)
 Headings: ${(c.headings||[]).slice(0,5).map(h=>h.text).join(' | ')}
+Has FAQ: ${c.hasFaq} | Has schema: ${c.hasSchema} | Has table: ${c.hasTable}
+Beat strategy: ${(analysis.competitor_analysis||[])[i]?.weaknesses || 'Be more specific, more cited, more concrete'}
 Preview: ${(c.textPreview||'').slice(0,800)}`).join('\n')
-      : 'No competitors available';
+      : (analysis.competitor_analysis||[]).map((c,i) => `COMPETITOR ${i+1}: ${c.url}\nStrengths: ${c.strengths}\nWeaknesses: ${c.weaknesses}`).join('\n') || 'No competitors available';
 
+    // Fetch sitemap for internal links
+    let writeSitemapUrls = [];
+    if (profile.sitemap_url) {
+      try {
+        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(6000) });
+        if (sr.ok) {
+          const sx = await sr.text();
+          writeSitemapUrls = (sx.match(/<loc>(.*?)<\/loc>/g)||[])
+            .map(m => m.replace(/<\/?loc>/g,'').trim())
+            .filter(u => !u.match(/\.(jpg|png|gif|xml|pdf)$/i)).slice(0,25);
+        }
+      } catch(e) {}
+    }
+    const writeSitemapBlock = writeSitemapUrls.length
+      ? `INTERNAL LINKS — use ONLY these exact URLs from the site sitemap:\n${writeSitemapUrls.map(u=>`- ${u}`).join('\n')}`
+      : (analysis.internal_links_suggested||[]).length
+        ? `SUGGESTED INTERNAL LINKS (from research):\n${(analysis.internal_links_suggested||[]).map(u=>`- ${u}`).join('\n')}`
+        : 'No internal links available — do not invent URLs.';
+
+    // Money pages
+    const mpWR = await pool.query('SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 8', [job.profile_id]);
+    const writeMoneyPages = mpWR.rows.map(p => `${p.title||p.url}: ${p.url} (keyword: ${p.primary_keyword||''})`).join('\n') || 'None configured.';
+
+    // Language detection for writes — profile setting, then geo_focus, then keyword/niche heuristic
+    const langMap = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
+    let writeLang = profile.content_language || 'en';
+    // If profile has no language set, try to infer from geo_focus or niche
+    if (writeLang === 'en') {
+      const geoLower = (profile.geo_focus || '').toLowerCase();
+      const nicheLower = (profile.niche || '').toLowerCase();
+      const combined = geoLower + ' ' + nicheLower + ' ' + (seedKeyword || '').toLowerCase();
+      if (/nederland|amsterdam|rotterdam|utrecht|\bnl\b|dutch|belgique|vlaanderen/.test(combined)) writeLang = 'nl';
+      else if (/deutschland|berlin|münchen|\bde\b|deutsch|österreich|schweiz/.test(combined)) writeLang = 'de';
+      else if (/france|paris|lyon|\bfr\b|français|belgique|suisse/.test(combined)) writeLang = 'fr';
+      else if (/españa|madrid|barcelona|\bes\b|español|mexico|colombia/.test(combined)) writeLang = 'es';
+      else if (/italia|roma|milano|\bit\b|italiano/.test(combined)) writeLang = 'it';
+      else if (/portugal|lisboa|\bpt\b|português|brasil/.test(combined)) writeLang = 'pt';
+    }
+    const writeLangName = langMap[writeLang] || 'English';
+    console.log(`[bulk-write] Language: ${writeLang} (${writeLangName}) for keyword: ${seedKeyword}`);
     const writePrompt = `You are an elite SEO content writer. Write a new BOFU-focused article for this keyword.
+
+LANGUAGE: Write the ENTIRE article in ${writeLangName}. All headings, body text, FAQ, TL;DR, and CTAs must be in ${writeLangName}. Do not switch languages.
 
 BUSINESS: ${profile.name} — ${profile.niche || ''}
 TARGET AUDIENCE: ${profile.target_audience || ''}
 PRIMARY GOAL: ${profile.primary_goal || 'leads'}
+GEO FOCUS: ${profile.geo_focus || 'not specified'}
 
 SEED KEYWORD: "${seedKeyword}"
 SLUG: ${item.new_slug}
@@ -11622,7 +11773,7 @@ BOFU STANDARD — NON-NEGOTIABLE:
 - Minimum 2000 words
 
 AUTHOR: Ottmar J.G. Francisca (default) · https://contentscale.site/about
-REQUIRED ELEMENTS: Direct answer, TL;DR, TOC, H2 structure, FAQ (5+ voice-search questions), data table
+REQUIRED ELEMENTS: Direct answer, TL;DR, TOC, H2 structure, FAQ (5+ voice-search questions in ${writeLangName}), data table
 REQUIRED JSON-LD: Article schema with author.Person
 
 Return ONLY the full HTML from <article> onwards. No markdown fences. End with <!-- word_count: X -->.`;
@@ -11641,7 +11792,6 @@ Return ONLY the full HTML from <article> onwards. No markdown fences. End with <
     const validation = rewriterHelpers.validateBofuQuality(html);
 
     if (!validation.ok) {
-      // Hard fail on BOFU for writer too — consistent with rewriter
       await pool.query(
         `UPDATE content_bulk_items
          SET status='failed', bofu_score=$2, error_message=$3, result_data=$4, updated_at=NOW()
@@ -11652,6 +11802,39 @@ Return ONLY the full HTML from <article> onwards. No markdown fences. End with <
       );
       return { failed: true };
     }
+
+    // ═══ GRAAF scan the written article — apply any high-priority gaps automatically ═══
+    try {
+      const writeGraaf = graafScanHtml(html, '');
+      const writeGraafRecs = (writeGraaf?.recommendations || []).filter(r => r.priority === 'high').slice(0, 4);
+      if (writeGraafRecs.length > 0) {
+        console.log(`[bulk-write] GRAAF: ${writeGraaf.contentScore}/100 — ${writeGraafRecs.length} high gaps, applying...`);
+        const langCode = profile.content_language || 'en';
+        const langNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
+        const langName = langNames[langCode] || 'English';
+        const fixPrompt = `You are an expert SEO content editor. Apply ALL these improvements to the HTML article. Write all additions in ${langName}.
+
+GAPS TO FIX:
+${writeGraafRecs.map(r => `• ${r.title}: ${r.action || r.description || ''}`).join('\n')}
+
+CURRENT HTML:
+${html.substring(0, 40000)}
+
+Return ONLY the complete updated HTML. No markdown.`;
+
+        const fixR = await callGeminiWithFallback(geminiKey, {
+          contents: [{ role: 'user', parts: [{ text: fixPrompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } }
+        });
+        if (fixR.ok) {
+          let fixedHtml = fixR.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          fixedHtml = fixedHtml.replace(/^```html\n?/i,'').replace(/```$/,'').trim();
+          if (fixedHtml && fixedHtml.length > 500) html = fixedHtml;
+        }
+      } else {
+        console.log(`[bulk-write] GRAAF: ${writeGraaf?.contentScore}/100 — article clean`);
+      }
+    } catch(ge) { console.warn('[bulk-write] GRAAF scan failed:', ge.message); }
 
     // Save as article
     const title = (html.match(/<h1[^>]*>(.*?)<\/h1>/i) || [])[1]?.replace(/<[^>]+>/g, '').trim() || seedKeyword;
@@ -19979,6 +20162,130 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+
+// ── Server-side GRAAF HTML analyser (no Puppeteer) ──────────────────────────
+// Extracts the same signals as the browser evaluate() but via regex on raw HTML
+function graafAnalyzeHtml(html, pageUrl) {
+  if (!html) return null;
+  const rawHtml = html;
+  const bodyText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/\s+/g,' ').trim();
+  const lower = bodyText.toLowerCase();
+
+  const wordCount = bodyText.split(/\s+/).filter(w => w.length > 0).length;
+
+  // Headings
+  const h1Matches = [...rawHtml.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
+  const h1Text = h1Matches[0] ? h1Matches[0][1].replace(/<[^>]+>/g,'').trim() : '';
+  const h1VisibleCount = h1Matches.length;
+  const GENERIC = ['welcome','home','hello','untitled','page','index','main','default','test'];
+  const h1IsGeneric = h1Text.length > 0 && GENERIC.some(g => h1Text.toLowerCase().trim() === g);
+  const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+  const h2Count = (rawHtml.match(/<h2[\s\S]*?>/gi)||[]).length;
+  const h3Count = (rawHtml.match(/<h3[\s\S]*?>/gi)||[]).length;
+
+  // Paragraphs
+  const paragraphTexts = [...rawHtml.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map(m => m[1].replace(/<[^>]+>/g,'').trim().split(/\s+/).length);
+  const avgParagraphLength = paragraphTexts.length > 0
+    ? paragraphTexts.reduce((a,b)=>a+b,0) / paragraphTexts.length : 0;
+  const listItemCount = (rawHtml.match(/<li[\s\S]*?>/gi)||[]).length;
+
+  // Meta
+  const metaTitle = (rawHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]?.replace(/<[^>]+>/g,'').trim() || '';
+  const metaTitleLength = metaTitle.length;
+  const metaDescMatch = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["'][^>]*>/i)
+    || rawHtml.match(/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["'][^>]*>/i);
+  const metaDescription = metaDescMatch ? metaDescMatch[1] : '';
+  const metaDescriptionLength = metaDescription.length;
+
+  // Technical signals
+  const hasCanonical = /<link[^>]+rel=["']canonical["'][^>]*>/i.test(rawHtml);
+  const hasMetaViewport = /<meta[^>]+name=["']viewport["'][^>]*>/i.test(rawHtml);
+  const hasOpenGraph = /<meta[^>]+property=["']og:title["'][^>]*>/i.test(rawHtml);
+  const hasTwitterCard = /<meta[^>]+name=["']twitter:card["'][^>]*>/i.test(rawHtml);
+
+  // Schema
+  const schemaBlocks = [...rawHtml.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const schemas = schemaBlocks.map(m => { try { return JSON.parse(m[1]); } catch(e) { return null; } }).filter(Boolean);
+  const flatSchemas = schemas.flatMap(s => Array.isArray(s) ? s : (s['@graph'] ? s['@graph'] : [s]));
+  const hasArticleSchema = flatSchemas.some(s => ['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
+  const hasFAQPageSchema = flatSchemas.some(s => s['@type'] === 'FAQPage');
+
+  // Content signals
+  const hasDirectAnswer = /^.{0,300}[.!?]/s.test(bodyText.substring(0, 300));
+  const hasTLDR = /tl;?dr|summary|key takeaway|in short|in brief/i.test(lower);
+  const hasTOC = /table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase());
+  const hasAuthorBio = /written by|about the author|meet the author/i.test(rawHtml.toLowerCase());
+  const hasFAQContent = /frequently asked|faq|common questions/i.test(rawHtml.toLowerCase()) || hasFAQPageSchema;
+
+  // Images
+  const images = (rawHtml.match(/<img[\s\S]*?>/gi)||[]).length;
+  const imagesWithAlt = (rawHtml.match(/<img[^>]+alt=["'][^"']+["'][^>]*>/gi)||[]).length;
+
+  // Links
+  let host = '';
+  try { host = new URL(pageUrl || 'https://example.com').hostname; } catch(e) {}
+  const allLinks = [...rawHtml.matchAll(/href=["']([^"']+)["'][^>]*>/gi)].map(m => m[1]);
+  const internalLinks = allLinks.filter(l => { try { return new URL(l, 'https://'+host).hostname === host; } catch(e) { return l.startsWith('/'); } }).length;
+  const externalLinks = allLinks.filter(l => { try { const u = new URL(l); return u.hostname !== host && u.protocol.startsWith('http'); } catch(e) { return false; } }).length;
+
+  // Expert quotes & case studies
+  const bqCount = (rawHtml.match(/<blockquote/gi)||[]).length;
+  const citeCount = (rawHtml.match(/<cite[\s>]/gi)||[]).length;
+  const expertQuoteCount = Math.max(bqCount, citeCount);
+  const caseStudyCount = (lower.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
+
+  // Stats
+  const statsRegex = /\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g;
+  const statsFound = (bodyText.match(statsRegex)||[]).length;
+
+  return { wordCount, h1Text, h1VisibleCount, h1IsGeneric, h1IsTooShort, h2Count, h3Count,
+    listItemCount, avgParagraphLength, metaTitle, metaTitleLength, metaDescription, metaDescriptionLength,
+    hasCanonical, hasMetaViewport, hasArticleSchema, hasFAQPageSchema, hasOpenGraph, hasTwitterCard,
+    hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio, hasFAQContent, images, imagesWithAlt,
+    internalLinks, externalLinks, expertQuoteCount, caseStudyCount, statsFound };
+}
+
+// Run a full GRAAF scan on raw HTML, returns { score, recommendations, breakdown }
+function graafScanHtml(html, pageUrl) {
+  const analysis = graafAnalyzeHtml(html, pageUrl);
+  if (!analysis) return null;
+  const result = computeScore(pageUrl || 'internal', analysis, []);
+  result.analysis = analysis;
+  return result;
+}
+
+// ── Language detection utility ────────────────────────────────────────────────
+// Detects language from HTML lang attribute or content word frequency
+function detectContentLanguage(html) {
+  if (!html) return 'en';
+  // 1. Check <html lang="...">
+  const langAttr = (html.match(/<html[^>]+lang=["']([^"']+)["'][^>]*>/i) || [])[1];
+  if (langAttr) {
+    const base = langAttr.split('-')[0].toLowerCase();
+    if (['en','nl','de','fr','es','it','pt','pl','da','sv','no','fi'].includes(base)) return base;
+  }
+  // 2. Strip HTML and check common word frequency
+  const text = html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').toLowerCase().substring(0, 3000);
+  const scores = {
+    nl: (text.match(/\b(de|het|een|van|en|in|is|dit|voor|met|op|aan|te|zijn|worden|heeft|door|niet|ook|als|bij|naar|kan|om|worden)\b/g)||[]).length,
+    de: (text.match(/\b(die|der|das|ist|und|in|von|mit|auf|für|nicht|auch|als|an|zu|bei|es|sie|wird|sein|einer|haben|dem)\b/g)||[]).length,
+    fr: (text.match(/\b(le|la|les|de|du|des|en|un|une|est|et|dans|pour|par|sur|avec|qui|que|pas|ne|vous|nous|sont|être)\b/g)||[]).length,
+    es: (text.match(/\b(el|la|los|las|de|del|en|un|una|es|y|que|por|para|con|se|su|al|como|más|pero|también|esta|este)\b/g)||[]).length,
+    it: (text.match(/\b(il|la|le|di|del|in|un|una|è|e|che|per|con|si|su|dal|dalla|dei|gli|nei|questa|questo|sono|ma)\b/g)||[]).length,
+    pt: (text.match(/\b(o|a|os|as|de|do|da|em|um|uma|é|e|que|para|com|se|por|como|mais|mas|também|este|esta|ser)\b/g)||[]).length,
+  };
+  const best = Object.entries(scores).sort((a,b) => b[1]-a[1])[0];
+  // Only switch from English if strong signal (>15 matches)
+  if (best && best[1] > 15) return best[0];
+  return 'en';
+}
+
 // ── Core check function ───────────────────────────────────────────────────────
 // Real APIs: Google CSE · Perplexity Sonar · You.com · Bing (optional)
 
@@ -20014,13 +20321,37 @@ async function runTrackerCheck(page, geminiKey, keys) {
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-  // ── 1. HTML hash ─────────────────────────────────────────────────────────────
-  _trSetStep(pageId, 'html_hash', 'running', 'Hashing page content…');
+  // ── 1. Fetch live HTML if not stored, then hash ─────────────────────────────
+  _trSetStep(pageId, 'html_hash', 'running', 'Fetching live page content…');
+  if(!page.html_content && page.url) {
+    try {
+      const liveResp = await fetch(page.url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale-Tracker/1.0)' },
+        signal: AbortSignal.timeout(15000)
+      });
+      if(liveResp.ok) {
+        const liveHtml = await liveResp.text();
+        if(liveHtml && liveHtml.length > 200) {
+          page.html_content = liveHtml;
+          // Persist to DB so next check skips the fetch (will be updated on rewrite)
+          await pool.query('UPDATE tracker_pages SET html_content=$1 WHERE id=$2', [liveHtml, pageId])
+            .catch(e => console.warn('[tracker] html_content save failed:', e.message));
+          _trSetStep(pageId, 'html_hash', 'done', 'Fetched live: ' + Math.round(liveHtml.length/1024) + 'KB stored');
+        } else {
+          _trSetStep(pageId, 'html_hash', 'done', 'Live fetch returned empty — no content');
+        }
+      } else {
+        _trSetStep(pageId, 'html_hash', 'done', 'Live fetch HTTP ' + liveResp.status + ' — add HTML manually');
+      }
+    } catch(e) {
+      _trSetStep(pageId, 'html_hash', 'done', 'Live fetch failed: ' + e.message.substring(0,60));
+    }
+  }
   if(page.html_content) {
     snapshot.html_hash = crypto.createHash('sha256').update(page.html_content).digest('hex').substring(0,16);
-    _trSetStep(pageId, 'html_hash', 'done', 'Hash: ' + snapshot.html_hash);
+    if(!page.html_content.includes('Fetched')) _trSetStep(pageId, 'html_hash', 'done', 'Hash: ' + snapshot.html_hash + ' (' + Math.round(page.html_content.length/1024) + 'KB)');
   } else {
-    _trSetStep(pageId, 'html_hash', 'done', 'No HTML content stored');
+    _trSetStep(pageId, 'html_hash', 'done', 'No HTML — add URL manually or check access');
   }
 
   if(keyword) {
@@ -20199,46 +20530,73 @@ async function runTrackerCheck(page, geminiKey, keys) {
     _trSetStep(pageId, 'youcom', 'error', 'No keyword — skipped');
   }
 
-  // 5. Generate recommendations via Gemini based on findings
-  _trSetStep(pageId, 'recommendations', 'running', 'Generating AI recommendations…');
+  // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
+  _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
     try {
-      const findings = [
-        snapshot.google_position ? `Google position: #${snapshot.google_position}` : 'Not found in Google top results',
-        snapshot.ai_google_overview_found ? (snapshot.ai_google_overview_cited ? '✅ CITED in Google AI Overview' : '⚠️ AI Overview exists but URL not cited') : '❌ No Google AI Overview for this keyword',
-        snapshot.ai_perplexity_cited ? '✅ CITED in Perplexity' : '❌ Not cited in Perplexity',
-        snapshot.ai_bing_cited ? '✅ CITED in You.com AI' : '❌ Not cited in You.com AI',
-      ].join('\\n');
+      const kw = page.keyword || 'unknown';
 
-      // Extract useful context from the page HTML if available
-      let pageContext = '';
-      if(page.html_content) {
-        // Strip tags, get first ~600 chars of readable text as context
-        const textOnly = page.html_content.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,600);
-        if(textOnly.length > 50) pageContext = '\n\nPAGE CONTENT EXCERPT:\n' + textOnly + (page.html_content.length > 600 ? '...' : '');
+      // Our page — strip HTML to readable text
+      let ourContent = '';
+      const rawHtml = page.html_content || '';
+      if(rawHtml) {
+        ourContent = rawHtml
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+          .replace(/\s+/g,' ').trim()
+          .substring(0, 2000);
       }
 
-      const kw = page.keyword || 'unknown';
-      const prompt = `You are an SEO specialist. Analyze this specific page and give CONCRETE recommendations — not generic SEO tips.
+      // Top competitor snippets from Serper
+      const competitors = (snapshot._competitors || []).filter(function(c){ return c.snippet; });
+      const competitorBlock = competitors.length
+        ? competitors.map(function(c,i){ return `#${c.position||i+1} ${c.url}\nTitle: ${c.title}\nSnippet: ${c.snippet}`; }).join('\n\n')
+        : '(No competitor data — Serper key not set or no results)';
 
-URL: ${page.url}
-TARGET KEYWORD: "${kw}"
-PAGE TITLE: ${page.title||'(not set)'}${pageContext}
+      const aioText = snapshot.ai_google_overview_text ? `\nWHAT GOOGLE AI OVERVIEW CURRENTLY SAYS:\n${snapshot.ai_google_overview_text}` : '';
 
-WHAT THE CHECK FOUND:
-${findings}
+      const status = [
+        snapshot.google_position ? `Our page is at position #${snapshot.google_position} in Google` : 'Our page is NOT in Google top 10',
+        snapshot.ai_google_overview_cited ? '✅ We ARE in Google AI Overview' : (snapshot.ai_google_overview_found ? '❌ Google AI Overview exists but we are NOT in it' : '❌ No Google AI Overview for this keyword yet'),
+        snapshot.ai_perplexity_cited ? '✅ We ARE cited in Perplexity' : '❌ We are NOT cited in Perplexity',
+        snapshot.ai_bing_cited ? '✅ We ARE cited in You.com AI' : '❌ We are NOT cited in You.com AI',
+      ].join('\n');
 
-Your job: explain WHY this page is not ranking/cited, and give 3-5 specific fixes.
+      const prompt = `You are a content strategist specializing in AI citation optimization and Google AI Overview inclusion.
 
-For each recommendation:
-- Title: name the SPECIFIC thing to fix (e.g. "Add direct answer for '${kw}' in first paragraph" not "Improve content")
-- Action: tell EXACTLY what to write/change — reference the actual keyword "${kw}", the actual URL, and actual content gaps you can see above
-- If no page content is stored: base recommendations on the URL structure, keyword, and check results only — still be specific
+Your goal: analyze why this page is NOT appearing in Google AI Overview, Perplexity, and You.com AI — and give specific content changes that would get it there AND push it to #1 in Google.
+
+KEYWORD: "${kw}"
+OUR PAGE: ${page.url}
+TITLE: ${page.title||'(not set)'}
+
+CURRENT SITUATION:
+${status}${aioText}
+
+OUR PAGE CONTENT:
+${ourContent ? ourContent + '...' : '(No content stored — base analysis on keyword and competitor data only)'}
+
+PAGES CURRENTLY BEATING US in Google for "${kw}":
+${competitorBlock}
+
+HOW TO GET INTO AI OVERVIEW & AI CITATIONS (apply this knowledge):
+- Google AI Overview picks pages that open with a direct, factual 1-2 sentence answer to the exact query
+- Perplexity and You.com prefer pages with specific data, numbers, named examples, clear H2 structure, and internal Q&A
+- All AI systems favor pages that answer follow-up questions on the same page (what is X, how much does X cost, who does X in [city])
+- Schema markup (FAQ, HowTo, Article) signals crawlable structure to AI systems
+- Pages that get cited tend to have one clear unique claim or statistic no competitor has
+
+TASK:
+1. Compare our content vs. what competitors are saying — what specific facts, phrases, or structures do they have that we don’t?
+2. If AI Overview text is shown: what exact format triggered it? How do we match or exceed that?
+3. Give 3-5 actions that directly target getting into Google AI Overview, Perplexity, and You.com
 
 Return ONLY a JSON array, no markdown:
-[{"title":"...","priority":"high"|"medium"|"low","action":"2-3 sentence specific instruction","expected_impact":"specific outcome"}]
+[{"title":"specific gap max 10 words","priority":"high"|"medium"|"low","action":"exactly what to write or restructure — be specific about the gap vs competitors","expected_impact":"Google AI Overview / Perplexity / You.com / Google #1 — and the mechanism why"}]
 
-No generic advice. Every recommendation must be actionable for THIS page today.`;
+Zero generic advice. Skip anything our content already clearly has.`;
 
       const resp = await callGeminiWithFallback(geminiKey, {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
