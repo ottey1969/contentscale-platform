@@ -526,7 +526,19 @@ textarea{resize:vertical;min-height:100px;}
     <div><h2 style="font-size:1.3rem;font-weight:800;">📰 News Feeds</h2><p style="font-size:13px;color:#6b7280;margin-top:4px;">Fetch, rewrite, and publish niche news — plagiarism-free</p></div>
     <div style="display:flex;gap:8px;">
       <select id="newsProfileFilter" onchange="loadFeeds()" style="padding:8px 12px;width:180px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;"><option value="">Select profile</option></select>
+      <button class="btn btn-secondary" onclick="document.getElementById('feedLibraryPanel').style.display=document.getElementById('feedLibraryPanel').style.display==='none'?'block':'none'">📚 Feed Library</button>
       <button class="btn btn-primary" onclick="document.getElementById('newFeedForm').style.display='block'">+ New Feed</button>
+    </div>
+  </div>
+
+  <!-- ── Feed Library ─────────────────────────────────────────────────── -->
+  <div id="feedLibraryPanel" style="display:none;margin-bottom:16px;">
+    <div class="card" style="padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:#e2e8f0;">📚 Curated Feed Library — click any feed to auto-fill the form</div>
+        <input id="feedLibSearch" placeholder="Search feeds..." oninput="filterFeedLib()" style="padding:6px 10px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e2e8f0;font-size:12px;width:200px;">
+      </div>
+      <div id="feedLibCategories"></div>
     </div>
   </div>
 
@@ -1842,6 +1854,143 @@ var _currentFeedId = null;
 function toggleFeedType() {
   var t = document.getElementById('feedType').value;
   document.getElementById('feedUrlField').style.display = t === 'rss' ? 'block' : 'none';
+
+// ── Feed Library ────────────────────────────────────────────────────────────
+var _feedLibrary = [
+  { cat: '🏗️ Construction & Trades', feeds: [
+    { name: 'Construction Week', url: 'https://www.constructionweekonline.com/rss', kw: 'construction, building, contractor' },
+    { name: 'Roofing Contractor', url: 'https://www.roofingcontractor.com/rss', kw: 'roofing, roof repair, flat roof' },
+    { name: 'ProRemodeler', url: 'https://www.proremodeler.com/rss.xml', kw: 'remodeling, renovation, contractor' },
+    { name: 'Building Design+Construction', url: 'https://www.bdcnetwork.com/rss.xml', kw: 'construction, architecture, building' },
+    { name: 'Renovation Headquarters', url: 'https://www.renovationheadquarters.com/feed/', kw: 'renovation, home improvement, remodeling' },
+    { name: 'Plumbing & Mechanical', url: 'https://www.pmmag.com/rss', kw: 'plumbing, HVAC, mechanical' },
+  ]},
+  { cat: '🏠 Real Estate & Property', feeds: [
+    { name: 'Inman News', url: 'https://www.inman.com/feed/', kw: 'real estate, housing market, property' },
+    { name: 'HousingWire', url: 'https://www.housingwire.com/feed/', kw: 'mortgage, housing market, real estate' },
+    { name: 'Realtor Magazine', url: 'https://magazine.realtor/rss-feed/', kw: 'real estate, realtor, housing' },
+    { name: 'The Real Deal', url: 'https://therealdeal.com/feed/', kw: 'real estate, commercial property, investment' },
+    { name: 'CoStar News', url: 'https://www.costar.com/rss', kw: 'commercial real estate, property investment' },
+    { name: 'NVM (Dutch)', url: 'https://www.nvm.nl/rss', kw: 'woningmarkt, vastgoed, huis kopen' },
+  ]},
+  { cat: '💻 Technology & AI', feeds: [
+    { name: 'TechCrunch', url: 'https://techcrunch.com/feed/', kw: 'technology, startup, AI, software' },
+    { name: 'Wired', url: 'https://www.wired.com/feed/rss', kw: 'technology, AI, innovation' },
+    { name: 'MIT Technology Review', url: 'https://www.technologyreview.com/feed/', kw: 'AI, machine learning, technology' },
+    { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml', kw: 'technology, gadgets, software' },
+    { name: 'VentureBeat AI', url: 'https://venturebeat.com/category/ai/feed/', kw: 'artificial intelligence, machine learning, AI' },
+    { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index', kw: 'technology, science, computing' },
+  ]},
+  { cat: '📈 Marketing & SEO', feeds: [
+    { name: 'Search Engine Journal', url: 'https://www.searchenginejournal.com/feed/', kw: 'SEO, digital marketing, search' },
+    { name: 'Moz Blog', url: 'https://moz.com/blog/feed', kw: 'SEO, link building, ranking' },
+    { name: 'HubSpot Blog', url: 'https://blog.hubspot.com/marketing/rss.xml', kw: 'marketing, inbound, content marketing' },
+    { name: 'Search Engine Land', url: 'https://searchengineland.com/feed', kw: 'SEO, Google, search marketing' },
+    { name: 'Content Marketing Institute', url: 'https://contentmarketinginstitute.com/feed/', kw: 'content marketing, strategy, B2B' },
+    { name: 'Neil Patel Blog', url: 'https://neilpatel.com/blog/feed/', kw: 'SEO, marketing, traffic' },
+  ]},
+  { cat: '💼 Business & B2B', feeds: [
+    { name: 'Harvard Business Review', url: 'https://hbr.org/feed', kw: 'business strategy, leadership, management' },
+    { name: 'Entrepreneur', url: 'https://www.entrepreneur.com/latest.rss', kw: 'entrepreneurship, business, startup' },
+    { name: 'Forbes Business', url: 'https://www.forbes.com/business/feed/', kw: 'business, finance, entrepreneurship' },
+    { name: 'Inc.com', url: 'https://www.inc.com/rss/', kw: 'small business, startup, leadership' },
+    { name: 'Fast Company', url: 'https://www.fastcompany.com/latest/rss', kw: 'business innovation, leadership, strategy' },
+    { name: 'FD (Dutch)', url: 'https://fd.nl/rss', kw: 'business, finance, ondernemen' },
+  ]},
+  { cat: '⚕️ Healthcare & Medical', feeds: [
+    { name: 'Health Affairs', url: 'https://www.healthaffairs.org/rss/current.xml', kw: 'healthcare, health policy, medical' },
+    { name: 'MedCity News', url: 'https://medcitynews.com/feed/', kw: 'healthcare, medtech, health startup' },
+    { name: 'Fierce Healthcare', url: 'https://www.fiercehealthcare.com/rss/xml', kw: 'healthcare, hospital, health system' },
+    { name: 'Modern Healthcare', url: 'https://www.modernhealthcare.com/section/rss', kw: 'healthcare management, hospital, health policy' },
+  ]},
+  { cat: '⚖️ Legal & Finance', feeds: [
+    { name: 'Law360', url: 'https://www.law360.com/rss', kw: 'legal, law, litigation' },
+    { name: 'Bloomberg Tax', url: 'https://news.bloombergtax.com/tax/rss', kw: 'tax, accounting, finance' },
+    { name: 'CFO.com', url: 'https://www.cfo.com/rss/', kw: 'finance, CFO, financial management' },
+    { name: 'Accountancy Age', url: 'https://www.accountancyage.com/feed/', kw: 'accounting, finance, audit' },
+  ]},
+  { cat: '🌱 Sustainability & Green', feeds: [
+    { name: 'Greenbiz', url: 'https://www.greenbiz.com/feeds/articles', kw: 'sustainability, green business, ESG' },
+    { name: 'Renewable Energy World', url: 'https://www.renewableenergyworld.com/feed/', kw: 'solar, wind, renewable energy' },
+    { name: 'CleanTechnica', url: 'https://cleantechnica.com/feed/', kw: 'solar, electric vehicles, clean energy' },
+    { name: 'Environment+Energy Leader', url: 'https://www.environmentalleader.com/feed/', kw: 'sustainability, energy management, ESG' },
+  ]},
+  { cat: '🛒 E-commerce & Retail', feeds: [
+    { name: 'Practical Ecommerce', url: 'https://www.practicalecommerce.com/feed', kw: 'ecommerce, online retail, shopify' },
+    { name: 'eMarketer', url: 'https://www.emarketer.com/rss', kw: 'ecommerce, retail, digital commerce' },
+    { name: 'Retail Dive', url: 'https://www.retaildive.com/feeds/news/', kw: 'retail, consumer, shopping' },
+    { name: 'Shop.org Blog', url: 'https://nrf.com/topics/technology/feed', kw: 'retail technology, ecommerce, NRF' },
+  ]},
+  { cat: '🏋️ Health & Fitness', feeds: [
+    { name: 'Runner\'s World', url: 'https://www.runnersworld.com/feed/all', kw: 'running, fitness, training' },
+    { name: 'Men\'s Health', url: 'https://www.menshealth.com/rss/all.xml/', kw: 'fitness, health, nutrition' },
+    { name: 'Healthline', url: 'https://www.healthline.com/rss/health-news', kw: 'health, wellness, nutrition, fitness' },
+    { name: 'ACE Fitness', url: 'https://www.acefitness.org/resources/everyone/blog/rss/', kw: 'fitness, exercise, personal training' },
+  ]},
+  { cat: '🍕 Food & Hospitality', feeds: [
+    { name: 'Nation\'s Restaurant News', url: 'https://www.nrn.com/rss', kw: 'restaurant, foodservice, hospitality' },
+    { name: 'Food Business News', url: 'https://www.foodbusinessnews.net/rss', kw: 'food industry, food manufacturing, FMCG' },
+    { name: 'Hotel Management', url: 'https://www.hotelmanagement.net/rss.xml', kw: 'hotel, hospitality, lodging' },
+    { name: 'Eater', url: 'https://www.eater.com/rss/index.xml', kw: 'restaurant, food, dining' },
+  ]},
+  { cat: '🚗 Automotive', feeds: [
+    { name: 'Automotive News', url: 'https://www.autonews.com/rss', kw: 'automotive, car industry, electric vehicles' },
+    { name: 'Car and Driver', url: 'https://www.caranddriver.com/rss/all.xml/', kw: 'cars, automotive, vehicle reviews' },
+    { name: 'Electrek', url: 'https://electrek.co/feed/', kw: 'electric vehicles, Tesla, EV' },
+    { name: 'Motor Trend', url: 'https://www.motortrend.com/rss/news/', kw: 'automotive, car news, motor industry' },
+  ]},
+  { cat: '🌍 Dutch / NL', feeds: [
+    { name: 'RTL Nieuws', url: 'https://www.rtlnieuws.nl/rss.xml', kw: 'nieuws, Nederland, economie' },
+    { name: 'NU.nl', url: 'https://www.nu.nl/rss/algemeen', kw: 'nieuws, economie, technologie' },
+    { name: 'Emerce', url: 'https://www.emerce.nl/rss', kw: 'digitaal, marketing, e-commerce, technologie' },
+    { name: 'Sprout', url: 'https://www.sprout.nl/rss', kw: 'ondernemen, startup, MKB, business' },
+    { name: 'Twinkle', url: 'https://www.twinkle.net/rss', kw: 'e-commerce, online retail, webshop' },
+    { name: 'Skipr Zorg', url: 'https://skipr.nl/feed/', kw: 'zorg, healthcare, zorgsector' },
+  ]},
+];
+
+var _allFeedLibItems = [];
+_feedLibrary.forEach(function(cat) { cat.feeds.forEach(function(f) { _allFeedLibItems.push({ cat: cat.cat, ...f }); }); });
+
+function renderFeedLibrary(items) {
+  var cats = {};
+  items.forEach(function(f) { if (!cats[f.cat]) cats[f.cat] = []; cats[f.cat].push(f); });
+  var el = document.getElementById('feedLibCategories');
+  if (!el) return;
+  el.innerHTML = Object.entries(cats).map(function(kv) {
+    return '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">' + kv[0] + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      kv[1].map(function(f) {
+        return '<button onclick="pickFeedFromLibrary(' + JSON.stringify(f).replace(/"/g,'&quot;') + ')" style="background:#0a0f1a;border:1px solid #1f2937;border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;cursor:pointer;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor=\'#7c3aed\'" onmouseout="this.style.borderColor=\'#1f2937\'">' +
+          '<div style="font-weight:600;">' + f.name + '</div>' +
+          '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + f.kw.split(',')[0].trim() + '</div>' +
+        '</button>';
+      }).join('') +
+      '</div></div>';
+  }).join('');
+}
+
+function filterFeedLib() {
+  var q = (document.getElementById('feedLibSearch').value || '').toLowerCase();
+  var filtered = q ? _allFeedLibItems.filter(function(f) { return (f.name+f.kw+f.cat).toLowerCase().includes(q); }) : _allFeedLibItems;
+  renderFeedLibrary(filtered);
+}
+
+function pickFeedFromLibrary(f) {
+  document.getElementById('newFeedForm').style.display = 'block';
+  document.getElementById('feedLibraryPanel').style.display = 'none';
+  document.getElementById('feedName').value = f.name;
+  document.getElementById('feedType').value = 'rss';
+  toggleFeedType();
+  document.getElementById('feedUrl').value = f.url;
+  document.getElementById('feedKeywords').value = f.kw;
+  document.getElementById('feedBatch').value = '3';
+  toast('Feed pre-filled — choose a profile and save');
+}
+
+// Init library on page load
+(function() { renderFeedLibrary(_allFeedLibItems); })();
   document.getElementById('feedDomainField').style.display = t === 'domain' ? 'block' : 'none';
 }
 
