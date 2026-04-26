@@ -10889,7 +10889,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     }
 
     if (!transcript || transcript.length < 100) {
-      return res.status(400).json({ success: false, error: 'Could not retrieve transcript for this video. The video may have no captions, or captions are disabled. Try a different video or add YOUTUBE_API_KEY to Railway env vars.' });
+      return res.status(400).json({ success: false, error: 'No transcript found for this video. Captions may be disabled by the channel (common for documentaries/films). Try a different video — use the Search tab to find videos with confirmed captions.' });
     }
 
     // Detect language
