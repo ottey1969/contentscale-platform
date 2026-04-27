@@ -145,7 +145,7 @@ async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, cl
   const anthropicKey = claudeKey || process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) throw new Error('Claude API key required — add ANTHROPIC_API_KEY to Railway or provide x-claude-key header');
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 120000);
+  const timer = setTimeout(() => controller.abort(), 150000); // 2.5 minutes
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -10771,6 +10771,10 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
 
 // ── Fetch transcript + rewrite video as SEO article ────────────────────────
 app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
+  req.setTimeout(180000); // 3 minutes — YouTube fetches + Claude writing
+  // Send keep-alive comment every 15s so browser/proxies don't kill the connection
+  res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering if present
+  const keepAlive = setInterval(() => { try { res.write(' '); } catch(e) {} }, 15000);
   try {
     const { video_id, video_url, video_title, profile_id, use_template = true } = req.body;
     if (!video_id && !video_url) return res.status(400).json({ success: false, error: 'video_id or video_url required' });
@@ -10797,7 +10801,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     // 1. Get video metadata via YouTube Data API (title, channel, publish date)
     if (ytKey) {
       try {
-        const metaR = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(8000) });
+        const metaR = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(25000) });
         if (metaR.ok) {
           const metaD = await metaR.json();
           const item = metaD.items?.[0];
@@ -10814,14 +10818,26 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     // YouTube embeds caption track URLs in the page's initial data — extract and fetch directly
     if (!transcript) {
       try {
-        const watchR = await fetch(`https://www.youtube.com/watch?v=${vid}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-          },
-          signal: AbortSignal.timeout(15000)
-        });
+        // Fetch with retry — YouTube can be slow from Railway's region
+        let watchR = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            watchR = await fetch(`https://www.youtube.com/watch?v=${vid}`, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br'
+              },
+              signal: AbortSignal.timeout(30000)
+            });
+            if (watchR.ok) break;
+          } catch(fetchErr) {
+            console.warn(`[video-rewrite] watch page attempt ${attempt} failed:`, fetchErr.message);
+            if (attempt === 3) throw fetchErr;
+            await new Promise(r => setTimeout(r, 1000 * attempt));
+          }
+        }
         if (watchR.ok) {
           const watchHtml = await watchR.text();
 
@@ -10868,7 +10884,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
           if (captionBaseUrl) {
             try {
               const capUrl = captionBaseUrl.includes('fmt=') ? captionBaseUrl : captionBaseUrl + '&fmt=json3';
-              const capR = await fetch(capUrl, { signal: AbortSignal.timeout(12000) });
+              const capR = await fetch(capUrl, { signal: AbortSignal.timeout(25000) });
               if (capR.ok) {
                 const capText = await capR.text();
                 // Try JSON parse first
@@ -10911,7 +10927,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
       try {
         const langs = ['en','en-US','en-GB','a.en'];
         for (const lang of langs) {
-          const ttR = await fetch(`https://www.youtube.com/api/timedtext?v=${vid}&lang=${lang}&fmt=json3`, { signal: AbortSignal.timeout(8000) });
+          const ttR = await fetch(`https://www.youtube.com/api/timedtext?v=${vid}&lang=${lang}&fmt=json3`, { signal: AbortSignal.timeout(20000) });
           if (ttR.ok) {
             const ttD = await ttR.json().catch(()=>null);
             if (ttD?.events?.length) {
@@ -10936,7 +10952,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     let sitemapUrls = [];
     if (profile.sitemap_url) {
       try {
-        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(6000) });
+        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(15000) });
         if (sr.ok) {
           const sx = await sr.text();
           sitemapUrls = (sx.match(/<loc>(.*?)<\/loc>/g)||[]).map(m=>m.replace(/<\/?loc>/g,'')).filter(u=>!u.match(/\.(jpg|png|gif|xml)$/i)).slice(0,20);
@@ -11070,8 +11086,10 @@ Return ONLY clean HTML starting with <article>. No markdown, no code fences. End
     const html = scrub.html;
     const wc = html.replace(/<[^>]+>/g,'').split(/\s+/).length;
 
+    clearInterval(keepAlive);
     res.json({ success: true, html, title: actualTitle, word_count: wc, transcript_chars: transcript.length, source_url: sourceUrl, channel: channelName, detected_language: detectedLang });
   } catch(e) {
+    clearInterval(keepAlive);
     console.error('[video-rewrite]', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
@@ -12255,7 +12273,7 @@ Preview: ${(c.textPreview||'').slice(0,800)}`).join('\n')
     let writeSitemapUrls = [];
     if (profile.sitemap_url) {
       try {
-        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(6000) });
+        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(15000) });
         if (sr.ok) {
           const sx = await sr.text();
           writeSitemapUrls = (sx.match(/<loc>(.*?)<\/loc>/g)||[])
