@@ -1009,9 +1009,8 @@ async function loadProfiles() {
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">' +
       '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="refreshSitemap(' + p.id + ', this)" title="Re-fetch sitemap URLs">🗺️ Sitemap</button>' +
-      '<label class="btn btn-secondary" style="font-size:12px;padding:6px 12px;cursor:pointer;" title="Upload HTML template file">' +
-        '📋 Template <input type="file" accept=".html,.htm" style="display:none;" onchange="uploadTemplate(' + p.id + ', this)">' +
-      '</label>' +
+      '<button id="templateBtn_' + p.id + '" class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="document.getElementById(\'templateFile_' + p.id + '\').click()" title="Upload HTML template file">📋 Template</button>' +
+      '<input type="file" id="templateFile_' + p.id + '" accept=".html,.htm" style="display:none;" onchange="uploadTemplate(' + p.id + ', this)">' +
       '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="editProfile(' + p.id + ')">✏️ Edit</button>' +
       '<button class="btn btn-primary" style="font-size:12px;padding:6px 12px;" onclick="useProfile(' + p.id + ')">🚀 Use</button>' +
       '<button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteProfile(' + p.id + ')">🗑</button>' +
@@ -1087,16 +1086,16 @@ function renderPendingLocations() {
 async function uploadTemplate(profileId, input) {
   var file = input.files[0];
   if (!file) return;
-  var label = input.parentElement;
-  var origText = label.innerHTML;
+  var btn = document.getElementById('templateBtn_' + profileId);
+  var origText = btn ? btn.innerHTML : '📋 Template';
   try {
     var html = await file.text();
     if (html.length < 100) { toast('Template file is too small — check the file', 'red'); return; }
-    label.innerHTML = '⏳ Uploading...';
+    console.log('[template upload] file size:', html.length, 'chars');
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Saving...'; }
     var d = await api('/api/content/profiles/' + profileId + '/template', 'PATCH', { html_template: html });
     if (d.success) {
-      toast('✅ Template updated — ' + Math.round(html.length/1024) + 'kb saved · ' + file.name);
-      // Update local profile cache
+      toast('✅ Template updated — ' + Math.round(html.length/1024) + 'kb · ' + file.name);
       var p = _profiles.find(function(x) { return x.id === profileId; });
       if (p) p.html_template = html;
       renderProfiles();
@@ -1104,10 +1103,11 @@ async function uploadTemplate(profileId, input) {
       throw new Error(d.error || 'Upload failed');
     }
   } catch(e) {
+    console.error('[template upload] error:', e);
     toast('Template upload failed: ' + e.message, 'red');
-    label.innerHTML = origText;
+    if (btn) { btn.disabled = false; btn.innerHTML = origText; }
   }
-  input.value = ''; // reset file input
+  input.value = '';
 }
 
 async function clearTemplate(profileId) {

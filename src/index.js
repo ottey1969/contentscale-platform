@@ -11026,26 +11026,35 @@ ${transcript.substring(0, 8000)}
 
 PARAGRAPH RULE: Keep ALL paragraphs SHORT — maximum 2-3 sentences each. Never write a paragraph longer than 60 words. Break up long explanations into multiple short paragraphs. This is non-negotiable.
 
+PLACEHOLDER REPLACEMENT — CRITICAL:
+The template contains placeholders like [AI: ...], [TITLE], [FOCUS KEYWORD], [CONTENT HERE], [INSERT ...], etc.
+Replace ALL of them with real content based on the video. Leave NO placeholder unreplaced.
+Examples:
+- [AI: Keyword First — Power Word + Number | Topic] → real SEO title based on video
+- [FOCUS KEYWORD] → the main keyword for this article
+- [AI: write intro paragraph here] → actual intro paragraph
+- [INSERT STAT] → real stat from the video or your knowledge
+
 CONTENT REQUIREMENTS:
 1. Extract the BEST insights from the transcript — key facts, specific numbers, notable quotes, concrete examples
 2. Add your own expertise and context around those insights — do not just paraphrase
 3. Every H2 answers a specific question a reader would ask
 4. Include: direct answer in first 2 sentences, TL;DR, TOC, 5-question FAQ
 5. Add: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a>
-6. Add Article + FAQPage JSON-LD schema with datePublished="${videoPublishedDate}" and dateModified="${videoDateModified}"
+6. Update Article + FAQPage JSON-LD schema with datePublished="${videoPublishedDate}" and dateModified="${videoDateModified}"
 
 ${internalLinks}
 
 CTA STRATEGY — CRITICAL:
 Weave ${profile.name} naturally throughout — not only at the end:
-- After TL;DR: connect the video topic to ${profile.name}\'s expertise
+- After TL;DR: connect the video topic to ${profile.name}'s expertise
 - In relevant H2 sections: show how ${profile.name} helps with this topic
 - Mid-article: add a CTA box linking to the main service
 ${videoMoneyPages ? '- Link to these money pages naturally:\n' + videoMoneyPages : ''}
-- Final CTA: strong pitch for ${profile.name}\'s core service
+- Final CTA: strong pitch for ${profile.name}'s core service
 
 ═══════════════════════════════════════
-THE TEMPLATE — FILL IN, DO NOT CHANGE STRUCTURE
+THE TEMPLATE — FILL ALL PLACEHOLDERS, DO NOT CHANGE HTML STRUCTURE
 ═══════════════════════════════════════
 ${profile.html_template}
 
@@ -11601,8 +11610,16 @@ JSON-LD SCHEMA'S (toevoegen voor </article>):
 ${imageNote}
 
 ═══════════════════════════════════════
-HET TEMPLATE — VUL IN, VERANDER STRUCTUUR NIET
+HET TEMPLATE — VUL ALLE PLACEHOLDERS IN, VERANDER HTML-STRUCTUUR NIET
 ═══════════════════════════════════════
+Het template bevat placeholders zoals [AI: ...], [TITLE], [FOCUS KEYWORD], [CONTENT HERE], [INSERT ...], enz.
+Vervang ALLE placeholders door echte content. Laat GEEN enkele placeholder staan.
+Voorbeelden:
+- [AI: Keyword First — Power Word + Number | Topic] → echte SEO-titel op basis van het onderwerp
+- [FOCUS KEYWORD] → het primaire keyword
+- [AI: schrijf intro hier] → echte intro alinea
+- [INSERT STAT] → echte statistiek
+
 ${rw.html_template}
 
 Geef ALLEEN de ingevulde template terug. Geen uitleg, geen markdown. Eindig met <!-- word_count: X -->.`;
