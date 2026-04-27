@@ -10771,10 +10771,11 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
 
 // ── Fetch transcript + rewrite video as SEO article ────────────────────────
 app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
-  req.setTimeout(180000); // 3 minutes — YouTube fetches + Claude writing
-  // Send keep-alive comment every 15s so browser/proxies don't kill the connection
-  res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering if present
-  const keepAlive = setInterval(() => { try { res.write(' '); } catch(e) {} }, 15000);
+  req.setTimeout(180000); // 3 minutes
+  res.setHeader('X-Accel-Buffering', 'no');
+  const keepAlive = setInterval(() => {
+    try { res.setHeader('X-Keep-Alive', Date.now()); } catch(e) {}
+  }, 10000);
   try {
     const { video_id, video_url, video_title, profile_id, use_template = true } = req.body;
     if (!video_id && !video_url) return res.status(400).json({ success: false, error: 'video_id or video_url required' });

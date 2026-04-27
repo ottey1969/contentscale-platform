@@ -944,9 +944,18 @@ async function api(endpoint, method, body) {
   }
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
+  // Video and rewrite endpoints need longer timeout — YouTube fetches can be slow
+  const isLongOp = endpoint.includes('video-rewrite') || endpoint.includes('execute-rewrite') || endpoint.includes('analyse-rewrite');
+  if (isLongOp) opts.signal = AbortSignal.timeout(180000); // 3 minutes
   const r = await fetch(endpoint, opts);
   if (r.status === 401) { sessionStorage.clear(); window.location.href = '/engine-login'; return {}; }
-  return r.json();
+  try {
+    const text = await r.text();
+    return JSON.parse(text.trim());
+  } catch(e) {
+    console.error('JSON parse error for', endpoint, e.message);
+    return { success: false, error: 'Response parse error — try again' };
+  }
 }
 
 function showPanel(name, btn) {
