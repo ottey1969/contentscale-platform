@@ -164,6 +164,29 @@ async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, cl
 
 
 
+// Auto-split long paragraphs — enforces max 2 sentences per <p>
+// Applied to all generated HTML output across write, rewrite, news, video routes
+function splitLongParagraphs(html) {
+  if (!html) return html;
+  return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, attrs, content) => {
+    // Skip paragraphs containing block-level HTML — don't break structured components
+    if (/<(?:div|ul|ol|li|table|blockquote|h[1-6]|img|figure)/i.test(content)) return match;
+    // Skip very short content
+    if (content.trim().length < 80) return match;
+    // Split on sentence boundaries — period/!/? followed by space + capital or end
+    const sentences = content.match(/[^.!?]*[.!?]+(?:\s+|$)/g);
+    if (!sentences || sentences.length <= 2) return match;
+    // Group into pairs of 2 sentences max
+    const groups = [];
+    for (let i = 0; i < sentences.length; i += 2) {
+      const group = sentences.slice(i, i + 2).join('').trim();
+      if (group) groups.push(group);
+    }
+    if (groups.length <= 1) return match;
+    return groups.map(g => `<p${attrs}>${g}</p>`).join('\n');
+  });
+}
+
 // Strip AI-inserted placeholder/flag patterns from generated HTML content.
 // Used by both the article write endpoint and the news rewrite endpoint.
 function stripAiPlaceholders(html) {
@@ -10563,12 +10586,13 @@ Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
         const scrub = stripAiPlaceholders(rawHtml);
         if (scrub.stripped) console.log(`🧹 [news] Stripped ${scrub.stripped} placeholder pattern type(s) from "${art.title}"`);
         const html = scrub.html;
+        const htmlFinal = splitLongParagraphs(html);
         const slug = art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
         const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
         
         const dbR = await pool.query(
           `INSERT INTO content_news_articles (feed_id,profile_id,original_url,original_title,original_source,original_date,rewritten_title,rewritten_html,rewritten_slug,status,word_count) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'rewritten',$10) RETURNING *`,
-          [feed.id, feed.profile_id, art.url, art.title, feed.domain||feed.feed_url, art.date, art.title, html, slug, wc]
+          [feed.id, feed.profile_id, art.url, art.title, feed.domain||feed.feed_url, art.date, art.title, htmlFinal, slug, wc]
         );
         rewritten.push(dbR.rows[0]);
       } catch(e) { 
@@ -11918,7 +11942,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       wasTruncated = false; modelUsed = 'claude-sonnet-4-20250514';
 
       const scrubbed = stripAiPlaceholders(rawHtml);
-      let candidate = rewriterHelpers.stripForbiddenPatterns(scrubbed.html);
+      let candidate = rewriterHelpers.stripForbiddenPatterns(splitLongParagraphs(scrubbed.html));
       validationResult = rewriterHelpers.validateBofuQuality(candidate);
 
       console.log(`[execute-rewrite] Attempt ${attemptsUsed}: score=${validationResult.score} violations=${validationResult.violations.length}`);
@@ -12572,7 +12596,7 @@ Return ONLY the full HTML from <article> onwards. No markdown fences. End with <
     if (!raw) throw new Error('No content generated');
 
     const scrubbed = stripAiPlaceholders(raw);
-    let html = rewriterHelpers.stripForbiddenPatterns(scrubbed.html);
+    let html = rewriterHelpers.stripForbiddenPatterns(splitLongParagraphs(scrubbed.html));
     const validation = rewriterHelpers.validateBofuQuality(html);
 
     if (!validation.ok) {
@@ -12995,7 +13019,7 @@ WRITING RULES:
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty study' });
 
     const scrub = stripAiPlaceholders(rawHtml);
-    const htmlContent = scrub.html;
+    const htmlContent = splitLongParagraphs(scrub.html);
     const wc = htmlContent.replace(/<[^>]+>/g,'').split(/\s+/).length;
     console.log(`[stats-study] Generated ${wc} words, ${htmlContent.length} chars`);
 
