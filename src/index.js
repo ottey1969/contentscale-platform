@@ -11147,7 +11147,7 @@ REQUIRED JSON-LD (add before </article>):
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
 
 Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
-      sys = 'You are an expert SEO content writer converting video transcripts into original, rankable articles. Short paragraphs — max 2-3 sentences. Weave the business naturally throughout. Return only clean HTML from <article>.';
+      sys = 'You are an expert SEO content writer. CRITICAL RULE: Every <p> tag must contain MAXIMUM 2 sentences — never more. Split longer thoughts into multiple short paragraphs. Return only clean HTML.';
     }
     // Template mode needs much higher token limit — template is 70kb+
     // Strategy: write article content first (compact HTML), then inject into template
@@ -11158,6 +11158,15 @@ Return ONLY clean HTML starting with <article>. No markdown, no code fences. End
       const contentOnlyPrompt = writePrompt.replace(
         /═══════════════════════════════════════\nTHE TEMPLATE.*$/s,
         `MINIMUM 1500 WORDS — this is a hard requirement. If the transcript is short, expand each section with additional expert context, examples, and insights. Never produce less than 1500 words.
+
+═══════════════════════════════════════
+PARAGRAPH RULE — ABSOLUTE NON-NEGOTIABLE
+═══════════════════════════════════════
+Every single <p> tag must contain MAXIMUM 2 sentences.
+Never write more than 2 sentences in one paragraph.
+If you have more to say: start a new <p> tag.
+Count your sentences before closing </p>.
+This is the single most important formatting rule.
 
 Return a complete article as COMPACT HTML — NO <html>, <head>, <body>, <style> tags — just the article body elements starting directly with content.
 DO NOT wrap in <article class="blog-content"> — the template already has that wrapper.
@@ -12516,10 +12525,11 @@ SLUG: ${item.new_slug}
 ${competitorBlock}
 
 
-PARAGRAPH RULE — NON-NEGOTIABLE:
-Keep ALL paragraphs SHORT: maximum 2-3 sentences, never more than 60 words per paragraph.
-Break long explanations into multiple short paragraphs.
-Readers scan — short paragraphs make content readable and increase engagement.
+PARAGRAPH RULE — ABSOLUTE HARD LIMIT:
+Every <p> tag = maximum 2 sentences. Never 3. Never more.
+Count sentences before closing </p>. If you have 3 sentences: split into two <p> tags.
+A sentence ends with . or ! or ?
+This overrides everything else. Short paragraphs always.
 
 BOFU STANDARD — NON-NEGOTIABLE:
 - NO generic openers ("In today's fast-paced...", "In the ever-evolving landscape")
