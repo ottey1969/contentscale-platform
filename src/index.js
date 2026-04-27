@@ -10568,7 +10568,7 @@ Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
         try {
           // ✅ FORCE CLAUDE FOR NEWS REWRITING
           const claudeNewsKey = resolveClaudeKey(req);
-          const sys = 'You are a professional content writer. Rewrite news articles to be 100% original, plagiarism-free, and SEO-optimised. Return only clean HTML starting with <article>. No markdown, no code fences.';
+          const sys = 'You are an elite SEO Content Architect. Rewrite news articles to be 100% original, plagiarism-free, and SEO-optimised. Include: Direct Answer box, TL;DR bullets, TOC, Key Takeaways, min 2 CTAs. NEVER invent stats — only use facts from the source article. Every <p> = max 2 sentences. Return only clean HTML starting with <article>. No markdown, no code fences.';
           
           rawHtml = await callClaudeForWrite(sys, rewritePrompt, 4000, claudeNewsKey);
           
@@ -11121,12 +11121,44 @@ PRIMARY GOAL: ${profile.primary_goal || 'leads'}
 VIDEO TRANSCRIPT (extract the BEST from this — key insights, specific facts, real examples, notable statements):
 ${transcript.substring(0, 8000)}
 
+
 ═══════════════════════════════════════
-PARAGRAPH RULE — NON-NEGOTIABLE
+CONTENT ARCHITECTURE — APPLY TO ALL SECTIONS
 ═══════════════════════════════════════
-Keep ALL paragraphs SHORT: maximum 2-3 sentences, never more than 60 words per paragraph.
-Break long explanations into multiple short paragraphs.
-Readers scan — short paragraphs make content readable and increase engagement.
+TITLE TAG: Focus Keyword in first 3 words + one number + one power word (Proven/Ultimate/Breakthrough/Expert/Essential) + 50-60 chars total
+H1: Include focus keyword + number + power word — can be longer than title
+META DESCRIPTION: 140-155 chars — keyword + stat/number + CTA verb at end (Try/Get/Learn/Discover)
+
+STRUCTURAL SIGNALS (all required):
+- DIRECT ANSWER BOX: 15-30 words, green gradient — optimised for featured snippets
+- TL;DR BOX: 5-7 bullets, max 12 words each — purple gradient
+- TABLE OF CONTENTS: anchor links to every H2
+- KEY TAKEAWAYS BOX: summary for skimmers before FAQ
+- AUTHOR BIO: must include "Founder", certifications, years experience, LinkedIn link — E-E-A-T signal
+- "Last reviewed: [date]" freshness badge in author bio
+
+CONVERSION (minimum per article):
+- CTA after Direct Answer box
+- CTA after TL;DR  
+- CTA inside at least 2 H2 sections
+- CTA in author bio
+- Final CTA block before footer
+Total: minimum 5 CTAs per article
+
+SCHEMA SYNC RULE: FAQ body Q&A must match FAQPage schema word-for-word — Google compares and penalises mismatches
+
+DATA INTEGRITY — NON-NEGOTIABLE:
+- NEVER invent statistics, quotes, or claims
+- If a stat cannot be verified from a real named source → write [STAT NEEDED] instead
+- Format: (Source Name, Year) — never "studies show" without naming source
+- If no real source found: leave [SOURCE NEEDED] — do NOT invent one
+
+═══════════════════════════════════════
+PARAGRAPH RULE — ABSOLUTE HARD LIMIT
+═══════════════════════════════════════
+Every <p> tag = maximum 2 sentences. Never 3. Never more.
+Count sentences before closing </p>. If you have 3 sentences: split into two <p> tags.
+A sentence ends with . or ! or ?
 
 ═══════════════════════════════════════
 CONTENT REQUIREMENTS
@@ -11135,7 +11167,24 @@ CONTENT REQUIREMENTS
 2. Add your own expertise around those insights — do not just paraphrase the transcript
 3. Structure: H1 → direct answer (2 short sentences) → TL;DR bullets → TOC → H2 sections → FAQ (5 Q&As) → CTA
 4. Every H2 answers a specific question from the transcript content
-5. Include: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a>
+5. Include a VIDEO EMBED BLOCK after the TL;DR — use this exact HTML pattern:
+<div class="highlight-box" style="margin:20px 0;">
+<h3>🎬 Watch This Video Free on YouTube</h3>
+<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it alongside this article for the complete insights.</p>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
+  <iframe src="https://www.youtube.com/embed/VIDEOID"
+    title="${actualTitle}"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen loading="lazy">
+  </iframe>
+</div>
+<p style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;">
+  <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
+</p>
+</div>
+IMPORTANT: Extract the YouTube video ID from this URL: ${sourceUrl} — put it in the iframe src as: https://www.youtube.com/embed/[VIDEO_ID]
+6. Also include: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a> at end of article
 6. Minimum 1500 words
 7. No generic openers ("In today's world...", "In an era of..."), no empty jargon
 
@@ -11171,7 +11220,7 @@ REQUIRED JSON-LD (add before </article>):
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
 
 Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
-      sys = 'You are an expert SEO content writer. CRITICAL RULE: Every <p> tag must contain MAXIMUM 2 sentences — never more. Split longer thoughts into multiple short paragraphs. Return only clean HTML.';
+      sys = 'You are an elite SEO Content Architect. Engineer traffic, not just content. CRITICAL: Every <p> = MAXIMUM 2 sentences. Use structured signals: Direct Answer box, TL;DR, TOC, Key Takeaways, Author Bio with E-E-A-T. Minimum 5 CTAs. NEVER invent stats — use [STAT NEEDED] if unverifiable. Return only clean HTML.';
     }
     // Template mode needs much higher token limit — template is 70kb+
     // Strategy: write article content first (compact HTML), then inject into template
@@ -11205,6 +11254,23 @@ STRUCTURE (all required):
 - At least 1 <div class="stats-box"> with 4+ stat-rows
 - At least 2 <blockquote> with <cite>
 - At least 2 <div class="case-card"> with ContentScale CTA
+- VIDEO EMBED BLOCK — insert after the TL;DR box (required in every video article):
+<div class="highlight-box" style="margin:20px 0;">
+<h3>🎬 Watch "${actualTitle}" Free on YouTube</h3>
+<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it to get the complete insights covered in this article.</p>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
+  <iframe src="https://www.youtube.com/embed/VIDEOID"
+    title="${actualTitle}"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen loading="lazy">
+  </iframe>
+</div>
+<p style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;">
+  <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
+</p>
+</div>
+IMPORTANT: Replace VIDEOID in the iframe src with the actual YouTube video ID extracted from the source URL.
 - <h2>Frequently Asked Questions</h2> with 10 faq-items
 - <p><a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a></p>
 - Final <div class="case-card"> CTA for ContentScale
@@ -11295,6 +11361,38 @@ Return ONLY the complete filled template. No explanation.`;
       rawHtml = rawHtml.replace(/\[AI: fill with publish date[^\]]*\]/gi, todayFinal);
       // Fill YYYY-MM-DD placeholders with video date
       rawHtml = rawHtml.replace(/YYYY-MM-DDT00:00:00\+00:00/g, videoPublishedDate + 'T00:00:00+00:00');
+      // Replace VIDEOID placeholder with actual YouTube video ID
+      if (vid) {
+        rawHtml = rawHtml.replace(/embed\/VIDEOID/g, `embed/${vid}`);
+        rawHtml = rawHtml.replace(/\/embed\/VIDEOID/g, `/embed/${vid}`);
+      }
+      // If Claude didn't include an embed at all, inject one after the TL;DR box
+      if (vid && !rawHtml.includes('youtube.com/embed/')) {
+        const embedBlock = `
+<div class="highlight-box" style="margin:20px 0;">
+<h3>🎬 Watch This Video Free on YouTube</h3>
+<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it alongside this article for the complete insights.</p>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
+  <iframe src="https://www.youtube.com/embed/${vid}"
+    title="${actualTitle.replace(/"/g,'&quot;')}"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen loading="lazy">
+  </iframe>
+</div>
+<p style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;">
+  <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
+</p>
+</div>`;
+        // Insert after closing </div> of tldr-box, or after TOC, or after first H2
+        if (rawHtml.includes('tldr-box')) {
+          rawHtml = rawHtml.replace(/(<\/div>\s*)((?=<div class="toc"|<h2))/i, `$1${embedBlock}\n$2`);
+        } else {
+          // Fallback: insert after first H2
+          rawHtml = rawHtml.replace(/(<\/h2>)/, `$1\n${embedBlock}`);
+        }
+        console.log(`[video-rewrite] Auto-injected YouTube embed for ${vid}`);
+      }
       // Extract slug from canonical tag and fill all slug placeholders
       const canonicalMatch = rawHtml.match(/<link rel="canonical" href="https?:\/\/[^/]+\/([^/"]+)\/?"/i);
       const extractedSlug = canonicalMatch ? canonicalMatch[1] : (actualTitle || 'article').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,75);
@@ -11911,7 +12009,26 @@ STRUCTUUR: ${(analysis.recommended_h2s||[]).map((h,i)=>`H2 ${i+1}: ${h}`).join('
 AUTEUR (voeg toe aan <article> en schema):
 ${author.name} · ${author.url || 'https://contentscale.site/about'}
 
-VERPLICHTE ELEMENTEN: Direct antwoord, TOC, datatable, TL;DR, FAQ (5+ vragen, voice-search)
+VERPLICHTE ELEMENTEN (alle verplicht):
+✅ Direct antwoord box (groen, 15-30 woorden, voor featured snippets)
+✅ TL;DR box (paars, 5-7 bullets, max 12 woorden elk)
+✅ Table of Contents (anchor links naar elke H2)
+✅ Key Takeaways box (samenvatting voor skimmers, voor FAQ)
+✅ Auteur bio (E-E-A-T: foto, "Oprichter", certificaten, LinkedIn)
+✅ "Bijgewerkt: [datum]" freshness badge in auteur bio
+✅ Minimum 5 CTAs verspreid door de pagina
+✅ FAQ (10+ vragen) — EXACT synchroon met FAQPage schema (Google vergelijkt!)
+✅ Datatable indien relevant
+
+TITEL ENGINEERING:
+- Titel tag: Focus keyword in eerste 3 woorden + getal + power word (Bewezen/Ultiem/Expert/Essentieel) + 50-60 tekens
+- H1: zelfde keyword + getal, mag langer zijn dan titel
+- Meta description: 140-155 tekens — keyword + getal/stat + CTA werkwoord aan het einde
+
+GEEN UITVINDINGEN:
+- Verzin NOOIT statistieken, citaten of claims
+- Als een stat niet verifieerbaar is: schrijf [STAT NEEDED] — nooit raden
+- Format: (Bronnaam, Jaar) — nooit "onderzoeken tonen" zonder bron te noemen
 
 JSON-LD verplicht:
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
@@ -13010,18 +13127,29 @@ WRITE A COMPLETE STATISTICS STUDY with this exact structure:
 
 10. SOURCES — numbered list with linked citations
 
+TITLE ENGINEERING:
+- Title tag: Focus keyword first 3 words + number + power word (Proven/Ultimate/Expert/Essential) + 50-60 chars
+- H1: same keyword + number but more descriptive (can be longer)
+- Meta description: 140-155 chars — keyword + stat + CTA verb
+
+CONVERSION RULES:
+- CTA after intro, after TL;DR, inside 2 H2 sections, final CTA block — minimum 5 total
+- Link CTAs to: ${profile.domain ? (profile.domain.startsWith('http') ? profile.domain : 'https://'+profile.domain) : '#'}
+
 WRITING RULES:
 - ONLY use statistics from STUDY DATA — never invent numbers
+- If a stat cannot be verified from STUDY DATA → write [STAT NEEDED] — never guess
 - Write in a data-driven, authoritative journalistic style
 - Make every H2 specific and stat-driven (e.g. "73% of Companies Now Use X — Here's Why")
 - Target 2500-3000 words total
+- Every <p> = maximum 2 sentences — split longer thoughts into new paragraphs
 - Include anchor IDs on H2s for the TOC: <h2 id="section-name">
 - Return ONLY clean HTML starting with <article>. No markdown, no code fences.`;
 
     const claudeStudyKey = resolveClaudeKey(req);
     let rawHtml;
     try {
-      const sys = 'You are an expert data journalist and visual HTML designer. Write link-worthy statistics studies with bold visual design — colourful stat cards, charts, styled callouts. Return only clean HTML from <article>. Never invent statistics.';
+      const sys = 'You are an elite SEO Content Architect and data journalist. Write link-worthy statistics studies with bold visual design — colourful stat cards, charts, styled callouts. Include: Direct Answer box, TL;DR, TOC, Key Takeaways, Author Bio with E-E-A-T, minimum 5 CTAs. ABSOLUTE RULE: Never invent statistics — only use data from STUDY DATA provided. If unverifiable: write [STAT NEEDED]. Every <p> = max 2 sentences. Return only clean HTML from <article>.';
       rawHtml = await callClaudeForWrite(sys, articlePrompt, 12000, claudeStudyKey);
       rawHtml = rawHtml.replace(/^```html\n?/i,'').replace(/^```/,'').replace(/```$/,'').trim();
     } catch(e) {
