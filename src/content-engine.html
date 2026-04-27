@@ -600,12 +600,21 @@ textarea{resize:vertical;min-height:100px;}
     </div>
 
     <!-- Template option -->
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);margin-top:4px;">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af;cursor:pointer;">
-        <input type="checkbox" id="videoUseTemplate" style="width:16px;height:16px;" checked>
-        <span>Use profile HTML template (if set)</span>
-      </label>
-      <span style="font-size:11px;color:#4b5563;">· Short paragraphs always enforced · Best insights extracted from transcript</span>
+    <div style="padding:10px 0;border-top:1px solid rgba(255,255,255,.06);margin-top:4px;">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;">Writing Mode</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:7px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);cursor:pointer;font-size:12px;color:#a78bfa;">
+          <input type="radio" name="videoMode" id="videoModeTemplate" value="template" checked style="accent-color:#a78bfa;">
+          📋 Use Profile Template
+          <span style="font-size:10px;color:#6b7280;">(fills your saved HTML layout)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);cursor:pointer;font-size:12px;color:#9ca3af;">
+          <input type="radio" name="videoMode" id="videoModeFree" value="free" style="accent-color:#a78bfa;">
+          ✍️ Free Write
+          <span style="font-size:10px;color:#6b7280;">(clean article, no template)</span>
+        </label>
+      </div>
+      <div style="font-size:11px;color:#4b5563;margin-top:6px;">· Short paragraphs always enforced · Best insights extracted from transcript</div>
     </div>
   </div>
 
@@ -998,12 +1007,17 @@ async function loadProfiles() {
       '<div>' + locs + '</div>' +
       (p.wp_url ? '<div style="font-size:11px;color:#a78bfa;margin-top:6px;">🚀 WP: ' + p.wp_url + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-      '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="refreshSitemap(' + p.id + ', this)" title="Re-fetch sitemap URLs">🗺️ Refresh Sitemap</button>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">' +
+      '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="refreshSitemap(' + p.id + ', this)" title="Re-fetch sitemap URLs">🗺️ Sitemap</button>' +
+      '<label class="btn btn-secondary" style="font-size:12px;padding:6px 12px;cursor:pointer;" title="Upload HTML template file">' +
+        '📋 Template <input type="file" accept=".html,.htm" style="display:none;" onchange="uploadTemplate(' + p.id + ', this)">' +
+      '</label>' +
       '<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="editProfile(' + p.id + ')">✏️ Edit</button>' +
       '<button class="btn btn-primary" style="font-size:12px;padding:6px 12px;" onclick="useProfile(' + p.id + ')">🚀 Use</button>' +
       '<button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteProfile(' + p.id + ')">🗑</button>' +
-      '</div></div></div>';
+      '</div></div>' +
+      (p.html_template ? '<div style="font-size:11px;color:#4ade80;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);">✓ HTML template set (' + Math.round(p.html_template.length/1024) + 'kb) — <button onclick="clearTemplate(' + p.id + ')" style="background:none;border:none;color:#f87171;font-size:11px;cursor:pointer;padding:0;">✕ Clear</button></div>' : '<div style="font-size:11px;color:#4b5563;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);">No template — upload .html file to add one</div>') +
+      '</div>';
   }).join('');
 }
 
@@ -1068,6 +1082,45 @@ function renderPendingLocations() {
       '<button onclick="_pendingLocations.splice(' + i + ',1);renderPendingLocations()" style="background:transparent;border:none;color:#7f1d1d;cursor:pointer;font-size:14px;">✕</button>' +
       '</div>';
   }).join('');
+}
+
+async function uploadTemplate(profileId, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var label = input.parentElement;
+  var origText = label.innerHTML;
+  try {
+    var html = await file.text();
+    if (html.length < 100) { toast('Template file is too small — check the file', 'red'); return; }
+    label.innerHTML = '⏳ Uploading...';
+    var d = await api('/api/content/profiles/' + profileId + '/template', 'PATCH', { html_template: html });
+    if (d.success) {
+      toast('✅ Template updated — ' + Math.round(html.length/1024) + 'kb saved · ' + file.name);
+      // Update local profile cache
+      var p = _profiles.find(function(x) { return x.id === profileId; });
+      if (p) p.html_template = html;
+      renderProfiles();
+    } else {
+      throw new Error(d.error || 'Upload failed');
+    }
+  } catch(e) {
+    toast('Template upload failed: ' + e.message, 'red');
+    label.innerHTML = origText;
+  }
+  input.value = ''; // reset file input
+}
+
+async function clearTemplate(profileId) {
+  if (!confirm('Remove the HTML template from this profile? The profile will use free-write mode.')) return;
+  var d = await api('/api/content/profiles/' + profileId + '/template', 'PATCH', { html_template: '' });
+  if (d.success) {
+    toast('Template cleared');
+    var p = _profiles.find(function(x) { return x.id === profileId; });
+    if (p) p.html_template = '';
+    renderProfiles();
+  } else {
+    toast('Failed: ' + (d.error || 'unknown error'), 'red');
+  }
 }
 
 async function refreshSitemap(profileId, btn) {
@@ -2282,7 +2335,7 @@ async function searchVideos() {
 async function rewriteVideoFromSearch(video) {
   var profileId = document.getElementById('newsProfileFilter').value;
   if (!profileId) { toast('Select a profile first', 'red'); return; }
-  var useTemplate = document.getElementById('videoUseTemplate')?.checked !== false;
+  var useTemplate = document.querySelector('input[name="videoMode"]:checked')?.value !== 'free';
   await _doVideoRewrite({ video_id: video.id, video_url: video.url, video_title: video.title, published: video.published, profile_id: profileId, use_template: useTemplate });
 }
 
@@ -2293,7 +2346,7 @@ async function rewriteVideoUrl() {
   if (!profileId) { toast('Select a profile first', 'red'); return; }
   var match = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
   var videoId = match ? match[1] : null;
-  var useTemplate = document.getElementById('videoUseTemplate')?.checked !== false;
+  var useTemplate = document.querySelector('input[name="videoMode"]:checked')?.value !== 'free';
   await _doVideoRewrite({ video_id: videoId, video_url: url, profile_id: profileId, use_template: useTemplate });
 }
 

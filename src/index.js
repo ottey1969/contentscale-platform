@@ -9609,12 +9609,20 @@ app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
 
 app.put('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
   try {
-    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password } = req.body;
+    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language } = req.body;
     const r = await pool.query(
       `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,content_language=$12,updated_at=NOW() WHERE id=$13 RETURNING *`,
       [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language||'en',req.params.id]
     );
     res.json({ success: true, profile: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.patch('/api/content/profiles/:id/template', verifyEngineAccess, async (req, res) => {
+  try {
+    const { html_template } = req.body;
+    await pool.query(`UPDATE content_profiles SET html_template=$1,updated_at=NOW() WHERE id=$2`, [html_template, req.params.id]);
+    res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
