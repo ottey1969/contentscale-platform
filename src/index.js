@@ -11126,12 +11126,33 @@ Return ONLY clean HTML starting with <article>. No markdown, no code fences. End
     let rawHtml;
     if (hasVideoTemplate) {
       // Step 1: Write compact article content without the full template
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       const contentOnlyPrompt = writePrompt.replace(
         /═══════════════════════════════════════\nTHE TEMPLATE.*$/s,
-        `Return a complete article as COMPACT HTML (no full page wrapper, just article body elements).
-Include: H1, direct-answer div, TL;DR, TOC, all H2 sections, stats, blockquotes, FAQ section, CTA sections.
-Use these CSS classes from the template: direct-answer, da-label, tldr-box, tldr-label, toc, stats-box, stat-row, stat-num, stat-text, case-card, blog-content, article-h1, cat-badge.
-End with <!-- word_count: X -->.`
+        `MINIMUM 1500 WORDS — this is a hard requirement. If the transcript is short, expand each section with additional expert context, examples, and insights. Never produce less than 1500 words.
+
+Return a complete article as COMPACT HTML — NO <html>, <head>, <body>, <style> tags — just the article body elements starting directly with content.
+DO NOT wrap in <article class="blog-content"> — the template already has that wrapper.
+
+STRUCTURE (all required):
+- <div class="cat-badge cat-guide">Category</div>
+- <h1 class="article-h1">Title</h1>
+- <div class="direct-answer"><div class="da-label">Direct Answer</div><p>...</p></div>
+- <div class="tldr-box"><div class="tldr-label">TL;DR</div><ul>5 bullet points</ul></div>
+- <div class="toc"><h3>Table of Contents</h3><ol>anchor links</ol></div>
+- Minimum 6 H2 sections (each 200+ words)
+- At least 1 <div class="stats-box"> with 4+ stat-rows
+- At least 2 <blockquote> with <cite>
+- At least 2 <div class="case-card"> with ContentScale CTA
+- <h2>Frequently Asked Questions</h2> with 10 faq-items
+- <p><a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a></p>
+- Final <div class="case-card"> CTA for ContentScale
+
+CSS CLASSES TO USE: direct-answer, da-label, tldr-box, tldr-label, toc, stats-box, stat-row, stat-num, stat-text, case-card, faq-item, faq-q, faq-a, highlight-box, warning-box, result-grid, result-row
+
+FILL THIS PLACEHOLDER in the author bio area if it appears: [AI: fill with publish date] → replace with: ${today}
+
+End with <!-- word_count: X --> where X is the actual word count.`
       );
       const articleContent = await callClaudeForWrite(sys, contentOnlyPrompt, 16000, claudeKey);
       const cleanContent = articleContent.replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
@@ -11162,6 +11183,20 @@ End with <!-- word_count: X -->.`
         }
       }
 
+      // Post-process: fix double article tags, fill publish date placeholder
+      if (rawHtml) {
+        const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        // Fix double opening article tags
+        rawHtml = rawHtml.replace(/<article([^>]*)>\s*<article([^>]*)>/gi, '<article$1>');
+        // Fix double closing article tags  
+        rawHtml = rawHtml.replace(/<\/article>\s*<\/article>/gi, '</article>');
+        // Fill publish date placeholder in author bio
+        rawHtml = rawHtml.replace(/\[AI: fill with publish date[^\]]*\]/gi, todayStr);
+        rawHtml = rawHtml.replace(/\[AI: fill.*?publish.*?date[^\]]*\]/gi, todayStr);
+        // Fill any remaining simple placeholders that weren't filled
+        rawHtml = rawHtml.replace(/YYYY-MM-DDT00:00:00\+00:00/g, videoPublishedDate + 'T00:00:00+00:00');
+      }
+
       if (!injected) {
         // Fallback: ask Claude to do the injection with higher token limit
         const injectPrompt = `You have a complete HTML template and article content to inject into it.
@@ -11188,6 +11223,18 @@ Return ONLY the complete filled template. No explanation.`;
     }
 
     rawHtml = (rawHtml||'').replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
+
+    // Global post-process — fix structural issues regardless of mode
+    if (rawHtml) {
+      const todayFinal = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      // Fix double opening/closing article tags
+      rawHtml = rawHtml.replace(/<article([^>]*)>\s*<article([^>]*blog-content[^>]*)>/gi, '<article$2>');
+      rawHtml = rawHtml.replace(/<\/article>\s*<\/article>/gi, '</article>');
+      // Fill publish date placeholder in author bio
+      rawHtml = rawHtml.replace(/\[AI: fill with publish date[^\]]*\]/gi, todayFinal);
+      // Fill YYYY-MM-DD placeholders with video date
+      rawHtml = rawHtml.replace(/YYYY-MM-DDT00:00:00\+00:00/g, videoPublishedDate + 'T00:00:00+00:00');
+    }
 
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty article' });
 
