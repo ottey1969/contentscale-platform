@@ -1090,21 +1090,42 @@ async function uploadTemplate(profileId, input) {
   var origText = btn ? btn.innerHTML : '📋 Template';
   try {
     var html = await file.text();
-    if (html.length < 100) { toast('Template file is too small — check the file', 'red'); return; }
-    console.log('[template upload] file size:', html.length, 'chars');
-    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Saving...'; }
-    var d = await api('/api/content/profiles/' + profileId + '/template', 'PATCH', { html_template: html });
+    if (html.length < 100) { toast('Template file is too small', 'red'); return; }
+    console.log('[template] uploading', html.length, 'chars,', file.name);
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ' + Math.round(html.length/1024) + 'kb...'; }
+
+    // Use fetch directly — api() helper may have issues with large payloads
+    var headers = { 'Content-Type': 'application/json' };
+    if (IS_ADMIN) {
+      headers['x-admin-key'] = ADMIN_ID;
+    } else {
+      headers['x-engine-token'] = ENGINE_TOKEN;
+      if (ENGINE_CLAUDE_KEY) headers['x-claude-key'] = ENGINE_CLAUDE_KEY;
+    }
+
+    var resp = await fetch('/api/content/profiles/' + profileId + '/template', {
+      method: 'PATCH',
+      headers: headers,
+      body: JSON.stringify({ html_template: html })
+    });
+
+    var text = await resp.text();
+    console.log('[template] response status:', resp.status, 'body:', text.substring(0, 200));
+
+    var d;
+    try { d = JSON.parse(text); } catch(pe) { throw new Error('Server response: ' + text.substring(0,100)); }
+
     if (d.success) {
-      toast('✅ Template updated — ' + Math.round(html.length/1024) + 'kb · ' + file.name);
+      toast('✅ Template saved — ' + Math.round(html.length/1024) + 'kb · ' + file.name);
       var p = _profiles.find(function(x) { return x.id === profileId; });
       if (p) p.html_template = html;
-      renderProfiles();
+      loadProfiles();
     } else {
-      throw new Error(d.error || 'Upload failed');
+      throw new Error(d.error || 'Server returned failure');
     }
   } catch(e) {
-    console.error('[template upload] error:', e);
-    toast('Template upload failed: ' + e.message, 'red');
+    console.error('[template] upload error:', e);
+    toast('Upload failed: ' + e.message, 'red');
     if (btn) { btn.disabled = false; btn.innerHTML = origText; }
   }
   input.value = '';
@@ -1117,7 +1138,7 @@ async function clearTemplate(profileId) {
     toast('Template cleared');
     var p = _profiles.find(function(x) { return x.id === profileId; });
     if (p) p.html_template = '';
-    renderProfiles();
+    loadProfiles();
   } else {
     toast('Failed: ' + (d.error || 'unknown error'), 'red');
   }
