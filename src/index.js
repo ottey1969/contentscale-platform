@@ -10810,6 +10810,11 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
             actualTitle = item.snippet?.title || actualTitle;
             channelName = item.snippet?.channelTitle || '';
             if (item.snippet?.publishedAt) req._videoPublishedAt = item.snippet.publishedAt.slice(0,10);
+            // Store description from API — used as fallback if no captions
+            if (item.snippet?.description && item.snippet.description.length > 100) {
+              req._videoApiDesc = item.snippet.description;
+              console.log(`[video-rewrite] API description stored: ${req._videoApiDesc.length} chars`);
+            }
           }
         }
       } catch(e) { console.warn('[video-rewrite] metadata fetch failed:', e.message); }
@@ -10841,84 +10846,93 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
         }
         if (watchR.ok) {
           const watchHtml = await watchR.text();
+          console.log(`[video-rewrite] watch page fetched: ${watchHtml.length} chars`);
 
-          // Extract video description (always available)
-          const descMatch = watchHtml.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
-          if (descMatch) {
-            const desc = descMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
-            if (desc.length > 100) sourceUrl = sourceUrl; // keep, description stored separately
-          }
-
-          // Extract caption track URL from page data (YouTube embeds this for auto-captions)
-          // Use multiple extraction strategies since YouTube's page format varies
-          let captionBaseUrl = null;
-          let captionLang = 'en';
-
-          // Strategy 1: extract baseUrl directly without parsing full JSON
-          const baseUrlMatch = watchHtml.match(/"captionTracks"[^\[]*\[[^\]]*?"baseUrl"\s*:\s*"([^"]+)"/);
-          if (baseUrlMatch) {
-            captionBaseUrl = baseUrlMatch[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
-            const langMatch = watchHtml.match(/"captionTracks"[^\[]*\[.*?"languageCode"\s*:\s*"([^"]+)"/);
-            if (langMatch) captionLang = langMatch[1];
-            console.log('[video-rewrite] Strategy 1 baseUrl found, lang:', captionLang);
-          }
-
-          // Strategy 2: find all timedtext baseUrls and pick best language
-          if (!captionBaseUrl) {
-            const allBaseUrls = [];
-            let s2m; const s2re = /"baseUrl":"([^"]*timedtext[^"]*)"/g;
-            while ((s2m = s2re.exec(watchHtml)) !== null) allBaseUrls.push(s2m[1]);
-            if (allBaseUrls.length) {
-              const enTrack = allBaseUrls.find(u => u.includes('lang=en') || u.includes('hl=en'));
-              const picked = enTrack || allBaseUrls[0];
-              captionBaseUrl = picked.replace(/\\u0026/g,'&').replace(/\\//g,'/');
-              console.log('[video-rewrite] Strategy 2 baseUrl:', captionBaseUrl.substring(0,80));
+          // ── Extract description (multiple patterns, YouTube changes format) ──
+          let pageDesc = '';
+          const descPatterns = [
+            /"shortDescription":"((?:[^"\\]|\\.)*)"/,
+            /"description":\s*\{"simpleText":"((?:[^"\\]|\\.)*)"/,
+            /<meta name="description" content="([^"]+)"/,
+            /"text":"((?:[^"\\]|\\.){200,})"/  // long text block fallback
+          ];
+          for (const pat of descPatterns) {
+            const m = watchHtml.match(pat);
+            if (m && m[1] && m[1].length > 100) {
+              pageDesc = m[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\u0026/g,'&').replace(/\\\\/g,'\\');
+              console.log(`[video-rewrite] Description found: ${pageDesc.length} chars`);
+              break;
             }
           }
 
-          // Strategy 3: construct timedtext URL from video ID
-          if (!captionBaseUrl) {
-            captionBaseUrl = `https://www.youtube.com/api/timedtext?v=${vid}&lang=en&fmt=json3`;
-            console.log('[video-rewrite] Strategy 3: using timedtext API');
+          // ── Extract caption baseUrl (3 strategies) ──
+          let captionBaseUrl = null;
+
+          // S1: captionTracks array — grab first baseUrl
+          const s1 = watchHtml.match(/"captionTracks"[^\[]*\[.*?"baseUrl"\s*:\s*"([^"]+)"/s);
+          if (s1) {
+            captionBaseUrl = s1[1].replace(/\\u0026/g,'&').replace(/\\\//g,'/').replace(/\\\\/g,'');
+            console.log('[video-rewrite] S1 caption baseUrl:', captionBaseUrl.substring(0,100));
           }
 
-          if (captionBaseUrl) {
-            try {
-              const capUrl = captionBaseUrl.includes('fmt=') ? captionBaseUrl : captionBaseUrl + '&fmt=json3';
-              const capR = await fetch(capUrl, { signal: AbortSignal.timeout(25000) });
-              if (capR.ok) {
-                const capText = await capR.text();
-                // Try JSON parse first
+          // S2: any timedtext URL in the page
+          if (!captionBaseUrl) {
+            const allUrls = []; let s2m;
+            const s2re = /"baseUrl"\s*:\s*"([^"]*timedtext[^"]*)"/g;
+            while ((s2m = s2re.exec(watchHtml)) !== null) allUrls.push(s2m[1]);
+            if (allUrls.length) {
+              const en = allUrls.find(u => u.includes('lang=en') || u.includes('hl=en')) || allUrls[0];
+              captionBaseUrl = en.replace(/\\u0026/g,'&').replace(/\\\//g,'/').replace(/\\\\/g,'');
+              console.log('[video-rewrite] S2 caption baseUrl:', captionBaseUrl.substring(0,100));
+            }
+          }
+
+          // S3: construct timedtext URL directly
+          if (!captionBaseUrl) {
+            captionBaseUrl = `https://www.youtube.com/api/timedtext?v=${vid}&lang=en&fmt=json3`;
+            console.log('[video-rewrite] S3: timedtext direct');
+          }
+
+          // ── Fetch and parse caption ──
+          try {
+            const capUrl = captionBaseUrl.includes('fmt=') ? captionBaseUrl : captionBaseUrl + '&fmt=json3';
+            console.log('[video-rewrite] fetching caption:', capUrl.substring(0,120));
+            const capR = await fetch(capUrl, { signal: AbortSignal.timeout(25000) });
+            console.log('[video-rewrite] caption response status:', capR.status);
+            if (capR.ok) {
+              const capText = await capR.text();
+              console.log('[video-rewrite] caption response length:', capText.length, 'preview:', capText.substring(0,80));
+              if (capText.length > 50) {
                 try {
                   const capD = JSON.parse(capText);
                   const extracted = (capD.events || [])
                     .filter(e => e.segs)
                     .map(e => e.segs.map(s => (s.utf8||'').replace(/\n/g,' ')).join(''))
                     .filter(t => t.trim())
-                    .join(' ')
-                    .replace(/\s+/g,' ')
-                    .trim();
+                    .join(' ').replace(/\s+/g,' ').trim();
                   if (extracted.length > 100) {
                     transcript = extracted;
-                    console.log(`[video-rewrite] Transcript via captionTrack JSON: ${transcript.length} chars`);
+                    console.log(`[video-rewrite] transcript JSON: ${transcript.length} chars`);
                   }
-                } catch(jsonErr) {
-                  // Try XML/SRT format
+                } catch(je) {
+                  // XML/SRT fallback
                   const xmlText = capText.replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/\s+/g,' ').trim();
                   if (xmlText.length > 100) {
                     transcript = xmlText;
-                    console.log(`[video-rewrite] Transcript via captionTrack XML: ${transcript.length} chars`);
+                    console.log(`[video-rewrite] transcript XML: ${transcript.length} chars`);
                   }
                 }
               }
-            } catch(capErr) { console.warn('[video-rewrite] captionTrack fetch failed:', capErr.message); }
-          }
+            }
+          } catch(capErr) { console.warn('[video-rewrite] caption fetch failed:', capErr.message); }
 
-          // If no caption track found, extract description as fallback content
-          if (!transcript && descMatch) {
-            transcript = descMatch[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').substring(0, 5000);
-            console.log(`[video-rewrite] Using description as transcript fallback: ${transcript.length} chars`);
+          // ── Description fallback ──
+          if ((!transcript || transcript.length < 200) && pageDesc.length > 100) {
+            transcript = pageDesc.substring(0, 6000);
+            console.log(`[video-rewrite] using description fallback: ${transcript.length} chars`);
           }
+        } else {
+          console.warn('[video-rewrite] watch page not ok:', watchR?.status);
         }
       } catch(e) { console.warn('[video-rewrite] watch page fetch failed:', e.message); }
     }
@@ -10940,7 +10954,13 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
       } catch(e) { console.warn('[video-rewrite] timedtext failed:', e.message); }
     }
 
-    if (!transcript || transcript.length < 100) {
+    // Ultimate fallback — use description from YouTube Data API if available
+    if ((!transcript || transcript.length < 50) && req._videoApiDesc) {
+      transcript = req._videoApiDesc;
+      console.log(`[video-rewrite] using YouTube API description as final fallback: ${transcript.length} chars`);
+    }
+
+    if (!transcript || transcript.length < 50) {
       return res.status(400).json({ success: false, error: 'No transcript found for this video. Captions may be disabled by the channel (common for documentaries/films). Try a different video — use the Search tab to find videos with confirmed captions.' });
     }
 
