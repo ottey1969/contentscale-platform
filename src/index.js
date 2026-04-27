@@ -11295,6 +11295,18 @@ Return ONLY the complete filled template. No explanation.`;
       rawHtml = rawHtml.replace(/\[AI: fill with publish date[^\]]*\]/gi, todayFinal);
       // Fill YYYY-MM-DD placeholders with video date
       rawHtml = rawHtml.replace(/YYYY-MM-DDT00:00:00\+00:00/g, videoPublishedDate + 'T00:00:00+00:00');
+      // Extract slug from canonical tag and fill all slug placeholders
+      const canonicalMatch = rawHtml.match(/<link rel="canonical" href="https?:\/\/[^/]+\/([^/"]+)\/?"/i);
+      const extractedSlug = canonicalMatch ? canonicalMatch[1] : (actualTitle || 'article').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,75);
+      const slugUrl = `https://contentscale.site/${extractedSlug}/`;
+      rawHtml = rawHtml.replace(/\[AI: same slug as canonical tag\]/gi, extractedSlug);
+      rawHtml = rawHtml.replace(/https:\/\/contentscale\.site\/\[AI: same slug as canonical tag\]\//gi, slugUrl);
+      rawHtml = rawHtml.replace(/https:\/\/contentscale\.site\/\[focus-keyword-slug\]\//gi, slugUrl);
+      rawHtml = rawHtml.replace(/contentscale\.site\/\[focus-keyword-slug\]/gi, `contentscale.site/${extractedSlug}`);
+      // Fill breadcrumb page title short form if unfilled
+      const h1Match = rawHtml.match(/<h1[^>]*>([^<]{10,60})<\/h1>/i);
+      const shortTitle = h1Match ? h1Match[1].substring(0,40) : (actualTitle || '').substring(0,40);
+      rawHtml = rawHtml.replace(/\[AI: page title short form[^\]]*\]/gi, shortTitle);
     }
 
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty article' });
