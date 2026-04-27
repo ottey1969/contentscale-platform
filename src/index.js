@@ -11276,7 +11276,23 @@ Return ONLY the complete filled template. No explanation.`;
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty article' });
 
     const scrub = stripAiPlaceholders(rawHtml);
-    const html = scrub.html;
+    // Auto-split long paragraphs — enforces max 2 sentences per <p> regardless of what Claude wrote
+    const splitLongParagraphs = (html) => {
+      return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, attrs, content) => {
+        // Skip if content has block-level HTML inside
+        if (/<(?:div|ul|ol|li|table|blockquote|h[1-6])/i.test(content)) return match;
+        // Split on sentence boundaries — period/!/? followed by space and capital
+        const sentences = content.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [content];
+        if (sentences.length <= 2) return match;
+        // Group into pairs of 2 sentences
+        const groups = [];
+        for (let i = 0; i < sentences.length; i += 2) {
+          groups.push(sentences.slice(i, i + 2).join('').trim());
+        }
+        return groups.map(g => `<p${attrs}>${g}</p>`).join('\n');
+      });
+    };
+    const html = splitLongParagraphs(scrub.html);
     const wc = html.replace(/<[^>]+>/g,'').split(/\s+/).length;
 
     clearInterval(keepAlive);
