@@ -10994,7 +10994,10 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
         }
       } catch(e) {}
     }
-    const internalLinks = sitemapUrls.length ? `INTERNAL LINKS (use only these URLs):\n${sitemapUrls.map(u=>`- ${u}`).join('\n')}` : 'No sitemap — do not invent URLs.';
+    const effectiveSitemapUrls = sitemapUrls;
+    const internalLinks = effectiveSitemapUrls.length
+      ? `INTERNAL LINKS — use 3-5 of these naturally with descriptive anchor text (never bare URLs):\n${effectiveSitemapUrls.map(u=>`- ${u}`).join('\n')}`
+      : 'No sitemap configured — go to Profiles → click 🗺️ Sitemap button to add one. Do not invent URLs.';
 
     const geminiKey = process.env.GEMINI_API_KEY;
     const claudeKey = resolveClaudeKey(req);
@@ -11051,13 +11054,24 @@ CONTENT REQUIREMENTS:
 
 ${internalLinks}
 
+
 CTA STRATEGY — CRITICAL:
-Weave ${profile.name} naturally throughout — not only at the end:
-- After TL;DR: connect the video topic to ${profile.name}'s expertise
-- In relevant H2 sections: show how ${profile.name} helps with this topic
-- Mid-article: add a CTA box linking to the main service
-${videoMoneyPages ? '- Link to these money pages naturally:\n' + videoMoneyPages : ''}
-- Final CTA: strong pitch for ${profile.name}'s core service
+ContentScale-specific services to weave in naturally (pick 3-4 most relevant to article topic):
+- GRAAF Framework (content quality scoring) → https://contentscale.site/graaf-framework/
+- CRAFT Framework (content structure) → https://contentscale.site/craft-framework/
+- Traffic Drop Recovery → https://contentscale.site/traffic-drop-recovery/
+- Google Update Recovery → https://contentscale.site/google-update-recovery/
+- 90-Day Recovery Timeline → https://contentscale.site/90-day-recovery-timeline/
+- AI Overview Optimization → https://contentscale.site/ai-overview-trigger-patterns/
+- Free ContentScore Scan → https://app.contentscale.site
+- DIY vs Agency Recovery → https://contentscale.site/diy-vs-agency-recovery/
+
+Use descriptive anchor text — never bare URLs. Link 3-5 pages naturally in the article body.
+After TL;DR: one sentence connecting topic specifically to ContentScale's GRAAF Framework or ContentScore.
+In 2 H2 sections: mention the specific ContentScale service most relevant to that section — not generic language.
+Mid-article case-card: specific tool or service with real link.
+Final case-card: free ContentScore scan offer → https://app.contentscale.site
+${videoMoneyPages ? '\n' + videoMoneyPages : ''}
 
 ═══════════════════════════════════════
 THE TEMPLATE — FILL ALL PLACEHOLDERS, DO NOT CHANGE HTML STRUCTURE
@@ -11103,17 +11117,31 @@ CONTENT REQUIREMENTS
 
 ${internalLinks}
 
-CTA STRATEGY — CRITICAL — people find this via Google, pull them to ${profile.name}:
-- After the TL;DR: one sentence connecting the video topic to what ${profile.name} does
-- In 2-3 relevant H2 sections: a short paragraph showing how ${profile.name} helps with this specific topic (natural, not salesy)
-- Mid-article CTA box (use this HTML):
-  <div style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(37,99,235,.08));border:1px solid rgba(124,58,237,.25);border-radius:12px;padding:24px;margin:32px 0;text-align:center;">
-    <strong style="color:#a78bfa;font-size:1.1rem;">${profile.name}</strong>
-    <p style="color:#9ca3af;margin:8px 0;">Need help with ${profile.niche || 'your content strategy'}? We help businesses rank higher and get more leads.</p>
-    <a href="${profile.domain ? (profile.domain.startsWith('http') ? profile.domain : 'https://'+profile.domain) : '#'}" style="display:inline-block;background:#7c3aed;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Get a Free Consultation →</a>
-  </div>
-${videoMoneyPages ? '- Link naturally to these service pages throughout:\n' + videoMoneyPages : ''}
-- Final H2 "How ${profile.name} Can Help": strong closing section with concrete offer and CTA
+CTA STRATEGY — CRITICAL — people find this via Google, convert them to ContentScale leads:
+
+ContentScale's specific services to mention naturally (pick the most relevant 3-4 based on the article topic):
+- GRAAF Framework (content quality scoring) → https://contentscale.site/graaf-framework/
+- CRAFT Framework (content structure) → https://contentscale.site/craft-framework/
+- Traffic Drop Recovery → https://contentscale.site/traffic-drop-recovery/
+- Google Update Recovery → https://contentscale.site/google-update-recovery/
+- 90-Day Recovery Timeline → https://contentscale.site/90-day-recovery-timeline/
+- AI Overview Optimization → https://contentscale.site/ai-overview-trigger-patterns/
+- ContentScore Free Scan → https://app.contentscale.site
+- DIY vs Agency Recovery → https://contentscale.site/diy-vs-agency-recovery/
+- B2B SaaS Traffic Recovery → https://contentscale.site/b2b-saas-traffic-recovery/
+- YMYL AI Optimization → https://contentscale.site/ymyl-ai-optimization/
+
+INTERNAL LINK RULES:
+- Use ONLY the URLs listed above — never invent URLs
+- Link 3-5 of them naturally within the article body using descriptive anchor text
+- Do NOT use "[contentscale.site/page]" as anchor text — use descriptive text like "the GRAAF Framework" or "content recovery process"
+
+CTA PLACEMENT:
+1. After TL;DR: one specific sentence connecting the video topic to ContentScale's GRAAF Framework or content scoring
+2. In 2 H2 sections: a short paragraph specifically mentioning the ContentScale service most relevant to that section — not generic "we help businesses" language
+3. Mid-article case-card CTA: reference a specific ContentScale tool or service with a real link
+4. Final case-card: strong closing with ContentScale's free scan offer → https://app.contentscale.site
+${videoMoneyPages ? '\nMONEY PAGES (also link to these if relevant):\n' + videoMoneyPages : ''}
 
 REQUIRED JSON-LD (add before </article>):
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
