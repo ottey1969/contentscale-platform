@@ -9621,9 +9621,15 @@ app.put('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
 app.patch('/api/content/profiles/:id/template', verifyEngineAccess, async (req, res) => {
   try {
     const { html_template } = req.body;
+    console.log(`[template patch] profile=${req.params.id} size=${(html_template||'').length} chars`);
+    if (!html_template && html_template !== '') return res.status(400).json({ success: false, error: 'html_template field missing from request body' });
     await pool.query(`UPDATE content_profiles SET html_template=$1,updated_at=NOW() WHERE id=$2`, [html_template, req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+    console.log(`[template patch] saved ok for profile ${req.params.id}`);
+    res.json({ success: true, size: html_template.length });
+  } catch(e) {
+    console.error('[template patch] error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.delete('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
@@ -11115,8 +11121,73 @@ REQUIRED JSON-LD (add before </article>):
 Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
       sys = 'You are an expert SEO content writer converting video transcripts into original, rankable articles. Short paragraphs — max 2-3 sentences. Weave the business naturally throughout. Return only clean HTML from <article>.';
     }
-    let rawHtml = await callClaudeForWrite(sys, writePrompt, 8000, claudeKey);
-    rawHtml = rawHtml.replace(/^```html\n?/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    // Template mode needs much higher token limit — template is 70kb+
+    // Strategy: write article content first (compact HTML), then inject into template
+    let rawHtml;
+    if (hasVideoTemplate) {
+      // Step 1: Write compact article content without the full template
+      const contentOnlyPrompt = writePrompt.replace(
+        /═══════════════════════════════════════\nTHE TEMPLATE.*$/s,
+        `Return a complete article as COMPACT HTML (no full page wrapper, just article body elements).
+Include: H1, direct-answer div, TL;DR, TOC, all H2 sections, stats, blockquotes, FAQ section, CTA sections.
+Use these CSS classes from the template: direct-answer, da-label, tldr-box, tldr-label, toc, stats-box, stat-row, stat-num, stat-text, case-card, blog-content, article-h1, cat-badge.
+End with <!-- word_count: X -->.`
+      );
+      const articleContent = await callClaudeForWrite(sys, contentOnlyPrompt, 16000, claudeKey);
+      const cleanContent = articleContent.replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
+
+      // Step 2: Inject content into template — find the main content placeholder
+      const template = profile.html_template;
+      // Look for common content injection points in the template
+      const injectionPatterns = [
+        /(<main[^>]*>)([\s\S]*?)(<\/main>)/i,
+        /(<article[^>]*>)([\s\S]*?)(<\/article>)/i,
+        /(<div[^>]*class="[^"]*blog-content[^"]*"[^>]*>)([\s\S]*?)(<\/div>)/i,
+        /(<div[^>]*class="[^"]*page-outer[^"]*"[^>]*>)([\s\S]*?)(<\/div>)/i,
+        /(<!--\s*CONTENT START\s*-->)([\s\S]*?)(<!--\s*CONTENT END\s*-->)/i,
+        /(\[CONTENT HERE\]|\[INSERT CONTENT\]|\[AI: write.*?here\])/i
+      ];
+
+      let injected = false;
+      for (const pattern of injectionPatterns) {
+        if (pattern.test(template)) {
+          if (pattern.source.includes('CONTENT START') || pattern.source.includes('CONTENT HERE')) {
+            rawHtml = template.replace(pattern, cleanContent);
+          } else {
+            rawHtml = template.replace(pattern, (m, open, inner, close) => open + '\n' + cleanContent + '\n' + (close||''));
+          }
+          injected = true;
+          console.log('[video-rewrite] template injection via pattern:', pattern.source.substring(0,40));
+          break;
+        }
+      }
+
+      if (!injected) {
+        // Fallback: ask Claude to do the injection with higher token limit
+        const injectPrompt = `You have a complete HTML template and article content to inject into it.
+
+TASK: Replace all placeholder text in the template with the article content. Fill ALL [AI:...] placeholders, [TITLE], [CONTENT] etc.
+Keep ALL HTML structure, CSS, scripts exactly as-is.
+
+ARTICLE CONTENT TO INJECT:
+\${cleanContent.substring(0, 6000)}
+
+TEMPLATE:
+\${template}
+
+Return ONLY the complete filled template. No explanation.`;
+        rawHtml = await callClaudeForWrite(
+          'You are an HTML injection specialist. Fill templates with content exactly. Return complete HTML only.',
+          injectPrompt,
+          16000,
+          claudeKey
+        );
+      }
+    } else {
+      rawHtml = await callClaudeForWrite(sys, writePrompt, 12000, claudeKey);
+    }
+
+    rawHtml = (rawHtml||'').replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
 
     if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty article' });
 
