@@ -9402,7 +9402,27 @@ const verifyEngineAccess = async (req, res, next) => {
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
 
-  
+  const engineCode = req.headers['x-engine-code'] || req.query.code;
+  if (!engineCode) {
+    return res.status(401).json({ success: false, error: 'Engine access code required' });
+  }
+
+  try {
+    const codeResult = await pool.query(
+      'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE',
+      [engineCode]
+    );
+    if (codeResult.rows.length === 0) {
+      return res.status(403).json({ success: false, error: 'Invalid or expired engine access code' });
+    }
+    const code = codeResult.rows[0];
+    req.engineUser = { isAdmin: false, codeId: code.id, code: code };
+    next();
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Server error: ' + error.message });
+  }
+};
+
 // ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
   try {
