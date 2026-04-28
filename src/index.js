@@ -2524,12 +2524,27 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // ── Core page analysis — shared by bulk jobs and campaign ────
                async function internalScanPage(page, scanUrl) {
                const analysis = await page.evaluate((su) => {
-               const text = document.body ? document.body.innerText : '';
+               // Use full rendered text — body.innerText can miss WP/Elementor content blocks
+               const bodyRaw = document.body ? document.body.innerText : '';
+               // Also check WP-specific content containers
+               const wpSels = ['.page-content','.entry-content','.post-content','.wp-block-html','main','.site-main'];
+               let wpText = '';
+               wpSels.forEach(sel => { try { document.querySelectorAll(sel).forEach(el => { wpText += ' ' + (el.innerText||''); }); } catch(e){} });
+               const text = wpText.trim().length > bodyRaw.trim().length ? wpText : bodyRaw;
                const cleanText = text.replace(/\s+/g, ' ').trim();
                const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
                const rawHtml = document.documentElement.outerHTML;
                const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
-               h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
+               h1Els.forEach(el => {
+                 const s = window.getComputedStyle(el);
+                 const r = el.getBoundingClientRect();
+                 // Only flag hidden if display:none or visibility:hidden — NOT for off-screen or zero-size
+                 // getBoundingClientRect returns zeros for display:none but also for fixed-position elements
+                 // Use display/visibility as the definitive check only
+                 const hidden = s.display==='none' || s.visibility==='hidden';
+                 if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}
+                 else{h1IsHidden=true;}
+               });
                const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
                const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
                const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
@@ -2578,7 +2593,11 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                else req.continue();
                });
                try {
-               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
+               await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 }).catch(() =>
+                 page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+               );
+               // Wait for WP/Elementor JS to finish rendering content blocks
+               await page.waitForTimeout(2500);
                await new Promise(r => setTimeout(r, 800)); // let JS render
                } catch(e) {
                // Site unreachable/blocked — skip gracefully, don't waste retry time
@@ -10840,7 +10859,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     // 1. Get video metadata via YouTube Data API (title, channel, publish date)
     if (ytKey) {
       try {
-        const metaR = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(25000) });
+        const metaR = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${vid}&key=${ytKey}`, { signal: AbortSignal.timeout(25000) });
         if (metaR.ok) {
           const metaD = await metaR.json();
           const item = metaD.items?.[0];
@@ -10848,11 +10867,28 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
             actualTitle = item.snippet?.title || actualTitle;
             channelName = item.snippet?.channelTitle || '';
             if (item.snippet?.publishedAt) req._videoPublishedAt = item.snippet.publishedAt.slice(0,10);
+            // Store stats for use in article
+            const stats = item.statistics || {};
+            if (stats.viewCount) req._videoViews = parseInt(stats.viewCount);
+            if (stats.likeCount) req._videoLikes = parseInt(stats.likeCount);
+            // Duration: PT4M13S → "4 min 13 sec"
+            const dur = item.contentDetails?.duration || '';
+            const durMatch = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (durMatch) {
+              const h = parseInt(durMatch[1]||0), m = parseInt(durMatch[2]||0), s = parseInt(durMatch[3]||0);
+              req._videoDuration = h ? `${h}h ${m}m` : m ? `${m} min ${s > 0 ? s+'s' : ''}`.trim() : `${s}s`;
+              req._videoDurationISO = dur; // for VideoObject schema
+            }
+            // Thumbnail
+            req._videoThumbnail = item.snippet?.thumbnails?.maxres?.url
+              || item.snippet?.thumbnails?.high?.url
+              || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
             // Store description from API — used as fallback if no captions
             if (item.snippet?.description && item.snippet.description.length > 100) {
               req._videoApiDesc = item.snippet.description;
               console.log(`[video-rewrite] API description stored: ${req._videoApiDesc.length} chars`);
             }
+            console.log(`[video-rewrite] Stats: ${req._videoViews?.toLocaleString()} views, ${req._videoLikes?.toLocaleString()} likes, duration: ${req._videoDuration}`);
           }
         }
       } catch(e) { console.warn('[video-rewrite] metadata fetch failed:', e.message); }
@@ -11022,6 +11058,10 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     const internalLinks = effectiveSitemapUrls.length
       ? `INTERNAL LINKS — use 3-5 of these naturally with descriptive anchor text (never bare URLs):\n${effectiveSitemapUrls.map(u=>`- ${u}`).join('\n')}`
       : 'No sitemap configured — go to Profiles → click 🗺️ Sitemap button to add one. Do not invent URLs.';
+    // See Also section links — pick 3-5 most relevant from sitemap
+    const internalLinksForSeeAlso = effectiveSitemapUrls.length
+      ? effectiveSitemapUrls.slice(0, 10).map(u => `- ${u}`).join('\n')
+      : 'No sitemap — omit See Also section.';
 
     const geminiKey = process.env.GEMINI_API_KEY;
     const claudeKey = resolveClaudeKey(req);
@@ -11036,6 +11076,45 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
       || (req.body.published ? new Date(req.body.published).toISOString().slice(0,10) : null)
       || new Date().toISOString().slice(0,10);
     const videoDateModified = new Date().toISOString().slice(0,10);
+
+    // Rich video stats for use in prompts
+    const videoViews = req._videoViews || 0;
+    const videoLikes = req._videoLikes || 0;
+    const videoDuration = req._videoDuration || '';
+    const videoDurationISO = req._videoDurationISO || '';
+    const videoThumbnail = req._videoThumbnail || `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
+    const viewsFormatted = videoViews > 1000000
+      ? (videoViews/1000000).toFixed(1) + 'M'
+      : videoViews > 1000 ? (videoViews/1000).toFixed(0) + 'K' : String(videoViews);
+
+    // VideoObject schema
+    const videoObjectSchema = vid ? JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      "name": actualTitle,
+      "description": (transcript || '').substring(0, 300),
+      "thumbnailUrl": videoThumbnail,
+      "uploadDate": videoPublishedDate + 'T00:00:00+00:00',
+      "duration": videoDurationISO || undefined,
+      "embedUrl": `https://www.youtube.com/embed/${vid}`,
+      "contentUrl": `https://www.youtube.com/watch?v=${vid}`,
+      "interactionStatistic": videoViews ? {
+        "@type": "InteractionCounter",
+        "interactionType": { "@type": "WatchAction" },
+        "userInteractionCount": videoViews
+      } : undefined
+    }, null, 2) : null;
+
+    // Film infobox data
+    const filmInfobox = {
+      title: actualTitle,
+      channel: channelName,
+      views: viewsFormatted,
+      likes: videoLikes > 0 ? (videoLikes > 1000000 ? (videoLikes/1000000).toFixed(1)+'M' : (videoLikes/1000).toFixed(0)+'K') : '',
+      duration: videoDuration,
+      published: videoPublishedDate,
+      url: sourceUrl
+    };
 
     // Check if profile has a template and user wants to use it
     const hasVideoTemplate = use_template && profile.html_template && profile.html_template.trim().length > 50;
@@ -11107,16 +11186,20 @@ Return ONLY the filled template HTML. No markdown, no explanation. End with <!--
 
     } else {
       // MODE: Free write
-      writePrompt = `You are an expert SEO content writer converting a YouTube video into a high-quality, original SEO article.
+      writePrompt = `You are an elite SEO Content Architect converting a YouTube video into a production-ready, traffic-engineered article.
 
 LANGUAGE: Write the ENTIRE article in ${langName}. All headings, body, FAQ — everything in ${langName}.
 
-VIDEO: ${actualTitle}
-CHANNEL: ${channelName}
-SOURCE: ${sourceUrl}
-BUSINESS: ${profile.name} — ${profile.niche || ''}
-TARGET AUDIENCE: ${profile.target_audience || ''}
-PRIMARY GOAL: ${profile.primary_goal || 'leads'}
+VIDEO DETAILS:
+Title: ${actualTitle}
+Channel: ${channelName}
+Source URL: ${sourceUrl}
+Views: ${viewsFormatted || 'not available'}
+Duration: ${videoDuration || 'not available'}
+Published: ${videoPublishedDate}
+Business: ${profile.name} — ${profile.niche || ''}
+Target Audience: ${profile.target_audience || ''}
+Primary Goal: ${profile.primary_goal || 'leads'}
 
 VIDEO TRANSCRIPT (extract the BEST from this — key insights, specific facts, real examples, notable statements):
 ${transcript.substring(0, 8000)}
@@ -11161,16 +11244,24 @@ Count sentences before closing </p>. If you have 3 sentences: split into two <p>
 A sentence ends with . or ! or ?
 
 ═══════════════════════════════════════
-CONTENT REQUIREMENTS
+MANDATORY ARTICLE STRUCTURE (in order)
 ═══════════════════════════════════════
-1. Extract and USE the best insights from the transcript — specific facts, numbers, quotes, examples — these are the backbone
-2. Add your own expertise around those insights — do not just paraphrase the transcript
-3. Structure: H1 → direct answer (2 short sentences) → TL;DR bullets → TOC → H2 sections → FAQ (5 Q&As) → CTA
-4. Every H2 answers a specific question from the transcript content
-5. Include a VIDEO EMBED BLOCK after the TL;DR — use this exact HTML pattern:
+H1 (focus keyword first 3 words + number + power word)
+
+${videoViews > 100000 ? `VIRAL STATS BOX — insert immediately after H1 (use stats-box class):
+Views: ${viewsFormatted} | Duration: ${videoDuration} | Channel: ${channelName} | Published: ${videoPublishedDate}` : ''}
+
+FILM INFOBOX TABLE — quick facts (use blog-content table styling):
+Rows: Title | Channel | Views | Runtime | Published | Watch free (link)
+
+DIRECT ANSWER BOX (15-30 words, green gradient, for featured snippets)
+
+TL;DR BOX (5-7 bullets, max 12 words each, purple gradient)
+
+VIDEO EMBED — insert here (required):
 <div class="highlight-box" style="margin:20px 0;">
-<h3>🎬 Watch This Video Free on YouTube</h3>
-<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it alongside this article for the complete insights.</p>
+<h3>🎬 Watch "${actualTitle}" Free on YouTube</h3>
+<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Runtime: ${videoDuration || 'see YouTube'}.</p>
 <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
   <iframe src="https://www.youtube.com/embed/VIDEOID"
     title="${actualTitle}"
@@ -11183,10 +11274,29 @@ CONTENT REQUIREMENTS
   <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
 </p>
 </div>
-IMPORTANT: Extract the YouTube video ID from this URL: ${sourceUrl} — put it in the iframe src as: https://www.youtube.com/embed/[VIDEO_ID]
-6. Also include: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a> at end of article
-6. Minimum 1500 words
-7. No generic openers ("In today's world...", "In an era of..."), no empty jargon
+IMPORTANT: Replace VIDEOID with the actual YouTube video ID from: ${sourceUrl}
+
+TABLE OF CONTENTS (anchor links to every H2)
+
+MINIMUM 7 H2 SECTIONS — each answers a specific question from the video content
+
+KEY TAKEAWAYS BOX (highlight-box, before FAQ) — 5-7 bullet summary for skimmers
+
+FAQ SECTION (10 Q&As using faq-item/faq-q/faq-a classes) — must match FAQPage schema exactly
+
+SEE ALSO SECTION — 3-5 related ContentScale articles using only these URLs from sitemap:
+${internalLinksForSeeAlso}
+
+SOURCES SECTION — numbered list of all external sources cited, with real URLs
+
+FINAL CTA (case-card)
+
+CONTENT RULES:
+- Extract and USE the best insights from the transcript — specific facts, numbers, real quotes
+- Add expert context and analysis — do not just paraphrase the transcript
+- Minimum 1500 words
+- No generic openers ("In today's world...", "In an era of...")
+- Only cite verifiable facts — write [STAT NEEDED] if unverifiable
 
 ${internalLinks}
 
@@ -11365,6 +11475,27 @@ Return ONLY the complete filled template. No explanation.`;
       if (vid) {
         rawHtml = rawHtml.replace(/embed\/VIDEOID/g, `embed/${vid}`);
         rawHtml = rawHtml.replace(/\/embed\/VIDEOID/g, `/embed/${vid}`);
+      }
+      // Inject VideoObject schema if not already present
+      if (videoObjectSchema && !rawHtml.includes('"@type": "VideoObject"') && !rawHtml.includes('"VideoObject"')) {
+        const schemaTag = `\n<script type="application/ld+json">\n${videoObjectSchema}\n</script>`;
+        // Insert before </article> or at end of content
+        if (rawHtml.includes('</article>')) {
+          rawHtml = rawHtml.replace('</article>', schemaTag + '\n</article>');
+        } else {
+          rawHtml = rawHtml + schemaTag;
+        }
+        console.log('[video-rewrite] VideoObject schema injected');
+      }
+      // Add hreflang hints as HTML comments (for reference when publishing to WP)
+      if (!rawHtml.includes('hreflang')) {
+        const domain = profile.domain ? (profile.domain.startsWith('http') ? profile.domain : 'https://'+profile.domain) : 'https://contentscale.site';
+        const hreflangComment = `<!-- HREFLANG (add to WP head via Rank Math or plugin):
+<link rel="alternate" hreflang="en" href="${domain}/" />
+<link rel="alternate" hreflang="en-NL" href="${domain}/" />
+<link rel="alternate" hreflang="x-default" href="${domain}/" />
+-->`;
+        rawHtml = hreflangComment + '\n' + rawHtml;
       }
       // If Claude didn't include an embed at all, inject one after the TL;DR box
       if (vid && !rawHtml.includes('youtube.com/embed/')) {
