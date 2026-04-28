@@ -9590,35 +9590,6 @@ async function spendCredits(codeId, action) {
     console.error('spendCredits error:', e.message);
     throw e;
   }
-}  const cost = CREDIT_COSTS[action] || 1;
-  try {
-    const r = await pool.query(
-      `UPDATE engine_access_codes SET credits_used = credits_used + $1 WHERE id = $2 AND use_platform_keys = TRUE AND (platform_credits IS NULL OR (platform_credits - credits_used) >= $1) RETURNING platform_credits, credits_used`,
-      [cost, codeId]
-    );
-    if (!r.rows.length) {
-      const check = await pool.query(`SELECT platform_credits, credits_used FROM engine_access_codes WHERE id=$1`, [codeId]);
-      const row = check.rows[0];
-      if (row && row.platform_credits !== null && (row.platform_credits - row.credits_used) < cost) {
-        return { ok: false, error: `Not enough credits. Need ${cost}, have ${row.platform_credits - row.credits_used}.` };
-      }
-      return { ok: false, error: 'Credit deduction failed' };
-    }
-    const row = r.rows[0];
-    const left = row.platform_credits === null ? null : (row.platform_credits - row.credits_used);
-    await pool.query(`INSERT INTO credit_log (code_id, action, credits_spent) VALUES ($1,$2,$3)`, [codeId, action, cost]).catch(()=>{});
-    return { ok: true, credits_left: left, cost };
-  } catch(e) {
-    // Fail open on DB connection errors so platform users aren't blocked by infra issues
-    // Only fail closed on legitimate logic errors
-    const isConnErr = e.code === 'ECONNREFUSED' || e.code === '57P01' || e.message.includes('connect');
-    if (isConnErr) {
-      console.warn('[credits] DB unavailable — failing open:', e.message);
-      return { ok: true, credits_left: null, cost: 0, failedOpen: true };
-    }
-    return { ok: false, error: e.message };
-  }
-}
 
 function requireCredits(action) {
   return async (req, res, next) => {
