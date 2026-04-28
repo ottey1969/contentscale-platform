@@ -9465,8 +9465,30 @@ app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) =>
       if (parseFloat(pageStats.avgPosition) > 10) {
         recommendations.push({ type: 'position', message: `Avg position ${pageStats.avgPosition} — optimize content` });
       }
-      if (parseFloat(pageStats
+            if (parseFloat(pageStats.avgCtr) < 2) {
+        recommendations.push({ type: 'ctr', message: `CTR ${pageStats.avgCtr}% low — improve title/meta` });
+      }
+      if (pageStats.totalImpressions > 1000 && pageStats.totalClicks < 50) {
+        recommendations.push({ type: 'opportunity', message: `${pageStats.totalImpressions} impr, ${pageStats.totalClicks} clicks — high visibility, low capture` });
+      }
+    }
 
+    res.json({
+      success: true,
+      matched: { pages: pagesResult.rows.length, queries: queriesResult.rows.length },
+      pageStats, queryStats, recommendations,
+      message: pagesResult.rows.length > 0 || queriesResult.rows.length > 0
+        ? `Found ${pagesResult.rows.length} pages and ${queriesResult.rows.length} queries`
+        : 'No GSC data found. Upload CSV first.'
+    });
+
+  } catch (error) {
+    console.error('GSC match error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
 // ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
   try {
