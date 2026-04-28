@@ -2107,6 +2107,136 @@ app.post('/api/fetch-html', async (req, res) => {
   }
 });
 
+
+// ============================================================
+// /api/scan/paste
+// Scans pasted HTML directly — no URL fetch, no Puppeteer needed.
+// POST body: { html: "...", url: "https://example.com" (optional label) }
+// ============================================================
+app.post('/api/scan/paste', async (req, res) => {
+  const { html, url: labelUrl } = req.body;
+  if (!html || html.length < 100) {
+    return res.status(400).json({ success: false, error: 'HTML too short or missing' });
+  }
+  
+  try {
+    // Create a virtual DOM analysis using the same scoring logic
+    // We simulate what the browser evaluate() returns
+    const scanUrl = labelUrl || 'pasted-html';
+    
+    // Parse HTML with cheerio-like regex (fast, no extra dependency)
+    const rawHtml = html;
+    const textMatch = rawHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const bodyHtml = textMatch ? textMatch[1] : rawHtml;
+    
+    // Strip tags to get text content
+    const stripTags = (str) => str.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanText = stripTags(bodyHtml);
+    const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+    
+    // Count headings
+    const h1Matches = [...rawHtml.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
+    const h1Count = h1Matches.length;
+    const h1Text = h1Matches[0] ? stripTags(h1Matches[0][1]) : '';
+    const h1Length = h1Text.length;
+    const h1IsGeneric = h1Text.length > 0 && ['welcome','home','hello','untitled','page','index','main','default'].includes(h1Text.toLowerCase().trim());
+    const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+    const h1IsTooLong = h1Text.length > 70;
+    
+    const h2Count = ([...rawHtml.matchAll(/<h2/gi)]).length;
+    const h3Count = ([...rawHtml.matchAll(/<h3/gi)]).length;
+    const listItemCount = ([...rawHtml.matchAll(/<li/gi)]).length;
+    
+    // Paragraph stats
+    const pMatches = [...rawHtml.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+    const avgParagraphLength = pMatches.length > 0 
+      ? pMatches.map(m => stripTags(m[1]).split(/\s+/).length).reduce((a,b) => a+b, 0) / pMatches.length 
+      : 0;
+    
+    // Meta
+    const titleMatch = rawHtml.match(/<title>([^<]+)<\/title>/i);
+    const metaTitle = titleMatch ? titleMatch[1] : '';
+    const metaTitleLength = metaTitle.length;
+    
+    const descMatch = rawHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) 
+      || rawHtml.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+    const metaDescription = descMatch ? descMatch[1] : '';
+    const metaDescriptionLength = metaDescription.length;
+    
+    const hasCanonical = /<link[^>]*rel=["']canonical["']/i.test(rawHtml);
+    const hasMetaViewport = /<meta[^>]*name=["']viewport["']/i.test(rawHtml);
+    const hasOpenGraph = /<meta[^>]*property=["']og:/i.test(rawHtml);
+    const hasTwitterCard = /<meta[^>]*name=["']twitter:/i.test(rawHtml);
+    
+    // Schema
+    const schemaScripts = [];
+    const schemaMatches = [...rawHtml.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+    schemaMatches.forEach(m => {
+      try { schemaScripts.push(JSON.parse(m[1])); } catch(e) {}
+    });
+    const flatSchemas = schemaScripts.flatMap(s => Array.isArray(s) ? s : (s['@graph'] ? s['@graph'] : [s]));
+    const hasArticleSchema = flatSchemas.some(s => ['Article','NewsArticle','BlogPosting','TechArticle'].includes(s?.['@type']));
+    const hasFAQPageSchema = flatSchemas.some(s => s?.['@type'] === 'FAQPage');
+    const hasOrganizationSchema = flatSchemas.some(s => ['Organization','LocalBusiness','Corporation'].includes(s?.['@type']));
+    
+    // Content signals
+    const bodyText = cleanText.toLowerCase();
+    const hasFAQContent = /frequently asked|faq|common questions/i.test(rawHtml) 
+      || /id=["'][^"']*faq[^"']*["']/i.test(rawHtml)
+      || rawHtml.toLowerCase().includes('class=') && rawHtml.toLowerCase().match(/class=["'][^"']*faq[^"']*["']/);
+    const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml);
+    const hasAuthorBio = /written by|about the author|about the founder|meet the author/i.test(rawHtml);
+    const hasDirectAnswer = cleanText.substring(0, 300).length > 150;
+    const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|highlights/i.test(rawHtml);
+    
+    // Images
+    const imgMatches = [...rawHtml.matchAll(/<img[^>]*>/gi)];
+    const images = imgMatches.length;
+    const imagesWithAlt = imgMatches.filter(m => /alt=["'][^"']+["']/i.test(m[0]) && !/alt=["']?["']/i.test(m[0])).length;
+    
+    // Links
+    const allLinks = [...rawHtml.matchAll(/<a[^>]*href=["']([^"']+)["']/gi)].map(m => m[1]);
+    const internalLinks = allLinks.filter(href => !href.startsWith('http') || href.includes(labelUrl || '')).length;
+    const externalLinks = allLinks.filter(href => href.startsWith('http') && !href.includes(labelUrl || '')).length;
+    
+    // Quotes & case studies
+    const bqCount = ([...rawHtml.matchAll(/<blockquote/gi)]).length;
+    const citeCount = ([...rawHtml.matchAll(/<cite[\s>]/gi)]).length;
+    const expertQuoteCount = Math.max(bqCount, citeCount);
+    
+    const caseStudyKeywords = ['case study','challenge','solution','results','roi','recovered'];
+    const caseStudyCount = caseStudyKeywords.reduce((sum, kw) => sum + (bodyText.split(kw).length - 1), 0);
+    
+    const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
+    const statsFound = (cleanText.match(statsPattern) || []).length;
+    
+    // Build analysis object matching the browser evaluate() output
+    const analysis = {
+      wordCount, h1Count, h1Text, h1Length, 
+      h1IsHidden: false, h1VisibleCount: h1Count, 
+      h1IsGeneric, h1IsTooShort, h1IsTooLong,
+      h2Count, h3Count, listItemCount, avgParagraphLength,
+      metaTitleLength, metaDescriptionLength,
+      hasMetaViewport, hasCanonical,
+      hasOpenGraph, hasTwitterCard,
+      hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+      hasFAQContent, images, imagesWithAlt,
+      internalLinks, externalLinks,
+      expertQuoteCount, caseStudyCount, statsFound,
+      hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
+    };
+    
+    const result = computeScore(scanUrl, analysis, []);
+    console.log(`✅ scan/paste: ${scanUrl} → ${result.score}/100 (${wordCount} words)`);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('❌ scan/paste error:', error.message);
+    res.status(500).json({ success: false, error: 'Paste scan failed: ' + error.message });
+  }
+});
+
+
 // Submit aggregate sitemap scan result as pending leaderboard entry
 const AUTO_APPROVE_DOMAINS = ['contentscale.site', 'app.contentscale.site'];
 app.post('/api/sitemap/submit', async (req, res) => {
