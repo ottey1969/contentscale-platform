@@ -8214,76 +8214,6 @@ app.get('/api/fetch-sitemap', async (req, res) => {
   }
 });
 
-
-// ── GSC Auto-Stat Matching ──
-app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
-  try {
-    const { profile_id, domain, keyword } = req.body;
-    if (!profile_id || !domain || !keyword) {
-      return res.status(400).json({ success: false, error: 'profile_id, domain, and keyword required' });
-    }
-
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
-
-    const pagesResult = await pool.query(`
-      SELECT * FROM gsc_pages
-      WHERE profile_id = $1 AND (domain = $2 OR domain LIKE $3 OR url LIKE $4)
-        AND (keyword ILIKE $5 OR slug ILIKE $6)
-      ORDER BY clicks DESC LIMIT 5
-    `, [profile_id, cleanDomain, `%${cleanDomain}%`, `%${cleanDomain}%`, `%${keyword}%`, `%${keyword}%`]);
-
-    const queriesResult = await pool.query(`
-      SELECT * FROM gsc_queries
-      WHERE profile_id = $1 AND (query ILIKE $2 OR query ILIKE $3)
-        AND (url = '' OR url LIKE $4)
-      ORDER BY clicks DESC LIMIT 10
-    `, [profile_id, `%${keyword}%`, `%${keyword.split(' ').join('%')}%`, `%${cleanDomain}%`]);
-
-    const pageStats = pagesResult.rows.length > 0 ? {
-      totalClicks: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
-      totalImpressions: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
-      avgCtr: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / pagesResult.rows.length).toFixed(2),
-      avgPosition: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / pagesResult.rows.length).toFixed(1),
-      topPages: pagesResult.rows.slice(0, 3)
-    } : null;
-
-    const queryStats = queriesResult.rows.length > 0 ? {
-      totalClicks: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
-      totalImpressions: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
-      avgCtr: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / queriesResult.rows.length).toFixed(2),
-      avgPosition: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / queriesResult.rows.length).toFixed(1),
-      topQueries: queriesResult.rows.slice(0, 5)
-    } : null;
-
-    const recommendations = [];
-    if (pageStats) {
-      if (parseFloat(pageStats.avgPosition) > 10) {
-        recommendations.push({ type: 'position', message: `Avg position ${pageStats.avgPosition} — optimize for top 10`, priority: 'high' });
-      }
-      if (parseFloat(pageStats.avgCtr) < 2) {
-        recommendations.push({ type: 'ctr', message: `CTR ${pageStats.avgCtr}% low — improve title/meta`, priority: 'high' });
-      }
-      if (pageStats.totalImpressions > 1000 && pageStats.totalClicks < 50) {
-        recommendations.push({ type: 'opportunity', message: `${pageStats.totalImpressions} impr, ${pageStats.totalClicks} clicks — huge CTR opportunity`, priority: 'high' });
-      }
-    }
-
-    res.json({
-      success: true,
-      matched: { pages: pagesResult.rows.length, queries: queriesResult.rows.length },
-      pageStats, queryStats, recommendations,
-      message: pagesResult.rows.length > 0 || queriesResult.rows.length > 0
-        ? `Found ${pagesResult.rows.length} pages and ${queriesResult.rows.length} queries`
-        : 'No GSC data found. Upload CSV first.'
-    });
-
-  } catch (error) {
-    console.error('GSC match error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-
 // ── GSC Match-Stats Alias (for /api/content prefix) ──
 app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) => {
   // Forward to the main handler - reuse logic or call internally
@@ -9422,6 +9352,120 @@ const verifyEngineAccess = async (req, res, next) => {
     return res.status(500).json({ success: false, error: 'Server error: ' + error.message });
   }
 };
+
+// ── GSC Auto-Stat Matching ──
+app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
+  try {
+    const { profile_id, domain, keyword } = req.body;
+    if (!profile_id || !domain || !keyword) {
+      return res.status(400).json({ success: false, error: 'profile_id, domain, and keyword required' });
+    }
+
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+
+    const pagesResult = await pool.query(`
+      SELECT * FROM gsc_pages
+      WHERE profile_id = $1 AND (domain = $2 OR domain LIKE $3 OR url LIKE $4)
+        AND (keyword ILIKE $5 OR slug ILIKE $6)
+      ORDER BY clicks DESC LIMIT 5
+    `, [profile_id, cleanDomain, `%${cleanDomain}%`, `%${cleanDomain}%`, `%${keyword}%`, `%${keyword}%`]);
+
+    const queriesResult = await pool.query(`
+      SELECT * FROM gsc_queries
+      WHERE profile_id = $1 AND (query ILIKE $2 OR query ILIKE $3)
+        AND (url = '' OR url LIKE $4)
+      ORDER BY clicks DESC LIMIT 10
+    `, [profile_id, `%${keyword}%`, `%${keyword.split(' ').join('%')}%`, `%${cleanDomain}%`]);
+
+    const pageStats = pagesResult.rows.length > 0 ? {
+      totalClicks: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
+      totalImpressions: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
+      avgCtr: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / pagesResult.rows.length).toFixed(2),
+      avgPosition: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / pagesResult.rows.length).toFixed(1),
+      topPages: pagesResult.rows.slice(0, 3)
+    } : null;
+
+    const queryStats = queriesResult.rows.length > 0 ? {
+      totalClicks: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
+      totalImpressions: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
+      avgCtr: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / queriesResult.rows.length).toFixed(2),
+      avgPosition: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / queriesResult.rows.length).toFixed(1),
+      topQueries: queriesResult.rows.slice(0, 5)
+    } : null;
+
+    const recommendations = [];
+    if (pageStats) {
+      if (parseFloat(pageStats.avgPosition) > 10) {
+        recommendations.push({ type: 'position', message: `Avg position ${pageStats.avgPosition} — optimize content` });
+      }
+      if (parseFloat(pageStats.avgCtr) < 2) {
+        recommendations.push({ type: 'ctr', message: `CTR ${pageStats.avgCtr}% low — improve title/meta` });
+      }
+      if (pageStats.totalImpressions > 1000 && pageStats.totalClicks < 50) {
+        recommendations.push({ type: 'opportunity', message: `${pageStats.totalImpressions} impr, ${pageStats.totalClicks} clicks — high visibility, low capture` });
+      }
+    }
+
+    res.json({
+      success: true,
+      matched: { pages: pagesResult.rows.length, queries: queriesResult.rows.length },
+      pageStats, queryStats, recommendations,
+      message: pagesResult.rows.length > 0 || queriesResult.rows.length > 0
+        ? `Found ${pagesResult.rows.length} pages and ${queriesResult.rows.length} queries`
+        : 'No GSC data found. Upload CSV first.'
+    });
+
+  } catch (error) {
+    console.error('GSC match error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── GSC Match-Stats Alias (for /api/content prefix) ──
+app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) => {
+  // Forward to the main handler - reuse logic or call internally
+  try {
+    const { profile_id, domain, keyword } = req.body;
+    if (!profile_id || !domain || !keyword) {
+      return res.status(400).json({ success: false, error: 'profile_id, domain, and keyword required' });
+    }
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+    const pagesResult = await pool.query(`
+      SELECT * FROM gsc_pages
+      WHERE profile_id = $1 AND (domain = $2 OR domain LIKE $3 OR url LIKE $4)
+        AND (keyword ILIKE $5 OR slug ILIKE $6)
+      ORDER BY clicks DESC LIMIT 5
+    `, [profile_id, cleanDomain, `%${cleanDomain}%`, `%${cleanDomain}%`, `%${keyword}%`, `%${keyword}%`]);
+
+    const queriesResult = await pool.query(`
+      SELECT * FROM gsc_queries
+      WHERE profile_id = $1 AND (query ILIKE $2 OR query ILIKE $3)
+        AND (url = '' OR url LIKE $4)
+      ORDER BY clicks DESC LIMIT 10
+    `, [profile_id, `%${keyword}%`, `%${keyword.split(' ').join('%')}%`, `%${cleanDomain}%`]);
+
+    const pageStats = pagesResult.rows.length > 0 ? {
+      totalClicks: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
+      totalImpressions: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
+      avgCtr: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / pagesResult.rows.length).toFixed(2),
+      avgPosition: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / pagesResult.rows.length).toFixed(1),
+      topPages: pagesResult.rows.slice(0, 3)
+    } : null;
+
+    const queryStats = queriesResult.rows.length > 0 ? {
+      totalClicks: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
+      totalImpressions: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
+      avgCtr: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / queriesResult.rows.length).toFixed(2),
+      avgPosition: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / queriesResult.rows.length).toFixed(1),
+      topQueries: queriesResult.rows.slice(0, 5)
+    } : null;
+
+    const recommendations = [];
+    if (pageStats) {
+      if (parseFloat(pageStats.avgPosition) > 10) {
+        recommendations.push({ type: 'position', message: `Avg position ${pageStats.avgPosition} — optimize content` });
+      }
+      if (parseFloat(pageStats
 
 // ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
