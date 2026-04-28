@@ -8214,46 +8214,6 @@ app.get('/api/fetch-sitemap', async (req, res) => {
   }
 });
 
-// ── GSC Match-Stats Alias (for /api/content prefix) ──
-app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) => {
-  // Forward to the main handler - reuse logic or call internally
-  try {
-    const { profile_id, domain, keyword } = req.body;
-    if (!profile_id || !domain || !keyword) {
-      return res.status(400).json({ success: false, error: 'profile_id, domain, and keyword required' });
-    }
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
-    const pagesResult = await pool.query(`
-      SELECT * FROM gsc_pages
-      WHERE profile_id = $1 AND (domain = $2 OR domain LIKE $3 OR url LIKE $4)
-        AND (keyword ILIKE $5 OR slug ILIKE $6)
-      ORDER BY clicks DESC LIMIT 5
-    `, [profile_id, cleanDomain, `%${cleanDomain}%`, `%${cleanDomain}%`, `%${keyword}%`, `%${keyword}%`]);
-    const queriesResult = await pool.query(`
-      SELECT * FROM gsc_queries
-      WHERE profile_id = $1 AND (query ILIKE $2 OR query ILIKE $3)
-        AND (url = '' OR url LIKE $4)
-      ORDER BY clicks DESC LIMIT 10
-    `, [profile_id, `%${keyword}%`, `%${keyword.split(' ').join('%')}%`, `%${cleanDomain}%`]);
-    const pageStats = pagesResult.rows.length > 0 ? {
-      totalClicks: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
-      totalImpressions: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
-      avgCtr: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / pagesResult.rows.length).toFixed(2),
-      avgPosition: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / pagesResult.rows.length).toFixed(1),
-      topPages: pagesResult.rows.slice(0, 3)
-    } : null;
-    const queryStats = queriesResult.rows.length > 0 ? {
-      totalClicks: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
-      totalImpressions: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
-      avgCtr: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / queriesResult.rows.length).toFixed(2),
-      avgPosition: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / queriesResult.rows.length).toFixed(1),
-      topQueries: queriesResult.rows.slice(0, 5)
-    } : null;
-    res.json({ success: true, pageStats, queryStats });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-
 // GSC AUTO-FILL — /api/gsc/auto-fill
 // Haalt GSC data op voor een specifieke pagina via Service Account
 // Vereist: GSC_SERVICE_ACCOUNT_JSON env var in Railway
