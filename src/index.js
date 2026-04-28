@@ -10302,9 +10302,10 @@ Return ONLY valid JSON with this exact structure:
       keywordData.titleAnalysis = titleAnalysis;
       keywordData.metaAnalysis = metaAnalysis;
 
-      `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links) VALUES ($1,$2,'researched',$3,$4,$5) RETURNING *`,
-      [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks)]
-
+          await pool.query(
+        `UPDATE content_jobs SET status='researched', keyword_data=$1, competitor_data=$2, sitemap_links=$3, updated_at=NOW() WHERE id=$4`,
+        [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobR.rows[0].id]
+      );
     );
 
     // If research_all: do a second AI pass to research full keyword universe
