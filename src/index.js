@@ -2091,7 +2091,7 @@ app.post('/api/fetch-html', async (req, res) => {
     });
 
     await page.goto(fetchUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 1500));
     const html = await page.evaluate(() => document.documentElement.outerHTML);
 
     if (!html || html.length < 500) {
@@ -2521,12 +2521,20 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--memory-pressure-off']
                }).catch(err => { console.error('Job browser launch failed:', err.message); return null; });
                }
-               // ── Core page analysis — shared by bulk jobs and campaign ────
+                              // ── Core page analysis — shared by bulk jobs and campaign ────
                async function internalScanPage(page, scanUrl) {
                const analysis = await page.evaluate((su) => {
-               const text = document.body ? document.body.innerText : '';
-               const cleanText = text.replace(/\s+/g, ' ').trim();
-               const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               let text = document.body ? document.body.innerText : '';
+               let cleanText = text.replace(/\s+/g, ' ').trim();
+               let wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               // Fallback: textContent catches content in DOM but not yet visible (JS frameworks)
+               if (wordCount < 200 && document.body) {
+                 const clone = document.body.cloneNode(true);
+                 clone.querySelectorAll('script, style, noscript').forEach(el => el.remove());
+                 const fbText = clone.textContent.replace(/\s+/g, ' ').trim();
+                 const fbCount = fbText.split(/\s+/).filter(w => w.length > 0).length;
+                 if (fbCount > wordCount) { wordCount = fbCount; cleanText = fbText; text = fbText; }
+               }
                const rawHtml = document.documentElement.outerHTML;
                const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
                h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
@@ -2579,7 +2587,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                });
                try {
                await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
-               await new Promise(r => setTimeout(r, 800)); // let JS render
+               await new Promise(r => setTimeout(r, 1500)); // let JS render              
                } catch(e) {
                // Site unreachable/blocked — skip gracefully, don't waste retry time
                throw new Error('skip:' + e.message.substring(0,60));
@@ -2701,7 +2709,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
                let browser = await getBrowser();
-               // One retry — force fresh browser if first attempt returns null
+                              // One retry — force fresh browser if first attempt returns null
                if (!browser) {
                  browserInstance = null;
                  browser = await getBrowser();
@@ -2711,10 +2719,19 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                await page.setViewport({ width: 1920, height: 1080 });
                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
                await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               await new Promise(r => setTimeout(r, 2000)); // let JS render
                const analysis = await page.evaluate((scanUrlParam) => {
-               const text = document.body ? document.body.innerText : '';
-               const cleanText = text.replace(/\s+/g, ' ').trim();
-               const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               let text = document.body ? document.body.innerText : '';
+               let cleanText = text.replace(/\s+/g, ' ').trim();
+               let wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+               // Fallback: textContent catches content in DOM but not yet visible (JS frameworks)
+               if (wordCount < 200 && document.body) {
+                 const clone = document.body.cloneNode(true);
+                 clone.querySelectorAll('script, style, noscript').forEach(el => el.remove());
+                 const fbText = clone.textContent.replace(/\s+/g, ' ').trim();
+                 const fbCount = fbText.split(/\s+/).filter(w => w.length > 0).length;
+                 if (fbCount > wordCount) { wordCount = fbCount; cleanText = fbText; text = fbText; }
+               }
                const rawHtml = document.documentElement.outerHTML;
                const h1Els = document.querySelectorAll('h1');
                const h1Count = h1Els.length;
@@ -9317,6 +9334,7 @@ app.post('/api/content/graaf-scan', verifyEngineAccess, async (req, res) => {
     await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
     try {
       await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await new Promise(r => setTimeout(r, 1500)); // let JS render
     } catch(e) {
       await page.close();
       // Clean up temp slot even on error
@@ -9329,9 +9347,17 @@ app.post('/api/content/graaf-scan', verifyEngineAccess, async (req, res) => {
 
     // Run the same analysis as the main scanner
     const analysis = await page.evaluate((su) => {
-      const text = document.body ? document.body.innerText : '';
-      const cleanText = text.replace(/\s+/g, ' ').trim();
-      const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+      let text = document.body ? document.body.innerText : '';
+      let cleanText = text.replace(/\s+/g, ' ').trim();
+      let wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+      // Fallback: textContent catches content in DOM but not yet visible (JS frameworks)
+      if (wordCount < 200 && document.body) {
+        const clone = document.body.cloneNode(true);
+        clone.querySelectorAll('script, style, noscript').forEach(el => el.remove());
+        const fbText = clone.textContent.replace(/\s+/g, ' ').trim();
+        const fbCount = fbText.split(/\s+/).filter(w => w.length > 0).length;
+        if (fbCount > wordCount) { wordCount = fbCount; cleanText = fbText; text = fbText; }
+      }
       const rawHtml = document.documentElement.outerHTML;
       const h1Els = document.querySelectorAll('h1'); let h1Text=''; let h1VisibleCount=0; let h1IsHidden=false;
       h1Els.forEach(el => { const s=window.getComputedStyle(el); const hidden=s.display==='none'||s.visibility==='hidden'; if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
