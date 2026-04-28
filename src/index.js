@@ -9449,7 +9449,7 @@ app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) =>
 });
 
 // ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
-const upload = multer({ storage: multer.memoryStorage() });
+// ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
   try {
     const { profile_id, type } = req.body;
@@ -9568,28 +9568,8 @@ const CREDIT_COSTS = {
   'news-generate':   4,   // AI news article generation per batch (up to 3 articles)
 };
 
-
 async function spendCredits(codeId, action) {
   const cost = CREDIT_COSTS[action] || 1;
-  try {
-    const r = await pool.query(
-      `UPDATE engine_access_codes SET credits_used = credits_used + $1 WHERE id = $2 AND use_platform_keys = TRUE AND (platform_credits IS NULL OR platform_credits >= credits_used + $1) RETURNING id`,
-      [cost, codeId]
-    );
-    if (!r.rows.length) {
-      throw new Error('Insufficient platform credits');
-    }
-    // Log the credit spend
-    await pool.query(
-      `INSERT INTO credit_log (code_id, action, credits_spent, detail) VALUES ($1, $2, $3, $4)`,
-      [codeId, action, cost, `Spent ${cost} credits for ${action}`]
-    ).catch(() => {});
-    return true;
-  } catch (e) {
-    console.error('spendCredits error:', e.message);
-    throw e;
-  }
-}  const cost = CREDIT_COSTS[action] || 1;
   try {
     const r = await pool.query(
       `UPDATE engine_access_codes SET credits_used = credits_used + $1 WHERE id = $2 AND use_platform_keys = TRUE AND (platform_credits IS NULL OR (platform_credits - credits_used) >= $1) RETURNING platform_credits, credits_used`,
