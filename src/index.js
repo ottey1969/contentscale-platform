@@ -9589,8 +9589,9 @@ async function spendCredits(codeId, action) {
   } catch (e) {
     console.error('spendCredits error:', e.message);
     throw e;
+    }
   }
-
+}
 function requireCredits(action) {
   return async (req, res, next) => {
     const eu = req.engineUser;
@@ -22454,5 +22455,7 @@ function startTrackerScheduler() {
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
-
+  // ── Start server ───────────────────────────────────────────────────────────
 startServer();
+}
+}
