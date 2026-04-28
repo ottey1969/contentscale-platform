@@ -8217,6 +8217,38 @@ app.get('/api/fetch-sitemap', async (req, res) => {
 // ── GSC CSV Upload ──
 const upload = multer({ storage: multer.memoryStorage() });
 
+// ── GSC CSV Upload Route ──
+app.post('/api/content/gsc/upload', verifyEngineAccess, async (req, res) => {
+  const { profile_id, type } = req.body;
+  if (!profile_id || !type) return res.status(400).json({ success: false, error: 'profile_id and type required' });
+  try {
+    const { data } = req.body;
+    if (!data || !Array.isArray(data)) return res.status(400).json({ success: false, error: 'data array required' });
+    let inserted = 0;
+    for (const row of data) {
+      if (type === 'pages') {
+        await pool.query(
+          `INSERT INTO gsc_pages (profile_id, url, domain, slug, clicks, impressions, ctr, position, keyword)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           ON CONFLICT (profile_id, url) DO UPDATE SET
+           clicks=EXCLUDED.clicks, impressions=EXCLUDED.impressions, ctr=EXCLUDED.ctr, position=EXCLUDED.position, keyword=EXCLUDED.keyword, uploaded_at=NOW()`,
+          [profile_id, row.url, row.domain, row.slug, row.clicks||0, row.impressions||0, row.ctr||0, row.position||0, row.keyword||null]
+        );
+      } else if (type === 'queries') {
+        await pool.query(
+          `INSERT INTO gsc_queries (profile_id, query, clicks, impressions, ctr, position, url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)
+           ON CONFLICT (profile_id, query, url) DO UPDATE SET
+           clicks=EXCLUDED.clicks, impressions=EXCLUDED.impressions, ctr=EXCLUDED.ctr, position=EXCLUDED.position, uploaded_at=NOW()`,
+          [profile_id, row.query, row.clicks||0, row.impressions||0, row.ctr||0, row.position||0, row.url||null]
+        );
+      }
+      inserted++;
+    }
+    res.json({ success: true, inserted, type });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
   try {
     const { profile_id, type } = req.body;
@@ -8365,6 +8397,46 @@ app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
     console.error('GSC match error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+
+// ── GSC Match-Stats Alias (for /api/content prefix) ──
+app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) => {
+  // Forward to the main handler - reuse logic or call internally
+  try {
+    const { profile_id, domain, keyword } = req.body;
+    if (!profile_id || !domain || !keyword) {
+      return res.status(400).json({ success: false, error: 'profile_id, domain, and keyword required' });
+    }
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+    const pagesResult = await pool.query(`
+      SELECT * FROM gsc_pages
+      WHERE profile_id = $1 AND (domain = $2 OR domain LIKE $3 OR url LIKE $4)
+        AND (keyword ILIKE $5 OR slug ILIKE $6)
+      ORDER BY clicks DESC LIMIT 5
+    `, [profile_id, cleanDomain, `%${cleanDomain}%`, `%${cleanDomain}%`, `%${keyword}%`, `%${keyword}%`]);
+    const queriesResult = await pool.query(`
+      SELECT * FROM gsc_queries
+      WHERE profile_id = $1 AND (query ILIKE $2 OR query ILIKE $3)
+        AND (url = '' OR url LIKE $4)
+      ORDER BY clicks DESC LIMIT 10
+    `, [profile_id, `%${keyword}%`, `%${keyword.split(' ').join('%')}%`, `%${cleanDomain}%`]);
+    const pageStats = pagesResult.rows.length > 0 ? {
+      totalClicks: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
+      totalImpressions: pagesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
+      avgCtr: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / pagesResult.rows.length).toFixed(2),
+      avgPosition: (pagesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / pagesResult.rows.length).toFixed(1),
+      topPages: pagesResult.rows.slice(0, 3)
+    } : null;
+    const queryStats = queriesResult.rows.length > 0 ? {
+      totalClicks: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.clicks) || 0), 0),
+      totalImpressions: queriesResult.rows.reduce((sum, r) => sum + (parseInt(r.impressions) || 0), 0),
+      avgCtr: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.ctr) || 0), 0) / queriesResult.rows.length).toFixed(2),
+      avgPosition: (queriesResult.rows.reduce((sum, r) => sum + (parseFloat(r.position) || 0), 0) / queriesResult.rows.length).toFixed(1),
+      topQueries: queriesResult.rows.slice(0, 5)
+    } : null;
+    res.json({ success: true, pageStats, queryStats });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 
