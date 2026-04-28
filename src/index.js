@@ -9480,29 +9480,95 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
       return res.status(400).json({ success: false, error: 'type must be pages or queries' });
     }
 
-  
-  const engineToken = req.headers['x-engine-token'];
-  if (!engineToken) return res.status(401).json({ success: false, error: 'Engine access required' });
-  try {
-    const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [engineToken.trim().toUpperCase()]);
-    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
-    req.engineUser = { isAdmin: false, codeId: r.rows[0].id, code: r.rows[0] };
-    // Inject API keys: use_platform_keys=true → use server env keys (paid users without own keys)
-    if (r.rows[0].use_platform_keys) {
-      if (!req.headers['x-gemini-key']) req.headers['x-gemini-key'] = process.env.GEMINI_API_KEY || r.rows[0].gemini_key || '';
-      if (!req.headers['x-claude-key']) req.headers['x-claude-key'] = process.env.ANTHROPIC_API_KEY || r.rows[0].claude_key || '';
-    } else {
-      if (r.rows[0].gemini_key && !req.headers['x-gemini-key']) req.headers['x-gemini-key'] = r.rows[0].gemini_key;
-      if (r.rows[0].claude_key && !req.headers['x-claude-key']) req.headers['x-claude-key'] = r.rows[0].claude_key;
+    const csvText = req.file.buffer.toString('utf8');
+    const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) {
+      return res.status(400).json({ success: false, error: 'CSV empty or invalid' });
     }
-    // Always inject tracker search keys — per-user keys override platform keys
-    const ec = r.rows[0];
-    if (!req.headers['x-serpapi-key']) req.headers['x-serpapi-key'] = ec.serpapi_key || process.env.SERPAPI_KEY || '';
-    if (!req.headers['x-you-api-key'])        req.headers['x-you-api-key']        = ec.you_api_key        || process.env.YOU_API_KEY        || '';
-    if (!req.headers['x-perplexity-key'])     req.headers['x-perplexity-key']     = ec.perplexity_key     || process.env.PERPLEXITY_API_KEY || '';
-    next();
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-};
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+    const getIdx = (name) => headers.findIndex(h => h.includes(name.toLowerCase()));
+    
+    const urlIdx = getIdx('url') !== -1 ? getIdx('url') : getIdx('page');
+    const clickIdx = getIdx('clicks');
+    const impIdx = getIdx('impressions');
+    const ctrIdx = getIdx('ctr');
+    const posIdx = getIdx('position');
+    const queryIdx = getIdx('query');
+    const keywordIdx = getIdx('keyword') !== -1 ? getIdx('keyword') : queryIdx;
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length < 2) continue;
+      
+      if (type === 'pages') {
+        const url = cols[urlIdx] || '';
+        if (!url || !url.startsWith('http')) continue;
+        rows.push({
+          profile_id: parseInt(profile_id),
+          url: url,
+          clicks: parseInt(cols[clickIdx]) || 0,
+          impressions: parseInt(cols[impIdx]) || 0,
+          ctr: parseFloat(cols[ctrIdx]) || 0,
+          position: parseFloat(cols[posIdx]) || 0,
+          uploaded_at: new Date().toISOString()
+        });
+      } else {
+        const query = cols[queryIdx] || cols[keywordIdx] || '';
+        if (!query) continue;
+        rows.push({
+          profile_id: parseInt(profile_id),
+          query: query,
+          clicks: parseInt(cols[clickIdx]) || 0,
+          impressions: parseInt(cols[impIdx]) || 0,
+          ctr: parseFloat(cols[ctrIdx]) || 0,
+          position: parseFloat(cols[posIdx]) || 0,
+          url: cols[urlIdx] || null,
+          uploaded_at: new Date().toISOString()
+        });
+      }
+    }
+
+    // Bulk insert
+    let inserted = 0;
+    const table = type === 'pages' ? 'gsc_pages' : 'gsc_queries';
+    const uniqueCol = type === 'pages' ? 'url' : 'query';
+    
+    for (const row of rows) {
+      try {
+        if (type === 'pages') {
+          await pool.query(
+            `INSERT INTO gsc_pages (profile_id, url, clicks, impressions, ctr, position, uploaded_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (profile_id, url) DO UPDATE SET
+             clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
+             ctr = EXCLUDED.ctr, position = EXCLUDED.position, uploaded_at = EXCLUDED.uploaded_at`,
+            [row.profile_id, row.url, row.clicks, row.impressions, row.ctr, row.position, row.uploaded_at]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO gsc_queries (profile_id, query, clicks, impressions, ctr, position, url, uploaded_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (profile_id, query, url) DO UPDATE SET
+             clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
+             ctr = EXCLUDED.ctr, position = EXCLUDED.position, uploaded_at = EXCLUDED.uploaded_at`,
+            [row.profile_id, row.query, row.clicks, row.impressions, row.ctr, row.position, row.url, row.uploaded_at]
+          );
+        }
+        inserted++;
+      } catch (e) {
+        console.warn(`[gsc-csv] insert skip: ${e.message}`);
+      }
+    }
+
+    res.json({ success: true, inserted, total: rows.length, type });
+  } catch (error) {
+    console.error('❌ GSC CSV upload error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+  
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
 const resolveSerpapiKey      = (req) => req.headers['x-serpapi-key']       || process.env.SERPAPI_KEY;
