@@ -10305,7 +10305,7 @@ Return ONLY valid JSON with this exact structure:
           await pool.query(
         `UPDATE content_jobs SET status='researched', keyword_data=$1, competitor_data=$2, sitemap_links=$3, updated_at=NOW() WHERE id=$4`,
         [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobR.rows[0].id]
-      );
+      
     );
 
     // If research_all: do a second AI pass to research full keyword universe
