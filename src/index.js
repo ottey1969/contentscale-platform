@@ -10395,21 +10395,21 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
 
  // ── Build REAL internal links pool ──
     const internalLinksPool = [];
-    const locR = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 ORDER BY sort_order`, [profile_id]);
+     const locR = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 ORDER BY sort_order`, [job.profile_id]);
     (locR.rows || []).forEach(loc => {
       if (loc.external_links && loc.location_value) {
         internalLinksPool.push({ text: loc.location_value, url: `/${loc.location_type}/${loc.location_value.toLowerCase().replace(/\s+/g, '-')}` });
       }
     });
-    const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order`, [profile_id]);
+    const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order`, [job.profile_id]);
     (mpR.rows || []).forEach(mp => {
-      internalLinksPool.push({ text: mp.title || mp.primary_keyword, url: mp.url || `/${mp.planned_slug || mp.primary_keyword?.toLowerCase().replace(/\s+/g, '-')}` });
+      internalLinksPool.push({ text: mp.title || mp.primary_keyword, url: mp.url || `/${mp.planned_slug || (mp.primary_keyword ? mp.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}` });
     });
     const artR = await pool.query(`SELECT id, title, slug, primary_keyword FROM content_articles WHERE profile_id=$1 AND status='published' ORDER BY published_at DESC LIMIT 20`, [profile_id]);
     (artR.rows || []).forEach(a => {
-      internalLinksPool.push({ text: a.title || a.primary_keyword, url: `/${a.slug || a.primary_keyword?.toLowerCase().replace(/\s+/g, '-')}` });
+       internalLinksPool.push({ text: a.title || a.primary_keyword, url: `/${a.slug || (a.primary_keyword ? a.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}` });
     });
-    if (prof.domain) {
+    if (job.domain) {
       internalLinksPool.push({ text: 'About Us', url: '/about' });
       internalLinksPool.push({ text: 'Contact', url: '/contact' });
       internalLinksPool.push({ text: 'Services', url: '/services' });
@@ -10446,7 +10446,8 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
       [req.params.jobId]
     );
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
-    const job = jobR.rows[0];
+       const job = jobR.rows[0];
+    const prof = job; // alias for template compatibility
     const brief = safeParse(job.brief, null);
     const kd = safeParse(job.keyword_data, {});
     if (!brief) return res.status(400).json({ success: false, error: 'Generate brief first' });
