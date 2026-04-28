@@ -2593,12 +2593,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                else req.continue();
                });
                try {
-               await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 }).catch(() =>
-                 page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
-               );
-               // Wait for WP/Elementor JS to finish rendering content blocks
-               await page.waitForTimeout(2500);
-               await new Promise(r => setTimeout(r, 800)); // let JS render
+               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               await new Promise(r => setTimeout(r, 1500));
                } catch(e) {
                // Site unreachable/blocked — skip gracefully, don't waste retry time
                throw new Error('skip:' + e.message.substring(0,60));
@@ -2729,10 +2725,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const page = await browser.newPage();
                await page.setViewport({ width: 1920, height: 1080 });
                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-               await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 }).catch(() =>
-                 page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
-               );
-               await page.waitForTimeout(2500);
+               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               await new Promise(r => setTimeout(r, 1500));
                const analysis = await page.evaluate((scanUrlParam) => {
                // Read from WP content containers — body.innerText misses Elementor/WP blocks
                const bodyRaw = document.body ? document.body.innerText : '';
