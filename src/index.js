@@ -2729,9 +2729,17 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const page = await browser.newPage();
                await page.setViewport({ width: 1920, height: 1080 });
                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               await page.goto(scanUrl, { waitUntil: 'networkidle2', timeout: 25000 }).catch(() =>
+                 page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+               );
+               await page.waitForTimeout(2500);
                const analysis = await page.evaluate((scanUrlParam) => {
-               const text = document.body ? document.body.innerText : '';
+               // Read from WP content containers — body.innerText misses Elementor/WP blocks
+               const bodyRaw = document.body ? document.body.innerText : '';
+               const wpSels = ['.page-content','.entry-content','.post-content','.wp-block-html','main','.site-main'];
+               let wpText = '';
+               wpSels.forEach(sel => { try { document.querySelectorAll(sel).forEach(el => { wpText += ' ' + (el.innerText||''); }); } catch(e){} });
+               const text = wpText.trim().length > bodyRaw.trim().length ? wpText : bodyRaw;
                const cleanText = text.replace(/\s+/g, ' ').trim();
                const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
                const rawHtml = document.documentElement.outerHTML;
@@ -2742,7 +2750,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                let h1VisibleCount = 0;
                h1Els.forEach(el => {
                const style = window.getComputedStyle(el);
-               const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+               // Only flag truly hidden — NOT opacity:0 (WP Elementor entrance animations)
+               const isHidden = style.display === 'none' || style.visibility === 'hidden';
                if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
                else { h1IsHidden = true; }
                });
