@@ -915,8 +915,10 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      brief JSONB DEFAULT '{}',
      sitemap_links JSONB DEFAULT '[]',
      created_at TIMESTAMP DEFAULT NOW(),
-     updated_at TIMESTAMP DEFAULT NOW()
+     updated_at TIMESTAMP DEFAULT NOW(),
+     completed_at TIMESTAMP
    )`);
+   await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS content_articles (
      id SERIAL PRIMARY KEY,
      job_id INTEGER REFERENCES content_jobs(id) ON DELETE CASCADE,
