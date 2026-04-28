@@ -9449,7 +9449,7 @@ app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) =>
 });
 
 // ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
-// ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
+const upload = multer({ storage: multer.memoryStorage() });
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
   try {
     const { profile_id, type } = req.body;
