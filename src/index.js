@@ -2524,12 +2524,23 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // ── Core page analysis — shared by bulk jobs and campaign ────
                async function internalScanPage(page, scanUrl) {
                const analysis = await page.evaluate((su) => {
-               // Use full rendered text — body.innerText can miss WP/Elementor content blocks
+               // Get all rendered text — try content containers first, fall back to full body
                const bodyRaw = document.body ? document.body.innerText : '';
-               // Also check WP-specific content containers
-               const wpSels = ['.page-content','.entry-content','.post-content','.wp-block-html','main','.site-main'];
+               const wpSels = [
+                 'article', '#content', '#primary', '#main', '.main-content',
+                 '.page-content', '.entry-content', '.post-content',
+                 '.wp-block-html', '.wp-block-group', '.is-layout-constrained',
+                 'main', '.site-main', '.hentry', '[class*="content"]'
+               ];
                let wpText = '';
-               wpSels.forEach(sel => { try { document.querySelectorAll(sel).forEach(el => { wpText += ' ' + (el.innerText||''); }); } catch(e){} });
+               wpSels.forEach(sel => {
+                 try {
+                   document.querySelectorAll(sel).forEach(el => {
+                     const t = el.innerText || '';
+                     if (t.length > wpText.length) wpText = t;
+                   });
+                 } catch(e) {}
+               });
                const text = wpText.trim().length > bodyRaw.trim().length ? wpText : bodyRaw;
                const cleanText = text.replace(/\s+/g, ' ').trim();
                const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
@@ -2728,11 +2739,25 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
                await new Promise(r => setTimeout(r, 1500));
                const analysis = await page.evaluate((scanUrlParam) => {
-               // Read from WP content containers — body.innerText misses Elementor/WP blocks
+               // Get all rendered text — try content containers first, fall back to full body
                const bodyRaw = document.body ? document.body.innerText : '';
-               const wpSels = ['.page-content','.entry-content','.post-content','.wp-block-html','main','.site-main'];
+               // Try every possible WP/theme content wrapper
+               const wpSels = [
+                 'article', '#content', '#primary', '#main', '.main-content',
+                 '.page-content', '.entry-content', '.post-content',
+                 '.wp-block-html', '.wp-block-group', '.is-layout-constrained',
+                 'main', '.site-main', '.hentry', '[class*="content"]'
+               ];
                let wpText = '';
-               wpSels.forEach(sel => { try { document.querySelectorAll(sel).forEach(el => { wpText += ' ' + (el.innerText||''); }); } catch(e){} });
+               wpSels.forEach(sel => {
+                 try {
+                   document.querySelectorAll(sel).forEach(el => {
+                     const t = el.innerText || '';
+                     if (t.length > wpText.length) wpText = t;
+                   });
+                 } catch(e) {}
+               });
+               // Use whichever source has MORE text
                const text = wpText.trim().length > bodyRaw.trim().length ? wpText : bodyRaw;
                const cleanText = text.replace(/\s+/g, ' ').trim();
                const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
