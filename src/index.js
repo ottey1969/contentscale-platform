@@ -44,6 +44,7 @@ const compression = require('compression');
 const sgMail = require('@sendgrid/mail');
 const axios = require('axios');
 const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 const http   = require('http');
 const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
@@ -9449,7 +9450,7 @@ app.post('/api/content/gsc/match-stats', verifyEngineAccess, async (req, res) =>
 });
 
 // ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
-const upload = multer({ storage: multer.memoryStorage() });
+
 app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
   try {
     const { profile_id, type } = req.body;
