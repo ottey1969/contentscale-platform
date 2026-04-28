@@ -8215,10 +8215,8 @@ app.get('/api/fetch-sitemap', async (req, res) => {
 });
 
 // ── GSC CSV Upload ──
+// ── GSC CSV Upload ──
 const upload = multer({ storage: multer.memoryStorage() });
-
-// ── GSC CSV Upload Route ──
-app.post('/api/content/gsc/upload', verifyEngineAccess, async (req, res) => {
   const { profile_id, type } = req.body;
   if (!profile_id || !type) return res.status(400).json({ success: false, error: 'profile_id and type required' });
   try {
@@ -9517,6 +9515,56 @@ const verifyEngineAccess = async (req, res, next) => {
     const isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]).catch(()=>({rows:[]}));
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
+
+  
+// ── GSC CSV Upload ── (moved here because verifyEngineAccess must be defined first)
+app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
+  try {
+    const { profile_id, type } = req.body;
+    if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+    if (!type || !['pages', 'queries'].includes(type)) {
+      return res.status(400).json({ success: false, error: 'type must be pages or queries' });
+    }
+    const csvText = req.file.buffer.toString('utf8');
+    const rows = parseCSV(csvText);
+    let inserted = 0;
+    for (const row of rows) {
+      if (type === 'pages') {
+        await pool.query(
+          `INSERT INTO gsc_pages (profile_id, url, domain, slug, clicks, impressions, ctr, position, keyword, uploaded_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+           ON CONFLICT (profile_id, url) DO UPDATE SET
+           clicks = EXCLUDED.clicks,
+           impressions = EXCLUDED.impressions,
+           ctr = EXCLUDED.ctr,
+           position = EXCLUDED.position,
+           keyword = EXCLUDED.keyword,
+           uploaded_at = NOW()`,
+          [profile_id, row.url, row.domain, row.slug, parseInt(row.clicks) || 0, parseInt(row.impressions) || 0, parseFloat(row.ctr) || 0, parseFloat(row.position) || 0, row.keyword || null]
+        );
+      } else if (type === 'queries') {
+        await pool.query(
+          `INSERT INTO gsc_queries (profile_id, query, clicks, impressions, ctr, position, url, uploaded_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+           ON CONFLICT (profile_id, query, url) DO UPDATE SET
+           clicks = EXCLUDED.clicks,
+           impressions = EXCLUDED.impressions,
+           ctr = EXCLUDED.ctr,
+           position = EXCLUDED.position,
+           uploaded_at = NOW()`,
+          [profile_id, row.query, parseInt(row.clicks) || 0, parseInt(row.impressions) || 0, parseFloat(row.ctr) || 0, parseFloat(row.position) || 0, row.url || null]
+        );
+      }
+      inserted++;
+    }
+    res.json({ success: true, inserted, type });
+  } catch (e) {
+    console.error('❌ GSC CSV upload error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+  
   const engineToken = req.headers['x-engine-token'];
   if (!engineToken) return res.status(401).json({ success: false, error: 'Engine access required' });
   try {
