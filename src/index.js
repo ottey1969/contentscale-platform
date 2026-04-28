@@ -9479,44 +9479,7 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
     if (!type || !['pages', 'queries'].includes(type)) {
       return res.status(400).json({ success: false, error: 'type must be pages or queries' });
     }
-    const csvText = req.file.buffer.toString('utf8');
-    const rows = parseCSV(csvText);
-    let inserted = 0;
-    for (const row of rows) {
-      if (type === 'pages') {
-        await pool.query(
-          `INSERT INTO gsc_pages (profile_id, url, domain, slug, clicks, impressions, ctr, position, keyword, uploaded_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-           ON CONFLICT (profile_id, url) DO UPDATE SET
-           clicks = EXCLUDED.clicks,
-           impressions = EXCLUDED.impressions,
-           ctr = EXCLUDED.ctr,
-           position = EXCLUDED.position,
-           keyword = EXCLUDED.keyword,
-           uploaded_at = NOW()`,
-          [profile_id, row.url, row.domain, row.slug, parseInt(row.clicks) || 0, parseInt(row.impressions) || 0, parseFloat(row.ctr) || 0, parseFloat(row.position) || 0, row.keyword || null]
-        );
-      } else if (type === 'queries') {
-        await pool.query(
-          `INSERT INTO gsc_queries (profile_id, query, clicks, impressions, ctr, position, url, uploaded_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-           ON CONFLICT (profile_id, query, url) DO UPDATE SET
-           clicks = EXCLUDED.clicks,
-           impressions = EXCLUDED.impressions,
-           ctr = EXCLUDED.ctr,
-           position = EXCLUDED.position,
-           uploaded_at = NOW()`,
-          [profile_id, row.query, parseInt(row.clicks) || 0, parseInt(row.impressions) || 0, parseFloat(row.ctr) || 0, parseFloat(row.position) || 0, row.url || null]
-        );
-      }
-      inserted++;
-    }
-    res.json({ success: true, inserted, type });
-  } catch (e) {
-    console.error('❌ GSC CSV upload error:', e.message);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
+
   
   const engineToken = req.headers['x-engine-token'];
   if (!engineToken) return res.status(401).json({ success: false, error: 'Engine access required' });
