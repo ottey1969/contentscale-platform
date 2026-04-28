@@ -8247,21 +8247,7 @@ const upload = multer({ storage: multer.memoryStorage() });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async (req, res) => {
-  try {
-    const { profile_id, type } = req.body;
-    if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
-    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
-    if (!type || !['pages', 'queries'].includes(type)) {
-      return res.status(400).json({ success: false, error: 'type must be pages or queries' });
-    }
 
-    const csv = require('csv-parse/sync');
-    const records = csv.parse(req.file.buffer.toString(), {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true
-    });
 
     const results = [];
     const errors = [];
