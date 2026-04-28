@@ -2585,11 +2585,11 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                try {
                await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
                await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
-               // Block images/fonts/media to save memory and speed up
+               // Block images/fonts/media to save memory — keep CSS so WP renders correctly
                await page.setRequestInterception(true);
                page.on('request', req => {
                const rt = req.resourceType();
-               if (['image','media','font','stylesheet'].includes(rt)) req.abort();
+               if (['image','media','font'].includes(rt)) req.abort();
                else req.continue();
                });
                try {
