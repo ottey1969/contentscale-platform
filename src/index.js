@@ -8214,39 +8214,6 @@ app.get('/api/fetch-sitemap', async (req, res) => {
   }
 });
 
-// ── GSC CSV Upload ──
-// ── GSC CSV Upload ──
-const upload = multer({ storage: multer.memoryStorage() });
-  const { profile_id, type } = req.body;
-  if (!profile_id || !type) return res.status(400).json({ success: false, error: 'profile_id and type required' });
-  try {
-    const { data } = req.body;
-    if (!data || !Array.isArray(data)) return res.status(400).json({ success: false, error: 'data array required' });
-    let inserted = 0;
-    for (const row of data) {
-      if (type === 'pages') {
-        await pool.query(
-          `INSERT INTO gsc_pages (profile_id, url, domain, slug, clicks, impressions, ctr, position, keyword)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-           ON CONFLICT (profile_id, url) DO UPDATE SET
-           clicks=EXCLUDED.clicks, impressions=EXCLUDED.impressions, ctr=EXCLUDED.ctr, position=EXCLUDED.position, keyword=EXCLUDED.keyword, uploaded_at=NOW()`,
-          [profile_id, row.url, row.domain, row.slug, row.clicks||0, row.impressions||0, row.ctr||0, row.position||0, row.keyword||null]
-        );
-      } else if (type === 'queries') {
-        await pool.query(
-          `INSERT INTO gsc_queries (profile_id, query, clicks, impressions, ctr, position, url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)
-           ON CONFLICT (profile_id, query, url) DO UPDATE SET
-           clicks=EXCLUDED.clicks, impressions=EXCLUDED.impressions, ctr=EXCLUDED.ctr, position=EXCLUDED.position, uploaded_at=NOW()`,
-          [profile_id, row.query, row.clicks||0, row.impressions||0, row.ctr||0, row.position||0, row.url||null]
-        );
-      }
-      inserted++;
-    }
-    res.json({ success: true, inserted, type });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
 
 
     const results = [];
