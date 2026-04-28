@@ -334,9 +334,26 @@
                </div>
                <div id="singleMode">
                   <div class="card max-w-3xl mx-auto">
-                     <div class="flex flex-col sm:flex-row gap-3">
-                        <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
-                        <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary"><i class="fas fa-search"></i> Start Scan</button>
+                     <!-- Toggle: URL vs Paste HTML -->
+                     <div class="flex gap-2 mb-4">
+                        <button id="singleUrlTab" onclick="setSingleInputMode('url')" class="flex-1 p-2 rounded text-sm font-semibold" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;cursor:pointer;">🔗 Scan URL</button>
+                        <button id="singlePasteTab" onclick="setSingleInputMode('paste')" class="flex-1 p-2 rounded text-sm font-semibold" style="background:#374151;color:#d1d5db;border:none;cursor:pointer;">📋 Paste HTML</button>
+                     </div>
+                     <!-- URL Input -->
+                     <div id="singleUrlWrap">
+                        <div class="flex flex-col sm:flex-row gap-3">
+                           <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
+                           <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary"><i class="fas fa-search"></i> Start Scan</button>
+                        </div>
+                     </div>
+                     <!-- Paste HTML Input -->
+                     <div id="singlePasteWrap" class="hidden">
+                        <textarea id="singlePasteInput" rows="8" placeholder="Paste full HTML here... (e.g. from Semrush article, WordPress editor, or browser DevTools → Elements → Copy outerHTML)" class="w-full p-3 rounded text-sm" style="font-family:monospace;font-size:0.78rem;line-height:1.6;"></textarea>
+                        <div class="flex gap-3 mt-3">
+                           <input type="text" id="singlePasteUrl" placeholder="https://example.com (optional — for report label)" class="flex-1 p-3 rounded text-sm">
+                           <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary"><i class="fas fa-search"></i> Scan Pasted HTML</button>
+                        </div>
+                        <p class="text-xs mt-2" style="color:#6b7280!important;">💡 Tip: Open DevTools → Elements → right-click &lt;html&gt; → Copy → Copy outerHTML</p>
                      </div>
                      <div id="singleProgress" class="hidden mt-4">
                         <div class="progress-bar">
@@ -1634,6 +1651,80 @@
          function _stripBadgeComments(html) {
          return html.replace(/\/\*[\s\S]*?\*\//g, '').trim();
          }
+
+         // ── Single Scan: URL vs Paste HTML toggle ─────────────────────────────
+         let singleInputMode = 'url';
+         window.setSingleInputMode = function(mode) {
+           singleInputMode = mode;
+           const urlWrap = document.getElementById('singleUrlWrap');
+           const pasteWrap = document.getElementById('singlePasteWrap');
+           const urlTab = document.getElementById('singleUrlTab');
+           const pasteTab = document.getElementById('singlePasteTab');
+           if (mode === 'url') {
+             urlWrap.classList.remove('hidden');
+             pasteWrap.classList.add('hidden');
+             urlTab.style.cssText = 'background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;cursor:pointer;';
+             pasteTab.style.cssText = 'background:#374151;color:#d1d5db;border:none;cursor:pointer;';
+           } else {
+             urlWrap.classList.add('hidden');
+             pasteWrap.classList.remove('hidden');
+             pasteTab.style.cssText = 'background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;cursor:pointer;';
+             urlTab.style.cssText = 'background:#374151;color:#d1d5db;border:none;cursor:pointer;';
+           }
+         };
+         
+         // ── Scan pasted HTML (no URL fetch needed) ────────────────────────────
+         window.scanPastedHTML = async function() {
+           const html = document.getElementById('singlePasteInput').value.trim();
+           const labelUrl = document.getElementById('singlePasteUrl').value.trim() || 'pasted-html';
+           const btn = document.getElementById('singlePasteBtn');
+           const progress = document.getElementById('singleProgress');
+           const progressBar = document.getElementById('singleProgressBar');
+           const progressText = document.getElementById('singleProgressText');
+           
+           if (!html || html.length < 500) {
+             showToast('❌ Paste at least 500 characters of HTML', '#ef4444');
+             return;
+           }
+           
+           btn.disabled = true;
+           btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analysing...';
+           progress.classList.remove('hidden');
+           progressBar.style.width = '30%';
+           progressText.textContent = 'Parsing pasted HTML...';
+           
+           try {
+             const res = await fetch('/api/scan/paste', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ html, url: labelUrl })
+             });
+             progressBar.style.width = '80%';
+             progressText.textContent = 'Scoring...';
+             const data = await res.json();
+             if (!data.success) throw new Error(data.error || 'Scan failed');
+             displayScanResult(data);
+             progressBar.style.width = '100%';
+             progressText.textContent = 'Complete!';
+             setTimeout(() => { progress.classList.add('hidden'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-search mr-2"></i> Scan Pasted HTML'; }, 1000);
+           } catch (error) {
+             progress.classList.add('hidden');
+             btn.disabled = false;
+             btn.innerHTML = '<i class="fas fa-search mr-2"></i> Scan Pasted HTML';
+             const resultDiv = document.getElementById('singleResult');
+             resultDiv.innerHTML = `
+               <div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:14px;padding:24px;margin-top:16px;text-align:center;">
+                 <div style="font-size:2.5rem;margin-bottom:8px;">❌</div>
+                 <div style="font-weight:800;font-size:1.1rem;color:#f87171!important;margin-bottom:8px;">Scan Failed</div>
+                 <div style="font-size:0.9rem;color:#fca5a5!important;margin-bottom:16px;">${error.message || 'Unknown error'}</div>
+                 <button onclick="document.getElementById('singleResult').classList.add('hidden')" style="background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:8px;padding:10px 20px;font-size:0.85rem;cursor:pointer;">Dismiss</button>
+               </div>`;
+             resultDiv.classList.remove('hidden');
+             resultDiv.scrollIntoView({ behavior: 'smooth' });
+           }
+         };
+
+         
          window._copyBadge = function(type, score) {
          const key = type === 'full' ? '_badgeFull_' : type === 'compact' ? '_badgeCompact_' : '_badgeText_';
          const raw = window[key + score] || '';
