@@ -67,6 +67,7 @@ textarea{resize:vertical;min-height:100px;}
 .news-card{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);}
 .tag{display:inline-block;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:4px;}
 </style>
+<base target="_blank">
 </head>
 <body>
 <div class="header">
@@ -212,6 +213,21 @@ textarea{resize:vertical;min-height:100px;}
         <button class="btn btn-danger" style="font-size:11px;padding:3px 9px;" onclick="resetEngineGSC()">↺ Reset</button>
       </div>
       <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Vul dit in VOOR research — de AI gebruikt jouw echte queries als basis voor keywords en H2-structuur.</div>
+
+      <!-- CSV Upload -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:10px;color:#6b7280;">Pages CSV (GSC → Performance → Pages → Export)</label>
+          <input type="file" id="engGscPagesFile" accept=".csv" onchange="handleEnginePagesCsv(this)" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;cursor:pointer;">
+          <div id="engPagesFileStatus" style="font-size:11px;color:#4ade80;margin-top:4px;display:none;"></div>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:10px;color:#6b7280;">Queries CSV (GSC → Performance → Queries → Export)</label>
+          <input type="file" id="engGscQueriesFile" accept=".csv" onchange="handleEngineQueriesCsv(this)" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;cursor:pointer;">
+          <div id="engQueriesFileStatus" style="font-size:11px;color:#4ade80;margin-top:4px;display:none;"></div>
+        </div>
+      </div>
+
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">
         <div><label>Impressions</label><input id="engImpressions" type="number" placeholder="12500"></div>
         <div><label>Clicks</label><input id="engClicks" type="number" placeholder="180"></div>
@@ -308,6 +324,18 @@ textarea{resize:vertical;min-height:100px;}
         <div style="display:flex;gap:6px;align-items:center;">
           <span id="rwGscStatus" style="font-size:11px;color:#6b7280;"></span>
           <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="autoFillRewriteGSC()" id="btnAutoFillGSC">⚡ Auto-fill from GSC</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:10px;color:#6b7280;">Pages CSV</label>
+          <input type="file" id="rwGscPagesFile" accept=".csv" onchange="handleRewritePagesCsv(this)" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;cursor:pointer;">
+          <div id="rwPagesFileStatus" style="font-size:11px;color:#4ade80;margin-top:4px;display:none;"></div>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:10px;color:#6b7280;">Queries CSV</label>
+          <input type="file" id="rwGscQueriesFile" accept=".csv" onchange="handleRewriteQueriesCsv(this)" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;cursor:pointer;">
+          <div id="rwQueriesFileStatus" style="font-size:11px;color:#4ade80;margin-top:4px;display:none;"></div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
@@ -2538,6 +2566,121 @@ async function loadStudies() {
 }
 
 // ── Reset — opens a modal that requires typing RESET to confirm
+// ── GSC CSV Upload ── parse client-side and auto-fill manual fields
+function parseGscCsv(raw) {
+  var lines = raw.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  if (lines.length < 2) return [];
+  var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g,'').toLowerCase(); });
+  var getIdx = function(name){ return headers.findIndex(function(h){ return h.indexOf(name.toLowerCase()) !== -1; }); };
+  var urlIdx = getIdx('url') !== -1 ? getIdx('url') : getIdx('page');
+  var clickIdx = getIdx('clicks');
+  var impIdx = getIdx('impressions');
+  var ctrIdx = getIdx('ctr');
+  var posIdx = getIdx('position');
+  var queryIdx = getIdx('query');
+  var keywordIdx = getIdx('keyword') !== -1 ? getIdx('keyword') : queryIdx;
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(',').map(function(c){ return c.trim().replace(/^"|"$/g,''); });
+    if (cols.length < 2) continue;
+    if (urlIdx !== -1 && cols[urlIdx] && cols[urlIdx].startsWith('http')) {
+      rows.push({ url: cols[urlIdx], clicks: parseFloat(cols[clickIdx])||0, impressions: parseFloat(cols[impIdx])||0, ctr: parseFloat(cols[ctrIdx])||0, position: parseFloat(cols[posIdx])||0 });
+    } else if ((queryIdx !== -1 && cols[queryIdx]) || (keywordIdx !== -1 && cols[keywordIdx])) {
+      rows.push({ query: cols[queryIdx] || cols[keywordIdx] || '', clicks: parseFloat(cols[clickIdx])||0, impressions: parseFloat(cols[impIdx])||0, ctr: parseFloat(cols[ctrIdx])||0, position: parseFloat(cols[posIdx])||0, url: cols[urlIdx] || null });
+    }
+  }
+  return rows;
+}
+
+function handleEnginePagesCsv(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('engPagesFileStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Parsing…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseGscCsv(e.target.result);
+    if (!rows.length) { statusEl.textContent = '⚠ No valid page rows found'; statusEl.style.color = '#f87171'; return; }
+    var urls = rows.map(function(r){ return r.url; }).filter(Boolean);
+    document.getElementById('engGscPages').value = urls.join('\n');
+    var totalImp = rows.reduce(function(s,r){ return s + (r.impressions||0); }, 0);
+    var totalClk = rows.reduce(function(s,r){ return s + (r.clicks||0); }, 0);
+    var avgPos = rows.reduce(function(s,r){ return s + (r.position||0); }, 0) / rows.length;
+    var avgCtr = rows.reduce(function(s,r){ return s + (r.ctr||0); }, 0) / rows.length;
+    if (totalImp) document.getElementById('engImpressions').value = Math.round(totalImp);
+    if (totalClk) document.getElementById('engClicks').value = Math.round(totalClk);
+    document.getElementById('engPosition').value = avgPos ? avgPos.toFixed(1) : '';
+    document.getElementById('engCtr').value = avgCtr ? avgCtr.toFixed(2) : '';
+    statusEl.style.color = '#4ade80';
+    statusEl.textContent = '✓ ' + rows.length + ' pages loaded · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
+    scheduleDraftSave();
+  };
+  reader.readAsText(file);
+}
+
+function handleEngineQueriesCsv(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('engQueriesFileStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Parsing…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseGscCsv(e.target.result);
+    if (!rows.length) { statusEl.textContent = '⚠ No valid query rows found'; statusEl.style.color = '#f87171'; return; }
+    var queries = rows.map(function(r){ return r.query; }).filter(Boolean);
+    document.getElementById('engGscQueries').value = queries.join('\n');
+    statusEl.style.color = '#4ade80';
+    statusEl.textContent = '✓ ' + rows.length + ' queries loaded';
+    scheduleDraftSave();
+  };
+  reader.readAsText(file);
+}
+
+function handleRewritePagesCsv(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('rwPagesFileStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Parsing…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseGscCsv(e.target.result);
+    if (!rows.length) { statusEl.textContent = '⚠ No valid page rows found'; statusEl.style.color = '#f87171'; return; }
+    var urls = rows.map(function(r){ return r.url; }).filter(Boolean);
+    document.getElementById('rwGscPages').value = urls.join('\n');
+    var totalImp = rows.reduce(function(s,r){ return s + (r.impressions||0); }, 0);
+    var totalClk = rows.reduce(function(s,r){ return s + (r.clicks||0); }, 0);
+    var avgPos = rows.reduce(function(s,r){ return s + (r.position||0); }, 0) / rows.length;
+    var avgCtr = rows.reduce(function(s,r){ return s + (r.ctr||0); }, 0) / rows.length;
+    if (totalImp) document.getElementById('rwImpressions').value = Math.round(totalImp);
+    if (totalClk) document.getElementById('rwClicks').value = Math.round(totalClk);
+    document.getElementById('rwPosition').value = avgPos ? avgPos.toFixed(1) : '';
+    statusEl.style.color = '#4ade80';
+    statusEl.textContent = '✓ ' + rows.length + ' pages loaded · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
+  };
+  reader.readAsText(file);
+}
+
+function handleRewriteQueriesCsv(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('rwQueriesFileStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Parsing…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseGscCsv(e.target.result);
+    if (!rows.length) { statusEl.textContent = '⚠ No valid query rows found'; statusEl.style.color = '#f87171'; return; }
+    var queries = rows.map(function(r){ return r.query; }).filter(Boolean);
+    document.getElementById('rwGscQueries').value = queries.join('\n');
+    statusEl.style.color = '#4ade80';
+    statusEl.textContent = '✓ ' + rows.length + ' queries loaded';
+  };
+  reader.readAsText(file);
+}
+
 function resetEngineGSC() {
   // Build modal once, reuse
   var overlay = document.getElementById('resetConfirmOverlay');
