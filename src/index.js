@@ -9591,7 +9591,6 @@ async function spendCredits(codeId, action) {
     throw e;
     }
   }
-}
 function requireCredits(action) {
   return async (req, res, next) => {
     const eu = req.engineUser;
@@ -22457,5 +22456,3 @@ setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
   // ── Start server ───────────────────────────────────────────────────────────
 startServer();
-}
-}
