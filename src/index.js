@@ -2639,7 +2639,61 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
             if (!analysis.hasOpenGraph) {
             recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200x630px), og:url' });
                }
-               const finalRecommendations = recommendations.length > 0 ? recommendations : [{
+               // ── NEAR-MISS: What to improve to reach 100/100 ───────────────────────────────
+               const nearMissRecs = [];
+               // Content depth: 2500+ gets max, but more is always better
+               if (analysis.wordCount >= 2500 && analysis.wordCount < 3500) {
+                 nearMissRecs.push({ title: '📈 Boost to Elite: Add 500–1,000 More Words', description: `You have ${analysis.wordCount} words (good). 500–1,000 more pushes toward maximum depth.`, priority: 'low', action: "Add a deeper case study, an expanded FAQ, or a comparison table.", learning: "Pages with 3,500+ words capture 2.3x more long-tail keywords.", target: '3,500+ words for maximum topical authority' });
+               }
+               // Stats: 8+ gets max, but 12+ is elite
+               if (analysis.statsFound >= 8 && analysis.statsFound < 12) {
+                 nearMissRecs.push({ title: '📈 Boost to Elite: Add 4+ More Statistics', description: `You have ${analysis.statsFound} data points. 12+ is the elite tier.`, priority: 'low', action: "Find 4 more recent 2024–2025 statistics from .gov, .edu, or industry research.", learning: "Pages with 12+ cited statistics earn 2.1x more featured snippets.", target: '12+ cited statistics for maximum evidence signal' });
+               }
+               // Expert quotes: 4+ gets max, but 6+ is elite
+               if (analysis.expertQuoteCount >= 4 && analysis.expertQuoteCount < 6) {
+                 nearMissRecs.push({ title: '💬 Boost to Elite: Add 2 More Expert Quotes', description: `You have ${analysis.expertQuoteCount} expert quotes. 6+ unlocks full E-E-A-T authority.`, priority: 'low', action: "Add 2 more quotes from recognized industry experts with full attribution.", learning: "6+ expert quotes signal comprehensive research depth.", target: '6+ attributed expert quotes' });
+               }
+               // Case studies: 2+ gets max, but 3+ is elite
+               if (analysis.caseStudyCount >= 2 && analysis.caseStudyCount < 3) {
+                 nearMissRecs.push({ title: '📊 Boost to Elite: Add a Third Case Study', description: `You have ${analysis.caseStudyCount} case studies. A third adds maximum credibility.`, priority: 'low', action: "Add one more real-world example with before/after metrics.", learning: "Three diverse case studies signal consistent, repeatable results across scenarios.", target: '3 case studies with quantifiable results' });
+               }
+               // H2s: 5+ gets max, but 8+ is ideal
+               if (analysis.h2Count >= 5 && analysis.h2Count < 8) {
+                 nearMissRecs.push({ title: '📑 Boost to Elite: Add 3 More H2 Sections', description: `You have ${analysis.h2Count} H2 headings. 8+ maximizes topical coverage.`, priority: 'low', action: "Break large sections into smaller subtopics. Each new H2 is a new ranking opportunity.", learning: "Pages with 8+ H2s capture 34% more long-tail keywords.", target: '8+ H2 headings with unique, keyword-rich angles' });
+               }
+               // Internal links: 8+ gets max points in computeScore but could be more
+               if (analysis.internalLinks >= 8 && analysis.internalLinks < 12) {
+                 nearMissRecs.push({ title: '🔗 Boost to Elite: Add 4 More Internal Links', description: `You have ${analysis.internalLinks} internal links. 12+ maximizes link equity flow.`, priority: 'low', action: "Find 4 unlinked topic mentions and add contextual links to related pages.", learning: "12+ internal links distribute authority across your entire domain.", target: '12+ internal links with descriptive anchor text' });
+               }
+               // External links: any is good, 5+ is elite
+               if (analysis.externalLinks >= 3 && analysis.externalLinks < 5) {
+                 nearMissRecs.push({ title: '🌐 Boost to Elite: Add 2 More External Links', description: `You have ${analysis.externalLinks} external links. 5+ signals maximum research depth.`, priority: 'low', action: "Link to 2 more .gov, .edu, or industry publications.", learning: "5+ outbound links to authoritative sources signal comprehensive research.", target: '5+ external links to .gov, .edu, or recognized publications' });
+               }
+               // Images: alt text on all images gets points, but 8+ images is better
+               if (analysis.images >= 5 && analysis.images < 8) {
+                 nearMissRecs.push({ title: '🖼️ Boost to Elite: Add 3 More Images', description: `You have ${analysis.images} images. 8+ maximizes visual engagement.`, priority: 'low', action: "Add 3 more screenshots, infographics, or diagrams.", learning: "Pages with 8+ images get 2.1x more social shares.", target: '8+ images with descriptive alt text' });
+               }
+               // Twitter Card: gives +1, easy win
+               if (!analysis.hasTwitterCard) {
+                 nearMissRecs.push({ title: '🐦 Quick Win: Add Twitter Card Meta Tags', description: 'No Twitter Card tags detected. 2-minute fix for +1 point.', priority: 'low', action: "Add twitter:card, twitter:title, twitter:description, twitter:image to your <head>.", learning: "Twitter Card tags improve social sharing appearance.", target: 'twitter:card, twitter:title, twitter:description, twitter:image' });
+               }
+               // Canonical: gives +1, easy win
+               if (!analysis.hasCanonical) {
+                 nearMissRecs.push({ title: '🔗 Quick Win: Add Canonical Tag', description: 'No canonical tag. 1-minute fix for +1 point.', priority: 'low', action: `Add <link rel="canonical" href="${scanUrl}"> to your <head>.`, learning: "Canonical tags prevent duplicate content issues.", target: 'Self-referencing canonical tag' });
+               }
+               // Meta description: if exists but not 140-165, can improve
+               if (analysis.metaDescriptionLength > 0 && (analysis.metaDescriptionLength < 140 || analysis.metaDescriptionLength > 165)) {
+                 nearMissRecs.push({ title: '📝 Quick Win: Optimize Meta Description Length', description: `Your meta description is ${analysis.metaDescriptionLength} characters. 140–165 is the sweet spot.`, priority: 'low', action: "Rewrite to 140–165 characters with a compelling CTA.", learning: "Meta descriptions at 140–165 characters have the highest CTR.", target: '140–165 characters with keyword + call-to-action' });
+               }
+               // Meta title: if exists but not 50-60, can improve
+               if (analysis.metaTitleLength > 0 && (analysis.metaTitleLength < 50 || analysis.metaTitleLength > 60)) {
+                 nearMissRecs.push({ title: '🏷️ Quick Win: Optimize Meta Title Length', description: `Your title is ${analysis.metaTitleLength} characters. 50–60 is optimal.`, priority: 'low', action: "Rewrite to 50–60 characters with primary keyword first.", learning: "Titles at 50–60 characters have the highest click-through rate.", target: '50–60 characters with primary keyword in first 30 characters' });
+               }
+
+               // Combine: regular recommendations first, then near-miss boosts
+               const allRecommendations = [...recommendations, ...nearMissRecs];
+
+               const finalRecommendations = allRecommendations.length > 0 ? allRecommendations : [{
                title: '🏆 Elite Content — Outstanding Work!',
                description: 'Your page meets all GRAAF Framework, CRAFT, and Technical SEO requirements.',
                priority: 'none',
