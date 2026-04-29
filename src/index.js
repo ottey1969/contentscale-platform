@@ -962,12 +962,13 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      competitor_data JSONB DEFAULT '[]',
      brief JSONB DEFAULT '{}',
      sitemap_links JSONB DEFAULT '[]',
+     created_by INTEGER,
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW(),
      completed_at TIMESTAMP
    )`);
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP`).catch(()=>{});
-   await client.query(`CREATE TABLE IF NOT EXISTS content_articles (
+   await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS created_by INTEGER`).catch(()=>{});
      id SERIAL PRIMARY KEY,
      job_id INTEGER REFERENCES content_jobs(id) ON DELETE CASCADE,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -10530,10 +10531,24 @@ Return ONLY valid JSON with this exact structure:
       keywordData.metaAnalysis = metaAnalysis;
 
       // Create a job record so research can be persisted and referenced later
-      const jobR = await pool.query(
-        `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links, created_by) VALUES ($1, $2, 'researched', $3, $4, $5, $6) RETURNING *`,
-        [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), req.engineUser ? (req.engineUser.codeId || req.engineUser.id) : null]
-      );
+      // Fallback: if created_by column doesn't exist yet, skip it
+      let jobR;
+      try {
+        jobR = await pool.query(
+          `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links, created_by) VALUES ($1, $2, 'researched', $3, $4, $5, $6) RETURNING *`,
+          [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), req.engineUser ? (req.engineUser.codeId || req.engineUser.id) : null]
+        );
+      } catch (insertErr) {
+        if (insertErr.message && insertErr.message.includes('created_by')) {
+          // Fallback: insert without created_by for backward compatibility
+          jobR = await pool.query(
+            `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links) VALUES ($1, $2, 'researched', $3, $4, $5) RETURNING *`,
+            [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks)]
+          );
+        } else {
+          throw insertErr; // re-throw if it's a different error
+        }
+      }
 
     // If research_all: do a second AI pass to research full keyword universe
     let allKeywordData = null;
