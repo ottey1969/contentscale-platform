@@ -67,7 +67,6 @@ textarea{resize:vertical;min-height:100px;}
 .news-card{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);}
 .tag{display:inline-block;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:4px;}
 </style>
-<base target="_blank">
 </head>
 <body>
 <div class="header">
@@ -326,6 +325,8 @@ textarea{resize:vertical;min-height:100px;}
           <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="autoFillRewriteGSC()" id="btnAutoFillGSC">⚡ Auto-fill from GSC</button>
         </div>
       </div>
+
+      <!-- CSV Upload -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         <div style="flex:1;min-width:200px;">
           <label style="font-size:10px;color:#6b7280;">Pages CSV</label>
@@ -338,6 +339,7 @@ textarea{resize:vertical;min-height:100px;}
           <div id="rwQueriesFileStatus" style="font-size:11px;color:#4ade80;margin-top:4px;display:none;"></div>
         </div>
       </div>
+
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
         <div><label>Impressions</label><input id="rwImpressions" type="number" placeholder="10000"></div>
         <div><label>Clicks</label><input id="rwClicks" type="number" placeholder="0"></div>
@@ -2566,7 +2568,6 @@ async function loadStudies() {
 }
 
 // ── Reset — opens a modal that requires typing RESET to confirm
-// ── GSC CSV Upload ── parse client-side and auto-fill manual fields
 function parseGscCsv(raw) {
   var lines = raw.split(/\r?\n/).filter(function(l){ return l.trim(); });
   if (lines.length < 2) return [];
@@ -3217,6 +3218,9 @@ function renderTrackerPagesList() {
     var aiY = snap.ai_bing_cited ? '<span style="color:#4ade80;">✅ You.com</span>' : '<span style="color:#6b7280;">— You.com</span>';
     var lastChecked = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never checked';
     var pending = parseInt(p.pending_changes || 0);
+    // GSC baseline badge
+    var hasGsc = p.gsc_impressions || p.gsc_clicks || p.gsc_position;
+    var gscBadge = hasGsc ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.25);margin-left:6px;">📊 GSC Baseline</span>' : '';
     // Parse recommendations safely
     var recs = snap.recommendations || null;
     if (recs && typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { recs = null; } }
@@ -3235,7 +3239,7 @@ function renderTrackerPagesList() {
     return '<div data-tracker-page-id="' + p.id + '" style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
       '<div style="display:flex;align-items:center;gap:12px;">' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + '</div>' +
+          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + gscBadge + '</div>' +
           '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + ' · ' + lastChecked + '</div>' +
           '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + ' ' + aiY + '</div>' +
           recHtml +
@@ -3388,6 +3392,22 @@ async function openTrackerDetail(pageId) {
     var snaps = await api('/api/tracker/pages/' + pageId + '/snapshots');
     var snapList = (snaps.snapshots || []).slice(0, 20).reverse(); // oldest first for chart
 
+    // ── GSC Baseline Card (from rewrite-time data) ───────────────────────────
+    var baselineHtml = '';
+    if (page && (page.gsc_impressions || page.gsc_clicks || page.gsc_position)) {
+      var gscItems = [];
+      if (page.gsc_position) gscItems.push('<div style="text-align:center;"><div style="font-size:1.6rem;font-weight:800;color:#fbbf24;">#' + page.gsc_position + '</div><div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Avg Position</div></div>');
+      if (page.gsc_impressions) gscItems.push('<div style="text-align:center;"><div style="font-size:1.6rem;font-weight:800;color:#60a5fa;">' + Number(page.gsc_impressions).toLocaleString() + '</div><div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Impressions</div></div>');
+      if (page.gsc_clicks) gscItems.push('<div style="text-align:center;"><div style="font-size:1.6rem;font-weight:800;color:#4ade80;">' + Number(page.gsc_clicks).toLocaleString() + '</div><div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Clicks</div></div>');
+      if (page.gsc_ctr) gscItems.push('<div style="text-align:center;"><div style="font-size:1.6rem;font-weight:800;color:#a78bfa;">' + parseFloat(page.gsc_ctr).toFixed(2) + '%</div><div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">CTR</div></div>');
+      baselineHtml = '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">📊 GSC Baseline <span style="font-weight:400;color:#4b5563;">(captured at time of rewrite)</span></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">' +
+          gscItems.join('') +
+        '</div>' +
+      '</div>';
+    }
+
     // ── Position history chart (SVG) ────────────────────────────────────────
     var chartHtml = '';
     var posSnaps = snapList.filter(function(s) { return s.google_position !== null; });
@@ -3504,7 +3524,7 @@ async function openTrackerDetail(pageId) {
       return;
     }
 
-    body.innerHTML = chartHtml + timelineHtml + recsHtml;
+    body.innerHTML = baselineHtml + chartHtml + timelineHtml + recsHtml;
   } catch(e) {
     body.innerHTML = '<div style="color:#f87171;padding:20px 0;">Error: ' + e.message + '</div>';
   }

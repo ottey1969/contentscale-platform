@@ -617,6 +617,15 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_engine_url_idx ON tracker_pages(engine_code_id, url) WHERE engine_code_id IS NOT NULL`).catch(()=>{});
    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_null_engine_url_idx ON tracker_pages(url) WHERE engine_code_id IS NULL`).catch(()=>{});
 
+   // ── GSC baseline data migration ────────────────────────────────────────────
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_impressions INTEGER`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_clicks INTEGER`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_position NUMERIC(6,1)`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_ctr NUMERIC(5,2)`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_queries JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_pages JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_keyword VARCHAR(500)`).catch(()=>{});
+
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
      page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
@@ -12880,24 +12889,46 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
     });
 
     // ── Auto-add to tracker_pages (every 3 days, scoped to engine user) ──────
+    let trackerPageId = null;
     if(rw.original_url) {
       try {
         const eu = req.engineUser;
         const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
         const tUrl = rw.original_url.startsWith('http') ? rw.original_url : 'https://' + rw.original_url;
         const tKeyword = rw.gsc_keyword || rw.new_seed_keyword || null;
-        // Upsert: update keyword/frequency if URL already tracked, else insert
+        // Upsert: update keyword/frequency + GSC baseline if URL already tracked, else insert
         const conflictClause = codeId
-          ? `ON CONFLICT (engine_code_id, url) WHERE engine_code_id IS NOT NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days'`
-          : `ON CONFLICT (url) WHERE engine_code_id IS NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days'`;
-        await pool.query(
-          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at)
-           VALUES ($1,$2,$3,$4,$5,'3days',NOW()) ` + conflictClause,
+          ? `ON CONFLICT (engine_code_id, url) WHERE engine_code_id IS NOT NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days', gsc_impressions=EXCLUDED.gsc_impressions, gsc_clicks=EXCLUDED.gsc_clicks, gsc_position=EXCLUDED.gsc_position, gsc_ctr=EXCLUDED.gsc_ctr, gsc_queries=EXCLUDED.gsc_queries, gsc_pages=EXCLUDED.gsc_pages, gsc_keyword=EXCLUDED.gsc_keyword`
+          : `ON CONFLICT (url) WHERE engine_code_id IS NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days', gsc_impressions=EXCLUDED.gsc_impressions, gsc_clicks=EXCLUDED.gsc_clicks, gsc_position=EXCLUDED.gsc_position, gsc_ctr=EXCLUDED.gsc_ctr, gsc_queries=EXCLUDED.gsc_queries, gsc_pages=EXCLUDED.gsc_pages, gsc_keyword=EXCLUDED.gsc_keyword`;
+        const tIns = await pool.query(
+          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
+           VALUES ($1,$2,$3,$4,$5,'3days',NOW(),$6,$7,$8,$9,$10,$11,$12) ` + conflictClause + ` RETURNING id`,
           [codeId, rw.profile_id||null, tUrl,
            tUrl.split('/').filter(Boolean).pop()||'/',
-           tKeyword]
-        ).catch(()=>{});
-        console.log('[tracker] Auto-added from rewrite:', tUrl);
+           tKeyword,
+           rw.gsc_impressions || null,
+           rw.gsc_clicks || null,
+           rw.gsc_position || null,
+           ctrCalc ? parseFloat(ctrCalc) : null,
+           (Array.isArray(analysis.gsc_queries) && analysis.gsc_queries.length) ? JSON.stringify(analysis.gsc_queries) : null,
+           (Array.isArray(analysis.gsc_pages) && analysis.gsc_pages.length) ? JSON.stringify(analysis.gsc_pages) : null,
+           rw.gsc_keyword || null]
+        ).catch(()=>{null});
+        trackerPageId = tIns && tIns.rows && tIns.rows[0] ? tIns.rows[0].id : null;
+        console.log('[tracker] Auto-added from rewrite:', tUrl, 'pageId=', trackerPageId);
+
+        // ── Baseline snapshot: store the GSC data as the starting point ──────────
+        if (trackerPageId && (rw.gsc_position || rw.gsc_impressions || rw.gsc_clicks)) {
+          await pool.query(
+            `INSERT INTO tracker_snapshots (page_id, checked_at, google_position, google_impressions, google_clicks, google_ctr, recommendations, notes)
+             VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7)`,
+            [trackerPageId, rw.gsc_position || null, rw.gsc_impressions || null, rw.gsc_clicks || null,
+             ctrCalc ? parseFloat(ctrCalc) : null,
+             JSON.stringify([{ title: 'GSC Baseline recorded', priority: 'low', action: 'Baseline data captured at time of rewrite', expected_impact: 'Reference point for future comparisons' }]),
+             'Baseline GSC data captured at time of rewrite']
+          ).catch(e => console.warn('[tracker] Baseline snapshot failed:', e.message));
+          console.log('[tracker] Baseline snapshot created for page', trackerPageId);
+        }
       } catch(e) { console.warn('[tracker] Auto-add failed:', e.message); }
     }
   } catch(e) {
@@ -21737,7 +21768,8 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
 });
 
 app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
-  const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days' } = req.body;
+  const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days',
+          gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'url required' });
   try {
     const eu = req.engineUser;
@@ -21745,16 +21777,21 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
     const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
     const r = await pool.query(
-      `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW()) RETURNING *`,
-      [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency]
+      `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
+       gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null,
+       gsc_queries ? JSON.stringify(gsc_queries) : null,
+       gsc_pages ? JSON.stringify(gsc_pages) : null,
+       gsc_keyword || null]
     );
     res.json({ success: true, page: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
-  const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected } = req.body;
+  const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected,
+          gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
   try {
     // Ownership check for non-admins
     const eu = req.engineUser;
@@ -21770,6 +21807,13 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     if(check_frequency!==undefined){fields.push(`check_frequency=$${i++}`);vals.push(check_frequency);}
     if(is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(!!is_active);}
     if(gsc_connected!==undefined){fields.push(`gsc_connected=$${i++}`);vals.push(!!gsc_connected);}
+    if(gsc_impressions!==undefined){fields.push(`gsc_impressions=$${i++}`);vals.push(gsc_impressions===null?null:parseInt(gsc_impressions));}
+    if(gsc_clicks!==undefined){fields.push(`gsc_clicks=$${i++}`);vals.push(gsc_clicks===null?null:parseInt(gsc_clicks));}
+    if(gsc_position!==undefined){fields.push(`gsc_position=$${i++}`);vals.push(gsc_position===null?null:parseFloat(gsc_position));}
+    if(gsc_ctr!==undefined){fields.push(`gsc_ctr=$${i++}`);vals.push(gsc_ctr===null?null:parseFloat(gsc_ctr));}
+    if(gsc_queries!==undefined){fields.push(`gsc_queries=$${i++}`);vals.push(gsc_queries?JSON.stringify(gsc_queries):null);}
+    if(gsc_pages!==undefined){fields.push(`gsc_pages=$${i++}`);vals.push(gsc_pages?JSON.stringify(gsc_pages):null);}
+    if(gsc_keyword!==undefined){fields.push(`gsc_keyword=$${i++}`);vals.push(gsc_keyword);}
     if(!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${i}`, vals);
