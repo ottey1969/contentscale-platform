@@ -9728,6 +9728,16 @@ async function spendCredits(codeId, action) {
   }
 }
 
+// Helper: safely parse profile.locations from PostgreSQL json_agg (may be string or array)
+function safeProfileLocations(profile) {
+  if (!profile) return [];
+  if (typeof profile.locations === 'string') {
+    try { profile.locations = JSON.parse(profile.locations); } catch(e) { profile.locations = []; }
+  }
+  if (!Array.isArray(profile.locations)) profile.locations = [];
+  return profile.locations;
+}
+
 function requireCredits(action) {
   return async (req, res, next) => {
     try {
@@ -10290,6 +10300,8 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
+    safeProfileLocations(profile);
+
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -11633,6 +11645,7 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     const profileR = await pool.query('SELECT * FROM content_profiles WHERE id=$1', [profile_id]);
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
+    safeProfileLocations(profile);
 
     const ytKey = process.env.YOUTUBE_API_KEY || '';
     let transcript = '';
@@ -12271,6 +12284,7 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
     );
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
+    safeProfileLocations(profile);
 
     // ═══ GSC AUTO-FILL when user didn't supply GSC data ═══
     let gscData = {
@@ -13461,6 +13475,7 @@ async function processBulkItemExecute(job, item) {
 
     const profileR = await pool.query(`SELECT * FROM content_profiles WHERE id=$1`, [job.profile_id]);
     const profile = profileR.rows[0];
+    safeProfileLocations(profile);
 
     const competitorsManual = analysis.competitors_manual || [];
     const competitorBlock = competitorsManual.length
@@ -13807,6 +13822,7 @@ app.post('/api/content/stats-study', verifyEngineAccess, requireCredits('stats-s
     const profileR = await pool.query(`SELECT * FROM content_profiles WHERE id=$1`, [profile_id]);
     if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
     const profile = profileR.rows[0];
+    safeProfileLocations(profile);
 
     // ── 1. RESEARCH: Serper searches for real stats sources ──────────────────
     const _statsSerpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
