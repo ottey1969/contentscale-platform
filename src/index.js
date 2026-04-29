@@ -20186,10 +20186,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <!-- Stats -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
                     <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">AI Overview cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
                     <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgGraaf" style="color:#e5e7eb;">—</div><div class="lbl">Avg GRAAF score</div></div>
                 </div>
 
                 <!-- Client filter -->
@@ -21169,6 +21172,45 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
             if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
             if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
+
+            // ── New aggregate KPIs ────────────────────────────────────────────────────
+            let pagesWithPos = 0, totalPosGain = 0;
+            let totalGraaf = 0, pagesWithGraaf = 0;
+            let citedCount = 0;
+            withLatest.forEach(p => {
+                const base = p.baseline_snapshot || {};
+                const curr = p.latest_snapshot || {};
+                if (base.google_position && curr.google_position) {
+                    pagesWithPos++;
+                    totalPosGain += (base.google_position - curr.google_position);
+                }
+                if (curr.score) { pagesWithGraaf++; totalGraaf += curr.score; }
+                if (curr.ai_google_overview_cited || curr.ai_perplexity_cited || curr.ai_bing_cited) citedCount++;
+            });
+            const avgPosGain = pagesWithPos ? (totalPosGain / pagesWithPos).toFixed(1) : null;
+            const avgGraaf = pagesWithGraaf ? Math.round(totalGraaf / pagesWithGraaf) : null;
+            const citationRate = withLatest.length ? Math.round((citedCount / withLatest.length) * 100) : 0;
+
+            if (el('trStatAvgPosGain')) {
+                if (avgPosGain !== null) {
+                    const gainNum = parseFloat(avgPosGain);
+                    el('trStatAvgPosGain').textContent = (gainNum > 0 ? '+' : '') + avgPosGain;
+                    el('trStatAvgPosGain').style.color = gainNum > 0 ? '#4ade80' : gainNum < 0 ? '#f87171' : '#e5e7eb';
+                } else {
+                    el('trStatAvgPosGain').textContent = '—';
+                    el('trStatAvgPosGain').style.color = '#e5e7eb';
+                }
+            }
+            if (el('trStatAvgGraaf')) {
+                if (avgGraaf !== null) {
+                    el('trStatAvgGraaf').textContent = avgGraaf + '/100';
+                    el('trStatAvgGraaf').style.color = avgGraaf >= 70 ? '#4ade80' : avgGraaf >= 50 ? '#fbbf24' : '#f87171';
+                } else {
+                    el('trStatAvgGraaf').textContent = '—';
+                    el('trStatAvgGraaf').style.color = '#e5e7eb';
+                }
+            }
+            if (el('trStatCitationRate')) el('trStatCitationRate').textContent = citationRate + '%';
         }
 
         function renderTrackerPages() {
@@ -21193,7 +21235,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function renderTrackerPageCard(p) {
             const snap = p.latest_snapshot;
             const pending = parseInt(p.pending_changes||0);
-            const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks'};
+            const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
             const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '—';
             const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
 
@@ -21205,6 +21247,31 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
                 posPill = '<span class="tr-badge" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;">#'+pos+'</span>';
             }
+
+            // GRAAF score badge
+            const graafBadge = (snap?.score)
+                ? '<span class="tr-badge" style="background:#2e1065;color:#a78bfa;margin-left:6px;">🎯 '+snap.score+'/100</span>'
+                : '';
+
+            // GSC baseline badge
+            const gscBadge = (p.gsc_impressions || p.gsc_clicks || p.gsc_position)
+                ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;margin-left:6px;">📊 GSC</span>'
+                : '';
+
+            // Classification badge
+            let clsBadge = '';
+            if (p.latest_classification) {
+                const cls = p.latest_classification;
+                const clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
+                const clsEmoji = cls.status === 'healthy' ? '🟢' : cls.status === 'attention' ? '🟡' : cls.status === 'opportunity' ? '💡' : '🔴';
+                const clsLabel = cls.status === 'healthy' ? 'HEALTHY' : cls.status === 'attention' ? 'NEEDS REFRESH' : cls.status === 'opportunity' ? 'OPPORTUNITY' : 'NEEDS REWRITE';
+                clsBadge = '<span class="tr-badge" style="background:'+clsColor+'22;color:'+clsColor+';border:1px solid '+clsColor+'44;margin-left:6px;">'+clsEmoji+' '+clsLabel+' '+(cls.score||0)+'/100</span>';
+            }
+
+            // Fetch reliability warning
+            const fetchWarning = (p.fetch_reliable === false)
+                ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">⚠️ fetch unreliable</span>'
+                : '';
 
             // AI citation badges
             const gBadge = snap
@@ -21232,6 +21299,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ? '<button onclick="openChangesModalById('+p.id+')" class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
                 : '';
 
+            // Manual HTML paste CTA for unreliable pages
+            const manualCta = (p.fetch_reliable === false && (!p.html_content || p.html_content.length < 500))
+                ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;">📋 Paste HTML manually for GRAAF scan</button></div>'
+                : '';
+
             const borderColor = p.is_active ? '#7e22ce' : '#374151';
             const dotHtml = p.is_active
                 ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
@@ -21246,13 +21318,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
                 +dotHtml
                 +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
-                +clientHtml
+                +graafBadge+gscBadge+clsBadge+fetchWarning
                 +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
                 +'</div>'
                 +'<div style="margin-bottom:8px;">'
                 +'<a href="'+p.url+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;">'+p.url+'</a>'
                 +kwHtml
                 +'</div>'
+                +manualCta
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
                 +posPill+gBadge+pBadge+bBadge
                 +'</div></div>'
@@ -22761,30 +22834,34 @@ async function runTrackerCheck(page, geminiKey, keys) {
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-  // ── 1. Fetch live HTML with stability guards ─────────────────────────────────
+  // ── 1. Fetch live HTML ──────────────────────────────────────────────────────
+  // ALTIJD proberen te fetchen. Als het resultaat suspicious is (JS-shell, bot-block),
+  // behoud de cached html_content (bv. handmatig geplakt). Pas als de fetch GOED is,
+  // overschrijven we de cache. De hash-comparatie geldt ALLEEN voor betrouwbare fetches.
   _trSetStep(pageId, 'html_hash', 'running', 'Fetching live page content…');
 
   function isSuspiciousHtml(html) {
-    if (!html || html.length < 500) return 'too_small (<500 bytes)';
+    if (!html || html.length < 500) return 'too_small';
     const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const textRatio = textOnly.length / html.length;
-    if (textRatio < 0.05) return 'low_text_ratio (' + Math.round(textRatio*100) + '%)';
+    if (textRatio < 0.05) return 'low_text_ratio';
     const pTags = (html.match(/<p[\s>]/gi) || []).length;
     const articleTags = (html.match(/<article[\s>]/gi) || []).length;
     const mainTags = (html.match(/<main[\s>]/gi) || []).length;
     const h1h2Tags = (html.match(/<h[12][\s>]/gi) || []).length;
-    if (pTags < 3 && articleTags === 0 && mainTags === 0 && h1h2Tags === 0) return 'no_content_tags (p=' + pTags + ',article=' + articleTags + ')';
+    if (pTags < 3 && articleTags === 0 && mainTags === 0 && h1h2Tags === 0) return 'no_content_tags';
     const rootMarkers = ['id="root"', 'id="__next"', 'id="app"', 'id="__nuxt"', 'window.__INITIAL_STATE__', 'window.__DATA__'];
     const hasRoot = rootMarkers.some(m => html.includes(m));
     const scriptCount = (html.match(/<script[\s>]/gi) || []).length;
-    if (hasRoot && scriptCount > 5 && pTags < 5) return 'js_spa (scripts=' + scriptCount + ',p=' + pTags + ')';
+    if (hasRoot && scriptCount > 5 && pTags < 5) return 'js_spa';
     return null; // not suspicious
   }
 
-  let htmlSource = 'cached';
-  let fetchReliable = true;
+  let effectiveHtml = page.html_content || '';   // wat we uiteindelijk gaan analyseren
+  let effectiveHash = page.last_page_hash || ''; // hash die hoort bij effectiveHtml
+  let fetchReliable = true;                      // is de fetch te vertrouwen?
+  let htmlSource = 'cached';                     // waar komt de HTML vandaan?
 
-  // Always attempt a live fetch first (to detect changes), but be smart about it
   if (page.url) {
     try {
       const liveResp = await fetch(page.url, {
@@ -22793,102 +22870,103 @@ async function runTrackerCheck(page, geminiKey, keys) {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9,nl;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
-          'DNT': '1',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Cache-Control': 'max-age=0'
+          'DNT': '1', 'Connection': 'keep-alive', 'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none', 'Sec-Fetch-User': '?1', 'Cache-Control': 'max-age=0'
         },
         signal: AbortSignal.timeout(15000)
       });
+
       if (liveResp.ok) {
         const liveHtml = await liveResp.text();
         const suspicion = isSuspiciousHtml(liveHtml);
+
         if (!suspicion) {
-          // Good fetch — use it, but only overwrite DB if it's better than cached
-          const cachedLen = (page.html_content || '').length;
-          if (liveHtml.length >= cachedLen * 0.8) {
-            page.html_content = liveHtml;
-            htmlSource = 'live_fresh';
-            _trSetStep(pageId, 'html_hash', 'done', 'Fetched live: ' + Math.round(liveHtml.length/1024) + 'KB');
-          } else {
-            // Live fetch smaller than cached — keep cached, might be JS-rendered shell
-            htmlSource = 'cached_live_suspicious';
-            fetchReliable = false;
-            _trSetStep(pageId, 'html_hash', 'done', 'Live fetch ' + Math.round(liveHtml.length/1024) + 'KB suspicious (' + suspicion + ') — using cached ' + Math.round(cachedLen/1024) + 'KB');
-          }
-        } else {
-          // Suspicious — likely JS SPA or bot block
+          // ✅ Goede fetch — gebruik het, sla op, hash is betrouwbaar
+          effectiveHtml = liveHtml;
+          htmlSource = 'live_fresh';
+          _trSetStep(pageId, 'html_hash', 'done', '✅ Live fetch: ' + Math.round(effectiveHtml.length/1024) + 'KB');
+        } else if (page.html_content && page.html_content.length > 500) {
+          // ⚠️ Fetch is suspicious, maar we hebben al betrouwbare cached HTML → behoud die
           fetchReliable = false;
-          htmlSource = 'cached_suspicious_live';
-          if (!page.html_content) {
-            // No cached HTML — store suspicious one anyway so we have SOMETHING
-            page.html_content = liveHtml;
-            _trSetStep(pageId, 'html_hash', 'done', '⚠️ Live fetch suspicious (' + suspicion + ') — no cached HTML, stored anyway (' + Math.round(liveHtml.length/1024) + 'KB)');
-          } else {
-            _trSetStep(pageId, 'html_hash', 'done', '⚠️ Live fetch suspicious (' + suspicion + ') — using cached ' + Math.round(page.html_content.length/1024) + 'KB');
-          }
+          htmlSource = 'cached_unreliable_fetch';
+          effectiveHtml = page.html_content; // behoud handmatig geplakte HTML
+          _trSetStep(pageId, 'html_hash', 'done', '⚠️ Fetch suspicious (' + suspicion + ') — behoud handmatige HTML (' + Math.round(effectiveHtml.length/1024) + 'KB)');
+        } else {
+          // ⚠️ Fetch is suspicious en we hebben geen cached HTML → gebruik toch, maar markeer unreliable
+          fetchReliable = false;
+          htmlSource = 'fallback_suspicious';
+          effectiveHtml = liveHtml;
+          _trSetStep(pageId, 'html_hash', 'done', '⚠️ Fetch suspicious (' + suspicion + ') — geen cache, gebruik toch (' + Math.round(effectiveHtml.length/1024) + 'KB)');
         }
       } else {
+        // ❌ HTTP error — gebruik cached HTML als die er is
         fetchReliable = false;
-        _trSetStep(pageId, 'html_hash', 'done', 'Live fetch HTTP ' + liveResp.status + ' — using cached HTML if available');
+        htmlSource = page.html_content ? 'cached_http_error' : 'none_http_error';
+        if (page.html_content) effectiveHtml = page.html_content;
+        _trSetStep(pageId, 'html_hash', 'done', '❌ Live HTTP ' + liveResp.status + (effectiveHtml ? ' — cached HTML behouden' : ' — geen HTML beschikbaar'));
       }
     } catch(e) {
       fetchReliable = false;
-      _trSetStep(pageId, 'html_hash', 'done', 'Live fetch failed: ' + e.message.substring(0,60) + ' — using cached');
+      htmlSource = page.html_content ? 'cached_fetch_error' : 'none_fetch_error';
+      if (page.html_content) effectiveHtml = page.html_content;
+      _trSetStep(pageId, 'html_hash', 'done', '❌ Live fetch error: ' + e.message.substring(0,60) + (effectiveHtml ? ' — cached behouden' : ' — geen HTML'));
     }
   }
 
-  // Compute hash from the HTML we decided to use
-  if (page.html_content) {
-    snapshot.html_hash = crypto.createHash('sha256').update(page.html_content).digest('hex').substring(0,16);
-    _trSetStep(pageId, 'html_hash', 'done', 'Hash: ' + snapshot.html_hash + ' (' + Math.round(page.html_content.length/1024) + 'KB, source: ' + htmlSource + ')');
+  // Hash altijd berekenen over de HTML die we gaan analyseren
+  if (effectiveHtml && effectiveHtml.length > 200) {
+    effectiveHash = crypto.createHash('sha256').update(effectiveHtml).digest('hex').substring(0,16);
+    snapshot.html_hash = effectiveHash;
+    _trSetStep(pageId, 'html_hash', 'done', 'Hash: ' + effectiveHash + ' (' + Math.round(effectiveHtml.length/1024) + 'KB, ' + htmlSource + ')');
   } else {
-    _trSetStep(pageId, 'html_hash', 'done', 'No HTML — add URL manually or paste HTML');
+    _trSetStep(pageId, 'html_hash', 'done', 'Geen HTML — handmatig toevoegen aangeraden');
   }
 
-  // ── 1b. GRAAF Score scan with STABILITY GUARD ──────────────────────────────
-  _trSetStep(pageId, 'graaf_score', 'running', 'Checking content quality stability…');
+  // ── 1b. GRAAF Score scan ────────────────────────────────────────────────────
+  // Stabiliteit: alleen als de fetch betrouwbaar was, vergelijken we hashes.
+  // Als handmatig verwijderd → geen cached HTML → altijd frisse scan.
+  // Als fetch suspicious → altijd frisse scan (want hash is van lege JS-shell).
+  _trSetStep(pageId, 'graaf_score', 'running', 'GRAAF content quality scan…');
 
-  let graafSource = 'fresh_scan';
   let graafScore = null;
   let graafBreakdown = null;
   let graafRecs = null;
 
-  if (page.html_content && page.html_content.length > 200) {
-    // STABILITY GUARD: compare hash with previous snapshot
-    const prevSnapR = await pool.query(
-      `SELECT html_hash, score, graaf_breakdown, graaf_recommendations FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`,
-      [pageId]
-    );
-    const prevSnap = prevSnapR.rows[0] || null;
+  if (effectiveHtml && effectiveHtml.length > 200) {
 
-    if (prevSnap && prevSnap.html_hash === snapshot.html_hash && prevSnap.score !== null) {
-      // CONTENT UNCHANGED — inherit previous GRAAF score for stability
-      graafScore = prevSnap.score;
-      graafBreakdown = prevSnap.graaf_breakdown;
-      graafRecs = prevSnap.graaf_recommendations;
-      graafSource = 'stable_inherited';
-      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + graafScore + '/100 (unchanged content — inherited from previous scan)');
-    } else {
-      // CONTENT CHANGED or first scan — run fresh GRAAF
+    // STABILITY GUARD — alleen bij betrouwbare fetches
+    let inherited = false;
+    if (fetchReliable) {
+      const prevSnapR = await pool.query(
+        `SELECT html_hash, score, graaf_breakdown, graaf_recommendations FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`,
+        [pageId]
+      );
+      const prevSnap = prevSnapR.rows[0] || null;
+      if (prevSnap && prevSnap.html_hash === effectiveHash && prevSnap.score !== null) {
+        graafScore = prevSnap.score;
+        graafBreakdown = prevSnap.graaf_breakdown;
+        graafRecs = prevSnap.graaf_recommendations;
+        inherited = true;
+        _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + graafScore + '/100 (stabiel — content ongewijzigd)');
+      }
+    }
+
+    if (!inherited) {
+      // Frisse scan — altijd bij suspicious fetch, nieuwe pagina, of content gewijzigd
       try {
-        const graafResult = graafScanHtml(page.html_content, page.url || '');
+        const graafResult = graafScanHtml(effectiveHtml, page.url || '');
         if (graafResult) {
           graafScore = graafResult.totalScore || graafResult.score || null;
           graafBreakdown = graafResult.breakdown || null;
           graafRecs = graafResult.recommendations || null;
-          const gLabel = graafResult.quality || 'Unknown';
-          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + (graafScore || 0) + '/100 (' + gLabel + ', fresh scan)');
+          _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100' + (fetchReliable ? '' : ' (handmatige scan aangeraden voor nauwkeurigheid)'));
         } else {
-          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan returned no result');
+          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan geen resultaat');
         }
       } catch(e) {
         console.warn('[tracker-graaf]', e.message);
-        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error: ' + e.message.substring(0,40));
+        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error');
       }
     }
 
@@ -22896,18 +22974,26 @@ async function runTrackerCheck(page, geminiKey, keys) {
     snapshot.graaf_breakdown = graafBreakdown;
     snapshot.graaf_recommendations = graafRecs;
 
-    // Persist working HTML + hash + score to tracker_pages for autobatch stability
-    await pool.query(
-      `UPDATE tracker_pages SET html_content=$1, last_page_hash=$2, last_graaf_score=$3, fetch_reliable=$4 WHERE id=$5`,
-      [page.html_content, snapshot.html_hash, graafScore, fetchReliable, pageId]
-    ).catch(e => console.warn('[tracker] page state save failed:', e.message));
+    // Bewaar de html_content ALLEEN als het betrouwbaar is, of als er niets beters is.
+    // Handmatig geplakte HTML wordt NIET overschreven door een suspicious fetch.
+    const shouldSaveHtml = (
+      fetchReliable ||                     // goede fetch → altijd opslaan
+      !page.html_content ||                // geen cache → sla toch op
+      (effectiveHtml === page.html_content) // al dezelfde → niets veranderd
+    );
+    if (shouldSaveHtml) {
+      await pool.query(
+        `UPDATE tracker_pages SET html_content=$1, last_page_hash=$2, last_graaf_score=$3, fetch_reliable=$4 WHERE id=$5`,
+        [effectiveHtml, effectiveHash, graafScore, fetchReliable, pageId]
+      ).catch(e => console.warn('[tracker] page state save failed:', e.message));
+    }
 
   } else {
-    _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF skipped — no HTML content');
-    // Try to inherit last known score for stability
+    _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF overgeslagen — geen HTML');
+    // Fallback naar laatst bekende score voor continuïteit
     if (page.last_graaf_score) {
       snapshot.score = page.last_graaf_score;
-      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + page.last_graaf_score + '/100 (inherited from last known score)');
+      _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + page.last_graaf_score + '/100 (laatst bekende score)');
     }
   }
 

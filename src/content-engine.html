@@ -67,7 +67,6 @@ textarea{resize:vertical;min-height:100px;}
 .news-card{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);}
 .tag{display:inline-block;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:4px;}
 </style>
-<base target="_blank">
 </head>
 <body>
 <div class="header">
@@ -3369,6 +3368,7 @@ function renderTrackerPagesList() {
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + gscBadge + graafBadge + clsBadge + '</div>' +
           '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + ' · ' + lastChecked + (!fetchReliable ? ' · <span style="color:#fbbf24;">⚠️ fetch unreliable</span>' : '') + '</div>' +
+          (!fetchReliable && (!p.html_content || p.html_content.length < 500) ? '<div style="margin-top:6px;"><button onclick="openTrackerEditHtml(' + p.id + ')" style="font-size:11px;padding:4px 10px;background:#713f12;border:1px solid #fbbf24;border-radius:6px;color:#fef9c3;cursor:pointer;">📋 Handmatig HTML plakken voor GRAAF scan</button></div>' : '') +
           '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + ' ' + aiY + '</div>' +
           recHtml +
         '</div>' +
@@ -3634,6 +3634,36 @@ async function copyReportEmail(pageId) {
   } catch(e) { toast('Copy failed: ' + e.message); }
 }
 
+// ── Handmatig HTML plakken voor pagina's die niet goed gefetched kunnen worden ──
+function openTrackerEditHtml(pageId) {
+  var page = _trPages.find(function(p) { return p.id === pageId; });
+  if (!page) { toast('Pagina niet gevonden'); return; }
+
+  // Re-use het bestaande add/edit modal maar vul het in voor edit
+  var modal = document.getElementById('trackerAddModal');
+  var form = document.getElementById('trackerAddForm');
+  var title = document.getElementById('trackerModalTitle');
+
+  title.textContent = '📋 Handmatig HTML plakken — ' + (page.title || page.url);
+  form.reset();
+  document.getElementById('trAddUrl').value = page.url || '';
+  document.getElementById('trAddSlug').value = page.slug || '';
+  document.getElementById('trAddTitle').value = page.title || '';
+  document.getElementById('trAddKeyword').value = page.keyword || '';
+  document.getElementById('trAddProfile').value = page.profile_id || '';
+  document.getElementById('trAddFrequency').value = page.check_frequency || '3days';
+  document.getElementById('trAddGscConnected').checked = !!page.gsc_connected;
+
+  // Toon de HTML textarea met hint
+  var htmlField = document.getElementById('trAddHtml');
+  htmlField.value = page.html_content || '';
+  htmlField.placeholder = 'Plak hier de volledige HTML broncode van de pagina...\n\nTip: In Chrome → DevTools (F12) → Elements tab → <html> tag → Copy → Copy outerHTML\n\nOf voor Semrush blogs: view-source:https://... en copy-paste alles.';
+
+  // Markeer dat dit een edit is
+  form.dataset.editId = pageId;
+  modal.classList.remove('hidden');
+}
+
 async function pushTrackerToRewrite(pageId) {
   var btn = document.querySelector('[onclick="pushTrackerToRewrite(' + pageId + ')"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
@@ -3886,7 +3916,22 @@ async function openTrackerDetail(pageId) {
       return;
     }
 
-    body.innerHTML = graafHtml + baselineHtml + chartHtml + timelineHtml + recsHtml;
+    // ── Handmatige HTML CTA (als fetch unreliable is) ─────────────────────────
+    var manualCtaHtml = '';
+    if (page && page.fetch_reliable === false) {
+      manualCtaHtml = '<div style="margin-bottom:16px;background:#1a1500;border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:14px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+          '<div style="font-size:20px;">⚠️</div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:13px;font-weight:600;color:#fbbf24;">URL scan niet betrouwbaar</div>' +
+            '<div style="font-size:11px;color:#9ca3af;margin-top:2px;">Deze pagina (zoals Semrush) geeft een lege JS-shell bij automatische fetch. Plak handmatig de HTML voor een accurate GRAAF score.</div>' +
+          '</div>' +
+          '<button onclick="openTrackerEditHtml(' + pageId + ')" style="flex-shrink:0;font-size:11px;padding:6px 12px;background:#713f12;border:1px solid #fbbf24;border-radius:6px;color:#fef9c3;cursor:pointer;font-weight:600;">📋 Handmatig HTML plakken</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    body.innerHTML = manualCtaHtml + graafHtml + baselineHtml + chartHtml + timelineHtml + recsHtml;
   } catch(e) {
     body.innerHTML = '<div style="color:#f87171;padding:20px 0;">Error: ' + e.message + '</div>';
   }
