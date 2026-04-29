@@ -625,6 +625,9 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_queries JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_pages JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_keyword VARCHAR(500)`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_page_hash VARCHAR(64)`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_graaf_score INTEGER`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS fetch_reliable BOOLEAN DEFAULT TRUE`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -648,6 +651,9 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      score INTEGER,
      notes TEXT
    )`).catch(()=>{});
+   // GRAAF score stability columns
+   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS graaf_breakdown JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS graaf_recommendations JSONB`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
      id SERIAL PRIMARY KEY,
@@ -22755,59 +22761,154 @@ async function runTrackerCheck(page, geminiKey, keys) {
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-  // ── 1. Fetch live HTML if not stored, then hash ─────────────────────────────
+  // ── 1. Fetch live HTML with stability guards ─────────────────────────────────
   _trSetStep(pageId, 'html_hash', 'running', 'Fetching live page content…');
-  if(!page.html_content && page.url) {
-    try {
-      const liveResp = await fetch(page.url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale-Tracker/1.0)' },
-        signal: AbortSignal.timeout(15000)
-      });
-      if(liveResp.ok) {
-        const liveHtml = await liveResp.text();
-        if(liveHtml && liveHtml.length > 200) {
-          page.html_content = liveHtml;
-          // Persist to DB so next check skips the fetch (will be updated on rewrite)
-          await pool.query('UPDATE tracker_pages SET html_content=$1 WHERE id=$2', [liveHtml, pageId])
-            .catch(e => console.warn('[tracker] html_content save failed:', e.message));
-          _trSetStep(pageId, 'html_hash', 'done', 'Fetched live: ' + Math.round(liveHtml.length/1024) + 'KB stored');
-        } else {
-          _trSetStep(pageId, 'html_hash', 'done', 'Live fetch returned empty — no content');
-        }
-      } else {
-        _trSetStep(pageId, 'html_hash', 'done', 'Live fetch HTTP ' + liveResp.status + ' — add HTML manually');
-      }
-    } catch(e) {
-      _trSetStep(pageId, 'html_hash', 'done', 'Live fetch failed: ' + e.message.substring(0,60));
-    }
-  }
-  if(page.html_content) {
-    snapshot.html_hash = crypto.createHash('sha256').update(page.html_content).digest('hex').substring(0,16);
-    if(!page.html_content.includes('Fetched')) _trSetStep(pageId, 'html_hash', 'done', 'Hash: ' + snapshot.html_hash + ' (' + Math.round(page.html_content.length/1024) + 'KB)');
-  } else {
-    _trSetStep(pageId, 'html_hash', 'done', 'No HTML — add URL manually or check access');
+
+  function isSuspiciousHtml(html) {
+    if (!html || html.length < 500) return 'too_small (<500 bytes)';
+    const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const textRatio = textOnly.length / html.length;
+    if (textRatio < 0.05) return 'low_text_ratio (' + Math.round(textRatio*100) + '%)';
+    const pTags = (html.match(/<p[\s>]/gi) || []).length;
+    const articleTags = (html.match(/<article[\s>]/gi) || []).length;
+    const mainTags = (html.match(/<main[\s>]/gi) || []).length;
+    const h1h2Tags = (html.match(/<h[12][\s>]/gi) || []).length;
+    if (pTags < 3 && articleTags === 0 && mainTags === 0 && h1h2Tags === 0) return 'no_content_tags (p=' + pTags + ',article=' + articleTags + ')';
+    const rootMarkers = ['id="root"', 'id="__next"', 'id="app"', 'id="__nuxt"', 'window.__INITIAL_STATE__', 'window.__DATA__'];
+    const hasRoot = rootMarkers.some(m => html.includes(m));
+    const scriptCount = (html.match(/<script[\s>]/gi) || []).length;
+    if (hasRoot && scriptCount > 5 && pTags < 5) return 'js_spa (scripts=' + scriptCount + ',p=' + pTags + ')';
+    return null; // not suspicious
   }
 
-  // ── 1b. GRAAF Score scan on live HTML ───────────────────────────────────────
-  _trSetStep(pageId, 'graaf_score', 'running', 'Running GRAAF content quality scan…');
-  if (page.html_content && page.html_content.length > 200) {
+  let htmlSource = 'cached';
+  let fetchReliable = true;
+
+  // Always attempt a live fetch first (to detect changes), but be smart about it
+  if (page.url) {
     try {
-      const graafResult = graafScanHtml(page.html_content, page.url || '');
-      if (graafResult) {
-        snapshot.score = graafResult.totalScore || graafResult.score || null;
-        snapshot.graaf_breakdown = graafResult.breakdown || null;
-        snapshot.graaf_recommendations = graafResult.recommendations || null;
-        const gLabel = graafResult.quality || 'Unknown';
-        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + (snapshot.score || 0) + '/100 (' + gLabel + ')');
+      const liveResp = await fetch(page.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9,nl;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0'
+        },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (liveResp.ok) {
+        const liveHtml = await liveResp.text();
+        const suspicion = isSuspiciousHtml(liveHtml);
+        if (!suspicion) {
+          // Good fetch — use it, but only overwrite DB if it's better than cached
+          const cachedLen = (page.html_content || '').length;
+          if (liveHtml.length >= cachedLen * 0.8) {
+            page.html_content = liveHtml;
+            htmlSource = 'live_fresh';
+            _trSetStep(pageId, 'html_hash', 'done', 'Fetched live: ' + Math.round(liveHtml.length/1024) + 'KB');
+          } else {
+            // Live fetch smaller than cached — keep cached, might be JS-rendered shell
+            htmlSource = 'cached_live_suspicious';
+            fetchReliable = false;
+            _trSetStep(pageId, 'html_hash', 'done', 'Live fetch ' + Math.round(liveHtml.length/1024) + 'KB suspicious (' + suspicion + ') — using cached ' + Math.round(cachedLen/1024) + 'KB');
+          }
+        } else {
+          // Suspicious — likely JS SPA or bot block
+          fetchReliable = false;
+          htmlSource = 'cached_suspicious_live';
+          if (!page.html_content) {
+            // No cached HTML — store suspicious one anyway so we have SOMETHING
+            page.html_content = liveHtml;
+            _trSetStep(pageId, 'html_hash', 'done', '⚠️ Live fetch suspicious (' + suspicion + ') — no cached HTML, stored anyway (' + Math.round(liveHtml.length/1024) + 'KB)');
+          } else {
+            _trSetStep(pageId, 'html_hash', 'done', '⚠️ Live fetch suspicious (' + suspicion + ') — using cached ' + Math.round(page.html_content.length/1024) + 'KB');
+          }
+        }
       } else {
-        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan returned no result');
+        fetchReliable = false;
+        _trSetStep(pageId, 'html_hash', 'done', 'Live fetch HTTP ' + liveResp.status + ' — using cached HTML if available');
       }
     } catch(e) {
-      console.warn('[tracker-graaf]', e.message);
-      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error: ' + e.message.substring(0,40));
+      fetchReliable = false;
+      _trSetStep(pageId, 'html_hash', 'done', 'Live fetch failed: ' + e.message.substring(0,60) + ' — using cached');
     }
+  }
+
+  // Compute hash from the HTML we decided to use
+  if (page.html_content) {
+    snapshot.html_hash = crypto.createHash('sha256').update(page.html_content).digest('hex').substring(0,16);
+    _trSetStep(pageId, 'html_hash', 'done', 'Hash: ' + snapshot.html_hash + ' (' + Math.round(page.html_content.length/1024) + 'KB, source: ' + htmlSource + ')');
+  } else {
+    _trSetStep(pageId, 'html_hash', 'done', 'No HTML — add URL manually or paste HTML');
+  }
+
+  // ── 1b. GRAAF Score scan with STABILITY GUARD ──────────────────────────────
+  _trSetStep(pageId, 'graaf_score', 'running', 'Checking content quality stability…');
+
+  let graafSource = 'fresh_scan';
+  let graafScore = null;
+  let graafBreakdown = null;
+  let graafRecs = null;
+
+  if (page.html_content && page.html_content.length > 200) {
+    // STABILITY GUARD: compare hash with previous snapshot
+    const prevSnapR = await pool.query(
+      `SELECT html_hash, score, graaf_breakdown, graaf_recommendations FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`,
+      [pageId]
+    );
+    const prevSnap = prevSnapR.rows[0] || null;
+
+    if (prevSnap && prevSnap.html_hash === snapshot.html_hash && prevSnap.score !== null) {
+      // CONTENT UNCHANGED — inherit previous GRAAF score for stability
+      graafScore = prevSnap.score;
+      graafBreakdown = prevSnap.graaf_breakdown;
+      graafRecs = prevSnap.graaf_recommendations;
+      graafSource = 'stable_inherited';
+      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + graafScore + '/100 (unchanged content — inherited from previous scan)');
+    } else {
+      // CONTENT CHANGED or first scan — run fresh GRAAF
+      try {
+        const graafResult = graafScanHtml(page.html_content, page.url || '');
+        if (graafResult) {
+          graafScore = graafResult.totalScore || graafResult.score || null;
+          graafBreakdown = graafResult.breakdown || null;
+          graafRecs = graafResult.recommendations || null;
+          const gLabel = graafResult.quality || 'Unknown';
+          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + (graafScore || 0) + '/100 (' + gLabel + ', fresh scan)');
+        } else {
+          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan returned no result');
+        }
+      } catch(e) {
+        console.warn('[tracker-graaf]', e.message);
+        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error: ' + e.message.substring(0,40));
+      }
+    }
+
+    snapshot.score = graafScore;
+    snapshot.graaf_breakdown = graafBreakdown;
+    snapshot.graaf_recommendations = graafRecs;
+
+    // Persist working HTML + hash + score to tracker_pages for autobatch stability
+    await pool.query(
+      `UPDATE tracker_pages SET html_content=$1, last_page_hash=$2, last_graaf_score=$3, fetch_reliable=$4 WHERE id=$5`,
+      [page.html_content, snapshot.html_hash, graafScore, fetchReliable, pageId]
+    ).catch(e => console.warn('[tracker] page state save failed:', e.message));
+
   } else {
     _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF skipped — no HTML content');
+    // Try to inherit last known score for stability
+    if (page.last_graaf_score) {
+      snapshot.score = page.last_graaf_score;
+      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + page.last_graaf_score + '/100 (inherited from last known score)');
+    }
   }
 
   if(keyword) {
@@ -23087,12 +23188,14 @@ Zero generic advice. Skip anything our content already clearly has.`;
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
-       recommendations,html_hash,score)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
-     snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null, snapshot.html_hash, snapshot.score]
+     snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null, snapshot.html_hash, snapshot.score,
+     snapshot.graaf_breakdown ? JSON.stringify(snapshot.graaf_breakdown) : null,
+     snapshot.graaf_recommendations ? JSON.stringify(snapshot.graaf_recommendations) : null]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
