@@ -1850,7 +1850,29 @@ async function autoFillRewriteGSC() {
       body: JSON.stringify({ pageUrl: url })
     });
     var d = await r.json();
-    if (!d.success) throw new Error(d.error || 'GSC fetch failed');
+    if (!d.success) {
+      // GSC failed — show helpful message, NEVER block manual input
+      var hint = d.hint || 'Enter GSC data manually below or upload CSV files.';
+      var code = d.code || '';
+      if (code === 'GSC_ACCESS_DENIED') {
+        statusEl.textContent = '⚠️ GSC access denied — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
+      } else if (code === 'GSC_NO_DATA') {
+        statusEl.textContent = '⚠️ No GSC data yet — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('ℹ️ ' + d.error + ' ' + hint, 'orange');
+      } else if (code === 'GSC_AUTH_FAILED') {
+        statusEl.textContent = '⚠️ GSC not connected — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
+      } else {
+        statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('⚠️ ' + (d.error || 'GSC unavailable') + ' You can always enter data manually.', 'orange');
+      }
+      return; // Don't throw — let user continue with manual input
+    }
     var g = d.data;
     document.getElementById('rwImpressions').value = g.impressions || 0;
     document.getElementById('rwClicks').value = g.clicks || 0;
@@ -1861,9 +1883,9 @@ async function autoFillRewriteGSC() {
     statusEl.style.color = '#4ade80';
     toast('✅ GSC data filled — ' + (g.queryCount || 0) + ' queries found');
   } catch(e) {
-    statusEl.textContent = '✗ ' + e.message;
-    statusEl.style.color = '#f87171';
-    toast('GSC autofill failed: ' + e.message, 'red');
+    statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+    statusEl.style.color = '#fbbf24';
+    toast('⚠️ GSC unavailable: ' + e.message + '. You can always enter data manually below.', 'orange');
   } finally {
     btn.disabled = false; btn.innerHTML = '⚡ Auto-fill from GSC';
   }
@@ -2729,7 +2751,29 @@ async function refreshEngineGSC() {
       body: JSON.stringify({ pageUrl: url })
     });
     var d = await r.json();
-    if (!d.success) throw new Error(d.error || 'GSC fetch failed');
+    if (!d.success) {
+      // GSC failed — show helpful message, NEVER block manual input
+      var hint = d.hint || 'Enter GSC data manually below or upload CSV files.';
+      var code = d.code || '';
+      if (code === 'GSC_ACCESS_DENIED') {
+        statusEl.textContent = '⚠️ GSC access denied — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
+      } else if (code === 'GSC_NO_DATA') {
+        statusEl.textContent = '⚠️ No GSC data yet — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('ℹ️ ' + d.error + ' ' + hint, 'orange');
+      } else if (code === 'GSC_AUTH_FAILED') {
+        statusEl.textContent = '⚠️ GSC not connected — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
+      } else {
+        statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+        statusEl.style.color = '#fbbf24';
+        toast('⚠️ ' + (d.error || 'GSC unavailable') + ' You can always enter data manually.', 'orange');
+      }
+      return; // Don't throw — let user continue with manual input
+    }
     var g = d.data;
     document.getElementById('engImpressions').value = g.impressions || 0;
     document.getElementById('engClicks').value = g.clicks || 0;
@@ -2742,9 +2786,9 @@ async function refreshEngineGSC() {
     toast('✅ GSC refreshed — ' + (g.queryCount || 0) + ' queries found');
     scheduleDraftSave();
   } catch(e) {
-    statusEl.textContent = '✗ ' + e.message;
-    statusEl.style.color = '#f87171';
-    toast('GSC refresh failed: ' + e.message, 'red');
+    statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+    statusEl.style.color = '#fbbf24';
+    toast('⚠️ GSC unavailable: ' + e.message + '. You can always enter data manually below.', 'orange');
   } finally {
     btn.disabled = false; btn.innerHTML = '🔄 Refresh GSC';
   }

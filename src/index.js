@@ -8439,11 +8439,33 @@ app.post('/api/gsc/auto-fill', async (req, res) => {
       ? (e.response.data.error.message || e.response.data.error)
       : e.message;
     console.error('[gsc] error:', msg);
-    let hint = '';
-    if (msg.includes('403') || msg.includes('Forbidden')) {
-      hint = ' — Voeg service account toe aan GSC: seo-audit-tool-service-account@pure-heuristic-473710-t1.iam.gserviceaccount.com';
+    // Return appropriate status codes — NOT 500 for expected errors
+    if (msg.includes('403') || msg.includes('Forbidden') || msg.includes('insufficientPermission')) {
+      return res.status(403).json({
+        success: false,
+        error: 'GSC access denied. Add the service account to your Search Console property.',
+        hint: 'seo-audit-tool-service-account@pure-heuristic-473710-t1.iam.gserviceaccount.com',
+        code: 'GSC_ACCESS_DENIED'
+      });
     }
-    res.status(500).json({ success: false, error: msg + hint });
+    if (msg.includes('404') || msg.includes('notFound') || msg.includes('No data') || msg.includes('empty')) {
+      return res.status(404).json({
+        success: false,
+        error: 'No GSC data for this URL. The page may not be indexed or has no traffic yet.',
+        hint: 'You can still enter GSC data manually in the form below.',
+        code: 'GSC_NO_DATA'
+      });
+    }
+    if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid_grant')) {
+      return res.status(401).json({
+        success: false,
+        error: 'GSC service account authentication failed.',
+        hint: 'Check that GSC_SERVICE_ACCOUNT_JSON is set correctly in your Railway variables.',
+        code: 'GSC_AUTH_FAILED'
+      });
+    }
+    // Only return 500 for truly unexpected errors
+    res.status(500).json({ success: false, error: msg });
   }
 });
 
@@ -9678,39 +9700,47 @@ async function spendCredits(codeId, action) {
   const cost = CREDIT_COSTS[action] || 1;
   try {
     const r = await pool.query(
-      `UPDATE engine_access_codes SET credits_used = credits_used + $1 WHERE id = $2 AND use_platform_keys = TRUE AND (platform_credits IS NULL OR platform_credits >= credits_used + $1) RETURNING id`,
+      `UPDATE engine_access_codes SET credits_used = credits_used + $1 WHERE id = $2 AND use_platform_keys = TRUE AND (platform_credits IS NULL OR platform_credits >= credits_used + $1) RETURNING id, platform_credits, credits_used`,
       [cost, codeId]
     );
     if (!r.rows.length) {
-      throw new Error('Insufficient platform credits');
+      return { ok: false, error: 'Insufficient platform credits' };
     }
+    const row = r.rows[0];
+    const creditsLeft = row.platform_credits !== null ? (row.platform_credits - row.credits_used) : null;
     // Log the credit spend
     await pool.query(
       `INSERT INTO credit_log (code_id, action, credits_spent, detail) VALUES ($1, $2, $3, $4)`,
       [codeId, action, cost, `Spent ${cost} credits for ${action}`]
     ).catch(() => {});
-    return true;
+    return { ok: true, cost: cost, credits_left: creditsLeft };
   } catch (e) {
     console.error('spendCredits error:', e.message);
-    throw e;
-    }
+    return { ok: false, error: e.message };
   }
+}
+
 function requireCredits(action) {
   return async (req, res, next) => {
-    const eu = req.engineUser;
-    // ── Never charge credits to: admins, unauthenticated, own-API-key users ──
-    if (!eu) return next();                          // unauthenticated (shouldn't reach here)
-    if (eu.isAdmin) return next();                   // admin — always free
-    if (!eu.code) return next();                     // safety guard
-    if (!eu.code.use_platform_keys) return next();   // own key OR lifetime deal — no credits, ever
-    // ── Platform key user ──
-    if (eu.code.platform_credits === null) return next(); // platform key + unlimited credits
-    // Platform key + credit cap — deduct
-    const result = await spendCredits(eu.codeId, action);
-    if (!result.ok) return res.status(402).json({ success: false, error: result.error, code: 'NO_CREDITS' });
-    req.creditsSpent = result.cost;
-    req.creditsLeft = result.credits_left;
-    next();
+    try {
+      const eu = req.engineUser;
+      // ── Never charge credits to: admins, unauthenticated, own-API-key users ──
+      if (!eu) return next();                          // unauthenticated (shouldn't reach here)
+      if (eu.isAdmin) return next();                   // admin — always free
+      if (!eu.code) return next();                     // safety guard
+      if (!eu.code.use_platform_keys) return next();   // own key OR lifetime deal — no credits, ever
+      // ── Platform key user ──
+      if (eu.code.platform_credits === null) return next(); // platform key + unlimited credits
+      // Platform key + credit cap — deduct
+      const result = await spendCredits(eu.codeId, action);
+      if (!result.ok) return res.status(402).json({ success: false, error: result.error, code: 'NO_CREDITS' });
+      req.creditsSpent = result.cost;
+      req.creditsLeft = result.credits_left;
+      next();
+    } catch (e) {
+      console.error('[requireCredits]', e);
+      return res.status(500).json({ success: false, error: 'Credit system error: ' + e.message });
+    }
   };
 }
 
