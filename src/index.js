@@ -22788,6 +22788,28 @@ async function runTrackerCheck(page, geminiKey, keys) {
     _trSetStep(pageId, 'html_hash', 'done', 'No HTML — add URL manually or check access');
   }
 
+  // ── 1b. GRAAF Score scan on live HTML ───────────────────────────────────────
+  _trSetStep(pageId, 'graaf_score', 'running', 'Running GRAAF content quality scan…');
+  if (page.html_content && page.html_content.length > 200) {
+    try {
+      const graafResult = graafScanHtml(page.html_content, page.url || '');
+      if (graafResult) {
+        snapshot.score = graafResult.totalScore || graafResult.score || null;
+        snapshot.graaf_breakdown = graafResult.breakdown || null;
+        snapshot.graaf_recommendations = graafResult.recommendations || null;
+        const gLabel = graafResult.quality || 'Unknown';
+        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF: ' + (snapshot.score || 0) + '/100 (' + gLabel + ')');
+      } else {
+        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan returned no result');
+      }
+    } catch(e) {
+      console.warn('[tracker-graaf]', e.message);
+      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error: ' + e.message.substring(0,40));
+    }
+  } else {
+    _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF skipped — no HTML content');
+  }
+
   if(keyword) {
 
     // ── 2. Google: position + AI Overview via Serper.dev ───────────────────
@@ -23065,12 +23087,12 @@ Zero generic advice. Skip anything our content already clearly has.`;
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
-       recommendations,html_hash)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+       recommendations,html_hash,score)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
-     snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null, snapshot.html_hash]
+     snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null, snapshot.html_hash, snapshot.score]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
@@ -23115,6 +23137,16 @@ Zero generic advice. Skip anything our content already clearly has.`;
         delta: snapshot.ai_perplexity_cited ? 1 : -1, is_significant: true });
     }
 
+    // GRAAF score change (content quality drift)
+    if (snapshot.score !== null && prev.score !== null) {
+      const scoreDelta = snapshot.score - prev.score;
+      if (Math.abs(scoreDelta) >= 5) {
+        changes.push({ change_type: 'content_quality', field_name: 'graaf_score',
+          value_before: String(prev.score), value_after: String(snapshot.score),
+          delta: scoreDelta, is_significant: true });
+      }
+    }
+
     // Save all significant changes
     for(const ch of changes) {
       await pool.query(
@@ -23134,8 +23166,8 @@ Zero generic advice. Skip anything our content already clearly has.`;
     [page.id]
   ).catch(()=>{});
 
-  _trSetStep(pageId, 'complete', 'done', 'Check finished — pos:' + (snapshot.google_position||'—') + ' · AIO:' + (snapshot.ai_google_overview_cited?'✅':'❌') + ' · Perplexity:' + (snapshot.ai_perplexity_cited?'✅':'❌') + ' · You.com:' + (snapshot.ai_bing_cited?'✅':'❌'));
-  console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, AI Overview:${snapshot.ai_google_overview_cited}`);
+  _trSetStep(pageId, 'complete', 'done', 'Check finished — pos:' + (snapshot.google_position||'—') + ' · GRAAF:' + (snapshot.score||'—') + '/100 · AIO:' + (snapshot.ai_google_overview_cited?'✅':'❌') + ' · Perplexity:' + (snapshot.ai_perplexity_cited?'✅':'❌') + ' · You.com:' + (snapshot.ai_bing_cited?'✅':'❌'));
+  console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, GRAAF:${snapshot.score}, AI Overview:${snapshot.ai_google_overview_cited}`);
 }
 
 // ── Automated scheduler — adaptive, runs every 15min, respects classification ───

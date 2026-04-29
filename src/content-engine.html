@@ -729,7 +729,7 @@ textarea{resize:vertical;min-height:100px;}
   </div>
 
   <!-- Stats row -->
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:20px;">
+  <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:12px;margin-bottom:20px;">
     <div class="card" style="padding:16px 20px;margin:0;">
       <div id="trStatPages" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">0</div>
       <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">Tracked Pages</div>
@@ -757,6 +757,10 @@ textarea{resize:vertical;min-height:100px;}
     <div class="card" style="padding:16px 20px;margin:0;">
       <div id="trStatCitationRate" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">0%</div>
       <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">AI Citation Rate</div>
+    </div>
+    <div class="card" style="padding:16px 20px;margin:0;">
+      <div id="trStatAvgGraaf" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">—</div>
+      <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">Avg GRAAF Score</div>
     </div>
   </div>
 
@@ -3296,6 +3300,23 @@ function renderTrackerStats() {
   }
   if (sid('trStatCitationRate')) sid('trStatCitationRate').textContent = citationRate + '%';
 
+  // Average GRAAF score
+  var pagesWithGraaf = 0, totalGraaf = 0;
+  withLatest.forEach(function(p) {
+    var s = p.latest_snapshot || {};
+    if (s.score) { pagesWithGraaf++; totalGraaf += s.score; }
+  });
+  var avgGraaf = pagesWithGraaf ? Math.round(totalGraaf / pagesWithGraaf) : null;
+  if (sid('trStatAvgGraaf')) {
+    if (avgGraaf !== null) {
+      sid('trStatAvgGraaf').textContent = avgGraaf + '/100';
+      sid('trStatAvgGraaf').style.color = avgGraaf >= 70 ? '#4ade80' : avgGraaf >= 50 ? '#fbbf24' : '#f87171';
+    } else {
+      sid('trStatAvgGraaf').textContent = '—';
+      sid('trStatAvgGraaf').style.color = '#e2e8f0';
+    }
+  }
+
   // Show/hide CSV download button
   var csvBtn = sid('trDownloadBtn');
   if (csvBtn) csvBtn.style.display = pages.length ? 'inline-block' : 'none';
@@ -3344,7 +3365,7 @@ function renderTrackerPagesList() {
     return '<div data-tracker-page-id="' + p.id + '" style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
       '<div style="display:flex;align-items:center;gap:12px;">' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + gscBadge + clsBadge + '</div>' +
+          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + gscBadge + graafBadge + clsBadge + '</div>' +
           '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + ' · ' + lastChecked + '</div>' +
           '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + ' ' + aiY + '</div>' +
           recHtml +
@@ -3711,6 +3732,26 @@ async function openTrackerDetail(pageId) {
     var snaps = await api('/api/tracker/pages/' + pageId + '/snapshots');
     var snapList = (snaps.snapshots || []).slice(0, 20).reverse(); // oldest first for chart
 
+    // ── GRAAF Score Card (from latest tracker scan) ──────────────────────────
+    var graafHtml = '';
+    if (snap && snap.score) {
+      var gColor = snap.score >= 70 ? '#4ade80' : snap.score >= 50 ? '#fbbf24' : '#f87171';
+      var gLabel = snap.score >= 70 ? 'Good' : snap.score >= 50 ? 'Needs Work' : 'Critical';
+      graafHtml = '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🎯 GRAAF Content Quality Score</div>' +
+        '<div style="display:flex;align-items:center;gap:14px;background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">' +
+          '<div style="text-align:center;min-width:70px;">' +
+            '<div style="font-size:2.2rem;font-weight:800;color:' + gColor + ';">' + snap.score + '</div>' +
+            '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;">/100</div>' +
+          '</div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:13px;font-weight:600;color:#e2e8f0;">' + gLabel + '</div>' +
+            '<div style="font-size:11px;color:#9ca3af;margin-top:2px;">Content quality at time of last tracker scan</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
     // ── GSC Baseline Card (from rewrite-time data) ───────────────────────────
     var baselineHtml = '';
     if (page && (page.gsc_impressions || page.gsc_clicks || page.gsc_position)) {
@@ -3843,7 +3884,7 @@ async function openTrackerDetail(pageId) {
       return;
     }
 
-    body.innerHTML = baselineHtml + chartHtml + timelineHtml + recsHtml;
+    body.innerHTML = graafHtml + baselineHtml + chartHtml + timelineHtml + recsHtml;
   } catch(e) {
     body.innerHTML = '<div style="color:#f87171;padding:20px 0;">Error: ' + e.message + '</div>';
   }
