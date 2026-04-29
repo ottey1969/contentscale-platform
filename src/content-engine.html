@@ -718,13 +718,14 @@ textarea{resize:vertical;min-height:100px;}
       <p style="font-size:13px;color:#6b7280;margin-top:4px;">Track Google position, AI Overview citations, and content changes over time</p>
     </div>
     <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" id="trDownloadBtn" onclick="downloadTrackerCsv()" style="display:none;">⬇ CSV</button>
       <button class="btn btn-secondary" id="trRefreshBtn" onclick="loadTrackerPages()">↺ Refresh</button>
       <button class="btn btn-primary" onclick="showTrackerAddModal()">+ Add URL</button>
     </div>
   </div>
 
   <!-- Stats row -->
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:20px;">
     <div class="card" style="padding:16px 20px;margin:0;">
       <div id="trStatPages" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">0</div>
       <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">Tracked Pages</div>
@@ -744,6 +745,14 @@ textarea{resize:vertical;min-height:100px;}
     <div class="card" style="padding:16px 20px;margin:0;">
       <div id="trStatPendingChanges" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">0</div>
       <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">Pending Changes</div>
+    </div>
+    <div class="card" style="padding:16px 20px;margin:0;">
+      <div id="trStatAvgPosGain" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">—</div>
+      <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">Avg Position Gain</div>
+    </div>
+    <div class="card" style="padding:16px 20px;margin:0;">
+      <div id="trStatCitationRate" style="font-size:1.8rem;font-weight:800;color:#e2e8f0;">0%</div>
+      <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin-top:2px;">AI Citation Rate</div>
     </div>
   </div>
 
@@ -3202,6 +3211,39 @@ function renderTrackerStats() {
   if (sid('trStatCitedPerplexity')) sid('trStatCitedPerplexity').textContent = citedP;
   if (sid('trStatCheckedToday')) sid('trStatCheckedToday').textContent = checkedToday;
   if (sid('trStatPendingChanges')) sid('trStatPendingChanges').textContent = pending;
+
+  // ── Aggregate KPIs ──────────────────────────────────────────────────────────
+  var pagesWithPos = 0, totalPosGain = 0;
+  var totalImpBefore = 0, totalImpAfter = 0;
+  var citedCount = 0;
+  withLatest.forEach(function(p) {
+    var base = p.baseline_snapshot || {};
+    var curr = p.latest_snapshot || {};
+    if (base.google_position && curr.google_position) {
+      pagesWithPos++;
+      totalPosGain += (base.google_position - curr.google_position);
+    }
+    totalImpBefore += (base.google_impressions || 0);
+    totalImpAfter += (curr.google_impressions || 0);
+    if (curr.ai_google_overview_cited || curr.ai_perplexity_cited || curr.ai_bing_cited) citedCount++;
+  });
+  var avgPosGain = pagesWithPos ? (totalPosGain / pagesWithPos).toFixed(1) : null;
+  var citationRate = withLatest.length ? Math.round((citedCount / withLatest.length) * 100) : 0;
+  if (sid('trStatAvgPosGain')) {
+    if (avgPosGain !== null) {
+      var gainNum = parseFloat(avgPosGain);
+      sid('trStatAvgPosGain').textContent = (gainNum > 0 ? '+' : '') + avgPosGain;
+      sid('trStatAvgPosGain').style.color = gainNum > 0 ? '#4ade80' : gainNum < 0 ? '#f87171' : '#e2e8f0';
+    } else {
+      sid('trStatAvgPosGain').textContent = '—';
+      sid('trStatAvgPosGain').style.color = '#e2e8f0';
+    }
+  }
+  if (sid('trStatCitationRate')) sid('trStatCitationRate').textContent = citationRate + '%';
+
+  // Show/hide CSV download button
+  var csvBtn = sid('trDownloadBtn');
+  if (csvBtn) csvBtn.style.display = pages.length ? 'inline-block' : 'none';
 }
 
 function renderTrackerPagesList() {
@@ -3374,6 +3416,110 @@ async function deleteTrackerPage(pageId) {
   }
 }
 
+function downloadTrackerCsv() {
+  var profileId = document.getElementById('trProfileFilter').value;
+  if (!profileId) {
+    var profiles = _engineProfiles || [];
+    if (profiles.length === 1) profileId = profiles[0].id;
+  }
+  if (!profileId) { toast('Select a profile first'); return; }
+  window.open('/api/tracker/profile/' + profileId + '/report.csv', '_blank');
+}
+
+async function generateTrackerReport(pageId) {
+  var btn = document.querySelector('[onclick="generateTrackerReport(' + pageId + ')"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    var data = await api('/api/tracker/pages/' + pageId + '/report', 'POST', { report_type: 'biweekly' });
+    if (!data.success) throw new Error(data.error || 'Failed to generate report');
+    var report = data.report;
+    var body = document.getElementById('trDetailBody');
+    var kpi = data.report.kpi ? JSON.parse(data.report.kpi) : {};
+    var summary = data.report.summary ? JSON.parse(data.report.summary) : {};
+    var actionPlan = data.report.action_plan ? JSON.parse(data.report.action_plan) : [];
+
+    var posColor = kpi.position && kpi.position.delta && kpi.position.delta.direction === 'up' ? '#4ade80' : '#e2e8f0';
+    var impColor = kpi.impressions && kpi.impressions.delta && kpi.impressions.delta.direction === 'up' ? '#4ade80' : '#e2e8f0';
+    var clkColor = kpi.clicks && kpi.clicks.delta && kpi.clicks.delta.direction === 'up' ? '#4ade80' : '#e2e8f0';
+
+    var reportHtml = '<div style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">📋 Bi-Weekly Report</div>' +
+        '<div style="font-size:11px;color:#4b5563;">' + (summary.period_days || '—') + ' days · ' + (summary.total_checks || 0) + ' checks</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">' +
+        '<div style="background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:1.4rem;font-weight:800;color:' + posColor + ';">' + (kpi.position && kpi.position.after ? '#' + kpi.position.after : '—') + '</div>' +
+          '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-top:4px;">Position</div>' +
+          '<div style="font-size:11px;color:' + posColor + ';margin-top:2px;">' + (kpi.position && kpi.position.delta ? kpi.position.delta.text : '') + '</div>' +
+        '</div>' +
+        '<div style="background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:1.4rem;font-weight:800;color:' + impColor + ';">' + (kpi.impressions && kpi.impressions.after ? Number(kpi.impressions.after).toLocaleString() : '—') + '</div>' +
+          '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-top:4px;">Impressions</div>' +
+          '<div style="font-size:11px;color:' + impColor + ';margin-top:2px;">' + (kpi.impressions && kpi.impressions.delta ? kpi.impressions.delta.text : '') + '</div>' +
+        '</div>' +
+        '<div style="background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:1.4rem;font-weight:800;color:' + clkColor + ';">' + (kpi.clicks && kpi.clicks.after ? Number(kpi.clicks.after).toLocaleString() : '—') + '</div>' +
+          '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-top:4px;">Clicks</div>' +
+          '<div style="font-size:11px;color:' + clkColor + ';margin-top:2px;">' + (kpi.clicks && kpi.clicks.delta ? kpi.clicks.delta.text : '') + '</div>' +
+        '</div>' +
+        '<div style="background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:1.4rem;font-weight:800;color:#a78bfa;">' + (kpi.ctr && kpi.ctr.after ? kpi.ctr.after + '%' : '—') + '</div>' +
+          '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-top:4px;">CTR</div>' +
+          '<div style="font-size:11px;color:#a78bfa;margin-top:2px;">' + (kpi.ctr && kpi.ctr.delta ? kpi.ctr.delta.text : '') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:14px;">' +
+        '<button onclick="copyReportEmail(' + pageId + ')" class="btn btn-secondary" style="font-size:12px;padding:6px 12px;">📧 Copy Email Body</button>' +
+        '<button onclick="closeTrackerDetail()" class="btn btn-danger" style="font-size:12px;padding:6px 12px;">Close</button>' +
+      '</div>' +
+    '</div>';
+
+    var pendingActions = actionPlan.filter(function(a) { return !a.done; });
+    if (pendingActions.length) {
+      reportHtml += '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🎯 Action Plan (Next 2 Weeks)</div>' +
+        '<div style="display:flex;flex-direction:column;gap:6px;">' +
+        pendingActions.slice(0, 5).map(function(a, i) {
+          var priColor = a.priority === 'high' ? '#f87171' : a.priority === 'medium' ? '#fbbf24' : '#4ade80';
+          var priEmoji = a.priority === 'high' ? '🔴' : a.priority === 'medium' ? '🟡' : '🟢';
+          return '<div style="background:#0f172a;border:1px solid rgba(255,255,255,.06);border-left:3px solid ' + priColor + ';border-radius:8px;padding:10px 14px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+              '<span style="font-size:12px;">' + priEmoji + '</span>' +
+              '<span style="font-weight:600;font-size:13px;color:#e2e8f0;">' + (a.title || '') + '</span>' +
+            '</div>' +
+            '<div style="font-size:12px;color:#9ca3af;line-height:1.4;">' + (a.action || '') + '</div>' +
+            (a.expected_impact ? '<div style="font-size:11px;color:#6b7280;margin-top:4px;">📈 Expected: ' + a.expected_impact + '</div>' : '') +
+          '</div>';
+        }).join('') +
+        '</div></div>';
+    }
+
+    body.innerHTML = reportHtml;
+    toast('Report generated — scroll down to view');
+  } catch(e) {
+    toast('Report failed: ' + e.message, 'red');
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Report'; }
+  }
+}
+
+async function copyReportEmail(pageId) {
+  try {
+    var data = await api('/api/tracker/pages/' + pageId + '/report', 'POST', { report_type: 'biweekly' });
+    if (!data.success || !data.email_body) { toast('No report email available'); return; }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(data.email_body);
+      toast('📧 Email report copied to clipboard!');
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = data.email_body;
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('📧 Email report copied to clipboard!');
+    }
+  } catch(e) { toast('Copy failed: ' + e.message); }
+}
+
 var _trDetailPageId = null;
 
 async function openTrackerDetail(pageId) {
@@ -3385,7 +3531,8 @@ async function openTrackerDetail(pageId) {
   if (page) titleEl.innerHTML =
     '<span>' + (page.title || page.url) + '</span>' +
     (page.keyword ? '<span style="font-size:12px;color:#6b7280;font-weight:400;margin-left:8px;">🔑 ' + page.keyword + '</span>' : '') +
-    '<button onclick="deleteTrackerPageFromDetail(' + pageId + ')" style="margin-left:12px;font-size:11px;padding:4px 10px;background:#7f1d1d;border:1px solid #f87171;border-radius:6px;color:#f87171;cursor:pointer;">🗑 Delete</button>';
+    '<button onclick="generateTrackerReport(' + pageId + ')" style="margin-left:8px;font-size:11px;padding:4px 10px;background:#1e293b;border:1px solid rgba(251,191,36,.4);border-radius:6px;color:#fbbf24;cursor:pointer;">📋 Report</button>' +
+            '<button onclick="deleteTrackerPageFromDetail(' + pageId + ')" style="margin-left:8px;font-size:11px;padding:4px 10px;background:#7f1d1d;border:1px solid #f87171;border-radius:6px;color:#f87171;cursor:pointer;">🗑 Delete</button>';
   modal.style.display = 'block';
   body.innerHTML = '<div style="color:#6b7280;padding:40px;text-align:center;">⏳ Loading…</div>';
   try {

@@ -664,6 +664,24 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      applied BOOLEAN DEFAULT FALSE,
      applied_at TIMESTAMPTZ
    )`).catch(()=>{});
+   await client.query(`CREATE TABLE IF NOT EXISTS tracker_reports (
+     id SERIAL PRIMARY KEY,
+     page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE SET NULL,
+     report_type VARCHAR(20) DEFAULT 'biweekly',
+     period_start TIMESTAMPTZ,
+     period_end TIMESTAMPTZ,
+     baseline_snapshot_id INTEGER,
+     current_snapshot_id INTEGER,
+     summary JSONB,
+     changes JSONB,
+     recommendations JSONB,
+     action_plan JSONB,
+     kpi JSONB,
+     email_body TEXT,
+     generated_at TIMESTAMPTZ DEFAULT NOW()
+   )`).catch(()=>{});
+
    await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`);
    await client.query(`CREATE TABLE IF NOT EXISTS user_email_templates (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, template_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, template_type))`);
    await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
@@ -21882,6 +21900,352 @@ app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res)
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      // Verify the change belongs to a page owned by this engine user
+      const own = await pool.query(
+        `SELECT tc.id FROM tracker_changes tc JOIN tracker_pages tp ON tp.id=tc.page_id WHERE tc.id=$1 AND tp.engine_code_id=$2`,
+        [req.params.id, eu.codeId]
+      );
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    await pool.query(
+      `UPDATE tracker_changes SET applied=TRUE, applied_at=NOW() WHERE id=$1`,
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Report Generation ────────────────────────────────────────────────────────
+
+function safeJson(v, fallback) {
+  if (v == null) return fallback;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch (_) { return fallback; }
+}
+
+function formatKpiDelta(before, after, type) {
+  if (before == null || after == null) return { text: '—', direction: 'neutral' };
+  const b = parseFloat(before), a = parseFloat(after);
+  if (isNaN(b) || isNaN(a)) return { text: '—', direction: 'neutral' };
+  const delta = type === 'position' ? b - a : a - b; // position: lower is better
+  const pct = b !== 0 ? Math.round((delta / Math.abs(b)) * 100) : 0;
+  const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+  const color = type === 'position'
+    ? (delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : '#6b7280')
+    : (delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : '#6b7280');
+  return { text: `${arrow} ${Math.abs(delta)}${type !== 'position' ? ' (' + pct + '%)' : ''}`, direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral', color };
+}
+
+app.post('/api/tracker/pages/:id/report', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    // ownership
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    // get page with baseline
+    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
+    if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const page = pageR.rows[0];
+
+    // get all snapshots, oldest first
+    const snapsR = await pool.query(
+      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at ASC`,
+      [pageId]
+    );
+    const snaps = snapsR.rows;
+    if (!snaps.length) return res.status(400).json({ success: false, error: 'No snapshots yet — run a check first' });
+
+    // Baseline = first snapshot (GSC baseline from rewrite), Current = latest
+    const baseline = snaps[0];
+    const current = snaps[snaps.length - 1];
+
+    // KPI calculations
+    const posDelta = formatKpiDelta(baseline.google_position, current.google_position, 'position');
+    const impDelta = formatKpiDelta(baseline.google_impressions, current.google_impressions, 'impressions');
+    const clkDelta = formatKpiDelta(baseline.google_clicks, current.google_clicks, 'clicks');
+    const ctrDelta = formatKpiDelta(baseline.google_ctr, current.google_ctr, 'ctr');
+
+    // AI citation tracking across history
+    const firstCitedG = snaps.findIndex(s => s.ai_google_overview_cited);
+    const firstCitedP = snaps.findIndex(s => s.ai_perplexity_cited);
+    const firstCitedY = snaps.findIndex(s => s.ai_bing_cited);
+
+    // Build changes list from tracker_changes table + snapshot diffs
+    const changesR = await pool.query(
+      `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at ASC`,
+      [pageId]
+    );
+    const dbChanges = changesR.rows.map(ch => ({
+      date: ch.changed_at,
+      type: ch.change_type,
+      field: ch.field_name,
+      before: ch.value_before,
+      after: ch.value_after,
+      delta: ch.delta,
+      significant: ch.is_significant,
+      applied: ch.applied
+    }));
+
+    // Also compute snapshot-to-snapshot deltas that weren't stored in tracker_changes
+    const snapshotDiffs = [];
+    for (let i = 1; i < snaps.length; i++) {
+      const prev = snaps[i-1], cur = snaps[i];
+      if (cur.google_position !== prev.google_position && cur.google_position != null) {
+        snapshotDiffs.push({
+          date: cur.checked_at, type: 'position', field: 'google_position',
+          before: String(prev.google_position || '—'), after: String(cur.google_position),
+          delta: (prev.google_position || 0) - cur.google_position,
+          significant: Math.abs((prev.google_position || 0) - cur.google_position) >= 3,
+          applied: false
+        });
+      }
+      if (cur.ai_google_overview_cited !== prev.ai_google_overview_cited) {
+        snapshotDiffs.push({
+          date: cur.checked_at, type: 'ai_citation', field: 'google_ai_overview',
+          before: prev.ai_google_overview_cited ? 'cited' : 'not cited',
+          after: cur.ai_google_overview_cited ? 'cited' : 'not cited',
+          delta: cur.ai_google_overview_cited ? 1 : -1,
+          significant: true, applied: false
+        });
+      }
+    }
+    const allChanges = [...dbChanges, ...snapshotDiffs].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    // Recommendations from latest snapshot + unapplied tracker_changes
+    const latestRecs = safeJson(current.recommendations, []);
+    const unappliedChanges = dbChanges.filter(c => c.significant && !c.applied);
+    const actionPlan = latestRecs.map((r, i) => ({
+      priority: r.priority || 'medium',
+      title: r.title || '',
+      action: r.action || r.text || '',
+      expected_impact: r.expected_impact || '',
+      done: false
+    }));
+    // Add significant unapplied changes as action items
+    unappliedChanges.forEach(c => {
+      actionPlan.push({
+        priority: 'high',
+        title: `Address ${c.field} change`,
+        action: `${c.field} moved from ${c.before} → ${c.after}. Investigate and fix.`,
+        expected_impact: 'Restore lost ranking or citation',
+        done: false
+      });
+    });
+
+    const summary = {
+      page_url: page.url,
+      keyword: page.keyword || '',
+      period_days: Math.round((new Date(current.checked_at) - new Date(baseline.checked_at)) / 86400000),
+      total_checks: snaps.length,
+      last_check: current.checked_at,
+      baseline_date: baseline.checked_at
+    };
+
+    const kpi = {
+      position: { before: baseline.google_position, after: current.google_position, delta: posDelta },
+      impressions: { before: baseline.google_impressions, after: current.google_impressions, delta: impDelta },
+      clicks: { before: baseline.google_clicks, after: current.google_clicks, delta: clkDelta },
+      ctr: { before: baseline.google_ctr, after: current.google_ctr, delta: ctrDelta },
+      ai_overview: { before: baseline.ai_google_overview_cited, after: current.ai_google_overview_cited, first_seen_check: firstCitedG >= 0 ? firstCitedG + 1 : null },
+      perplexity: { before: baseline.ai_perplexity_cited, after: current.ai_perplexity_cited, first_seen_check: firstCitedP >= 0 ? firstCitedP + 1 : null },
+      youcom: { before: baseline.ai_bing_cited, after: current.ai_bing_cited, first_seen_check: firstCitedY >= 0 ? firstCitedY + 1 : null }
+    };
+
+    // Generate email-ready body
+    const emailBody = generateTrackerEmail(summary, kpi, allChanges, actionPlan, page);
+
+    // Save report
+    const reportR = await pool.query(
+      `INSERT INTO tracker_reports (page_id, profile_id, report_type, period_start, period_end, baseline_snapshot_id, current_snapshot_id, summary, changes, recommendations, action_plan, kpi, email_body)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [pageId, page.profile_id || null, req.body.report_type || 'biweekly',
+       baseline.checked_at, current.checked_at, baseline.id, current.id,
+       JSON.stringify(summary), JSON.stringify(allChanges), JSON.stringify(latestRecs),
+       JSON.stringify(actionPlan), JSON.stringify(kpi), emailBody]
+    );
+
+    res.json({ success: true, report: reportR.rows[0], email_body: emailBody });
+  } catch(e) {
+    console.error('[tracker-report]', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+function generateTrackerEmail(summary, kpi, changes, actionPlan, page) {
+  const gscBaseline = page.gsc_position || page.gsc_impressions || page.gsc_clicks
+    ? `Baseline GSC (at rewrite): Pos #${page.gsc_position || '—'}, ${(page.gsc_impressions||0).toLocaleString()} impressions, ${(page.gsc_clicks||0).toLocaleString()} clicks, ${page.gsc_ctr || '—'}% CTR\n`
+    : '';
+
+  let changesText = '';
+  const significant = changes.filter(c => c.significant);
+  if (significant.length) {
+    changesText = '\n📊 KEY CHANGES (' + significant.length + ' significant):\n' +
+      significant.map(c => {
+        const emoji = c.type === 'position' ? (c.delta > 0 ? '✅' : '❌') : (c.delta > 0 ? '✅' : '⚠️');
+        return `  ${emoji} ${c.field}: ${c.before} → ${c.after} (${c.date.split('T')[0]})`;
+      }).join('\n') + '\n';
+  }
+
+  let recsText = '';
+  const pending = actionPlan.filter(a => !a.done);
+  if (pending.length) {
+    recsText = '\n💡 TOP RECOMMENDATIONS (next 2 weeks):\n' +
+      pending.slice(0, 5).map((a, i) => {
+        const priEmoji = a.priority === 'high' ? '🔴' : a.priority === 'medium' ? '🟡' : '🟢';
+        return `  ${i+1}. ${priEmoji} ${a.title}\n     → ${a.action.substring(0, 120)}${a.action.length > 120 ? '...' : ''}\n     📈 Expected: ${a.expected_impact || 'Ranking improvement'}`;
+      }).join('\n') + '\n';
+  }
+
+  const aiSummary = [
+    kpi.ai_overview.after ? '✅ Google AI Overview: CITED' : (kpi.ai_overview.before ? '⚠️ Lost AI Overview citation' : '❌ Google AI Overview: Not cited'),
+    kpi.perplexity.after ? '✅ Perplexity: CITED' : (kpi.perplexity.before ? '⚠️ Lost Perplexity citation' : '❌ Perplexity: Not cited'),
+    kpi.youcom.after ? '✅ You.com: CITED' : (kpi.youcom.before ? '⚠️ Lost You.com citation' : '❌ You.com: Not cited')
+  ].join('\n');
+
+  return `Gab Tracker Report — ${summary.page_url}
+Keyword: "${summary.keyword}"
+Period: ${summary.period_days} days · ${summary.total_checks} checks
+
+${gscBaseline}Current: Pos #${kpi.position.after || '—'} · ${kpi.impressions.after ? kpi.impressions.after.toLocaleString() : '—'} impressions · ${kpi.clicks.after ? kpi.clicks.after.toLocaleString() : '—'} clicks · ${kpi.ctr.after || '—'}% CTR
+
+Position: ${kpi.position.before || '—'} → ${kpi.position.after || '—'} ${kpi.position.delta.text}
+Impressions: ${kpi.impressions.before || '—'} → ${kpi.impressions.after || '—'} ${kpi.impressions.delta.text}
+Clicks: ${kpi.clicks.before || '—'} → ${kpi.clicks.after || '—'} ${kpi.clicks.delta.text}
+CTR: ${kpi.ctr.before || '—'}% → ${kpi.ctr.after || '—'}% ${kpi.ctr.delta.text}
+
+${aiSummary}${changesText}${recsText}
+---
+Generated by ContentScale Gab Tracker · ${new Date().toISOString().split('T')[0]}`;
+}
+
+// ── Bulk profile report (all pages) ─────────────────────────────────────────
+app.get('/api/tracker/profile/:profileId/report', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const profileId = parseInt(req.params.profileId);
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM content_profiles WHERE id=$1 AND (engine_code_id=$2 OR id IN (SELECT profile_id FROM engine_access_codes WHERE id=$2))', [profileId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    // Get all pages for this profile with latest snapshots
+    const pagesR = await pool.query(
+      `SELECT p.*,
+        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
+        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at ASC LIMIT 1) AS baseline_snapshot
+       FROM tracker_pages p WHERE p.profile_id=$1 AND p.is_active=TRUE ORDER BY p.created_at DESC`,
+      [profileId]
+    );
+    const pages = pagesR.rows;
+    if (!pages.length) return res.json({ success: true, pages: [], summary: {} });
+
+    // Compute aggregate KPIs
+    let totalPages = pages.length;
+    let pagesWithPosition = 0, avgPositionImprovement = 0;
+    let pagesCitedGoogle = 0, pagesCitedPerplexity = 0, pagesCitedYou = 0;
+    let totalImpressionsBefore = 0, totalImpressionsAfter = 0;
+    let totalClicksBefore = 0, totalClicksAfter = 0;
+
+    const pageReports = pages.map(p => {
+      const base = p.baseline_snapshot || {};
+      const curr = p.latest_snapshot || {};
+      const posBefore = base.google_position || null;
+      const posAfter = curr.google_position || null;
+      const posDelta = (posBefore && posAfter) ? posBefore - posAfter : null;
+      if (posDelta !== null) { pagesWithPosition++; avgPositionImprovement += posDelta; }
+      if (curr.ai_google_overview_cited) pagesCitedGoogle++;
+      if (curr.ai_perplexity_cited) pagesCitedPerplexity++;
+      if (curr.ai_bing_cited) pagesCitedYou++;
+      totalImpressionsBefore += base.google_impressions || 0;
+      totalImpressionsAfter += curr.google_impressions || 0;
+      totalClicksBefore += base.google_clicks || 0;
+      totalClicksAfter += curr.google_clicks || 0;
+
+      return {
+        id: p.id, url: p.url, keyword: p.keyword, slug: p.slug,
+        baseline: { position: posBefore, impressions: base.google_impressions, clicks: base.google_clicks, ctr: base.google_ctr },
+        current: { position: posAfter, impressions: curr.google_impressions, clicks: curr.google_clicks, ctr: curr.google_ctr },
+        delta: { position: posDelta, impressions: (curr.google_impressions||0)-(base.google_impressions||0), clicks: (curr.google_clicks||0)-(base.google_clicks||0) },
+        ai: { google: curr.ai_google_overview_cited, perplexity: curr.ai_perplexity_cited, youcom: curr.ai_bing_cited },
+        snapshot_count: p.snapshot_count || 0,
+        gsc_baseline: { position: p.gsc_position, impressions: p.gsc_impressions, clicks: p.gsc_clicks, ctr: p.gsc_ctr }
+      };
+    });
+
+    const summary = {
+      total_pages: totalPages,
+      pages_tracked: pagesWithPosition,
+      avg_position_gain: pagesWithPosition ? (avgPositionImprovement / pagesWithPosition).toFixed(1) : null,
+      ai_citation_rate: {
+        google: Math.round((pagesCitedGoogle / totalPages) * 100),
+        perplexity: Math.round((pagesCitedPerplexity / totalPages) * 100),
+        youcom: Math.round((pagesCitedYou / totalPages) * 100)
+      },
+      total_impressions_delta: totalImpressionsAfter - totalImpressionsBefore,
+      total_clicks_delta: totalClicksAfter - totalClicksBefore,
+      report_generated_at: new Date().toISOString()
+    };
+
+    res.json({ success: true, pages: pageReports, summary });
+  } catch(e) {
+    console.error('[tracker-profile-report]', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── Export report as CSV ────────────────────────────────────────────────────
+app.get('/api/tracker/profile/:profileId/report.csv', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const profileId = parseInt(req.params.profileId);
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM content_profiles WHERE id=$1 AND (engine_code_id=$2 OR id IN (SELECT profile_id FROM engine_access_codes WHERE id=$2))', [profileId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    const pagesR = await pool.query(
+      `SELECT p.*,
+        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
+        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at ASC LIMIT 1) AS baseline_snapshot
+       FROM tracker_pages p WHERE p.profile_id=$1 AND p.is_active=TRUE ORDER BY p.created_at DESC`,
+      [profileId]
+    );
+    const pages = pagesR.rows;
+    const headers = ['URL','Keyword','Slug','Baseline_Position','Current_Position','Position_Change','Baseline_Impressions','Current_Impressions','Impressions_Change','Baseline_Clicks','Current_Clicks','Clicks_Change','Baseline_CTR','Current_CTR','AI_Overview_Cited','Perplexity_Cited','You.com_Cited','GSC_Baseline_Position','GSC_Baseline_Impressions','GSC_Baseline_Clicks','GSC_Baseline_CTR','Last_Checked'];
+    const rows = pages.map(p => {
+      const base = p.baseline_snapshot || {};
+      const curr = p.latest_snapshot || {};
+      const posChange = (base.google_position && curr.google_position) ? (base.google_position - curr.google_position) : '';
+      const impChange = ((curr.google_impressions||0) - (base.google_impressions||0));
+      const clkChange = ((curr.google_clicks||0) - (base.google_clicks||0));
+      return [
+        p.url, p.keyword||'', p.slug||'',
+        base.google_position||'', curr.google_position||'', posChange,
+        base.google_impressions||'', curr.google_impressions||'', impChange,
+        base.google_clicks||'', curr.google_clicks||'', clkChange,
+        base.google_ctr||'', curr.google_ctr||'',
+        curr.ai_google_overview_cited?'Yes':'No',
+        curr.ai_perplexity_cited?'Yes':'No',
+        curr.ai_bing_cited?'Yes':'No',
+        p.gsc_position||'', p.gsc_impressions||'', p.gsc_clicks||'', p.gsc_ctr||'',
+        p.last_checked_at ? new Date(p.last_checked_at).toISOString().split('T')[0] : ''
+      ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',');
+    });
+    const csv = headers.join(',') + '\n' + rows.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="tracker-report-profile-${profileId}-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch(e) {
+    console.error('[tracker-csv]', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ── Live check status map ────────────────────────────────────────────────────
