@@ -10381,7 +10381,7 @@ Return ONLY valid JSON with this exact structure:
 
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }
+      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } }
     );
     const geminiData = gemResult.data;
     if (!gemResult.ok) {
@@ -10529,11 +10529,11 @@ Return ONLY valid JSON with this exact structure:
       keywordData.titleAnalysis = titleAnalysis;
       keywordData.metaAnalysis = metaAnalysis;
 
-          await pool.query(
-        `UPDATE content_jobs SET status='researched', keyword_data=$1, competitor_data=$2, sitemap_links=$3, updated_at=NOW() WHERE id=$4`,
-        [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobR.rows[0].id]
-      
-    );
+      // Create a job record so research can be persisted and referenced later
+      const jobR = await pool.query(
+        `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links, created_by) VALUES ($1, $2, 'researched', $3, $4, $5, $6) RETURNING *`,
+        [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), req.engineUser ? (req.engineUser.codeId || req.engineUser.id) : null]
+      );
 
     // If research_all: do a second AI pass to research full keyword universe
     let allKeywordData = null;
@@ -10562,7 +10562,7 @@ Return ONLY valid JSON:
       try {
         const allKwResult = await callGeminiWithFallback(
           geminiKey,
-          { contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }
+          { contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } }
         );
         const allKwData = allKwResult.data;
         const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -12465,7 +12465,7 @@ Return ONLY valid JSON:
 
     const analyseResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }
+      { contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } }
     );
     if (!analyseResult.ok) {
       const apiErr = analyseResult.errorMessage || `Gemini HTTP ${analyseResult.status}`;
@@ -12945,7 +12945,7 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
 
         const fixResp = await callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: fixPrompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 65536 }
         });
         if (fixResp.ok) {
           let fixedHtml = fixResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -13566,7 +13566,7 @@ Return ONLY the full HTML from <article> onwards. No markdown fences. End with <
     const geminiKey = process.env.GEMINI_API_KEY;
     const result = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } } }
+      { contents: [{ parts: [{ text: writePrompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 65536 } }
     );
     if (!result.ok) throw new Error(`Gemini: ${result.errorMessage || result.status}`);
     const raw = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -13609,7 +13609,7 @@ Return ONLY the complete updated HTML. No markdown.`;
 
         const fixR = await callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: fixPrompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 65536, thinkingConfig: { thinkingBudget: 0 } }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 65536 }
         });
         if (fixR.ok) {
           let fixedHtml = fixR.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -13886,7 +13886,7 @@ Return ONLY valid JSON:
 
     const studyResult = await callGeminiWithFallback(geminiKey, {
       contents: [{ role: 'user', parts: [{ text: studyPrompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
     });
     let studyData = {};
     try {

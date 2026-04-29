@@ -2703,12 +2703,12 @@ function handleEnginePagesCsv(input) {
     var totalClk = rows.reduce(function(s,r){ return s + (r.clicks||0); }, 0);
     var avgPos = rows.reduce(function(s,r){ return s + (r.position||0); }, 0) / rows.length;
     var avgCtr = rows.reduce(function(s,r){ return s + (r.ctr||0); }, 0) / rows.length;
-    if (totalImp) document.getElementById('engImpressions').value = Math.round(totalImp);
-    if (totalClk) document.getElementById('engClicks').value = Math.round(totalClk);
+    if (totalImp > 0) document.getElementById('engImpressions').value = Math.round(totalImp);
+    if (totalClk > 0) document.getElementById('engClicks').value = Math.round(totalClk);
     document.getElementById('engPosition').value = avgPos ? avgPos.toFixed(1) : '';
-    document.getElementById('engCtr').value = avgCtr ? avgCtr.toFixed(2) : '';
+    document.getElementById('engCtr').value = (avgCtr !== undefined && avgCtr >= 0) ? avgCtr.toFixed(2) : '';
     statusEl.style.color = '#4ade80';
-    statusEl.textContent = '✓ ' + rows.length + ' pages loaded · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
+    statusEl.textContent = '✓ ' + rows.length + ' pages loaded · ' + Math.round(totalClk) + ' clicks · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
     scheduleDraftSave();
   };
   reader.readAsText(file);
@@ -2726,8 +2726,17 @@ function handleEngineQueriesCsv(input) {
     if (!rows.length) { statusEl.textContent = '⚠ No valid query rows found'; statusEl.style.color = '#f87171'; return; }
     var queries = rows.map(function(r){ return r.query; }).filter(Boolean);
     document.getElementById('engGscQueries').value = queries.join('\n');
+    // Also fill aggregate numeric fields from Queries CSV
+    var totalImp = rows.reduce(function(s,r){ return s + (r.impressions||0); }, 0);
+    var totalClk = rows.reduce(function(s,r){ return s + (r.clicks||0); }, 0);
+    var avgPos = rows.length ? (rows.reduce(function(s,r){ return s + (r.position||0); }, 0) / rows.length) : 0;
+    var avgCtr = rows.length ? (rows.reduce(function(s,r){ return s + (r.ctr||0); }, 0) / rows.length) : 0;
+    if (totalImp > 0) document.getElementById('engImpressions').value = Math.round(totalImp);
+    if (totalClk > 0) document.getElementById('engClicks').value = Math.round(totalClk);
+    document.getElementById('engPosition').value = avgPos ? avgPos.toFixed(1) : '';
+    document.getElementById('engCtr').value = (avgCtr !== undefined && avgCtr >= 0) ? avgCtr.toFixed(2) : '';
     statusEl.style.color = '#4ade80';
-    statusEl.textContent = '✓ ' + rows.length + ' queries loaded';
+    statusEl.textContent = '✓ ' + rows.length + ' queries loaded' + (totalClk > 0 ? ' · ' + totalClk + ' clicks · avg pos ' + (avgPos?avgPos.toFixed(1):'-') : '');
     scheduleDraftSave();
   };
   reader.readAsText(file);
@@ -2770,8 +2779,16 @@ function handleRewriteQueriesCsv(input) {
     if (!rows.length) { statusEl.textContent = '⚠ No valid query rows found'; statusEl.style.color = '#f87171'; return; }
     var queries = rows.map(function(r){ return r.query; }).filter(Boolean);
     document.getElementById('rwGscQueries').value = queries.join('\n');
+    // Also fill aggregate numeric fields from Queries CSV
+    var totalImp = rows.reduce(function(s,r){ return s + (r.impressions||0); }, 0);
+    var totalClk = rows.reduce(function(s,r){ return s + (r.clicks||0); }, 0);
+    var avgPos = rows.reduce(function(s,r){ return s + (r.position||0); }, 0) / rows.length;
+    var avgCtr = rows.reduce(function(s,r){ return s + (r.ctr||0); }, 0) / rows.length;
+    if (totalImp > 0) document.getElementById('rwImpressions').value = Math.round(totalImp);
+    if (totalClk > 0) document.getElementById('rwClicks').value = Math.round(totalClk);
+    if (avgPos > 0) document.getElementById('rwPosition').value = avgPos.toFixed(1);
     statusEl.style.color = '#4ade80';
-    statusEl.textContent = '✓ ' + rows.length + ' queries loaded';
+    statusEl.textContent = '✓ ' + rows.length + ' queries loaded' + (totalClk > 0 ? ' · ' + totalClk + ' clicks · avg pos ' + (avgPos?avgPos.toFixed(1):'-') : '');
   };
   reader.readAsText(file);
 }
