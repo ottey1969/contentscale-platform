@@ -8399,7 +8399,15 @@ app.post('/api/gsc/auto-fill', async (req, res) => {
       }
     }
 
-    if (!usedSiteUrl) throw new Error('No GSC property found for this site — check that the service account has access');
+    if (!usedSiteUrl) {
+      // No GSC property matched — return clean error, not 500
+      return res.status(404).json({
+        success: false,
+        error: 'No GSC property found for this site. The service account may not have access, or the site is not registered in Search Console.',
+        hint: 'You can still enter GSC data manually below, or upload CSV files from Search Console.',
+        code: 'GSC_PROPERTY_NOT_FOUND'
+      });
+    }
 
     let impressions = 0, clicks = 0, ctr = 0, position = 0;
     if (pageRows.length > 0) {

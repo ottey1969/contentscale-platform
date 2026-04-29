@@ -2608,25 +2608,80 @@ async function loadStudies() {
 
 // ── Reset — opens a modal that requires typing RESET to confirm
 function parseGscCsv(raw) {
-  var lines = raw.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  // Remove BOM if present, normalize line endings
+  var clean = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var lines = clean.split('\n').filter(function(l){ return l.trim(); });
   if (lines.length < 2) return [];
-  var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g,'').toLowerCase(); });
-  var getIdx = function(name){ return headers.findIndex(function(h){ return h.indexOf(name.toLowerCase()) !== -1; }); };
-  var urlIdx = getIdx('url') !== -1 ? getIdx('url') : getIdx('page');
-  var clickIdx = getIdx('clicks');
-  var impIdx = getIdx('impressions');
-  var ctrIdx = getIdx('ctr');
-  var posIdx = getIdx('position');
-  var queryIdx = getIdx('query');
-  var keywordIdx = getIdx('keyword') !== -1 ? getIdx('keyword') : queryIdx;
+
+  // Detect delimiter: comma or semicolon
+  var firstLine = lines[0];
+  var commaCount = (firstLine.match(/,/g) || []).length;
+  var semiCount = (firstLine.match(/;/g) || []).length;
+  var delim = semiCount > commaCount ? ';' : ',';
+
+  // Robust CSV split: handles quoted fields with embedded delimiters
+  function splitRow(line, delimiter) {
+    var result = [], current = '', inQuotes = false;
+    for (var ci = 0; ci < line.length; ci++) {
+      var ch = line[ci];
+      if (ch === '"') {
+        if (inQuotes && line[ci + 1] === '"') { current += '"'; ci++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === delimiter && !inQuotes) {
+        result.push(current.trim()); current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
+  var headers = splitRow(lines[0], delim).map(function(h){ return h.toLowerCase().replace(/^"|"$/g,''); });
+  var getIdx = function(names) {
+    for (var ni = 0; ni < names.length; ni++) {
+      var idx = headers.findIndex(function(h){ return h === names[ni] || h.indexOf(names[ni]) !== -1; });
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+  var urlIdx = getIdx(['url', 'page', 'pagina']);
+  var clickIdx = getIdx(['clicks', 'clics']);
+  var impIdx = getIdx(['impressions', 'impressies']);
+  var ctrIdx = getIdx(['ctr']);
+  var posIdx = getIdx(['position', 'positie', 'avg position']);
+  var queryIdx = getIdx(['query', 'queries', 'zoekterm', 'search term']);
+  var keywordIdx = getIdx(['keyword', 'keywords', 'zoekwoord']);
+  var topQueryIdx = queryIdx !== -1 ? queryIdx : keywordIdx;
+
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
-    var cols = lines[i].split(',').map(function(c){ return c.trim().replace(/^"|"$/g,''); });
+    var line = lines[i].trim();
+    if (!line) continue;
+    var cols = splitRow(line, delim).map(function(c){ return c.replace(/^"|"$/g,''); });
     if (cols.length < 2) continue;
-    if (urlIdx !== -1 && cols[urlIdx] && cols[urlIdx].startsWith('http')) {
-      rows.push({ url: cols[urlIdx], clicks: parseFloat(cols[clickIdx])||0, impressions: parseFloat(cols[impIdx])||0, ctr: parseFloat(cols[ctrIdx])||0, position: parseFloat(cols[posIdx])||0 });
-    } else if ((queryIdx !== -1 && cols[queryIdx]) || (keywordIdx !== -1 && cols[keywordIdx])) {
-      rows.push({ query: cols[queryIdx] || cols[keywordIdx] || '', clicks: parseFloat(cols[clickIdx])||0, impressions: parseFloat(cols[impIdx])||0, ctr: parseFloat(cols[ctrIdx])||0, position: parseFloat(cols[posIdx])||0, url: cols[urlIdx] || null });
+
+    var hasUrl = urlIdx !== -1 && cols[urlIdx] && cols[urlIdx].match(/^https?:\/\//);
+    var hasQuery = topQueryIdx !== -1 && cols[topQueryIdx];
+    var hasKeyword = keywordIdx !== -1 && cols[keywordIdx];
+
+    if (hasUrl) {
+      rows.push({
+        url: cols[urlIdx],
+        clicks: clickIdx !== -1 ? parseFloat(cols[clickIdx])||0 : 0,
+        impressions: impIdx !== -1 ? parseFloat(cols[impIdx])||0 : 0,
+        ctr: ctrIdx !== -1 ? parseFloat(cols[ctrIdx])||0 : 0,
+        position: posIdx !== -1 ? parseFloat(cols[posIdx])||0 : 0
+      });
+    } else if (hasQuery || hasKeyword) {
+      rows.push({
+        query: cols[topQueryIdx] || cols[keywordIdx] || '',
+        clicks: clickIdx !== -1 ? parseFloat(cols[clickIdx])||0 : 0,
+        impressions: impIdx !== -1 ? parseFloat(cols[impIdx])||0 : 0,
+        ctr: ctrIdx !== -1 ? parseFloat(cols[ctrIdx])||0 : 0,
+        position: posIdx !== -1 ? parseFloat(cols[posIdx])||0 : 0,
+        url: urlIdx !== -1 ? (cols[urlIdx] || null) : null
+      });
     }
   }
   return rows;
