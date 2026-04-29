@@ -209,7 +209,11 @@ textarea{resize:vertical;min-height:100px;}
     <div style="background:#0a0a0f;border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:14px;margin-top:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;">📊 GSC Data</div>
-        <button class="btn btn-danger" style="font-size:11px;padding:3px 9px;" onclick="resetEngineGSC()">↺ Reset</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span id="engGscStatus" style="font-size:11px;color:#6b7280;"></span>
+          <button class="btn btn-secondary" style="font-size:11px;padding:3px 9px;" onclick="refreshEngineGSC()" id="btnRefreshEngineGSC">🔄 Refresh GSC</button>
+          <button class="btn btn-danger" style="font-size:11px;padding:3px 9px;" onclick="resetEngineGSC()">↺ Reset</button>
+        </div>
       </div>
       <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Vul dit in VOOR research — de AI gebruikt jouw echte queries als basis voor keywords en H2-structuur.</div>
 
@@ -2691,6 +2695,57 @@ function handleRewriteQueriesCsv(input) {
   reader.readAsText(file);
 }
 
+async function refreshEngineGSC() {
+  var profileId = document.getElementById('engineProfile').value;
+  var statusEl = document.getElementById('engGscStatus');
+  var btn = document.getElementById('btnRefreshEngineGSC');
+  if (!profileId) { toast('Select a profile first', 'red'); return; }
+
+  // Try to get a URL: first from engGscPages, otherwise from profile domain
+  var url = '';
+  var pagesText = document.getElementById('engGscPages').value.trim();
+  if (pagesText) {
+    url = pagesText.split(/\n/)[0].trim();
+  }
+  if (!url) {
+    var p = _profiles.find(function(x) { return x.id == profileId; });
+    if (p && p.domain) {
+      url = p.domain.startsWith('http') ? p.domain : 'https://' + p.domain;
+    }
+  }
+  if (!url) { toast('Enter a URL in GSC Pages or set a domain on the profile', 'red'); return; }
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  statusEl.textContent = 'Pulling GSC data...';
+  statusEl.style.color = '#fbbf24';
+  try {
+    var r = await fetch('/api/gsc/auto-fill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_ID },
+      body: JSON.stringify({ pageUrl: url })
+    });
+    var d = await r.json();
+    if (!d.success) throw new Error(d.error || 'GSC fetch failed');
+    var g = d.data;
+    document.getElementById('engImpressions').value = g.impressions || 0;
+    document.getElementById('engClicks').value = g.clicks || 0;
+    document.getElementById('engPosition').value = g.position || 0;
+    document.getElementById('engCtr').value = g.ctr || 0;
+    if (g.topQueries) document.getElementById('engGscQueries').value = g.topQueries;
+    if (g.topKeyword) document.getElementById('seedKeyword').value = g.topKeyword;
+    statusEl.textContent = '✓ ' + (g.impressions || 0) + ' impr · pos ' + (g.position || 0) + ' · ' + (g.queryCount || 0) + ' queries';
+    statusEl.style.color = '#4ade80';
+    toast('✅ GSC refreshed — ' + (g.queryCount || 0) + ' queries found');
+    scheduleDraftSave();
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e.message;
+    statusEl.style.color = '#f87171';
+    toast('GSC refresh failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '🔄 Refresh GSC';
+  }
+}
+
 function resetEngineGSC() {
   // Build modal once, reuse
   var overlay = document.getElementById('resetConfirmOverlay');
@@ -3263,6 +3318,14 @@ function renderTrackerPagesList() {
     // GSC baseline badge
     var hasGsc = p.gsc_impressions || p.gsc_clicks || p.gsc_position;
     var gscBadge = hasGsc ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.25);margin-left:6px;">📊 GSC Baseline</span>' : '';
+    // Classification badge (from latest classification if available)
+    var clsBadge = '';
+    if (p.latest_classification) {
+      var cls = p.latest_classification;
+      var clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
+      var clsEmoji = cls.status === 'healthy' ? '🟢' : cls.status === 'attention' ? '🟡' : cls.status === 'opportunity' ? '💡' : '🔴';
+      clsBadge = '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:' + clsColor + '22;color:' + clsColor + ';border:1px solid ' + clsColor + '44;margin-left:6px;font-weight:600;">' + clsEmoji + ' ' + (cls.score || 0) + '/100</span>';
+    }
     // Parse recommendations safely
     var recs = snap.recommendations || null;
     if (recs && typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { recs = null; } }
@@ -3281,7 +3344,7 @@ function renderTrackerPagesList() {
     return '<div data-tracker-page-id="' + p.id + '" style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06);">' +
       '<div style="display:flex;align-items:center;gap:12px;">' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + gscBadge + '</div>' +
+          '<div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.title || p.url) + gscBadge + clsBadge + '</div>' +
           '<div style="font-size:12px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.url + (p.keyword ? ' · 🔑 ' + p.keyword : '') + ' · ' + lastChecked + '</div>' +
           '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;font-size:12px;">' + aiG + ' ' + aiP + ' ' + aiY + '</div>' +
           recHtml +
@@ -3495,7 +3558,35 @@ async function generateTrackerReport(pageId) {
         '</div></div>';
     }
 
-    body.innerHTML = reportHtml;
+    // ── Classification & Next Action ──────────────────────────────────────────
+    var cls = data.classification || {};
+    var clsHtml = '';
+    if (cls.status) {
+      var clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
+      var clsEmoji = cls.status === 'healthy' ? '🟢' : cls.status === 'attention' ? '🟡' : cls.status === 'opportunity' ? '💡' : '🔴';
+      var clsLabel = cls.status === 'healthy' ? 'HEALTHY' : cls.status === 'attention' ? 'NEEDS REFRESH' : cls.status === 'opportunity' ? 'OPPORTUNITY' : 'NEEDS REWRITE';
+      var actionBtn = '';
+      if (cls.next_action === 'rewrite_needed') {
+        actionBtn = '<button onclick="pushTrackerToRewrite(' + pageId + ')" style="font-size:12px;padding:6px 12px;background:#7f1d1d;border:1px solid #f87171;border-radius:6px;color:#fef2f2;cursor:pointer;font-weight:600;">✏️ Push to Rewrite</button>';
+      } else if (cls.next_action === 'refresh_content') {
+        actionBtn = '<button onclick="refreshTrackerContent(' + pageId + ')" style="font-size:12px;padding:6px 12px;background:#713f12;border:1px solid #fbbf24;border-radius:6px;color:#fef9c3;cursor:pointer;font-weight:600;">🔄 Refresh Content</button>';
+      } else if (cls.next_action === 'optimize_position') {
+        actionBtn = '<button onclick="pushTrackerToEngine(' + pageId + ')" style="font-size:12px;padding:6px 12px;background:#1e3a5f;border:1px solid #60a5fa;border-radius:6px;color:#dbeafe;cursor:pointer;font-weight:600;">🚀 Push to Engine</button>';
+      } else {
+        actionBtn = '<button onclick="closeTrackerDetail()" style="font-size:12px;padding:6px 12px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#e2e8f0;cursor:pointer;">✓ Continue Monitoring</button>';
+      }
+      clsHtml = '<div style="margin-bottom:16px;background:#0a0f1a;border:1px solid ' + clsColor + '44;border-radius:10px;padding:14px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">' +
+          '<div>' +
+            '<div style="font-size:14px;font-weight:700;color:' + clsColor + ';">' + clsEmoji + ' ' + clsLabel + ' <span style="font-size:11px;font-weight:400;color:#4b5563;">(' + (cls.score || 0) + '/100)</span></div>' +
+            '<div style="font-size:12px;color:#9ca3af;margin-top:4px;max-width:500px;">' + (cls.reason || '') + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;flex-shrink:0;">' + actionBtn + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    body.innerHTML = clsHtml + reportHtml;
     toast('Report generated — scroll down to view');
   } catch(e) {
     toast('Report failed: ' + e.message, 'red');
@@ -3518,6 +3609,87 @@ async function copyReportEmail(pageId) {
       toast('📧 Email report copied to clipboard!');
     }
   } catch(e) { toast('Copy failed: ' + e.message); }
+}
+
+async function pushTrackerToRewrite(pageId) {
+  var btn = document.querySelector('[onclick="pushTrackerToRewrite(' + pageId + ')"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    var data = await api('/api/tracker/pages/' + pageId + '/push-to-rewrite', 'POST');
+    if (!data.success) throw new Error(data.error || 'Push failed');
+    var payload = data.rewrite_payload;
+    // Pre-fill Rewrite tab
+    document.getElementById('rwUrl').value = payload.original_url || '';
+    document.getElementById('rwSlug').value = payload.current_slug || '';
+    document.getElementById('rwTitle').value = payload.current_title || '';
+    document.getElementById('rwKeyword').value = payload.keyword || '';
+    document.getElementById('rwImpressions').value = payload.gsc_impressions || '';
+    document.getElementById('rwClicks').value = payload.gsc_clicks || '';
+    document.getElementById('rwPosition').value = payload.gsc_position || '';
+    document.getElementById('rwGscQueries').value = payload.gsc_queries ? JSON.parse(payload.gsc_queries).join('\n') : '';
+    document.getElementById('rwGscPages').value = payload.gsc_pages ? JSON.parse(payload.gsc_pages).join('\n') : '';
+    if (payload.profile_id) document.getElementById('rwProfile').value = payload.profile_id;
+    // Switch to rewrite tab
+    switchTab('rewrite');
+    toast('✅ Pushed to Rewrite tab — all data pre-filled');
+    closeTrackerDetail();
+  } catch(e) {
+    toast('Push failed: ' + e.message, 'red');
+    if (btn) { btn.disabled = false; btn.textContent = '✏️ Push to Rewrite'; }
+  }
+}
+
+async function refreshTrackerContent(pageId) {
+  var btn = document.querySelector('[onclick="refreshTrackerContent(' + pageId + ')"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    var data = await api('/api/tracker/pages/' + pageId + '/refresh', 'POST');
+    if (!data.success) throw new Error(data.error || 'Refresh failed');
+    var brief = data.refresh_brief || {};
+    var html = '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🔄 Refresh Brief</div>' +
+      '<div style="background:#0a0f1a;border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px;">' +
+        '<div style="font-size:13px;color:#e2e8f0;font-weight:600;margin-bottom:8px;">' + (brief.priority || 'medium').toUpperCase() + ' priority · Est. ' + (brief.estimated_effort || '1-2 hours') + '</div>' +
+        (brief.sections_to_update ? brief.sections_to_update.map(function(s) {
+          return '<div style="margin-bottom:10px;">' +
+            '<div style="font-size:12px;font-weight:600;color:#fbbf24;">' + (s.section || '') + '</div>' +
+            '<div style="font-size:11px;color:#9ca3af;">Issue: ' + (s.current_issue || '') + '</div>' +
+            '<div style="font-size:11px;color:#e2e8f0;margin-top:2px;">→ ' + (s.suggested_change || '') + '</div>' +
+          '</div>';
+        }).join('') : '') +
+        (brief.new_faqs_to_add && brief.new_faqs_to_add.length ? '<div style="margin-top:10px;"><div style="font-size:11px;font-weight:600;color:#60a5fa;margin-bottom:4px;">New FAQs to add:</div>' +
+          brief.new_faqs_to_add.map(function(f) {
+            return '<div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;"><b>Q:</b> ' + f.question + '<br><b>A:</b> ' + f.answer + '</div>';
+          }).join('') +
+        '</div>' : '') +
+        (brief.schema_suggestions ? '<div style="margin-top:8px;font-size:11px;color:#4ade80;">Schema: ' + brief.schema_suggestions.join(', ') + '</div>' : '') +
+      '</div></div>';
+    var body = document.getElementById('trDetailBody');
+    body.innerHTML = html + body.innerHTML;
+    toast('✅ Refresh brief generated — apply edits to your CMS');
+  } catch(e) {
+    toast('Refresh failed: ' + e.message, 'red');
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Refresh Content'; }
+  }
+}
+
+async function pushTrackerToEngine(pageId) {
+  // For opportunity pages — push to engine with the keyword pre-filled
+  var page = _trPages.find(function(p) { return p.id === pageId; });
+  if (page && page.keyword) {
+    document.getElementById('seedKeyword').value = page.keyword;
+    if (page.profile_id) document.getElementById('engineProfile').value = page.profile_id;
+    // Pre-fill GSC from tracker baseline
+    if (page.gsc_impressions) document.getElementById('engImpressions').value = page.gsc_impressions;
+    if (page.gsc_clicks) document.getElementById('engClicks').value = page.gsc_clicks;
+    if (page.gsc_position) document.getElementById('engPosition').value = page.gsc_position;
+    if (page.gsc_ctr) document.getElementById('engCtr').value = page.gsc_ctr;
+    if (page.gsc_queries) document.getElementById('engGscQueries').value = JSON.parse(page.gsc_queries).join('\n');
+    if (page.gsc_pages) document.getElementById('engGscPages').value = JSON.parse(page.gsc_pages).join('\n');
+    switchTab('engine');
+    toast('🚀 Pushed to Engine — create optimized content for "' + page.keyword + '"');
+    closeTrackerDetail();
+  }
 }
 
 var _trDetailPageId = null;
