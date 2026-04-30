@@ -1030,8 +1030,10 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      anchor_text VARCHAR(500),
      link_type VARCHAR(20) DEFAULT 'internal',
      is_active BOOLEAN DEFAULT FALSE,
-     created_at TIMESTAMP DEFAULT NOW()
+     created_at TIMESTAMP DEFAULT NOW(),
+     UNIQUE(cluster_id, from_node_id, to_node_id)
    )`);
+   await client.query(`ALTER TABLE content_cluster_links ADD CONSTRAINT IF NOT EXISTS content_cluster_links_unique UNIQUE (cluster_id, from_node_id, to_node_id)`).catch(()=>{});
    // Phase 2 tables
    await client.query(`CREATE TABLE IF NOT EXISTS content_money_pages (
      id SERIAL PRIMARY KEY,
@@ -11131,19 +11133,23 @@ Return ONLY valid JSON:
       for (const linkTarget of (ca.links_to||[])) {
         const toId = nodeIds[linkTarget] || nodeIds[`cluster_${parseInt(linkTarget.replace('cluster_',''))}`];
         if (fromId && toId) {
-          await pool.query(
-            `INSERT INTO content_cluster_links (cluster_id, from_node_id, to_node_id, anchor_text, link_type)
-             VALUES ($1,$2,$3,$4,'internal') ON CONFLICT DO NOTHING`,
-            [clusterId, fromId, toId, ca.anchor_text_for_others||ca.target_keyword]
-          );
+          try {
+            await pool.query(
+              `INSERT INTO content_cluster_links (cluster_id, from_node_id, to_node_id, anchor_text, link_type)
+               VALUES ($1,$2,$3,$4,'internal') ON CONFLICT DO NOTHING`,
+              [clusterId, fromId, toId, ca.anchor_text_for_others||ca.target_keyword]
+            );
+          } catch(linkErr) { /* ignore duplicate link errors */ }
         }
       }
       // All cluster articles link back to pillar
-      await pool.query(
-        `INSERT INTO content_cluster_links (cluster_id, from_node_id, to_node_id, anchor_text, link_type)
-         VALUES ($1,$2,$3,$4,'internal') ON CONFLICT DO NOTHING`,
-        [clusterId, fromId, pillarNodeId, pillar.anchor_text_for_others||pillar.target_keyword]
-      );
+      try {
+        await pool.query(
+          `INSERT INTO content_cluster_links (cluster_id, from_node_id, to_node_id, anchor_text, link_type)
+           VALUES ($1,$2,$3,$4,'internal') ON CONFLICT DO NOTHING`,
+          [clusterId, fromId, pillarNodeId, pillar.anchor_text_for_others||pillar.target_keyword]
+        );
+      } catch(linkErr) { /* ignore duplicate link errors */ }
     }
 
     // Reload full cluster with nodes
