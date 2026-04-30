@@ -12937,6 +12937,25 @@ BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
 GRAAF CONTENT SCORE (original page): ${originalGraafScan?.contentScore || 'not scanned'}/100
 GRAAF GAPS TO FIX IN REWRITE: ${(originalGraafScan?.recommendations||[]).filter(r=>r.priority==='high'||r.priority==='medium').slice(0,5).map(r=>'['+r.priority.toUpperCase()+'] '+r.title).join(' | ') || 'none detected'}
 
+═══════════════════════════════════════
+11-POINT SEO AUDIT — CHECK EACH AGAINST ORIGINAL HTML
+═══════════════════════════════════════
+Check the original HTML for these 11 critical SEO points. Report ONLY failures:
+
+1. META TITLE: Must be 50-60 characters, keyword in first 3 words, include a number or power word. Report if missing, too short/long, or keyword not first.
+2. META DESCRIPTION: Must be 140-155 characters, include keyword + price/number + CTA with phone. Report if missing or wrong length.
+3. CANONICAL TAG: Must have <link rel="canonical" href="...">. Report if missing.
+4. H1: Exactly ONE <h1> on the page, keyword must be present. Report if 0, multiple, or keyword missing.
+5. H2 COUNT: Minimum 8 <h2> headings with keyword variations. Report actual count if < 8.
+6. WORD COUNT: Minimum 2500 words in body content. Report actual count if < 2500.
+7. SCHEMA MARKUP: Must have 4 JSON-LD schemas (LocalBusiness/Article + FAQPage + BreadcrumbList + Article/Service). Report which are missing.
+8. IMAGES: All images must have descriptive alt text with keyword AND loading="lazy". Report count of images missing alt or lazy.
+9. INTERNAL LINKS: Minimum 3 internal links with descriptive anchor text (not "click here"). Report actual count if < 3.
+10. EXTERNAL LINKS: Minimum 3 external authority links (.gov/.edu/industry) with rel="noopener noreferrer nofollow" target="_blank". Report actual count if < 3.
+11. BOFU CTAs: Phone number visible above the fold, minimum 5 CTAs per page. Report if phone not in first screen or CTAs < 5.
+
+Return audit findings as: {"audit_11": [{"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "what was found", "required": "what was required", "fix": "specific fix needed"}, ...]}
+
 CRITICAL RULES:
 - SLUG IS SACRED: keep_slug is TRUE by default — only set false when the slug is factually wrong for the intent
 - NEVER change the slug if it would break the search intent of the phrase (even partially)
@@ -12970,7 +12989,20 @@ Return ONLY valid JSON:
   "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4"],
   "target_word_count": 2000,
   "images_to_keep": ["note about keeping existing images"],
-  "internal_links_needed": ["service page 1","money page 1"]
+  "internal_links_needed": ["service page 1","money page 1"],
+  "audit_11": [
+    {"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 2, "name": "Meta Description", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 3, "name": "Canonical Tag", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 4, "name": "H1", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 5, "name": "H2 Count", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 6, "name": "Word Count", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 7, "name": "Schema Markup", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 8, "name": "Images", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 9, "name": "Internal Links", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 10, "name": "External Links", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
+    {"point": 11, "name": "BOFU CTAs", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."}
+  ]
 }`;
 
     const analyseResult = await callGeminiWithFallback(
