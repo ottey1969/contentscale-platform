@@ -1335,6 +1335,9 @@ async function startResearch() {
     return;
   }
   
+  // Kill any _pollForResearchCompletion() loop — we take over polling
+  if (_researchPollTimer) { clearTimeout(_researchPollTimer); _researchPollTimer = null; }
+  
   btn.disabled = false;
   btn.innerHTML = '<span class="spinner"></span> Starting...';
   // Reset brief button too — new research means new brief needed
@@ -1957,32 +1960,33 @@ async function loadPreviousJob(jobId) {
 // Poll for a research job that was still in progress when user tried to restore it
 var _researchPollTimer = null;
 async function _pollForResearchCompletion(jobId) {
+  // Kill any existing poll timer
   if (_researchPollTimer) { clearTimeout(_researchPollTimer); _researchPollTimer = null; }
-  // Don't poll if startResearch() is already polling this job
-  if (_activeResearchJobId === jobId) {
-    console.log('_pollForResearchCompletion: startResearch() already polling job ' + jobId + ' — skipping');
+  
+  // CRITICAL: If startResearch() is polling ANY job, don't interfere at all
+  if (_activeResearchJobId !== null) {
+    console.log('_pollForResearchCompletion: startResearch() is active for job ' + _activeResearchJobId + ' — not starting separate poll');
     return;
   }
+  
   var attempts = 0;
   var maxAttempts = 30; // 30 x 3s = 90s max
 
   async function tick() {
-    // If startResearch() took over polling, exit
-    if (_activeResearchJobId === jobId) {
-      console.log('_pollForResearchCompletion: startResearch() took over job ' + jobId);
+    // If startResearch() started polling, kill this loop immediately
+    if (_activeResearchJobId !== null) {
+      console.log('_pollForResearchCompletion: startResearch() started — killing this loop');
       return;
     }
     attempts++;
     try {
       var d = await api('/api/content/research/' + jobId, 'GET');
       if (d.status === 'completed' && d.research) {
-        // Research finished! Restore it properly
         _currentResearch = d.research;
         _currentJobId = jobId;
         document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
         renderResearch(d.research, !!d.research.all_keyword_data);
         document.getElementById('stepResearch').style.display = 'block';
-        // Reset Research button to complete state
         var rb = document.getElementById('btnResearch');
         if (rb) { rb.innerHTML = '✓ Research Complete'; rb.style.background = 'linear-gradient(135deg,#065f46,#047857)'; rb.disabled = true; }
         saveDraftNow();
@@ -1995,17 +1999,16 @@ async function _pollForResearchCompletion(jobId) {
         if (rb2) { rb2.innerHTML = '🔍 Research'; rb2.style.background = ''; rb2.disabled = false; }
         return;
       }
-      // Still researching
-      if (attempts < maxAttempts) {
-        toast('⏳ Still researching (' + (attempts * 3) + 's)...');
+      // Still researching — only show toast if startResearch() is NOT active
+      if (_activeResearchJobId === null && attempts < maxAttempts) {
         _researchPollTimer = setTimeout(tick, 3000);
-      } else {
-        toast('⏳ Research is taking longer than expected. Please check back later.');
+      } else if (attempts >= maxAttempts) {
+        toast('⏳ Research is taking longer than expected. Click 🔍 Research to check status.');
         var rb3 = document.getElementById('btnResearch');
         if (rb3) { rb3.innerHTML = '🔍 Research'; rb3.style.background = ''; rb3.disabled = false; }
       }
     } catch(e) {
-      if (attempts < maxAttempts) {
+      if (_activeResearchJobId === null && attempts < maxAttempts) {
         _researchPollTimer = setTimeout(tick, 3000);
       }
     }
