@@ -10649,7 +10649,7 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
     (mpR.rows || []).forEach(mp => {
       internalLinksPool.push({ text: mp.title || mp.primary_keyword, url: mp.url || `/${mp.planned_slug || (mp.primary_keyword ? mp.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}` });
     });
-    const artR = await pool.query(`SELECT id, title, slug, primary_keyword FROM content_articles WHERE profile_id=$1 AND status='published' ORDER BY published_at DESC LIMIT 20`, [profile_id]);
+    const artR = await pool.query(`SELECT id, title, slug, primary_keyword FROM content_articles WHERE profile_id=$1 AND status='published' ORDER BY published_at DESC LIMIT 20`, [job.profile_id]);
     (artR.rows || []).forEach(a => {
        internalLinksPool.push({ text: a.title || a.primary_keyword, url: `/${a.slug || (a.primary_keyword ? a.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}` });
     });
