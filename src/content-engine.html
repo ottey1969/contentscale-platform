@@ -1405,6 +1405,34 @@ function renderResearch(r, allKeywords) {
         '</div></div>';
     }).join('') +
     '</div>' +
+    '<div class="grid-2" style="margin-bottom:12px;">' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Internal Links (min 3)</div>' +
+    (r.internal_links_suggested || []).map(function(l) { return '<div style="font-size:12px;color:#60a5fa;padding:2px 0;">🔗 ' + (typeof l === 'object' ? (l.text || l.url || JSON.stringify(l)) : l) + '</div>'; }).join('') +
+    (!(r.internal_links_suggested || []).length ? '<span style="font-size:12px;color:#6b7280;">None from sitemap</span>' : '') +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">External Authority Links (min 3)</div>' +
+    (r.external_links_local || []).map(function(l) { return '<div style="font-size:12px;color:#4ade80;padding:2px 0;">🌐 ' + (typeof l === 'object' ? (l.anchor || l.text || l.url || JSON.stringify(l)) : l) + '</div>'; }).join('') +
+    (!(r.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    '</div></div>' +
+    '<div class="grid-2" style="margin-bottom:12px;">' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">AI Overview Optimisation</div>' +
+    (r.ai_overview_tips || []).map(function(t) { return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
+    (!(r.ai_overview_tips || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Voice Search</div>' +
+    (r.voice_search_queries || []).map(function(q) { return '<div style="font-size:12px;color:#38bdf8;padding:2px 0;">🎙️ ' + q + '</div>'; }).join('') +
+    (!(r.voice_search_queries || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    (r.voice_search_optimization ? '<div style="margin-top:6px;font-size:12px;color:#38bdf8;background:rgba(56,189,248,.08);padding:8px;border-radius:6px;">🎙️ <strong>Strategy:</strong> ' + r.voice_search_optimization + '</div>' : '') +
+    '</div></div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">BOFU CTAs</div>' +
+    (r.bofu_ctas || r.bofu_cta_suggestions || []).map(function(c) { return '<div style="font-size:12px;color:#fbbf24;padding:2px 0;">→ ' + c + '</div>'; }).join('') +
+    (!(r.bofu_ctas || r.bofu_cta_suggestions || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    '</div>' +
     '<div class="research-block">' +
     '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Content Gaps & Opportunities</div>' +
     (r.content_gaps || []).map(function(g) { return '<div style="font-size:13px;color:#e2e8f0;padding:4px 0;">→ ' + g + '</div>'; }).join('') +
