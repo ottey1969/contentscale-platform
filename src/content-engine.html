@@ -4786,4 +4786,10 @@ async function deleteTrackerPageFromDetail(pageId) {
     toast('Page removed from tracker');
     await loadTrackerPages();
   } catch(e) {
-    toast('Error: ' + 
+    toast('Error: ' + e.message, 'red');
+  }
+}
+
+</script>
+</body>
+</html>
