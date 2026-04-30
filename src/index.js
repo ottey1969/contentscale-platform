@@ -993,6 +993,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    )`);
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP`).catch(()=>{});
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS created_by INTEGER`).catch(()=>{});
+   await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS error_message TEXT`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS content_articles (
      id SERIAL PRIMARY KEY,
      job_id INTEGER REFERENCES content_jobs(id) ON DELETE CASCADE,
