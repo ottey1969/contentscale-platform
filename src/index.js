@@ -10517,7 +10517,6 @@ Return ONLY valid JSON with this exact structure:
   "title_alternatives": ["alt title 1","alt title 2","alt title 3"],
   "recommended_h2s": ["H2 1: Direct answer to primary question (targets featured snippet)","H2 2: What is [keyword] and why it matters","H2 3: How [keyword] works (step-by-step guide)","H2 4: [Keyword] benefits and advantages","H2 5: Common [keyword] problems and solutions","H2 6: [Keyword] costs, pricing, and what to expect","H2 7: How to choose the best [keyword] provider","H2 8: FAQ — frequently asked questions about [keyword]"],
   "target_word_count": 2500,
-  "internal_links_suggested": ["url1","url2","url3"],
   "external_links_local": [{"anchor": "government regulation on topic", "url": "https://real-url.gov/specific-page"}, {"anchor": "industry authority research", "url": "https://real-industry-org.edu/research"}, {"anchor": "academic study", "url": "https://scholar.google.com/scholar?q=specific-topic"}],
   "bofu_ctas": ["Call (555) 123-4567 for a free consultation", "Get Your Free Quote — Schedule Now", "Book Your Appointment Online in 60 Seconds"],
   "ai_overview_tips": ["Add direct 40-word answer in first paragraph","Use FAQPage schema for all Q&A sections","Format key data in tables for snippet extraction","Include HowTo schema with numbered steps","Add Speakable schema for voice search"],
@@ -10772,7 +10771,7 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
       search_intent: kd.search_intent,
       target_word_count: kd.target_word_count || 2500,
       structure: kd.recommended_h2s,
-      internal_links: (kd.internal_links_suggested || []).slice(0,5),
+      internal_links: [], // Will be populated from REAL sitemap verification below
       external_links_local: kd.external_links_local || [],
       bofu_ctas: kd.bofu_ctas || kd.bofu_cta_suggestions || [],
       ai_overview_tips: kd.ai_overview_tips || [],
