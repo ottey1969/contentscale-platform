@@ -201,7 +201,7 @@ textarea{resize:vertical;min-height:100px;}
     <div class="card-title"><span class="step-num">1</span> Select Profile & Seed Keyword</div>
     <div class="grid-2">
       <div><label>Business Profile</label><select id="engineProfile" onchange="loadProfileInfo()"><option value="">— Select a profile —</option></select></div>
-      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="emergency drain cleaning new jersey" onkeydown="if(event.key==='Enter')startResearch()"></div>
+      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="emergency drain cleaning new jersey" onkeydown="if(event.key==='Enter')startResearch()" oninput="resetResearchButton()"></div>
     </div>
     <input type="hidden" id="clusterNodeId">
     <input type="hidden" id="clusterId">
@@ -1547,6 +1547,16 @@ function renderBrief(b) {
     '<div style="font-size:12px;color:#6b7280;margin-top:8px;">Target: <strong style="color:#e2e8f0;">' + (b.target_word_count || 2500) + ' words</strong> · H2s: <strong style="color:#e2e8f0;">' + (b.structure || []).length + '</strong></div>';
 }
 
+function resetResearchButton() {
+  var btn = document.getElementById('btnResearch');
+  if (!btn) return;
+  if (btn.innerHTML.indexOf('Complete') !== -1 || btn.disabled) {
+    btn.innerHTML = '🔍 Research';
+    btn.style.background = '';
+    btn.disabled = false;
+  }
+}
+
 // ── Continue Previous Work ──────────────────────────────────
 async function loadPreviousJobsForProfile(profileId) {
   var panel = document.getElementById('previousJobsPanel');
@@ -1596,23 +1606,70 @@ async function loadPreviousJob(jobId) {
       document.getElementById('stepResearch').style.display = 'block';
     }
 
-    // 2. Check for existing article(s) for this job
-    var articlesD = await api('/api/content/articles/' + profileId, 'GET');
-    if (articlesD.success && articlesD.articles) {
-      var article = articlesD.articles.find(function(a) { return a.job_id == jobId; });
-      if (article) {
-        _currentArticle = article;
-        _currentArticleId = article.id;
-        _currentArticleHtml = article.html_content || '';
-        _currentArticleTitle = article.title || '';
-        renderArticleReady(article);
+    // 2. Load engine draft — may contain brief and article for this exact job
+    var draft = await loadDraft(profileId);
+    if (draft && draft.current_job_id == jobId) {
+      if (draft.current_brief) {
+        _currentBrief = draft.current_brief;
+        renderBrief(draft.current_brief);
+        document.getElementById('stepBrief').style.display = 'block';
+      }
+      if (draft.current_article) {
+        _currentArticle = draft.current_article;
+        _currentArticleId = draft.current_article.id;
+        _currentArticleHtml = draft.current_article.html_content || '';
+        _currentArticleTitle = draft.current_article.title || '';
+        renderArticleReady(draft.current_article);
         document.getElementById('stepArticle').style.display = 'block';
       }
     }
 
+    // 3. If no article in draft, check DB directly
+    if (!_currentArticle) {
+      var articlesD = await api('/api/content/articles/' + profileId, 'GET');
+      if (articlesD.success && articlesD.articles) {
+        var article = articlesD.articles.find(function(a) { return a.job_id == jobId; });
+        if (article) {
+          _currentArticle = article;
+          _currentArticleId = article.id;
+          _currentArticleHtml = article.html_content || '';
+          _currentArticleTitle = article.title || '';
+          renderArticleReady(article);
+          document.getElementById('stepArticle').style.display = 'block';
+        }
+      }
+    }
+
+    // 4. Update Research button to show "complete" state so user doesn't click it again
+    var researchBtn = document.getElementById('btnResearch');
+    if (researchBtn) {
+      researchBtn.innerHTML = '✓ Research Complete';
+      researchBtn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+      researchBtn.disabled = true;
+      // Re-enable after 8 seconds (in case they want to re-research)
+      setTimeout(function() {
+        researchBtn.innerHTML = '🔍 Research';
+        researchBtn.style.background = '';
+        researchBtn.disabled = false;
+      }, 8000);
+    }
+
     saveDraftNow();
-    toast('✅ Restored: ' + ((d.job && d.job.seed_keyword) ? d.job.seed_keyword : 'previous job'));
-    document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
+
+    // 5. Scroll to the right place
+    if (_currentBrief) {
+      // Brief exists — scroll to brief step so Write button is visible
+      document.getElementById('stepBrief').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast('✅ Restored: ' + ((d.job && d.job.seed_keyword) ? d.job.seed_keyword : 'previous job') + ' — click Write Article below');
+    } else if (_currentArticle) {
+      // Article exists — scroll to article
+      document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast('✅ Restored: ' + ((d.job && d.job.seed_keyword) ? d.job.seed_keyword : 'previous job') + ' — article already written');
+    } else {
+      // Research only — scroll to research with clear next-step hint
+      document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast('✅ Research restored — click 📋 Generate Brief below to continue');
+    }
   } catch(e) {
     toast('Restore failed: ' + e.message, 'red');
     _currentJobId = null;
@@ -1658,9 +1715,15 @@ async function writeNeededPage(title, url, pageId) {
   showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
   setTimeout(function() {
     document.getElementById('seedKeyword').value = title;
+    // Make sure Research button is in normal state
     var researchBtn = document.getElementById('btnResearch');
+    if (researchBtn) {
+      researchBtn.innerHTML = '🔍 Research';
+      researchBtn.style.background = '';
+      researchBtn.disabled = false;
+    }
     if (researchBtn) researchBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    toast('✍️ Ready to write "' + title + '" — click 🔍 Research');
+    toast('✍️ New topic: "' + title + '" — click 🔍 Research to start');
   }, 100);
   if (pageId) {
     try {
@@ -1754,10 +1817,15 @@ function goToEngineAndWrite(title) {
     }
     // No existing job — pre-fill and let user research
     document.getElementById('seedKeyword').value = title;
+    var researchBtn = document.getElementById('btnResearch');
+    if (researchBtn) {
+      researchBtn.innerHTML = '🔍 Research';
+      researchBtn.style.background = '';
+      researchBtn.disabled = false;
+    }
     setTimeout(function() {
-      var researchBtn = document.getElementById('btnResearch');
       if (researchBtn) researchBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      toast('✍️ Ready to write "' + title + '" — click 🔍 Research');
+      toast('✍️ New topic: "' + title + '" — click 🔍 Research to start');
     }, 100);
   }).catch(function(e) {
     // Fallback: just pre-fill
