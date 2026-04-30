@@ -1298,38 +1298,57 @@ async function startResearch() {
   if (!seed) { alert('Enter a seed keyword'); return; }
   var btn = document.getElementById('btnResearch');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Researching...';
+  btn.innerHTML = '<span class="spinner"></span> Starting...';
   document.getElementById('stepResearch').style.display = 'none';
   document.getElementById('stepBrief').style.display = 'none';
   document.getElementById('stepArticle').style.display = 'none';
 
-  var gscPayload = {
-    profile_id: profileId,
-    seed_keyword: seed,
-    research_all: true,
-    gsc_impressions: safeGet('engImpressions') || undefined,
-    gsc_clicks:      safeGet('engClicks') || undefined,
-    gsc_position:    safeGet('engPosition') || undefined,
-    gsc_ctr:         safeGet('engCtr') || undefined,
-    gsc_pages:       safeGet('engGscPages') || undefined,
-    gsc_queries:     safeGet('engGscQueries') || undefined,
-  };
-
   try {
-    var d = await api('/api/content/research', 'POST', gscPayload);
+    // Step 1: Start research job (returns immediately)
+    var d = await api('/api/content/research', 'POST', { profile_id: profileId, seed_keyword: seed });
     if (!d.success) throw new Error(d.error);
-    _currentJobId = d.job.id;
-    _currentResearch = d.research;
+    var jobId = d.job.id;
+    _currentJobId = jobId;
     _currentBrief = null; _currentArticle = null;
-    document.getElementById('stepBrief').style.display = 'none';
-    document.getElementById('stepArticle').style.display = 'none';
-    renderResearch(d.research, true);
-    document.getElementById('stepResearch').style.display = 'block';
-    document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
-    saveDraftNow();
-    toast('🔍 ' + (d.research.all_keywords_researched || 0) + ' keywords analyzed — full universe');
-  } catch(e) { toast('Research failed: ' + e.message, 'red'); }
-  finally {
+    
+    // Step 2: Poll for results
+    btn.innerHTML = '<span class="spinner"></span> Researching...';
+    var pollCount = 0;
+    var maxPolls = 60; // 60 x 2s = 120s max
+    
+    while (pollCount < maxPolls) {
+      await new Promise(function(r) { setTimeout(r, 2000); }); // Wait 2s
+      pollCount++;
+      
+      var poll = await api('/api/content/research/' + jobId, 'GET');
+      if (!poll.success && poll.status !== 'researching') {
+        throw new Error(poll.error || 'Research failed');
+      }
+      
+      if (poll.status === 'completed') {
+        // Research done!
+        _currentResearch = poll.research;
+        renderResearch(poll.research, true);
+        document.getElementById('stepResearch').style.display = 'block';
+        document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
+        saveDraftNow();
+        toast('🔍 Research complete — ' + (poll.research.all_keywords_researched || poll.research.secondary_keywords.length || 0) + ' keywords found');
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Research';
+        return;
+      }
+      
+      if (poll.status === 'error') {
+        throw new Error(poll.error || 'Research failed');
+      }
+      
+      // Still researching — update button text
+      btn.innerHTML = '<span class="spinner"></span> Researching (' + (pollCount * 2) + 's)...';
+    }
+    
+    throw new Error('Research timed out after 120s. Try again with a shorter keyword.');
+  } catch(e) { 
+    toast('Research failed: ' + e.message, 'red'); 
     btn.disabled = false;
     btn.innerHTML = '🔍 Research';
   }

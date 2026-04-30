@@ -10418,47 +10418,88 @@ app.delete('/api/content/engine-draft/:profileId', verifyEngineAccess, async (re
   } catch(e) { console.error('Delete engine draft error:', e); res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Async Research Jobs ──────────────────────────────────────
+const _researchJobs = new Map(); // jobId -> {status, result, error}
+
 app.post('/api/content/research', verifyEngineAccess, requireCredits('research'), async (req, res) => {
   try {
-    const { profile_id, seed_keyword, research_all } = req.body;
+    const { profile_id, seed_keyword } = req.body;
     if (!profile_id || !seed_keyword) return res.status(400).json({ success: false, error: 'profile_id and seed_keyword required' });
+    
+    // Create job immediately, return jobId for polling
+    const jobR = await pool.query(
+      `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, brief, created_at, updated_at)
+       VALUES ($1,$2,'researching','{}','{}',NOW(),NOW()) RETURNING *`,
+      [profile_id, seed_keyword]
+    );
+    const job = jobR.rows[0];
+    const jobId = job.id;
+    
+    // Return job ID immediately — frontend will poll
+    res.json({ success: true, job: { id: jobId, status: 'researching', seed_keyword }, message: 'Research started — poll for results' });
+    
+    // ── Run research in background ──
+    _runResearchJob(jobId, profile_id, seed_keyword).catch(err => {
+      console.error(`[research job ${jobId}] crashed:`, err.message);
+      _researchJobs.set(jobId, { status: 'error', error: err.message });
+      pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [err.message, jobId]).catch(()=>{});
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Poll endpoint for research results
+app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => {
+  try {
+    const jobR = await pool.query(`SELECT * FROM content_jobs WHERE id=$1`, [req.params.jobId]);
+    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+    const job = jobR.rows[0];
+    const inMemory = _researchJobs.get(parseInt(req.params.jobId));
+    
+    if (job.status === 'completed') {
+      return res.json({ success: true, status: 'completed', job: job, research: job.keyword_data });
+    }
+    if (job.status === 'error' || (inMemory && inMemory.status === 'error')) {
+      return res.json({ success: false, status: 'error', error: job.error_message || (inMemory && inMemory.error) || 'Unknown error' });
+    }
+    // Still researching
+    res.json({ success: true, status: 'researching', job: { id: job.id, status: 'researching' } });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+async function _runResearchJob(jobId, profile_id, seed_keyword) {
+  _researchJobs.set(jobId, { status: 'researching' });
+  
+  try {
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
-    if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
+    if (!profileR.rows.length) throw new Error('Profile not found');
     const profile = profileR.rows[0];
     safeProfileLocations(profile);
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+    if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
 
-    // Step 1: Fetch sitemap links
-    let sitemapLinks = [];
-    if (profile.sitemap_url) {
-      try {
-        const sitemapResp = await fetch(profile.sitemap_url, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(8000) });
-        const sitemapText = await sitemapResp.text();
-        const urlMatches = sitemapText.match(/<loc>(.*?)<\/loc>/g) || [];
-        sitemapLinks = urlMatches.map(m => m.replace(/<\/?loc>/g, '').trim()).filter(u => u.length > 0).slice(0, 100);
-      } catch(e) { console.warn('Sitemap fetch failed:', e.message); }
-    }
-
-    // Step 2: Web search for top competitors
-    const searchQuery = `${seed_keyword} ${profile.niche || ''} ${profile.geo_focus || ''}`.trim();
-    let serpResults = [];
-    const hasSearchCredentials = process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX;
-    if (hasSearchCredentials) {
-      try {
-        const searchController = new AbortController();
-        const searchTimer = setTimeout(() => searchController.abort(), 8000);
-        const searchResp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchQuery)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`, { signal: searchController.signal });
-        clearTimeout(searchTimer);
-        if (searchResp.ok) {
-          const searchData = await searchResp.json();
-          serpResults = (searchData.items || []).map(item => ({ title: item.title, url: item.link, snippet: item.snippet }));
-        }
-      } catch(e) { console.warn('Search API failed:', e.message); }
-    } else {
-      console.warn('GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_CX not set — skipping competitor search');
-    }
+    // Step 1+2: Fetch sitemap + search in PARALLEL
+    const [sitemapLinks, serpResults] = await Promise.all([
+      (async () => {
+        if (!profile.sitemap_url) return [];
+        try {
+          const sitemapResp = await fetch(profile.sitemap_url, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(5000) });
+          const sitemapText = await sitemapResp.text();
+          const urlMatches = sitemapText.match(/<loc>(.*?)<\/loc>/g) || [];
+          return urlMatches.map(m => m.replace(/<\/?loc>/g, '').trim()).filter(u => u.length > 0).slice(0, 50);
+        } catch(e) { return []; }
+      })(),
+      (async () => {
+        const hasCreds = process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX;
+        if (!hasCreds) return [];
+        try {
+          const q = `${seed_keyword} ${profile.niche || ''} ${profile.geo_focus || ''}`.trim();
+          const resp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`, { signal: AbortSignal.timeout(5000) });
+          if (resp.ok) { const d = await resp.json(); return (d.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })); }
+          return [];
+        } catch(e) { return []; }
+      })()
+    ]);
 
     // Step 3: AI keyword + competitive research
     const locationsList = (profile.locations || []).map(l => `${l.location_type}: ${l.location_value}`).join(', ');
@@ -10503,27 +10544,26 @@ Return compact JSON:
     if (!gemResult.ok) {
       const apiErr = gemResult.errorMessage || `Gemini HTTP ${gemResult.status}`;
       console.error('Gemini research API error:', apiErr, geminiData);
-      return res.status(502).json({ success: false, error: `Gemini API error: ${apiErr}`, model: gemResult.modelUsed });
+      throw new Error(`Gemini API error: ${apiErr}`);
     }
     const blockReason = geminiData?.promptFeedback?.blockReason;
-    if (blockReason) return res.status(502).json({ success: false, error: `Gemini blocked the prompt: ${blockReason}` });
+    if (blockReason) throw new Error(`Gemini blocked the prompt: ${blockReason}`);
     const finishReason = geminiData?.candidates?.[0]?.finishReason;
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawText) return res.status(502).json({ success: false, error: `Gemini returned no content (finishReason: ${finishReason || 'unknown'})`, model: gemResult.modelUsed });
+    if (!rawText) throw new Error(`Gemini returned no content (finishReason: ${finishReason || 'unknown'})`);
     let keywordData;
     try {
-      // Strip code fences if present, then try direct parse, then fallback to regex extraction
       const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
       try {
         keywordData = JSON.parse(cleaned);
       } catch (_) {
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return res.status(502).json({ success: false, error: 'AI did not return JSON', raw_preview: rawText.slice(0, 300) });
+        if (!jsonMatch) throw new Error('AI did not return JSON: ' + rawText.slice(0, 300));
         keywordData = JSON.parse(jsonMatch[0]);
       }
     } catch (parseErr) {
       console.error('Research JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
-      return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
+      throw new Error(`AI returned invalid JSON: ${parseErr.message}`);
     }
 
  // ── Enhance keywordData with AI Overview + Ranking Strategy ──
@@ -10645,25 +10685,11 @@ Return compact JSON:
       keywordData.titleAnalysis = titleAnalysis;
       keywordData.metaAnalysis = metaAnalysis;
 
-      // Create a job record so research can be persisted and referenced later
-      // Fallback: if created_by column doesn't exist yet, skip it
-      let jobR;
-      try {
-        jobR = await pool.query(
-          `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links, created_by) VALUES ($1, $2, 'researched', $3, $4, $5, $6) RETURNING *`,
-          [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), req.engineUser ? (req.engineUser.codeId || req.engineUser.id) : null]
-        );
-      } catch (insertErr) {
-        if (insertErr.message && insertErr.message.includes('created_by')) {
-          // Fallback: insert without created_by for backward compatibility
-          jobR = await pool.query(
-            `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, competitor_data, sitemap_links) VALUES ($1, $2, 'researched', $3, $4, $5) RETURNING *`,
-            [profile_id, seed_keyword, JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks)]
-          );
-        } else {
-          throw insertErr; // re-throw if it's a different error
-        }
-      }
+      // Update existing job with research data
+      await pool.query(
+        `UPDATE content_jobs SET status='researched', keyword_data=$1, competitor_data=$2, sitemap_links=$3, updated_at=NOW() WHERE id=$4`,
+        [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobId]
+      );
 
     // If research_all: do a second AI pass to research full keyword universe
     let allKeywordData = null;
@@ -10715,13 +10741,19 @@ Return ONLY valid JSON:
       } catch(e) { console.warn('Research all keywords failed:', e.message); }
     }
 
-    res.json({ success: true, job: jobR.rows[0], research: keywordData });
+    // Save results to DB and memory cache
+    await pool.query(
+      `UPDATE content_jobs SET status='completed', completed_at=NOW(), keyword_data=$1 WHERE id=$2`,
+      [JSON.stringify(keywordData), jobId]
+    );
+    _researchJobs.set(jobId, { status: 'completed', result: keywordData });
+    console.log(`[research job ${jobId}] completed — ${keywordData.primary_keyword}`);
   } catch(e) {
-    console.error('Research error:', e);
-    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
-    res.status(500).json({ success: false, error: msg, where: 'research' });
+    console.error(`[research job ${jobId}] error:`, e);
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [e.message, jobId]).catch(()=>{});
+    _researchJobs.set(jobId, { status: 'error', error: e.message });
   }
-});
+}
 
 // ── Generate Brief ───────────────────────────────────────────
 app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'), async (req, res) => {
