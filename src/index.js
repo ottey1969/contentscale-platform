@@ -10691,10 +10691,9 @@ Return compact JSON:
         [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobId]
       );
 
-    // If research_all: do a second AI pass to research full keyword universe
+    // Always do full keyword universe research (merged button behavior)
     let allKeywordData = null;
-    if (research_all) {
-      const allKwPrompt = `You are an expert SEO keyword researcher. Given the seed keyword and initial research, build a complete keyword universe.
+    const allKwPrompt = `You are an expert SEO keyword researcher. Given the seed keyword and initial research, build a complete keyword universe.
 
 SEED KEYWORD: "${seed_keyword}"
 BUSINESS: ${profile.name} — ${profile.niche}
@@ -10733,13 +10732,12 @@ Return ONLY valid JSON:
           if (allKeywordData) {
             // Save back into job
             const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed });
-            await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobR.rows[0].id]);
+            await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobId]);
             keywordData.all_keyword_data = allKeywordData;
             keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed;
           }
         }
       } catch(e) { console.warn('Research all keywords failed:', e.message); }
-    }
 
     // Save results to DB and memory cache
     await pool.query(
