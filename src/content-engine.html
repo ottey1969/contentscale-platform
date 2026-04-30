@@ -196,6 +196,13 @@ textarea{resize:vertical;min-height:100px;}
     <h2 style="font-size:1.3rem;font-weight:800;">🚀 Content Engine</h2>
     <p style="font-size:13px;color:#6b7280;margin-top:4px;">Research → Brief → Write → Publish</p>
   </div>
+  <!-- Billing / API Key Status Bar — hidden until admin ready -->
+  <div id="billingBar" style="display:none;background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div id="billingMode" style="font-size:12px;color:#9ca3af;"></div>
+      <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="showBillingSettings()">⚙️ API Keys & Billing</button>
+    </div>
+  </div>
   <!-- Step 1 -->
   <div class="card" id="stepSelectProfile">
     <div class="card-title"><span class="step-num">1</span> Select Profile & Seed Keyword</div>
@@ -1027,7 +1034,7 @@ function showPanel(name, btn) {
   if (tzBar) { tzBar.style.display = name === 'tracker' ? 'flex' : 'none'; }
   if (name === 'tracker' && window._tzRender) window._tzRender();
   if (name === 'profiles') loadProfiles();
-  if (name === 'engine') loadEngineProfiles();
+  if (name === 'engine') { loadEngineProfiles(); loadBillingInfo(); }
   if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
   if (name === 'clusters') { populateClusterFilter(); }
   if (name === 'rewrite') { populateAllSelects(); }
@@ -1350,8 +1357,10 @@ async function startResearch() {
         document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
         saveDraftNow();
         toast('🔍 Research complete — ' + (poll.research.all_keywords_researched || poll.research.secondary_keywords.length || 0) + ' keywords found');
-        btn.disabled = false;
-        btn.innerHTML = '🔍 Research';
+        // Mark as complete — user must type new keyword to reset
+        btn.innerHTML = '✓ Research Complete';
+        btn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+        btn.disabled = true;
         return;
       }
       
@@ -1363,11 +1372,14 @@ async function startResearch() {
       btn.innerHTML = '<span class="spinner"></span> Researching (' + (pollCount * 2) + 's)...';
     }
     
-    throw new Error('Research timed out after 120s. Try again with a shorter keyword.');
+    throw new Error('Research timed out after 120s. Check the dropdown above for your job status, or retry.');
   } catch(e) { 
-    toast('Research failed: ' + e.message, 'red'); 
+    toast('❌ Research failed: ' + e.message + ' — click 🔍 Research to retry', 'red'); 
     btn.disabled = false;
     btn.innerHTML = '🔍 Research';
+    btn.style.background = '';
+    // Also reset brief button since we have no research
+    resetBriefButton();
   }
 }
 
@@ -1580,6 +1592,107 @@ function resetBriefButton() {
     btn.innerHTML = '📋 Generate Brief';
     btn.style.background = '';
     btn.disabled = false;
+  }
+}
+
+// ── Billing / API Key Management ──────────────────────────────
+var _billingData = null;
+
+async function loadBillingInfo() {
+  try {
+    var d = await api('/api/engine/billing', 'GET');
+    if (!d.success) return;
+    _billingData = d;
+    var bar = document.getElementById('billingBar');
+    if (!bar) return;
+    bar.style.display = 'block';
+    var modeEl = document.getElementById('billingMode');
+    if (!modeEl) return;
+    if (d.is_byok) {
+      modeEl.innerHTML = '<span style="color:#4ade80;">🔑 BYOK</span> — You pay Google/Anthropic directly. No platform limits.';
+    } else if (d.is_platform) {
+      var pct = Math.min(100, Math.round((d.monthly_cost_used / d.monthly_cost_limit) * 100));
+      var color = pct > 90 ? '#ef4444' : pct > 70 ? '#fbbf24' : '#4ade80';
+      modeEl.innerHTML = '<span style="color:#a78bfa;">🖥️ Platform</span> — $' + d.monthly_cost_used.toFixed(2) + ' / $' + d.monthly_cost_limit.toFixed(2) + ' this month (<span style="color:' + color + ';">' + pct + '%</span>)';
+    } else {
+      modeEl.innerHTML = '<span style="color:#fbbf24;">⚠️ Not configured</span> — Add API keys or set platform mode';
+    }
+  } catch(e) { console.warn('loadBillingInfo failed:', e.message); }
+}
+
+function showBillingSettings() {
+  var modal = document.getElementById('billingModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  if (!_billingData) { loadBillingInfo().then(function() { populateBillingModal(); }); }
+  else { populateBillingModal(); }
+}
+
+function populateBillingModal() {
+  var d = _billingData;
+  if (!d) return;
+  var modeText = d.is_byok ? '🔑 BYOK — Your own API keys' : d.is_platform ? '🖥️ Platform — We provide API keys' : '⚠️ Not configured';
+  document.getElementById('billingCurrentMode').textContent = modeText;
+
+  var modeSelect = document.getElementById('billingModeSelect');
+  modeSelect.value = d.mode || 'platform';
+
+  if (d.is_platform) {
+    document.getElementById('billingCostDisplay').style.display = 'block';
+    document.getElementById('billingCostDisplay').innerHTML = 'Used: $' + d.monthly_cost_used.toFixed(2) + ' / Limit: $' + d.monthly_cost_limit.toFixed(2) + ' <span style="color:#6b7280;">(resets monthly)</span>';
+    document.getElementById('billingCostLimit').value = d.monthly_cost_limit;
+  } else {
+    document.getElementById('billingCostDisplay').style.display = 'none';
+  }
+
+  // Show/hide fields based on mode
+  onBillingModeChange();
+
+  // Populate keys (if BYOK and user has keys)
+  if (d.gemini_key_last4) {
+    document.getElementById('billingGeminiKey').placeholder = 'Current: ' + d.gemini_key_last4 + ' (enter new to replace)';
+  }
+  if (d.claude_key_last4) {
+    document.getElementById('billingClaudeKey').placeholder = 'Current: ' + d.claude_key_last4 + ' (enter new to replace)';
+  }
+
+  // Populate cost log
+  if (d.recent_costs && d.recent_costs.length) {
+    document.getElementById('billingCostLog').style.display = 'block';
+    var logHtml = d.recent_costs.slice(0, 20).map(function(c) {
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
+        '<span style="color:#9ca3af;">' + c.action + ' · ' + c.model + '</span>' +
+        '<span style="color:#e2e8f0;">$' + parseFloat(c.estimated_cost).toFixed(4) + '</span></div>';
+    }).join('');
+    document.getElementById('billingCostLogTable').innerHTML = logHtml;
+  } else {
+    document.getElementById('billingCostLog').style.display = 'none';
+  }
+}
+
+function onBillingModeChange() {
+  var mode = document.getElementById('billingModeSelect').value;
+  document.getElementById('byokFields').style.display = mode === 'byok' ? 'block' : 'none';
+  document.getElementById('platformFields').style.display = mode === 'platform' ? 'block' : 'none';
+}
+
+async function saveBillingSettings() {
+  var mode = document.getElementById('billingModeSelect').value;
+  var payload = { api_key_mode: mode };
+  if (mode === 'byok') {
+    var gemKey = document.getElementById('billingGeminiKey').value.trim();
+    var claudeKey = document.getElementById('billingClaudeKey').value.trim();
+    if (gemKey) payload.gemini_key = gemKey;
+    if (claudeKey) payload.claude_key = claudeKey;
+  }
+  try {
+    var d = await api('/api/engine/billing/keys', 'PUT', payload);
+    if (!d.success) throw new Error(d.error);
+    toast('✅ Settings saved');
+    document.getElementById('billingModal').style.display = 'none';
+    await loadBillingInfo();
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'red');
   }
 }
 
@@ -4998,5 +5111,64 @@ async function deleteTrackerPageFromDetail(pageId) {
 }
 
 </script>
+
+<!-- ══ Billing / API Key Settings Modal ══ -->
+<div id="billingModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:9999;justify-content:center;align-items:center;overflow-y:auto;">
+  <div style="background:#0f0f1a;border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;margin-top:40px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:1.1rem;font-weight:700;color:#fbbf24;">⚙️ API Keys & Billing</h3>
+      <button onclick="document.getElementById('billingModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div id="billingModalContent">
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:12px;">Control how AI calls are paid for — your own keys (free for us) or platform keys with a monthly limit.</div>
+
+      <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin-bottom:6px;">Current Mode</div>
+        <div id="billingCurrentMode" style="font-size:14px;font-weight:600;color:#e2e8f0;">—</div>
+        <div id="billingCostDisplay" style="font-size:12px;color:#9ca3af;margin-top:4px;display:none;"></div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;color:#9ca3af;">API Key Mode</label>
+        <select id="billingModeSelect" onchange="onBillingModeChange()" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-top:4px;">
+          <option value="platform">🖥️ Platform API Keys (we bill you monthly)</option>
+          <option value="byok">🔑 Bring Your Own API Keys (you pay Google/Anthropic directly)</option>
+        </select>
+      </div>
+
+      <div id="byokFields" style="display:none;">
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px;color:#9ca3af;">Gemini API Key</label>
+          <input id="billingGeminiKey" type="password" placeholder="AIza..." style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-top:4px;">
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">Get one free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#60a5fa;">Google AI Studio</a></div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px;color:#9ca3af;">Claude API Key</label>
+          <input id="billingClaudeKey" type="password" placeholder="sk-ant-..." style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-top:4px;">
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#60a5fa;">Anthropic Console</a></div>
+        </div>
+      </div>
+
+      <div id="platformFields">
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px;color:#9ca3af;">Monthly Cost Limit ($)</label>
+          <input id="billingCostLimit" type="number" min="5" max="500" value="50" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-top:4px;">
+          <div style="font-size:11px;color:#6b7280;margin-top:2px;">When this limit is reached, all AI calls stop until next month.</div>
+        </div>
+      </div>
+
+      <div id="billingCostLog" style="margin-bottom:14px;display:none;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:6px;">Recent API Costs (30 days)</div>
+        <div id="billingCostLogTable" style="font-size:11px;max-height:150px;overflow-y:auto;"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-primary" onclick="saveBillingSettings()" style="flex:1;">💾 Save Settings</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('billingModal').style.display='none'" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

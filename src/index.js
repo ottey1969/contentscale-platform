@@ -113,9 +113,10 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
   const FALLBACK = fallbackModel || 'gemini-2.5-flash-lite';
   const primary = primaryModel || GEMINI_MODEL;
   const shouldFallback = (status, errMsg) => {
-    if (status === 503 || status === 429 || status === 500) return true;
+    // Timeout (408), overload (503), rate limit (429), server error (500), and bad gateway (502) all trigger fallback
+    if (status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true;
     const m = (errMsg || '').toLowerCase();
-    return m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota');
+    return m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota') || m.includes('timeout') || m.includes('timed out');
   };
   const tryModel = async (model) => {
     const controller = new AbortController();
@@ -945,6 +946,17 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`CREATE TABLE IF NOT EXISTS credit_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, credits_spent INTEGER NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS owner_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS content_language VARCHAR(10) DEFAULT 'en'`).catch(()=>{});
+   // ── API Cost Tracking System (replaces credits) ─────────────
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS api_key_mode VARCHAR(20) DEFAULT NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS monthly_cost_limit DECIMAL(10,2) DEFAULT 50.00`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS monthly_cost_used DECIMAL(10,2) DEFAULT 0.00`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS cost_reset_at TIMESTAMPTZ DEFAULT NULL`).catch(()=>{});
+   await client.query(`CREATE TABLE IF NOT EXISTS api_cost_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, model VARCHAR(100) NOT NULL, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, estimated_cost DECIMAL(10,6) NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
+   // Migrate existing users: byok = !use_platform_keys, platform = use_platform_keys
+   try {
+     await client.query(`UPDATE engine_access_codes SET api_key_mode='byok' WHERE use_platform_keys=FALSE AND api_key_mode IS NULL`);
+     await client.query(`UPDATE engine_access_codes SET api_key_mode='platform' WHERE use_platform_keys=TRUE AND api_key_mode IS NULL`);
+   } catch(e) {}
    // Client progress tracking
    await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
    // Content Engine tables
@@ -3777,6 +3789,13 @@ console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
   // Auto-detect best Gemini model at startup
   await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
+  // Recover any jobs stuck in 'researching' from previous server session
+  try {
+    const stuckR = await pool.query(`UPDATE content_jobs SET status='error', error_message='Server restarted during research — please try again' WHERE status='researching' RETURNING id, seed_keyword`);
+    if (stuckR.rows.length) {
+      console.log(`🔄 Recovered ${stuckR.rows.length} stuck research jobs:`, stuckR.rows.map(r => r.seed_keyword).join(', '));
+    }
+  } catch(e) { console.warn('Stuck job recovery failed:', e.message); }
 httpServer.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
@@ -9798,64 +9817,144 @@ function requireCredits(action) {
   return async (req, res, next) => {
     try {
       const eu = req.engineUser;
-      // ── Never charge credits to: admins, unauthenticated, own-API-key users ──
-      if (!eu) return next();                          // unauthenticated (shouldn't reach here)
-      if (eu.isAdmin) return next();                   // admin — always free
-      if (!eu.code) return next();                     // safety guard
-      if (!eu.code.use_platform_keys) return next();   // own key OR lifetime deal — no credits, ever
-      // ── Platform key user ──
-      if (eu.code.platform_credits === null) return next(); // platform key + unlimited credits
-      // Platform key + credit cap — deduct
-      const result = await spendCredits(eu.codeId, action);
-      if (!result.ok) return res.status(402).json({ success: false, error: result.error, code: 'NO_CREDITS' });
-      req.creditsSpent = result.cost;
-      req.creditsLeft = result.credits_left;
+      if (!eu) return next();
+      if (eu.isAdmin) return next();
+      if (!eu.code) return next();
+      // ── BYOK users pass through (they pay Google/Anthropic directly) ──
+      if (eu.code.api_key_mode === 'byok') return next();
+      // ── Platform key users: check monthly cost limit ──
+      // Reset monthly cost if needed
+      const now = new Date();
+      const resetAt = eu.code.cost_reset_at ? new Date(eu.code.cost_reset_at) : null;
+      if (!resetAt || now.getMonth() !== resetAt.getMonth() || now.getFullYear() !== resetAt.getFullYear()) {
+        await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
+        eu.code.monthly_cost_used = 0;
+      }
+      const limit = parseFloat(eu.code.monthly_cost_limit) || 50;
+      const used = parseFloat(eu.code.monthly_cost_used) || 0;
+      if (used >= limit) {
+        return res.status(402).json({
+          success: false,
+          error: `Budget exhausted: €${used.toFixed(2)} used of €${limit.toFixed(2)} limit. Contact admin to top up.`,
+          code: 'COST_LIMIT_REACHED',
+          used: used,
+          limit: limit
+        });
+      }
+      req.monthlyLimit = limit;
+      req.monthlyUsed = used;
       next();
     } catch (e) {
-      console.error('[requireCredits]', e);
-      return res.status(500).json({ success: false, error: 'Credit system error: ' + e.message });
+      console.error('[requireApiAccess]', e);
+      return res.status(500).json({ success: false, error: 'API access check failed: ' + e.message });
     }
   };
 }
 
-app.get('/api/engine/credits', verifyEngineAccess, async (req, res) => {
-  const eu = req.engineUser;
-  // Admins and own-key users: no credit system applies
-  if (eu.isAdmin) return res.json({ success: true, credits_apply: false, unlimited: true });
-  const code = eu.code;
-  if (!code.use_platform_keys) {
-    return res.json({ success: true, credits_apply: false, unlimited: true,
-      is_lifetime: code.deal_type === 'lifetime',
-      deal_label: code.deal_label || null,
-      message: code.deal_type === 'lifetime'
-        ? 'Lifetime deal — own API keys, no credit system'
-        : 'Own API key — credit system does not apply' });
+// ── API Cost Estimation ─────────────────────────────────────
+const COST_RATES = {
+  'gemini-2.5-flash': { input: 0.075e-6, output: 0.30e-6 },
+  'gemini-2.5-flash-lite': { input: 0.075e-6, output: 0.15e-6 },
+  'gemini-2.0-flash': { input: 0.075e-6, output: 0.30e-6 },
+  'gemini-1.5-flash-001': { input: 0.075e-6, output: 0.30e-6 },
+  'claude-sonnet-4-20250514': { input: 3.00e-6, output: 15.00e-6 },
+  'claude-3-7-sonnet-20250219': { input: 3.00e-6, output: 15.00e-6 },
+};
+function estimateApiCost(model, inputTokens, outputTokens) {
+  const rate = COST_RATES[model] || COST_RATES['gemini-2.5-flash'];
+  return ((inputTokens || 0) * rate.input) + ((outputTokens || 0) * rate.output);
+}
+async function trackApiCost(codeId, action, model, inputTokens, outputTokens, detail) {
+  try {
+    const cost = estimateApiCost(model, inputTokens, outputTokens);
+    await pool.query(`INSERT INTO api_cost_log (code_id, action, model, input_tokens, output_tokens, estimated_cost, detail) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [codeId, action, model, inputTokens || 0, outputTokens || 0, cost, detail || '']);
+    await pool.query(`UPDATE engine_access_codes SET monthly_cost_used = COALESCE(monthly_cost_used,0) + $1 WHERE id=$2`, [cost, codeId]);
+    return { ok: true, cost };
+  } catch (e) {
+    console.error('[trackApiCost] failed:', e.message);
+    return { ok: false, cost: 0 };
   }
-  // Platform key user
-  const used = code.credits_used || 0;
-  const total = code.platform_credits;  // null = unlimited
-  const left = total === null ? null : Math.max(0, total - used);
-  const isLifetime = code.deal_type === 'lifetime';
+}
+
+app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
+  const eu = req.engineUser;
+  if (!eu || !eu.code) return res.status(500).json({ success: false, error: 'No access code' });
+  const code = eu.code;
+  const now = new Date();
+  const resetAt = code.cost_reset_at ? new Date(code.cost_reset_at) : null;
+  if (!resetAt || now.getMonth() !== resetAt.getMonth() || now.getFullYear() !== resetAt.getFullYear()) {
+    await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
+    code.monthly_cost_used = 0;
+  }
+  let recentCosts = [];
+  try {
+    const logR = await pool.query(`SELECT action, model, input_tokens, output_tokens, estimated_cost, created_at FROM api_cost_log WHERE code_id=$1 AND created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC LIMIT 50`, [eu.codeId]);
+    recentCosts = logR.rows;
+  } catch(e) {}
   res.json({
     success: true,
-    credits_apply: true,
-    unlimited: total === null,
-    platform_credits: total,
-    credits_used: used,
-    credits_left: left,
+    mode: code.api_key_mode || 'unknown',
+    is_byok: code.api_key_mode === 'byok',
+    is_platform: code.api_key_mode === 'platform',
+    has_gemini_key: !!(code.gemini_key),
+    has_claude_key: !!(code.claude_key),
+    gemini_key_last4: code.gemini_key ? '****' + code.gemini_key.slice(-4) : null,
+    claude_key_last4: code.claude_key ? '****' + code.claude_key.slice(-4) : null,
+    monthly_cost_limit: parseFloat(code.monthly_cost_limit) || 50,
+    monthly_cost_used: parseFloat(code.monthly_cost_used) || 0,
+    cost_reset_at: code.cost_reset_at,
+    recent_costs: recentCosts,
+    credits_apply: code.api_key_mode === 'platform',
+    unlimited: code.api_key_mode === 'byok' || eu.isAdmin,
     deal_type: code.deal_type || null,
     deal_label: code.deal_label || null,
-    is_lifetime: isLifetime,
-    costs: CREDIT_COSTS
+  });
+});
+
+app.put('/api/engine/billing/keys', verifyEngineAccess, async (req, res) => {
+  const eu = req.engineUser;
+  if (!eu || !eu.code) return res.status(403).json({ success: false, error: 'No access code' });
+  const { gemini_key, claude_key, api_key_mode } = req.body;
+  const updates = []; const vals = []; let idx = 1;
+  if (gemini_key !== undefined) { updates.push(`gemini_key=$${idx++}`); vals.push(gemini_key); }
+  if (claude_key !== undefined) { updates.push(`claude_key=$${idx++}`); vals.push(claude_key); }
+  if (api_key_mode !== undefined) { updates.push(`api_key_mode=$${idx++}`); vals.push(api_key_mode); }
+  if (!updates.length) return res.status(400).json({ success: false, error: 'No fields to update' });
+  vals.push(eu.codeId);
+  try {
+    await pool.query(`UPDATE engine_access_codes SET ${updates.join(', ')} WHERE id=$${idx}`, vals);
+    res.json({ success: true, message: 'API keys updated' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/engine/credits', verifyEngineAccess, async (req, res) => {
+  const eu = req.engineUser;
+  if (!eu || !eu.code) return res.json({ success: true, credits_apply: false, unlimited: true });
+  const code = eu.code;
+  res.json({
+    success: true,
+    credits_apply: code.api_key_mode === 'platform',
+    unlimited: code.api_key_mode === 'byok' || eu.isAdmin,
+    is_lifetime: code.deal_type === 'lifetime',
+    deal_label: code.deal_label || null,
+    message: code.api_key_mode === 'byok'
+      ? 'BYOK — you pay Google/Anthropic directly'
+      : code.api_key_mode === 'platform'
+        ? `Platform API — $${parseFloat(code.monthly_cost_used||0).toFixed(2)} / $${parseFloat(code.monthly_cost_limit||50).toFixed(2)} this month`
+        : 'API mode not set',
+    mode: code.api_key_mode,
+    monthly_cost_limit: parseFloat(code.monthly_cost_limit) || 50,
+    monthly_cost_used: parseFloat(code.monthly_cost_used) || 0,
   });
 });
 
 app.patch('/api/admin/engine-codes/:id/credits', verifyAdmin, async (req, res) => {
-  const { platform_credits, reset_used } = req.body;
+  const { platform_credits, reset_used, monthly_cost_limit } = req.body;
   try {
     const fields = []; const vals = []; let i = 1;
+    if (monthly_cost_limit !== undefined) { fields.push(`monthly_cost_limit=$${i++}`); vals.push(monthly_cost_limit); }
     if (platform_credits !== undefined) { fields.push(`platform_credits=$${i++}`); vals.push(platform_credits === null ? null : parseInt(platform_credits)); }
-    if (reset_used) { fields.push(`credits_used=$${i++}`); vals.push(0); }
+    if (reset_used) { fields.push(`monthly_cost_used=0, cost_reset_at=NOW(), credits_used=0`); }
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -9867,6 +9966,12 @@ app.get('/api/admin/engine-codes/:id/credit-log', verifyAdmin, async (req, res) 
   try {
     const r = await pool.query(`SELECT * FROM credit_log WHERE code_id=$1 ORDER BY created_at DESC LIMIT 100`, [req.params.id]);
     res.json({ success: true, log: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/admin/engine-codes/:id/cost-log', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT action, model, input_tokens, output_tokens, estimated_cost, detail, created_at FROM api_cost_log WHERE code_id=$1 ORDER BY created_at DESC LIMIT 100`, [req.params.id]);
+    res.json({ success: true, logs: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 // ── GRAAF POST-WRITE SCAN SYSTEM ─────────────────────────────────────────────
@@ -10117,23 +10222,25 @@ app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
-  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key } = req.body;
+  const { client_name, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key, api_key_mode, monthly_cost_limit } = req.body;
   if (!client_name) return res.status(400).json({ success: false, error: 'client_name required' });
   try {
     const code = 'ENG-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
-    // Lifetime deal = client brings own keys, never expires, no credit system
-    // Platform keys = you provide AI keys + credit allowance
     const isLifetimeDeal = deal_type === 'lifetime';
     const effectivePlatformKeys = isLifetimeDeal ? false : !!use_platform_keys;
     const effectiveExpiry = isLifetimeDeal ? null : (expires_at || null);
     const effectiveCredits = isLifetimeDeal ? null : (platform_credits || null);
-    const r = await pool.query(`INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys,platform_credits,deal_type,deal_label,deal_purchased_at,serpapi_key,perplexity_key,you_api_key) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-      [code,client_name,gemini_key||null,claude_key||null,effectiveExpiry,notes||null,effectivePlatformKeys,effectiveCredits,deal_type||null,deal_label||null,isLifetimeDeal?new Date():null,serpapi_key||null,perplexity_key||null,you_api_key||null]);
+    const effectiveMode = api_key_mode || (isLifetimeDeal ? 'byok' : (effectivePlatformKeys ? 'platform' : 'byok'));
+    const effectiveCostLimit = isLifetimeDeal ? null : (monthly_cost_limit || 5);
+    const r = await pool.query(
+      `INSERT INTO engine_access_codes (code,client_name,gemini_key,claude_key,expires_at,notes,use_platform_keys,platform_credits,deal_type,deal_label,deal_purchased_at,serpapi_key,perplexity_key,you_api_key,api_key_mode,monthly_cost_limit) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [code,client_name,gemini_key||null,claude_key||null,effectiveExpiry,notes||null,effectivePlatformKeys,effectiveCredits,deal_type||null,deal_label||null,isLifetimeDeal?new Date():null,serpapi_key||null,perplexity_key||null,you_api_key||null,effectiveMode,effectiveCostLimit]
+    );
     res.json({ success: true, code: {...r.rows[0], gemini_key: gemini_key?'***'+gemini_key.slice(-4):null, claude_key: claude_key?'***'+claude_key.slice(-4):null} });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
-  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key } = req.body;
+  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key, api_key_mode, monthly_cost_limit } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
     if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
@@ -10143,12 +10250,14 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (notes!==undefined){fields.push(`notes=$${i++}`);vals.push(notes);}
     if (use_platform_keys!==undefined){fields.push(`use_platform_keys=$${i++}`);vals.push(!!use_platform_keys);}
     if (platform_credits!==undefined){fields.push(`platform_credits=$${i++}`);vals.push(platform_credits===null?null:parseInt(platform_credits));}
-    if (reset_used){fields.push(`credits_used=$${i++}`);vals.push(0);}
+    if (reset_used){fields.push(`credits_used=$${i++}`);vals.push(0);fields.push(`monthly_cost_used=0, cost_reset_at=NOW()`);}
     if (deal_type!==undefined){fields.push(`deal_type=$${i++}`);vals.push(deal_type||null);}
     if (deal_label!==undefined){fields.push(`deal_label=${i++}`);vals.push(deal_label||null);}
     if (serpapi_key!==undefined){fields.push(`serpapi_key=$${i++}`);vals.push(serpapi_key||null);}
     if (perplexity_key!==undefined){fields.push(`perplexity_key=${i++}`);vals.push(perplexity_key||null);}
     if (you_api_key!==undefined){fields.push(`you_api_key=${i++}`);vals.push(you_api_key||null);}
+    if (api_key_mode!==undefined){fields.push(`api_key_mode=$${i++}`);vals.push(api_key_mode);}
+    if (monthly_cost_limit!==undefined){fields.push(`monthly_cost_limit=$${i++}`);vals.push(monthly_cost_limit);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -10473,6 +10582,15 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
     const job = jobR.rows[0];
     const inMemory = _researchJobs.get(parseInt(req.params.jobId));
     
+    // Safety check: if researching for more than 5 minutes, treat as error
+    if (job.status === 'researching' && job.created_at) {
+      const ageMs = Date.now() - new Date(job.created_at).getTime();
+      if (ageMs > 300000) { // 5 minutes
+        await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out after 5 minutes', job.id]).catch(()=>{});
+        return res.json({ success: false, status: 'error', error: 'Research timed out after 5 minutes — please try again' });
+      }
+    }
+    
     if (job.status === 'completed') {
       return res.json({ success: true, status: 'completed', job: job, research: job.keyword_data });
     }
@@ -10480,18 +10598,28 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
       return res.json({ success: false, status: 'error', error: job.error_message || (inMemory && inMemory.error) || 'Unknown error' });
     }
     // Still researching
-    res.json({ success: true, status: 'researching', job: { id: job.id, status: 'researching' } });
+    res.json({ success: true, status: 'researching', job: { id: job.id, status: 'researching', seed_keyword: job.seed_keyword } });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 async function _runResearchJob(jobId, profile_id, seed_keyword) {
   _researchJobs.set(jobId, { status: 'researching' });
-  
+
+  // Safety timeout — if research takes longer than 3 minutes, mark as error
+  const safetyTimeout = setTimeout(async () => {
+    console.error(`[research job ${jobId}] SAFETY TIMEOUT — marking as error after 3 minutes`);
+    _researchJobs.set(jobId, { status: 'error', error: 'Research timed out after 3 minutes' });
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out after 3 minutes', jobId]).catch(()=>{});
+  }, 180000); // 3 minutes
+
   try {
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
     if (!profileR.rows.length) throw new Error('Profile not found');
     const profile = profileR.rows[0];
     safeProfileLocations(profile);
+
+    // Get code_id for cost tracking (from profile owner)
+    const codeId = profile.owner_code_id || null;
 
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
@@ -10675,6 +10803,14 @@ OUTPUT FORMAT — Return ONLY valid JSON:
       throw new Error(`AI returned invalid JSON: ${parseErr.message}`);
     }
 
+    // Track API cost for platform-key users
+    if (codeId) {
+      const usage = geminiData?.usageMetadata || {};
+      const inputTokens = usage.promptTokenCount || usage.inputTokenCount || 0;
+      const outputTokens = usage.candidatesTokenCount || usage.outputTokenCount || rawText.length / 4;
+      await trackApiCost(codeId, 'research', gemResult.modelUsed || GEMINI_MODEL, inputTokens, outputTokens, `Research: ${seed_keyword}`);
+    }
+
  // ── Enhance keywordData with AI Overview + Ranking Strategy ──
       const competitorData = keywordData.competitor_analysis || [];
 
@@ -10852,9 +10988,11 @@ Return ONLY valid JSON:
       [JSON.stringify(keywordData), jobId]
     );
     _researchJobs.set(jobId, { status: 'completed', result: keywordData });
+    clearTimeout(safetyTimeout);
     console.log(`[research job ${jobId}] completed — ${keywordData.primary_keyword}`);
   } catch(e) {
     console.error(`[research job ${jobId}] error:`, e);
+    clearTimeout(safetyTimeout);
     await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [e.message, jobId]).catch(()=>{});
     _researchJobs.set(jobId, { status: 'error', error: e.message });
   }
@@ -11446,6 +11584,13 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
         console.error('Claude fallback also failed:', fallbackErr.message);
         return res.status(502).json({ success: false, error: 'AI writer unavailable: ' + (claudeErr.message || fallbackErr.message) });
       }
+    }
+
+    // Track API cost for platform-key users (rough estimate: 1 token ≈ 4 chars)
+    if (req.engineUser && req.engineUser.codeId && req.engineUser.code.api_key_mode === 'platform') {
+      const inputTokens = Math.round(systemPrompt.length / 4) + Math.round(userPrompt.length / 4);
+      const outputTokens = Math.round((htmlContent || '').length / 4);
+      await trackApiCost(req.engineUser.codeId, 'write', 'claude-sonnet-4-20250514', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
     }
 
     if (!htmlContent || htmlContent.length < 100) {
@@ -21137,7 +21282,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                     <button type="button" onclick="setEcDealType('credits')" id="ecDealCredits" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#0891b2;color:#fff;border:1px solid #0284c7;cursor:pointer;">💳 Credit Pack</button>
                                     <button type="button" onclick="setEcDealType('lifetime')" id="ecDealLifetime" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#1e293b;color:#94a3b8;border:1px solid #334155;cursor:pointer;">♾️ Lifetime Deal</button>
                                 </div>
-                                <div id="ecCreditPackWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Platform Credits <span style="color:#38bdf8;">(leave blank = unlimited)</span></label><input id="ecPlatformCredits" type="number" min="1" placeholder="e.g. 50 — leave blank for unlimited" class="w-full rounded-lg px-3 py-2 text-sm"><div style="font-size:11px;color:#64748b;margin-top:4px;">Research=3 · Brief=2 · Write=10 · Rewrite=8 · Cluster=3 · Analyse=2 · News=4 · Stats=2 · Bulk=5</div></div>
+                                <div id="ecCreditPackWrap"><label class="block text-xs uppercase tracking-wider mb-2" style="color:#9ca3af;">Cost Budget (€) <span style="color:#38bdf8;">— actual API usage tracked</span></label><input id="ecCostLimit" type="number" min="1" step="0.01" value="5" placeholder="e.g. 5.00" class="w-full rounded-lg px-3 py-2 text-sm"><div style="font-size:11px;color:#64748b;margin-top:4px;">When budget runs out, AI calls stop. Top up anytime in admin.</div></div>
                                 <div id="ecLifetimeWrap" style="display:none;padding:12px 14px;background:#0c1a0c;border:1px solid #166534;border-radius:8px;margin-top:8px;">
                                     <div style="font-size:12px;font-weight:600;color:#4ade80;margin-bottom:4px;">♾️ Lifetime Deal — Client Brings Own API Keys</div>
                                     <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">No cost to you · Client gets unlimited access forever · They pay their own API bills directly</div>
@@ -22406,28 +22551,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>'
                             : '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#1e293b;color:#94a3b8;margin-left:6px;">Own Keys</span>';
                     const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
-                    // Credits display
+                    // ── API Cost Budget Display ───────────────────────────
                     let creditBar = '';
-                    if(c.use_platform_keys){
-                        const total = c.platform_credits;
-                        const used = c.credits_used||0;
-                        const left = total===null ? null : Math.max(0, total - used);
-                        const pct = total ? Math.min(100,Math.round((used/total)*100)) : 0;
-                        const barColor = left===null?'#38bdf8':left<10?'#ef4444':left<30?'#f59e0b':'#22c55e';
-                        creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
-                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                            '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Platform Credits</span>' +
-                            (total===null ? '<span style="font-size:12px;color:#38bdf8;font-weight:700;">∞ Unlimited</span>' :
-                             '<span style="font-size:12px;font-weight:700;color:'+barColor+';">'+left+' / '+total+' left</span>') +
-                            '</div>' +
-                            (total!==null ? '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:'+barColor+';width:'+pct+'%;transition:width .3s;"></div></div>' : '') +
-                            '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
-                            '<input type="number" id="topup_'+c.id+'" placeholder="Add credits" min="1" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
-                            '<button onclick="topUpCredits('+c.id+')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">+ Add Credits</button>' +
-                            '<button onclick="resetCredits('+c.id+')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
-                            '<button onclick="setUnlimited('+c.id+')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;">∞ Set Unlimited</button>' +
-                            '</div></div>';
-                    }
+                    const costLimit = parseFloat(c.monthly_cost_limit) || 50;
+                    const costUsed = parseFloat(c.monthly_cost_used) || 0;
+                    const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
+                    const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
+                    const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥️ Platform' : '❓ Not set';
+                    creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
+                        '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">€' + costUsed.toFixed(2) + ' / €' + costLimit.toFixed(2) + '</span>' +
+                        '</div>' +
+                        '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:' + costColor + ';width:' + costPct + '%;transition:width .3s;"></div></div>' +
+                        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
+                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set € budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
+                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">✓ Set Budget</button>' +
+                        '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
+                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;">📋 Cost Log</button>' +
+                        '</div></div>';
                     return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
                     '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
@@ -22442,36 +22584,60 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }catch(e){console.error('Failed to load engine codes:',e);}
         }
 
-        async function topUpCredits(id){
-            const inp=document.getElementById('topup_'+id);const add=parseInt(inp.value);
-            if(!add||add<1){alert('Enter a valid credit amount');return;}
-            // Get current total, add to it
-            const data=await apiCall('/api/admin/engine-codes');
-            const code=(data.codes||[]).find(c=>c.id===id);
-            const newTotal=(code&&code.platform_credits!==null)?((code.platform_credits||0)+add):add;
-            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{platform_credits:newTotal});
+        async function setCostLimit(id){
+            const inp=document.getElementById('setlimit_'+id);
+            const limit=parseFloat(inp.value);
+            if(!limit||limit<1){alert('Enter a valid budget amount (minimum €1)');return;}
+            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{monthly_cost_limit:limit});
             loadEngineCodes();
         }
-        async function resetCredits(id){
-            if(!confirm('Reset used credits to 0 for this code?'))return;
+        async function resetCostUsed(id){
+            if(!confirm('Reset cost used to €0.00 for this code?'))return;
             await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{reset_used:true});
             loadEngineCodes();
         }
-        async function setUnlimited(id){
-            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{platform_credits:null});
-            loadEngineCodes();
+        async function showCostLog(id){
+            try{
+                const data=await apiCall('/api/admin/engine-codes/'+id+'/cost-log');
+                const logs=data.logs||[];
+                let html='<div style="max-height:300px;overflow-y:auto;">';
+                if(!logs.length){html+='<div style="color:#64748b;text-align:center;padding:16px;">No API costs yet.</div>';}
+                else{
+                    html+='<table style="width:100%;font-size:11px;border-collapse:collapse;">'+
+                        '<thead><tr style="color:#94a3b8;text-align:left;border-bottom:1px solid #334155;">'+
+                        '<th style="padding:4px;">Action</th><th style="padding:4px;">Model</th><th style="padding:4px;">Tokens</th><th style="padding:4px;text-align:right;">Cost</th><th style="padding:4px;">Time</th></tr></thead><tbody>';
+                    logs.forEach(function(l){
+                        html+='<tr style="border-bottom:1px solid #1e293b;">'+
+                            '<td style="padding:4px;color:#e2e8f0;">'+l.action+'</td>'+
+                            '<td style="padding:4px;color:#9ca3af;">'+l.model+'</td>'+
+                            '<td style="padding:4px;color:#9ca3af;">'+(l.input_tokens+l.output_tokens)+'</td>'+
+                            '<td style="padding:4px;color:#fbbf24;text-align:right;">€'+parseFloat(l.estimated_cost).toFixed(4)+'</td>'+
+                            '<td style="padding:4px;color:#64748b;">'+new Date(l.created_at).toLocaleDateString()+'</td></tr>';
+                    });
+                    html+='</tbody></table>';
+                }
+                html+='</div>';
+                // Show in a simple alert-like modal
+                const modal=document.createElement('div');
+                modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:99999;justify-content:center;align-items:center;display:flex;';
+                modal.innerHTML='<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">'+
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
+                    '<h3 style="font-size:1rem;color:#fbbf24;margin:0;">📋 API Cost Log</h3>'+
+                    '<button onclick="this.closest(\'.modal-cost\').remove()" style="background:none;border:none;color:#9ca3af;font-size:18px;cursor:pointer;">✕</button></div>'+html+
+                    '<div style="margin-top:12px;text-align:right;"><button onclick="this.closest(\'.modal-cost\').remove()" style="padding:6px 14px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;cursor:pointer;">Close</button></div></div>';
+                modal.className='modal-cost';
+                document.body.appendChild(modal);
+            }catch(e){console.error('Show cost log failed:',e);alert('Failed to load cost log');}
         }
 
         async function createEngineCode(){
             const client_name=document.getElementById('ecClientName').value.trim();if(!client_name){alert('Enter a client name');return;}
             try{
                 const use_platform_keys=document.getElementById('ecUsePlatformKeys').checked;
-                const pc=document.getElementById('ecPlatformCredits').value.trim();
+                const costLimit=document.getElementById('ecCostLimit').value.trim();
                 const dealType=document.getElementById('ecDealType').value;
                 const dealLabel=document.getElementById('ecDealLabel')?.value.trim()||null;
                 const isLifetime=dealType==='lifetime';
-                // Lifetime: own keys (use_platform_keys=false), no expiry, deal_type='lifetime'
-                // Credit pack: platform keys, credit allowance
                 const data=await apiCall('/api/admin/engine-codes','POST',{
                     client_name,
                     gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,
@@ -22482,7 +22648,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     expires_at:isLifetime?null:(document.getElementById('ecExpires').value||null),
                     notes:document.getElementById('ecNotes').value.trim()||null,
                     use_platform_keys:isLifetime?false:use_platform_keys,
-                    platform_credits:use_platform_keys&&pc&&!isLifetime?parseInt(pc):null,
+                    api_key_mode:isLifetime?'byok':(use_platform_keys?'platform':'byok'),
+                    monthly_cost_limit:use_platform_keys&&!isLifetime?(parseFloat(costLimit)||5):null,
                     deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
                     deal_label:dealLabel||null
                 });
