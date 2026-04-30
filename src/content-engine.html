@@ -965,6 +965,7 @@ async function restoreDraftForProfile(profileId) {
       renderArticleReady(draft.current_article);
       document.getElementById('stepArticle').style.display = 'block';
     }
+    syncGscStatus();
     toast('↩️ Draft hersteld');
   } finally {
     _draftLoading = false;
@@ -1929,23 +1930,21 @@ async function autoFillRewriteGSC() {
       // GSC failed — show helpful message, NEVER block manual input
       var hint = d.hint || 'Enter GSC data manually below or upload CSV files.';
       var code = d.code || '';
-      if (code === 'GSC_ACCESS_DENIED') {
-        statusEl.textContent = '⚠️ GSC access denied — manual input available';
+      // Only update status to warning if no manual CSV data already exists
+      var hasManualData = document.getElementById('engImpressions').value || document.getElementById('engGscQueries').value.trim();
+      if (!hasManualData) {
+        if (code === 'GSC_ACCESS_DENIED') {
+          statusEl.textContent = '⚠️ GSC access denied — manual input available';
+        } else if (code === 'GSC_NO_DATA') {
+          statusEl.textContent = '⚠️ No GSC data yet — manual input available';
+        } else if (code === 'GSC_AUTH_FAILED') {
+          statusEl.textContent = '⚠️ GSC not connected — manual input available';
+        } else {
+          statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+        }
         statusEl.style.color = '#fbbf24';
-        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
-      } else if (code === 'GSC_NO_DATA') {
-        statusEl.textContent = '⚠️ No GSC data yet — manual input available';
-        statusEl.style.color = '#fbbf24';
-        toast('ℹ️ ' + d.error + ' ' + hint, 'orange');
-      } else if (code === 'GSC_AUTH_FAILED') {
-        statusEl.textContent = '⚠️ GSC not connected — manual input available';
-        statusEl.style.color = '#fbbf24';
-        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
-      } else {
-        statusEl.textContent = '⚠️ GSC unavailable — manual input available';
-        statusEl.style.color = '#fbbf24';
-        toast('⚠️ ' + (d.error || 'GSC unavailable') + ' You can always enter data manually.', 'orange');
       }
+      toast('⚠️ ' + (d.error || 'GSC unavailable') + ' ' + (hasManualData ? '(your CSV data is kept)' : hint), 'orange');
       return; // Don't throw — let user continue with manual input
     }
     var g = d.data;
@@ -2784,6 +2783,7 @@ function handleEnginePagesCsv(input) {
     document.getElementById('engCtr').value = (avgCtr !== undefined && avgCtr >= 0) ? avgCtr.toFixed(2) : '';
     statusEl.style.color = '#4ade80';
     statusEl.textContent = '✓ ' + rows.length + ' pages loaded · ' + Math.round(totalClk) + ' clicks · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
+    syncGscStatus();
     scheduleDraftSave();
   };
   reader.readAsText(file);
@@ -2805,6 +2805,7 @@ function handleEngineQueriesCsv(input) {
     // (those come from Pages CSV or manual input)
     statusEl.style.color = '#4ade80';
     statusEl.textContent = '✓ ' + rows.length + ' queries loaded';
+    syncGscStatus();
     scheduleDraftSave();
   };
   reader.readAsText(file);
@@ -2864,6 +2865,31 @@ function resetGscFields() {
   toast('GSC fields reset');
 }
 
+// Sync GSC status text with actual data presence — call after CSV upload, draft restore, manual input
+function syncGscStatus() {
+  var statusEl = document.getElementById('engGscStatus');
+  if (!statusEl) return;
+  var imp = document.getElementById('engImpressions').value;
+  var clk = document.getElementById('engClicks').value;
+  var pos = document.getElementById('engPosition').value;
+  var pages = document.getElementById('engGscPages').value.trim();
+  var queries = document.getElementById('engGscQueries').value.trim();
+  var hasData = imp || clk || pos || pages || queries;
+  if (hasData) {
+    var parts = [];
+    if (imp) parts.push(Math.round(imp) + ' impr');
+    if (clk !== '' && clk !== null) parts.push(Math.round(clk) + ' clicks');
+    if (pos) parts.push('pos ' + parseFloat(pos).toFixed(1));
+    if (queries) parts.push((queries.split('\n').filter(Boolean).length) + ' queries');
+    statusEl.textContent = '✅ GSC data loaded' + (parts.length ? ' — ' + parts.join(' · ') : '');
+    statusEl.style.color = '#4ade80';
+  } else {
+    // Only show neutral message, not warning — user hasn't entered anything yet
+    statusEl.textContent = 'Enter GSC data manually or upload CSV files';
+    statusEl.style.color = '#6b7280';
+  }
+}
+
 async function refreshEngineGSC() {
   var profileId = document.getElementById('engineProfile').value;
   var statusEl = document.getElementById('engGscStatus');
@@ -2898,23 +2924,21 @@ async function refreshEngineGSC() {
       // GSC failed — show helpful message, NEVER block manual input
       var hint = d.hint || 'Enter GSC data manually below or upload CSV files.';
       var code = d.code || '';
-      if (code === 'GSC_ACCESS_DENIED') {
-        statusEl.textContent = '⚠️ GSC access denied — manual input available';
+      // Only update status to warning if no manual CSV data already exists
+      var hasManualData = document.getElementById('engImpressions').value || document.getElementById('engGscQueries').value.trim();
+      if (!hasManualData) {
+        if (code === 'GSC_ACCESS_DENIED') {
+          statusEl.textContent = '⚠️ GSC access denied — manual input available';
+        } else if (code === 'GSC_NO_DATA') {
+          statusEl.textContent = '⚠️ No GSC data yet — manual input available';
+        } else if (code === 'GSC_AUTH_FAILED') {
+          statusEl.textContent = '⚠️ GSC not connected — manual input available';
+        } else {
+          statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+        }
         statusEl.style.color = '#fbbf24';
-        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
-      } else if (code === 'GSC_NO_DATA') {
-        statusEl.textContent = '⚠️ No GSC data yet — manual input available';
-        statusEl.style.color = '#fbbf24';
-        toast('ℹ️ ' + d.error + ' ' + hint, 'orange');
-      } else if (code === 'GSC_AUTH_FAILED') {
-        statusEl.textContent = '⚠️ GSC not connected — manual input available';
-        statusEl.style.color = '#fbbf24';
-        toast('⚠️ ' + d.error + ' ' + hint, 'orange');
-      } else {
-        statusEl.textContent = '⚠️ GSC unavailable — manual input available';
-        statusEl.style.color = '#fbbf24';
-        toast('⚠️ ' + (d.error || 'GSC unavailable') + ' You can always enter data manually.', 'orange');
       }
+      toast('⚠️ ' + (d.error || 'GSC unavailable') + ' ' + (hasManualData ? '(your CSV data is kept)' : hint), 'orange');
       return; // Don't throw — let user continue with manual input
     }
     var g = d.data;
@@ -2924,13 +2948,16 @@ async function refreshEngineGSC() {
     document.getElementById('engCtr').value = g.ctr || 0;
     if (g.topQueries) document.getElementById('engGscQueries').value = g.topQueries;
     if (g.topKeyword) document.getElementById('seedKeyword').value = g.topKeyword;
-    statusEl.textContent = '✓ ' + (g.impressions || 0) + ' impr · pos ' + (g.position || 0) + ' · ' + (g.queryCount || 0) + ' queries';
-    statusEl.style.color = '#4ade80';
+    syncGscStatus();
     toast('✅ GSC refreshed — ' + (g.queryCount || 0) + ' queries found');
     scheduleDraftSave();
   } catch(e) {
-    statusEl.textContent = '⚠️ GSC unavailable — manual input available';
-    statusEl.style.color = '#fbbf24';
+    // Only show warning if no manual data exists
+    var hasManualData = document.getElementById('engImpressions').value || document.getElementById('engGscQueries').value.trim();
+    if (!hasManualData) {
+      statusEl.textContent = '⚠️ GSC unavailable — manual input available';
+      statusEl.style.color = '#fbbf24';
+    }
     toast('⚠️ GSC unavailable: ' + e.message + '. You can always enter data manually below.', 'orange');
   } finally {
     btn.disabled = false; btn.innerHTML = '🔄 Refresh GSC';
