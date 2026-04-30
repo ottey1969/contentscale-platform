@@ -1569,11 +1569,17 @@ async function loadPreviousJobsForProfile(profileId) {
     var completed = d.jobs.filter(function(j) { return j.status === 'completed'; });
     if (!completed.length) { if (panel) panel.style.display = 'none'; return; }
     sel.innerHTML = '<option value="">— Select a previous research job —</option>';
-    completed.slice(0, 20).forEach(function(j) {
-      var opt = document.createElement('option');
-      opt.value = j.id;
-      opt.textContent = j.seed_keyword + ' · ' + new Date(j.created_at).toLocaleDateString() + (j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '');
-      sel.appendChild(opt);
+    // Deduplicate by seed_keyword — keep only the most recent per keyword
+    var seenKw = {};
+    completed.forEach(function(j) {
+      var kw = (j.seed_keyword || '').toLowerCase().trim();
+      if (!seenKw[kw]) {
+        seenKw[kw] = true;
+        var opt = document.createElement('option');
+        opt.value = j.id;
+        opt.textContent = j.seed_keyword + ' · ' + new Date(j.created_at).toLocaleDateString() + (j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '');
+        sel.appendChild(opt);
+      }
     });
     panel.style.display = 'block';
   } catch(e) { console.warn('Load previous jobs failed:', e.message); if (panel) panel.style.display = 'none'; }
