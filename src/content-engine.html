@@ -1558,10 +1558,13 @@ function resetResearchButton() {
 }
 
 // ── Continue Previous Work ──────────────────────────────────
+var _loadingPreviousJobs = false;
 async function loadPreviousJobsForProfile(profileId) {
   var panel = document.getElementById('previousJobsPanel');
   var sel = document.getElementById('previousJobsSelect');
   if (!profileId) { if (panel) panel.style.display = 'none'; return; }
+  if (_loadingPreviousJobs) return; // guard against concurrent calls
+  _loadingPreviousJobs = true;
   try {
     var d = await api('/api/content/jobs/' + profileId, 'GET');
     if (!d.success || !d.jobs || !d.jobs.length) { if (panel) panel.style.display = 'none'; return; }
@@ -1583,6 +1586,7 @@ async function loadPreviousJobsForProfile(profileId) {
     });
     panel.style.display = 'block';
   } catch(e) { console.warn('Load previous jobs failed:', e.message); if (panel) panel.style.display = 'none'; }
+  finally { _loadingPreviousJobs = false; }
 }
 
 async function loadPreviousJob(jobId) {
