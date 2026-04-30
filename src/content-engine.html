@@ -201,7 +201,7 @@ textarea{resize:vertical;min-height:100px;}
     <div class="card-title"><span class="step-num">1</span> Select Profile & Seed Keyword</div>
     <div class="grid-2">
       <div><label>Business Profile</label><select id="engineProfile" onchange="loadProfileInfo()"><option value="">— Select a profile —</option></select></div>
-      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="emergency drain cleaning new jersey" onkeydown="if(event.key==='Enter')startResearch()" oninput="resetResearchButton()"></div>
+      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="emergency drain cleaning new jersey" onkeydown="if(event.key==='Enter')startResearch()" oninput="resetResearchButton();resetBriefButton()"></div>
     </div>
     <input type="hidden" id="clusterNodeId">
     <input type="hidden" id="clusterId">
@@ -1308,6 +1308,8 @@ async function startResearch() {
   var btn = document.getElementById('btnResearch');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Starting...';
+  // Reset brief button too — new research means new brief needed
+  resetBriefButton();
   document.getElementById('stepResearch').style.display = 'none';
   document.getElementById('stepBrief').style.display = 'none';
   document.getElementById('stepArticle').style.display = 'none';
@@ -1490,8 +1492,17 @@ async function generateBrief() {
     document.getElementById('stepBrief').style.display = 'block';
     document.getElementById('stepBrief').scrollIntoView({ behavior: 'smooth' });
     saveDraftNow();
-  } catch(e) { toast('Brief failed: ' + e.message, 'red'); }
-  finally { btn.disabled = false; btn.innerHTML = '📋 Generate Brief'; }
+    // Mark brief as complete — button stays green until user types new keyword
+    btn.innerHTML = '✓ Brief Complete';
+    btn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+    btn.disabled = true;
+  } catch(e) {
+    toast('Brief failed: ' + e.message, 'red');
+    // On error, reset button so user can retry
+    btn.innerHTML = '📋 Generate Brief';
+    btn.style.background = '';
+    btn.disabled = false;
+  }
 }
 
 function renderBrief(b) {
@@ -1552,6 +1563,15 @@ function resetResearchButton() {
   if (!btn) return;
   if (btn.innerHTML.indexOf('Complete') !== -1 || btn.disabled) {
     btn.innerHTML = '🔍 Research';
+    btn.style.background = '';
+    btn.disabled = false;
+  }
+}
+function resetBriefButton() {
+  var btn = document.getElementById('btnBrief');
+  if (!btn) return;
+  if (btn.innerHTML.indexOf('Complete') !== -1 || btn.disabled) {
+    btn.innerHTML = '📋 Generate Brief';
     btn.style.background = '';
     btn.disabled = false;
   }
