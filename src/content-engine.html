@@ -1559,19 +1559,26 @@ function resetResearchButton() {
 
 // ── Continue Previous Work ──────────────────────────────────
 var _loadingPreviousJobs = false;
+var _lastPopulatedJobsProfile = null;
 async function loadPreviousJobsForProfile(profileId) {
   var panel = document.getElementById('previousJobsPanel');
   var sel = document.getElementById('previousJobsSelect');
-  if (!profileId) { if (panel) panel.style.display = 'none'; return; }
+  if (!profileId) { if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; return; }
   if (_loadingPreviousJobs) return; // guard against concurrent calls
+  if (_lastPopulatedJobsProfile === profileId) return; // already done for this profile
   _loadingPreviousJobs = true;
   try {
     var d = await api('/api/content/jobs/' + profileId, 'GET');
-    if (!d.success || !d.jobs || !d.jobs.length) { if (panel) panel.style.display = 'none'; return; }
+    if (!d.success || !d.jobs || !d.jobs.length) { if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; return; }
     // Only show completed jobs with research data
     var completed = d.jobs.filter(function(j) { return j.status === 'completed'; });
-    if (!completed.length) { if (panel) panel.style.display = 'none'; return; }
-    sel.innerHTML = '<option value="">— Select a previous research job —</option>';
+    if (!completed.length) { if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; return; }
+    // Hard reset — remove all existing options first
+    while (sel.firstChild) { sel.removeChild(sel.firstChild); }
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '— Select a previous research job —';
+    sel.appendChild(placeholder);
     // Deduplicate by seed_keyword — keep only the most recent per keyword
     var seenKw = {};
     completed.forEach(function(j) {
@@ -1584,8 +1591,9 @@ async function loadPreviousJobsForProfile(profileId) {
         sel.appendChild(opt);
       }
     });
+    _lastPopulatedJobsProfile = profileId;
     panel.style.display = 'block';
-  } catch(e) { console.warn('Load previous jobs failed:', e.message); if (panel) panel.style.display = 'none'; }
+  } catch(e) { console.warn('Load previous jobs failed:', e.message); if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; }
   finally { _loadingPreviousJobs = false; }
 }
 
@@ -1605,18 +1613,37 @@ async function loadPreviousJob(jobId) {
   toast('↩️ Restoring previous work...');
 
   try {
-    // 1. Load job research
+    // 1. Load job status
     var d = await api('/api/content/research/' + jobId, 'GET');
     if (!d.success) throw new Error(d.error || 'Failed to load research');
 
+    // Handle job still in progress
+    if (d.status === 'researching') {
+      toast('⏳ This research is still running — please wait. Do not click Research again or you will be charged twice.');
+      _currentJobId = jobId;
+      document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
+      // Disable Research button temporarily
+      var rb = document.getElementById('btnResearch');
+      if (rb) { rb.innerHTML = '⏳ Researching...'; rb.disabled = true; }
+      // Poll for completion
+      _pollForResearchCompletion(jobId);
+      return;
+    }
+    if (d.status === 'error') {
+      throw new Error(d.error || 'Research failed for this job');
+    }
+
+    // 2. Job is completed — restore research
     if (d.research) {
       _currentResearch = d.research;
       document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
       renderResearch(d.research, !!d.research.all_keyword_data);
       document.getElementById('stepResearch').style.display = 'block';
+    } else {
+      throw new Error('Job is completed but no research data found');
     }
 
-    // 2. Load engine draft — may contain brief and article for this exact job
+    // 3. Load engine draft — may contain brief and article for this exact job
     var draft = await loadDraft(profileId);
     if (draft && draft.current_job_id == jobId) {
       if (draft.current_brief) {
@@ -1634,7 +1661,7 @@ async function loadPreviousJob(jobId) {
       }
     }
 
-    // 3. If no article in draft, check DB directly
+    // 4. If no article in draft, check DB directly
     if (!_currentArticle) {
       var articlesD = await api('/api/content/articles/' + profileId, 'GET');
       if (articlesD.success && articlesD.articles) {
@@ -1650,33 +1677,24 @@ async function loadPreviousJob(jobId) {
       }
     }
 
-    // 4. Update Research button to show "complete" state so user doesn't click it again
+    // 5. Permanently mark Research button as complete (user must type new keyword to reset)
     var researchBtn = document.getElementById('btnResearch');
     if (researchBtn) {
       researchBtn.innerHTML = '✓ Research Complete';
       researchBtn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
       researchBtn.disabled = true;
-      // Re-enable after 8 seconds (in case they want to re-research)
-      setTimeout(function() {
-        researchBtn.innerHTML = '🔍 Research';
-        researchBtn.style.background = '';
-        researchBtn.disabled = false;
-      }, 8000);
     }
 
     saveDraftNow();
 
-    // 5. Scroll to the right place
+    // 6. Scroll to the right place
     if (_currentBrief) {
-      // Brief exists — scroll to brief step so Write button is visible
       document.getElementById('stepBrief').scrollIntoView({ behavior: 'smooth', block: 'start' });
       toast('✅ Restored: ' + ((d.job && d.job.seed_keyword) ? d.job.seed_keyword : 'previous job') + ' — click Write Article below');
     } else if (_currentArticle) {
-      // Article exists — scroll to article
       document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth', block: 'start' });
       toast('✅ Restored: ' + ((d.job && d.job.seed_keyword) ? d.job.seed_keyword : 'previous job') + ' — article already written');
     } else {
-      // Research only — scroll to research with clear next-step hint
       document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth', block: 'start' });
       toast('✅ Research restored — click 📋 Generate Brief below to continue');
     }
@@ -1684,6 +1702,56 @@ async function loadPreviousJob(jobId) {
     toast('Restore failed: ' + e.message, 'red');
     _currentJobId = null;
   }
+}
+
+// Poll for a research job that was still in progress when user tried to restore it
+var _researchPollTimer = null;
+async function _pollForResearchCompletion(jobId) {
+  if (_researchPollTimer) { clearTimeout(_researchPollTimer); _researchPollTimer = null; }
+  var attempts = 0;
+  var maxAttempts = 30; // 30 x 3s = 90s max
+
+  async function tick() {
+    attempts++;
+    try {
+      var d = await api('/api/content/research/' + jobId, 'GET');
+      if (d.status === 'completed' && d.research) {
+        // Research finished! Restore it properly
+        _currentResearch = d.research;
+        _currentJobId = jobId;
+        document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
+        renderResearch(d.research, !!d.research.all_keyword_data);
+        document.getElementById('stepResearch').style.display = 'block';
+        // Reset Research button to complete state
+        var rb = document.getElementById('btnResearch');
+        if (rb) { rb.innerHTML = '✓ Research Complete'; rb.style.background = 'linear-gradient(135deg,#065f46,#047857)'; rb.disabled = true; }
+        saveDraftNow();
+        toast('✅ Research finished! Click 📋 Generate Brief below to continue');
+        return;
+      }
+      if (d.status === 'error') {
+        toast('❌ Research failed: ' + (d.error || 'Unknown error'), 'red');
+        var rb2 = document.getElementById('btnResearch');
+        if (rb2) { rb2.innerHTML = '🔍 Research'; rb2.style.background = ''; rb2.disabled = false; }
+        return;
+      }
+      // Still researching
+      if (attempts < maxAttempts) {
+        toast('⏳ Still researching (' + (attempts * 3) + 's)...');
+        _researchPollTimer = setTimeout(tick, 3000);
+      } else {
+        toast('⏳ Research is taking longer than expected. Please check back later.');
+        var rb3 = document.getElementById('btnResearch');
+        if (rb3) { rb3.innerHTML = '🔍 Research'; rb3.style.background = ''; rb3.disabled = false; }
+      }
+    } catch(e) {
+      if (attempts < maxAttempts) {
+        _researchPollTimer = setTimeout(tick, 3000);
+      }
+    }
+  }
+
+  _researchPollTimer = setTimeout(tick, 3000);
 }
 
 // ── Needed Pages Actions ────────────────────────────────────
