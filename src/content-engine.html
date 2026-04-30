@@ -1945,6 +1945,7 @@ async function autoFillRewriteGSC() {
         statusEl.style.color = '#fbbf24';
       }
       toast('⚠️ ' + (d.error || 'GSC unavailable') + ' ' + (hasManualData ? '(your CSV data is kept)' : hint), 'orange');
+      syncGscStatus(); // Restore correct status instead of leaving "Pulling GSC data..." stuck
       return; // Don't throw — let user continue with manual input
     }
     var g = d.data;
@@ -2939,6 +2940,7 @@ async function refreshEngineGSC() {
         statusEl.style.color = '#fbbf24';
       }
       toast('⚠️ ' + (d.error || 'GSC unavailable') + ' ' + (hasManualData ? '(your CSV data is kept)' : hint), 'orange');
+      syncGscStatus(); // Restore correct status instead of leaving "Pulling GSC data..." stuck
       return; // Don't throw — let user continue with manual input
     }
     var g = d.data;
@@ -2958,6 +2960,7 @@ async function refreshEngineGSC() {
       statusEl.textContent = '⚠️ GSC unavailable — manual input available';
       statusEl.style.color = '#fbbf24';
     }
+    syncGscStatus();
     toast('⚠️ GSC unavailable: ' + e.message + '. You can always enter data manually below.', 'orange');
   } finally {
     btn.disabled = false; btn.innerHTML = '🔄 Refresh GSC';
