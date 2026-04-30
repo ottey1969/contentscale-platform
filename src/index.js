@@ -11437,8 +11437,9 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
     const articleR = await pool.query(
       `INSERT INTO content_articles (job_id, profile_id, title, slug, primary_keyword, secondary_keywords, html_content, word_count, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
-      [jobId, profile_id, brief.title || kd.primary_keyword, brief.slug || kd.primary_keyword?.toLowerCase().replace(/\s+/g, '-'),
-       kd.primary_keyword, JSON.stringify(kd.secondary_keywords||[]), finalHtml, wordCount]
+      [jobId, job.profile_id, brief.title || kd.primary_keyword || job.seed_keyword,
+       brief.slug || (kd.primary_keyword || job.seed_keyword || '').toLowerCase().replace(/\s+/g, '-'),
+       kd.primary_keyword || job.seed_keyword, JSON.stringify(kd.secondary_keywords||[]), finalHtml, wordCount]
     );
 
     await pool.query(`UPDATE content_jobs SET status='completed', completed_at=NOW() WHERE id=$1`, [jobId]);
