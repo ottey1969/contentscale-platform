@@ -10566,6 +10566,19 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
     const { profile_id, seed_keyword } = req.body;
     if (!profile_id || !seed_keyword) return res.status(400).json({ success: false, error: 'profile_id and seed_keyword required' });
     
+    // Mark any old stuck 'researching' jobs for this profile+keyword as abandoned
+    // This lets users retry without being blocked by previous stuck jobs
+    const abandonedR = await pool.query(
+      `UPDATE content_jobs SET status='error', error_message='Abandoned — user started new research' 
+       WHERE profile_id=$1 AND seed_keyword=$2 AND status='researching' 
+       RETURNING id`,
+      [profile_id, seed_keyword]
+    );
+    if (abandonedR.rows.length > 0) {
+      console.log(`[research] abandoned ${abandonedR.rows.length} stuck job(s) for "${seed_keyword}"`);
+      abandonedR.rows.forEach(r => _researchJobs.set(r.id, { status: 'error', error: 'Abandoned' }));
+    }
+    
     // Create job immediately, return jobId for polling
     const jobR = await pool.query(
       `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, brief, created_at, updated_at)

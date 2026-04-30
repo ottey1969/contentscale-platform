@@ -1345,12 +1345,21 @@ async function startResearch() {
     
     // Step 2: Poll for results
     btn.innerHTML = '<span class="spinner"></span> Researching...';
+    btn.disabled = false; // ALWAYS keep button clickable — user can force restart
+    btn.style.background = 'linear-gradient(135deg,#7c3aed,#6d28d9)';
+    btn.title = 'Click to force restart (abandons current research)';
     var pollCount = 0;
     var maxPolls = 150; // 150 x 2s = 300s (5 min) max
     
     while (pollCount < maxPolls) {
       await new Promise(function(r) { setTimeout(r, 2000); }); // Wait 2s
       pollCount++;
+      
+      // Check if user clicked Research again (button text changed by new call)
+      if (btn.innerHTML.indexOf('Starting') !== -1) {
+        console.log('New research started — abandoning old poll loop');
+        return; // Exit this poll loop, new one is running
+      }
       
       var poll = await api('/api/content/research/' + jobId, 'GET');
       if (!poll.success && poll.status !== 'researching') {
@@ -1369,6 +1378,7 @@ async function startResearch() {
         btn.innerHTML = '✓ Research Complete';
         btn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
         btn.disabled = true;
+        btn.title = '';
         return;
       }
       
@@ -1381,15 +1391,22 @@ async function startResearch() {
       var mins = Math.floor(elapsed / 60);
       var secs = elapsed % 60;
       var timeStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
-      btn.innerHTML = '<span class="spinner"></span> Researching (' + timeStr + ')...';
+      btn.innerHTML = '<span class="spinner"></span> Researching (' + timeStr + ') — click to restart';
     }
     
-    throw new Error('Research timed out after 5 minutes. Check the dropdown above — your job may still be processing. If not, click Research to retry.');
-  } catch(e) { 
-    toast('❌ Research failed: ' + e.message + ' — click 🔍 Research to retry', 'red'); 
+    // Max polls reached — show timeout but keep button clickable for retry
+    btn.innerHTML = '🔄 Research Timed Out — Click to Retry';
+    btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
     btn.disabled = false;
-    btn.innerHTML = '🔍 Research';
-    btn.style.background = '';
+    btn.title = 'Click to start fresh research';
+    toast('⏳ Research timed out. Click the button to retry.', 'red');
+    return; // Don't throw — let user click again
+  } catch(e) { 
+    toast('❌ Research failed: ' + e.message + ' — click to retry', 'red'); 
+    btn.innerHTML = '🔄 Retry Research';
+    btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
+    btn.disabled = false;
+    btn.title = 'Click to retry';
     // Also reset brief button since we have no research
     resetBriefButton();
   }
