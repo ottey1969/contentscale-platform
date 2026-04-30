@@ -1042,7 +1042,7 @@ function showPanel(name, btn) {
   if (tzBar) { tzBar.style.display = name === 'tracker' ? 'flex' : 'none'; }
   if (name === 'tracker' && window._tzRender) window._tzRender();
   if (name === 'profiles') loadProfiles();
-  if (name === 'engine') { loadEngineProfiles(); loadBillingInfo(); }
+  if (name === 'engine') { loadEngineProfiles(); /* loadBillingInfo() — disabled until billing UI ready */ }
   if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
   if (name === 'clusters') { populateClusterFilter(); }
   if (name === 'rewrite') { populateAllSelects(); }
@@ -1346,7 +1346,7 @@ async function startResearch() {
     // Step 2: Poll for results
     btn.innerHTML = '<span class="spinner"></span> Researching...';
     var pollCount = 0;
-    var maxPolls = 60; // 60 x 2s = 120s max
+    var maxPolls = 150; // 150 x 2s = 300s (5 min) max
     
     while (pollCount < maxPolls) {
       await new Promise(function(r) { setTimeout(r, 2000); }); // Wait 2s
@@ -1377,10 +1377,14 @@ async function startResearch() {
       }
       
       // Still researching — update button text
-      btn.innerHTML = '<span class="spinner"></span> Researching (' + (pollCount * 2) + 's)...';
+      var elapsed = pollCount * 2;
+      var mins = Math.floor(elapsed / 60);
+      var secs = elapsed % 60;
+      var timeStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
+      btn.innerHTML = '<span class="spinner"></span> Researching (' + timeStr + ')...';
     }
     
-    throw new Error('Research timed out after 120s. Check the dropdown above for your job status, or retry.');
+    throw new Error('Research timed out after 5 minutes. Check the dropdown above — your job may still be processing. If not, click Research to retry.');
   } catch(e) { 
     toast('❌ Research failed: ' + e.message + ' — click 🔍 Research to retry', 'red'); 
     btn.disabled = false;

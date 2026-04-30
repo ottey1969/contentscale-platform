@@ -9880,32 +9880,45 @@ app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
   const eu = req.engineUser;
   if (!eu || !eu.code) return res.status(500).json({ success: false, error: 'No access code' });
   const code = eu.code;
-  const now = new Date();
-  const resetAt = code.cost_reset_at ? new Date(code.cost_reset_at) : null;
-  if (!resetAt || now.getMonth() !== resetAt.getMonth() || now.getFullYear() !== resetAt.getFullYear()) {
-    await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
-    code.monthly_cost_used = 0;
-  }
+  
+  // Defensive: handle missing columns (migration not run yet)
+  let monthlyUsed = 0;
+  let monthlyLimit = 50;
+  let resetAt = null;
+  let mode = code.api_key_mode || 'unknown';
+  try {
+    monthlyLimit = parseFloat(code.monthly_cost_limit) || 50;
+    monthlyUsed = parseFloat(code.monthly_cost_used) || 0;
+    resetAt = code.cost_reset_at;
+    const now = new Date();
+    const resetDate = resetAt ? new Date(resetAt) : null;
+    if (!resetDate || now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
+      await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
+      monthlyUsed = 0;
+    }
+  } catch(e) { console.warn('[billing] cost columns may not exist yet:', e.message); }
+  
   let recentCosts = [];
   try {
     const logR = await pool.query(`SELECT action, model, input_tokens, output_tokens, estimated_cost, created_at FROM api_cost_log WHERE code_id=$1 AND created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC LIMIT 50`, [eu.codeId]);
     recentCosts = logR.rows;
-  } catch(e) {}
+  } catch(e) { /* api_cost_log may not exist yet */ }
+  
   res.json({
     success: true,
-    mode: code.api_key_mode || 'unknown',
-    is_byok: code.api_key_mode === 'byok',
-    is_platform: code.api_key_mode === 'platform',
+    mode: mode,
+    is_byok: mode === 'byok',
+    is_platform: mode === 'platform',
     has_gemini_key: !!(code.gemini_key),
     has_claude_key: !!(code.claude_key),
     gemini_key_last4: code.gemini_key ? '****' + code.gemini_key.slice(-4) : null,
     claude_key_last4: code.claude_key ? '****' + code.claude_key.slice(-4) : null,
-    monthly_cost_limit: parseFloat(code.monthly_cost_limit) || 50,
-    monthly_cost_used: parseFloat(code.monthly_cost_used) || 0,
-    cost_reset_at: code.cost_reset_at,
+    monthly_cost_limit: monthlyLimit,
+    monthly_cost_used: monthlyUsed,
+    cost_reset_at: resetAt,
     recent_costs: recentCosts,
-    credits_apply: code.api_key_mode === 'platform',
-    unlimited: code.api_key_mode === 'byok' || eu.isAdmin,
+    credits_apply: mode === 'platform',
+    unlimited: mode === 'byok' || eu.isAdmin,
     deal_type: code.deal_type || null,
     deal_label: code.deal_label || null,
   });
@@ -10603,16 +10616,18 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
 });
 
 async function _runResearchJob(jobId, profile_id, seed_keyword) {
+  console.log(`[research job ${jobId}] starting for "${seed_keyword}"`);
   _researchJobs.set(jobId, { status: 'researching' });
 
-  // Safety timeout — if research takes longer than 3 minutes, mark as error
+  // Safety timeout — if research takes longer than 5 minutes, mark as error
   const safetyTimeout = setTimeout(async () => {
-    console.error(`[research job ${jobId}] SAFETY TIMEOUT — marking as error after 3 minutes`);
-    _researchJobs.set(jobId, { status: 'error', error: 'Research timed out after 3 minutes' });
-    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out after 3 minutes', jobId]).catch(()=>{});
-  }, 180000); // 3 minutes
+    console.error(`[research job ${jobId}] SAFETY TIMEOUT — marking as error after 5 minutes`);
+    _researchJobs.set(jobId, { status: 'error', error: 'Research timed out after 5 minutes' });
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out after 5 minutes', jobId]).catch(()=>{});
+  }, 300000); // 5 minutes
 
   try {
+    console.log(`[research job ${jobId}] loading profile...`);
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
     if (!profileR.rows.length) throw new Error('Profile not found');
     const profile = profileR.rows[0];
@@ -10625,11 +10640,15 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
     if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
 
     // Step 1+2: Fetch sitemap + search in PARALLEL
+    console.log(`[research job ${jobId}] fetching sitemap + SERP...`);
     const [sitemapLinks, serpResults] = await Promise.all([
       (async () => {
         if (!profile.sitemap_url) return [];
         try {
-          const sitemapResp = await fetch(profile.sitemap_url, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(5000) });
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
+          const sitemapResp = await fetch(profile.sitemap_url, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: controller.signal });
+          clearTimeout(timer);
           const sitemapText = await sitemapResp.text();
           const urlMatches = sitemapText.match(/<loc>(.*?)<\/loc>/g) || [];
           return urlMatches.map(m => m.replace(/<\/?loc>/g, '').trim()).filter(u => u.length > 0).slice(0, 50);
@@ -10639,8 +10658,11 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
         const hasCreds = process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX;
         if (!hasCreds) return [];
         try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
           const q = `${seed_keyword} ${profile.niche || ''} ${profile.geo_focus || ''}`.trim();
-          const resp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`, { signal: AbortSignal.timeout(5000) });
+          const resp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`, { signal: controller.signal });
+          clearTimeout(timer);
           if (resp.ok) { const d = await resp.json(); return (d.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })); }
           return [];
         } catch(e) { return []; }
@@ -10784,10 +10806,12 @@ If a field has no value, omit it rather than returning empty string.
   "voice_search_optimization": ""
 }`;
 
+    console.log(`[research job ${jobId}] calling Gemini primary model...`);
     const gemResult = await callGeminiWithFallback(
       geminiKey,
       { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }
     );
+    console.log(`[research job ${jobId}] Gemini result: ok=${gemResult.ok}, status=${gemResult.status}, model=${gemResult.modelUsed}`);
     const geminiData = gemResult.data;
     if (!gemResult.ok) {
       const apiErr = gemResult.errorMessage || `Gemini HTTP ${gemResult.status}`;
@@ -10799,10 +10823,12 @@ If a field has no value, omit it rather than returning empty string.
     const finishReason = geminiData?.candidates?.[0]?.finishReason;
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if (!rawText) throw new Error(`Gemini returned no content (finishReason: ${finishReason || 'unknown'})`);
+    console.log(`[research job ${jobId}] Gemini raw text length: ${rawText.length} chars`);
     let keywordData;
     try {
       // Extract JSON from text that might have markdown fences or extra text
       keywordData = extractJsonFromText(rawText);
+      console.log(`[research job ${jobId}] JSON parsed successfully, primary_keyword: ${keywordData.primary_keyword || 'N/A'}`);
     } catch (parseErr) {
       console.error('Research JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
       throw new Error(`AI returned invalid JSON: ${parseErr.message}`);
@@ -10816,7 +10842,7 @@ If a field has no value, omit it rather than returning empty string.
       await trackApiCost(codeId, 'research', gemResult.modelUsed || GEMINI_MODEL, inputTokens, outputTokens, `Research: ${seed_keyword}`);
     }
 
- // ── Enhance keywordData with AI Overview + Ranking Strategy ──
+    console.log(`[research job ${jobId}] enhancing with AI Overview + Ranking Strategy...`);
       const competitorData = keywordData.competitor_analysis || [];
 
       // AI Overview Analysis
@@ -10988,13 +11014,14 @@ Return ONLY valid JSON:
       } catch(e) { console.warn('Research all keywords failed:', e.message); }
 
     // Save results to DB and memory cache
+    console.log(`[research job ${jobId}] saving results to DB...`);
     await pool.query(
       `UPDATE content_jobs SET status='completed', completed_at=NOW(), keyword_data=$1 WHERE id=$2`,
       [JSON.stringify(keywordData), jobId]
     );
     _researchJobs.set(jobId, { status: 'completed', result: keywordData });
     clearTimeout(safetyTimeout);
-    console.log(`[research job ${jobId}] completed — ${keywordData.primary_keyword}`);
+    console.log(`[research job ${jobId}] completed successfully`);
   } catch(e) {
     console.error(`[research job ${jobId}] error:`, e);
     clearTimeout(safetyTimeout);
@@ -11697,11 +11724,13 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
     }
 
     // Track API cost for platform-key users (rough estimate: 1 token ≈ 4 chars)
-    if (req.engineUser && req.engineUser.codeId && req.engineUser.code.api_key_mode === 'platform') {
-      const inputTokens = Math.round(systemPrompt.length / 4) + Math.round(userPrompt.length / 4);
-      const outputTokens = Math.round((htmlContent || '').length / 4);
-      await trackApiCost(req.engineUser.codeId, 'write', 'claude-sonnet-4-20250514', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
-    }
+    try {
+      if (req.engineUser && req.engineUser.codeId && req.engineUser.code && req.engineUser.code.api_key_mode === 'platform') {
+        const inputTokens = Math.round(systemPrompt.length / 4) + Math.round(userPrompt.length / 4);
+        const outputTokens = Math.round((htmlContent || '').length / 4);
+        await trackApiCost(req.engineUser.codeId, 'write', 'claude-sonnet-4-20250514', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
+      }
+    } catch(costErr) { console.warn('[write] Cost tracking failed:', costErr.message); }
 
     if (!htmlContent || htmlContent.length < 100) {
       return res.status(502).json({ success: false, error: 'AI returned empty or too-short content — try again' });
@@ -11716,7 +11745,7 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
     const articleR = await pool.query(
       `INSERT INTO content_articles (job_id, profile_id, title, slug, primary_keyword, secondary_keywords, html_content, word_count, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
-      [jobId, job.profile_id, brief.title || kd.primary_keyword || job.seed_keyword,
+      [req.params.jobId, job.profile_id, brief.title || kd.primary_keyword || job.seed_keyword,
        brief.slug || (kd.primary_keyword || job.seed_keyword || '').toLowerCase().replace(/\s+/g, '-'),
        kd.primary_keyword || job.seed_keyword, JSON.stringify(kd.secondary_keywords||[]), finalHtml, wordCount]
     );
