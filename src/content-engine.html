@@ -281,6 +281,17 @@ textarea{resize:vertical;min-height:100px;}
     <div class="card-title"><span class="step-num">4</span> Article Ready</div>
     <div id="articleResult"></div>
   </div>
+
+  <!-- Pages You Should Create -->
+  <div class="card" id="neededPagesCard" style="display:none;">
+    <div class="card-title" style="color:#fbbf24;">📋 Pages You Should Create (SEO Critical)</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:10px;">These pages are recommended by the AI for better internal linking and BOFU conversion. They are stored on the server until you create them.</div>
+    <div id="neededPagesPanel"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="loadNeededPages()">🔄 Refresh List</button>
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="checkSitemapForNeededPages()">🔍 Check Sitemap (auto-resolve)</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══ ARTICLES ══ -->
@@ -1298,9 +1309,11 @@ async function loadEngineProfiles() {
 function loadProfileInfo() {
   var id = document.getElementById('engineProfile').value;
   var el = document.getElementById('profileInfo');
-  if (!id) { el.style.display = 'none'; return; }
+  if (!id) { el.style.display = 'none'; document.getElementById('neededPagesCard').style.display = 'none'; return; }
   // Remember last used profile
   try { localStorage.setItem('cs_last_profile_id', id); } catch(e) {}
+  // Load needed pages for this profile
+  loadNeededPages();
   var p = _profiles.find(function(x) { return x.id == id; });
   if (!p) return;
   var locs = (p.locations || []).map(function(l) { return l.location_value; }).join(', ');
@@ -1407,14 +1420,20 @@ function renderResearch(r, allKeywords) {
     '</div>' +
     '<div class="grid-2" style="margin-bottom:12px;">' +
     '<div class="research-block">' +
-    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Internal Links (min 3)</div>' +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Internal Links (from your sitemap)</div>' +
     (r.internal_links_suggested || []).map(function(l) { return '<div style="font-size:12px;color:#60a5fa;padding:2px 0;">🔗 ' + (typeof l === 'object' ? (l.text || l.url || JSON.stringify(l)) : l) + '</div>'; }).join('') +
-    (!(r.internal_links_suggested || []).length ? '<span style="font-size:12px;color:#6b7280;">None from sitemap</span>' : '') +
+    (!(r.internal_links_suggested || []).length ? '<span style="font-size:12px;color:#6b7280;">Brief will scan your sitemap for real pages</span>' : '') +
     '</div>' +
     '<div class="research-block">' +
-    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">External Authority Links (min 3)</div>' +
-    (r.external_links_local || []).map(function(l) { return '<div style="font-size:12px;color:#4ade80;padding:2px 0;">🌐 ' + (typeof l === 'object' ? (l.anchor || l.text || l.url || JSON.stringify(l)) : l) + '</div>'; }).join('') +
-    (!(r.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">External Authority Links (real URLs)</div>' +
+    (r.external_links_local || []).map(function(l) {
+      var isObj = typeof l === 'object';
+      var anchor = isObj ? (l.anchor || l.text || 'External source') : l;
+      var url = isObj ? (l.url || '') : '';
+      var hasUrl = url && url.startsWith('http');
+      return '<div style="font-size:12px;padding:2px 0;"><span style="color:' + (hasUrl ? '#4ade80' : '#fbbf24') + ';">🌐</span> <span style="color:#e2e8f0;">' + anchor + '</span>' + (hasUrl ? ' <a href="' + url + '" target="_blank" style="color:#60a5fa;font-size:10px;">' + url.replace(/^https?:\/\//, '').substring(0, 35) + '</a>' : ' <span style="color:#fbbf24;font-size:10px;">[real URL will be added in brief]</span>') + '</div>';
+    }).join('') +
+    (!(r.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">Real authority URLs will be added in brief</span>' : '') +
     '</div></div>' +
     '<div class="grid-2" style="margin-bottom:12px;">' +
     '<div class="research-block">' +
@@ -1482,16 +1501,44 @@ function renderBrief(b) {
     '</div>' +
     '<div>' +
     '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Internal Links</div>' +
-    (b.internal_links || []).map(function(u) { return '<div style="font-size:12px;color:#60a5fa;padding:2px 0;">🔗 ' + u + '</div>'; }).join('') +
+    (b.internal_links || []).map(function(l) {
+      var isObj = typeof l === 'object';
+      var url = isObj ? (l.url || '') : l;
+      var text = isObj ? (l.text || l.anchor || url) : url;
+      var status = isObj ? (l.status || '') : '';
+      var label = isObj ? (l.statusLabel || '') : '';
+      var color = status === 'exists' ? '#4ade80' : status === 'missing' ? '#fbbf24' : '#60a5fa';
+      return '<div style="font-size:12px;padding:2px 0;"><span style="color:' + color + ';">' + (label || '🔗') + '</span> <span style="color:#e2e8f0;">' + text + '</span> <span style="color:#6b7280;font-size:10px;">' + url + '</span></div>';
+    }).join('') +
     (!(b.internal_links || []).length ? '<span style="font-size:12px;color:#6b7280;">None from sitemap</span>' : '') +
     '</div>' +
-    '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Local External Links</div>' +
-    (b.external_links_local || []).map(function(u) { return '<div style="font-size:12px;color:#4ade80;padding:2px 0;">🌐 ' + u + '</div>'; }).join('') +
-    (!(b.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
+    '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">External Authority Links</div>' +
+    (b.external_sources || b.external_links_local || []).map(function(l) {
+      var isObj = typeof l === 'object';
+      var anchor = isObj ? (l.anchor || l.text || 'External source') : l;
+      var url = isObj ? (l.url || '#') : '#';
+      return '<div style="font-size:12px;padding:2px 0;"><span style="color:#4ade80;">🌐</span> <a href="' + url + '" target="_blank" style="color:#60a5fa;text-decoration:none;">' + anchor + '</a> <span style="color:#6b7280;font-size:10px;">' + url.replace(/^https?:\/\//, '').substring(0, 40) + '</span></div>';
+    }).join('') +
+    (!(b.external_sources || b.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
     '</div>' +
     '<div class="research-block"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">BOFU CTAs</div>' +
     (b.bofu_ctas || []).map(function(c) { return '<div style="font-size:12px;color:#fbbf24;padding:2px 0;">→ ' + c + '</div>'; }).join('') +
     '</div></div></div>' +
+    (b.internal_links_needed && b.internal_links_needed.length ? '<div class="research-block" style="border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.06);">' +
+    '<div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">⚠️ Pages You Should Create</div>' +
+    '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">These pages don\'t exist on your site yet. Creating them will strengthen your internal linking and BOFU conversion. Stored on server until you\'re ready:</div>' +
+    b.internal_links_needed.map(function(p) {
+      return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="color:#fbbf24;font-weight:600;">→ ' + p.title + '</div>' +
+        '<div style="color:#6b7280;font-size:10px;">URL: ' + p.url + '</div>' +
+        '<div style="color:#9ca3af;font-size:11px;margin-top:2px;">' + p.reason + '</div></div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.title || '').replace(/'/g, '') + '\',\'' + (p.url || '').replace(/'/g, '') + '\')" title="Write this page now">✍️ Write</button>' +
+        '</div></div></div>';
+    }).join('') +
+    '</div>' : '') +
     '<div class="research-block">' +
     '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">AI Overview Optimisation</div>' +
     (b.ai_overview_tips || []).map(function(t) { return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
@@ -1502,9 +1549,127 @@ function renderBrief(b) {
     (!(b.voice_search_queries || []).length ? '<span style="font-size:12px;color:#6b7280;">No voice queries generated</span>' : '') +
     '</div>' +
     (b.voice_search_optimization ? '<div style="font-size:12px;color:#38bdf8;margin-top:6px;background:rgba(56,189,248,.08);padding:8px;border-radius:6px;">🎙️ <strong>Voice Strategy:</strong> ' + b.voice_search_optimization + '</div>' : '') +
+    (b.all_needed_pages && b.all_needed_pages.length ? '<div class="research-block" style="border-color:rgba(124,58,237,.3);margin-top:12px;">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 All Recommended Pages (stored on server)</div>' +
+    '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">' + b.all_needed_pages.length + ' page(s) recommended across all briefs. Create them when ready:</div>' +
+    b.all_needed_pages.map(function(p) {
+      return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="color:#e2e8f0;font-weight:600;">' + p.title + ' <span style="font-size:9px;color:#fbbf24;text-transform:uppercase;">' + (p.priority || 'high') + '</span></div>' +
+        '<div style="color:#6b7280;font-size:10px;">' + p.url + '</div>' +
+        '<div style="color:#9ca3af;font-size:11px;margin-top:2px;">' + p.reason + '</div></div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.title || '').replace(/'/g, '') + '\',\'' + (p.url || '').replace(/'/g, '') + '\', ' + (p.id || 'null') + ')" title="Write this page now">✍️ Write</button>' +
+        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + p.id + ',\'' + (p.url || '').replace(/'/g, '') + '\')" title="I created this page">✓ Created</button>' +
+        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + p.id + ')" title="Ignore">✕</button>' +
+        '</div></div></div>';
+    }).join('') +
+    '</div>' : '') +
     '<div style="font-size:12px;color:#6b7280;margin-top:8px;">Target: <strong style="color:#e2e8f0;">' + (b.target_word_count || 2500) + ' words</strong> · H2s: <strong style="color:#e2e8f0;">' + (b.structure || []).length + '</strong></div>';
 }
 
+// ── Needed Pages Actions ────────────────────────────────────
+async function writeNeededPage(title, url, pageId) {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  // Pre-fill the engine with this page's info
+  showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
+  setTimeout(function() {
+    document.getElementById('seedKeyword').value = title;
+    toast('✍️ Ready to write "' + title + '" — click Start Research');
+  }, 100);
+  // If there's a pageId, auto-mark it as pending (being worked on)
+  if (pageId) {
+    try {
+      var profileIdNum = parseInt(profileId);
+      await api('/api/content/profiles/' + profileIdNum + '/needed-pages/' + pageId, 'PUT', { status: 'pending' });
+    } catch(e) { console.warn('Mark pending failed:', e.message); }
+  }
+}
+
+async function markNeededPageCreated(pageId, finalUrl) {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  try {
+    await api('/api/content/profiles/' + parseInt(profileId) + '/needed-pages/' + pageId, 'PUT', { status: 'created', final_url: finalUrl });
+    toast('✅ Marked as created! This page will now be used in internal linking.');
+    // Refresh brief to show updated status
+    if (_currentJobId) {
+      try { var d = await api('/api/content/brief/' + _currentJobId, 'POST'); if (d.success) { renderBrief(d.brief); } } catch(e) {}
+    }
+  } catch(e) { toast('Failed: ' + e.message, 'red'); }
+}
+
+async function ignoreNeededPage(pageId) {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  if (!confirm('Ignore this page recommendation?')) return;
+  try {
+    await api('/api/content/profiles/' + parseInt(profileId) + '/needed-pages/' + pageId, 'DELETE');
+    toast('Page recommendation removed');
+    // Refresh brief
+    if (_currentJobId) {
+      try { var d = await api('/api/content/brief/' + _currentJobId, 'POST'); if (d.success) { renderBrief(d.brief); } } catch(e) {}
+    }
+  } catch(e) { toast('Failed: ' + e.message, 'red'); }
+}
+
+// Load all needed pages for a profile (useful for standalone panel)
+async function loadNeededPages() {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) return;
+  try {
+    var d = await api('/api/content/profiles/' + parseInt(profileId) + '/needed-pages', 'GET');
+    if (d.success && d.pages) {
+      renderNeededPagesPanel(d.pages);
+      // Show card if there are pending pages
+      var hasPending = d.pages.some(function(p) { return p.status === 'recommended' || p.status === 'pending'; });
+      document.getElementById('neededPagesCard').style.display = (hasPending || d.pages.length) ? 'block' : 'none';
+    }
+  } catch(e) { console.warn('Load needed pages failed:', e.message); }
+}
+
+async function checkSitemapForNeededPages() {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  try {
+    var d = await api('/api/content/profiles/' + parseInt(profileId) + '/needed-pages/check-sitemap', 'POST');
+    if (d.success) {
+      toast(d.resolved > 0 ? '✅ ' + d.resolved + ' page(s) found in sitemap and marked as created!' : 'ℹ️ No changes — checked ' + d.totalChecked + ' page(s)');
+      loadNeededPages(); // Refresh the panel
+    }
+  } catch(e) { toast('Sitemap check failed: ' + e.message, 'red'); }
+}
+
+function renderNeededPagesPanel(pages) {
+  var el = document.getElementById('neededPagesPanel');
+  if (!el) return;
+  if (!pages || !pages.length) { el.innerHTML = '<div style="font-size:12px;color:#6b7280;padding:10px;">No recommended pages yet. Run a brief to get recommendations.</div>'; return; }
+  var recommended = pages.filter(function(p) { return p.status === 'recommended' || p.status === 'pending'; });
+  var created = pages.filter(function(p) { return p.status === 'created'; });
+  el.innerHTML =
+    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">' + recommended.length + ' pending · ' + created.length + ' created</div>' +
+    recommended.map(function(p) {
+      return '<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="color:#fbbf24;font-weight:700;font-size:13px;">' + p.page_title + '</div>' +
+        '<div style="color:#6b7280;font-size:10px;">' + p.suggested_url + '</div>' +
+        '<div style="color:#9ca3af;font-size:11px;margin-top:3px;">' + p.reason + '</div>' +
+        (p.target_keyword ? '<div style="color:#a78bfa;font-size:10px;margin-top:2px;">🎯 ' + p.target_keyword + '</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.page_title || '').replace(/'/g, '') + '\',\'' + (p.suggested_url || '').replace(/'/g, '') + '\', ' + p.id + ')">✍️ Write</button>' +
+        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + p.id + ',\'' + (p.suggested_url || '').replace(/'/g, '') + '\')">✓ Created</button>' +
+        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + p.id + ')">✕</button>' +
+        '</div></div></div>';
+    }).join('') +
+    (created.length ? '<div style="margin-top:12px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">Created Pages (✅ used in linking)</div>' +
+      created.map(function(p) {
+        return '<div style="font-size:12px;color:#4ade80;padding:3px 0;">✅ ' + p.page_title + ' <span style="color:#6b7280;font-size:10px;">' + p.suggested_url + '</span></div>';
+      }).join('') : '');
+}
 
 function renderArticleReady(article, clusterLinked) {
   var el = document.getElementById('articleResult');

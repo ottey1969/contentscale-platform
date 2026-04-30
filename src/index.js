@@ -1046,6 +1046,28 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      UNIQUE(cluster_id, from_node_id, to_node_id)
    )`);
    await client.query(`DO $$ BEGIN ALTER TABLE content_cluster_links ADD CONSTRAINT content_cluster_links_unique UNIQUE (cluster_id, from_node_id, to_node_id); EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL; END $$`).catch(()=>{});
+
+   // ═══════════════════════════════════════════════════════════════
+   // NEEDED PAGES — pages recommended by AI that don't exist yet
+   // User can mark as created, then they flow into sitemap + links
+   // ═══════════════════════════════════════════════════════════════
+   await client.query(`CREATE TABLE IF NOT EXISTS content_needed_pages (
+     id SERIAL PRIMARY KEY,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     page_title VARCHAR(255) NOT NULL,
+     suggested_url VARCHAR(500) NOT NULL,
+     reason TEXT,
+     seo_priority VARCHAR(20) DEFAULT 'high',
+     status VARCHAR(20) DEFAULT 'recommended',
+     ai_suggested_h2s JSONB DEFAULT '[]',
+     target_keyword VARCHAR(255),
+     source VARCHAR(50) DEFAULT 'brief',
+     created_at TIMESTAMP DEFAULT NOW(),
+     resolved_at TIMESTAMP,
+     UNIQUE(profile_id, suggested_url)
+   )`);
+   await client.query(`ALTER TABLE content_needed_pages ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'brief'`).catch(()=>{});
+
    // Phase 2 tables
    await client.query(`CREATE TABLE IF NOT EXISTS content_money_pages (
      id SERIAL PRIMARY KEY,
@@ -10242,6 +10264,93 @@ app.delete('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => 
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// NEEDED PAGES — SEO-critical pages the AI recommends creating
+// ═══════════════════════════════════════════════════════════════
+
+// List all needed pages for a profile
+app.get('/api/content/profiles/:id/needed-pages', verifyEngineAccess, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM content_needed_pages WHERE profile_id=$1 ORDER BY CASE seo_priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ success: true, pages: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Add a needed page (from brief generation or manual)
+app.post('/api/content/profiles/:id/needed-pages', verifyEngineAccess, async (req, res) => {
+  try {
+    const { page_title, suggested_url, reason, seo_priority, target_keyword, ai_suggested_h2s, source } = req.body;
+    const r = await pool.query(
+      `INSERT INTO content_needed_pages (profile_id, page_title, suggested_url, reason, seo_priority, target_keyword, ai_suggested_h2s, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (profile_id, suggested_url) DO UPDATE SET
+         page_title=EXCLUDED.page_title, reason=EXCLUDED.reason, seo_priority=EXCLUDED.seo_priority,
+         target_keyword=EXCLUDED.target_keyword, ai_suggested_h2s=EXCLUDED.ai_suggested_h2s,
+         status='recommended', resolved_at=NULL
+       RETURNING *`,
+      [req.params.id, page_title, suggested_url, reason || '', seo_priority || 'high', target_keyword || '', JSON.stringify(ai_suggested_h2s || []), source || 'manual']
+    );
+    res.json({ success: true, page: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Mark a needed page as created (user built the page)
+app.put('/api/content/profiles/:id/needed-pages/:pageId', verifyEngineAccess, async (req, res) => {
+  try {
+    const { status, final_url } = req.body;
+    const r = await pool.query(
+      `UPDATE content_needed_pages SET status=$1, resolved_at=NOW(), suggested_url=COALESCE($2, suggested_url) WHERE id=$3 AND profile_id=$4 RETURNING *`,
+      [status || 'created', final_url || null, req.params.pageId, req.params.id]
+    );
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    res.json({ success: true, page: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Delete / ignore a needed page
+app.delete('/api/content/profiles/:id/needed-pages/:pageId', verifyEngineAccess, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM content_needed_pages WHERE id=$1 AND profile_id=$2`, [req.params.pageId, req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Auto-check sitemap: resolve pages that now exist
+app.post('/api/content/profiles/:id/needed-pages/check-sitemap', verifyEngineAccess, async (req, res) => {
+  try {
+    const profileR = await pool.query(`SELECT domain FROM content_profiles WHERE id=$1`, [req.params.id]);
+    if (!profileR.rows.length || !profileR.rows[0].domain) return res.json({ success: true, resolved: 0 });
+    const domain = profileR.rows[0].domain;
+    const sitemapUrl = domain.startsWith('http') ? domain.replace(/\/$/, '') + '/sitemap.xml' : 'https://' + domain.replace(/\/$/, '') + '/sitemap.xml';
+    let sitemapUrls = [];
+    try {
+      const sitemapResp = await fetch(sitemapUrl, { method: 'GET', signal: AbortSignal.timeout(8000) });
+      if (sitemapResp.ok) {
+        const sitemapXml = await sitemapResp.text();
+        const urlMatches = sitemapXml.match(/<loc>([^<]+)<\/loc>/g) || [];
+        sitemapUrls = urlMatches.map(m => {
+          const fullUrl = m.replace(/<\/?loc>/g, '').trim();
+          try { return new URL(fullUrl).pathname.replace(/\/$/, ''); } catch(e) { return fullUrl.replace(/\/$/, ''); }
+        }).filter(Boolean);
+      }
+    } catch(e) { console.warn('Sitemap check failed:', e.message); }
+
+    const pendingR = await pool.query(`SELECT * FROM content_needed_pages WHERE profile_id=$1 AND status IN ('recommended', 'pending')`, [req.params.id]);
+    let resolved = 0;
+    for (const page of pendingR.rows) {
+      const normalized = page.suggested_url.replace(/\/$/, '');
+      if (sitemapUrls.some(su => su === normalized)) {
+        await pool.query(`UPDATE content_needed_pages SET status='created', resolved_at=NOW() WHERE id=$1`, [page.id]);
+        resolved++;
+      }
+    }
+    res.json({ success: true, resolved, totalChecked: pendingR.rows.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ── Locations ────────────────────────────────────────────────
 app.post('/api/content/profiles/:id/locations', verifyEngineAccess, async (req, res) => {
   try {
@@ -10409,7 +10518,7 @@ Return ONLY valid JSON with this exact structure:
   "recommended_h2s": ["H2 1: Direct answer to primary question (targets featured snippet)","H2 2: What is [keyword] and why it matters","H2 3: How [keyword] works (step-by-step guide)","H2 4: [Keyword] benefits and advantages","H2 5: Common [keyword] problems and solutions","H2 6: [Keyword] costs, pricing, and what to expect","H2 7: How to choose the best [keyword] provider","H2 8: FAQ — frequently asked questions about [keyword]"],
   "target_word_count": 2500,
   "internal_links_suggested": ["url1","url2","url3"],
-  "external_links_local": [{"anchor": "government regulation on topic", "url": "https://...gov..."}, {"anchor": "industry authority research", "url": "https://...edu... or industry org"}, {"anchor": "academic study", "url": "https://scholar.google.com/..."}],
+  "external_links_local": [{"anchor": "government regulation on topic", "url": "https://real-url.gov/specific-page"}, {"anchor": "industry authority research", "url": "https://real-industry-org.edu/research"}, {"anchor": "academic study", "url": "https://scholar.google.com/scholar?q=specific-topic"}],
   "bofu_ctas": ["Call (555) 123-4567 for a free consultation", "Get Your Free Quote — Schedule Now", "Book Your Appointment Online in 60 Seconds"],
   "ai_overview_tips": ["Add direct 40-word answer in first paragraph","Use FAQPage schema for all Q&A sections","Format key data in tables for snippet extraction","Include HowTo schema with numbered steps","Add Speakable schema for voice search"],
   "voice_search_queries": ["Hey Google, what is [keyword]?", "Alexa, how much does [keyword] cost?", "Siri, find the best [keyword] near me", "OK Google, how do I [keyword]?"],
@@ -10674,52 +10783,197 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
       locations: locList
     };
 
- // ── Build REAL internal links pool ──
+ // ── Build REAL internal links pool — VERIFY against sitemap ──
+    // Fetch actual sitemap to validate URLs
+    let sitemapUrls = [];
+    try {
+      const sitemapUrl = job.domain.startsWith('http') ? job.domain.replace(/\/$/, '') + '/sitemap.xml' : 'https://' + job.domain.replace(/\/$/, '') + '/sitemap.xml';
+      const sitemapResp = await fetch(sitemapUrl, { method: 'GET', signal: AbortSignal.timeout(8000) });
+      if (sitemapResp.ok) {
+        const sitemapXml = await sitemapResp.text();
+        const urlMatches = sitemapXml.match(/<loc>([^<]+)<\/loc>/g) || [];
+        sitemapUrls = urlMatches.map(m => {
+          const fullUrl = m.replace(/<\/?loc>/g, '').trim();
+          // Extract path from full URL
+          try { return new URL(fullUrl).pathname; } catch(e) { return fullUrl; }
+        }).filter(Boolean);
+      }
+    } catch(e) { console.warn('Sitemap fetch failed:', e.message); }
+
     const internalLinksPool = [];
-     const locR = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 ORDER BY sort_order`, [job.profile_id]);
+    // Helper to check if URL exists in sitemap
+    function urlExistsInSitemap(url) {
+      if (!sitemapUrls.length) return 'unknown'; // No sitemap = can't verify
+      const normalized = url.replace(/\/$/, '');
+      return sitemapUrls.some(su => su.replace(/\/$/, '') === normalized) ? 'exists' : 'missing';
+    }
+
+    const locR = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 ORDER BY sort_order`, [job.profile_id]);
     (locR.rows || []).forEach(loc => {
-      if (loc.external_links && loc.location_value) {
-        internalLinksPool.push({ text: loc.location_value, url: `/${loc.location_type}/${loc.location_value.toLowerCase().replace(/\s+/g, '-')}` });
+      if (loc.location_value) {
+        const url = loc.external_links || `/${loc.location_type}/${loc.location_value.toLowerCase().replace(/\s+/g, '-')}`;
+        const status = urlExistsInSitemap(url);
+        internalLinksPool.push({ text: loc.location_value, url, status, statusLabel: status === 'exists' ? '✅' : status === 'missing' ? '⚠️ PAGE NEEDED' : '❓ unverified' });
       }
     });
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order`, [job.profile_id]);
     (mpR.rows || []).forEach(mp => {
-      internalLinksPool.push({ text: mp.title || mp.primary_keyword, url: mp.url || `/${mp.planned_slug || (mp.primary_keyword ? mp.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}` });
+      const url = mp.url || `/${mp.planned_slug || (mp.primary_keyword ? mp.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}`;
+      const status = urlExistsInSitemap(url);
+      internalLinksPool.push({ text: mp.title || mp.primary_keyword, url, status, statusLabel: status === 'exists' ? '✅' : status === 'missing' ? '⚠️ PAGE NEEDED' : '❓ unverified' });
     });
     const artR = await pool.query(`SELECT id, title, slug, primary_keyword FROM content_articles WHERE profile_id=$1 AND status='published' ORDER BY published_at DESC LIMIT 20`, [job.profile_id]);
     (artR.rows || []).forEach(a => {
-       internalLinksPool.push({ text: a.title || a.primary_keyword, url: `/${a.slug || (a.primary_keyword ? a.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}` });
+      const url = `/${a.slug || (a.primary_keyword ? a.primary_keyword.toLowerCase().replace(/\s+/g, '-') : '')}`;
+      internalLinksPool.push({ text: a.title || a.primary_keyword, url, status: 'exists', statusLabel: '✅ published' });
     });
-    if (job.domain) {
-      internalLinksPool.push({ text: 'About Us', url: '/about' });
-      internalLinksPool.push({ text: 'Contact', url: '/contact' });
-      internalLinksPool.push({ text: 'Services', url: '/services' });
-    }
-    brief.internal_links = internalLinksPool.filter(l => l.text && l.url).slice(0, 5);
-    // Ensure minimum 3 internal links — pad with defaults if needed
-    while (brief.internal_links.length < 3 && job.domain) {
-      const defaults = [
-        { text: 'About Us', url: '/about' },
-        { text: 'Contact', url: '/contact' },
-        { text: 'Services', url: '/services' },
-        { text: 'Blog', url: '/blog' }
-      ];
-      const missing = defaults.find(d => !brief.internal_links.some(l => l.url === d.url));
-      if (!missing) break;
-      brief.internal_links.push(missing);
+
+    // Add commonly needed pages — but MARK them if not in sitemap
+    const commonPages = [
+      { text: 'About Us', url: '/about' },
+      { text: 'About Us', url: '/about-us' },
+      { text: 'Contact', url: '/contact' },
+      { text: 'Contact', url: '/contact-us' },
+      { text: 'Services', url: '/services' },
+      { text: 'Service Areas', url: '/service-areas' },
+      { text: 'Blog', url: '/blog' },
+      { text: 'Areas We Serve', url: '/areas-we-serve' }
+    ];
+    commonPages.forEach(cp => {
+      const status = urlExistsInSitemap(cp.url);
+      // Only add if not already in pool
+      if (!internalLinksPool.some(l => l.url === cp.url)) {
+        internalLinksPool.push({ text: cp.text, url: cp.url, status, statusLabel: status === 'exists' ? '✅' : status === 'missing' ? '⚠️ PAGE NEEDED — create this page' : '❓ unverified' });
+      }
+    });
+
+    // Separate into verified and needed pages
+    const verifiedLinks = internalLinksPool.filter(l => l.status === 'exists');
+    const neededPages = internalLinksPool.filter(l => l.status === 'missing');
+
+    // Use verified first, then mark needed ones clearly
+    brief.internal_links = [...verifiedLinks, ...neededPages].slice(0, 5);
+    brief.internal_links_verified = verifiedLinks.length;
+    brief.internal_links_needed = neededPages.map(l => ({ title: l.text, url: l.url, reason: `Create a "${l.text}" page for better internal linking and BOFU conversion` }));
+
+    // ── AUTO-SAVE needed pages to database ──
+    // These are SEO-critical pages that don't exist yet. Store them server-side
+    // so the user can come back later and create them when ready.
+    for (const np of neededPages) {
+      try {
+        await pool.query(
+          `INSERT INTO content_needed_pages (profile_id, page_title, suggested_url, reason, seo_priority, target_keyword, source)
+           VALUES ($1,$2,$3,$4,$5,$6,'brief')
+           ON CONFLICT (profile_id, suggested_url) DO UPDATE SET
+             page_title=EXCLUDED.page_title, reason=EXCLUDED.reason,
+             status='recommended', resolved_at=NULL`,
+          [job.profile_id, np.text, np.url, `Create a "${np.text}" page for better internal linking and BOFU conversion`, 'high', kd.primary_keyword || '']
+        );
+      } catch(saveErr) { console.warn('Failed to save needed page:', saveErr.message); }
     }
 
-    // ── 5 REAL EXTERNAL AUTHORITY LINKS ──
+    // Also load previously recommended pages that are still pending
+    const pendingNeededR = await pool.query(
+      `SELECT * FROM content_needed_pages WHERE profile_id=$1 AND status IN ('recommended', 'pending') ORDER BY seo_priority, created_at DESC`,
+      [job.profile_id]
+    );
+    brief.all_needed_pages = pendingNeededR.rows.map(p => ({
+      id: p.id, title: p.page_title, url: p.suggested_url, reason: p.reason,
+      priority: p.seo_priority, status: p.status, h2s: p.ai_suggested_h2s || []
+    }));
+
+    // Ensure minimum 3 — but ONLY from verified ones
+    while (verifiedLinks.length < 3 && brief.internal_links.length < 5) {
+      const moreNeeded = neededPages.find(n => !brief.internal_links.some(l => l.url === n.url));
+      if (!moreNeeded) break;
+      brief.internal_links.push(moreNeeded);
+    }
+
+    // ── REAL EXTERNAL AUTHORITY LINKS by niche + geo ──
     const niche = (job.niche || '').toLowerCase();
     const geo = (job.geo_focus || job.geo || '').toLowerCase();
+    const geoState = geo.match(/new\s*jers|nj|jersey/) ? 'nj'
+      : geo.match(/new\s*york|ny/) ? 'ny'
+      : geo.match(/florid|fl/) ? 'fl'
+      : geo.match(/californi|ca/) ? 'ca'
+      : geo.match(/texas|tx/) ? 'tx'
+      : geo.match(/netherland|dutch|nl/) ? 'nl'
+      : 'us';
+
+    // Real external URL database by state
+    const externalUrlDB = {
+      nj: {
+        government: [
+          { anchor: 'NJ Department of Environmental Protection', url: 'https://www.nj.gov/dep/' },
+          { anchor: 'NJ Consumer Affairs — Home Improvement', url: 'https://www.njconsumeraffairs.gov/' },
+          { anchor: 'NJ Division of Local Government Services', url: 'https://www.nj.gov/dca/divisions/dlgs/' }
+        ],
+        industry: [
+          { anchor: 'Plumbing-Heating-Cooling Contractors of New Jersey', url: 'https://www.phccnj.org/' },
+          { anchor: 'NJ Business & Industry Association', url: 'https://www.njbia.org/' }
+        ],
+        academic: [
+          { anchor: 'Rutgers NJ Agricultural Experiment Station', url: 'https://njaes.rutgers.edu/' }
+        ]
+      },
+      ny: {
+        government: [
+          { anchor: 'NYC Department of Environmental Protection', url: 'https://www.nyc.gov/site/dep/index.page' },
+          { anchor: 'NYS Department of State — Division of Consumer Protection', url: 'https://www.nysenate.gov/departments/consumer-protection' }
+        ],
+        industry: [
+          { anchor: 'PHCC of New York', url: 'https://www.phccny.org/' }
+        ],
+        academic: [
+          { anchor: 'Cornell Cooperative Extension', url: 'https://cce.cornell.edu/' }
+        ]
+      },
+      nl: {
+        government: [
+          { anchor: 'Rijksoverheid — Wonen en Bouwen', url: 'https://www.rijksoverheid.nl/onderwerpen/wonen-en-bouwen' },
+          { anchor: 'Omgevingsloket', url: 'https://www.omgevingsloket.nl/' }
+        ],
+        industry: [
+          { anchor: 'Techniek Nederland', url: 'https://www.technieknederland.nl/' }
+        ],
+        academic: [
+          { anchor: 'TU Delft — Watermanagement', url: 'https://www.tudelft.nl/en/ceg/research/water-management' }
+        ]
+      },
+      us: {
+        government: [
+          { anchor: 'EPA — Environmental Protection Agency', url: 'https://www.epa.gov/' },
+          { anchor: 'USA.gov — Home Improvement', url: 'https://www.usa.gov/home-repair' }
+        ],
+        industry: [
+          { anchor: 'PHCC — National Association', url: 'https://www.phccweb.org/' }
+        ],
+        academic: [
+          { anchor: 'Google Scholar', url: 'https://scholar.google.com' }
+        ]
+      }
+    };
+
+    const stateDB = externalUrlDB[geoState] || externalUrlDB.us;
+    const nicheKeyword = (job.niche || 'service').toLowerCase();
+
+    // Build real external links — minimum 3 with actual URLs
     brief.external_sources = [
-      { text: 'Statista industry research', url: 'https://www.statista.com/statistics' },
-      { text: 'Government guidelines', url: geo.includes('nl') || geo.includes('dutch') ? 'https://www.rijksoverheid.nl' : 'https://www.gov.uk' },
-      { text: 'Academic research', url: 'https://scholar.google.com' },
-      { text: 'Forbes industry analysis', url: 'https://www.forbes.com' },
-      { text: niche + ' Wikipedia overview', url: 'https://en.wikipedia.org/wiki/' + niche.replace(/\s+/g, '_') },
-      { text: 'Industry association guidelines', url: 'https://www.iso.org' }
-    ].filter(e => e.text && e.url);
+      ...(stateDB.government || []).slice(0, 2),
+      ...(stateDB.industry || []).slice(0, 2),
+      ...(stateDB.academic || []).slice(0, 1),
+      { anchor: `${nicheKeyword} — Wikipedia`, url: 'https://en.wikipedia.org/wiki/' + nicheKeyword.replace(/\s+/g, '_') },
+      { anchor: 'Statista — Industry Statistics', url: 'https://www.statista.com/statistics' }
+    ].filter(e => e.anchor && e.url).slice(0, 6);
+
+    // Also add Gemini's suggestions if they have real URLs
+    (kd.external_links_local || []).forEach(gemLink => {
+      if (typeof gemLink === 'object' && gemLink.url && gemLink.url.startsWith('http')) {
+        if (!brief.external_sources.some(e => e.url === gemLink.url)) {
+          brief.external_sources.push({ anchor: gemLink.anchor || gemLink.text || 'External source', url: gemLink.url });
+        }
+      }
+    });
 
     await pool.query(`UPDATE content_jobs SET brief=$1, status='briefed', updated_at=NOW() WHERE id=$2`, [JSON.stringify(brief), req.params.jobId]);
     res.json({ success: true, brief });
