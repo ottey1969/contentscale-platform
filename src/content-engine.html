@@ -1534,28 +1534,6 @@ function renderBrief(b) {
     '<div class="research-block"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">BOFU CTAs</div>' +
     (b.bofu_ctas || []).map(function(c) { return '<div style="font-size:12px;color:#fbbf24;padding:2px 0;">→ ' + c + '</div>'; }).join('') +
     '</div></div></div>' +
-    (b.internal_links_needed && b.internal_links_needed.length ? '<div class="research-block" style="border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.04);">' +
-    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 Recommended Pages to Create</div>' +
-    '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">These pages don\'t exist on your site yet. Creating them will strengthen internal linking and BOFU conversion. Stored on server until you\'re ready:</div>' +
-    b.internal_links_needed.map(function(p) {
-      return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
-        '<div style="flex:1;min-width:0;">' +
-        '<div style="color:#e2e8f0;font-weight:600;">' + p.title + ' <span style="font-size:9px;color:#fbbf24;text-transform:uppercase;">' + (p.priority || 'high') + '</span></div>' +
-        '<div style="color:#6b7280;font-size:10px;">' + p.url + '</div>' +
-        '<div style="color:#9ca3af;font-size:11px;margin-top:2px;">' + p.reason + '</div></div>' +
-        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
-        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="inlineWritePage(\'' + (p.title || '').replace(/'/g, '') + '\',\'' + (p.url || '').replace(/'/g, '') + '\')" title="Write this page now">✍️ Write</button>' +
-        '<button class="btn btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="inlineResearchPage(\'' + (p.title || '').replace(/'/g, '') + '\')" title="Research this keyword">🔍 Research</button>' +
-        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + (p.id || 'null') + ',\'' + (p.url || '').replace(/'/g, '') + '\')" title="I created this page">✓ Created</button>' +
-        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + (p.id || 'null') + ')' + (p.id ? '' : ',true') + '" title="Ignore">✕</button>' +
-        '</div></div></div>';
-    }).join('') +
-    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
-    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="loadNeededPages()">🔄 Refresh List</button>' +
-    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="checkSitemapForNeededPages()">🔍 Check Sitemap (auto-resolve)</button>' +
-    '</div>' +
-    '</div>' : '') +
     '<div class="research-block">' +
     '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">AI Overview Optimisation</div>' +
     (b.ai_overview_tips || []).map(function(t) { return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
@@ -1656,8 +1634,21 @@ async function writeNeededPage(title, url, pageId) {
       });
       if (existing) {
         // Restore existing job so Write button works immediately
-        loadPreviousJob(existing.id);
-        toast('↩️ Found existing research for "' + title + '" — restored!');
+        await loadPreviousJob(existing.id);
+        // Scroll to Write button
+        setTimeout(function() {
+          var writeBtn = document.getElementById('btnWrite');
+          if (writeBtn && writeBtn.offsetParent !== null) {
+            writeBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            toast('✍️ Ready to write — click the Write button below');
+          } else {
+            var briefStep = document.getElementById('stepBrief');
+            if (briefStep && briefStep.offsetParent !== null) {
+              briefStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              toast('✍️ Brief ready — click Write Article below');
+            }
+          }
+        }, 400);
         return;
       }
     }
@@ -1667,6 +1658,8 @@ async function writeNeededPage(title, url, pageId) {
   showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
   setTimeout(function() {
     document.getElementById('seedKeyword').value = title;
+    var researchBtn = document.getElementById('btnResearch');
+    if (researchBtn) researchBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
     toast('✍️ Ready to write "' + title + '" — click 🔍 Research');
   }, 100);
   if (pageId) {
@@ -1685,9 +1678,16 @@ async function inlineWritePage(title, url) {
 async function inlineResearchPage(title) {
   var profileId = document.getElementById('engineProfile').value;
   if (!profileId) { alert('Select a profile first'); return; }
-  document.getElementById('seedKeyword').value = title;
-  document.getElementById('stepSelectProfile').scrollIntoView({ behavior: 'smooth' });
-  toast('🔍 Ready to research "' + title + '" — click 🔍 Research button');
+  // Remove inline panel if open
+  var panel = document.getElementById('inlinePagePanel');
+  if (panel) panel.remove();
+  showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
+  setTimeout(function() {
+    document.getElementById('seedKeyword').value = title;
+    var researchBtn = document.getElementById('btnResearch');
+    if (researchBtn) researchBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast('🔍 Ready to research "' + title + '" — click the Research button');
+  }, 100);
 }
 
 function showInlinePagePanel(action, title, url) {
@@ -1716,12 +1716,54 @@ function showInlinePagePanel(action, title, url) {
 
 function goToEngineAndWrite(title) {
   var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  // Remove inline panel first
+  var panel = document.getElementById('inlinePagePanel');
+  if (panel) panel.remove();
+
+  // Go to engine tab
   showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
-  setTimeout(function() {
+
+  // Try to find an existing completed job for this keyword
+  api('/api/content/jobs/' + profileId, 'GET').then(function(d) {
+    if (d.success && d.jobs) {
+      var searchTitle = title.toLowerCase().trim();
+      var existing = d.jobs.find(function(j) {
+        return j.seed_keyword && j.seed_keyword.toLowerCase().trim() === searchTitle && j.status === 'completed';
+      });
+      if (existing) {
+        // Restore existing job — this brings back research, brief, article
+        loadPreviousJob(existing.id);
+        // After a short delay, scroll to the Write button area
+        setTimeout(function() {
+          var writeBtn = document.getElementById('btnWrite');
+          if (writeBtn && writeBtn.offsetParent !== null) {
+            writeBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            toast('✍️ Ready to write — click the Write button below');
+          } else {
+            // Write button not visible yet — scroll to brief step
+            var briefStep = document.getElementById('stepBrief');
+            if (briefStep && briefStep.offsetParent !== null) {
+              briefStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              toast('✍️ Brief ready — click Write Article below');
+            }
+          }
+        }, 400);
+        return;
+      }
+    }
+    // No existing job — pre-fill and let user research
     document.getElementById('seedKeyword').value = title;
-    toast('🚀 Ready to write "' + title + '" — click 🔍 Research');
-    document.getElementById('inlinePagePanel').remove();
-  }, 100);
+    setTimeout(function() {
+      var researchBtn = document.getElementById('btnResearch');
+      if (researchBtn) researchBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast('✍️ Ready to write "' + title + '" — click 🔍 Research');
+    }, 100);
+  }).catch(function(e) {
+    // Fallback: just pre-fill
+    document.getElementById('seedKeyword').value = title;
+    toast('✍️ Ready to write "' + title + '" — click 🔍 Research');
+  });
 }
 
 async function markNeededPageCreated(pageId, finalUrl) {
@@ -1796,7 +1838,7 @@ function renderNeededPagesPanel(pages) {
         (p.target_keyword ? '<div style="color:#a78bfa;font-size:10px;margin-top:2px;">🎯 ' + p.target_keyword + '</div>' : '') +
         '</div>' +
         '<div style="display:flex;gap:4px;flex-shrink:0;">' +
-        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="inlineWritePage(\'' + (p.page_title || '').replace(/'/g, '') + '\',\'' + (p.suggested_url || '').replace(/'/g, '') + '\')" title="Write this page">✍️ Write</button>' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.page_title || '').replace(/'/g, '') + '\',\'' + (p.suggested_url || '').replace(/'/g, '') + '\',' + p.id + ')" title="Write this page">✍️ Write</button>' +
         '<button class="btn btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="inlineResearchPage(\'' + (p.page_title || '').replace(/'/g, '') + '\')" title="Research this keyword">🔍 Research</button>' +
         '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + p.id + ',\'' + (p.suggested_url || '').replace(/'/g, '') + '\')" title="I created this page">✓ Created</button>' +
         '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + p.id + ')" title="Ignore">✕</button>' +
@@ -4744,14 +4786,4 @@ async function deleteTrackerPageFromDetail(pageId) {
     toast('Page removed from tracker');
     await loadTrackerPages();
   } catch(e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-function closeTrackerDetail() {
-  document.getElementById('trackerDetailModal').style.display = 'none';
-}
-
-</script>
-</body>
-</html>
+    toast('Error: ' + 
