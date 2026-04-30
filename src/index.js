@@ -10553,12 +10553,20 @@ Return compact JSON:
     if (!rawText) throw new Error(`Gemini returned no content (finishReason: ${finishReason || 'unknown'})`);
     let keywordData;
     try {
-      const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      // Strip ALL markdown code fences (Gemini often wraps JSON in ```json ... ```)
+      const cleaned = rawText
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
+        .trim();
       try {
         keywordData = JSON.parse(cleaned);
       } catch (_) {
+        // Try extracting JSON object from anywhere in the text (handles trailing text)
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI did not return JSON: ' + rawText.slice(0, 300));
+        if (!jsonMatch) {
+          console.error('No JSON found in AI response. Raw:', rawText.slice(0, 500));
+          throw new Error('AI did not return valid JSON. Raw: ' + rawText.slice(0, 200));
+        }
         keywordData = JSON.parse(jsonMatch[0]);
       }
     } catch (parseErr) {
@@ -10722,12 +10730,23 @@ Return ONLY valid JSON:
         const allKwData = allKwResult.data;
         const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (allKwText) {
-          const cleaned = allKwText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+          const cleaned = allKwText
+            .replace(/```json\s*/gi, '')
+            .replace(/```\s*/gi, '')
+            .trim();
           try {
             allKeywordData = JSON.parse(cleaned);
           } catch (_) {
             const allKwMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (allKwMatch) allKeywordData = JSON.parse(allKwMatch[0]);
+            if (allKwMatch) {
+              try {
+                allKeywordData = JSON.parse(allKwMatch[0]);
+              } catch(parseErr) {
+                console.warn('All keywords JSON parse failed:', parseErr.message, 'raw:', allKwText.slice(0, 200));
+              }
+            } else {
+              console.warn('No JSON found in all keywords response:', allKwText.slice(0, 200));
+            }
           }
           if (allKeywordData) {
             // Save back into job
