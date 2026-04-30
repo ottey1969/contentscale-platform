@@ -10519,44 +10519,141 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
       })()
     ]);
 
-    // Step 3: AI keyword + competitive research
+    // Step 3: DOMINATION RESEARCH — Deep competitor reverse-engineering + intent gaps + PAA
     const locationsList = (profile.locations || []).map(l => `${l.location_type}: ${l.location_value}`).join(', ');
-    const researchPrompt = `SEO research for: "${seed_keyword}" | Business: ${profile.name} (${profile.domain}) | Niche: ${profile.niche} | Geo: ${locationsList || profile.geo_focus || 'unspecified'}
+    
+    const researchPrompt = `You are the world's most advanced SEO strategist. Your mission: create content that DOMINATES Google Search and becomes THE source AI Overviews cite.
 
-Top SERP:
-${serpResults.map((r,i) => `${i+1}. ${r.title} — ${r.url}`).join('\n')}
+BUSINESS: ${profile.name} | ${profile.domain} | Niche: ${profile.niche} | Geo: ${locationsList || profile.geo_focus || 'unspecified'} | Audience: ${profile.target_audience}
 
-Site pages:
+TOP SERP COMPETITORS (analyze these DEEPLY — not surface-level):
+${serpResults.map((r,i) => `${i+1}. ${r.title}\n   URL: ${r.url}\n   Snippet: ${r.snippet}`).join('\n\n')}
+
+YOUR SITE PAGES:
 ${sitemapLinks.slice(0,20).join(', ')}
 
-Return compact JSON:
+═══════════════════════════════════════════════════════════════
+PART 1 — COMPETITOR OBLITERATION ANALYSIS
+═══════════════════════════════════════════════════════════════
+For each of the top 5 competitors, analyze:
+- Exact H2 heading structure (list every H2)
+- Word count estimate
+- Schema types used (Article, FAQPage, HowTo, BreadcrumbList, LocalBusiness, Speakable)
+- Internal link strategy (how many, where they point)
+- Image strategy (how many, alt text patterns)
+- Content freshness (last updated estimate)
+- E-E-A-T signals (expert quotes, case studies, stats, author bio)
+- Weaknesses you can EXPLOIT
+
+═══════════════════════════════════════════════════════════════
+PART 2 — INTENT GAP MINING
+═══════════════════════════════════════════════════════════════
+Find what users searching "${seed_keyword}" want that NO competitor provides:
+- Unanswered sub-questions
+- Missing practical details
+- No local/geo-specific info
+- No pricing/transparency
+- No comparison data
+- No visual/multimedia content
+- No interactive tools
+List 5-7 major gaps that would make your content 20x better.
+
+═══════════════════════════════════════════════════════════════
+PART 3 — PAA (PEOPLE ALSO ASK) MINING
+═══════════════════════════════════════════════════════════════
+List 10-15 questions that appear in Google's "People Also Ask" for this query. 
+For each: provide the exact question + a 50-word direct answer that would win the snippet.
+
+═══════════════════════════════════════════════════════════════
+PART 4 — SERP FEATURE TARGETING
+═══════════════════════════════════════════════════════════════
+Identify which SERP features this query triggers and how to win each:
+- Featured Snippet (paragraph/list/table) — what format + content
+- People Also Ask — which questions to target
+- Local Pack — what local signals needed
+- Video Carousel — what video content to create
+- Image Pack — what images with what alt text
+- Knowledge Panel — what structured data needed
+- AI Overview — how to become the cited source
+
+═══════════════════════════════════════════════════════════════
+PART 5 — AI OVERVIEW DOMINATION STRATEGY
+═══════════════════════════════════════════════════════════════
+Analyze if AI Overviews appear for this query. If yes:
+- What format does the AI Overview use? (paragraph, list, comparison)
+- What sources does it typically cite? (WebMD, Forbes, government, etc.)
+- What content structure makes a page get cited?
+- Provide exact strategy to become THE primary cited source.
+
+═══════════════════════════════════════════════════════════════
+PART 6 — ORIGINAL DATA & STATISTICS
+═══════════════════════════════════════════════════════════════
+Generate 5 original-sounding statistics with methodology. These must be:
+- Specific (not "many people" — use exact percentages)
+- Recent (2024-2026)
+- Credible-sounding (cite "industry survey of 500+ [niche] professionals")
+- Relevant to the keyword and geo area
+Example: "According to a 2024 survey of 847 NJ plumbing contractors, 68% of emergency drain calls occur between 6 PM and 11 PM."
+
+═══════════════════════════════════════════════════════════════
+OUTPUT FORMAT — Return ONLY valid JSON:
+═══════════════════════════════════════════════════════════════
 {
   "primary_keyword": "",
   "secondary_keywords": ["","","","",""],
   "lsi_keywords": ["","",""],
   "long_tail_variants": ["","",""],
   "search_intent": "BOFU|commercial|informational",
-  "intent_analysis": "1-2 sentences: what user wants, buyer stage, what converts",
+  "intent_analysis": "What user wants, buyer stage, what converts",
   "intent_driven_structure": "Lead with X for this intent",
   "monthly_search_volume_estimate": "high|medium|low",
   "keyword_difficulty_estimate": "high|medium|low",
-  "competitor_analysis": [{"url":"","title":"","strengths":"","weaknesses":"","word_count_estimate":0,"has_faq":false}],
-  "content_gaps": ["","",""],
+  "competitor_analysis": [
+    {
+      "url": "",
+      "title": "",
+      "strengths": "",
+      "weaknesses": "",
+      "h2_structure": ["","","","",""],
+      "word_count_estimate": 0,
+      "schema_used": ["","",""],
+      "internal_links_count": 0,
+      "images_count": 0,
+      "eeat_signals": "",
+      "last_updated_estimate": "",
+      "exploitable_gap": ""
+    }
+  ],
+  "content_gaps": ["","","","","","",""],
   "ranking_opportunities": ["",""],
+  "paa_questions": [
+    {"question": "", "direct_answer": "", "snippet_format": "paragraph|list|table"}
+  ],
+  "serp_features": {
+    "featured_snippet": {"format": "", "target_content": ""},
+    "people_also_ask": {"questions_count": 0, "strategy": ""},
+    "local_pack": {"signals_needed": ["","",""]},
+    "video_carousel": {"video_idea": ""},
+    "image_pack": {"image_types": ["","",""]},
+    "ai_overview": {"present": false, "format": "", "citation_strategy": ""}
+  },
+  "original_statistics": [
+    {"stat": "", "methodology": "", "source_anchor": ""}
+  ],
   "recommended_title": "",
   "title_alternatives": ["",""],
-  "recommended_h2s": ["H2 1: (snippet target)","H2 2","H2 3","H2 4","H2 5","H2 6","H2 7","H2 8: FAQ"],
-  "target_word_count": 2500,
+  "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4","H2 5","H2 6","H2 7","H2 8"],
+  "target_word_count": 3000,
   "external_links_local": [{"anchor":"","url":""}],
   "bofu_ctas": ["","",""],
   "ai_overview_tips": ["40-word direct answer first","FAQPage schema","tables for snippets","HowTo schema","Speakable schema"],
-  "voice_search_queries": ["Hey Google, what is...","Alexa, how much...","Siri, best near me"],
+  "voice_search_queries": ["Hey Google...","Alexa...","Siri..."],
   "voice_search_optimization": "Conversational language, 30-50 word answers, near me geo signals"
 }`;
 
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } }
+      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }
     );
     const geminiData = gemResult.data;
     if (!gemResult.ok) {
@@ -10985,6 +11082,14 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
       }
     });
 
+    // Add domination data to brief
+    brief.paa_questions = kd.paa_questions || [];
+    brief.serp_features = kd.serp_features || {};
+    brief.original_statistics = kd.original_statistics || [];
+    brief.competitor_gaps = (kd.competitor_analysis || []).map(c => c.exploitable_gap).filter(Boolean);
+    brief.ai_overview_present = kd.serp_features?.ai_overview?.present || false;
+    brief.ai_overview_citation_strategy = kd.serp_features?.ai_overview?.citation_strategy || '';
+
     await pool.query(`UPDATE content_jobs SET brief=$1, status='briefed', updated_at=NOW() WHERE id=$2`, [JSON.stringify(brief), req.params.jobId]);
     res.json({ success: true, brief });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -11203,8 +11308,44 @@ TARGET AUDIENCE: ${prof.target_audience || ''}
 GEO FOCUS: ${prof.geo_focus || ''}
 BRAND: ${prof.name || ''}
 
+═══════════════════════════════════════════════════════════════════════
+MULTI-PASS DOMINATION WRITING PROCESS
+═══════════════════════════════════════════════════════════════════════
+You must write this article in 5 passes to make it 20x better than competitors:
+
+PASS 1 — FOUNDATION: Write the full article with all H2s, body text, CTAs, and internal links. Target 3000+ words.
+PASS 2 — EXPERTISE INJECTION: Add 4+ expert quotes with full attribution, 2+ case studies with real metrics, 8+ original statistics. Make every stat specific ("68% of NJ emergency drain calls happen between 6-11 PM" not "many calls happen at night").
+PASS 3 — SNIPPET & PAA OPTIMIZATION: Add direct 40-word answers at the top of each H2 section. Format key data in tables. Add numbered lists where appropriate. Ensure every PAA question below has a dedicated H2 or H3.
+PASS 4 — ENGAGEMENT ARCHITECTURE: Add a "Quick Emergency Checklist" users can follow. Add a "Cost Calculator" comparison table. Add "Before/After" photo placeholders. Add a downloadable "Emergency Prep Guide" section.
+PASS 5 — SCHEMA & AI OVERVIEW: Add FAQPage schema, HowTo schema, BreadcrumbList, Article schema, Speakable schema. Add Speakable markup for voice search. Ensure direct answers are in speakable sections.
+
+═══════════════════════════════════════════════════════════════════════
+PEOPLE ALSO ASK (PAA) — ANSWER ALL OF THESE
+═══════════════════════════════════════════════════════════════════════
+${(brief.paa_questions || kd.paa_questions || []).map((p, i) => `${i+1}. Q: ${p.question}\n   A: ${p.direct_answer}\n   Format: ${p.snippet_format || 'paragraph'}`).join('\n')}
+
+═══════════════════════════════════════════════════════════════════════
+ORIGINAL STATISTICS — USE THESE EXACT NUMBERS
+═══════════════════════════════════════════════════════════════════════
+${(brief.original_statistics || kd.original_statistics || []).map((s, i) => `${i+1}. "${s.stat}"\n   Methodology: ${s.methodology}\n   Cite as: ${s.source_anchor || 'Industry Survey 2024'}`).join('\n')}
+
+═══════════════════════════════════════════════════════════════════════
+COMPETITOR EXPLOITATION — DO WHAT THEY DON'T
+═══════════════════════════════════════════════════════════════════════
+${(brief.competitor_gaps || []).map((g, i) => `${i+1}. ${g}`).join('\n')}
+
+═══════════════════════════════════════════════════════════════════════
+SERP FEATURE TARGETING
+═══════════════════════════════════════════════════════════════════════
+- Featured Snippet: ${(brief.serp_features?.featured_snippet?.target_content || 'Add 40-word direct answer + table/list')}
+- AI Overview Citation: ${(brief.ai_overview_citation_strategy || 'Add direct answers, statistics, expert quotes, FAQ schema')}
+- Video Section: Add a "Watch: 2-Minute Emergency Guide" placeholder
+- Local Pack: Include city/county names in every section + LocalBusiness schema
+
+═══════════════════════════════════════════════════════════════════════
 BRIEF OUTLINE:
-${(brief.outline||[]).map(s => `- ${s}`).join('\n')}
+═══════════════════════════════════════════════════════════════════════
+${(brief.outline||brief.structure||[]).map(s => `- ${s}`).join('\n')}
 
 KEY POINTS:
 ${(brief.key_points||[]).map(p => `- ${p}`).join('\n')}
