@@ -11647,10 +11647,10 @@ KEY POINTS:
 ${(brief.key_points||[]).map(p => `- ${p}`).join('\n')}
 
 COMPETITOR INSIGHTS:
-${(kd.competitor_analysis||[]).slice(0,5).map(c => `- ${c.domain || 'N/A'}: ${(c.strengths||[]).join(', ')} | Weak: ${(c.weaknesses||[]).join(', ')}`).join('\n')}
+${(kd.competitor_analysis||[]).slice(0,5).map(c => `- ${c.domain || 'N/A'}: ${(Array.isArray(c.strengths) ? c.strengths : [c.strengths || 'N/A']).join(', ')} | Weak: ${(Array.isArray(c.weaknesses) ? c.weaknesses : [c.weaknesses || 'N/A']).join(', ')}`).join('\n')}
 
 CONTENT GAPS:
-${(kd.contentGaps||[]).map(g => `- ${g.type}: ${(g.items||[]).join(', ') || g.opportunity}`).join('\n')}
+${(kd.contentGaps||[]).map(g => `- ${g.type}: ${(g.items||[]).join(', ') || g.opportunity || 'N/A'}`).join('\n')}
 
 RANKING STRATEGY:
 ${(kd.rankingStrategy?.priority||[]).map(p => `- ${p.action} (${p.reason})`).join('\n')}
