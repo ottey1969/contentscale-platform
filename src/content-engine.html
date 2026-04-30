@@ -249,9 +249,16 @@ textarea{resize:vertical;min-height:100px;}
       </div>
     </div>
 
+    <!-- GSC Priority Panel — shows all URLs from Pages CSV ranked by opportunity -->
+    <div id="gscPriorityPanel" style="display:none;margin-top:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#4ade80;margin-bottom:10px;">🎯 GSC Priority — URLs Ranked by Opportunity</div>
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:10px;">Based on your GSC data. Position 11-20 = almost page 1 (highest priority). Click "Research" to analyze and improve.</div>
+      <div id="gscPriorityList"></div>
+    </div>
+
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-primary" onclick="startResearch(false)" id="btnResearch">🔍 Start Research</button>
-      <button class="btn btn-secondary" onclick="startResearch(true)" id="btnResearchAll" style="font-size:12px;" title="Research All Keywords = same as Start Research PLUS full keyword universe (25+ keywords: long-tail, questions, local variants, BOFU). Better for cluster building.">🔍🔍 Research All Keywords</button>
+      <button class="btn btn-secondary" onclick="startResearch(true)" id="btnResearchAll" style="font-size:12px;" title="Deep keyword universe analysis: 25+ keywords including long-tail, questions, local variants, BOFU keywords. Use this when planning content clusters or content calendars.">🔍🔍 Deep Keyword Analysis</button>
       <span style="font-size:11px;color:#6b7280;margin-left:auto;">
         <a href="javascript:void(0)" onclick="resetGscFields()" style="color:#f87171;text-decoration:none;">↺ Reset GSC</a>
       </span>
@@ -879,6 +886,7 @@ let _currentArticleId = null;
 let _currentArticleHtml = '';
 let _currentArticleTitle = '';
 let _clusters = [];
+let _gscPagesCsv = []; // Stores all GSC Pages CSV data for priority panel
 // Draft snapshot — lets us restore last research/brief/article view on refresh
 let _currentResearch = null;
 let _currentBrief = null;
@@ -1420,25 +1428,6 @@ function renderResearch(r, allKeywords) {
     '</div>' +
     '<div class="grid-2" style="margin-bottom:12px;">' +
     '<div class="research-block">' +
-    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Internal Links (AI Suggestions)</div>' +
-    '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">These are AI suggestions — the brief will verify against your real sitemap:</div>' +
-    (r.internal_links_suggested || []).map(function(l) { return '<div style="font-size:12px;color:#60a5fa;padding:2px 0;">🔗 ' + (typeof l === 'object' ? (l.text || l.url || JSON.stringify(l)) : l) + '</div>'; }).join('') +
-    (!(r.internal_links_suggested || []).length ? '<span style="font-size:12px;color:#6b7280;">Brief will scan your sitemap for real pages</span>' : '') +
-    '</div>' +
-    '<div class="research-block">' +
-    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">External Authority Links (real URLs in brief)</div>' +
-    '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">Real .gov/.edu URLs will be added in the brief:</div>' +
-    (r.external_links_local || []).map(function(l) {
-      var isObj = typeof l === 'object';
-      var anchor = isObj ? (l.anchor || l.text || 'External source') : l;
-      var url = isObj ? (l.url || '') : '';
-      var hasUrl = url && url.startsWith('http');
-      return '<div style="font-size:12px;padding:2px 0;"><span style="color:' + (hasUrl ? '#4ade80' : '#fbbf24') + ';">🌐</span> <span style="color:#e2e8f0;">' + anchor + '</span>' + (hasUrl ? ' <a href="' + url + '" target="_blank" style="color:#60a5fa;font-size:10px;">' + url.replace(/^https?:\/\//, '').substring(0, 35) + '</a>' : ' <span style="color:#fbbf24;font-size:10px;">[real URL will be added in brief]</span>') + '</div>';
-    }).join('') +
-    (!(r.external_links_local || []).length ? '<span style="font-size:12px;color:#6b7280;">Real authority URLs will be added in brief</span>' : '') +
-    '</div></div>' +
-    '<div class="grid-2" style="margin-bottom:12px;">' +
-    '<div class="research-block">' +
     '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">AI Overview Optimisation</div>' +
     (r.ai_overview_tips || []).map(function(t) { return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('') +
     (!(r.ai_overview_tips || []).length ? '<span style="font-size:12px;color:#6b7280;">None</span>' : '') +
@@ -1502,7 +1491,8 @@ function renderBrief(b) {
     }).join('') +
     '</div>' +
     '<div>' +
-    '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Internal Links</div>' +
+    '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Internal Links (verified from your sitemap)</div>' +
+    '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">Only pages that exist on your site are shown. Missing pages flagged below.</div>' +
     (b.internal_links || []).map(function(l) {
       var isObj = typeof l === 'object';
       var url = isObj ? (l.url || '') : l;
@@ -1512,7 +1502,7 @@ function renderBrief(b) {
       var color = status === 'exists' ? '#4ade80' : status === 'missing' ? '#fbbf24' : '#60a5fa';
       return '<div style="font-size:12px;padding:2px 0;"><span style="color:' + color + ';">' + (label || '🔗') + '</span> <span style="color:#e2e8f0;">' + text + '</span> <span style="color:#6b7280;font-size:10px;">' + url + '</span></div>';
     }).join('') +
-    (!(b.internal_links || []).length ? '<span style="font-size:12px;color:#6b7280;">None from sitemap</span>' : '') +
+    (!(b.internal_links || []).length ? '<span style="font-size:12px;color:#6b7280;">No verified pages found — run Check Sitemap or add money pages to profile</span>' : '') +
     '</div>' +
     '<div class="research-block" style="margin-bottom:8px;"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">External Authority Links</div>' +
     (b.external_sources || b.external_links_local || []).map(function(l) {
@@ -3042,6 +3032,8 @@ function handleEnginePagesCsv(input) {
   reader.onload = function(e) {
     var rows = parseGscCsv(e.target.result);
     if (!rows.length) { statusEl.textContent = '⚠ No valid page rows found'; statusEl.style.color = '#f87171'; return; }
+    // Store all page data for priority panel
+    _gscPagesCsv = rows;
     var urls = rows.map(function(r){ return r.url; }).filter(Boolean);
     document.getElementById('engGscPages').value = urls.join('\n');
     var totalImp = rows.reduce(function(s,r){ return s + (r.impressions||0); }, 0);
@@ -3055,6 +3047,7 @@ function handleEnginePagesCsv(input) {
     statusEl.style.color = '#4ade80';
     statusEl.textContent = '✓ ' + rows.length + ' pages loaded · ' + Math.round(totalClk) + ' clicks · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
     syncGscStatus();
+    renderGscPriorityPanel();
     scheduleDraftSave();
   };
   reader.readAsText(file);
@@ -3161,7 +3154,131 @@ function syncGscStatus() {
   }
 }
 
-async function refreshEngineGSC() {
+// ═══════════════════════════════════════════════════════════════
+// GSC PRIORITY PANEL — show all URLs ranked by SEO opportunity
+// ═══════════════════════════════════════════════════════════════
+
+function renderGscPriorityPanel() {
+  var panel = document.getElementById('gscPriorityPanel');
+  var list = document.getElementById('gscPriorityList');
+  if (!_gscPagesCsv || !_gscPagesCsv.length) { panel.style.display = 'none'; return; }
+
+  // Score and sort each row
+  var scored = _gscPagesCsv.map(function(r) {
+    var pos = parseFloat(r.position) || 999;
+    var imp = parseInt(r.impressions) || 0;
+    var clicks = parseInt(r.clicks) || 0;
+    var score = 0;
+    var tier = '';
+    var tierColor = '';
+    var tierIcon = '';
+
+    if (pos >= 11 && pos <= 20) {
+      score = 100 + imp;
+      tier = 'CRITICAL';
+      tierColor = '#f87171';
+      tierIcon = '🚨';
+    } else if (pos >= 21 && pos <= 30) {
+      score = 80 + imp;
+      tier = 'HIGH';
+      tierColor = '#fbbf24';
+      tierIcon = '⚠️';
+    } else if (pos >= 31 && pos <= 50) {
+      score = 60 + imp;
+      tier = 'MEDIUM';
+      tierColor = '#60a5fa';
+      tierIcon = '📈';
+    } else if (pos > 50 || pos === 0) {
+      score = 30 + imp;
+      tier = 'LONG TAIL';
+      tierColor = '#6b7280';
+      tierIcon = '📊';
+    } else {
+      // pos 1-10 = already page 1
+      score = 40 + imp;
+      tier = 'PAGE 1';
+      tierColor = '#4ade80';
+      tierIcon = '✅';
+    }
+
+    return {
+      url: r.url,
+      keyword: r.keyword || extractKeywordFromUrl(r.url),
+      position: pos,
+      impressions: imp,
+      clicks: clicks,
+      ctr: parseFloat(r.ctr) || 0,
+      score: score,
+      tier: tier,
+      tierColor: tierColor,
+      tierIcon: tierIcon
+    };
+  });
+
+  // Sort by score descending (highest opportunity first)
+  scored.sort(function(a, b) { return b.score - a.score; });
+
+  // Build HTML
+  var html = scored.map(function(row, idx) {
+    var displayUrl = row.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    return '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin-bottom:8px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">' +
+      '<div style="flex:0 0 36px;text-align:center;">' +
+      '<div style="font-size:18px;font-weight:800;color:' + row.tierColor + ';">#' + (idx + 1) + '</div>' +
+      '</div>' +
+      '<div style="flex:1;min-width:200px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">' +
+      '<span style="font-size:12px;color:' + row.tierColor + ';font-weight:700;">' + row.tierIcon + ' ' + row.tier + '</span>' +
+      '<span style="font-size:11px;color:#4b5563;">·</span>' +
+      '<span style="font-size:11px;color:#6b7280;">Pos ' + (row.position ? row.position.toFixed(1) : '-') + '</span>' +
+      '<span style="font-size:11px;color:#4b5563;">·</span>' +
+      '<span style="font-size:11px;color:#6b7280;">' + row.impressions.toLocaleString() + ' impr</span>' +
+      '<span style="font-size:11px;color:#4b5563;">·</span>' +
+      '<span style="font-size:11px;color:#6b7280;">' + row.clicks + ' clicks</span>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:2px;">' + displayUrl + '</div>' +
+      '<div style="font-size:11px;color:#a78bfa;margin-bottom:4px;">🎯 ' + (row.keyword || 'No keyword detected') + '</div>' +
+      '<div style="font-size:11px;color:#9ca3af;">' + getGscPriorityReason(row) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">' +
+      '<button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="startResearchForUrl(\'' + row.url.replace(/'/g, '') + '\',\'' + (row.keyword || '').replace(/'/g, '') + '\')">🔍 Research</button>' +
+      '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="window.open(\'' + row.url + '\',\'_blank\')">↗️ Open</button>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+
+  list.innerHTML = html;
+  panel.style.display = 'block';
+}
+
+function getGscPriorityReason(row) {
+  if (row.tier === 'CRITICAL') return 'Position ' + row.position.toFixed(1) + ' — almost page 1. One good content push can get you there.';
+  if (row.tier === 'HIGH') return 'Position ' + row.position.toFixed(1) + ' — on page 2-3. Strong content + internal links needed.';
+  if (row.tier === 'MEDIUM') return 'Position ' + row.position.toFixed(1) + ' — page 4-5. Needs content depth + backlinks.';
+  if (row.tier === 'LONG TAIL') return 'Position ' + (row.position ? row.position.toFixed(1) : '100+') + ' — long tail opportunity. Target specific queries.';
+  if (row.tier === 'PAGE 1') return 'Already on page 1! Maintain position — monitor competitors.';
+  return '';
+}
+
+function extractKeywordFromUrl(url) {
+  if (!url) return '';
+  try {
+    var path = new URL(url).pathname;
+    var parts = path.replace(/^\/|\/$/g, '').split(/[-_\/]/);
+    // Capitalize and join for a readable keyword
+    return parts.map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+  } catch(e) { return ''; }
+}
+
+async function startResearchForUrl(url, keyword) {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  // Use keyword if provided, otherwise extract from URL
+  var seedKeyword = keyword || extractKeywordFromUrl(url);
+  if (!seedKeyword) { alert('Could not detect keyword from URL. Enter manually.'); return; }
+  document.getElementById('seedKeyword').value = seedKeyword;
+  toast('🔍 Researching "' + seedKeyword + '" from ' + url.replace(/^https?:\/\//, '').substring(0, 40));
+  await startResearch(false);
+}
   var profileId = document.getElementById('engineProfile').value;
   var statusEl = document.getElementById('engGscStatus');
   var btn = document.getElementById('btnRefreshEngineGSC');
