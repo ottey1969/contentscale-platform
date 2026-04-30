@@ -10860,6 +10860,13 @@ Return ONLY valid JSON:
   }
 }
 
+// ── Helpers used by endpoints ─────────────────────────────────
+function safeParse(v, fallback) {
+  if (!v) return fallback;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch(e) { return fallback; }
+}
+
 // ── Generate Brief ───────────────────────────────────────────
 app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'), async (req, res) => {
   try {
