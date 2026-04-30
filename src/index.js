@@ -118,13 +118,25 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
     return m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota');
   };
   const tryModel = async (model) => {
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await resp.json().catch(() => ({}));
-    return { ok: resp.ok, status: resp.status, data, modelUsed: model, errorMessage: data?.error?.message || '' };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25000); // 25s timeout per model
+    try {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      const data = await resp.json().catch(() => ({}));
+      return { ok: resp.ok, status: resp.status, data, modelUsed: model, errorMessage: data?.error?.message || '' };
+    } catch (fetchErr) {
+      clearTimeout(timer);
+      if (fetchErr.name === 'AbortError') {
+        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 25s' };
+      }
+      return { ok: false, status: 0, data: {}, modelUsed: model, errorMessage: fetchErr.message || 'Network error' };
+    }
   };
   const first = await tryModel(primary);
   if (first.ok) return first;
@@ -10323,13 +10335,21 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
     // Step 2: Web search for top competitors
     const searchQuery = `${seed_keyword} ${profile.niche || ''} ${profile.geo_focus || ''}`.trim();
     let serpResults = [];
-    try {
-      const searchResp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchQuery)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`);
-      if (searchResp.ok) {
-        const searchData = await searchResp.json();
-        serpResults = (searchData.items || []).map(item => ({ title: item.title, url: item.link, snippet: item.snippet }));
-      }
-    } catch(e) { console.warn('Search API failed:', e.message); }
+    const hasSearchCredentials = process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX;
+    if (hasSearchCredentials) {
+      try {
+        const searchController = new AbortController();
+        const searchTimer = setTimeout(() => searchController.abort(), 8000);
+        const searchResp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(searchQuery)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`, { signal: searchController.signal });
+        clearTimeout(searchTimer);
+        if (searchResp.ok) {
+          const searchData = await searchResp.json();
+          serpResults = (searchData.items || []).map(item => ({ title: item.title, url: item.link, snippet: item.snippet }));
+        }
+      } catch(e) { console.warn('Search API failed:', e.message); }
+    } else {
+      console.warn('GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_CX not set — skipping competitor search');
+    }
 
     // Step 3: AI keyword + competitive research
     const locationsList = (profile.locations || []).map(l => `${l.location_type}: ${l.location_value}`).join(', ');
@@ -10351,13 +10371,24 @@ ${serpResults.map((r,i) => `${i+1}. ${r.title}\n   URL: ${r.url}\n   Snippet: ${
 EXISTING SITE PAGES (for internal linking):
 ${sitemapLinks.slice(0,30).join('\n')}
 
+CRITICAL — INTENT-FIRST ANALYSIS:
+Before generating any output, deeply analyze the search intent for "${seed_keyword}" in the context of ${profile.niche || 'this industry'}.
+- What is the user REALLY trying to accomplish? (hire, buy, learn, compare?)
+- What stage of the buyer journey? (awareness, consideration, decision?)
+- What content would make them take action NOW vs bounce?
+- For BOFU intent: lead with price, availability, trust signals, CTAs — NOT definitions
+- For informational: lead with direct answers, then depth
+- For commercial: lead with comparisons, then proof
+
 Return ONLY valid JSON with this exact structure:
 {
   "primary_keyword": "exact optimized primary keyword",
   "secondary_keywords": ["kw1","kw2","kw3","kw4","kw5"],
   "lsi_keywords": ["lsi1","lsi2","lsi3"],
   "long_tail_variants": ["variant1","variant2","variant3"],
-  "search_intent": "BOFU|commercial|informational",
+  "search_intent": "BOFU|commercial|informational|transactional|navigational",
+  "intent_analysis": "Detailed analysis: what the searcher really wants, what stage of the buyer journey, what would make them convert. Example: 'User wants to hire a local service provider immediately — they need price, availability, and trust signals, NOT educational content'",
+  "intent_driven_structure": "Based on intent analysis, recommend specific content structure: lead with pricing/CTA for BOFU, lead with education for informational, lead with comparison for commercial",
   "monthly_search_volume_estimate": "high|medium|low",
   "keyword_difficulty_estimate": "high|medium|low",
   "competitor_analysis": [
