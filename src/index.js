@@ -11417,6 +11417,27 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
     const kd = safeParse(job.keyword_data, {});
     if (!brief) return res.status(400).json({ success: false, error: 'Generate brief first' });
 
+    // ── NORMALIZE ARRAYS — Gemini sometimes returns strings instead of arrays ──
+    function normArr(v) {
+      if (!v) return [];
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') return v.split(/[,;]/).map(function(s){return s.trim();}).filter(function(s){return s;});
+      return [];
+    }
+    kd.paa_questions = normArr(kd.paa_questions);
+    kd.original_statistics = normArr(kd.original_statistics);
+    kd.content_gaps = normArr(kd.content_gaps);
+    kd.ranking_opportunities = normArr(kd.ranking_opportunities);
+    if (kd.rankingStrategy && typeof kd.rankingStrategy === 'object') {
+      kd.rankingStrategy.priority = normArr(kd.rankingStrategy.priority);
+    }
+    brief.competitor_gaps = normArr(brief.competitor_gaps);
+    brief.outline = normArr(brief.outline);
+    brief.structure = normArr(brief.structure);
+    brief.key_points = normArr(brief.key_points);
+    brief.internal_links = normArr(brief.internal_links);
+    brief.external_sources = normArr(brief.external_sources);
+
     // ── FETCH CLUSTER INTERLINKS if writing from a cluster ──
     let clusterInterlinks = [];
     let activeClusterId = cluster_id || null;
@@ -11518,7 +11539,9 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
     if ((bi.service_areas||[]).length) schemaObj['areaServed'] = bi.service_areas;
 
   // ── CLAUDE WRITE PROMPT (ALL HTML through Claude) ──
-    const systemPrompt = `You are the world's best SEO content writer. You write HTML content that ranks #1 on Google and scores 95+/100 on GRAAF content quality scoring.
+  let systemPrompt, userPrompt;
+  try {
+    systemPrompt = `You are the world's best SEO content writer. You write HTML content that ranks #1 on Google and scores 95+/100 on GRAAF content quality scoring.
 
 ═══════════════════════════════════════════════════════════════════════
 TRUTH-TELLING RULES — NON-NEGOTIABLE
@@ -11717,6 +11740,13 @@ LINK RULES:
 - Pillar content gets MORE internal links pointing TO it from cluster articles
 
 OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
+
+  } catch(promptErr) {
+    console.error('[write] Prompt construction failed:', promptErr.message, promptErr.stack);
+    console.error('[write] brief keys:', Object.keys(brief || {}));
+    console.error('[write] kd keys:', Object.keys(kd || {}));
+    return res.status(500).json({ success: false, error: 'Failed to build write prompt: ' + promptErr.message });
+  }
 
     const claudeKey = req.headers['x-claude-key'] || (req.engineCode?.claude_key) || process.env.ANTHROPIC_API_KEY;
     if (!claudeKey) {
