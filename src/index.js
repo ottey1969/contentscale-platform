@@ -119,7 +119,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
   };
   const tryModel = async (model) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25000); // 25s timeout per model
+    const timer = setTimeout(() => controller.abort(), 28000); // 28s timeout (Railway kills at 30s)
     try {
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -133,7 +133,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
     } catch (fetchErr) {
       clearTimeout(timer);
       if (fetchErr.name === 'AbortError') {
-        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 25s' };
+        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 28s' };
       }
       return { ok: false, status: 0, data: {}, modelUsed: model, errorMessage: fetchErr.message || 'Network error' };
     }
@@ -10462,71 +10462,42 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
 
     // Step 3: AI keyword + competitive research
     const locationsList = (profile.locations || []).map(l => `${l.location_type}: ${l.location_value}`).join(', ');
-    const researchPrompt = `You are an expert SEO strategist. Analyze this seed keyword and business context, then return a complete research JSON.
+    const researchPrompt = `SEO research for: "${seed_keyword}" | Business: ${profile.name} (${profile.domain}) | Niche: ${profile.niche} | Geo: ${locationsList || profile.geo_focus || 'unspecified'}
 
-BUSINESS CONTEXT:
-- Business: ${profile.name}
-- Domain: ${profile.domain}
-- Niche: ${profile.niche}
-- Target audience: ${profile.target_audience}
-- Geo focus: ${locationsList || profile.geo_focus || 'Not specified'}
-- Primary goal: ${profile.primary_goal}
+Top SERP:
+${serpResults.map((r,i) => `${i+1}. ${r.title} — ${r.url}`).join('\n')}
 
-SEED KEYWORD: "${seed_keyword}"
+Site pages:
+${sitemapLinks.slice(0,20).join(', ')}
 
-TOP 5 SERP RESULTS (current competitors):
-${serpResults.map((r,i) => `${i+1}. ${r.title}\n   URL: ${r.url}\n   Snippet: ${r.snippet}`).join('\n\n')}
-
-EXISTING SITE PAGES (for internal linking):
-${sitemapLinks.slice(0,30).join('\n')}
-
-CRITICAL — INTENT-FIRST ANALYSIS:
-Before generating any output, deeply analyze the search intent for "${seed_keyword}" in the context of ${profile.niche || 'this industry'}.
-- What is the user REALLY trying to accomplish? (hire, buy, learn, compare?)
-- What stage of the buyer journey? (awareness, consideration, decision?)
-- What content would make them take action NOW vs bounce?
-- For BOFU intent: lead with price, availability, trust signals, CTAs — NOT definitions
-- For informational: lead with direct answers, then depth
-- For commercial: lead with comparisons, then proof
-
-Return ONLY valid JSON with this exact structure:
+Return compact JSON:
 {
-  "primary_keyword": "exact optimized primary keyword",
-  "secondary_keywords": ["kw1","kw2","kw3","kw4","kw5"],
-  "lsi_keywords": ["lsi1","lsi2","lsi3"],
-  "long_tail_variants": ["variant1","variant2","variant3"],
-  "search_intent": "BOFU|commercial|informational|transactional|navigational",
-  "intent_analysis": "Detailed analysis: what the searcher really wants, what stage of the buyer journey, what would make them convert. Example: 'User wants to hire a local service provider immediately — they need price, availability, and trust signals, NOT educational content'",
-  "intent_driven_structure": "Based on intent analysis, recommend specific content structure: lead with pricing/CTA for BOFU, lead with education for informational, lead with comparison for commercial",
+  "primary_keyword": "",
+  "secondary_keywords": ["","","","",""],
+  "lsi_keywords": ["","",""],
+  "long_tail_variants": ["","",""],
+  "search_intent": "BOFU|commercial|informational",
+  "intent_analysis": "1-2 sentences: what user wants, buyer stage, what converts",
+  "intent_driven_structure": "Lead with X for this intent",
   "monthly_search_volume_estimate": "high|medium|low",
   "keyword_difficulty_estimate": "high|medium|low",
-  "competitor_analysis": [
-    {
-      "url": "competitor url",
-      "title": "their title",
-      "strengths": "what they do well",
-      "weaknesses": "gaps and weaknesses to exploit",
-      "word_count_estimate": 1500,
-      "has_faq": true,
-      "has_local_signals": false
-    }
-  ],
-  "content_gaps": ["gap1","gap2","gap3"],
-  "ranking_opportunities": ["opportunity1","opportunity2"],
-  "recommended_title": "Click-worthy SEO title that beats competitors and targets AI Overviews",
-  "title_alternatives": ["alt title 1","alt title 2","alt title 3"],
-  "recommended_h2s": ["H2 1: Direct answer to primary question (targets featured snippet)","H2 2: What is [keyword] and why it matters","H2 3: How [keyword] works (step-by-step guide)","H2 4: [Keyword] benefits and advantages","H2 5: Common [keyword] problems and solutions","H2 6: [Keyword] costs, pricing, and what to expect","H2 7: How to choose the best [keyword] provider","H2 8: FAQ — frequently asked questions about [keyword]"],
+  "competitor_analysis": [{"url":"","title":"","strengths":"","weaknesses":"","word_count_estimate":0,"has_faq":false}],
+  "content_gaps": ["","",""],
+  "ranking_opportunities": ["",""],
+  "recommended_title": "",
+  "title_alternatives": ["",""],
+  "recommended_h2s": ["H2 1: (snippet target)","H2 2","H2 3","H2 4","H2 5","H2 6","H2 7","H2 8: FAQ"],
   "target_word_count": 2500,
-  "external_links_local": [{"anchor": "government regulation on topic", "url": "https://real-url.gov/specific-page"}, {"anchor": "industry authority research", "url": "https://real-industry-org.edu/research"}, {"anchor": "academic study", "url": "https://scholar.google.com/scholar?q=specific-topic"}],
-  "bofu_ctas": ["Call (555) 123-4567 for a free consultation", "Get Your Free Quote — Schedule Now", "Book Your Appointment Online in 60 Seconds"],
-  "ai_overview_tips": ["Add direct 40-word answer in first paragraph","Use FAQPage schema for all Q&A sections","Format key data in tables for snippet extraction","Include HowTo schema with numbered steps","Add Speakable schema for voice search"],
-  "voice_search_queries": ["Hey Google, what is [keyword]?", "Alexa, how much does [keyword] cost?", "Siri, find the best [keyword] near me", "OK Google, how do I [keyword]?"],
-  "voice_search_optimization": "Use natural conversational language, answer questions directly in 30-50 words, include 'near me' geo signals, add Q&A schema, optimize for position zero"
+  "external_links_local": [{"anchor":"","url":""}],
+  "bofu_ctas": ["","",""],
+  "ai_overview_tips": ["40-word direct answer first","FAQPage schema","tables for snippets","HowTo schema","Speakable schema"],
+  "voice_search_queries": ["Hey Google, what is...","Alexa, how much...","Siri, best near me"],
+  "voice_search_optimization": "Conversational language, 30-50 word answers, near me geo signals"
 }`;
 
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } }
+      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } }
     );
     const geminiData = gemResult.data;
     if (!gemResult.ok) {
