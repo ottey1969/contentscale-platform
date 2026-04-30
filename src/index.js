@@ -1033,7 +1033,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      created_at TIMESTAMP DEFAULT NOW(),
      UNIQUE(cluster_id, from_node_id, to_node_id)
    )`);
-   await client.query(`ALTER TABLE content_cluster_links ADD CONSTRAINT IF NOT EXISTS content_cluster_links_unique UNIQUE (cluster_id, from_node_id, to_node_id)`).catch(()=>{});
+   await client.query(`DO $$ BEGIN ALTER TABLE content_cluster_links ADD CONSTRAINT content_cluster_links_unique UNIQUE (cluster_id, from_node_id, to_node_id); EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL; END $$`).catch(()=>{});
    // Phase 2 tables
    await client.query(`CREATE TABLE IF NOT EXISTS content_money_pages (
      id SERIAL PRIMARY KEY,
@@ -10373,14 +10373,16 @@ Return ONLY valid JSON with this exact structure:
   ],
   "content_gaps": ["gap1","gap2","gap3"],
   "ranking_opportunities": ["opportunity1","opportunity2"],
-  "recommended_title": "Click-worthy SEO title that beats competitors",
-  "title_alternatives": ["alt title 1","alt title 2"],
-  "recommended_h2s": ["H2 section 1","H2 section 2","H2 section 3","H2 section 4","H2 section 5"],
-  "target_word_count": 2000,
+  "recommended_title": "Click-worthy SEO title that beats competitors and targets AI Overviews",
+  "title_alternatives": ["alt title 1","alt title 2","alt title 3"],
+  "recommended_h2s": ["H2 1: Direct answer to primary question (targets featured snippet)","H2 2: What is [keyword] and why it matters","H2 3: How [keyword] works (step-by-step guide)","H2 4: [Keyword] benefits and advantages","H2 5: Common [keyword] problems and solutions","H2 6: [Keyword] costs, pricing, and what to expect","H2 7: How to choose the best [keyword] provider","H2 8: FAQ — frequently asked questions about [keyword]"],
+  "target_word_count": 2500,
   "internal_links_suggested": ["url1","url2","url3"],
-  "external_links_local": ["authoritative local source 1","authoritative local source 2"],
-  "bofu_cta_suggestions": ["CTA 1","CTA 2"],
-  "ai_overview_tips": ["tip to rank in AI overview 1","tip 2"]
+  "external_links_local": [{"anchor": "government regulation on topic", "url": "https://...gov..."}, {"anchor": "industry authority research", "url": "https://...edu... or industry org"}, {"anchor": "academic study", "url": "https://scholar.google.com/..."}],
+  "bofu_ctas": ["Call (555) 123-4567 for a free consultation", "Get Your Free Quote — Schedule Now", "Book Your Appointment Online in 60 Seconds"],
+  "ai_overview_tips": ["Add direct 40-word answer in first paragraph","Use FAQPage schema for all Q&A sections","Format key data in tables for snippet extraction","Include HowTo schema with numbered steps","Add Speakable schema for voice search"],
+  "voice_search_queries": ["Hey Google, what is [keyword]?", "Alexa, how much does [keyword] cost?", "Siri, find the best [keyword] near me", "OK Google, how do I [keyword]?"],
+  "voice_search_optimization": "Use natural conversational language, answer questions directly in 30-50 words, include 'near me' geo signals, add Q&A schema, optimize for position zero"
 }`;
 
     const gemResult = await callGeminiWithFallback(
@@ -10628,12 +10630,14 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
       secondary_keywords: kd.secondary_keywords,
       lsi_keywords: kd.lsi_keywords,
       search_intent: kd.search_intent,
-      target_word_count: kd.target_word_count || 2000,
+      target_word_count: kd.target_word_count || 2500,
       structure: kd.recommended_h2s,
       internal_links: (kd.internal_links_suggested || []).slice(0,5),
       external_links_local: kd.external_links_local || [],
-      bofu_ctas: kd.bofu_cta_suggestions || [],
+      bofu_ctas: kd.bofu_ctas || kd.bofu_cta_suggestions || [],
       ai_overview_tips: kd.ai_overview_tips || [],
+      voice_search_queries: kd.voice_search_queries || [],
+      voice_search_optimization: kd.voice_search_optimization || '',
       content_gaps_to_fill: kd.content_gaps || [],
       competitor_weaknesses: (kd.competitor_analysis || []).map(c => c.weaknesses),
       locations: locList
@@ -10661,15 +10665,30 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
       internalLinksPool.push({ text: 'Services', url: '/services' });
     }
     brief.internal_links = internalLinksPool.filter(l => l.text && l.url).slice(0, 5);
+    // Ensure minimum 3 internal links — pad with defaults if needed
+    while (brief.internal_links.length < 3 && job.domain) {
+      const defaults = [
+        { text: 'About Us', url: '/about' },
+        { text: 'Contact', url: '/contact' },
+        { text: 'Services', url: '/services' },
+        { text: 'Blog', url: '/blog' }
+      ];
+      const missing = defaults.find(d => !brief.internal_links.some(l => l.url === d.url));
+      if (!missing) break;
+      brief.internal_links.push(missing);
+    }
 
     // ── 5 REAL EXTERNAL AUTHORITY LINKS ──
+    const niche = (job.niche || '').toLowerCase();
+    const geo = (job.geo_focus || job.geo || '').toLowerCase();
     brief.external_sources = [
-      { text: 'Statista industry research', url: 'https://www.statista.com' },
-      { text: 'Government guidelines', url: 'https://www.gov.uk' },
+      { text: 'Statista industry research', url: 'https://www.statista.com/statistics' },
+      { text: 'Government guidelines', url: geo.includes('nl') || geo.includes('dutch') ? 'https://www.rijksoverheid.nl' : 'https://www.gov.uk' },
       { text: 'Academic research', url: 'https://scholar.google.com' },
       { text: 'Forbes industry analysis', url: 'https://www.forbes.com' },
-      { text: 'Wikipedia overview', url: 'https://en.wikipedia.org' }
-    ];
+      { text: niche + ' Wikipedia overview', url: 'https://en.wikipedia.org/wiki/' + niche.replace(/\s+/g, '_') },
+      { text: 'Industry association guidelines', url: 'https://www.iso.org' }
+    ].filter(e => e.text && e.url);
 
     await pool.query(`UPDATE content_jobs SET brief=$1, status='briefed', updated_at=NOW() WHERE id=$2`, [JSON.stringify(brief), req.params.jobId]);
     res.json({ success: true, brief });
@@ -10685,7 +10704,7 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
     try { return JSON.parse(v); } catch (_) { return fallback; }
   };
   try {
-    const { title_override } = req.body;
+    const { title_override, cluster_node_id, cluster_id } = req.body;
     const jobR = await pool.query(
       `SELECT j.*, cp.name as profile_name, cp.domain, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template, cp.wp_url
        FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`,
@@ -10697,6 +10716,50 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
     const brief = safeParse(job.brief, null);
     const kd = safeParse(job.keyword_data, {});
     if (!brief) return res.status(400).json({ success: false, error: 'Generate brief first' });
+
+    // ── FETCH CLUSTER INTERLINKS if writing from a cluster ──
+    let clusterInterlinks = [];
+    let activeClusterId = cluster_id || null;
+    let activeNodeId = cluster_node_id || null;
+
+    // If no cluster context passed, try to find one by profile + keyword
+    if (!activeClusterId) {
+      const clusterMatchR = await pool.query(`
+        SELECT cc.id as cluster_id, ccn.id as node_id
+        FROM content_clusters cc
+        JOIN content_cluster_nodes ccn ON ccn.cluster_id = cc.id
+        WHERE cc.profile_id = $1
+          AND (ccn.target_keyword ILIKE $2 OR ccn.title ILIKE $2)
+          AND ccn.status IN ('planned', 'in-progress')
+        LIMIT 1
+      `, [job.profile_id, `%${kd.primary_keyword || job.seed_keyword}%`]).catch(() => ({ rows: [] }));
+      if (clusterMatchR.rows.length) {
+        activeClusterId = clusterMatchR.rows[0].cluster_id;
+        activeNodeId = clusterMatchR.rows[0].node_id;
+      }
+    }
+
+    // Fetch the full link map for this cluster
+    if (activeClusterId && activeNodeId) {
+      const linkMapR = await pool.query(`
+        SELECT cl.*, fn.title as from_title, fn.planned_slug as from_slug, fn.final_url as from_url,
+               tn.title as to_title, tn.planned_slug as to_slug, tn.final_url as to_url, tn.node_type as to_type
+        FROM content_cluster_links cl
+        JOIN content_cluster_nodes fn ON fn.id = cl.from_node_id
+        JOIN content_cluster_nodes tn ON tn.id = cl.to_node_id
+        WHERE cl.cluster_id = $1
+          AND (cl.from_node_id = $2 OR cl.to_node_id = $2)
+          AND cl.link_type = 'internal'
+        ORDER BY cl.from_node_id
+      `, [activeClusterId, activeNodeId]).catch(() => ({ rows: [] }));
+      clusterInterlinks = linkMapR.rows.map(l => ({
+        direction: l.from_node_id === activeNodeId ? 'outbound' : 'inbound',
+        anchor: l.anchor_text || l.to_title || l.from_title,
+        target_title: l.from_node_id === activeNodeId ? l.to_title : l.from_title,
+        target_url: l.from_node_id === activeNodeId ? (l.to_url || l.to_slug) : (l.from_url || l.from_slug),
+        target_type: l.from_node_id === activeNodeId ? l.to_type : 'cluster'
+      }));
+    }
 
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
@@ -10755,24 +10818,86 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
     if ((bi.service_areas||[]).length) schemaObj['areaServed'] = bi.service_areas;
 
   // ── CLAUDE WRITE PROMPT (ALL HTML through Claude) ──
-    const systemPrompt = `You are the world's best SEO content writer. You write HTML content that ranks #1 on Google.
-CRITICAL RULES:
+    const systemPrompt = `You are the world's best SEO content writer. You write HTML content that ranks #1 on Google and scores 95+/100 on GRAAF content quality scoring.
+
+═══════════════════════════════════════════════════════════════════════
+TRUTH-TELLING RULES — NON-NEGOTIABLE
+═══════════════════════════════════════════════════════════════════════
+RULE 1 — NEVER GUESS: If a statistic, quote, or claim cannot be verified with a real named source, do not include it. Write [STAT NEEDED] instead.
+RULE 2 — CONFIDENCE SCORE: Rate 1-10 after each stat/quote. Below 7/10 → flag: [CONFIDENCE: X/10 — REVIEW NEEDED]
+RULE 3 — VERIFIED SOURCES ONLY: Format (Source Name, Year). NEVER "studies show" without naming source. No real source found = [SOURCE NEEDED].
+
+═══════════════════════════════════════════════════════════════════════
+GRAAF SCORING RULES (50 pts) — TARGET 95+/100
+═══════════════════════════════════════════════════════════════════════
+- 4+ expert blockquotes with FULL attribution (name, title, org, year)
+- 2+ case studies with real metrics (before/after format)
+- 8+ statistics from 2024-2026 ONLY — in dedicated stats section
+- Keyword density 0.5-1.5% — aim for 1x per 200 body words
+- Primary keyword in H1, first H2, intro paragraph, conclusion
+- MINIMUM 3 internal links embedded naturally in body text
+- MINIMUM 3 external authority links (.gov, .edu, industry, research)
+
+═══════════════════════════════════════════════════════════════════════
+CRAFT SCORING RULES (30 pts)
+═══════════════════════════════════════════════════════════════════════
+- Minimum 2500 words total
+- Exactly 1 H1 on the page
+- H2s must use keyword variations — not generic headings
+- 6+ FAQ questions matching FAQPage schema exactly
+- Symptom/diagnosis table (where relevant for service pages)
+- 4-step process section (where relevant for service pages)
+- Table of Contents with anchor links
+- TL;DR summary near top
+- Direct answer paragraph after H1 (40-80 words)
+
+═══════════════════════════════════════════════════════════════════════
+TECHNICAL SEO (20 pts)
+═══════════════════════════════════════════════════════════════════════
+- Meta title 50-60 chars — keyword first
+- Meta description 140-155 chars — keyword + price/number + CTA
+- 4 JSON-LD schemas: LocalBusiness + FAQPage + BreadcrumbList + Article
+- Phone always E.164 format: tel:+1XXXXXXXXXX (never tel:XXXXXXXXXX)
+- All images: alt text with keyword, loading="lazy"
+- Proper heading hierarchy: ONE H1, then H2s, then H3s
+- Semantic HTML: <article>, <section>, <aside>
+- Meta title and description CTR-optimized
+
+═══════════════════════════════════════════════════════════════════════
+CONTENT INTENT — ALL PAGES = BOFU (Bottom of Funnel)
+═══════════════════════════════════════════════════════════════════════
+Visitor is ready to CALL. You must:
+- Lead with price range and response time — NEVER start with definitions
+- Phone visible within first screen
+- CTA after EVERY major section (minimum 5 CTAs per page)
+- FAQ must answer: "how much", "how fast", "do you serve my area"
+- Reviews must include location name — builds local trust
+- Conclusion = direct call-to-action with phone number
+
+═══════════════════════════════════════════════════════════════════════
+KEYWORD TARGETS
+═══════════════════════════════════════════════════════════════════════
+- Primary keyword exact: 10-15x total
+- Keyword variations: 8-12x total (geo modifiers, related terms)
+- LSI keywords: naturally woven throughout
+
+═══════════════════════════════════════════════════════════════════════
+H2 SECTION STRUCTURE (every H2 follows this pattern):
+═══════════════════════════════════════════════════════════════════════
+- Para 1 (100-150w): keyword variation in first sentence + local hook
+- Para 2 (100-150w): explanation + 1 verified stat (2024-2026) + source
+- Para 3 (100-150w): practical steps or location-specific context
+- Pro Tip: 1-2 sentence actionable advice
+
+═══════════════════════════════════════════════════════════════════════
+OUTPUT RULES
+═══════════════════════════════════════════════════════════════════════
 - Output ONLY valid HTML (no markdown, no code blocks)
-- Use proper heading hierarchy: ONE H1, then H2s, then H3s
 - Every paragraph max 2 sentences (short paragraphs for mobile)
-- Include 5 internal links and 5 external authority links naturally in the text
-- Add a Table of Contents with anchor links
-- Add FAQ section with schema markup
-- Include real statistics with sources
-- Add expert quotes with attribution
-- Include case study with Challenge/Solution/Results format
-- Word count: 2500+ words minimum
-- Use semantic HTML: <article>, <section>, <aside>
-- Include author bio at the end
-- Add TL;DR summary near the top
-- Include direct answer paragraph after H1 (40-80 words)
-- All images must have descriptive alt text with keyword
-- Meta title and description must be CTR-optimized`;
+- Include author bio at the end (200-250 words)
+- Include case study with Challenge/Solution/Results + metrics
+- Open Graph tags, Twitter Card tags, Canonical tag
+- All external links: rel="noopener noreferrer nofollow" target="_blank"`;
 
     const userPrompt = `Write the complete HTML article for:
 
@@ -10801,11 +10926,16 @@ ${(kd.rankingStrategy?.priority||[]).map(p => `- ${p.action} (${p.reason})`).joi
 AI OVERVIEW OPTIMIZATION:
 ${(kd.aiOverviewAnalysis?.recommendation) || 'Add FAQPage schema, direct answers, HowTo schema'}
 
-INTERNAL LINKS (5):
-${(brief.internal_links||[]).map((l, i) => `${i+1}. <a href="${l.url}">${l.text}</a>`).join('\n')}
+INTERNAL LINKS — MINIMUM 3 REQUIRED (embed naturally in body text):
+${(brief.internal_links||[]).slice(0,5).map((l, i) => `${i+1}. <a href="${l.url}">${l.text}</a>`).join('\n')}
+${(brief.internal_links||[]).length < 3 ? 'FALLBACK: If fewer than 3 provided, add links to: /about, /contact, /services, /blog' : ''}
 
-EXTERNAL LINKS (5):
-${(brief.external_sources||[]).map((l, i) => `${i+1}. <a href="${l.url}" rel="noopener noreferrer nofollow" target="_blank">${l.text}</a>`).join('\n')}
+${clusterInterlinks.length ? `CLUSTER INTERLINKS — YOU MUST include these links (critical for SEO cluster strategy):
+${clusterInterlinks.map((l, i) => `${i+1}. [${l.direction.toUpperCase()}] Link to "${l.target_title}" using anchor text: "${l.anchor}" → URL: ${l.target_url || '[URL TBD — use placeholder slug]'} (type: ${l.target_type})`).join('\n')}
+` : 'CLUSTER INTERLINKS: None — this article is not part of an active cluster. Add minimum 3 internal links from the list above.'}
+EXTERNAL AUTHORITY LINKS — MINIMUM 3 REQUIRED (.gov, .edu, industry, research):
+${(brief.external_sources||[]).slice(0,6).map((l, i) => `${i+1}. <a href="${l.url}" rel="noopener noreferrer nofollow" target="_blank">${l.text}</a>`).join('\n')}
+${!(brief.external_sources||[]).length ? 'FALLBACK: Cite at least 3 of: Wikipedia, Forbes, Statista, government source, academic research' : ''}
 
 BRAND INFO:
 - Name: ${prof.name || ''}
@@ -10822,14 +10952,14 @@ BRAND INFO:
 FAQ:
 ${(prof.faq||[]).map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
 
-REQUIREMENTS:
+REQUIREMENTS (MANDATORY — every item must be present):
 1. H1 with primary keyword
 2. Direct answer (40-80 words) after H1
 3. TL;DR with 5 bullets
 4. Table of Contents with anchors
 5. 2500+ words
-6. 5 internal links
-7. 5 external links (nofollow)
+6. MINIMUM 3 internal links embedded in body text (anchor text must be descriptive, not "click here")
+7. MINIMUM 3 external authority links (.gov, .edu, industry org, research — nofollow)
 8. 8+ statistics with attribution
 9. 3-5 expert quotes
 10. 1 case study (Challenge/Solution/Results + metrics)
@@ -10842,6 +10972,13 @@ REQUIREMENTS:
 17. Open Graph tags
 18. Twitter Card tags
 19. Canonical tag
+20. If cluster interlinks are provided above — ALL must be included with exact anchor text
+
+LINK RULES:
+- Every internal link uses descriptive anchor text (e.g., "emergency roof repair services" not "click here")
+- Every external link opens in new tab with rel="noopener noreferrer nofollow"
+- Internal links distributed throughout article (not bunched at top or bottom)
+- Pillar content gets MORE internal links pointing TO it from cluster articles
 
 OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
 
@@ -10863,7 +11000,18 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
 
     await pool.query(`UPDATE content_jobs SET status='completed', completed_at=NOW() WHERE id=$1`, [jobId]);
 
-    res.json({ success: true, article: articleR.rows[0], wordCount, stripped,
+    // ── Update cluster node when article is written from a cluster ──
+    if (activeNodeId && articleR.rows[0]) {
+      await pool.query(`
+        UPDATE content_cluster_nodes
+        SET article_id = $1, status = 'written', final_url = $2, updated_at = NOW()
+        WHERE id = $3
+      `, [articleR.rows[0].id, articleR.rows[0].slug ? `/${articleR.rows[0].slug}` : null, activeNodeId]).catch(() => {});
+      // Activate links now that this node has a real article
+      await pool.query(`UPDATE content_cluster_links SET is_active = TRUE WHERE from_node_id = $1 OR to_node_id = $1`, [activeNodeId]).catch(() => {});
+    }
+
+    res.json({ success: true, article: articleR.rows[0], wordCount, stripped, cluster_linked: !!activeNodeId,
       message: `Article written: ${wordCount} words. Review and publish.` });
 
   } catch (error) {
@@ -11025,7 +11173,7 @@ app.post('/api/content/clusters/generate', verifyEngineAccess, requireCredits('c
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    const clusterPrompt = `You are an expert SEO content strategist. Create a complete topic cluster plan.
+    const clusterPrompt = `You are the world's best SEO content strategist. Create a COMPLETE topic cluster plan that DOMINATES Google Search, wins AI Overviews, and captures voice search queries.
 
 BUSINESS: ${job.profile_name}
 DOMAIN: ${job.domain}
@@ -11037,10 +11185,35 @@ ${sitemapLinks.slice(0,50).join('\n')}
 RESEARCH CONTEXT:
 - Primary keyword: ${kd.primary_keyword || job.seed_keyword}
 - Secondary keywords: ${(kd.secondary_keywords||[]).join(', ')}
+- Long-tail keywords: ${(kd.lsi_keywords||[]).join(', ')}
 - Content gaps identified: ${(kd.content_gaps||[]).join(', ')}
+- Search intent: ${kd.search_intent || 'mixed'}
+- Competitor weaknesses: ${(kd.competitor_analysis||[]).map(c=>c.weaknesses).flat().join(', ')}
 
-Create a topic cluster with 1 pillar + ${cluster_size} cluster articles.
-For each article, check if a matching page exists in the sitemap above.
+YOUR MISSION:
+1. Create a topic cluster with 1 pillar + ${cluster_size} cluster articles
+2. EVERY article MUST have minimum 8 H2 headings (detailed, scannable structure)
+3. EVERY article MUST have minimum 3 internal links — pillar links to ALL clusters, every cluster links BACK to pillar + 2 other clusters
+4. EVERY article MUST have minimum 3 external authority links — mix of .gov, .edu, industry associations, and research sites
+5. Target AI Overview features: direct answers, featured snippets, People Also Ask
+6. Target VOICE SEARCH: natural language queries, question-based H2s, conversational answers
+7. Fill ALL content gaps competitors miss — close EVERY gap in Google Search results
+
+LINKING STRATEGY (critical for pillar strength):
+- Pillar article: links OUT to ALL ${cluster_size} cluster articles (distributes authority downward)
+- Each cluster article: links BACK to pillar (strengthens pillar) + links to 2 OTHER cluster articles (cross-linking web)
+- This creates a bidirectional link web where pagerank flows UP to pillar AND sideways between clusters
+- NO article should have fewer than 3 internal links
+- NO article should have fewer than 3 external authority links
+
+For each article provide:
+- 8+ H2 headings (numbered H2 1 through H2 8+)
+- Internal link opportunities (anchor text + which article to link to)
+- Local external authority links (government, educational, industry orgs)
+- BOFU CTAs (bottom-of-funnel calls to action: "Call Now", "Get a Free Quote", "Schedule Consultation")
+- AI Overview optimization strategy (how to win the featured snippet)
+- Voice search queries this article should target
+- Search intent classification
 
 Return ONLY valid JSON:
 {
@@ -11051,7 +11224,21 @@ Return ONLY valid JSON:
     "planned_slug": "/blog/slug-here",
     "sitemap_match": "matching sitemap URL or null",
     "anchor_text_for_others": "natural anchor text when others link to this",
-    "why_pillar": "why this is the pillar"
+    "why_pillar": "why this is the pillar — the pillar must link to ALL cluster articles to distribute authority",
+    "h2_headings": ["H2 1: question-based heading", "H2 2: ..."],
+    "internal_links": [
+      {"anchor": "anchor to cluster article 1", "links_to": "cluster_1", "why": "pillar links down to every cluster article — distributes link equity"},
+      {"anchor": "anchor to cluster article 2", "links_to": "cluster_2", "why": "pillar links down to every cluster article — distributes link equity"},
+      {"anchor": "anchor to cluster article 3", "links_to": "cluster_3", "why": "pillar links down to every cluster article — distributes link equity"}
+    ],
+    "external_links": [
+      {"anchor": "government regulation on [topic]", "url": "https://...gov...", "type": "government"},
+      {"anchor": "industry research from [authority]", "url": "https://...edu...", "type": "authority"},
+      {"anchor": "academic study on [topic]", "url": "https://scholar.google.com/...", "type": "academic"}
+    ],
+    "bofu_ctas": ["Call (555) 123-4567 for a free quote", "Schedule your consultation today"],
+    "ai_overview_strategy": "How to win the featured snippet for this topic",
+    "voice_search_queries": ["Hey Google, what is...", "Alexa, how do I..."]
   },
   "cluster_articles": [
     {
@@ -11062,7 +11249,21 @@ Return ONLY valid JSON:
       "anchor_text_for_others": "natural anchor text",
       "search_intent": "informational|commercial|BOFU",
       "links_to": ["pillar", "cluster_1"],
-      "why_this_topic": "how this supports the pillar"
+      "why_this_topic": "how this supports the pillar",
+      "h2_headings": ["H2 1: question-based heading", "H2 2: ...", "H2 3: ...", "H2 4: ...", "H2 5: ...", "H2 6: ...", "H2 7: ...", "H2 8: ..."],
+      "internal_links": [
+        {"anchor": "anchor text linking to pillar", "links_to": "pillar", "why": "strengthens pillar authority — every cluster article MUST link to pillar"},
+        {"anchor": "anchor text linking to cluster_N", "links_to": "cluster_1", "why": "cross-link to related cluster article"},
+        {"anchor": "anchor text linking to cluster_M", "links_to": "cluster_2", "why": "cross-link to another cluster article"}
+      ],
+      "external_links": [
+        {"anchor": "government regulation on [topic]", "url": "https://...gov...", "type": "government"},
+        {"anchor": "industry research from [authority]", "url": "https://...edu... or https://forbes...", "type": "authority"},
+        {"anchor": "academic study on [topic]", "url": "https://scholar.google.com/...", "type": "academic"}
+      ],
+      "bofu_ctas": ["Get Your Free Quote", "Call Now: (555) 123-4567"],
+      "ai_overview_strategy": "How to win the AI Overview for this keyword",
+      "voice_search_queries": ["voice search question 1", "voice search question 2"]
     }
   ],
   "sitemap_supporting_pages": [
@@ -11072,7 +11273,10 @@ Return ONLY valid JSON:
       "should_link_to": ["pillar", "cluster_1"]
     }
   ],
-  "internal_link_strategy": "brief description of the linking strategy"
+  "internal_link_strategy": "Detailed description of the internal linking web: every cluster article links to pillar + 2 other clusters, pillar links to all clusters",
+  "external_link_strategy": "Strategy for local authority external links to boost E-E-A-T",
+  "ai_overview_master_strategy": "How the cluster as a whole targets AI Overviews and featured snippets",
+  "voice_search_master_strategy": "How the cluster captures voice search traffic through conversational content"
 }`;
 
     const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
