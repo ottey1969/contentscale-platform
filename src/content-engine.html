@@ -207,6 +207,14 @@ textarea{resize:vertical;min-height:100px;}
     <input type="hidden" id="clusterId">
     <div id="profileInfo" style="display:none;background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-top:12px;font-size:13px;color:#9ca3af;"></div>
 
+    <!-- Continue Previous Work — previously researched jobs -->
+    <div id="previousJobsPanel" style="display:none;margin-top:14px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin-bottom:8px;">📂 Continue Previous Work</div>
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">Pick up where you left off:</div>
+      <select id="previousJobsSelect" onchange="loadPreviousJob(this.value)" style="width:100%;background:#0a0a0f;border:1px solid rgba(124,58,237,.3);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+        <option value="">— Select a previous research job —</option>
+      </select>
+    </div>
 
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-primary" onclick="startResearch()" id="btnResearch">🔍 Research</button>
@@ -1277,11 +1285,12 @@ async function loadEngineProfiles() {
 function loadProfileInfo() {
   var id = document.getElementById('engineProfile').value;
   var el = document.getElementById('profileInfo');
-  if (!id) { el.style.display = 'none'; document.getElementById('neededPagesCard').style.display = 'none'; return; }
+  if (!id) { el.style.display = 'none'; document.getElementById('neededPagesCard').style.display = 'none'; document.getElementById('previousJobsPanel').style.display = 'none'; return; }
   // Remember last used profile
   try { localStorage.setItem('cs_last_profile_id', id); } catch(e) {}
-  // Load needed pages for this profile
+  // Load needed pages and previous jobs for this profile
   loadNeededPages();
+  loadPreviousJobsForProfile(id);
   var p = _profiles.find(function(x) { return x.id == id; });
   if (!p) return;
   var locs = (p.locations || []).map(function(l) { return l.location_value; }).join(', ');
@@ -1560,11 +1569,101 @@ function renderBrief(b) {
     '<div style="font-size:12px;color:#6b7280;margin-top:8px;">Target: <strong style="color:#e2e8f0;">' + (b.target_word_count || 2500) + ' words</strong> · H2s: <strong style="color:#e2e8f0;">' + (b.structure || []).length + '</strong></div>';
 }
 
+// ── Continue Previous Work ──────────────────────────────────
+async function loadPreviousJobsForProfile(profileId) {
+  var panel = document.getElementById('previousJobsPanel');
+  var sel = document.getElementById('previousJobsSelect');
+  if (!profileId) { if (panel) panel.style.display = 'none'; return; }
+  try {
+    var d = await api('/api/content/jobs/' + profileId, 'GET');
+    if (!d.success || !d.jobs || !d.jobs.length) { if (panel) panel.style.display = 'none'; return; }
+    // Only show completed jobs with research data
+    var completed = d.jobs.filter(function(j) { return j.status === 'completed'; });
+    if (!completed.length) { if (panel) panel.style.display = 'none'; return; }
+    sel.innerHTML = '<option value="">— Select a previous research job —</option>';
+    completed.slice(0, 20).forEach(function(j) {
+      var opt = document.createElement('option');
+      opt.value = j.id;
+      opt.textContent = j.seed_keyword + ' · ' + new Date(j.created_at).toLocaleDateString() + (j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '');
+      sel.appendChild(opt);
+    });
+    panel.style.display = 'block';
+  } catch(e) { console.warn('Load previous jobs failed:', e.message); if (panel) panel.style.display = 'none'; }
+}
+
+async function loadPreviousJob(jobId) {
+  if (!jobId) return;
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+
+  // Clear current state
+  hideAllSteps();
+  _currentJobId = parseInt(jobId, 10);
+  _currentBrief = null;
+  _currentArticle = null;
+  _currentArticleHtml = '';
+  _currentArticleTitle = '';
+
+  toast('↩️ Restoring previous work...');
+
+  try {
+    // 1. Load job research
+    var d = await api('/api/content/research/' + jobId, 'GET');
+    if (!d.success) throw new Error(d.error || 'Failed to load research');
+
+    if (d.research) {
+      _currentResearch = d.research;
+      document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
+      renderResearch(d.research, !!d.research.all_keyword_data);
+      document.getElementById('stepResearch').style.display = 'block';
+    }
+
+    // 2. Check for existing article(s) for this job
+    var articlesD = await api('/api/content/articles/' + profileId, 'GET');
+    if (articlesD.success && articlesD.articles) {
+      var article = articlesD.articles.find(function(a) { return a.job_id == jobId; });
+      if (article) {
+        _currentArticle = article;
+        _currentArticleId = article.id;
+        _currentArticleHtml = article.html_content || '';
+        _currentArticleTitle = article.title || '';
+        renderArticleReady(article);
+        document.getElementById('stepArticle').style.display = 'block';
+      }
+    }
+
+    saveDraftNow();
+    toast('✅ Restored: ' + ((d.job && d.job.seed_keyword) ? d.job.seed_keyword : 'previous job'));
+    document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) {
+    toast('Restore failed: ' + e.message, 'red');
+    _currentJobId = null;
+  }
+}
+
 // ── Needed Pages Actions ────────────────────────────────────
 async function writeNeededPage(title, url, pageId) {
   var profileId = document.getElementById('engineProfile').value;
   if (!profileId) { alert('Select a profile first'); return; }
-  // Pre-fill the engine with this page's info
+
+  // Try to find an existing completed job for this keyword
+  try {
+    var d = await api('/api/content/jobs/' + profileId, 'GET');
+    if (d.success && d.jobs) {
+      var searchTitle = title.toLowerCase().trim();
+      var existing = d.jobs.find(function(j) {
+        return j.seed_keyword && j.seed_keyword.toLowerCase().trim() === searchTitle && j.status === 'completed';
+      });
+      if (existing) {
+        // Restore existing job so Write button works immediately
+        loadPreviousJob(existing.id);
+        toast('↩️ Found existing research for "' + title + '" — restored!');
+        return;
+      }
+    }
+  } catch(e) { console.warn('Search existing job failed:', e.message); }
+
+  // No existing job — pre-fill engine and let user research
   showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
   setTimeout(function() {
     document.getElementById('seedKeyword').value = title;
