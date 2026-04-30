@@ -1525,20 +1525,27 @@ function renderBrief(b) {
     '<div class="research-block"><div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">BOFU CTAs</div>' +
     (b.bofu_ctas || []).map(function(c) { return '<div style="font-size:12px;color:#fbbf24;padding:2px 0;">→ ' + c + '</div>'; }).join('') +
     '</div></div></div>' +
-    (b.internal_links_needed && b.internal_links_needed.length ? '<div class="research-block" style="border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.06);">' +
-    '<div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">⚠️ Pages You Should Create</div>' +
-    '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">These pages don\'t exist on your site yet. Creating them will strengthen your internal linking and BOFU conversion. Stored on server until you\'re ready:</div>' +
+    (b.internal_links_needed && b.internal_links_needed.length ? '<div class="research-block" style="border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.04);">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 Recommended Pages to Create</div>' +
+    '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">These pages don\'t exist on your site yet. Creating them will strengthen internal linking and BOFU conversion. Stored on server until you\'re ready:</div>' +
     b.internal_links_needed.map(function(p) {
       return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
         '<div style="flex:1;min-width:0;">' +
-        '<div style="color:#fbbf24;font-weight:600;">→ ' + p.title + '</div>' +
-        '<div style="color:#6b7280;font-size:10px;">URL: ' + p.url + '</div>' +
+        '<div style="color:#e2e8f0;font-weight:600;">' + p.title + ' <span style="font-size:9px;color:#fbbf24;text-transform:uppercase;">' + (p.priority || 'high') + '</span></div>' +
+        '<div style="color:#6b7280;font-size:10px;">' + p.url + '</div>' +
         '<div style="color:#9ca3af;font-size:11px;margin-top:2px;">' + p.reason + '</div></div>' +
         '<div style="display:flex;gap:4px;flex-shrink:0;">' +
-        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.title || '').replace(/'/g, '') + '\',\'' + (p.url || '').replace(/'/g, '') + '\')" title="Write this page now">✍️ Write</button>' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="inlineWritePage(\'' + (p.title || '').replace(/'/g, '') + '\',\'' + (p.url || '').replace(/'/g, '') + '\')" title="Write this page now">✍️ Write</button>' +
+        '<button class="btn btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="inlineResearchPage(\'' + (p.title || '').replace(/'/g, '') + '\')" title="Research this keyword">🔍 Research</button>' +
+        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + (p.id || 'null') + ',\'' + (p.url || '').replace(/'/g, '') + '\')" title="I created this page">✓ Created</button>' +
+        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + (p.id || 'null') + ')' + (p.id ? '' : ',true') + '" title="Ignore">✕</button>' +
         '</div></div></div>';
     }).join('') +
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="loadNeededPages()">🔄 Refresh List</button>' +
+    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="checkSitemapForNeededPages()">🔍 Check Sitemap (auto-resolve)</button>' +
+    '</div>' +
     '</div>' : '') +
     '<div class="research-block">' +
     '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">AI Overview Optimisation</div>' +
@@ -1550,23 +1557,6 @@ function renderBrief(b) {
     (!(b.voice_search_queries || []).length ? '<span style="font-size:12px;color:#6b7280;">No voice queries generated</span>' : '') +
     '</div>' +
     (b.voice_search_optimization ? '<div style="font-size:12px;color:#38bdf8;margin-top:6px;background:rgba(56,189,248,.08);padding:8px;border-radius:6px;">🎙️ <strong>Voice Strategy:</strong> ' + b.voice_search_optimization + '</div>' : '') +
-    (b.all_needed_pages && b.all_needed_pages.length ? '<div class="research-block" style="border-color:rgba(124,58,237,.3);margin-top:12px;">' +
-    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 All Recommended Pages (stored on server)</div>' +
-    '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px;">' + b.all_needed_pages.length + ' page(s) recommended across all briefs. Create them when ready:</div>' +
-    b.all_needed_pages.map(function(p) {
-      return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
-        '<div style="flex:1;min-width:0;">' +
-        '<div style="color:#e2e8f0;font-weight:600;">' + p.title + ' <span style="font-size:9px;color:#fbbf24;text-transform:uppercase;">' + (p.priority || 'high') + '</span></div>' +
-        '<div style="color:#6b7280;font-size:10px;">' + p.url + '</div>' +
-        '<div style="color:#9ca3af;font-size:11px;margin-top:2px;">' + p.reason + '</div></div>' +
-        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
-        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.title || '').replace(/'/g, '') + '\',\'' + (p.url || '').replace(/'/g, '') + '\', ' + (p.id || 'null') + ')" title="Write this page now">✍️ Write</button>' +
-        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + p.id + ',\'' + (p.url || '').replace(/'/g, '') + '\')" title="I created this page">✓ Created</button>' +
-        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + p.id + ')" title="Ignore">✕</button>' +
-        '</div></div></div>';
-    }).join('') +
-    '</div>' : '') +
     '<div style="font-size:12px;color:#6b7280;margin-top:8px;">Target: <strong style="color:#e2e8f0;">' + (b.target_word_count || 2500) + ' words</strong> · H2s: <strong style="color:#e2e8f0;">' + (b.structure || []).length + '</strong></div>';
 }
 
@@ -1578,14 +1568,94 @@ async function writeNeededPage(title, url, pageId) {
   showPanel('engine', document.querySelector('.nav-tab:nth-child(2)'));
   setTimeout(function() {
     document.getElementById('seedKeyword').value = title;
-    toast('✍️ Ready to write "' + title + '" — click Start Research');
+    toast('✍️ Ready to write "' + title + '" — click 🔍 Research');
   }, 100);
-  // If there's a pageId, auto-mark it as pending (being worked on)
   if (pageId) {
     try {
-      var profileIdNum = parseInt(profileId);
-      await api('/api/content/profiles/' + profileIdNum + '/needed-pages/' + pageId, 'PUT', { status: 'pending' });
+      await api('/api/content/profiles/' + parseInt(profileId) + '/needed-pages/' + pageId, 'PUT', { status: 'pending' });
     } catch(e) { console.warn('Mark pending failed:', e.message); }
+  }
+}
+
+async function inlineWritePage(title, url) {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  showInlinePagePanel('write', title, url);
+}
+
+async function inlineResearchPage(title) {
+  var profileId = document.getElementById('engineProfile').value;
+  if (!profileId) { alert('Select a profile first'); return; }
+  document.getElementById('seedKeyword').value = title;
+  document.getElementById('stepSelectProfile').scrollIntoView({ behavior: 'smooth' });
+  toast('🔍 Ready to research "' + title + '" — click 🔍 Research button');
+}
+
+function showInlinePagePanel(action, title, url) {
+  var existing = document.getElementById('inlinePagePanel');
+  if (existing) existing.remove();
+  var panel = document.createElement('div');
+  panel.id = 'inlinePagePanel';
+  panel.style.cssText = 'background:#0a0a0f;border:2px solid rgba(124,58,237,.5);border-radius:12px;padding:16px;margin:12px 0;position:relative;';
+  panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<div style="font-size:14px;font-weight:700;color:#a78bfa;">✍️ Write Page: ' + title + '</div>' +
+    '<button onclick="document.getElementById(\'inlinePagePanel\').remove()" style="background:none;border:none;color:#6b7280;font-size:16px;cursor:pointer;">×</button>' +
+    '</div>' +
+    '<div style="font-size:12px;color:#9ca3af;margin-bottom:10px;">This will research and write a complete article for "' + title + '" without leaving this page.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    '<button class="btn btn-primary" style="font-size:12px;padding:6px 16px;" onclick="runInlineWrite(\'' + title.replace(/'/g, '') + '\')">🚀 Start Writing</button>' +
+    '<button class="btn btn-secondary" style="font-size:12px;padding:6px 16px;" onclick="document.getElementById(\'inlinePagePanel\').remove()">Cancel</button>' +
+    '</div>' +
+    '<div id="inlinePageProgress" style="margin-top:12px;display:none;">' +
+    '<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Progress:</div>' +
+    '<div style="background:rgba(255,255,255,.1);border-radius:4px;height:6px;overflow:hidden;">' +
+    '<div id="inlinePageProgressBar" style="background:#a78bfa;height:100%;width:0%;transition:width .3s;"></div>' +
+    '</div>' +
+    '<div id="inlinePageStatus" style="font-size:11px;color:#9ca3af;margin-top:4px;"></div>' +
+    '</div>';
+  var briefEl = document.getElementById('briefResult');
+  if (briefEl && briefEl.parentNode) {
+    briefEl.parentNode.insertBefore(panel, briefEl.nextSibling);
+  } else {
+    document.getElementById('stepBrief').appendChild(panel);
+  }
+}
+
+async function runInlineWrite(title) {
+  var progressEl = document.getElementById('inlinePageProgress');
+  var barEl = document.getElementById('inlinePageProgressBar');
+  var statusEl = document.getElementById('inlinePageStatus');
+  if (progressEl) progressEl.style.display = 'block';
+  var profileId = document.getElementById('engineProfile').value;
+  try {
+    if (barEl) barEl.style.width = '20%';
+    if (statusEl) statusEl.textContent = '🔍 Researching keyword...';
+    var d = await api('/api/content/research', 'POST', { profile_id: parseInt(profileId), seed_keyword: title });
+    if (!d.success) throw new Error(d.error);
+    var jobId = d.job.id;
+    var pollCount = 0;
+    var researchDone = false;
+    while (pollCount < 60 && !researchDone) {
+      await new Promise(function(r) { setTimeout(r, 2000); });
+      pollCount++;
+      var poll = await api('/api/content/research/' + jobId, 'GET');
+      if (poll.status === 'completed') { researchDone = true; if (barEl) barEl.style.width = '50%'; if (statusEl) statusEl.textContent = '✓ Research done — generating brief...'; }
+      else if (poll.status === 'error') throw new Error(poll.error || 'Research failed');
+    }
+    if (!researchDone) throw new Error('Research timed out');
+    var briefD = await api('/api/content/brief/' + jobId, 'POST');
+    if (!briefD.success) throw new Error(briefD.error);
+    if (barEl) barEl.style.width = '70%';
+    if (statusEl) statusEl.textContent = '✓ Brief done — writing article...';
+    var writeD = await api('/api/content/write/' + jobId, 'POST', {});
+    if (!writeD.success) throw new Error(writeD.error);
+    if (barEl) barEl.style.width = '100%';
+    if (statusEl) statusEl.textContent = '✅ Article complete! ' + (writeD.article ? writeD.article.word_count : 0) + ' words';
+    toast('✅ "' + title + '" written successfully!');
+    setTimeout(function() { loadNeededPages(); checkSitemapForNeededPages(); }, 2000);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '❌ Error: ' + e.message;
+    toast('Write failed: ' + e.message, 'red');
   }
 }
 
@@ -1652,20 +1722,25 @@ function renderNeededPagesPanel(pages) {
   el.innerHTML =
     '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">' + recommended.length + ' pending · ' + created.length + ' created</div>' +
     recommended.map(function(p) {
-      return '<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-bottom:8px;">' +
+      return '<div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px;margin-bottom:8px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
         '<div style="flex:1;min-width:0;">' +
-        '<div style="color:#fbbf24;font-weight:700;font-size:13px;">' + p.page_title + '</div>' +
+        '<div style="color:#e2e8f0;font-weight:700;font-size:13px;">' + p.page_title + '</div>' +
         '<div style="color:#6b7280;font-size:10px;">' + p.suggested_url + '</div>' +
         '<div style="color:#9ca3af;font-size:11px;margin-top:3px;">' + p.reason + '</div>' +
         (p.target_keyword ? '<div style="color:#a78bfa;font-size:10px;margin-top:2px;">🎯 ' + p.target_keyword + '</div>' : '') +
         '</div>' +
         '<div style="display:flex;gap:4px;flex-shrink:0;">' +
-        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="writeNeededPage(\'' + (p.page_title || '').replace(/'/g, '') + '\',\'' + (p.suggested_url || '').replace(/'/g, '') + '\', ' + p.id + ')">✍️ Write</button>' +
-        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + p.id + ',\'' + (p.suggested_url || '').replace(/'/g, '') + '\')">✓ Created</button>' +
-        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + p.id + ')">✕</button>' +
+        '<button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" onclick="inlineWritePage(\'' + (p.page_title || '').replace(/'/g, '') + '\',\'' + (p.suggested_url || '').replace(/'/g, '') + '\')" title="Write this page">✍️ Write</button>' +
+        '<button class="btn btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="inlineResearchPage(\'' + (p.page_title || '').replace(/'/g, '') + '\')" title="Research this keyword">🔍 Research</button>' +
+        '<button class="btn btn-success" style="font-size:10px;padding:3px 8px;" onclick="markNeededPageCreated(' + p.id + ',\'' + (p.suggested_url || '').replace(/'/g, '') + '\')" title="I created this page">✓ Created</button>' +
+        '<button class="btn btn-danger" style="font-size:10px;padding:3px 6px;" onclick="ignoreNeededPage(' + p.id + ')" title="Ignore">✕</button>' +
         '</div></div></div>';
     }).join('') +
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="loadNeededPages()">🔄 Refresh List</button>' +
+    '<button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="checkSitemapForNeededPages()">🔍 Check Sitemap (auto-resolve)</button>' +
+    '</div>' +
     (created.length ? '<div style="margin-top:12px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">Created Pages (✅ used in linking)</div>' +
       created.map(function(p) {
         return '<div style="font-size:12px;color:#4ade80;padding:3px 0;">✅ ' + p.page_title + ' <span style="color:#6b7280;font-size:10px;">' + p.suggested_url + '</span></div>';
