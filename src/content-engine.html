@@ -1385,18 +1385,56 @@ function renderResearch(r, allKeywords) {
     '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Keywords</div>' +
     chips(r.secondary_keywords) + chips(r.lsi_keywords) + chips(r.long_tail_variants) +
     '</div>' +
-    '<div class="research-block">' +
-    '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Competitor Analysis</div>' +
-    (r.competitor_analysis || []).map(function(c) {
-      return '<div class="competitor-card">' +
-        '<div style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:4px;">' + (c.title || c.url) + '</div>' +
-        '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + c.url + '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">' +
-        '<div><span style="color:#4ade80;">✓ Strengths:</span> ' + c.strengths + '</div>' +
-        '<div><span style="color:#f87171;">✗ Weaknesses:</span> ' + c.weaknesses + '</div>' +
-        '</div></div>';
+    '<div class="research-block" style="border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.04);">' +
+    '<div style="font-size:11px;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🎯 Competitor Deep-Dive (Exploitable Gaps)</div>' +
+    (r.competitor_analysis || []).map(function(c, idx) {
+      return '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div style="font-size:13px;font-weight:700;color:#60a5fa;">' + (idx+1) + '. ' + (c.title || 'Competitor') + '</div>' +
+        '<div style="font-size:10px;color:#6b7280;">' + (c.word_count_estimate || '?') + ' words · ' + (c.images_count || '?') + ' imgs</div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:#6b7280;margin-bottom:4px;">' + (c.url || '') + '</div>' +
+        (c.h2_structure && c.h2_structure.length ? '<div style="font-size:11px;color:#9ca3af;margin-bottom:4px;"><strong style="color:#e2e8f0;">H2s:</strong> ' + c.h2_structure.slice(0,5).join(' · ') + (c.h2_structure.length > 5 ? ' +' + (c.h2_structure.length-5) : '') + '</div>' : '') +
+        (c.schema_used && c.schema_used.length ? '<div style="font-size:11px;color:#9ca3af;margin-bottom:4px;"><strong style="color:#e2e8f0;">Schema:</strong> ' + c.schema_used.join(', ') + '</div>' : '') +
+        '<div style="font-size:11px;color:#4ade80;margin-bottom:3px;">✓ ' + c.strengths + '</div>' +
+        '<div style="font-size:11px;color:#f87171;margin-bottom:3px;">✗ ' + c.weaknesses + '</div>' +
+        (c.exploitable_gap ? '<div style="font-size:11px;color:#fbbf24;background:rgba(251,191,36,.08);padding:6px;border-radius:5px;margin-top:4px;"><strong>💡 Exploit:</strong> ' + c.exploitable_gap + '</div>' : '') +
+        '</div>';
     }).join('') +
     '</div>' +
+    (r.paa_questions && r.paa_questions.length ? '<div class="research-block" style="border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.04);">' +
+    '<div style="font-size:11px;color:#38bdf8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">❓ People Also Ask (PAA) — Target These</div>' +
+    '<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">' + r.paa_questions.length + ' questions Google shows. Answer ALL in your content to dominate the SERP.</div>' +
+    r.paa_questions.map(function(paa, idx) {
+      return '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+        '<div style="font-size:12px;font-weight:600;color:#38bdf8;margin-bottom:3px;">Q' + (idx+1) + ': ' + paa.question + '</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-bottom:3px;">' + (paa.direct_answer || '') + '</div>' +
+        '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;">' + (paa.snippet_format || 'paragraph') + ' snippet</div>' +
+        '</div>';
+    }).join('') +
+    '</div>' : '') +
+    (r.serp_features ? '<div class="research-block" style="border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.04);">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🎯 SERP Feature Domination Strategy</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">' +
+    (r.serp_features.featured_snippet ? '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;"><div style="font-size:10px;color:#fbbf24;text-transform:uppercase;">📌 Featured Snippet</div><div style="font-size:11px;color:#e2e8f0;">' + r.serp_features.featured_snippet.format + '</div><div style="font-size:10px;color:#9ca3af;">' + (r.serp_features.featured_snippet.target_content || '') + '</div></div>' : '') +
+    (r.serp_features.people_also_ask ? '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;"><div style="font-size:10px;color:#38bdf8;text-transform:uppercase;">❓ PAA</div><div style="font-size:11px;color:#e2e8f0;">' + r.serp_features.people_also_ask.questions_count + ' questions</div><div style="font-size:10px;color:#9ca3af;">' + (r.serp_features.people_also_ask.strategy || '') + '</div></div>' : '') +
+    (r.serp_features.local_pack ? '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;"><div style="font-size:10px;color:#4ade80;text-transform:uppercase;">📍 Local Pack</div><div style="font-size:11px;color:#e2e8f0;">' + (r.serp_features.local_pack.signals_needed || []).join(', ') + '</div></div>' : '') +
+    (r.serp_features.video_carousel ? '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;"><div style="font-size:10px;color:#f87171;text-transform:uppercase;">🎥 Video</div><div style="font-size:11px;color:#e2e8f0;">' + (r.serp_features.video_carousel.video_idea || '') + '</div></div>' : '') +
+    (r.serp_features.image_pack ? '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;"><div style="font-size:10px;color:#60a5fa;text-transform:uppercase;">🖼️ Images</div><div style="font-size:11px;color:#e2e8f0;">' + (r.serp_features.image_pack.image_types || []).join(', ') + '</div></div>' : '') +
+    (r.serp_features.ai_overview ? '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;"><div style="font-size:10px;color:#c084fc;text-transform:uppercase;">✦ AI Overview</div><div style="font-size:11px;color:#e2e8f0;">' + (r.serp_features.ai_overview.present ? 'YES — ' : 'No AI Overview') + (r.serp_features.ai_overview.citation_strategy || '') + '</div></div>' : '') +
+    '</div>' +
+    '</div>' : '') +
+    (r.original_statistics && r.original_statistics.length ? '<div class="research-block" style="border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.04);">' +
+    '<div style="font-size:11px;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">📊 Original Data & Statistics (Unique to Your Content)</div>' +
+    '<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">These statistics make your content THE authoritative source. No competitor has these exact numbers.</div>' +
+    r.original_statistics.map(function(s) {
+      return '<div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+        '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:3px;">"' + s.stat + '"</div>' +
+        '<div style="font-size:11px;color:#9ca3af;"><strong>Methodology:</strong> ' + s.methodology + '</div>' +
+        '<div style="font-size:10px;color:#6b7280;margin-top:2px;">🔗 Cite as: ' + (s.source_anchor || 'Original research') + '</div>' +
+        '</div>';
+    }).join('') +
+    '</div>' : '') +
     '<div class="grid-2" style="margin-bottom:12px;">' +
     '<div class="research-block">' +
     '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">AI Overview Optimisation</div>' +
