@@ -5409,15 +5409,7 @@ Respond in valid JSON format:
     // Parse JSON response
     let analysis;
     try {
-      // Remove markdown code fences if present
-      const cleaned = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      // Extract JSON object
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
+      analysis = extractJsonFromText(aiResponse);
     } catch (e) {
       console.error('❌ JSON parse error:', e.message);
       console.log('Raw AI response preview:', aiResponse.substring(0, 500));
@@ -9766,6 +9758,32 @@ async function spendCredits(codeId, action) {
   }
 }
 
+// Helper: safely extract JSON from text that may have markdown fences or extra text
+function extractJsonFromText(text) {
+  if (!text || typeof text !== 'string') throw new Error('Empty or non-string response');
+  let cleaned = text
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/gi, '')
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    let startIdx = cleaned.indexOf('{');
+    if (startIdx === -1) throw new Error('No JSON object found');
+    let depth = 0;
+    let endIdx = -1;
+    for (let i = startIdx; i < cleaned.length; i++) {
+      if (cleaned[i] === '{') depth++;
+      else if (cleaned[i] === '}') {
+        depth--;
+        if (depth === 0) { endIdx = i; break; }
+      }
+    }
+    if (endIdx === -1) throw new Error('Unclosed JSON object');
+    return JSON.parse(cleaned.slice(startIdx, endIdx + 1));
+  }
+}
+
 // Helper: safely parse profile.locations from PostgreSQL json_agg (may be string or array)
 function safeProfileLocations(profile) {
   if (!profile) return [];
@@ -10553,22 +10571,8 @@ Return compact JSON:
     if (!rawText) throw new Error(`Gemini returned no content (finishReason: ${finishReason || 'unknown'})`);
     let keywordData;
     try {
-      // Strip ALL markdown code fences (Gemini often wraps JSON in ```json ... ```)
-      const cleaned = rawText
-        .replace(/```json\s*/gi, '')
-        .replace(/```\s*/gi, '')
-        .trim();
-      try {
-        keywordData = JSON.parse(cleaned);
-      } catch (_) {
-        // Try extracting JSON object from anywhere in the text (handles trailing text)
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          console.error('No JSON found in AI response. Raw:', rawText.slice(0, 500));
-          throw new Error('AI did not return valid JSON. Raw: ' + rawText.slice(0, 200));
-        }
-        keywordData = JSON.parse(jsonMatch[0]);
-      }
+      // Extract JSON from text that might have markdown fences or extra text
+      keywordData = extractJsonFromText(rawText);
     } catch (parseErr) {
       console.error('Research JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
       throw new Error(`AI returned invalid JSON: ${parseErr.message}`);
@@ -10730,31 +10734,18 @@ Return ONLY valid JSON:
         const allKwData = allKwResult.data;
         const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (allKwText) {
-          const cleaned = allKwText
-            .replace(/```json\s*/gi, '')
-            .replace(/```\s*/gi, '')
-            .trim();
           try {
-            allKeywordData = JSON.parse(cleaned);
-          } catch (_) {
-            const allKwMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (allKwMatch) {
-              try {
-                allKeywordData = JSON.parse(allKwMatch[0]);
-              } catch(parseErr) {
-                console.warn('All keywords JSON parse failed:', parseErr.message, 'raw:', allKwText.slice(0, 200));
-              }
-            } else {
-              console.warn('No JSON found in all keywords response:', allKwText.slice(0, 200));
-            }
+            allKeywordData = extractJsonFromText(allKwText);
+          } catch(parseErr) {
+            console.warn('All keywords JSON parse failed:', parseErr.message, 'raw:', allKwText.slice(0, 200));
           }
-          if (allKeywordData) {
-            // Save back into job
-            const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed });
-            await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobId]);
-            keywordData.all_keyword_data = allKeywordData;
-            keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed;
-          }
+      // Save back into job
+      if (allKeywordData && allKeywordData.all_keywords) {
+        const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed || allKeywordData.total_keywords || (allKeywordData.all_keywords ? allKeywordData.all_keywords.length : 0) });
+        await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobId]);
+        keywordData.all_keyword_data = allKeywordData;
+        keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed || allKeywordData.total_keywords || (allKeywordData.all_keywords ? allKeywordData.all_keywords.length : 0);
+      }
         }
       } catch(e) { console.warn('Research all keywords failed:', e.message); }
 
@@ -10778,7 +10769,7 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
     const jobR = await pool.query(`SELECT j.*, cp.* FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`, [req.params.jobId]);
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
     const job = jobR.rows[0];
-    const kd = job.keyword_data;
+    const kd = safeParse(job.keyword_data, {});
     const locations = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 ORDER BY sort_order`, [job.profile_id]);
     const locList = locations.rows.map(l => `${l.location_type}: ${l.location_value} (external links: ${l.external_links})`).join('\n');
 
