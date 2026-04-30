@@ -11273,7 +11273,7 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
       const fillPrompt = `You are an expert SEO content strategist. Fill in the MISSING fields for this content brief.
 
 SEED KEYWORD: "${job.seed_keyword}"
-BUSINESS: ${profile.name} | ${profile.niche} | ${profile.geo_focus || ''}
+BUSINESS: ${job.name || ''} | ${job.niche || ''} | ${job.geo_focus || ''}
 
 EXISTING BRIEF DATA:
 - Title: ${brief.title || '(missing)'}
