@@ -1591,14 +1591,14 @@ async function loadPreviousJobsForProfile(profileId) {
   var sel = document.getElementById('previousJobsSelect');
   if (!profileId) { if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; return; }
   if (_loadingPreviousJobs) return; // guard against concurrent calls
-  if (_lastPopulatedJobsProfile === profileId) return; // already done for this profile
+  // Convert both to string for reliable comparison (dropdown value is string)
+  if (String(_lastPopulatedJobsProfile) === String(profileId)) return;
   _loadingPreviousJobs = true;
   try {
     var d = await api('/api/content/jobs/' + profileId, 'GET');
     if (!d.success || !d.jobs || !d.jobs.length) { if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; return; }
-    // Only show completed jobs with research data
-    var completed = d.jobs.filter(function(j) { return j.status === 'completed'; });
-    if (!completed.length) { if (panel) panel.style.display = 'none'; _lastPopulatedJobsProfile = null; return; }
+    // Show ALL jobs — not just completed — with status indicators
+    var jobs = d.jobs;
     // Hard reset — remove all existing options first
     while (sel.firstChild) { sel.removeChild(sel.firstChild); }
     var placeholder = document.createElement('option');
@@ -1607,13 +1607,20 @@ async function loadPreviousJobsForProfile(profileId) {
     sel.appendChild(placeholder);
     // Deduplicate by seed_keyword — keep only the most recent per keyword
     var seenKw = {};
-    completed.forEach(function(j) {
+    jobs.forEach(function(j) {
       var kw = (j.seed_keyword || '').toLowerCase().trim();
       if (!seenKw[kw]) {
         seenKw[kw] = true;
         var opt = document.createElement('option');
         opt.value = j.id;
-        opt.textContent = j.seed_keyword + ' · ' + new Date(j.created_at).toLocaleDateString() + (j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '');
+        var statusLabel = '';
+        var statusColor = '';
+        if (j.status === 'researching') { statusLabel = ' ⏳ researching'; statusColor = '#fbbf24'; }
+        else if (j.status === 'error') { statusLabel = ' ❌ error'; statusColor = '#ef4444'; }
+        else if (j.status === 'completed') { statusLabel = ' ✅ done'; statusColor = '#4ade80'; }
+        var articleBadge = j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '';
+        opt.textContent = j.seed_keyword + ' · ' + new Date(j.created_at).toLocaleDateString() + statusLabel + articleBadge;
+        if (statusColor) opt.style.color = statusColor;
         sel.appendChild(opt);
       }
     });
@@ -1669,31 +1676,42 @@ async function loadPreviousJob(jobId) {
       throw new Error('Job is completed but no research data found');
     }
 
-    // 3. Load engine draft — may contain brief and article for this exact job
-    var draft = await loadDraft(profileId);
-    if (draft && draft.current_job_id == jobId) {
-      if (draft.current_brief) {
-        _currentBrief = draft.current_brief;
-        renderBrief(draft.current_brief);
-        document.getElementById('stepBrief').style.display = 'block';
-        var briefBtn2 = document.getElementById('btnBrief');
-        if (briefBtn2) {
-          briefBtn2.innerHTML = '✓ Brief Complete';
-          briefBtn2.style.background = 'linear-gradient(135deg,#065f46,#047857)';
-          briefBtn2.disabled = true;
-        }
-      }
-      if (draft.current_article) {
-        _currentArticle = draft.current_article;
-        _currentArticleId = draft.current_article.id;
-        _currentArticleHtml = draft.current_article.html_content || '';
-        _currentArticleTitle = draft.current_article.title || '';
-        renderArticleReady(draft.current_article);
-        document.getElementById('stepArticle').style.display = 'block';
-      }
+    // 3. Restore brief — FIRST try job record (always persisted there), THEN draft
+    var jobBrief = null;
+    if (d.job && d.job.brief) {
+      try {
+        jobBrief = (typeof d.job.brief === 'string') ? JSON.parse(d.job.brief) : d.job.brief;
+      } catch(e) { console.warn('Job brief parse failed:', e.message); }
     }
+    // Also try draft as fallback
+    var draft = await loadDraft(profileId);
+    var draftBrief = (draft && draft.current_job_id == jobId) ? draft.current_brief : null;
+    _currentBrief = jobBrief || draftBrief || null;
 
-    // 4. If no article in draft, check DB directly
+    if (_currentBrief) {
+      renderBrief(_currentBrief);
+      document.getElementById('stepBrief').style.display = 'block';
+      var briefBtn2 = document.getElementById('btnBrief');
+      if (briefBtn2) {
+        briefBtn2.innerHTML = '✓ Brief Complete';
+        briefBtn2.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+        briefBtn2.disabled = true;
+      }
+    } else {
+      // No brief found — reset brief button so user can generate one
+      resetBriefButton();
+    }
+    // 4. Restore article — try draft first, then DB
+    _currentArticle = null; _currentArticleId = null; _currentArticleHtml = ''; _currentArticleTitle = '';
+    var draftArticle = (draft && draft.current_job_id == jobId) ? draft.current_article : null;
+    if (draftArticle) {
+      _currentArticle = draftArticle;
+      _currentArticleId = draftArticle.id;
+      _currentArticleHtml = draftArticle.html_content || '';
+      _currentArticleTitle = draftArticle.title || '';
+      renderArticleReady(draftArticle);
+      document.getElementById('stepArticle').style.display = 'block';
+    }
     if (!_currentArticle) {
       var articlesD = await api('/api/content/articles/' + profileId, 'GET');
       if (articlesD.success && articlesD.articles) {
