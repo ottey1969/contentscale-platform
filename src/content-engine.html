@@ -1842,15 +1842,23 @@ async function loadPreviousJobsForProfile(profileId) {
     sel.appendChild(placeholder);
     // Deduplicate by seed_keyword — keep only the most recent per keyword
     var seenKw = {};
+    var now = Date.now();
     jobs.forEach(function(j) {
       var kw = (j.seed_keyword || '').toLowerCase().trim();
       if (!seenKw[kw]) {
         seenKw[kw] = true;
+        // Auto-detect stale researching jobs (>10 min old = dead)
+        var isStaleResearching = false;
+        if (j.status === 'researching' && j.created_at) {
+          var ageMin = (now - new Date(j.created_at).getTime()) / 60000;
+          if (ageMin > 10) { isStaleResearching = true; }
+        }
         var opt = document.createElement('option');
         opt.value = j.id;
         var statusLabel = '';
         var statusColor = '';
-        if (j.status === 'researching') { statusLabel = ' ⏳ researching'; statusColor = '#fbbf24'; }
+        if (isStaleResearching) { statusLabel = ' ⏱️ timed out'; statusColor = '#ef4444'; }
+        else if (j.status === 'researching') { statusLabel = ' ⏳ researching'; statusColor = '#fbbf24'; }
         else if (j.status === 'error') { statusLabel = ' ❌ error'; statusColor = '#ef4444'; }
         else if (j.status === 'completed') { statusLabel = ' ✅ done'; statusColor = '#4ade80'; }
         var articleBadge = j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '';
@@ -1887,13 +1895,20 @@ async function loadPreviousJob(jobId) {
 
     // Handle job still in progress
     if (d.status === 'researching') {
-      toast('⏳ This research is still running — please wait. Do not click Research again or you will be charged twice.');
+      // Check if job is stale (>10 min old = dead, backend crashed or timed out)
+      var jobAge = (d.job && d.job.created_at) ? ((Date.now() - new Date(d.job.created_at).getTime()) / 60000) : 999;
+      if (jobAge > 10) {
+        toast('⏱️ This research timed out after ' + Math.round(jobAge) + ' minutes. Click 🔍 Research to retry.', 'red');
+        var rb = document.getElementById('btnResearch');
+        if (rb) { rb.innerHTML = '🔄 Retry Research'; rb.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)'; rb.disabled = false; }
+        _activeResearchJobId = null;
+        return;
+      }
+      toast('⏳ This research is still running — please wait.');
       _currentJobId = jobId;
       document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
-      // Disable Research button temporarily
       var rb = document.getElementById('btnResearch');
       if (rb) { rb.innerHTML = '⏳ Researching...'; rb.disabled = true; }
-      // Poll for completion
       _pollForResearchCompletion(jobId);
       return;
     }

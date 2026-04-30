@@ -10975,17 +10975,17 @@ If a field has no value, omit it rather than returning empty string.
       keywordData.titleAnalysis = titleAnalysis;
       keywordData.metaAnalysis = metaAnalysis;
 
-      // Update existing job with research data
+      // Update existing job with research data (step 1 complete — save now so we don't lose it)
+      console.log(`[research job ${jobId}] step 1 complete — saving initial results`);
       await pool.query(
         `UPDATE content_jobs SET status='researched', keyword_data=$1, competitor_data=$2, sitemap_links=$3, updated_at=NOW() WHERE id=$4`,
         [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobId]
       );
 
-    // Always do full keyword universe research (merged button behavior)
-    let allKeywordData = null;
-    const allKwPrompt = `You are an expert SEO keyword researcher. Given the seed keyword and initial research, build a complete keyword universe.
-
-SEED KEYWORD: "${seed_keyword}"
+      // Step 2: Full keyword universe research — WRAPPED in try/catch so step 1 is never lost
+      console.log(`[research job ${jobId}] starting step 2: keyword universe...`);
+      let allKeywordData = null;
+      const allKwPrompt = `SEED KEYWORD: "${seed_keyword}"
 BUSINESS: ${profile.name} — ${profile.niche}
 INITIAL KEYWORDS FOUND: ${[...(keywordData.secondary_keywords||[]), ...(keywordData.lsi_keywords||[]), ...(keywordData.long_tail_variants||[])].join(', ')}
 CONTENT GAPS: ${(keywordData.content_gaps||[]).join(', ')}
@@ -11009,23 +11009,27 @@ Return ONLY valid JSON:
           geminiKey,
           { contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } }
         );
+        console.log(`[research job ${jobId}] step 2 Gemini: ok=${allKwResult.ok}`);
         const allKwData = allKwResult.data;
         const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (allKwText) {
           try {
             allKeywordData = extractJsonFromText(allKwText);
+            console.log(`[research job ${jobId}] step 2 JSON parsed`);
           } catch(parseErr) {
-            console.warn('All keywords JSON parse failed:', parseErr.message, 'raw:', allKwText.slice(0, 200));
+            console.warn(`[research job ${jobId}] step 2 JSON parse failed:`, parseErr.message);
           }
-      // Save back into job
+        }
+      } catch(e) {
+        console.warn(`[research job ${jobId}] step 2 failed:`, e.message);
+      }
+      // Save step 2 results (works even if step 2 failed — step 1 data is preserved)
       if (allKeywordData && allKeywordData.all_keywords) {
         const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed || allKeywordData.total_keywords || (allKeywordData.all_keywords ? allKeywordData.all_keywords.length : 0) });
         await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobId]);
         keywordData.all_keyword_data = allKeywordData;
         keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed || allKeywordData.total_keywords || (allKeywordData.all_keywords ? allKeywordData.all_keywords.length : 0);
       }
-        }
-      } catch(e) { console.warn('Research all keywords failed:', e.message); }
 
     // Save results to DB and memory cache
     console.log(`[research job ${jobId}] saving results to DB...`);
