@@ -201,7 +201,7 @@ textarea{resize:vertical;min-height:100px;}
     <div class="card-title"><span class="step-num">1</span> Select Profile & Seed Keyword</div>
     <div class="grid-2">
       <div><label>Business Profile</label><select id="engineProfile" onchange="loadProfileInfo()"><option value="">— Select a profile —</option></select></div>
-      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="dakdekker Amsterdam kosten" onkeydown="if(event.key==='Enter')startResearch()"></div>
+      <div><label>Seed Keyword</label><input id="seedKeyword" placeholder="emergency drain cleaning new jersey" onkeydown="if(event.key==='Enter')startResearch()"></div>
     </div>
     <input type="hidden" id="clusterNodeId">
     <input type="hidden" id="clusterId">
@@ -209,8 +209,7 @@ textarea{resize:vertical;min-height:100px;}
 
 
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
-      <button class="btn btn-primary" onclick="startResearch(false)" id="btnResearch">🔍 Start Research</button>
-      <button class="btn btn-secondary" onclick="startResearch(true)" id="btnResearchAll" style="font-size:12px;" title="Deep keyword universe analysis: 25+ keywords including long-tail, questions, local variants, BOFU keywords. Use this when planning content clusters or content calendars.">🔍🔍 Deep Keyword Analysis</button>
+      <button class="btn btn-primary" onclick="startResearch()" id="btnResearch">🔍 Research</button>
     </div>
   </div>
   <!-- Step 2 -->
@@ -854,18 +853,23 @@ let _draftLoading = false; // suppress auto-save while we restore
 function _draftFields() {
   return {
     seed_keyword:    document.getElementById('seedKeyword').value,
-    gsc_impressions: document.getElementById('engImpressions').value,
-    gsc_clicks:      document.getElementById('engClicks').value,
-    gsc_position:    document.getElementById('engPosition').value,
-    gsc_ctr:         document.getElementById('engCtr').value,
-    gsc_pages:       document.getElementById('engGscPages').value,
-    gsc_queries:     document.getElementById('engGscQueries').value,
-    title_override:  (document.getElementById('titleOverride') || {}).value || '',
+    gsc_impressions: safeGet('engImpressions'),
+    gsc_clicks:      safeGet('engClicks'),
+    gsc_position:    safeGet('engPosition'),
+    gsc_ctr:         safeGet('engCtr'),
+    gsc_pages:       safeGet('engGscPages'),
+    gsc_queries:     safeGet('engGscQueries'),
+    title_override:  safeGet('titleOverride'),
     current_job_id:  _currentJobId,
     current_research: _currentResearch,
     current_brief:    _currentBrief,
     current_article:  _currentArticle,
   };
+}
+
+function safeGet(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
 }
 
 function _draftLocalKey(profileId) { return 'cs_engine_draft_' + profileId; }
@@ -1287,30 +1291,28 @@ function loadProfileInfo() {
   restoreDraftForProfile(id);
 }
 
-async function startResearch(allKeywords) {
+async function startResearch() {
   var profileId = document.getElementById('engineProfile').value;
   var seed = document.getElementById('seedKeyword').value.trim();
   if (!profileId) { alert('Select a profile first'); return; }
   if (!seed) { alert('Enter a seed keyword'); return; }
-  var btn = allKeywords ? document.getElementById('btnResearchAll') : document.getElementById('btnResearch');
-  document.getElementById('btnResearch').disabled = true;
-  document.getElementById('btnResearchAll').disabled = true;
+  var btn = document.getElementById('btnResearch');
+  btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Researching...';
   document.getElementById('stepResearch').style.display = 'none';
   document.getElementById('stepBrief').style.display = 'none';
   document.getElementById('stepArticle').style.display = 'none';
 
-  // Collect GSC data — will drive keyword & H2 decisions in research
   var gscPayload = {
     profile_id: profileId,
     seed_keyword: seed,
-    research_all: allKeywords,
-    gsc_impressions: document.getElementById('engImpressions').value || undefined,
-    gsc_clicks:      document.getElementById('engClicks').value || undefined,
-    gsc_position:    document.getElementById('engPosition').value || undefined,
-    gsc_ctr:         document.getElementById('engCtr').value || undefined,
-    gsc_pages:       document.getElementById('engGscPages').value.trim() || undefined,
-    gsc_queries:     document.getElementById('engGscQueries').value.trim() || undefined,
+    research_all: true,
+    gsc_impressions: safeGet('engImpressions') || undefined,
+    gsc_clicks:      safeGet('engClicks') || undefined,
+    gsc_position:    safeGet('engPosition') || undefined,
+    gsc_ctr:         safeGet('engCtr') || undefined,
+    gsc_pages:       safeGet('engGscPages') || undefined,
+    gsc_queries:     safeGet('engGscQueries') || undefined,
   };
 
   try {
@@ -1318,24 +1320,18 @@ async function startResearch(allKeywords) {
     if (!d.success) throw new Error(d.error);
     _currentJobId = d.job.id;
     _currentResearch = d.research;
-    // Research invalidates any previous brief/article
     _currentBrief = null; _currentArticle = null;
     document.getElementById('stepBrief').style.display = 'none';
     document.getElementById('stepArticle').style.display = 'none';
-    renderResearch(d.research, allKeywords);
+    renderResearch(d.research, true);
     document.getElementById('stepResearch').style.display = 'block';
     document.getElementById('stepResearch').scrollIntoView({ behavior: 'smooth' });
     saveDraftNow();
-    if (allKeywords) toast('Full keyword universe researched — ' + (d.research.all_keywords_researched || 0) + ' keywords analyzed');
-    // Show GSC badge if data was used
-    var hasGsc = gscPayload.gsc_queries || gscPayload.gsc_impressions;
-    if (hasGsc) toast('✅ GSC data gebruikt voor keyword & structuurkeuzes');
+    toast('🔍 ' + (d.research.all_keywords_researched || 0) + ' keywords analyzed — full universe');
   } catch(e) { toast('Research failed: ' + e.message, 'red'); }
   finally {
-    document.getElementById('btnResearch').disabled = false;
-    document.getElementById('btnResearchAll').disabled = false;
-    document.getElementById('btnResearch').innerHTML = '🔍 Start Research';
-    document.getElementById('btnResearchAll').innerHTML = '🔍🔍 Research All Keywords';
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Research';
   }
 }
 
