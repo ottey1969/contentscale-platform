@@ -864,6 +864,27 @@ let _currentArticle = null;
 let _draftSaveTimer = null;
 let _draftLoading = false; // suppress auto-save while we restore
 let _activeResearchJobId = null; // tracks which job the current poll loop is for — kill old loops when new one starts
+let _researchSafetyTimer = null; // force-resets stuck Research button after 6 min
+
+// Safety net: if Research button is stuck "Researching..." for >6 min, force reset
+function clearResearchSafetyTimer() {
+  if (_researchSafetyTimer) { clearTimeout(_researchSafetyTimer); _researchSafetyTimer = null; }
+}
+function startResearchSafetyTimer() {
+  clearResearchSafetyTimer();
+  _researchSafetyTimer = setTimeout(function() {
+    var btn = document.getElementById('btnResearch');
+    if (btn && btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1) {
+      console.warn('SAFETY: Research button stuck for 6 min — force resetting');
+      btn.innerHTML = '🔄 Retry Research';
+      btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
+      btn.disabled = false;
+      _activeResearchJobId = null;
+      toast('⏳ Research timed out. Click to retry.', 'red');
+    }
+    _researchSafetyTimer = null;
+  }, 360000); // 6 minutes
+}
 
 // ── Draft persistence (server primary, localStorage fallback) ─
 function _draftFields() {
@@ -1043,7 +1064,14 @@ function showPanel(name, btn) {
   if (tzBar) { tzBar.style.display = name === 'tracker' ? 'flex' : 'none'; }
   if (name === 'tracker' && window._tzRender) window._tzRender();
   if (name === 'profiles') loadProfiles();
-  if (name === 'engine') { loadEngineProfiles(); /* loadBillingInfo() — disabled until billing UI ready */ }
+  if (name === 'engine') {
+    loadEngineProfiles();
+    // Stale-state recovery: if Research button is stuck, force reset
+    var rbtn = document.getElementById('btnResearch');
+    if (rbtn && rbtn.innerHTML.indexOf('Researching') !== -1 && rbtn.innerHTML.indexOf('Complete') === -1 && !_activeResearchJobId) {
+      rbtn.innerHTML = '🔍 Research'; rbtn.style.background = ''; rbtn.disabled = false;
+    }
+  }
   if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
   if (name === 'clusters') { populateClusterFilter(); }
   if (name === 'rewrite') { populateAllSelects(); }
@@ -1329,6 +1357,14 @@ async function startResearch() {
   if (!seed) { alert('Enter a seed keyword'); return; }
   var btn = document.getElementById('btnResearch');
   
+  // STALE STATE RECOVERY: if button says "Researching..." but no active job tracked, force reset
+  if (btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1 && !_activeResearchJobId) {
+    console.warn('Stale Researching button detected — forcing reset');
+    btn.innerHTML = '🔍 Research';
+    btn.style.background = '';
+    btn.disabled = false;
+  }
+  
   // If already polling for this exact keyword, don't start duplicate
   if (_activeResearchJobId && btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1) {
     toast('⏳ Already researching — wait or click the button to force restart');
@@ -1353,6 +1389,7 @@ async function startResearch() {
     var jobId = d.job.id;
     _currentJobId = jobId;
     _activeResearchJobId = jobId; // Mark this as the active poll loop
+    startResearchSafetyTimer(); // Force-reset button if it gets stuck
     _currentBrief = null; _currentArticle = null;
     
     // Step 2: Poll for results
@@ -1391,6 +1428,7 @@ async function startResearch() {
         btn.disabled = true;
         btn.title = '';
         _activeResearchJobId = null;
+        clearResearchSafetyTimer();
         return;
       }
       
@@ -1412,10 +1450,12 @@ async function startResearch() {
     btn.disabled = false;
     btn.title = 'Click to start fresh research';
     _activeResearchJobId = null;
+    clearResearchSafetyTimer();
     toast('⏳ Research timed out. Click the button to retry.', 'red');
     return; // Don't throw — let user click again
   } catch(e) { 
     _activeResearchJobId = null;
+    clearResearchSafetyTimer();
     toast('❌ Research failed: ' + e.message + ' — click to retry', 'red'); 
     btn.innerHTML = '🔄 Retry Research';
     btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
