@@ -154,7 +154,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, claudeKey) {
+async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, claudeKey, modelName = 'claude-sonnet-4-20250514') {
   const anthropicKey = claudeKey || process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) throw new Error('Claude API key required — add ANTHROPIC_API_KEY to Railway or provide x-claude-key header');
   const controller = new AbortController();
@@ -163,7 +163,7 @@ async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, cl
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+      body: JSON.stringify({ model: modelName, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -11426,7 +11426,31 @@ LINK RULES:
 OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
 
     const claudeKey = req.headers['x-claude-key'] || (req.engineCode?.claude_key) || process.env.ANTHROPIC_API_KEY;
-    const htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey);
+    if (!claudeKey) {
+      return res.status(500).json({ success: false, error: 'Claude API key not configured. Add ANTHROPIC_API_KEY to Railway or provide x-claude-key header.' });
+    }
+
+    // Validate brief has minimum required fields before calling Claude
+    if (!brief.title && !kd.primary_keyword && !job.seed_keyword) {
+      return res.status(400).json({ success: false, error: 'Brief is missing title/keyword — regenerate brief first' });
+    }
+
+    let htmlContent;
+    try {
+      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-20250514');
+    } catch(claudeErr) {
+      console.error('Claude Sonnet 4 failed, trying Sonnet 3.7 fallback:', claudeErr.message);
+      try {
+        htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-3-7-sonnet-20250219');
+      } catch(fallbackErr) {
+        console.error('Claude fallback also failed:', fallbackErr.message);
+        return res.status(502).json({ success: false, error: 'AI writer unavailable: ' + (claudeErr.message || fallbackErr.message) });
+      }
+    }
+
+    if (!htmlContent || htmlContent.length < 100) {
+      return res.status(502).json({ success: false, error: 'AI returned empty or too-short content — try again' });
+    }
 
     const { html: cleanHtml, stripped } = stripAiPlaceholders(htmlContent);
     const finalHtml = splitLongParagraphs(cleanHtml);
@@ -11459,8 +11483,9 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
       message: `Article written: ${wordCount} words. Review and publish.` });
 
   } catch (error) {
-    console.error('Write error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Write error for job', req.params.jobId, ':', error);
+    console.error('Write error stack:', error.stack);
+    res.status(500).json({ success: false, error: error.message || 'Write failed' });
   }
 });
 

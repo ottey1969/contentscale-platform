@@ -943,6 +943,12 @@ async function restoreDraftForProfile(profileId) {
       _currentBrief = draft.current_brief;
       renderBrief(_currentBrief);
       document.getElementById('stepBrief').style.display = 'block';
+      var briefBtn = document.getElementById('btnBrief');
+      if (briefBtn) {
+        briefBtn.innerHTML = '✓ Brief Complete';
+        briefBtn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+        briefBtn.disabled = true;
+      }
     }
     if (draft.current_article) {
       _currentArticle = draft.current_article;
@@ -1670,6 +1676,12 @@ async function loadPreviousJob(jobId) {
         _currentBrief = draft.current_brief;
         renderBrief(draft.current_brief);
         document.getElementById('stepBrief').style.display = 'block';
+        var briefBtn2 = document.getElementById('btnBrief');
+        if (briefBtn2) {
+          briefBtn2.innerHTML = '✓ Brief Complete';
+          briefBtn2.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+          briefBtn2.disabled = true;
+        }
       }
       if (draft.current_article) {
         _currentArticle = draft.current_article;
@@ -3863,7 +3875,18 @@ async function writeArticle() {
     } else {
       toast('✅ Artikel klaar — ' + d.article.word_count + ' woorden!');
     }
-  } catch(e) { toast('Write failed: ' + e.message, 'red'); }
+  } catch(e) {
+    var msg = e.message || 'Write failed';
+    if (msg.includes('AI writer unavailable') || msg.includes('Claude API')) {
+      toast('❌ AI writer temporarily unavailable — try again in a moment', 'red');
+    } else if (msg.includes('Brief is missing')) {
+      toast('❌ ' + msg + ' — click 📋 Generate Brief first', 'red');
+    } else if (msg.includes('key not configured')) {
+      toast('❌ Claude API key not set — contact admin', 'red');
+    } else {
+      toast('Write failed: ' + msg, 'red');
+    }
+  }
   finally { btn.disabled = false; btn.innerHTML = '✍️ Write Article'; }
 }
 
