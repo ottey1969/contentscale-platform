@@ -863,6 +863,7 @@ let _currentBrief = null;
 let _currentArticle = null;
 let _draftSaveTimer = null;
 let _draftLoading = false; // suppress auto-save while we restore
+let _activeResearchJobId = null; // tracks which job the current poll loop is for — kill old loops when new one starts
 
 // ── Draft persistence (server primary, localStorage fallback) ─
 function _draftFields() {
@@ -1327,7 +1328,14 @@ async function startResearch() {
   if (!profileId) { alert('Select a profile first'); return; }
   if (!seed) { alert('Enter a seed keyword'); return; }
   var btn = document.getElementById('btnResearch');
-  btn.disabled = true;
+  
+  // If already polling for this exact keyword, don't start duplicate
+  if (_activeResearchJobId && btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1) {
+    toast('⏳ Already researching — wait or click the button to force restart');
+    return;
+  }
+  
+  btn.disabled = false;
   btn.innerHTML = '<span class="spinner"></span> Starting...';
   // Reset brief button too — new research means new brief needed
   resetBriefButton();
@@ -1341,11 +1349,11 @@ async function startResearch() {
     if (!d.success) throw new Error(d.error);
     var jobId = d.job.id;
     _currentJobId = jobId;
+    _activeResearchJobId = jobId; // Mark this as the active poll loop
     _currentBrief = null; _currentArticle = null;
     
     // Step 2: Poll for results
     btn.innerHTML = '<span class="spinner"></span> Researching...';
-    btn.disabled = false; // ALWAYS keep button clickable — user can force restart
     btn.style.background = 'linear-gradient(135deg,#7c3aed,#6d28d9)';
     btn.title = 'Click to force restart (abandons current research)';
     var pollCount = 0;
@@ -1355,10 +1363,10 @@ async function startResearch() {
       await new Promise(function(r) { setTimeout(r, 2000); }); // Wait 2s
       pollCount++;
       
-      // Check if user clicked Research again (button text changed by new call)
-      if (btn.innerHTML.indexOf('Starting') !== -1) {
-        console.log('New research started — abandoning old poll loop');
-        return; // Exit this poll loop, new one is running
+      // If a newer research job started, kill this old poll loop
+      if (_activeResearchJobId !== jobId) {
+        console.log('Poll loop for job ' + jobId + ' abandoned — newer job ' + _activeResearchJobId + ' started');
+        return;
       }
       
       var poll = await api('/api/content/research/' + jobId, 'GET');
@@ -1379,6 +1387,7 @@ async function startResearch() {
         btn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
         btn.disabled = true;
         btn.title = '';
+        _activeResearchJobId = null;
         return;
       }
       
@@ -1399,9 +1408,11 @@ async function startResearch() {
     btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
     btn.disabled = false;
     btn.title = 'Click to start fresh research';
+    _activeResearchJobId = null;
     toast('⏳ Research timed out. Click the button to retry.', 'red');
     return; // Don't throw — let user click again
   } catch(e) { 
+    _activeResearchJobId = null;
     toast('❌ Research failed: ' + e.message + ' — click to retry', 'red'); 
     btn.innerHTML = '🔄 Retry Research';
     btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
@@ -1947,10 +1958,20 @@ async function loadPreviousJob(jobId) {
 var _researchPollTimer = null;
 async function _pollForResearchCompletion(jobId) {
   if (_researchPollTimer) { clearTimeout(_researchPollTimer); _researchPollTimer = null; }
+  // Don't poll if startResearch() is already polling this job
+  if (_activeResearchJobId === jobId) {
+    console.log('_pollForResearchCompletion: startResearch() already polling job ' + jobId + ' — skipping');
+    return;
+  }
   var attempts = 0;
   var maxAttempts = 30; // 30 x 3s = 90s max
 
   async function tick() {
+    // If startResearch() took over polling, exit
+    if (_activeResearchJobId === jobId) {
+      console.log('_pollForResearchCompletion: startResearch() took over job ' + jobId);
+      return;
+    }
     attempts++;
     try {
       var d = await api('/api/content/research/' + jobId, 'GET');
