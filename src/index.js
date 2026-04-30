@@ -10726,14 +10726,19 @@ Example: "According to a 2024 survey of 847 NJ plumbing contractors, 68% of emer
 ═══════════════════════════════════════════════════════════════
 OUTPUT FORMAT — Return ONLY valid JSON:
 ═══════════════════════════════════════════════════════════════
+IMPORTANT: Every single field must contain REAL generated content. 
+NEVER return placeholder text like "H2 1" or empty strings "".
+NEVER copy example formats — write actual research findings.
+If a field has no value, omit it rather than returning empty string.
+
 {
   "primary_keyword": "",
-  "secondary_keywords": ["","","","",""],
-  "lsi_keywords": ["","",""],
-  "long_tail_variants": ["","",""],
+  "secondary_keywords": [],
+  "lsi_keywords": [],
+  "long_tail_variants": [],
   "search_intent": "BOFU|commercial|informational",
-  "intent_analysis": "What user wants, buyer stage, what converts",
-  "intent_driven_structure": "Lead with X for this intent",
+  "intent_analysis": "",
+  "intent_driven_structure": "",
   "monthly_search_volume_estimate": "high|medium|low",
   "keyword_difficulty_estimate": "high|medium|low",
   "competitor_analysis": [
@@ -10742,9 +10747,9 @@ OUTPUT FORMAT — Return ONLY valid JSON:
       "title": "",
       "strengths": "",
       "weaknesses": "",
-      "h2_structure": ["","","","",""],
+      "h2_structure": [],
       "word_count_estimate": 0,
-      "schema_used": ["","",""],
+      "schema_used": [],
       "internal_links_count": 0,
       "images_count": 0,
       "eeat_signals": "",
@@ -10752,31 +10757,31 @@ OUTPUT FORMAT — Return ONLY valid JSON:
       "exploitable_gap": ""
     }
   ],
-  "content_gaps": ["","","","","","",""],
-  "ranking_opportunities": ["",""],
+  "content_gaps": [],
+  "ranking_opportunities": [],
   "paa_questions": [
     {"question": "", "direct_answer": "", "snippet_format": "paragraph|list|table"}
   ],
   "serp_features": {
     "featured_snippet": {"format": "", "target_content": ""},
     "people_also_ask": {"questions_count": 0, "strategy": ""},
-    "local_pack": {"signals_needed": ["","",""]},
+    "local_pack": {"signals_needed": []},
     "video_carousel": {"video_idea": ""},
-    "image_pack": {"image_types": ["","",""]},
+    "image_pack": {"image_types": []},
     "ai_overview": {"present": false, "format": "", "citation_strategy": ""}
   },
   "original_statistics": [
     {"stat": "", "methodology": "", "source_anchor": ""}
   ],
   "recommended_title": "",
-  "title_alternatives": ["",""],
-  "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4","H2 5","H2 6","H2 7","H2 8"],
+  "title_alternatives": [],
+  "recommended_h2s": [],
   "target_word_count": 3000,
-  "external_links_local": [{"anchor":"","url":""}],
-  "bofu_ctas": ["","",""],
-  "ai_overview_tips": ["40-word direct answer first","FAQPage schema","tables for snippets","HowTo schema","Speakable schema"],
-  "voice_search_queries": ["Hey Google...","Alexa...","Siri..."],
-  "voice_search_optimization": "Conversational language, 30-50 word answers, near me geo signals"
+  "external_links_local": [],
+  "bofu_ctas": [],
+  "ai_overview_tips": [],
+  "voice_search_queries": [],
+  "voice_search_optimization": ""
 }`;
 
     const gemResult = await callGeminiWithFallback(
@@ -11003,6 +11008,29 @@ function safeParse(v, fallback) {
   if (!v) return fallback;
   if (typeof v === 'object') return v;
   try { return JSON.parse(v); } catch(e) { return fallback; }
+}
+
+// Validate that a brief has real content (not placeholders or empty arrays)
+function validateBrief(brief, seedKeyword) {
+  const errors = [];
+  if (!brief.title || brief.title.trim().length < 10) errors.push('title too short or missing');
+  if (!brief.structure || !Array.isArray(brief.structure) || brief.structure.length < 3) errors.push('needs at least 3 H2 headings');
+  if (!brief.bofu_ctas || !Array.isArray(brief.bofu_ctas) || brief.bofu_ctas.length === 0) errors.push('missing BOFU CTAs');
+  if (!brief.ai_overview_tips || !Array.isArray(brief.ai_overview_tips) || brief.ai_overview_tips.length === 0) errors.push('missing AI Overview tips');
+  if (!brief.voice_search_queries || !Array.isArray(brief.voice_search_queries) || brief.voice_search_queries.length === 0) errors.push('missing voice search queries');
+  
+  // Check for placeholder text
+  const placeholderPatterns = ['H2 1', 'H2 2', 'Hey Google', 'Alexa', 'Siri', 'PLACEHOLDER', 'example'];
+  const allText = JSON.stringify(brief).toLowerCase();
+  placeholderPatterns.forEach(p => {
+    if (allText.includes(p.toLowerCase())) errors.push(`contains placeholder text: "${p}"`);
+  });
+  
+  return {
+    isValid: errors.length === 0,
+    errors: errors,
+    missingFields: errors
+  };
 }
 
 // ── Generate Brief ───────────────────────────────────────────
@@ -11235,8 +11263,90 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
     brief.ai_overview_present = kd.serp_features?.ai_overview?.present || false;
     brief.ai_overview_citation_strategy = kd.serp_features?.ai_overview?.citation_strategy || '';
 
+    // ── VALIDATE brief completeness — regenerate missing fields ──
+    const validation = validateBrief(brief, job.seed_keyword);
+    if (!validation.isValid) {
+      console.warn(`[brief ${req.params.jobId}] Incomplete brief detected:`, validation.errors.join('; '));
+      
+      // Try to fill missing fields with a targeted Gemini call
+      const missingFields = validation.missingFields;
+      const fillPrompt = `You are an expert SEO content strategist. Fill in the MISSING fields for this content brief.
+
+SEED KEYWORD: "${job.seed_keyword}"
+BUSINESS: ${profile.name} | ${profile.niche} | ${profile.geo_focus || ''}
+
+EXISTING BRIEF DATA:
+- Title: ${brief.title || '(missing)'}
+- Primary keyword: ${brief.primary_keyword || job.seed_keyword}
+- Search intent: ${brief.search_intent || 'unknown'}
+
+MISSING FIELDS TO GENERATE (fill all of these with real content):
+${missingFields.map(f => `- ${f}`).join('\n')}
+
+Generate the missing content as JSON:
+{
+  "recommended_title": "10-word SEO-optimized title with year and power word",
+  "title_alternatives": ["alt title 1", "alt title 2"],
+  "recommended_h2s": ["Real H2 heading 1", "Real H2 heading 2", "Real H2 heading 3", "Real H2 heading 4", "Real H2 heading 5", "Real H2 heading 6", "Real H2 heading 7", "Real H2 heading 8"],
+  "bofu_ctas": ["Specific CTA 1", "Specific CTA 2", "Specific CTA 3"],
+  "ai_overview_tips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5"],
+  "voice_search_queries": ["How do I...", "What is the best...", "Where can I find..."],
+  "voice_search_optimization": "Conversational answer strategy with geo signals"
+}
+
+Rules:
+- NEVER use placeholder text like "H2 1" or "Example"
+- Every field must have real, specific content
+- H2s must be detailed and keyword-rich
+- CTAs must be action-oriented and specific to the business niche`;
+
+      try {
+        const fillResult = await callGeminiWithFallback(
+          geminiKey,
+          { contents: [{ parts: [{ text: fillPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } }
+        );
+        if (fillResult.ok) {
+          const fillText = fillResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const fillData = extractJsonFromText(fillText);
+          
+          // Merge fill data into brief
+          if (fillData.recommended_title && fillData.recommended_title.length > 10 && !fillData.recommended_title.includes('H2')) {
+            brief.title = fillData.recommended_title;
+          }
+          if (fillData.title_alternatives && fillData.title_alternatives.length > 0) {
+            brief.title_alternatives = fillData.title_alternatives;
+          }
+          if (fillData.recommended_h2s && fillData.recommended_h2s.length >= 3) {
+            brief.structure = fillData.recommended_h2s;
+          }
+          if (fillData.bofu_ctas && fillData.bofu_ctas.length > 0) {
+            brief.bofu_ctas = fillData.bofu_ctas;
+          }
+          if (fillData.ai_overview_tips && fillData.ai_overview_tips.length > 0) {
+            brief.ai_overview_tips = fillData.ai_overview_tips;
+          }
+          if (fillData.voice_search_queries && fillData.voice_search_queries.length > 0) {
+            brief.voice_search_queries = fillData.voice_search_queries;
+          }
+          if (fillData.voice_search_optimization && fillData.voice_search_optimization.length > 10) {
+            brief.voice_search_optimization = fillData.voice_search_optimization;
+          }
+          
+          console.log(`[brief ${req.params.jobId}] Regenerated missing fields successfully`);
+        }
+      } catch(regenErr) {
+        console.error(`[brief ${req.params.jobId}] Regeneration failed:`, regenErr.message);
+      }
+    }
+
+    // Final validation after regeneration attempt
+    const finalValidation = validateBrief(brief, job.seed_keyword);
+    if (!finalValidation.isValid) {
+      console.error(`[brief ${req.params.jobId}] Still incomplete after regeneration:`, finalValidation.errors.join('; '));
+    }
+
     await pool.query(`UPDATE content_jobs SET brief=$1, status='briefed', updated_at=NOW() WHERE id=$2`, [JSON.stringify(brief), req.params.jobId]);
-    res.json({ success: true, brief });
+    res.json({ success: true, brief, validation: finalValidation });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

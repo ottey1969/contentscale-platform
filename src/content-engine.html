@@ -952,9 +952,17 @@ async function restoreDraftForProfile(profileId) {
       document.getElementById('stepBrief').style.display = 'block';
       var briefBtn = document.getElementById('btnBrief');
       if (briefBtn) {
-        briefBtn.innerHTML = '✓ Brief Complete';
-        briefBtn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
-        briefBtn.disabled = true;
+        if (isBriefComplete(_currentBrief)) {
+          briefBtn.innerHTML = '✓ Brief Complete';
+          briefBtn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+          briefBtn.disabled = true;
+        } else {
+          var missing = detectMissingBriefFields(_currentBrief);
+          briefBtn.innerHTML = '⚠️ Brief Incomplete';
+          briefBtn.style.background = 'linear-gradient(135deg,#92400e,#b45309)';
+          briefBtn.disabled = false;
+          toast('⚠️ Loaded brief has missing fields: ' + missing.slice(0, 3).join(', ') + '. Click Generate Brief to fix.', 'orange');
+        }
       }
     }
     if (draft.current_article) {
@@ -1510,6 +1518,18 @@ async function generateBrief() {
     document.getElementById('stepBrief').style.display = 'block';
     document.getElementById('stepBrief').scrollIntoView({ behavior: 'smooth' });
     saveDraftNow();
+    
+    // Check if brief is actually complete
+    var isComplete = isBriefComplete(d.brief);
+    if (!isComplete || (d.validation && !d.validation.isValid)) {
+      var missing = d.validation && d.validation.missingFields ? d.validation.missingFields : detectMissingBriefFields(d.brief);
+      btn.innerHTML = '⚠️ Brief Incomplete';
+      btn.style.background = 'linear-gradient(135deg,#92400e,#b45309)';
+      btn.disabled = false;
+      toast('⚠️ Brief generated but some fields are empty: ' + missing.slice(0, 3).join(', ') + '. Click Generate Brief to retry.', 'orange');
+      return;
+    }
+    
     // Mark brief as complete — button stays green until user types new keyword
     btn.innerHTML = '✓ Brief Complete';
     btn.style.background = 'linear-gradient(135deg,#065f46,#047857)';
@@ -1574,6 +1594,33 @@ function renderBrief(b) {
     '</div>' +
     (b.voice_search_optimization ? '<div style="font-size:12px;color:#38bdf8;margin-top:6px;background:rgba(56,189,248,.08);padding:8px;border-radius:6px;">🎙️ <strong>Voice Strategy:</strong> ' + b.voice_search_optimization + '</div>' : '') +
     '<div style="font-size:12px;color:#6b7280;margin-top:8px;">Target: <strong style="color:#e2e8f0;">' + (b.target_word_count || 2500) + ' words</strong> · H2s: <strong style="color:#e2e8f0;">' + (b.structure || []).length + '</strong></div>';
+}
+
+function isBriefComplete(b) {
+  if (!b) return false;
+  if (!b.title || b.title.trim().length < 10) return false;
+  if (!b.structure || !Array.isArray(b.structure) || b.structure.length < 3) return false;
+  if (!b.bofu_ctas || !Array.isArray(b.bofu_ctas) || b.bofu_ctas.length === 0) return false;
+  if (!b.ai_overview_tips || !Array.isArray(b.ai_overview_tips) || b.ai_overview_tips.length === 0) return false;
+  // Check for placeholder text
+  var allText = JSON.stringify(b).toLowerCase();
+  var placeholders = ['h2 1', 'h2 2', 'h2 3', 'hey google', 'alexa', 'siri', 'placeholder', 'example'];
+  for (var i = 0; i < placeholders.length; i++) {
+    if (allText.indexOf(placeholders[i]) !== -1) return false;
+  }
+  return true;
+}
+
+function detectMissingBriefFields(b) {
+  var missing = [];
+  if (!b.title || b.title.trim().length < 10) missing.push('title');
+  if (!b.structure || !Array.isArray(b.structure) || b.structure.length < 3) missing.push('H2 structure');
+  if (!b.bofu_ctas || !Array.isArray(b.bofu_ctas) || b.bofu_ctas.length === 0) missing.push('BOFU CTAs');
+  if (!b.ai_overview_tips || !Array.isArray(b.ai_overview_tips) || b.ai_overview_tips.length === 0) missing.push('AI Overview tips');
+  if (!b.voice_search_queries || !Array.isArray(b.voice_search_queries) || b.voice_search_queries.length === 0) missing.push('voice queries');
+  var allText = JSON.stringify(b).toLowerCase();
+  if (allText.indexOf('h2 1') !== -1 || allText.indexOf('h2 2') !== -1) missing.push('placeholder text');
+  return missing;
 }
 
 function resetResearchButton() {
@@ -1806,9 +1853,17 @@ async function loadPreviousJob(jobId) {
       document.getElementById('stepBrief').style.display = 'block';
       var briefBtn2 = document.getElementById('btnBrief');
       if (briefBtn2) {
-        briefBtn2.innerHTML = '✓ Brief Complete';
-        briefBtn2.style.background = 'linear-gradient(135deg,#065f46,#047857)';
-        briefBtn2.disabled = true;
+        if (isBriefComplete(_currentBrief)) {
+          briefBtn2.innerHTML = '✓ Brief Complete';
+          briefBtn2.style.background = 'linear-gradient(135deg,#065f46,#047857)';
+          briefBtn2.disabled = true;
+        } else {
+          var missing = detectMissingBriefFields(_currentBrief);
+          briefBtn2.innerHTML = '⚠️ Brief Incomplete';
+          briefBtn2.style.background = 'linear-gradient(135deg,#92400e,#b45309)';
+          briefBtn2.disabled = false;
+          toast('⚠️ Restored brief has missing fields: ' + missing.slice(0, 3).join(', ') + '. Click Generate Brief to fix.', 'orange');
+        }
       }
     } else {
       // No brief found — reset brief button so user can generate one
