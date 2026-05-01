@@ -1546,6 +1546,23 @@ res.json({ success: true, inserted });
 app.post('/api/bulk-scan/send-improvement-emails', async (req, res) => { res.json({ success: true }); });
 app.post('/api/bulk-scan/send-website-offers', async (req, res) => { res.json({ success: true }); });
 // Admin Endpoints
+// Emergency password recovery — uses secret key from env
+app.post('/api/setup/recover-admin', async (req, res) => {
+  const { recovery_key, new_password } = req.body;
+  const expectedKey = process.env.ADMIN_RECOVERY_KEY || 'contentscale-reset-2024';
+  if (recovery_key !== expectedKey) return res.status(403).json({ success: false, error: 'Invalid recovery key' });
+  if (!new_password || new_password.length < 6) return res.status(400).json({ success: false, error: 'New password must be at least 6 characters' });
+  try {
+    const hash = await bcrypt.hash(new_password, 10);
+    // Reset the default admin 'ot'
+    await pool.query(
+      `INSERT INTO super_admins (username, password_hash, is_active, last_login) VALUES ('ot', $1, TRUE, NOW())
+       ON CONFLICT (username) DO UPDATE SET password_hash = $1, is_active = TRUE, session_token = NULL, last_login = NOW()`,
+      [hash]
+    );
+    res.json({ success: true, message: 'Admin password reset. Login with: ot / ' + new_password });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 app.post('/api/setup/verify-admin', async (req, res) => {
 const { username, password } = req.body;
 if (!pool) return res.status(503).json({ success: false, error: 'DB down' });
