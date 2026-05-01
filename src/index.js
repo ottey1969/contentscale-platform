@@ -11720,7 +11720,9 @@ app.post('/api/content/clusters/generate', verifyEngineAccess, requireCredits('c
     let sitemapLinks = (job.sitemap_links || []);
     if (!sitemapLinks.length && job.sitemap_url) {
       try {
-        const sr = await fetch(job.sitemap_url, { signal: AbortSignal.timeout(6000) });
+        const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(),6000);
+        const sr = await fetch(job.sitemap_url, { signal: ctrl.signal });
+        clearTimeout(t);
         const st = await sr.text();
         sitemapLinks = (st.match(/<loc>(.*?)<\/loc>/g)||[]).map(m=>m.replace(/<\/?loc>/g,'').trim()).slice(0,150);
       } catch(e) { console.warn('Sitemap fetch failed:', e.message); }
@@ -11743,7 +11745,7 @@ RESEARCH CONTEXT:
 - Long-tail keywords: ${(kd.lsi_keywords||[]).join(', ')}
 - Content gaps identified: ${(kd.content_gaps||[]).join(', ')}
 - Search intent: ${kd.search_intent || 'mixed'}
-- Competitor weaknesses: ${(kd.competitor_analysis||[]).map(c=>c.weaknesses).flat().join(', ')}
+- Competitor weaknesses: ${(Array.isArray(kd.competitor_analysis)?kd.competitor_analysis.map(c=>Array.isArray(c.weaknesses)?c.weaknesses.join(', '):(c.weaknesses||'')).filter(Boolean).join('; '):'')}
 
 YOUR MISSION:
 1. Create a topic cluster with 1 pillar + ${cluster_size} cluster articles
