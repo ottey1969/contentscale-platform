@@ -10498,7 +10498,10 @@ app.post('/api/content/profiles/:id/needed-pages/check-sitemap', verifyEngineAcc
     let resolved = 0;
     for (const page of pendingR.rows) {
       const normalized = page.suggested_url.replace(/\/$/, '');
-      if (sitemapUrls.some(su => su === normalized)) {
+      // Extract pathname from suggested_url for flexible matching
+      let suggestedPathname = normalized;
+      try { suggestedPathname = new URL(normalized).pathname.replace(/\/$/, '') || '/'; } catch(e) { /* keep as-is */ }
+      if (sitemapUrls.some(su => su === normalized || su === suggestedPathname)) {
         await pool.query(`UPDATE content_needed_pages SET status='created', resolved_at=NOW() WHERE id=$1`, [page.id]);
         resolved++;
       }
@@ -10680,9 +10683,11 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
     const year = new Date().getFullYear();
     const locs = (profile.locations||[]).map(l=>l.location_value).join(', ') || profile.geo_focus || '';
 
-    const prompt = `You are an expert SEO researcher. Analyze the keyword "${seed_keyword}" for a ${profile.niche} business in ${locs}.
+    const prompt = `You are an expert SEO researcher. Research "${seed_keyword}" for a ${profile.niche} business in ${locs}.
 
-Return ONLY this JSON (fill every field with real content):
+Your task: Find 8-12 REAL statistics from 2024-2026 with named sources. Search for: industry reports, government data (.gov), trade associations, reputable news sources, and academic studies. Every stat must have a real source name and year.
+
+Return ONLY this JSON (fill every field with real, sourced content):
 {
   "primary_keyword": "exact keyword",
   "secondary_keywords": ["kw1","kw2","kw3","kw4","kw5"],
@@ -10700,6 +10705,10 @@ Return ONLY this JSON (fill every field with real content):
   "content_gaps": ["gap 1","gap 2","gap 3"],
   "paa_questions": [
     {"question":"Question?","direct_answer":"50 word answer","snippet_format":"paragraph"}
+  ],
+  "original_statistics": [
+    {"stat": "Specific number/fact with context", "source": "Real source name and year", "url": "https://real-source-url.com"},
+    {"stat": "Another verified number", "source": "Source Name, Year", "url": "https://source.com"}
   ],
   "bofu_ctas": ["Book a Free Consultation","Get a Quote Today","Call Now: ${profile.phone || 'us'}"],
   "ai_overview_tips": ["Direct answer first","FAQ schema","HowTo markup","Speakable schema"],
@@ -11272,7 +11281,8 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
       systemPrompt = `You are an elite SEO content writer. Follow the template's ENGINE RULES precisely.
 
 CRITICAL RULES:
-- NEVER guess statistics. If unverified, use [STAT NEEDED].
+- USE the STATISTICS listed in research data below — each has a source. Cite them properly.
+- If research stats are insufficient, actively search your knowledge for real 2024-2026 stats from named sources.
 - NEVER invent phone numbers, addresses, or business facts. Use ONLY what's in the template.
 - Fill EVERY [AI: ...] placeholder with real content. Remove the placeholder markers after writing.
 - Keep ALL hardcoded business constants exactly as-is (phone, address, schema, CSS, scripts).
@@ -11294,7 +11304,7 @@ PAA QUESTIONS — ANSWER IN FAQ:
 ${(brief.paa_questions || kd.paa_questions || []).map((p, i) => `${i+1}. ${typeof p === 'string' ? p : (p.question || JSON.stringify(p))}`).join('\n') || 'No PAA data'}
 
 STATISTICS — USE THESE (with attribution):
-${(brief.original_statistics || kd.original_statistics || []).map((s, i) => `${i+1}. ${typeof s === 'string' ? s : (s.stat || JSON.stringify(s))}`).join('\n') || 'No verified stats — use [STAT NEEDED]'}
+${(brief.original_statistics || kd.original_statistics || []).map((s, i) => `${i+1}. ${typeof s === 'string' ? s : ((s.stat||'') + ' — Source: ' + (s.source||'Unknown') + (s.url?' ('+s.url+')':''))}`).join('\n') || 'FIND 8+ real statistics from 2024-2026 with named sources and URLs. Use industry reports, government data, trade associations.'}
 
 COMPETITOR GAPS — EXPLOIT IN CONTENT:
 ${(brief.competitor_gaps || []).slice(0,8).join('\n') || 'None'}
