@@ -11727,6 +11727,7 @@ app.post('/api/content/clusters/generate', verifyEngineAccess, requireCredits('c
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
+    const isPreview = req.query.preview === 'true' || req.body.preview === true;
     const clusterPrompt = `You are the world's best SEO content strategist. Create a COMPLETE topic cluster plan that DOMINATES Google Search, wins AI Overviews, and captures voice search queries.
 
 BUSINESS: ${job.profile_name}
