@@ -225,6 +225,7 @@ textarea{resize:vertical;min-height:100px;}
 
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-primary" onclick="startResearch()" id="btnResearch">🔍 Research</button>
+      <button class="btn btn-danger" id="btnResetResearch" onclick="resetResearchJob()" style="display:none;background:linear-gradient(135deg,#dc2626,#b91c1c);font-size:12px;padding:5px 10px;">🔄 Reset</button>
     </div>
   </div>
   <!-- Step 2 -->
@@ -1436,12 +1437,15 @@ async function startResearch() {
         throw new Error(poll.error || 'Research failed');
       }
       
-      // Still researching — update button text
+      // Still researching — update button text, show Reset after 20s
       var elapsed = pollCount * 2;
       var mins = Math.floor(elapsed / 60);
       var secs = elapsed % 60;
       var timeStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
-      btn.innerHTML = '<span class="spinner"></span> Researching (' + timeStr + ') — click to restart';
+      btn.innerHTML = '<span class="spinner"></span> Researching (' + timeStr + ')';
+      // Show Reset button if stuck > 20 seconds
+      var resetBtn = document.getElementById('btnResetResearch');
+      if (resetBtn && elapsed > 20) resetBtn.style.display = 'inline-block';
     }
     
     // Max polls reached — show timeout but keep button clickable for retry
@@ -1818,6 +1822,25 @@ async function saveBillingSettings() {
   }
 }
 
+async function resetResearchJob() {
+  var jobId = _currentJobId;
+  if (!jobId) { toast('No active research to reset', 'red'); return; }
+  if (!confirm('Reset this research? You can start fresh afterwards.')) return;
+  try {
+    var d = await api('/api/content/research/' + jobId + '/reset', 'POST');
+    if (!d.success) throw new Error(d.error);
+    _activeResearchJobId = null;
+    clearResearchSafetyTimer();
+    var btn = document.getElementById('btnResearch');
+    var resetBtn = document.getElementById('btnResetResearch');
+    if (btn) { btn.innerHTML = '🔍 Research'; btn.style.background = ''; btn.disabled = false; }
+    if (resetBtn) resetBtn.style.display = 'none';
+    toast('✅ Research reset — click 🔍 Research to start fresh');
+  } catch(e) {
+    toast('Reset failed: ' + e.message, 'red');
+  }
+}
+
 // ── Continue Previous Work ──────────────────────────────────
 var _loadingPreviousJobs = false;
 var _lastPopulatedJobsProfile = null;
@@ -1900,9 +1923,11 @@ async function loadPreviousJob(jobId) {
       var jobCreated = (d.job && d.job.created_at) ? new Date(d.job.created_at).getTime() : 0;
       var jobAge = jobCreated ? ((Date.now() - jobCreated) / 60000) : 0;
       if (jobAge > 10) {
-        toast('⏱️ This research timed out after ' + Math.round(jobAge) + ' minutes. Click 🔍 Research to retry.', 'red');
+        toast('⏱️ This research timed out after ' + Math.round(jobAge) + ' minutes. Click 🔄 Reset to clear, then 🔍 Research to retry.', 'orange');
         var rb = document.getElementById('btnResearch');
+        var resetBtn = document.getElementById('btnResetResearch');
         if (rb) { rb.innerHTML = '🔄 Retry Research'; rb.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)'; rb.disabled = false; }
+        if (resetBtn) resetBtn.style.display = 'inline-block';
         _activeResearchJobId = null;
         return;
       }
@@ -5320,12 +5345,4 @@ async function deleteTrackerPageFromDetail(pageId) {
       </div>
 
       <div style="display:flex;gap:8px;margin-top:14px;">
-        <button class="btn btn-primary" onclick="saveBillingSettings()" style="flex:1;">💾 Save Settings</button>
-        <button class="btn btn-secondary" onclick="document.getElementById('billingModal').style.display='none'" style="flex:1;">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+        <button class="btn btn-primary" onclick="saveBillingSettings()" style="flex:1;">💾 Save Settin
