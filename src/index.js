@@ -11233,6 +11233,10 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
 
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+    
+    // Check if this is a preview request (dry run)
+    const isPreview = req.query.preview === 'true' || req.body.preview === true;
+
     const title = title_override || brief.title;
     const locations = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 AND external_links=TRUE ORDER BY sort_order`, [job.profile_id]);
     const locStrings = locations.rows.map(l => `${l.location_type}: ${l.location_value}`).join(', ');
@@ -11547,7 +11551,7 @@ OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
        kd.primary_keyword || job.seed_keyword, JSON.stringify(kd.secondary_keywords||[]), finalHtml, wordCount]
     );
 
-    await pool.query(`UPDATE content_jobs SET status='completed', completed_at=NOW() WHERE id=$1`, [jobId]);
+    await pool.query(`UPDATE content_jobs SET status='completed', completed_at=NOW() WHERE id=$1`, [req.params.jobId]);
 
     // ── Update cluster node when article is written from a cluster ──
     if (activeNodeId && articleR.rows[0]) {
@@ -11839,6 +11843,11 @@ Return ONLY valid JSON:
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ success: false, error: 'AI did not return valid JSON' });
     const clusterData = JSON.parse(jsonMatch[0]);
+
+    // If preview mode, return cluster plan without saving
+    if (isPreview) {
+      return res.json({ success: true, preview: clusterData, message: 'Preview ready — click Create Cluster to save' });
+    }
 
     // Save cluster
     const clusterR = await pool.query(

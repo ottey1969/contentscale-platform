@@ -4183,8 +4183,8 @@ async function writeArticle() {
     }
   } catch(e) {
     var msg = e.message || 'Write failed';
-    if (msg.includes('AI writer unavailable') || msg.includes('Claude API')) {
-      toast('❌ AI writer temporarily unavailable — try again in a moment', 'red');
+    if (msg.includes('AI writer unavailable') || msg.includes('Claude API') || msg.includes('timed out')) {
+      toast('❌ AI writer timed out — article too complex. Try a shorter keyword or reduce template.', 'red');
     } else if (msg.includes('Brief is missing')) {
       toast('❌ ' + msg + ' — click 📋 Generate Brief first', 'red');
     } else if (msg.includes('key not configured')) {
