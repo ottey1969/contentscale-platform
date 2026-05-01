@@ -9477,15 +9477,20 @@ const verifyEngineAccess = async (req, res, next) => {
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
 
+  // Accept token (from sessionStorage) or code (from URL/header)
+  const engineToken = req.headers['x-engine-token'];
   const engineCode = req.headers['x-engine-code'] || req.query.code;
-  if (!engineCode) {
+  const lookupCode = engineToken || engineCode;
+
+  if (!lookupCode) {
     return res.status(401).json({ success: false, error: 'Engine access code required' });
   }
 
   try {
+    // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
     const codeResult = await pool.query(
-      'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE',
-      [engineCode]
+      'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
+      [lookupCode.trim().toUpperCase()]
     );
     if (codeResult.rows.length === 0) {
       return res.status(403).json({ success: false, error: 'Invalid or expired engine access code' });
@@ -22774,12 +22779,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function setCostLimit(id){
             const inp=document.getElementById('setlimit_'+id);
             const limit=parseFloat(inp.value);
-            if(!limit||limit<1){alert('Enter a valid budget amount (minimum €1)');return;}
+            if(!limit||limit<1){alert('Enter a valid budget amount (minimum $1)');return;}
             await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{monthly_cost_limit:limit});
             loadEngineCodes();
         }
         async function resetCostUsed(id){
-            if(!confirm('Reset cost used to €0.00 for this code?'))return;
+            if(!confirm('Reset cost used to $0.00 for this code?'))return;
             await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{reset_used:true});
             loadEngineCodes();
         }
@@ -22798,21 +22803,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             '<td style="padding:4px;color:#e2e8f0;">'+l.action+'</td>'+
                             '<td style="padding:4px;color:#9ca3af;">'+l.model+'</td>'+
                             '<td style="padding:4px;color:#9ca3af;">'+(l.input_tokens+l.output_tokens)+'</td>'+
-                            '<td style="padding:4px;color:#fbbf24;text-align:right;">€'+parseFloat(l.estimated_cost).toFixed(4)+'</td>'+
+                            '<td style="padding:4px;color:#fbbf24;text-align:right;">$'+parseFloat(l.estimated_cost).toFixed(4)+'</td>'+
                             '<td style="padding:4px;color:#64748b;">'+new Date(l.created_at).toLocaleDateString()+'</td></tr>';
                     });
                     html+='</tbody></table>';
                 }
                 html+='</div>';
-                // Show in a simple alert-like modal
+                // Show in a simple modal
                 const modal=document.createElement('div');
                 modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:99999;justify-content:center;align-items:center;display:flex;';
                 modal.innerHTML='<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">'+
                     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
-                    '<h3 style="font-size:1rem;color:#fbbf24;margin:0;">📋 API Cost Log</h3>'+
-                    '<button onclick="this.closest(\'.modal-cost\').remove()" style="background:none;border:none;color:#9ca3af;font-size:18px;cursor:pointer;">✕</button></div>'+html+
-                    '<div style="margin-top:12px;text-align:right;"><button onclick="this.closest(\'.modal-cost\').remove()" style="padding:6px 14px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;cursor:pointer;">Close</button></div></div>';
+                    '<h3 style="font-size:1rem;color:#fbbf24;margin:0;">API Cost Log</h3>'+
+                    '<button class="costlog-close" style="background:none;border:none;color:#9ca3af;font-size:18px;cursor:pointer;">X</button></div>'+html+
+                    '<div style="margin-top:12px;text-align:right;"><button class="costlog-close" style="padding:6px 14px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;cursor:pointer;">Close</button></div></div>';
                 modal.className='modal-cost';
+                modal.onclick=function(e){if(e.target===modal)modal.remove();};
+                modal.querySelectorAll('.costlog-close').forEach(function(b){b.onclick=function(){modal.remove();};});
                 document.body.appendChild(modal);
             }catch(e){console.error('Show cost log failed:',e);alert('Failed to load cost log');}
         }
