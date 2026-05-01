@@ -1850,7 +1850,8 @@ async function loadPreviousJobsForProfile(profileId) {
         // Auto-detect stale researching jobs (>10 min old = dead)
         var isStaleResearching = false;
         if (j.status === 'researching' && j.created_at) {
-          var ageMin = (now - new Date(j.created_at).getTime()) / 60000;
+          var created = new Date(j.created_at).getTime();
+          var ageMin = created ? (now - created) / 60000 : 0;
           if (ageMin > 10) { isStaleResearching = true; }
         }
         var opt = document.createElement('option');
@@ -1896,7 +1897,8 @@ async function loadPreviousJob(jobId) {
     // Handle job still in progress
     if (d.status === 'researching') {
       // Check if job is stale (>10 min old = dead, backend crashed or timed out)
-      var jobAge = (d.job && d.job.created_at) ? ((Date.now() - new Date(d.job.created_at).getTime()) / 60000) : 999;
+      var jobCreated = (d.job && d.job.created_at) ? new Date(d.job.created_at).getTime() : 0;
+      var jobAge = jobCreated ? ((Date.now() - jobCreated) / 60000) : 0;
       if (jobAge > 10) {
         toast('⏱️ This research timed out after ' + Math.round(jobAge) + ' minutes. Click 🔍 Research to retry.', 'red');
         var rb = document.getElementById('btnResearch');

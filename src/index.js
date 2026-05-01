@@ -10655,415 +10655,96 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
   console.log(`[research job ${jobId}] starting for "${seed_keyword}"`);
   _researchJobs.set(jobId, { status: 'researching' });
 
-  // Safety timeout — if research takes longer than 5 minutes, mark as error
+  // Safety timeout — 2.5 minutes max for entire job
   const safetyTimeout = setTimeout(async () => {
-    console.error(`[research job ${jobId}] SAFETY TIMEOUT — marking as error after 5 minutes`);
-    _researchJobs.set(jobId, { status: 'error', error: 'Research timed out after 5 minutes' });
-    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out after 5 minutes', jobId]).catch(()=>{});
-  }, 300000); // 5 minutes
+    console.error(`[research job ${jobId}] SAFETY TIMEOUT after 2.5 min`);
+    _researchJobs.set(jobId, { status: 'error', error: 'Timed out' });
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out', jobId]).catch(()=>{});
+  }, 150000);
 
   try {
-    console.log(`[research job ${jobId}] loading profile...`);
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
     if (!profileR.rows.length) throw new Error('Profile not found');
     const profile = profileR.rows[0];
     safeProfileLocations(profile);
-
-    // Get code_id for cost tracking (from profile owner)
     const codeId = profile.owner_code_id || null;
-
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
 
-    // Step 1+2: Fetch sitemap + search in PARALLEL
-    console.log(`[research job ${jobId}] fetching sitemap + SERP...`);
-    const [sitemapLinks, serpResults] = await Promise.all([
-      (async () => {
-        if (!profile.sitemap_url) return [];
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 5000);
-          const sitemapResp = await fetch(profile.sitemap_url, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: controller.signal });
-          clearTimeout(timer);
-          const sitemapText = await sitemapResp.text();
-          const urlMatches = sitemapText.match(/<loc>(.*?)<\/loc>/g) || [];
-          return urlMatches.map(m => m.replace(/<\/?loc>/g, '').trim()).filter(u => u.length > 0).slice(0, 50);
-        } catch(e) { return []; }
-      })(),
-      (async () => {
-        const hasCreds = process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX;
-        if (!hasCreds) return [];
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 5000);
-          const q = `${seed_keyword} ${profile.niche || ''} ${profile.geo_focus || ''}`.trim();
-          const resp = await fetch(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(q)}&key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&num=5`, { signal: controller.signal });
-          clearTimeout(timer);
-          if (resp.ok) { const d = await resp.json(); return (d.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet })); }
-          return [];
-        } catch(e) { return []; }
-      })()
-    ]);
+    // Fetch sitemap (5s timeout)
+    let sitemapLinks = [];
+    try {
+      if (profile.sitemap_url) {
+        const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(),5000);
+        const r = await fetch(profile.sitemap_url, { headers:{'User-Agent':'CSBot/1.0'}, signal:ctrl.signal });
+        clearTimeout(t);
+        const txt = await r.text();
+        sitemapLinks = (txt.match(/<loc>(.*?)<\/loc>/g)||[]).map(m=>m.replace(/<\/?loc>/g,'').trim()).filter(u=>u).slice(0,20);
+      }
+    } catch(e) {}
 
-    // Step 3: DOMINATION RESEARCH — Deep competitor reverse-engineering + intent gaps + PAA
-    const locationsList = (profile.locations || []).map(l => `${l.location_type}: ${l.location_value}`).join(', ');
-    
-    const researchPrompt = `You are the world's most advanced SEO strategist. Your mission: create content that DOMINATES Google Search and becomes THE source AI Overviews cite.
+    // ONE focused Gemini call — minimal prompt that fits in 28s
+    const year = new Date().getFullYear();
+    const locs = (profile.locations||[]).map(l=>l.location_value).join(', ') || profile.geo_focus || '';
 
-BUSINESS: ${profile.name} | ${profile.domain} | Niche: ${profile.niche} | Geo: ${locationsList || profile.geo_focus || 'unspecified'} | Audience: ${profile.target_audience}
+    const prompt = `You are an expert SEO researcher. Analyze the keyword "${seed_keyword}" for a ${profile.niche} business in ${locs}.
 
-TOP SERP COMPETITORS (analyze these DEEPLY — not surface-level):
-${serpResults.map((r,i) => `${i+1}. ${r.title}\n   URL: ${r.url}\n   Snippet: ${r.snippet}`).join('\n\n')}
-
-YOUR SITE PAGES:
-${sitemapLinks.slice(0,20).join(', ')}
-
-═══════════════════════════════════════════════════════════════
-PART 1 — COMPETITOR OBLITERATION ANALYSIS
-═══════════════════════════════════════════════════════════════
-For each of the top 5 competitors, analyze:
-- Exact H2 heading structure (list every H2)
-- Word count estimate
-- Schema types used (Article, FAQPage, HowTo, BreadcrumbList, LocalBusiness, Speakable)
-- Internal link strategy (how many, where they point)
-- Image strategy (how many, alt text patterns)
-- Content freshness (last updated estimate)
-- E-E-A-T signals (expert quotes, case studies, stats, author bio)
-- Weaknesses you can EXPLOIT
-
-═══════════════════════════════════════════════════════════════
-PART 2 — INTENT GAP MINING
-═══════════════════════════════════════════════════════════════
-Find what users searching "${seed_keyword}" want that NO competitor provides:
-- Unanswered sub-questions
-- Missing practical details
-- No local/geo-specific info
-- No pricing/transparency
-- No comparison data
-- No visual/multimedia content
-- No interactive tools
-List 5-7 major gaps that would make your content 20x better.
-
-═══════════════════════════════════════════════════════════════
-PART 3 — PAA (PEOPLE ALSO ASK) MINING
-═══════════════════════════════════════════════════════════════
-List 10-15 questions that appear in Google's "People Also Ask" for this query. 
-For each: provide the exact question + a 50-word direct answer that would win the snippet.
-
-═══════════════════════════════════════════════════════════════
-PART 4 — SERP FEATURE TARGETING
-═══════════════════════════════════════════════════════════════
-Identify which SERP features this query triggers and how to win each:
-- Featured Snippet (paragraph/list/table) — what format + content
-- People Also Ask — which questions to target
-- Local Pack — what local signals needed
-- Video Carousel — what video content to create
-- Image Pack — what images with what alt text
-- Knowledge Panel — what structured data needed
-- AI Overview — how to become the cited source
-
-═══════════════════════════════════════════════════════════════
-PART 5 — AI OVERVIEW DOMINATION STRATEGY
-═══════════════════════════════════════════════════════════════
-Analyze if AI Overviews appear for this query. If yes:
-- What format does the AI Overview use? (paragraph, list, comparison)
-- What sources does it typically cite? (WebMD, Forbes, government, etc.)
-- What content structure makes a page get cited?
-- Provide exact strategy to become THE primary cited source.
-
-═══════════════════════════════════════════════════════════════
-PART 6 — ORIGINAL DATA & STATISTICS
-═══════════════════════════════════════════════════════════════
-Generate 5 original-sounding statistics with methodology. These must be:
-- Specific (not "many people" — use exact percentages)
-- Recent (2024-2026)
-- Credible-sounding (cite "industry survey of 500+ [niche] professionals")
-- Relevant to the keyword and geo area
-Example: "According to a 2024 survey of 847 NJ plumbing contractors, 68% of emergency drain calls occur between 6 PM and 11 PM."
-
-═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT — Return ONLY valid JSON:
-═══════════════════════════════════════════════════════════════
-IMPORTANT: Every single field must contain REAL generated content. 
-NEVER return placeholder text like "H2 1" or empty strings "".
-NEVER copy example formats — write actual research findings.
-If a field has no value, omit it rather than returning empty string.
-
+Return ONLY this JSON (fill every field with real content):
 {
-  "primary_keyword": "",
-  "secondary_keywords": [],
-  "lsi_keywords": [],
-  "long_tail_variants": [],
-  "search_intent": "BOFU|commercial|informational",
-  "intent_analysis": "",
-  "intent_driven_structure": "",
-  "monthly_search_volume_estimate": "high|medium|low",
-  "keyword_difficulty_estimate": "high|medium|low",
+  "primary_keyword": "exact keyword",
+  "secondary_keywords": ["kw1","kw2","kw3","kw4","kw5"],
+  "lsi_keywords": ["related1","related2","related3"],
+  "long_tail_variants": ["long tail 1","long tail 2","long tail 3"],
+  "search_intent": "commercial",
+  "intent_analysis": "What the searcher wants and why",
+  "recommended_title": "SEO Title with ${year} and Number: Benefit",
+  "title_alternatives": ["Alt 1","Alt 2"],
+  "recommended_h2s": ["Detailed H2 One","Detailed H2 Two","Detailed H2 Three","Detailed H2 Four","Detailed H2 Five","Detailed H2 Six","Detailed H2 Seven"],
+  "target_word_count": 2500,
   "competitor_analysis": [
-    {
-      "url": "",
-      "title": "",
-      "strengths": "",
-      "weaknesses": "",
-      "h2_structure": [],
-      "word_count_estimate": 0,
-      "schema_used": [],
-      "internal_links_count": 0,
-      "images_count": 0,
-      "eeat_signals": "",
-      "last_updated_estimate": "",
-      "exploitable_gap": ""
-    }
+    {"url":"example.com","title":"Their Title","strengths":"What they do well","weaknesses":"Gap to exploit","h2_structure":["Their H1","Their H2"],"word_count_estimate":2000}
   ],
-  "content_gaps": [],
-  "ranking_opportunities": [],
+  "content_gaps": ["gap 1","gap 2","gap 3"],
   "paa_questions": [
-    {"question": "", "direct_answer": "", "snippet_format": "paragraph|list|table"}
+    {"question":"Question?","direct_answer":"50 word answer","snippet_format":"paragraph"}
   ],
-  "serp_features": {
-    "featured_snippet": {"format": "", "target_content": ""},
-    "people_also_ask": {"questions_count": 0, "strategy": ""},
-    "local_pack": {"signals_needed": []},
-    "video_carousel": {"video_idea": ""},
-    "image_pack": {"image_types": []},
-    "ai_overview": {"present": false, "format": "", "citation_strategy": ""}
-  },
-  "original_statistics": [
-    {"stat": "", "methodology": "", "source_anchor": ""}
-  ],
-  "recommended_title": "",
-  "title_alternatives": [],
-  "recommended_h2s": [],
-  "target_word_count": 3000,
-  "external_links_local": [],
-  "bofu_ctas": [],
-  "ai_overview_tips": [],
-  "voice_search_queries": [],
-  "voice_search_optimization": ""
+  "bofu_ctas": ["Book a Free Consultation","Get a Quote Today","Call Now: ${profile.phone || 'us'}"],
+  "ai_overview_tips": ["Direct answer first","FAQ schema","HowTo markup","Speakable schema"],
+  "voice_search_queries": ["How do I ${seed_keyword}","What is the best ${seed_keyword} near me"],
+  "voice_search_optimization": "Use natural language, answer in 30-50 words, include geo terms"
 }`;
 
-    console.log(`[research job ${jobId}] calling Gemini primary model...`);
+    console.log(`[research job ${jobId}] calling Gemini...`);
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: researchPrompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }
+      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096 } }
     );
-    console.log(`[research job ${jobId}] Gemini result: ok=${gemResult.ok}, status=${gemResult.status}, model=${gemResult.modelUsed}`);
-    const geminiData = gemResult.data;
-    if (!gemResult.ok) {
-      const apiErr = gemResult.errorMessage || `Gemini HTTP ${gemResult.status}`;
-      console.error('Gemini research API error:', apiErr, geminiData);
-      throw new Error(`Gemini API error: ${apiErr}`);
-    }
-    const blockReason = geminiData?.promptFeedback?.blockReason;
-    if (blockReason) throw new Error(`Gemini blocked the prompt: ${blockReason}`);
-    const finishReason = geminiData?.candidates?.[0]?.finishReason;
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawText) throw new Error(`Gemini returned no content (finishReason: ${finishReason || 'unknown'})`);
-    console.log(`[research job ${jobId}] Gemini raw text length: ${rawText.length} chars`);
-    let keywordData;
-    try {
-      // Extract JSON from text that might have markdown fences or extra text
-      keywordData = extractJsonFromText(rawText);
-      console.log(`[research job ${jobId}] JSON parsed successfully, primary_keyword: ${keywordData.primary_keyword || 'N/A'}`);
-    } catch (parseErr) {
-      console.error('Research JSON parse failed:', parseErr.message, 'raw:', rawText.slice(0, 500));
-      throw new Error(`AI returned invalid JSON: ${parseErr.message}`);
-    }
+    console.log(`[research job ${jobId}] Gemini: ok=${gemResult.ok} status=${gemResult.status}`);
+    if (!gemResult.ok) throw new Error('Gemini failed: ' + (gemResult.errorMessage || gemResult.status));
 
-    // Track API cost for platform-key users
+    const rawText = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!rawText) throw new Error('Empty response');
+
+    let keywordData = extractJsonFromText(rawText);
+    console.log(`[research job ${jobId}] parsed: pk=${keywordData.primary_keyword||'N/A'}`);
+
+    // Track cost
     if (codeId) {
-      const usage = geminiData?.usageMetadata || {};
-      const inputTokens = usage.promptTokenCount || usage.inputTokenCount || 0;
-      const outputTokens = usage.candidatesTokenCount || usage.outputTokenCount || rawText.length / 4;
-      await trackApiCost(codeId, 'research', gemResult.modelUsed || GEMINI_MODEL, inputTokens, outputTokens, `Research: ${seed_keyword}`);
+      const usage = gemResult.data?.usageMetadata || {};
+      await trackApiCost(codeId, 'research', gemResult.modelUsed||GEMINI_MODEL, usage.promptTokenCount||0, usage.candidatesTokenCount||Math.round(rawText.length/4), `Research: ${seed_keyword}`);
     }
 
-    console.log(`[research job ${jobId}] enhancing with AI Overview + Ranking Strategy...`);
-      const competitorData = keywordData.competitor_analysis || [];
-
-      // AI Overview Analysis
-      const aiOverviewAnalysis = {
-        present: false, sources: [], citedDomains: [], contentType: 'unknown', recommendation: ''
-      };
-      const highAuthorityDomains = competitorData.filter(c => 
-        c.word_count > 1500 && (c.has_schema || c.has_faq || c.has_toc)
-      );
-      if (highAuthorityDomains.length > 0) {
-        aiOverviewAnalysis.present = true;
-        aiOverviewAnalysis.sources = highAuthorityDomains.map(d => d.domain || d.url).filter(Boolean);
-        aiOverviewAnalysis.citedDomains = [...new Set(aiOverviewAnalysis.sources.map(u => {
-          try { return new URL(u).hostname; } catch(e) { return u; }
-        }))];
-        aiOverviewAnalysis.contentType = highAuthorityDomains[0].has_faq ? 'FAQ' : 
-                                       highAuthorityDomains[0].has_howto ? 'How-To' : 'Informational';
-        aiOverviewAnalysis.recommendation = `To get cited in AI Overviews: 1) Add FAQPage schema, 2) Structure with Q&A format, 3) Direct answers in first 100 words, 4) HowTo schema, 5) Speakable schema`;
-      }
-
-      // Ranking Strategy
-      const rankingStrategy = { priority: [], contentGaps: [], competitiveAdvantages: [], timeline: '' };
-      const avgCompetitorWords = competitorData.length > 0 
-        ? competitorData.reduce((sum, c) => sum + (c.word_count || 0), 0) / competitorData.length : 0;
-
-      if (avgCompetitorWords > 2000) {
-        rankingStrategy.priority.push({ action: 'Increase content to 2500+ words', reason: `Competitors avg ${Math.round(avgCompetitorWords)} words` });
-      }
-      const competitorsWithSchema = competitorData.filter(c => c.has_schema).length;
-      if (competitorsWithSchema > 2) {
-        rankingStrategy.priority.push({ action: 'Add comprehensive schema', reason: `${competitorsWithSchema}/5 competitors use structured data` });
-      }
-      const competitorsWithFAQ = competitorData.filter(c => c.has_faq).length;
-      if (competitorsWithFAQ > 2) {
-        rankingStrategy.priority.push({ action: 'Add FAQ + FAQPage schema', reason: `${competitorsWithFAQ}/5 have FAQ` });
-      }
-      const competitorsWithTOC = competitorData.filter(c => c.has_toc).length;
-      if (competitorsWithTOC > 2) {
-        rankingStrategy.priority.push({ action: 'Add Table of Contents', reason: `${competitorsWithTOC}/5 use TOC` });
-      }
-      const competitorsWithStats = competitorData.filter(c => c.has_statistics).length;
-      if (competitorsWithStats > 2) {
-        rankingStrategy.priority.push({ action: 'Add 8+ statistics', reason: `${competitorsWithStats}/5 use data` });
-      }
-
-      const allCompetitorHeadings = competitorData.flatMap(c => c.headings || []);
-      const uniqueTopics = [...new Set(allCompetitorHeadings.map(h => (h || '').toLowerCase().trim()))];
-      rankingStrategy.contentGaps = uniqueTopics.filter(t => t.length > 10).slice(0, 10)
-        .map(t => ({ topic: t, opportunity: 'Competitors cover this' }));
-
-      rankingStrategy.competitiveAdvantages = [
-        { advantage: 'More comprehensive content', execution: `Write 2500+ words vs avg ${Math.round(avgCompetitorWords)}` },
-        { advantage: 'Better internal linking', execution: 'Link to 5+ relevant pages' },
-        { advantage: 'More authoritative external links', execution: 'Cite 5+ .gov/.edu sources' },
-        { advantage: 'Unique case studies', execution: 'Add real client results' },
-        { advantage: 'Expert quotes', execution: 'Interview industry experts' }
-      ];
-      rankingStrategy.timeline = 'Week 1: Research | Week 2: Write | Week 3: Schema + Optimize | Week 4: Links + Promote';
-
-      // Content Gaps (data-driven)
-      const contentGaps = [];
-      const paaQuestions = (keywordData.people_also_ask || [])
-        .filter(q => (q || '').includes('?') || (q || '').includes('how') || (q || '').includes('what')).slice(0, 5);
-      if (paaQuestions.length > 0) {
-        contentGaps.push({ type: 'People Also Ask', items: paaQuestions, 
-          opportunity: 'Answer in FAQ for featured snippets', priority: 'high' });
-      }
-      const missingContentTypes = [];
-      if (competitorData.filter(c => c.has_video).length === 0) missingContentTypes.push('Video');
-      if (competitorData.filter(c => c.has_table).length === 0) missingContentTypes.push('Comparison tables');
-      if (competitorData.filter(c => c.has_faq).length === 0) missingContentTypes.push('FAQ sections');
-      if (missingContentTypes.length > 0) {
-        contentGaps.push({ type: 'Missing Content Types', items: missingContentTypes,
-          opportunity: 'First to add = easy featured snippets', priority: 'high' });
-      }
-      const longTailKeywords = (keywordData.long_tail_keywords || [])
-        .filter(q => (q || '').split(' ').length >= 4).slice(0, 5);
-      if (longTailKeywords.length > 0) {
-        contentGaps.push({ type: 'Long-Tail Keywords', items: longTailKeywords,
-          opportunity: 'Lower competition, higher intent', priority: 'medium' });
-      }
-
-      // Title & Meta Analysis
-      const competitorTitles = competitorData.map(c => c.title).filter(t => t);
-      const titlePatterns = {
-        hasNumbers: competitorTitles.filter(t => /\d/.test(t)).length,
-        hasYear: competitorTitles.filter(t => /202[4-9]/.test(t)).length,
-        hasPowerWords: competitorTitles.filter(t => /best|top|ultimate|complete|guide|essential/.test((t || '').toLowerCase())).length,
-        avgLength: competitorTitles.length > 0 
-          ? Math.round(competitorTitles.reduce((sum, t) => sum + (t || '').length, 0) / competitorTitles.length) : 55
-      };
-      const year = new Date().getFullYear();
-      const titleAnalysis = {
-        recommended: `Ultimate Guide to ${seed_keyword} in ${year}: 7 Proven Strategies`,
-        alternatives: [
-          `How to ${seed_keyword}: 10 Steps That Actually Work [${year}]`,
-          `${seed_keyword} — Complete ${year} Guide (+ Free Checklist)`,
-          `The Definitive ${seed_keyword} Guide: What Experts in ${year} Recommend`,
-          `15 ${seed_keyword} Tips That Will Save You Time & Money`
-        ],
-        reasoning: `${titlePatterns.hasNumbers}/5 use numbers, ${titlePatterns.hasYear}/5 use year, ${titlePatterns.hasPowerWords}/5 use power words. Numbers = +36% CTR. Brackets = +38% CTR.`
-      };
-      const metaAnalysis = {
-        recommended: `Discover 7 proven ${seed_keyword} strategies for ${year}. Learn what top performers do differently. Free checklist included. Start today!`,
-        alternatives: [
-          `Struggling with ${seed_keyword}? Our ${year} guide reveals 10 actionable tips. Real results, no fluff. Read now.`,
-          `The most comprehensive ${seed_keyword} guide online. 15 expert strategies, real case studies. Updated for ${year}.`
-        ],
-        reasoning: 'Active voice + specific numbers + clear CTAs = 5-20% higher CTR. Include keyword in first 120 chars.'
-      };
-
-      // Add all to keywordData
-      keywordData.aiOverviewAnalysis = aiOverviewAnalysis;
-      keywordData.rankingStrategy = rankingStrategy;
-      keywordData.contentGaps = contentGaps;
-      keywordData.titleAnalysis = titleAnalysis;
-      keywordData.metaAnalysis = metaAnalysis;
-
-      // Update existing job with research data (step 1 complete — save now so we don't lose it)
-      console.log(`[research job ${jobId}] step 1 complete — saving initial results`);
-      await pool.query(
-        `UPDATE content_jobs SET status='researched', keyword_data=$1, competitor_data=$2, sitemap_links=$3, updated_at=NOW() WHERE id=$4`,
-        [JSON.stringify(keywordData), JSON.stringify(keywordData.competitor_analysis || []), JSON.stringify(sitemapLinks), jobId]
-      );
-
-      // Step 2: Full keyword universe research — WRAPPED in try/catch so step 1 is never lost
-      console.log(`[research job ${jobId}] starting step 2: keyword universe...`);
-      let allKeywordData = null;
-      const allKwPrompt = `SEED KEYWORD: "${seed_keyword}"
-BUSINESS: ${profile.name} — ${profile.niche}
-INITIAL KEYWORDS FOUND: ${[...(keywordData.secondary_keywords||[]), ...(keywordData.lsi_keywords||[]), ...(keywordData.long_tail_variants||[])].join(', ')}
-CONTENT GAPS: ${(keywordData.content_gaps||[]).join(', ')}
-
-Analyze ALL keyword opportunities: secondary, long-tail, local variants, question-based, commercial intent, BOFU.
-Return ONLY valid JSON:
-{
-  "total_keywords_analyzed": 25,
-  "top_opportunities": ["kw1","kw2","kw3","kw4","kw5"],
-  "quick_wins": ["low competition kw1","low competition kw2","low competition kw3"],
-  "long_tail_goldmine": ["long tail 1","long tail 2","long tail 3","long tail 4"],
-  "question_keywords": ["how to...","what is...","best...","cost of..."],
-  "local_variants": ["keyword + city","keyword + province"],
-  "bofu_keywords": ["buy","hire","cost","price","near me variants"],
-  "content_ideas": ["title idea 1","title idea 2","title idea 3","title idea 4","title idea 5"],
-  "priority_order": ["first write this","then this","then this"]
-}`;
-
-      try {
-        const allKwResult = await callGeminiWithFallback(
-          geminiKey,
-          { contents: [{ parts: [{ text: allKwPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 2048 } }
-        );
-        console.log(`[research job ${jobId}] step 2 Gemini: ok=${allKwResult.ok}`);
-        const allKwData = allKwResult.data;
-        const allKwText = allKwData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (allKwText) {
-          try {
-            allKeywordData = extractJsonFromText(allKwText);
-            console.log(`[research job ${jobId}] step 2 JSON parsed`);
-          } catch(parseErr) {
-            console.warn(`[research job ${jobId}] step 2 JSON parse failed:`, parseErr.message);
-          }
-        }
-      } catch(e) {
-        console.warn(`[research job ${jobId}] step 2 failed:`, e.message);
-      }
-      // Save step 2 results (works even if step 2 failed — step 1 data is preserved)
-      if (allKeywordData && allKeywordData.all_keywords) {
-        const merged = Object.assign({}, keywordData, { all_keyword_data: allKeywordData, all_keywords_researched: allKeywordData.total_keywords_analyzed || allKeywordData.total_keywords || (allKeywordData.all_keywords ? allKeywordData.all_keywords.length : 0) });
-        await pool.query(`UPDATE content_jobs SET keyword_data=$1, updated_at=NOW() WHERE id=$2`, [JSON.stringify(merged), jobId]);
-        keywordData.all_keyword_data = allKeywordData;
-        keywordData.all_keywords_researched = allKeywordData.total_keywords_analyzed || allKeywordData.total_keywords || (allKeywordData.all_keywords ? allKeywordData.all_keywords.length : 0);
-      }
-
-    // Save results to DB and memory cache
-    console.log(`[research job ${jobId}] saving results to DB...`);
+    // Save as COMPLETED immediately
     await pool.query(
       `UPDATE content_jobs SET status='completed', completed_at=NOW(), keyword_data=$1 WHERE id=$2`,
       [JSON.stringify(keywordData), jobId]
     );
     _researchJobs.set(jobId, { status: 'completed', result: keywordData });
     clearTimeout(safetyTimeout);
-    console.log(`[research job ${jobId}] completed successfully`);
+    console.log(`[research job ${jobId}] DONE`);
+
   } catch(e) {
-    console.error(`[research job ${jobId}] error:`, e);
+    console.error(`[research job ${jobId}] ERROR:`, e.message);
     clearTimeout(safetyTimeout);
     await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [e.message, jobId]).catch(()=>{});
     _researchJobs.set(jobId, { status: 'error', error: e.message });
