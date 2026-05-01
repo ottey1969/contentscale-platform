@@ -11116,8 +11116,43 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
        const job = jobR.rows[0];
     const prof = job; // alias for template compatibility
-    const brief = safeParse(job.brief, null);
+    let brief = safeParse(job.brief, null);
     const kd = safeParse(job.keyword_data, {});
+    
+    // ── AUTO-GENERATE BRIEF from research if missing ──
+    // User may have research but never generated a brief — build one from keyword_data
+    if (!brief && kd && kd.primary_keyword) {
+      brief = {
+        title: kd.recommended_title || kd.title || (kd.primary_keyword + ' — Complete Guide'),
+        title_alternatives: normArr(kd.title_alternatives),
+        slug: (kd.primary_keyword || job.seed_keyword || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        primary_keyword: kd.primary_keyword,
+        secondary_keywords: normArr(kd.secondary_keywords),
+        lsi_keywords: normArr(kd.lsi_keywords),
+        long_tail: normArr(kd.long_tail_variants),
+        search_intent: kd.search_intent || 'commercial',
+        intent_analysis: kd.intent_analysis || '',
+        structure: normArr(kd.recommended_h2s),
+        outline: normArr(kd.recommended_h2s).map(function(h, i) { return { section: 'h2', text: h, notes: '' }; }),
+        target_word_count: kd.target_word_count || 2500,
+        tone: 'professional',
+        key_points: normArr(kd.paa_questions).map(function(q) { return q.question; }),
+        faq_questions: normArr(kd.paa_questions),
+        must_include: normArr(kd.secondary_keywords).slice(0, 5),
+        competitor_gaps: normArr(kd.content_gaps),
+        bofu_ctas: normArr(kd.bofu_ctas),
+        internal_links: [],
+        external_sources: normArr(kd.external_links_local),
+        ai_overview_present: kd.serp_features?.ai_overview?.present || false,
+        ai_overview_citation_strategy: kd.serp_features?.ai_overview?.citation_strategy || '',
+        ai_overview_tips: normArr(kd.ai_overview_tips),
+        voice_search_queries: normArr(kd.voice_search_queries),
+        voice_search_optimization: kd.voice_search_optimization || '',
+        ranking_strategy_priority: normArr(kd.ranking_opportunities || (kd.rankingStrategy ? kd.rankingStrategy.priority : []))
+      };
+      console.log(`[write ${req.params.jobId}] auto-generated brief from research data`);
+    }
+    
     if (!brief) return res.status(400).json({ success: false, error: 'Generate brief first' });
 
     // ── NORMALIZE ARRAYS — Gemini sometimes returns strings instead of arrays ──
