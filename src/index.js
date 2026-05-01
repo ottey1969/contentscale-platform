@@ -973,10 +973,30 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      wp_url VARCHAR(500),
      wp_user VARCHAR(255),
      wp_app_password TEXT,
+     years_experience VARCHAR(50),
+     team_size VARCHAR(50),
+     pricing_model VARCHAR(255),
+     free_consultation BOOLEAN DEFAULT FALSE,
+     guarantee TEXT,
+     certifications JSONB DEFAULT '[]',
+     unique_selling_points JSONB DEFAULT '[]',
+     service_areas JSONB DEFAULT '[]',
+     faq JSONB DEFAULT '[]',
+     business_info JSONB DEFAULT '{}',
      is_active BOOLEAN DEFAULT TRUE,
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW()
    )`);
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS years_experience VARCHAR(50)`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS team_size VARCHAR(50)`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS pricing_model VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS free_consultation BOOLEAN DEFAULT FALSE`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS guarantee TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS certifications JSONB DEFAULT '[]'`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS unique_selling_points JSONB DEFAULT '[]'`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS service_areas JSONB DEFAULT '[]'`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS faq JSONB DEFAULT '[]'`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS business_info JSONB DEFAULT '{}'`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS content_jobs (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -10359,10 +10379,10 @@ app.get('/api/content/profiles', async (req, res, next) => {
 
 app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
   try {
-    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password } = req.body;
+    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language, years_experience, team_size, pricing_model, free_consultation, guarantee, certifications, unique_selling_points, service_areas, faq, business_info } = req.body;
     const r = await pool.query(
-      `INSERT INTO content_profiles (name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal||'leads',html_template,wp_url,wp_user,wp_app_password,content_language||'en']
+      `INSERT INTO content_profiles (name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language,years_experience,team_size,pricing_model,free_consultation,guarantee,certifications,unique_selling_points,service_areas,faq,business_info) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
+      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal||'leads',html_template,wp_url,wp_user,wp_app_password,content_language||'en',years_experience,team_size,pricing_model,free_consultation,guarantee,JSON.stringify(certifications||[]),JSON.stringify(unique_selling_points||[]),JSON.stringify(service_areas||[]),JSON.stringify(faq||[]),JSON.stringify(business_info||{})]
     );
     res.json({ success: true, profile: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -10370,10 +10390,10 @@ app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
 
 app.put('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
   try {
-    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language } = req.body;
+    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language, years_experience, team_size, pricing_model, free_consultation, guarantee, certifications, unique_selling_points, service_areas, faq, business_info } = req.body;
     const r = await pool.query(
-      `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,content_language=$12,updated_at=NOW() WHERE id=$13 RETURNING *`,
-      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language||'en',req.params.id]
+      `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,content_language=$12,years_experience=$13,team_size=$14,pricing_model=$15,free_consultation=$16,guarantee=$17,certifications=$18,unique_selling_points=$19,service_areas=$20,faq=$21,business_info=$22,updated_at=NOW() WHERE id=$23 RETURNING *`,
+      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language||'en',years_experience,team_size,pricing_model,free_consultation,guarantee,JSON.stringify(certifications||[]),JSON.stringify(unique_selling_points||[]),JSON.stringify(service_areas||[]),JSON.stringify(faq||[]),JSON.stringify(business_info||{}),req.params.id]
     );
     res.json({ success: true, profile: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -11092,7 +11112,9 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
   try {
     const { title_override } = req.body;
     const jobR = await pool.query(
-      `SELECT j.*, cp.name as profile_name, cp.domain, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template, cp.wp_url
+      `SELECT j.*, cp.name as profile_name, cp.domain, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template, cp.wp_url,
+       cp.years_experience, cp.team_size, cp.pricing_model, cp.free_consultation, cp.guarantee,
+       cp.certifications, cp.unique_selling_points, cp.service_areas, cp.faq, cp.business_info
        FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`,
       [req.params.jobId]
     );
@@ -11240,8 +11262,70 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
     if (bi.review_score) schemaObj['aggregateRating'] = {'@type':'AggregateRating','ratingValue':bi.review_score,'reviewCount':bi.review_count||undefined};
     if ((bi.service_areas||[]).length) schemaObj['areaServed'] = bi.service_areas;
 
-    // ── COMPACT CLAUDE PROMPT ──
-    const systemPrompt = `You are an elite SEO content writer. Write complete HTML articles that rank #1.
+    // ── TEMPLATE-AWARE CLAUDE PROMPT ──
+    let systemPrompt, userPrompt;
+    const hasTemplate = job.html_template && job.html_template.includes('[AI:');
+
+    if (hasTemplate) {
+      // User provided an HTML template with [AI: ...] placeholders
+      // The template already has all business constants, CSS, schemas, structure
+      systemPrompt = `You are an elite SEO content writer. Follow the template's ENGINE RULES precisely.
+
+CRITICAL RULES:
+- NEVER guess statistics. If unverified, use [STAT NEEDED].
+- NEVER invent phone numbers, addresses, or business facts. Use ONLY what's in the template.
+- Fill EVERY [AI: ...] placeholder with real content. Remove the placeholder markers after writing.
+- Keep ALL hardcoded business constants exactly as-is (phone, address, schema, CSS, scripts).
+- Replace [PASTE WP MEDIA URL] with placeholder comments or realistic filenames.
+- Output ONLY the complete HTML document. No markdown wrappers. No explanations.`;
+
+      const researchData = `
+RESEARCH DATA — use this to fill [AI: ...] placeholders:
+
+TITLE: ${brief.title || kd.primary_keyword || job.seed_keyword}
+PRIMARY KEYWORD: ${kd.primary_keyword || brief.primary_keyword || job.seed_keyword}
+SECONDARY KEYWORDS: ${(kd.secondary_keywords||[]).join(', ')}
+SEARCH INTENT: ${kd.search_intent || 'commercial'}
+TARGET AUDIENCE: ${prof.target_audience || ''}
+GEO FOCUS: ${prof.geo_focus || ''}
+BRAND: ${prof.name || ''}
+
+PAA QUESTIONS — ANSWER IN FAQ:
+${(brief.paa_questions || kd.paa_questions || []).map((p, i) => `${i+1}. ${typeof p === 'string' ? p : (p.question || JSON.stringify(p))}`).join('\n') || 'No PAA data'}
+
+STATISTICS — USE THESE (with attribution):
+${(brief.original_statistics || kd.original_statistics || []).map((s, i) => `${i+1}. ${typeof s === 'string' ? s : (s.stat || JSON.stringify(s))}`).join('\n') || 'No verified stats — use [STAT NEEDED]'}
+
+COMPETITOR GAPS — EXPLOIT IN CONTENT:
+${(brief.competitor_gaps || []).slice(0,8).join('\n') || 'None'}
+
+RECOMMENDED H2 HEADINGS:
+${(brief.structure || brief.outline || kd.recommended_h2s || []).map(s => `- ${typeof s === 'string' ? s : (s.text || JSON.stringify(s))}`).join('\n') || 'None'}
+
+KEY POINTS:
+${(brief.key_points || []).slice(0,10).join('\n') || 'None'}
+
+SERP FEATURES:
+${kd.serp_features ? JSON.stringify(kd.serp_features, null, 2) : 'None'}
+
+GSC DATA:
+${gscBlock || 'None'}
+
+SITEMAP URLS (for internal links):
+${internalLinksBlock}
+`;
+
+      userPrompt = `Fill in this HTML template. Replace every [AI: ...] instruction with real content based on the research data below. Keep ALL hardcoded CSS, schemas, scripts, and business constants exactly as they are. Remove the [AI: ...] markers after writing. Output ONLY the complete HTML.
+
+${researchData}
+
+--- HTML TEMPLATE ---
+
+${job.html_template}`;
+
+    } else {
+      // No template — fall back to compact prompt
+      systemPrompt = `You are an elite SEO content writer. Write complete HTML articles that rank #1.
 
 RULES:
 - NEVER guess stats/quotes. Use [STAT NEEDED] if unverified.
@@ -11258,7 +11342,7 @@ RULES:
 - Semantic HTML: article, section, aside
 - Output ONLY valid HTML. No markdown. No code blocks.`;
 
-    const userPrompt = `Write complete HTML article for:
+      userPrompt = `Write complete HTML article for:
 
 TITLE: ${brief.title || kd.primary_keyword}
 PRIMARY KEYWORD: ${kd.primary_keyword || brief.primary_keyword}
@@ -11320,6 +11404,7 @@ MANDATORY ELEMENTS:
 16. Images with keyword alt text
 
 OUTPUT ONLY COMPLETE HTML.`;
+    }
 
     let htmlContent;
     try {

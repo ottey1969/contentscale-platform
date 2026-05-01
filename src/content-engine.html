@@ -75,6 +75,7 @@ textarea{resize:vertical;min-height:100px;}
     <button class="nav-tab active" onclick="showPanel('profiles',this)">⚙️ Profiles</button>
     <button class="nav-tab" onclick="showPanel('engine',this)">🚀 Engine</button>
     <button class="nav-tab" onclick="showPanel('articles',this)">📄 Articles</button>
+    <button class="nav-tab" onclick="showPanel('preview',this);loadPreviewArticles();">👁 Preview</button>
     <button class="nav-tab" onclick="showPanel('rewrite',this)">🔄 Rewrite</button>
     <button class="nav-tab" onclick="showPanel('bulk',this)">⚡ Bulk Autopilot</button>
     <button class="nav-tab" onclick="showPanel('news',this)">📰 News+Video</button>
@@ -162,6 +163,38 @@ textarea{resize:vertical;min-height:100px;}
       <div><label>WordPress URL (optional)</label><input id="pfWpUrl" placeholder="https://janssendak.nl"></div>
       <div><label>WP Username</label><input id="pfWpUser" placeholder="admin"></div>
       <div><label>WP App Password</label><input id="pfWpPw" type="password" placeholder="xxxx xxxx xxxx xxxx"></div>
+    </div>
+
+    <!-- Business Data — feeds directly into article schemas & content -->
+    <div style="margin-bottom:14px;background:#0a0a0f;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px;">
+      <div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:10px;">🏢 Business Data (Used in AI articles & schema)</div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div><label>Phone</label><input id="pfPhone" placeholder="+31 6 12345678"></div>
+        <div><label>Email</label><input id="pfEmail" placeholder="info@company.nl"></div>
+        <div><label>Street Address</label><input id="pfAddress" placeholder="Hoofdstraat 123"></div>
+        <div><label>City</label><input id="pfCity" placeholder="Amsterdam"></div>
+        <div><label>Country</label><input id="pfCountry" placeholder="Netherlands"></div>
+        <div><label>KvK / Chamber of Commerce</label><input id="pfKvk" placeholder="12345678"></div>
+        <div><label>BTW / VAT</label><input id="pfBtw" placeholder="NL123456789B01"></div>
+        <div><label>Founded Year</label><input id="pfFounded" placeholder="2010"></div>
+        <div><label>Owner Name</label><input id="pfOwner" placeholder="Jan Janssen"></div>
+        <div><label>Schema Type</label><select id="pfSchemaType"><option value="LocalBusiness">LocalBusiness</option><option value="Organization">Organization</option><option value="ProfessionalService">ProfessionalService</option><option value="HomeAndConstructionBusiness">HomeAndConstructionBusiness</option><option value="Plumber">Plumber</option><option value="Electrician">Electrician</option><option value="RoofingContractor">RoofingContractor</option></select></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div><label>Review Score</label><input id="pfReviewScore" placeholder="4.8"></div>
+        <div><label>Review Count</label><input id="pfReviewCount" placeholder="127"></div>
+        <div><label>Review Platform</label><input id="pfReviewPlatform" placeholder="Google"></div>
+        <div><label>Opening Hours</label><input id="pfOpeningHours" placeholder="Mo-Fr 08:00-18:00"></div>
+        <div><label>Years Experience</label><input id="pfYears" placeholder="15+ years"></div>
+        <div><label>Team Size</label><input id="pfTeamSize" placeholder="12 technicians"></div>
+        <div><label>Pricing Model</label><input id="pfPricing" placeholder="Free estimates, flat-rate pricing"></div>
+        <div><label>Guarantee</label><input id="pfGuarantee" placeholder="Lifetime workmanship guarantee"></div>
+      </div>
+      <div style="margin-bottom:10px;"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="pfFreeConsult" style="width:16px;height:16px;"><span>Offers Free Consultation</span></label></div>
+      <div style="margin-bottom:10px;"><label>Certifications (one per line)</label><textarea id="pfCerts" rows="3" placeholder="NVKL certified&#10;Licensed Master Plumber&#10;ISO 9001"></textarea></div>
+      <div style="margin-bottom:10px;"><label>Unique Selling Points (one per line)</label><textarea id="pfUsps" rows="3" placeholder="24/7 emergency service&#10;Same-day appointments&#10;No hidden fees"></textarea></div>
+      <div style="margin-bottom:10px;"><label>Service Areas (one per line)</label><textarea id="pfServiceAreas" rows="3" placeholder="Amsterdam&#10;Rotterdam&#10;Utrecht&#10;The Hague"></textarea></div>
+      <div><label>FAQ (JSON format — optional)</label><textarea id="pfFaq" rows="3" placeholder='[{"question":"Do you offer emergency service?","answer":"Yes, 24/7 available."}]'></textarea></div>
     </div>
     <!-- Locations -->
     <div style="margin-bottom:14px;">
@@ -272,6 +305,36 @@ textarea{resize:vertical;min-height:100px;}
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
     <div id="articlesList"><div style="text-align:center;padding:40px;color:#6b7280;">Select a profile or click Refresh.</div></div>
+  </div>
+</div>
+
+<!-- ══ PREVIEW PANEL ══ -->
+<div id="panel-preview" class="tab-panel" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div><h2 style="font-size:1.3rem;font-weight:800;">👁 Content Preview</h2><p style="font-size:13px;color:#6b7280;margin-top:4px;">Clean white view — read your content before publishing</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <select id="previewProfileFilter" onchange="loadPreviewArticles()" style="padding:8px 12px;width:180px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
+        <option value="">Select profile</option>
+      </select>
+      <select id="previewArticleSelect" onchange="renderPreview()" style="padding:8px 12px;width:220px;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e2e8f0;font-size:13px;">
+        <option value="">Select article</option>
+      </select>
+      <button class="btn btn-secondary" onclick="loadPreviewArticles()" style="font-size:12px;">↺ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Mobile size toggle -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+    <span style="font-size:12px;color:#6b7280;">Viewport:</span>
+    <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="setPreviewWidth('100%')">💻 Desktop</button>
+    <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="setPreviewWidth('768px')">📱 Tablet</button>
+    <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="setPreviewWidth('375px')">📱 Mobile</button>
+    <span id="previewWordCount" style="font-size:12px;color:#6b7280;margin-left:auto;"></span>
+  </div>
+
+  <!-- White preview iframe -->
+  <div id="previewWrapper" style="background:#fff;border-radius:8px;border:1px solid rgba(255,255,255,.1);overflow:hidden;transition:width .3s ease;width:100%;margin:0 auto;">
+    <iframe id="previewFrame" style="width:100%;min-height:70vh;border:none;display:block;" sandbox="allow-same-origin"></iframe>
   </div>
 </div>
 
@@ -1073,9 +1136,18 @@ function showProfileForm(profile) {
   _pendingLocations = [];
   _editingProfileId = null;
   document.getElementById('pfId').value = '';
-  ['pfName','pfDomain','pfSitemap','pfNiche','pfAudience','pfTemplate','pfWpUrl','pfWpUser','pfWpPw'].forEach(function(id) { document.getElementById(id).value = ''; });
+  // Clear all fields
+  ['pfName','pfDomain','pfSitemap','pfNiche','pfAudience','pfTemplate','pfWpUrl','pfWpUser','pfWpPw',
+   'pfPhone','pfEmail','pfAddress','pfCity','pfCountry','pfKvk','pfBtw','pfFounded','pfOwner',
+   'pfReviewScore','pfReviewCount','pfReviewPlatform','pfOpeningHours','pfYears','pfTeamSize',
+   'pfPricing','pfGuarantee','pfCerts','pfUsps','pfServiceAreas','pfFaq'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   document.getElementById('pfGoal').value = 'leads';
   document.getElementById('pfLang').value = 'en';
+  document.getElementById('pfSchemaType').value = 'LocalBusiness';
+  document.getElementById('pfFreeConsult').checked = false;
   document.getElementById('pfLocations').innerHTML = '';
   document.getElementById('addLocForm').style.display = 'none';
   document.getElementById('profileFormTitle').textContent = 'New Profile';
@@ -1092,7 +1164,33 @@ function showProfileForm(profile) {
     document.getElementById('pfTemplate').value = profile.html_template || '';
     document.getElementById('pfWpUrl').value = profile.wp_url || '';
     document.getElementById('pfWpUser').value = profile.wp_user || '';
+    document.getElementById('pfWpPw').value = '';
     document.getElementById('profileFormTitle').textContent = 'Edit — ' + profile.name;
+    // Business data
+    var bi = profile.business_info || {};
+    document.getElementById('pfPhone').value = bi.phone || '';
+    document.getElementById('pfEmail').value = bi.email || '';
+    document.getElementById('pfAddress').value = bi.address || '';
+    document.getElementById('pfCity').value = bi.city || '';
+    document.getElementById('pfCountry').value = bi.country || '';
+    document.getElementById('pfKvk').value = bi.kvk || '';
+    document.getElementById('pfBtw').value = bi.btw || '';
+    document.getElementById('pfFounded').value = bi.founded_year || '';
+    document.getElementById('pfOwner').value = bi.owner_name || '';
+    document.getElementById('pfSchemaType').value = bi.schema_type || 'LocalBusiness';
+    document.getElementById('pfReviewScore').value = bi.review_score || '';
+    document.getElementById('pfReviewCount').value = bi.review_count || '';
+    document.getElementById('pfReviewPlatform').value = bi.review_platform || '';
+    document.getElementById('pfOpeningHours').value = bi.opening_hours || '';
+    document.getElementById('pfYears').value = profile.years_experience || '';
+    document.getElementById('pfTeamSize').value = profile.team_size || '';
+    document.getElementById('pfPricing').value = profile.pricing_model || '';
+    document.getElementById('pfFreeConsult').checked = !!profile.free_consultation;
+    document.getElementById('pfGuarantee').value = profile.guarantee || '';
+    document.getElementById('pfCerts').value = (profile.certifications || []).join('\n');
+    document.getElementById('pfUsps').value = (profile.unique_selling_points || []).join('\n');
+    document.getElementById('pfServiceAreas').value = (profile.service_areas || []).join('\n');
+    document.getElementById('pfFaq').value = profile.faq ? JSON.stringify(profile.faq, null, 2) : '';
     _pendingLocations = (profile.locations || []).map(function(l) { return Object.assign({}, l, { _saved: true }); });
     renderPendingLocations();
   }
@@ -1218,6 +1316,12 @@ async function refreshSitemap(profileId, btn) {
 async function saveProfile() {
   var name = document.getElementById('pfName').value.trim();
   if (!name) { alert('Business name is required'); return; }
+  // Helper: parse textarea lines into array
+  function linesToArr(id) {
+    var val = document.getElementById(id).value.trim();
+    if (!val) return [];
+    return val.split('\n').map(function(s){return s.trim();}).filter(function(s){return s;});
+  }
   var payload = {
     name: name,
     domain: document.getElementById('pfDomain').value.trim(),
@@ -1229,7 +1333,33 @@ async function saveProfile() {
     html_template: document.getElementById('pfTemplate').value.trim(),
     wp_url: document.getElementById('pfWpUrl').value.trim(),
     wp_user: document.getElementById('pfWpUser').value.trim(),
-    wp_app_password: document.getElementById('pfWpPw').value.trim()
+    wp_app_password: document.getElementById('pfWpPw').value.trim(),
+    years_experience: document.getElementById('pfYears').value.trim(),
+    team_size: document.getElementById('pfTeamSize').value.trim(),
+    pricing_model: document.getElementById('pfPricing').value.trim(),
+    free_consultation: document.getElementById('pfFreeConsult').checked,
+    guarantee: document.getElementById('pfGuarantee').value.trim(),
+    certifications: linesToArr('pfCerts'),
+    unique_selling_points: linesToArr('pfUsps'),
+    service_areas: linesToArr('pfServiceAreas'),
+    faq: (function(){ try { return JSON.parse(document.getElementById('pfFaq').value.trim()||'[]'); } catch(e){ return []; } })(),
+    business_info: {
+      business_name: name,
+      phone: document.getElementById('pfPhone').value.trim(),
+      email: document.getElementById('pfEmail').value.trim(),
+      address: document.getElementById('pfAddress').value.trim(),
+      city: document.getElementById('pfCity').value.trim(),
+      country: document.getElementById('pfCountry').value.trim(),
+      kvk: document.getElementById('pfKvk').value.trim(),
+      btw: document.getElementById('pfBtw').value.trim(),
+      founded_year: document.getElementById('pfFounded').value.trim(),
+      owner_name: document.getElementById('pfOwner').value.trim(),
+      review_score: document.getElementById('pfReviewScore').value.trim(),
+      review_count: document.getElementById('pfReviewCount').value.trim(),
+      review_platform: document.getElementById('pfReviewPlatform').value.trim(),
+      opening_hours: document.getElementById('pfOpeningHours').value.trim(),
+      schema_type: document.getElementById('pfSchemaType').value
+    }
   };
   var d = _editingProfileId ? await api('/api/content/profiles/' + _editingProfileId, 'PUT', payload) : await api('/api/content/profiles', 'POST', payload);
   if (!d.success) { alert('Error: ' + d.error); return; }
@@ -2361,6 +2491,99 @@ async function deleteArticle(id) {
   if (!confirm('Delete this article permanently?')) return;
   await api('/api/content/articles/' + id, 'DELETE');
   toast('Deleted'); loadArticles();
+}
+
+// ── Content Preview (Clean White View) ────────────────────────
+let _previewArticlesCache = [];
+
+async function loadPreviewArticles() {
+  if (!_profiles.length) await loadEngineProfiles();
+  // Populate profile filter
+  var sel = document.getElementById('previewProfileFilter');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">Select profile</option>';
+  _profiles.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.name;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+
+  var profileId = sel.value;
+  _previewArticlesCache = [];
+  if (profileId) {
+    var d = await api('/api/content/articles/' + profileId);
+    _previewArticlesCache = d.articles || [];
+  } else {
+    for (var i = 0; i < _profiles.length; i++) {
+      var pd = await api('/api/content/articles/' + _profiles[i].id);
+      _previewArticlesCache = _previewArticlesCache.concat(pd.articles || []);
+    }
+    _previewArticlesCache.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+  }
+  // Populate article dropdown
+  var aSel = document.getElementById('previewArticleSelect');
+  aSel.innerHTML = '<option value="">Select article (' + _previewArticlesCache.length + ')</option>';
+  _previewArticlesCache.forEach(function(a) {
+    var o = document.createElement('option');
+    o.value = a.id;
+    o.textContent = (a.title || 'Untitled') + ' · ' + (a.word_count || 0) + ' words';
+    aSel.appendChild(o);
+  });
+  // Auto-select most recent
+  if (_previewArticlesCache.length) {
+    aSel.value = _previewArticlesCache[0].id;
+    renderPreview();
+  }
+}
+
+function renderPreview() {
+  var articleId = document.getElementById('previewArticleSelect').value;
+  if (!articleId) {
+    document.getElementById('previewFrame').srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#fff;font-family:system-ui,-apple-system,sans-serif;padding:40px;text-align:center;color:#999;}</style></head><body><p>Select an article to preview.</p></body></html>';
+    document.getElementById('previewWordCount').textContent = '';
+    return;
+  }
+  var article = _previewArticlesCache.find(function(a) { return a.id == articleId; });
+  if (!article) return;
+  document.getElementById('previewWordCount').textContent = (article.word_count || 0) + ' words · ' + (article.status || 'draft');
+
+  var cleanHtml = buildPreviewDoc(article.html_content || '<p>No content.</p>', article.title || 'Preview');
+  document.getElementById('previewFrame').srcdoc = cleanHtml;
+}
+
+function buildPreviewDoc(content, title) {
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(title) + '</title><style>' +
+    'body{font-family:Arial,sans-serif;font-size:16px;line-height:1.7;color:#222;background:#fff;padding:20px;margin:0;}' +
+    '.wrap{max-width:800px;margin:0 auto;}' +
+    'h1{font-size:1.6rem;margin:24px 0 12px;}' +
+    'h2{font-size:1.3rem;margin:20px 0 10px;}' +
+    'h3{font-size:1.1rem;margin:16px 0 8px;}' +
+    'p{margin-bottom:14px;}' +
+    'ul,ol{padding-left:24px;margin-bottom:14px;}' +
+    'li{margin-bottom:4px;}' +
+    'blockquote{border-left:3px solid #ccc;margin:16px 0;padding:8px 16px;background:#f9f9f9;}' +
+    'table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;}' +
+    'th,td{border:1px solid #ddd;padding:8px;text-align:left;}' +
+    'th{background:#f5f5f5;}' +
+    'img{max-width:100%;height:auto;}' +
+    'a{color:#2563eb;}' +
+    'pre{background:#f5f5f5;padding:12px;overflow-x:auto;font-size:13px;}' +
+    'code{background:#f5f5f5;padding:2px 6px;font-size:14px;}' +
+    'strong{font-weight:700;}' +
+    '</style></head><body><div class="wrap">' + content + '</div></body></html>';
+}
+
+function setPreviewWidth(width) {
+  document.getElementById('previewWrapper').style.width = width;
+  document.getElementById('previewWrapper').style.margin = '0 auto';
+}
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // ══ PHASE 2 JS ════════════════════════════════════════════════
@@ -5008,4 +5231,12 @@ async function deleteTrackerPageFromDetail(pageId) {
       </div>
 
       <div style="display:flex;gap:8px;margin-top:14px;">
-        <button class="btn btn-primary" onclick="saveBillingSettings()" style="flex:1;">💾 Save Settin
+        <button class="btn btn-primary" onclick="saveBillingSettings()" style="flex:1;">💾 Save Settings</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('billingModal').style.display='none'" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
