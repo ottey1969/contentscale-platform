@@ -225,7 +225,7 @@ textarea{resize:vertical;min-height:100px;}
 
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-primary" onclick="startResearch()" id="btnResearch">🔍 Research</button>
-      <button class="btn btn-danger" id="btnResetResearch" onclick="resetResearchJob()" style="display:none;background:linear-gradient(135deg,#dc2626,#b91c1c);font-size:12px;padding:5px 10px;">🔄 Reset</button>
+      <button class="btn btn-danger" id="btnResetResearch" onclick="resetResearchJob()" style="background:linear-gradient(135deg,#dc2626,#b91c1c);font-size:12px;padding:5px 10px;">🔄 Reset</button>
     </div>
   </div>
   <!-- Step 2 -->
@@ -1437,15 +1437,12 @@ async function startResearch() {
         throw new Error(poll.error || 'Research failed');
       }
       
-      // Still researching — update button text, show Reset after 20s
+      // Still researching — update button text
       var elapsed = pollCount * 2;
       var mins = Math.floor(elapsed / 60);
       var secs = elapsed % 60;
       var timeStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
       btn.innerHTML = '<span class="spinner"></span> Researching (' + timeStr + ')';
-      // Show Reset button if stuck > 20 seconds
-      var resetBtn = document.getElementById('btnResetResearch');
-      if (resetBtn && elapsed > 20) resetBtn.style.display = 'inline-block';
     }
     
     // Max polls reached — show timeout but keep button clickable for retry
@@ -1832,9 +1829,7 @@ async function resetResearchJob() {
     _activeResearchJobId = null;
     clearResearchSafetyTimer();
     var btn = document.getElementById('btnResearch');
-    var resetBtn = document.getElementById('btnResetResearch');
     if (btn) { btn.innerHTML = '🔍 Research'; btn.style.background = ''; btn.disabled = false; }
-    if (resetBtn) resetBtn.style.display = 'none';
     toast('✅ Research reset — click 🔍 Research to start fresh');
   } catch(e) {
     toast('Reset failed: ' + e.message, 'red');
@@ -1925,9 +1920,7 @@ async function loadPreviousJob(jobId) {
       if (jobAge > 10) {
         toast('⏱️ This research timed out after ' + Math.round(jobAge) + ' minutes. Click 🔄 Reset to clear, then 🔍 Research to retry.', 'orange');
         var rb = document.getElementById('btnResearch');
-        var resetBtn = document.getElementById('btnResetResearch');
         if (rb) { rb.innerHTML = '🔄 Retry Research'; rb.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)'; rb.disabled = false; }
-        if (resetBtn) resetBtn.style.display = 'inline-block';
         _activeResearchJobId = null;
         return;
       }
