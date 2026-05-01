@@ -10781,7 +10781,18 @@ function validateBrief(brief, seedKeyword) {
   };
 }
 
-// ── Generate Brief ───────────────────────────────────────────
+app.post('/api/content/research/:jobId/reset', verifyEngineAccess, async (req, res) => {
+  try {
+    const jobR = await pool.query(`SELECT * FROM content_jobs WHERE id=$1`, [req.params.jobId]);
+    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
+    const job = jobR.rows[0];
+    // Mark as error so user can restart
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1, updated_at=NOW() WHERE id=$2`,
+      ['Reset by user — click Research to retry', req.params.jobId]);
+    _researchJobs.set(parseInt(req.params.jobId), { status: 'error', error: 'Reset by user' });
+    res.json({ success: true, message: 'Research reset — you can now start fresh' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'), async (req, res) => {
   try {
     const jobR = await pool.query(`SELECT j.*, cp.* FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`, [req.params.jobId]);
