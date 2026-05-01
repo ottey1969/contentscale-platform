@@ -225,7 +225,6 @@ textarea{resize:vertical;min-height:100px;}
 
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-primary" onclick="startResearch()" id="btnResearch">🔍 Research</button>
-      <button class="btn btn-danger" id="btnResetResearch" onclick="resetResearchJob()" style="background:linear-gradient(135deg,#dc2626,#b91c1c);font-size:12px;padding:5px 10px;">🔄 Reset</button>
     </div>
   </div>
   <!-- Step 2 -->
@@ -865,27 +864,6 @@ let _currentArticle = null;
 let _draftSaveTimer = null;
 let _draftLoading = false; // suppress auto-save while we restore
 let _activeResearchJobId = null; // tracks which job the current poll loop is for — kill old loops when new one starts
-let _researchSafetyTimer = null; // force-resets stuck Research button after 6 min
-
-// Safety net: if Research button is stuck "Researching..." for >6 min, force reset
-function clearResearchSafetyTimer() {
-  if (_researchSafetyTimer) { clearTimeout(_researchSafetyTimer); _researchSafetyTimer = null; }
-}
-function startResearchSafetyTimer() {
-  clearResearchSafetyTimer();
-  _researchSafetyTimer = setTimeout(function() {
-    var btn = document.getElementById('btnResearch');
-    if (btn && btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1) {
-      console.warn('SAFETY: Research button stuck for 6 min — force resetting');
-      btn.innerHTML = '🔄 Retry Research';
-      btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
-      btn.disabled = false;
-      _activeResearchJobId = null;
-      toast('⏳ Research timed out. Click to retry.', 'red');
-    }
-    _researchSafetyTimer = null;
-  }, 360000); // 6 minutes
-}
 
 // ── Draft persistence (server primary, localStorage fallback) ─
 function _draftFields() {
@@ -1067,11 +1045,6 @@ function showPanel(name, btn) {
   if (name === 'profiles') loadProfiles();
   if (name === 'engine') {
     loadEngineProfiles();
-    // Stale-state recovery: if Research button is stuck, force reset
-    var rbtn = document.getElementById('btnResearch');
-    if (rbtn && rbtn.innerHTML.indexOf('Researching') !== -1 && rbtn.innerHTML.indexOf('Complete') === -1 && !_activeResearchJobId) {
-      rbtn.innerHTML = '🔍 Research'; rbtn.style.background = ''; rbtn.disabled = false;
-    }
   }
   if (name === 'articles') { loadEngineProfiles(); loadArticles(); }
   if (name === 'clusters') { populateClusterFilter(); }
@@ -1358,14 +1331,6 @@ async function startResearch() {
   if (!seed) { alert('Enter a seed keyword'); return; }
   var btn = document.getElementById('btnResearch');
   
-  // STALE STATE RECOVERY: if button says "Researching..." but no active job tracked, force reset
-  if (btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1 && !_activeResearchJobId) {
-    console.warn('Stale Researching button detected — forcing reset');
-    btn.innerHTML = '🔍 Research';
-    btn.style.background = '';
-    btn.disabled = false;
-  }
-  
   // If already polling for this exact keyword, don't start duplicate
   if (_activeResearchJobId && btn.innerHTML.indexOf('Researching') !== -1 && btn.innerHTML.indexOf('Complete') === -1) {
     toast('⏳ Already researching — wait or click the button to force restart');
@@ -1390,7 +1355,6 @@ async function startResearch() {
     var jobId = d.job.id;
     _currentJobId = jobId;
     _activeResearchJobId = jobId; // Mark this as the active poll loop
-    startResearchSafetyTimer(); // Force-reset button if it gets stuck
     _currentBrief = null; _currentArticle = null;
     
     // Step 2: Poll for results
@@ -1429,7 +1393,6 @@ async function startResearch() {
         btn.disabled = true;
         btn.title = '';
         _activeResearchJobId = null;
-        clearResearchSafetyTimer();
         return;
       }
       
@@ -1451,12 +1414,10 @@ async function startResearch() {
     btn.disabled = false;
     btn.title = 'Click to start fresh research';
     _activeResearchJobId = null;
-    clearResearchSafetyTimer();
     toast('⏳ Research timed out. Click the button to retry.', 'red');
     return; // Don't throw — let user click again
   } catch(e) { 
     _activeResearchJobId = null;
-    clearResearchSafetyTimer();
     toast('❌ Research failed: ' + e.message + ' — click to retry', 'red'); 
     btn.innerHTML = '🔄 Retry Research';
     btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
@@ -1819,23 +1780,6 @@ async function saveBillingSettings() {
   }
 }
 
-async function resetResearchJob() {
-  var jobId = _currentJobId;
-  if (!jobId) { toast('No active research to reset', 'red'); return; }
-  if (!confirm('Reset this research? You can start fresh afterwards.')) return;
-  try {
-    var d = await api('/api/content/research/' + jobId + '/reset', 'POST');
-    if (!d.success) throw new Error(d.error);
-    _activeResearchJobId = null;
-    clearResearchSafetyTimer();
-    var btn = document.getElementById('btnResearch');
-    if (btn) { btn.innerHTML = '🔍 Research'; btn.style.background = ''; btn.disabled = false; }
-    toast('✅ Research reset — click 🔍 Research to start fresh');
-  } catch(e) {
-    toast('Reset failed: ' + e.message, 'red');
-  }
-}
-
 // ── Continue Previous Work ──────────────────────────────────
 var _loadingPreviousJobs = false;
 var _lastPopulatedJobsProfile = null;
@@ -1860,25 +1804,16 @@ async function loadPreviousJobsForProfile(profileId) {
     sel.appendChild(placeholder);
     // Deduplicate by seed_keyword — keep only the most recent per keyword
     var seenKw = {};
-    var now = Date.now();
     jobs.forEach(function(j) {
       var kw = (j.seed_keyword || '').toLowerCase().trim();
       if (!seenKw[kw]) {
         seenKw[kw] = true;
-        // Auto-detect stale researching jobs (>10 min old = dead)
-        var isStaleResearching = false;
-        if (j.status === 'researching' && j.created_at) {
-          var created = new Date(j.created_at).getTime();
-          var ageMin = created ? (now - created) / 60000 : 0;
-          if (ageMin > 10) { isStaleResearching = true; }
-        }
         var opt = document.createElement('option');
         opt.value = j.id;
         var statusLabel = '';
         var statusColor = '';
-        if (isStaleResearching) { statusLabel = ' ⏱️ timed out'; statusColor = '#ef4444'; }
-        else if (j.status === 'researching') { statusLabel = ' ⏳ researching'; statusColor = '#fbbf24'; }
-        else if (j.status === 'error') { statusLabel = ' ❌ error'; statusColor = '#ef4444'; }
+        if (j.status === 'researching') { statusLabel = ' ⏳ researching'; statusColor = '#fbbf24'; }
+        else if (j.status === 'error') { statusLabel = ' 🔄 retry'; statusColor = '#f97316'; }
         else if (j.status === 'completed') { statusLabel = ' ✅ done'; statusColor = '#4ade80'; }
         var articleBadge = j.article_count > 0 ? ' · ✍️ ' + j.article_count + ' article' + (j.article_count > 1 ? 's' : '') : '';
         opt.textContent = j.seed_keyword + ' · ' + new Date(j.created_at).toLocaleDateString() + statusLabel + articleBadge;
@@ -1912,16 +1847,23 @@ async function loadPreviousJob(jobId) {
     var d = await api('/api/content/research/' + jobId, 'GET');
     if (!d.success) throw new Error(d.error || 'Failed to load research');
 
+    // If job failed or timed out — just research it again automatically
+    if (d.status === 'error' || d.status === 'timed out' || !d.research) {
+      toast('↩️ Previous research incomplete — restarting for "' + (d.job ? d.job.seed_keyword : '') + '"...');
+      document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
+      startResearch();
+      return;
+    }
+
     // Handle job still in progress
     if (d.status === 'researching') {
       // Check if job is stale (>10 min old = dead, backend crashed or timed out)
       var jobCreated = (d.job && d.job.created_at) ? new Date(d.job.created_at).getTime() : 0;
       var jobAge = jobCreated ? ((Date.now() - jobCreated) / 60000) : 0;
       if (jobAge > 10) {
-        toast('⏱️ This research timed out after ' + Math.round(jobAge) + ' minutes. Click 🔄 Reset to clear, then 🔍 Research to retry.', 'orange');
-        var rb = document.getElementById('btnResearch');
-        if (rb) { rb.innerHTML = '🔄 Retry Research'; rb.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)'; rb.disabled = false; }
-        _activeResearchJobId = null;
+        toast('⏱️ Previous research timed out — restarting for "' + (d.job ? d.job.seed_keyword : '') + '"...');
+        document.getElementById('seedKeyword').value = (d.job && d.job.seed_keyword) ? d.job.seed_keyword : '';
+        startResearch();
         return;
       }
       toast('⏳ This research is still running — please wait.');
