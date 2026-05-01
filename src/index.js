@@ -994,6 +994,19 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP`).catch(()=>{});
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS created_by INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS error_message TEXT`).catch(()=>{});
+   await client.query(`CREATE TABLE IF NOT EXISTS content_write_jobs (
+     id SERIAL PRIMARY KEY,
+     content_job_id INTEGER REFERENCES content_jobs(id) ON DELETE CASCADE,
+     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
+     status VARCHAR(50) DEFAULT 'queued',
+     title VARCHAR(1000),
+     html_content TEXT,
+     word_count INTEGER DEFAULT 0,
+     stripped INTEGER DEFAULT 0,
+     error_message TEXT,
+     created_at TIMESTAMP DEFAULT NOW(),
+     completed_at TIMESTAMP
+   )`);
    await client.query(`CREATE TABLE IF NOT EXISTS content_articles (
      id SERIAL PRIMARY KEY,
      job_id INTEGER REFERENCES content_jobs(id) ON DELETE CASCADE,
@@ -1020,45 +1033,6 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      sort_order INTEGER DEFAULT 0,
      created_at TIMESTAMP DEFAULT NOW()
    )`);
-   await client.query(`CREATE TABLE IF NOT EXISTS content_clusters (
-     id SERIAL PRIMARY KEY,
-     profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
-     name VARCHAR(500) NOT NULL,
-     seed_keyword VARCHAR(500) NOT NULL,
-     pillar_article_id INTEGER REFERENCES content_articles(id) ON DELETE SET NULL,
-     pillar_sitemap_url VARCHAR(1000),
-     status VARCHAR(50) DEFAULT 'planning',
-     cluster_data JSONB DEFAULT '{}',
-     created_at TIMESTAMP DEFAULT NOW(),
-     updated_at TIMESTAMP DEFAULT NOW()
-   )`);
-   await client.query(`CREATE TABLE IF NOT EXISTS content_cluster_nodes (
-     id SERIAL PRIMARY KEY,
-     cluster_id INTEGER REFERENCES content_clusters(id) ON DELETE CASCADE,
-     article_id INTEGER REFERENCES content_articles(id) ON DELETE SET NULL,
-     node_type VARCHAR(20) DEFAULT 'cluster',
-     title VARCHAR(1000),
-     target_keyword VARCHAR(500),
-     planned_slug VARCHAR(500),
-     final_url VARCHAR(1000),
-     sitemap_url VARCHAR(1000),
-     status VARCHAR(30) DEFAULT 'planned',
-     sort_order INTEGER DEFAULT 0,
-     created_at TIMESTAMP DEFAULT NOW(),
-     updated_at TIMESTAMP DEFAULT NOW()
-   )`);
-   await client.query(`CREATE TABLE IF NOT EXISTS content_cluster_links (
-     id SERIAL PRIMARY KEY,
-     cluster_id INTEGER REFERENCES content_clusters(id) ON DELETE CASCADE,
-     from_node_id INTEGER REFERENCES content_cluster_nodes(id) ON DELETE CASCADE,
-     to_node_id INTEGER REFERENCES content_cluster_nodes(id) ON DELETE CASCADE,
-     anchor_text VARCHAR(500),
-     link_type VARCHAR(20) DEFAULT 'internal',
-     is_active BOOLEAN DEFAULT FALSE,
-     created_at TIMESTAMP DEFAULT NOW(),
-     UNIQUE(cluster_id, from_node_id, to_node_id)
-   )`);
-   await client.query(`DO $$ BEGIN ALTER TABLE content_cluster_links ADD CONSTRAINT content_cluster_links_unique UNIQUE (cluster_id, from_node_id, to_node_id); EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL; END $$`).catch(()=>{});
 
    // ═══════════════════════════════════════════════════════════════
    // NEEDED PAGES — pages recommended by AI that don't exist yet
@@ -9767,7 +9741,6 @@ const CREDIT_COSTS = {
   'research':        3,
   'brief':           2,
   'write':          10,
-  'clusters':        3,
   'analyse-rewrite': 2,
   'execute-rewrite': 8,
   'stats-study':     2,
@@ -11109,68 +11082,98 @@ Rules:
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ── Write Article ────────────────────────────────────────────
+// ── Write Article (ASYNC — background job + polling) ────────
 app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'), async (req, res) => {
-  // Helper: parse a value that might be a JS object already (jsonb) or a JSON string (text column), safely
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
     if (typeof v !== 'string') return v;
     try { return JSON.parse(v); } catch (_) { return fallback; }
   };
   try {
-    const { title_override, cluster_node_id, cluster_id } = req.body;
+    const { title_override } = req.body;
     const jobR = await pool.query(
       `SELECT j.*, cp.name as profile_name, cp.domain, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template, cp.wp_url
        FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`,
       [req.params.jobId]
     );
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
-       const job = jobR.rows[0];
-    const prof = job; // alias for template compatibility
+    const job = jobR.rows[0];
     let brief = safeParse(job.brief, null);
     const kd = safeParse(job.keyword_data, {});
-    
-    // ── AUTO-GENERATE BRIEF from research if missing ──
-    // User may have research but never generated a brief — build one from keyword_data
+
+    // Auto-generate brief from research if missing
     if (!brief && kd && kd.primary_keyword) {
-      brief = {
-        title: kd.recommended_title || kd.title || (kd.primary_keyword + ' — Complete Guide'),
-        title_alternatives: normArr(kd.title_alternatives),
-        slug: (kd.primary_keyword || job.seed_keyword || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        primary_keyword: kd.primary_keyword,
-        secondary_keywords: normArr(kd.secondary_keywords),
-        lsi_keywords: normArr(kd.lsi_keywords),
-        long_tail: normArr(kd.long_tail_variants),
-        search_intent: kd.search_intent || 'commercial',
-        intent_analysis: kd.intent_analysis || '',
-        structure: normArr(kd.recommended_h2s),
-        outline: normArr(kd.recommended_h2s).map(function(h, i) { return { section: 'h2', text: h, notes: '' }; }),
-        target_word_count: kd.target_word_count || 2500,
-        tone: 'professional',
-        key_points: normArr(kd.paa_questions).map(function(q) { return q.question; }),
-        faq_questions: normArr(kd.paa_questions),
-        must_include: normArr(kd.secondary_keywords).slice(0, 5),
-        competitor_gaps: normArr(kd.content_gaps),
-        bofu_ctas: normArr(kd.bofu_ctas),
-        internal_links: [],
-        external_sources: normArr(kd.external_links_local),
-        ai_overview_present: kd.serp_features?.ai_overview?.present || false,
-        ai_overview_citation_strategy: kd.serp_features?.ai_overview?.citation_strategy || '',
-        ai_overview_tips: normArr(kd.ai_overview_tips),
-        voice_search_queries: normArr(kd.voice_search_queries),
-        voice_search_optimization: kd.voice_search_optimization || '',
-        ranking_strategy_priority: normArr(kd.ranking_opportunities || (kd.rankingStrategy ? kd.rankingStrategy.priority : []))
-      };
+      brief = buildBriefFromResearch(kd, job.seed_keyword);
       console.log(`[write ${req.params.jobId}] auto-generated brief from research data`);
     }
-    
     if (!brief) return res.status(400).json({ success: false, error: 'Generate brief first' });
 
-    // ── NORMALIZE ARRAYS — Gemini sometimes returns strings instead of arrays ──
+    // Validate brief has minimum required fields
+    if (!brief.title && !kd.primary_keyword && !job.seed_keyword) {
+      return res.status(400).json({ success: false, error: 'Brief is missing title/keyword — regenerate brief first' });
+    }
+
+    const claudeKey = req.headers['x-claude-key'] || (req.engineCode?.claude_key) || process.env.ANTHROPIC_API_KEY;
+    if (!claudeKey) {
+      return res.status(500).json({ success: false, error: 'Claude API key not configured. Add ANTHROPIC_API_KEY to Railway or provide x-claude-key header.' });
+    }
+
+    // Create write job
+    const writeJobR = await pool.query(
+      `INSERT INTO content_write_jobs (content_job_id, profile_id, status, title)
+       VALUES ($1,$2,'writing',$3) RETURNING id`,
+      [req.params.jobId, job.profile_id, brief.title || kd.primary_keyword || job.seed_keyword]
+    );
+    const writeJobId = writeJobR.rows[0].id;
+
+    // Fire background write — do NOT await
+    setImmediate(() => {
+      _runWriteJob(writeJobId, req.params.jobId, job, brief, kd, title_override, claudeKey,
+        req.engineUser && req.engineUser.codeId && req.engineUser.code && req.engineUser.code.api_key_mode === 'platform'
+          ? req.engineUser.codeId : null
+      ).catch(e => console.error(`[writeJob ${writeJobId}] background error:`, e.message));
+    });
+
+    res.json({ success: true, write_job_id: writeJobId, status: 'writing', message: 'Article writing started — poll for status' });
+  } catch(e) {
+    console.error('Write queue error:', e);
+    res.status(500).json({ success: false, error: e.message || 'Write failed' });
+  }
+});
+
+// ── Poll write job status ─────────────────────────────────────
+app.get('/api/content/write-job/:writeJobId', verifyEngineAccess, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM content_write_jobs WHERE id=$1', [req.params.writeJobId]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Write job not found' });
+    const j = r.rows[0];
+    res.json({
+      success: true,
+      status: j.status,
+      title: j.title,
+      word_count: j.word_count,
+      error: j.error_message,
+      article_id: j.status === 'completed' ? j.id : null,
+      html_preview: j.status === 'completed' ? (j.html_content ? j.html_content.substring(0, 500) + '...' : '') : ''
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Background write worker ───────────────────────────────────
+async function _runWriteJob(writeJobId, contentJobId, job, brief, kd, titleOverride, claudeKey, codeIdForCost) {
+  const safeParse = (v, fallback) => {
+    if (v == null) return fallback;
+    if (typeof v !== 'string') return v;
+    try { return JSON.parse(v); } catch (_) { return fallback; }
+  };
+  try {
+    const prof = job;
+
+    // Normalize arrays
     function normArr(v) {
       if (!v) return [];
       if (Array.isArray(v)) return v;
-      if (typeof v === 'string') return v.split(/[,;]/).map(function(s){return s.trim();}).filter(function(s){return s;});
+      if (typeof v === 'string') return v.split(/[,;]/).map(s => s.trim()).filter(s => s);
       return [];
     }
     kd.paa_questions = normArr(kd.paa_questions);
@@ -11187,61 +11190,9 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
     brief.internal_links = normArr(brief.internal_links);
     brief.external_sources = normArr(brief.external_sources);
 
-    // ── FETCH CLUSTER INTERLINKS if writing from a cluster ──
-    let clusterInterlinks = [];
-    let activeClusterId = cluster_id || null;
-    let activeNodeId = cluster_node_id || null;
-
-    // If no cluster context passed, try to find one by profile + keyword
-    if (!activeClusterId) {
-      const clusterMatchR = await pool.query(`
-        SELECT cc.id as cluster_id, ccn.id as node_id
-        FROM content_clusters cc
-        JOIN content_cluster_nodes ccn ON ccn.cluster_id = cc.id
-        WHERE cc.profile_id = $1
-          AND (ccn.target_keyword ILIKE $2 OR ccn.title ILIKE $2)
-          AND ccn.status IN ('planned', 'in-progress')
-        LIMIT 1
-      `, [job.profile_id, `%${kd.primary_keyword || job.seed_keyword}%`]).catch(() => ({ rows: [] }));
-      if (clusterMatchR.rows.length) {
-        activeClusterId = clusterMatchR.rows[0].cluster_id;
-        activeNodeId = clusterMatchR.rows[0].node_id;
-      }
-    }
-
-    // Fetch the full link map for this cluster
-    if (activeClusterId && activeNodeId) {
-      const linkMapR = await pool.query(`
-        SELECT cl.*, fn.title as from_title, fn.planned_slug as from_slug, fn.final_url as from_url,
-               tn.title as to_title, tn.planned_slug as to_slug, tn.final_url as to_url, tn.node_type as to_type
-        FROM content_cluster_links cl
-        JOIN content_cluster_nodes fn ON fn.id = cl.from_node_id
-        JOIN content_cluster_nodes tn ON tn.id = cl.to_node_id
-        WHERE cl.cluster_id = $1
-          AND (cl.from_node_id = $2 OR cl.to_node_id = $2)
-          AND cl.link_type = 'internal'
-        ORDER BY cl.from_node_id
-      `, [activeClusterId, activeNodeId]).catch(() => ({ rows: [] }));
-      clusterInterlinks = linkMapR.rows.map(l => ({
-        direction: l.from_node_id === activeNodeId ? 'outbound' : 'inbound',
-        anchor: l.anchor_text || l.to_title || l.from_title,
-        target_title: l.from_node_id === activeNodeId ? l.to_title : l.from_title,
-        target_url: l.from_node_id === activeNodeId ? (l.to_url || l.to_slug) : (l.from_url || l.from_slug),
-        target_type: l.from_node_id === activeNodeId ? l.to_type : 'cluster'
-      }));
-    }
-
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
-    
-    // Check if this is a preview request (dry run)
-    const isPreview = req.query.preview === 'true' || req.body.preview === true;
-
-    const title = title_override || brief.title;
+    const title = titleOverride || brief.title;
     const locations = await pool.query(`SELECT * FROM content_locations WHERE profile_id=$1 AND external_links=TRUE ORDER BY sort_order`, [job.profile_id]);
     const locStrings = locations.rows.map(l => `${l.location_type}: ${l.location_value}`).join(', ');
-
-    const internalLinksStr = (brief.internal_links || []).map(u => `- ${u}`).join('\n');
     const h2Structure = (brief.structure || []).map((h,i) => `H2 ${i+1}: ${h}`).join('\n');
 
     // GSC from saved job
@@ -11254,17 +11205,17 @@ Rankende pagina's: ${(gsc.pages||[]).join(', ')||'—'}
 Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
 ` : '';
 
-    // Verified business facts — no hallucinations
+    // Verified business facts
     const bi = safeParse(job.business_info, {}) || {};
     const verifiedFacts = [
-      bi.phone         ? `- Telefoon: ${bi.phone}` : null,
-      bi.email         ? `- Email: ${bi.email}` : null,
-      bi.address       ? `- Adres: ${bi.address}${bi.city ? ', '+bi.city : ''}` : null,
-      bi.kvk           ? `- KvK: ${bi.kvk}` : null,
-      bi.btw           ? `- BTW: ${bi.btw}` : null,
-      bi.founded_year  ? `- Opgericht: ${bi.founded_year}` : null,
-      bi.owner_name    ? `- Eigenaar: ${bi.owner_name}` : null,
-      bi.review_score  ? `- Reviews: ${bi.review_score} (${bi.review_count||''} op ${bi.review_platform||''})` : null,
+      bi.phone ? `- Telefoon: ${bi.phone}` : null,
+      bi.email ? `- Email: ${bi.email}` : null,
+      bi.address ? `- Adres: ${bi.address}${bi.city ? ', '+bi.city : ''}` : null,
+      bi.kvk ? `- KvK: ${bi.kvk}` : null,
+      bi.btw ? `- BTW: ${bi.btw}` : null,
+      bi.founded_year ? `- Opgericht: ${bi.founded_year}` : null,
+      bi.owner_name ? `- Eigenaar: ${bi.owner_name}` : null,
+      bi.review_score ? `- Reviews: ${bi.review_score} (${bi.review_count||''} op ${bi.review_platform||''})` : null,
       bi.opening_hours ? `- Openingstijden: ${bi.opening_hours}` : null,
       (bi.certifications||[]).length ? `- Certificaten: ${bi.certifications.join(', ')}` : null,
       (bi.unique_selling_points||[]).length ? `- USPs: ${bi.unique_selling_points.join(' | ')}` : null,
@@ -11274,307 +11225,193 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
       ? `GEBRUIK ALLEEN DEZE GEGEVENS. Verzin NOOIT telefoonnummers, adressen, e-mails of andere contactgegevens die niet hierboven staan. Ontbrekende gegevens = weglaten of [CONTACT] gebruiken.`
       : `Er zijn geen bedrijfsgegevens gescrapt. Verzin GEEN telefoonnummers, adressen, e-mails of andere contactgegevens. Gebruik [CONTACT] als placeholder.`;
 
-    // Real internal links from sitemap only
     const realLinks = (brief.internal_links || brief.sitemap_all || [])
       .filter(u => typeof u === 'string' && u.length > 10).slice(0, 30);
     const internalLinksBlock = realLinks.length
       ? `Gebruik ALLEEN deze exacte URLs van de sitemap — verzin er GEEN:\n${realLinks.map(u=>`- ${u}`).join('\n')}`
       : 'Geen sitemap-URLs beschikbaar — voeg GEEN interne links toe.';
 
-    // Build JSON-LD schema from verified data
     const schemaType = bi.schema_type || 'LocalBusiness';
     const schemaObj = { '@context':'https://schema.org','@type':schemaType,'name':bi.business_name||job.profile_name,'url':job.domain?(job.domain.startsWith('http')?job.domain:'https://'+job.domain):undefined };
-    if (bi.phone)   schemaObj['telephone'] = bi.phone;
-    if (bi.email)   schemaObj['email'] = bi.email;
+    if (bi.phone) schemaObj['telephone'] = bi.phone;
+    if (bi.email) schemaObj['email'] = bi.email;
     if (bi.address) schemaObj['address'] = {'@type':'PostalAddress','streetAddress':bi.address,'addressLocality':bi.city,'addressCountry':bi.country};
     if (bi.opening_hours) schemaObj['openingHours'] = bi.opening_hours;
-    if (bi.review_score)  schemaObj['aggregateRating'] = {'@type':'AggregateRating','ratingValue':bi.review_score,'reviewCount':bi.review_count||undefined};
+    if (bi.review_score) schemaObj['aggregateRating'] = {'@type':'AggregateRating','ratingValue':bi.review_score,'reviewCount':bi.review_count||undefined};
     if ((bi.service_areas||[]).length) schemaObj['areaServed'] = bi.service_areas;
 
-  // ── CLAUDE WRITE PROMPT (ALL HTML through Claude) ──
-  let systemPrompt, userPrompt;
-  try {
-    systemPrompt = `You are the world's best SEO content writer. You write HTML content that ranks #1 on Google and scores 95+/100 on GRAAF content quality scoring.
+    // ── COMPACT CLAUDE PROMPT ──
+    const systemPrompt = `You are an elite SEO content writer. Write complete HTML articles that rank #1.
 
-═══════════════════════════════════════════════════════════════════════
-TRUTH-TELLING RULES — NON-NEGOTIABLE
-═══════════════════════════════════════════════════════════════════════
-RULE 1 — NEVER GUESS: If a statistic, quote, or claim cannot be verified with a real named source, do not include it. Write [STAT NEEDED] instead.
-RULE 2 — CONFIDENCE SCORE: Rate 1-10 after each stat/quote. Below 7/10 → flag: [CONFIDENCE: X/10 — REVIEW NEEDED]
-RULE 3 — VERIFIED SOURCES ONLY: Format (Source Name, Year). NEVER "studies show" without naming source. No real source found = [SOURCE NEEDED].
+RULES:
+- NEVER guess stats/quotes. Use [STAT NEEDED] if unverified.
+- 4 expert quotes with full attribution (name, title, org, year)
+- 2 case studies with real metrics (before/after)
+- 8+ statistics from 2024-2026 with named sources
+- Keyword density 0.5-1.5%
+- Primary keyword in H1, first H2, intro, conclusion
+- MIN 3 internal links (descriptive anchor text)
+- MIN 3 external authority links (.gov, .edu, industry)
+- Meta title 50-60 chars, description 140-155 chars
+- JSON-LD schemas: LocalBusiness + FAQPage + BreadcrumbList + Article
+- Phone E.164 format
+- Semantic HTML: article, section, aside
+- Output ONLY valid HTML. No markdown. No code blocks.`;
 
-═══════════════════════════════════════════════════════════════════════
-GRAAF SCORING RULES (50 pts) — TARGET 95+/100
-═══════════════════════════════════════════════════════════════════════
-- 4+ expert blockquotes with FULL attribution (name, title, org, year)
-- 2+ case studies with real metrics (before/after format)
-- 8+ statistics from 2024-2026 ONLY — in dedicated stats section
-- Keyword density 0.5-1.5% — aim for 1x per 200 body words
-- Primary keyword in H1, first H2, intro paragraph, conclusion
-- MINIMUM 3 internal links embedded naturally in body text
-- MINIMUM 3 external authority links (.gov, .edu, industry, research)
-
-═══════════════════════════════════════════════════════════════════════
-CRAFT SCORING RULES (30 pts)
-═══════════════════════════════════════════════════════════════════════
-- Minimum 2500 words total
-- Exactly 1 H1 on the page
-- H2s must use keyword variations — not generic headings
-- 6+ FAQ questions matching FAQPage schema exactly
-- Symptom/diagnosis table (where relevant for service pages)
-- 4-step process section (where relevant for service pages)
-- Table of Contents with anchor links
-- TL;DR summary near top
-- Direct answer paragraph after H1 (40-80 words)
-
-═══════════════════════════════════════════════════════════════════════
-TECHNICAL SEO (20 pts)
-═══════════════════════════════════════════════════════════════════════
-- Meta title 50-60 chars — keyword first
-- Meta description 140-155 chars — keyword + price/number + CTA
-- 4 JSON-LD schemas: LocalBusiness + FAQPage + BreadcrumbList + Article
-- Phone always E.164 format: tel:+1XXXXXXXXXX (never tel:XXXXXXXXXX)
-- All images: alt text with keyword, loading="lazy"
-- Proper heading hierarchy: ONE H1, then H2s, then H3s
-- Semantic HTML: <article>, <section>, <aside>
-- Meta title and description CTR-optimized
-
-═══════════════════════════════════════════════════════════════════════
-CONTENT INTENT — ALL PAGES = BOFU (Bottom of Funnel)
-═══════════════════════════════════════════════════════════════════════
-Visitor is ready to CALL. You must:
-- Lead with price range and response time — NEVER start with definitions
-- Phone visible within first screen
-- CTA after EVERY major section (minimum 5 CTAs per page)
-- FAQ must answer: "how much", "how fast", "do you serve my area"
-- Reviews must include location name — builds local trust
-- Conclusion = direct call-to-action with phone number
-
-═══════════════════════════════════════════════════════════════════════
-KEYWORD TARGETS
-═══════════════════════════════════════════════════════════════════════
-- Primary keyword exact: 10-15x total
-- Keyword variations: 8-12x total (geo modifiers, related terms)
-- LSI keywords: naturally woven throughout
-
-═══════════════════════════════════════════════════════════════════════
-H2 SECTION STRUCTURE (every H2 follows this pattern):
-═══════════════════════════════════════════════════════════════════════
-- Para 1 (100-150w): keyword variation in first sentence + local hook
-- Para 2 (100-150w): explanation + 1 verified stat (2024-2026) + source
-- Para 3 (100-150w): practical steps or location-specific context
-- Pro Tip: 1-2 sentence actionable advice
-
-═══════════════════════════════════════════════════════════════════════
-OUTPUT RULES
-═══════════════════════════════════════════════════════════════════════
-- Output ONLY valid HTML (no markdown, no code blocks)
-- Every paragraph max 2 sentences (short paragraphs for mobile)
-- Include author bio at the end (200-250 words)
-- Include case study with Challenge/Solution/Results + metrics
-- Open Graph tags, Twitter Card tags, Canonical tag
-- All external links: rel="noopener noreferrer nofollow" target="_blank"`;
-
-    const userPrompt = `Write the complete HTML article for:
+    const userPrompt = `Write complete HTML article for:
 
 TITLE: ${brief.title || kd.primary_keyword}
 PRIMARY KEYWORD: ${kd.primary_keyword || brief.primary_keyword}
-SECONDARY KEYWORDS: ${(kd.secondary_keywords||[]).join(', ')}
-TARGET AUDIENCE: ${prof.target_audience || ''}
-GEO FOCUS: ${prof.geo_focus || ''}
+SECONDARY: ${(kd.secondary_keywords||[]).join(', ')}
+AUDIENCE: ${prof.target_audience || ''}
+GEO: ${prof.geo_focus || ''}
 BRAND: ${prof.name || ''}
 
-═══════════════════════════════════════════════════════════════════════
-MULTI-PASS DOMINATION WRITING PROCESS
-═══════════════════════════════════════════════════════════════════════
-You must write this article in 5 passes to make it 20x better than competitors:
+BUSINESS FACTS (USE ONLY THESE — NEVER HALLUCINATE):
+${verifiedFacts || 'None provided'}
 
-PASS 1 — FOUNDATION: Write the full article with all H2s, body text, CTAs, and internal links. Target 3000+ words.
-PASS 2 — EXPERTISE INJECTION: Add 4+ expert quotes with full attribution, 2+ case studies with real metrics, 8+ original statistics. Make every stat specific ("68% of NJ emergency drain calls happen between 6-11 PM" not "many calls happen at night").
-PASS 3 — SNIPPET & PAA OPTIMIZATION: Add direct 40-word answers at the top of each H2 section. Format key data in tables. Add numbered lists where appropriate. Ensure every PAA question below has a dedicated H2 or H3.
-PASS 4 — ENGAGEMENT ARCHITECTURE: Add a "Quick Emergency Checklist" users can follow. Add a "Cost Calculator" comparison table. Add "Before/After" photo placeholders. Add a downloadable "Emergency Prep Guide" section.
-PASS 5 — SCHEMA & AI OVERVIEW: Add FAQPage schema, HowTo schema, BreadcrumbList, Article schema, Speakable schema. Add Speakable markup for voice search. Ensure direct answers are in speakable sections.
+${antiFacts}
 
-═══════════════════════════════════════════════════════════════════════
-PEOPLE ALSO ASK (PAA) — ANSWER ALL OF THESE
-═══════════════════════════════════════════════════════════════════════
-${(brief.paa_questions || kd.paa_questions || []).map((p, i) => `${i+1}. Q: ${p.question}\n   A: ${p.direct_answer}\n   Format: ${p.snippet_format || 'paragraph'}`).join('\n')}
+GSC DATA:
+${gscBlock || 'None'}
 
-═══════════════════════════════════════════════════════════════════════
-ORIGINAL STATISTICS — USE THESE EXACT NUMBERS
-═══════════════════════════════════════════════════════════════════════
-${(brief.original_statistics || kd.original_statistics || []).map((s, i) => `${i+1}. "${s.stat}"\n   Methodology: ${s.methodology}\n   Cite as: ${s.source_anchor || 'Industry Survey 2024'}`).join('\n')}
+PAA QUESTIONS — ANSWER ALL:
+${(brief.paa_questions || kd.paa_questions || []).map((p, i) => `${i+1}. ${typeof p === 'string' ? p : p.question}`).join('\n')}
 
-═══════════════════════════════════════════════════════════════════════
-COMPETITOR EXPLOITATION — DO WHAT THEY DON'T
-═══════════════════════════════════════════════════════════════════════
-${(brief.competitor_gaps || []).map((g, i) => `${i+1}. ${g}`).join('\n')}
+STATISTICS TO USE:
+${(brief.original_statistics || kd.original_statistics || []).map((s, i) => `${i+1}. ${typeof s === 'string' ? s : s.stat}`).join('\n')}
 
-═══════════════════════════════════════════════════════════════════════
-SERP FEATURE TARGETING
-═══════════════════════════════════════════════════════════════════════
-- Featured Snippet: ${(brief.serp_features?.featured_snippet?.target_content || 'Add 40-word direct answer + table/list')}
-- AI Overview Citation: ${(brief.ai_overview_citation_strategy || 'Add direct answers, statistics, expert quotes, FAQ schema')}
-- Video Section: Add a "Watch: 2-Minute Emergency Guide" placeholder
-- Local Pack: Include city/county names in every section + LocalBusiness schema
+COMPETITOR GAPS — EXPLOIT THESE:
+${(brief.competitor_gaps || []).slice(0,8).join('\n')}
 
-═══════════════════════════════════════════════════════════════════════
-BRIEF OUTLINE:
-═══════════════════════════════════════════════════════════════════════
-${(brief.outline||brief.structure||[]).map(s => `- ${s}`).join('\n')}
+OUTLINE:
+${(brief.outline || brief.structure || []).map(s => `- ${typeof s === 'string' ? s : s.text}`).join('\n')}
 
 KEY POINTS:
-${(brief.key_points||[]).map(p => `- ${p}`).join('\n')}
+${(brief.key_points || []).slice(0,10).join('\n')}
 
-COMPETITOR INSIGHTS:
-${(kd.competitor_analysis||[]).slice(0,5).map(c => `- ${c.domain || 'N/A'}: ${(Array.isArray(c.strengths) ? c.strengths : [c.strengths || 'N/A']).join(', ')} | Weak: ${(Array.isArray(c.weaknesses) ? c.weaknesses : [c.weaknesses || 'N/A']).join(', ')}`).join('\n')}
+COMPETITORS:
+${(kd.competitor_analysis||[]).slice(0,3).map(c => `- ${c.domain || 'N/A'}: strengths=${(Array.isArray(c.strengths)?c.strengths:[c.strengths||'N/A']).join(', ')}`).join('\n')}
 
-CONTENT GAPS:
-${(kd.contentGaps||[]).map(g => `- ${g.type}: ${(g.items||[]).join(', ') || g.opportunity || 'N/A'}`).join('\n')}
+INTERNAL LINKS (USE THESE EXACT URLs):
+${internalLinksBlock}
 
-RANKING STRATEGY:
-${(kd.rankingStrategy?.priority||[]).map(p => `- ${p.action} (${p.reason})`).join('\n')}
+EXTERNAL SOURCES:
+${(brief.external_sources||[]).slice(0,4).map((l, i) => `${i+1}. ${typeof l === 'string' ? l : l.url + ' — ' + l.text}`).join('\n') || 'Cite Wikipedia, Forbes, Statista, government source, academic research'}
 
-AI OVERVIEW OPTIMIZATION:
-${(kd.aiOverviewAnalysis?.recommendation) || 'Add FAQPage schema, direct answers, HowTo schema'}
+BRAND: ${prof.name || ''} | Niche: ${prof.niche || ''} | USPs: ${(prof.unique_selling_points||[]).join(', ')} | Areas: ${(prof.service_areas||[]).join(', ')} | Years: ${prof.years_experience || ''}
 
-INTERNAL LINKS — MINIMUM 3 REQUIRED (embed naturally in body text):
-${(brief.internal_links||[]).slice(0,5).map((l, i) => `${i+1}. <a href="${l.url}">${l.text}</a>`).join('\n')}
-${(brief.internal_links||[]).length < 3 ? 'FALLBACK: If fewer than 3 provided, add links to: /about, /contact, /services, /blog' : ''}
-
-${clusterInterlinks.length ? `CLUSTER INTERLINKS — YOU MUST include these links (critical for SEO cluster strategy):
-${clusterInterlinks.map((l, i) => `${i+1}. [${l.direction.toUpperCase()}] Link to "${l.target_title}" using anchor text: "${l.anchor}" → URL: ${l.target_url || '[URL TBD — use placeholder slug]'} (type: ${l.target_type})`).join('\n')}
-` : 'CLUSTER INTERLINKS: None — this article is not part of an active cluster. Add minimum 3 internal links from the list above.'}
-EXTERNAL AUTHORITY LINKS — MINIMUM 3 REQUIRED (.gov, .edu, industry, research):
-${(brief.external_sources||[]).slice(0,6).map((l, i) => `${i+1}. <a href="${l.url}" rel="noopener noreferrer nofollow" target="_blank">${l.text}</a>`).join('\n')}
-${!(brief.external_sources||[]).length ? 'FALLBACK: Cite at least 3 of: Wikipedia, Forbes, Statista, government source, academic research' : ''}
-
-BRAND INFO:
-- Name: ${prof.name || ''}
-- Niche: ${prof.niche || ''}
-- USPs: ${(prof.unique_selling_points||[]).join(', ')}
-- Certifications: ${(prof.certifications||[]).join(', ')}
-- Years: ${prof.years_experience || ''}
-- Team: ${prof.team_size || ''}
-- Pricing: ${prof.pricing_model || ''}
-- Free Consult: ${prof.free_consultation ? 'Yes' : 'No'}
-- Guarantee: ${prof.guarantee || ''}
-- Areas: ${(prof.service_areas||[]).join(', ')}
-
-FAQ:
-${(prof.faq||[]).map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
-
-REQUIREMENTS (MANDATORY — every item must be present):
+MANDATORY ELEMENTS:
 1. H1 with primary keyword
-2. Direct answer (40-80 words) after H1
+2. Direct answer 40-80 words after H1
 3. TL;DR with 5 bullets
 4. Table of Contents with anchors
 5. 2500+ words
-6. MINIMUM 3 internal links embedded in body text (anchor text must be descriptive, not "click here")
-7. MINIMUM 3 external authority links (.gov, .edu, industry org, research — nofollow)
+6. 3+ internal links embedded naturally
+7. 3+ external authority links (nofollow)
 8. 8+ statistics with attribution
 9. 3-5 expert quotes
 10. 1 case study (Challenge/Solution/Results + metrics)
 11. FAQ section (5-8 Q&A)
 12. Author bio (200-250 words)
-13. Article schema in <head>
-14. FAQPage schema
-15. Images with keyword alt text
-16. Meta title + description as HTML comments
-17. Open Graph tags
-18. Twitter Card tags
-19. Canonical tag
-20. If cluster interlinks are provided above — ALL must be included with exact anchor text
+13. Article + FAQPage + BreadcrumbList + LocalBusiness schema
+14. Meta title + description as HTML comments
+15. Open Graph + Twitter Card + Canonical
+16. Images with keyword alt text
 
-LINK RULES:
-- Every internal link uses descriptive anchor text (e.g., "emergency roof repair services" not "click here")
-- Every external link opens in new tab with rel="noopener noreferrer nofollow"
-- Internal links distributed throughout article (not bunched at top or bottom)
-- Pillar content gets MORE internal links pointing TO it from cluster articles
-
-OUTPUT ONLY COMPLETE HTML. No explanations, no markdown.`;
-
-  } catch(promptErr) {
-    console.error('[write] Prompt construction failed:', promptErr.message, promptErr.stack);
-    console.error('[write] brief keys:', Object.keys(brief || {}));
-    console.error('[write] kd keys:', Object.keys(kd || {}));
-    return res.status(500).json({ success: false, error: 'Failed to build write prompt: ' + promptErr.message });
-  }
-
-    const claudeKey = req.headers['x-claude-key'] || (req.engineCode?.claude_key) || process.env.ANTHROPIC_API_KEY;
-    if (!claudeKey) {
-      return res.status(500).json({ success: false, error: 'Claude API key not configured. Add ANTHROPIC_API_KEY to Railway or provide x-claude-key header.' });
-    }
-
-    // Validate brief has minimum required fields before calling Claude
-    if (!brief.title && !kd.primary_keyword && !job.seed_keyword) {
-      return res.status(400).json({ success: false, error: 'Brief is missing title/keyword — regenerate brief first' });
-    }
+OUTPUT ONLY COMPLETE HTML.`;
 
     let htmlContent;
     try {
       htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-20250514');
     } catch(claudeErr) {
-      console.error('Claude Sonnet 4 failed, trying Sonnet 3.7 fallback:', claudeErr.message);
-      try {
-        htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-3-7-sonnet-20250219');
-      } catch(fallbackErr) {
-        console.error('Claude fallback also failed:', fallbackErr.message);
-        return res.status(502).json({ success: false, error: 'AI writer unavailable: ' + (claudeErr.message || fallbackErr.message) });
-      }
+      console.error('Claude Sonnet 4 failed, trying 3.7 fallback:', claudeErr.message);
+      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-3-7-sonnet-20250219');
     }
 
-    // Track API cost for platform-key users (rough estimate: 1 token ≈ 4 chars)
-    try {
-      if (req.engineUser && req.engineUser.codeId && req.engineUser.code && req.engineUser.code.api_key_mode === 'platform') {
-        const inputTokens = Math.round(systemPrompt.length / 4) + Math.round(userPrompt.length / 4);
-        const outputTokens = Math.round((htmlContent || '').length / 4);
-        await trackApiCost(req.engineUser.codeId, 'write', 'claude-sonnet-4-20250514', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
-      }
-    } catch(costErr) { console.warn('[write] Cost tracking failed:', costErr.message); }
-
     if (!htmlContent || htmlContent.length < 100) {
-      return res.status(502).json({ success: false, error: 'AI returned empty or too-short content — try again' });
+      throw new Error('AI returned empty or too-short content');
     }
 
     const { html: cleanHtml, stripped } = stripAiPlaceholders(htmlContent);
     const finalHtml = splitLongParagraphs(cleanHtml);
-
     const textOnly = finalHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = textOnly.split(/\s+/).filter(w => w.length > 0).length;
 
+    // Insert article
     const articleR = await pool.query(
       `INSERT INTO content_articles (job_id, profile_id, title, slug, primary_keyword, secondary_keywords, html_content, word_count, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
-      [req.params.jobId, job.profile_id, brief.title || kd.primary_keyword || job.seed_keyword,
+      [contentJobId, job.profile_id, brief.title || kd.primary_keyword || job.seed_keyword,
        brief.slug || (kd.primary_keyword || job.seed_keyword || '').toLowerCase().replace(/\s+/g, '-'),
        kd.primary_keyword || job.seed_keyword, JSON.stringify(kd.secondary_keywords||[]), finalHtml, wordCount]
     );
 
-    await pool.query(`UPDATE content_jobs SET status='completed', completed_at=NOW() WHERE id=$1`, [req.params.jobId]);
+    // Update write job as completed
+    await pool.query(
+      `UPDATE content_write_jobs SET status='completed', html_content=$1, word_count=$2, stripped=$3, completed_at=NOW() WHERE id=$4`,
+      [finalHtml, wordCount, stripped, writeJobId]
+    );
 
-    // ── Update cluster node when article is written from a cluster ──
-    if (activeNodeId && articleR.rows[0]) {
-      await pool.query(`
-        UPDATE content_cluster_nodes
-        SET article_id = $1, status = 'written', final_url = $2, updated_at = NOW()
-        WHERE id = $3
-      `, [articleR.rows[0].id, articleR.rows[0].slug ? `/${articleR.rows[0].slug}` : null, activeNodeId]).catch(() => {});
-      // Activate links now that this node has a real article
-      await pool.query(`UPDATE content_cluster_links SET is_active = TRUE WHERE from_node_id = $1 OR to_node_id = $1`, [activeNodeId]).catch(() => {});
+    // Update content job status
+    await pool.query(`UPDATE content_jobs SET status='completed', completed_at=NOW() WHERE id=$1`, [contentJobId]);
+
+    // Track cost
+    if (codeIdForCost) {
+      try {
+        const inputTokens = Math.round(systemPrompt.length / 4) + Math.round(userPrompt.length / 4);
+        const outputTokens = Math.round((htmlContent || '').length / 4);
+        await trackApiCost(codeIdForCost, 'write', 'claude-sonnet-4-20250514', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
+      } catch(costErr) { console.warn('[write] Cost tracking failed:', costErr.message); }
     }
 
-    res.json({ success: true, article: articleR.rows[0], wordCount, stripped, cluster_linked: !!activeNodeId,
-      message: `Article written: ${wordCount} words. Review and publish.` });
-
-  } catch (error) {
-    console.error('Write error for job', req.params.jobId, ':', error);
-    console.error('Write error stack:', error.stack);
-    res.status(500).json({ success: false, error: error.message || 'Write failed' });
+    console.log(`[writeJob ${writeJobId}] completed — ${wordCount} words, article ${articleR.rows[0].id}`);
+  } catch(error) {
+    console.error(`[writeJob ${writeJobId}] failed:`, error.message, error.stack);
+    await pool.query(
+      `UPDATE content_write_jobs SET status='failed', error_message=$1, completed_at=NOW() WHERE id=$2`,
+      [error.message || 'Write failed', writeJobId]
+    ).catch(() => {});
   }
-});
+}
 
-// ── Articles ─────────────────────────────────────────────────
+// Helper: build brief from research data
+function buildBriefFromResearch(kd, seedKeyword) {
+  function normArr(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') return v.split(/[,;]/).map(s => s.trim()).filter(s => s);
+    return [];
+  }
+  return {
+    title: kd.recommended_title || kd.title || (kd.primary_keyword + ' — Complete Guide'),
+    title_alternatives: normArr(kd.title_alternatives),
+    slug: (kd.primary_keyword || seedKeyword || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    primary_keyword: kd.primary_keyword,
+    secondary_keywords: normArr(kd.secondary_keywords),
+    lsi_keywords: normArr(kd.lsi_keywords),
+    long_tail: normArr(kd.long_tail_variants),
+    search_intent: kd.search_intent || 'commercial',
+    intent_analysis: kd.intent_analysis || '',
+    structure: normArr(kd.recommended_h2s),
+    outline: normArr(kd.recommended_h2s).map(h => ({ section: 'h2', text: h, notes: '' })),
+    target_word_count: kd.target_word_count || 2500,
+    tone: 'professional',
+    key_points: normArr(kd.paa_questions).map(q => typeof q === 'string' ? q : q.question),
+    faq_questions: normArr(kd.paa_questions),
+    must_include: normArr(kd.secondary_keywords).slice(0, 5),
+    competitor_gaps: normArr(kd.content_gaps),
+    bofu_ctas: normArr(kd.bofu_ctas),
+    internal_links: [],
+    external_sources: normArr(kd.external_links_local),
+    ai_overview_present: kd.serp_features?.ai_overview?.present || false,
+    ai_overview_citation_strategy: kd.serp_features?.ai_overview?.citation_strategy || '',
+    ai_overview_tips: normArr(kd.ai_overview_tips),
+    voice_search_queries: normArr(kd.voice_search_queries),
+    voice_search_optimization: kd.voice_search_optimization || '',
+    ranking_strategy_priority: normArr(kd.ranking_opportunities || (kd.rankingStrategy ? kd.rankingStrategy.priority : []))
+  };
+}
 app.get('/api/content/articles/:profileId', verifyEngineAccess, async (req, res) => {
   try {
     const r = await pool.query(
@@ -11673,601 +11510,6 @@ app.get('/engine-login', (req, res) => {
 app.get('/content-engine', (req, res) => {
   res.sendFile(require('path').join(__dirname, 'content-engine.html'));
 });
-// ============================================================
-// CONTENT CLUSTER API
-// ============================================================
-
-// ── Get all clusters for a profile ───────────────────────────
-app.get('/api/content/clusters/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const r = await pool.query(`
-      SELECT cc.*,
-        json_agg(
-          json_build_object(
-            'id', cn.id, 'node_type', cn.node_type, 'title', cn.title,
-            'target_keyword', cn.target_keyword, 'planned_slug', cn.planned_slug,
-            'final_url', cn.final_url, 'sitemap_url', cn.sitemap_url,
-            'status', cn.status, 'sort_order', cn.sort_order, 'article_id', cn.article_id
-          ) ORDER BY cn.sort_order
-        ) FILTER (WHERE cn.id IS NOT NULL) AS nodes
-      FROM content_clusters cc
-      LEFT JOIN content_cluster_nodes cn ON cn.cluster_id = cc.id
-      WHERE cc.profile_id = $1
-      GROUP BY cc.id
-      ORDER BY cc.created_at DESC`,
-      [req.params.profileId]
-    );
-    res.json({ success: true, clusters: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Create cluster from a job (AI generates subtopics) ────────
-app.post('/api/content/clusters/generate', verifyEngineAccess, requireCredits('clusters'), async (req, res) => {
-  try {
-    const { job_id, profile_id, cluster_size = 5 } = req.body;
-    if (!job_id || !profile_id) return res.status(400).json({ success: false, error: 'job_id and profile_id required' });
-
-    const jobR = await pool.query(
-      `SELECT j.*, cp.domain, cp.sitemap_url, cp.niche, cp.name as profile_name
-       FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`,
-      [job_id]
-    );
-    if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
-    const job = jobR.rows[0];
-    const kd = job.keyword_data || {};
-
-    // Fetch sitemap to find matching existing pages
-    let sitemapLinks = (job.sitemap_links || []);
-    if (!sitemapLinks.length && job.sitemap_url) {
-      try {
-        const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(),6000);
-        const sr = await fetch(job.sitemap_url, { signal: ctrl.signal });
-        clearTimeout(t);
-        const st = await sr.text();
-        sitemapLinks = (st.match(/<loc>(.*?)<\/loc>/g)||[]).map(m=>m.replace(/<\/?loc>/g,'').trim()).slice(0,150);
-      } catch(e) { console.warn('Sitemap fetch failed:', e.message); }
-    }
-
-    const geminiKey = process.env.GEMINI_API_KEY;
-    const isPreview = req.query.preview === 'true' || req.body.preview === true;
-    const clusterPrompt = `You are the world's best SEO content strategist. Create a COMPLETE topic cluster plan that DOMINATES Google Search, wins AI Overviews, and captures voice search queries.
-
-BUSINESS: ${job.profile_name}
-DOMAIN: ${job.domain}
-NICHE: ${job.niche}
-PILLAR KEYWORD: "${job.seed_keyword}"
-EXISTING SITE PAGES (sitemap):
-${sitemapLinks.slice(0,50).join('\n')}
-
-RESEARCH CONTEXT:
-- Primary keyword: ${kd.primary_keyword || job.seed_keyword}
-- Secondary keywords: ${(kd.secondary_keywords||[]).join(', ')}
-- Long-tail keywords: ${(kd.lsi_keywords||[]).join(', ')}
-- Content gaps identified: ${(kd.content_gaps||[]).join(', ')}
-- Search intent: ${kd.search_intent || 'mixed'}
-- Competitor weaknesses: ${(Array.isArray(kd.competitor_analysis)?kd.competitor_analysis.map(c=>Array.isArray(c.weaknesses)?c.weaknesses.join(', '):(c.weaknesses||'')).filter(Boolean).join('; '):'')}
-
-YOUR MISSION:
-1. Create a topic cluster with 1 pillar + ${cluster_size} cluster articles
-2. EVERY article MUST have minimum 8 H2 headings (detailed, scannable structure)
-3. EVERY article MUST have minimum 3 internal links — pillar links to ALL clusters, every cluster links BACK to pillar + 2 other clusters
-4. EVERY article MUST have minimum 3 external authority links — mix of .gov, .edu, industry associations, and research sites
-5. Target AI Overview features: direct answers, featured snippets, People Also Ask
-6. Target VOICE SEARCH: natural language queries, question-based H2s, conversational answers
-7. Fill ALL content gaps competitors miss — close EVERY gap in Google Search results
-
-LINKING STRATEGY (critical for pillar strength):
-- Pillar article: links OUT to ALL ${cluster_size} cluster articles (distributes authority downward)
-- Each cluster article: links BACK to pillar (strengthens pillar) + links to 2 OTHER cluster articles (cross-linking web)
-- This creates a bidirectional link web where pagerank flows UP to pillar AND sideways between clusters
-- NO article should have fewer than 3 internal links
-- NO article should have fewer than 3 external authority links
-
-For each article provide:
-- 8+ H2 headings (numbered H2 1 through H2 8+)
-- Internal link opportunities (anchor text + which article to link to)
-- Local external authority links (government, educational, industry orgs)
-- BOFU CTAs (bottom-of-funnel calls to action: "Call Now", "Get a Free Quote", "Schedule Consultation")
-- AI Overview optimization strategy (how to win the featured snippet)
-- Voice search queries this article should target
-- Search intent classification
-
-Return ONLY valid JSON:
-{
-  "cluster_name": "short cluster name",
-  "pillar": {
-    "title": "Best pillar title for '${job.seed_keyword}'",
-    "target_keyword": "${kd.primary_keyword || job.seed_keyword}",
-    "planned_slug": "/blog/slug-here",
-    "sitemap_match": "matching sitemap URL or null",
-    "anchor_text_for_others": "natural anchor text when others link to this",
-    "why_pillar": "why this is the pillar — the pillar must link to ALL cluster articles to distribute authority",
-    "h2_headings": ["H2 1: question-based heading", "H2 2: ..."],
-    "internal_links": [
-      {"anchor": "anchor to cluster article 1", "links_to": "cluster_1", "why": "pillar links down to every cluster article — distributes link equity"},
-      {"anchor": "anchor to cluster article 2", "links_to": "cluster_2", "why": "pillar links down to every cluster article — distributes link equity"},
-      {"anchor": "anchor to cluster article 3", "links_to": "cluster_3", "why": "pillar links down to every cluster article — distributes link equity"}
-    ],
-    "external_links": [
-      {"anchor": "government regulation on [topic]", "url": "https://...gov...", "type": "government"},
-      {"anchor": "industry research from [authority]", "url": "https://...edu...", "type": "authority"},
-      {"anchor": "academic study on [topic]", "url": "https://scholar.google.com/...", "type": "academic"}
-    ],
-    "bofu_ctas": ["Call (555) 123-4567 for a free quote", "Schedule your consultation today"],
-    "ai_overview_strategy": "How to win the featured snippet for this topic",
-    "voice_search_queries": ["Hey Google, what is...", "Alexa, how do I..."]
-  },
-  "cluster_articles": [
-    {
-      "title": "Article title",
-      "target_keyword": "specific keyword for this article",
-      "planned_slug": "/blog/slug-here",
-      "sitemap_match": "matching sitemap URL or null",
-      "anchor_text_for_others": "natural anchor text",
-      "search_intent": "informational|commercial|BOFU",
-      "links_to": ["pillar", "cluster_1"],
-      "why_this_topic": "how this supports the pillar",
-      "h2_headings": ["H2 1: question-based heading", "H2 2: ...", "H2 3: ...", "H2 4: ...", "H2 5: ...", "H2 6: ...", "H2 7: ...", "H2 8: ..."],
-      "internal_links": [
-        {"anchor": "anchor text linking to pillar", "links_to": "pillar", "why": "strengthens pillar authority — every cluster article MUST link to pillar"},
-        {"anchor": "anchor text linking to cluster_N", "links_to": "cluster_1", "why": "cross-link to related cluster article"},
-        {"anchor": "anchor text linking to cluster_M", "links_to": "cluster_2", "why": "cross-link to another cluster article"}
-      ],
-      "external_links": [
-        {"anchor": "government regulation on [topic]", "url": "https://...gov...", "type": "government"},
-        {"anchor": "industry research from [authority]", "url": "https://...edu... or https://forbes...", "type": "authority"},
-        {"anchor": "academic study on [topic]", "url": "https://scholar.google.com/...", "type": "academic"}
-      ],
-      "bofu_ctas": ["Get Your Free Quote", "Call Now: (555) 123-4567"],
-      "ai_overview_strategy": "How to win the AI Overview for this keyword",
-      "voice_search_queries": ["voice search question 1", "voice search question 2"]
-    }
-  ],
-  "sitemap_supporting_pages": [
-    {
-      "url": "existing sitemap URL that supports this cluster",
-      "title": "page title estimate",
-      "should_link_to": ["pillar", "cluster_1"]
-    }
-  ],
-  "internal_link_strategy": "Detailed description of the internal linking web: every cluster article links to pillar + 2 other clusters, pillar links to all clusters",
-  "external_link_strategy": "Strategy for local authority external links to boost E-E-A-T",
-  "ai_overview_master_strategy": "How the cluster as a whole targets AI Overviews and featured snippets",
-  "voice_search_master_strategy": "How the cluster captures voice search traffic through conversational content"
-}`;
-
-    const gr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: clusterPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096 } })
-    });
-    const gd = await gr.json();
-    const rawText = gd?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ success: false, error: 'AI did not return valid JSON' });
-    const clusterData = JSON.parse(jsonMatch[0]);
-
-    // If preview mode, return cluster plan without saving
-    if (isPreview) {
-      return res.json({ success: true, preview: clusterData, message: 'Preview ready — click Create Cluster to save' });
-    }
-
-    // Save cluster
-    const clusterR = await pool.query(
-      `INSERT INTO content_clusters (profile_id, name, seed_keyword, pillar_sitemap_url, status, cluster_data)
-       VALUES ($1,$2,$3,$4,'planning',$5) RETURNING *`,
-      [profile_id, clusterData.cluster_name, job.seed_keyword, clusterData.pillar?.sitemap_match||null, JSON.stringify(clusterData)]
-    );
-    const clusterId = clusterR.rows[0].id;
-
-    // Save pillar node
-    const pillar = clusterData.pillar;
-    const pillarNodeR = await pool.query(
-      `INSERT INTO content_cluster_nodes (cluster_id, node_type, title, target_keyword, planned_slug, final_url, sitemap_url, status, sort_order)
-       VALUES ($1,'pillar',$2,$3,$4,$5,$6,$7,0) RETURNING *`,
-      [clusterId, pillar.title, pillar.target_keyword, pillar.planned_slug, pillar.sitemap_match||null, pillar.sitemap_match||null, pillar.sitemap_match?'exists':'planned']
-    );
-    const pillarNodeId = pillarNodeR.rows[0].id;
-
-    // Save cluster article nodes
-    const nodeIds = { pillar: pillarNodeId };
-    for (let i = 0; i < (clusterData.cluster_articles||[]).length; i++) {
-      const ca = clusterData.cluster_articles[i];
-      const nodeR = await pool.query(
-        `INSERT INTO content_cluster_nodes (cluster_id, node_type, title, target_keyword, planned_slug, final_url, sitemap_url, status, sort_order)
-         VALUES ($1,'cluster',$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-        [clusterId, ca.title, ca.target_keyword, ca.planned_slug, ca.sitemap_match||null, ca.sitemap_match||null, ca.sitemap_match?'exists':'planned', i+1]
-      );
-      nodeIds[`cluster_${i+1}`] = nodeR.rows[0].id;
-    }
-
-    // Save sitemap supporting pages as nodes
-    for (let i = 0; i < (clusterData.sitemap_supporting_pages||[]).length; i++) {
-      const sp = clusterData.sitemap_supporting_pages[i];
-      await pool.query(
-        `INSERT INTO content_cluster_nodes (cluster_id, node_type, title, final_url, sitemap_url, status, sort_order)
-         VALUES ($1,'sitemap',$2,$3,$4,'exists',$5) RETURNING *`,
-        [clusterId, sp.title||sp.url, sp.url, sp.url, 100+i]
-      );
-    }
-
-    // Save all links between nodes
-    const allNodes = [{ key:'pillar', id:pillarNodeId }, ...Object.entries(nodeIds).filter(([k])=>k!=='pillar').map(([k,id])=>({key:k,id}))];
-    for (let i = 0; i < (clusterData.cluster_articles||[]).length; i++) {
-      const ca = clusterData.cluster_articles[i];
-      const fromId = nodeIds[`cluster_${i+1}`];
-      for (const linkTarget of (ca.links_to||[])) {
-        const toId = nodeIds[linkTarget] || nodeIds[`cluster_${parseInt(linkTarget.replace('cluster_',''))}`];
-        if (fromId && toId) {
-          try {
-            await pool.query(
-              `INSERT INTO content_cluster_links (cluster_id, from_node_id, to_node_id, anchor_text, link_type)
-               VALUES ($1,$2,$3,$4,'internal') ON CONFLICT DO NOTHING`,
-              [clusterId, fromId, toId, ca.anchor_text_for_others||ca.target_keyword]
-            );
-          } catch(linkErr) { /* ignore duplicate link errors */ }
-        }
-      }
-      // All cluster articles link back to pillar
-      try {
-        await pool.query(
-          `INSERT INTO content_cluster_links (cluster_id, from_node_id, to_node_id, anchor_text, link_type)
-           VALUES ($1,$2,$3,$4,'internal') ON CONFLICT DO NOTHING`,
-          [clusterId, fromId, pillarNodeId, pillar.anchor_text_for_others||pillar.target_keyword]
-        );
-      } catch(linkErr) { /* ignore duplicate link errors */ }
-    }
-
-    // Reload full cluster with nodes
-    const fullR = await pool.query(`
-      SELECT cc.*, json_agg(json_build_object(
-        'id',cn.id,'node_type',cn.node_type,'title',cn.title,'target_keyword',cn.target_keyword,
-        'planned_slug',cn.planned_slug,'final_url',cn.final_url,'sitemap_url',cn.sitemap_url,
-        'status',cn.status,'sort_order',cn.sort_order,'article_id',cn.article_id
-      ) ORDER BY cn.sort_order) FILTER (WHERE cn.id IS NOT NULL) AS nodes
-      FROM content_clusters cc LEFT JOIN content_cluster_nodes cn ON cn.cluster_id=cc.id
-      WHERE cc.id=$1 GROUP BY cc.id`, [clusterId]
-    );
-    res.json({ success: true, cluster: fullR.rows[0], cluster_data: clusterData });
-  } catch(e) { console.error('Cluster generate error:', e); res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Update node status when article is written ────────────────
-app.patch('/api/content/cluster-nodes/:nodeId', verifyEngineAccess, async (req, res) => {
-  try {
-    const { article_id, final_url, status } = req.body;
-    await pool.query(
-      `UPDATE content_cluster_nodes SET article_id=COALESCE($1,article_id), final_url=COALESCE($2,final_url), status=COALESCE($3,status), updated_at=NOW() WHERE id=$4`,
-      [article_id||null, final_url||null, status||null, req.params.nodeId]
-    );
-    // Activate all links to/from this node now that the URL is real
-    if (final_url) {
-      await pool.query(`UPDATE content_cluster_links SET is_active=TRUE WHERE from_node_id=$1 OR to_node_id=$1`, [req.params.nodeId]);
-    }
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Get link map for a cluster (for injecting into articles) ──
-app.get('/api/content/clusters/:clusterId/linkmap', verifyEngineAccess, async (req, res) => {
-  try {
-    const nodesR = await pool.query(`SELECT * FROM content_cluster_nodes WHERE cluster_id=$1 ORDER BY sort_order`, [req.params.clusterId]);
-    const linksR = await pool.query(`
-      SELECT cl.*, fn.title as from_title, tn.title as to_title, tn.final_url as to_url, tn.planned_slug as to_slug
-      FROM content_cluster_links cl
-      JOIN content_cluster_nodes fn ON fn.id=cl.from_node_id
-      JOIN content_cluster_nodes tn ON tn.id=cl.to_node_id
-      WHERE cl.cluster_id=$1`, [req.params.clusterId]
-    );
-    const linkmap = {};
-    for (const node of nodesR.rows) {
-      linkmap[node.id] = {
-        node_id: node.id, title: node.title, node_type: node.node_type,
-        url: node.final_url || node.planned_slug,
-        status: node.status,
-        links_to: linksR.rows.filter(l=>l.from_node_id===node.id).map(l=>({
-          node_id: l.to_node_id, title: l.to_title,
-          url: l.to_url || l.to_slug, anchor_text: l.anchor_text, is_active: l.is_active
-        }))
-      };
-    }
-    res.json({ success: true, linkmap, nodes: nodesR.rows, links: linksR.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Delete cluster ────────────────────────────────────────────
-app.delete('/api/content/clusters/:id', verifyEngineAccess, async (req, res) => {
-  try {
-    await pool.query(`DELETE FROM content_clusters WHERE id=$1`, [req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ============================================================
-// CONTENT ENGINE PHASE 2 API
-// ============================================================
-
-// ── Money Pages ───────────────────────────────────────────────
-app.get('/api/content/money-pages/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const r = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 ORDER BY sort_order, id`, [req.params.profileId]);
-    res.json({ success: true, pages: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.post('/api/content/money-pages/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const { url, title, page_type, primary_keyword } = req.body;
-    const r = await pool.query(`INSERT INTO content_money_pages (profile_id,url,title,page_type,primary_keyword) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [req.params.profileId, url, title, page_type||'service', primary_keyword]);
-    res.json({ success: true, page: r.rows[0] });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.delete('/api/content/money-pages/:id', verifyEngineAccess, async (req, res) => {
-  try {
-    await pool.query(`DELETE FROM content_money_pages WHERE id=$1`, [req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Image Library ─────────────────────────────────────────────
-app.get('/api/content/images/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const r = await pool.query(`SELECT * FROM content_image_library WHERE profile_id=$1 ORDER BY created_at DESC`, [req.params.profileId]);
-    res.json({ success: true, images: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.post('/api/content/images/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const { image_url, file_name, alt_text, caption, tags } = req.body;
-    const fn = file_name || image_url.split('/').pop().split('?')[0];
-    const r = await pool.query(`INSERT INTO content_image_library (profile_id,image_url,file_name,alt_text,caption,tags) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [req.params.profileId, image_url, fn, alt_text, caption, tags]);
-    res.json({ success: true, image: r.rows[0] });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.delete('/api/content/images/:id', verifyEngineAccess, async (req, res) => {
-  try {
-    await pool.query(`DELETE FROM content_image_library WHERE id=$1`, [req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── News Feeds ────────────────────────────────────────────────
-app.get('/api/content/feeds/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const r = await pool.query(`SELECT f.*, COUNT(a.id) as article_count FROM content_news_feeds f LEFT JOIN content_news_articles a ON a.feed_id=f.id WHERE f.profile_id=$1 GROUP BY f.id ORDER BY f.created_at DESC`, [req.params.profileId]);
-    res.json({ success: true, feeds: r.rows });
-  } catch(e) {
-    console.error('Feeds GET error:', e);
-    const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
-    res.status(500).json({ success: false, error: msg, where: 'feeds_get' });
-  }
-});
-
-app.post('/api/content/feeds/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const { feed_name, feed_type, feed_url, domain, niche_keywords, auto_publish, publish_interval, articles_per_batch } = req.body;
-    const r = await pool.query(`INSERT INTO content_news_feeds (profile_id,feed_name,feed_type,feed_url,domain,niche_keywords,auto_publish,publish_interval,articles_per_batch) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [req.params.profileId, feed_name, feed_type||'rss', feed_url, domain, niche_keywords, auto_publish||false, publish_interval||'manual', articles_per_batch||1]);
-    res.json({ success: true, feed: r.rows[0] });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.delete('/api/content/feeds/:id', verifyEngineAccess, async (req, res) => {
-  try {
-    await pool.query(`DELETE FROM content_news_feeds WHERE id=$1`, [req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Fetch + Rewrite News Feed ─────────────────────────────────
-app.post('/api/content/feeds/:feedId/fetch', verifyEngineAccess, requireCredits('news-generate'), async (req, res) => {
-  try {
-    const { days_back = 7 } = req.body;
-    const feedR = await pool.query(`SELECT f.*, cp.niche, cp.name as profile_name, cp.domain as profile_domain FROM content_news_feeds f JOIN content_profiles cp ON cp.id=f.profile_id WHERE f.id=$1`, [req.params.feedId]);
-    if (!feedR.rows.length) return res.status(404).json({ success: false, error: 'Feed not found' });
-    const feed = feedR.rows[0];
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
-
-    let articles = [];
-    const since = new Date(Date.now() - days_back * 86400000).toISOString();
-
-    // Try RSS / Atom feed first
-    if (feed.feed_url) {
-      try {
-        const rssResp = await fetch(feed.feed_url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)' } });
-        const rssText = await rssResp.text();
-        // Support both RSS <item> and Atom <entry>
-        const isAtom = rssText.includes('<entry>');
-        const itemTag = isAtom ? 'entry' : 'item';
-        const items = rssText.match(new RegExp(`<${itemTag}>([\\s\\S]*?)<\/${itemTag}>`, 'g')) || [];
-        for (const item of items.slice(0, 15)) {
-          const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/s) || item.match(/<title[^>]*>([^<]*)<\/title>/s))?.[1]?.trim() || '';
-          // Atom uses <link href="..."/> RSS uses <link>...</link>
-          const link = isAtom
-            ? (item.match(/<link[^>]+href=["\'](.*?)["\'][^>]*\/>/)?.[1] || item.match(/<link[^>]*rel=["\'alternate["\'][^>]+href=["\'](.*?)["\'][^>]*>/)?.[1] || '')
-            : ((item.match(/<link>(.*?)<\/link>/s) || item.match(/<guid[^>]*>(https?:\/\/[^<]+)<\/guid>/s))?.[1] || '');
-          const pubDate = (item.match(/<pubDate>(.*?)<\/pubDate>/s) || item.match(/<published>(.*?)<\/published>/s) || item.match(/<updated>(.*?)<\/updated>/s))?.[1] || '';
-          const desc = (item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/s) || item.match(/<description[^>]*>([\s\S]*?)<\/description>/s) || item.match(/<summary[^>]*>([\s\S]*?)<\/summary>/s) || item.match(/<content[^>]*>([\s\S]*?)<\/content>/s))?.[1] || '';
-          const itemDate = pubDate ? new Date(pubDate) : new Date();
-          if (isNaN(itemDate.getTime()) || itemDate >= new Date(since)) {
-            articles.push({ title: title.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim(), url: link.trim(), date: itemDate.toISOString(), snippet: desc.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').substring(0, 400) });
-          }
-        }
-        console.log(`[news-feed] ${isAtom?'Atom':'RSS'} parsed: ${items.length} items, ${articles.length} in date range`);
-      } catch(e) { console.warn('[news-feed] RSS/Atom fetch failed:', e.message); }
-    }
-
-    // Fallback: Serper keyword search when no feed URL or feed returned nothing
-    const _newsSerpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
-    if (!articles.length && _newsSerpKey) {
-      try {
-        const q = feed.domain ? `site:${feed.domain} ${feed.niche_keywords || feed.niche || ''}`.trim() : `${feed.niche_keywords || feed.niche || ''} news`.trim();
-        const sr = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: { 'X-API-KEY': _newsSerpKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q, num: 8, tbs: `qdr:d${days_back}` }),
-          signal: AbortSignal.timeout(10000)
-        });
-        if (sr.ok) {
-          const sd = await sr.json();
-          articles = (sd.organic || []).slice(0,8).map(i => ({ title: i.title, url: i.link, date: new Date().toISOString(), snippet: i.snippet || '' }));
-          console.log(`[news-feed] Serper fallback: ${articles.length} results for "${q}"`);
-        }
-      } catch(e) { console.warn('[news-feed] Serper fallback failed:', e.message); }
-    }
-
-    if (!articles.length) return res.json({ success: true, found: 0, articles: [] });
-
-    // Rewrite each article with AI
-    const rewritten = [];
-    for (const art of articles.slice(0, feed.articles_per_batch || 3)) {
-      // Fetch original content
-      let originalContent = art.snippet;
-      try {
-        const pageResp = await fetch(art.url, { signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'Mozilla/5.0' } });
-        const pageText = await pageResp.text();
-        originalContent = pageText.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 3000);
-      } catch(e) { /* use snippet */ }
-
-      // Detect language for news rewrite
-      const newsLang = detectContentLanguage(originalContent) !== 'en' ? detectContentLanguage(originalContent) : (detectContentLanguage(feed.niche || '') || 'en');
-      const newsLangNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
-      const newsLangName = newsLangNames[newsLang] || 'English';
-
-      const newsDatePublished = art.date ? new Date(art.date).toISOString().slice(0,10) : new Date().toISOString().slice(0,10);
-      const newsDateModified = new Date().toISOString().slice(0,10);
-      const rewritePrompt = `You are an expert SEO content writer writing in ${newsLangName}. Rewrite this news article to be 100% original, plagiarism-free, and highly valuable for readers in the niche: "${feed.niche || feed.niche_keywords}".
-
-LANGUAGE: Write the ENTIRE article in ${newsLangName}. All headings, body, FAQ in ${newsLangName}.
-
-ORIGINAL TITLE: ${art.title}
-ORIGINAL SOURCE: ${art.url}
-ORIGINAL CONTENT: ${originalContent}
-BUSINESS: ${feed.profile_name} — ${feed.niche}
-
-═══════════════════════════════════════
-STRICT CONTENT RULES
-═══════════════════════════════════════
-- Only use statistics that appear in the original content, cite with source URL
-- NEVER invent numbers, dates, or claims not in the original
-- NEVER add "[UNVERIFIED]" or "[citation needed]" labels — just omit unverifiable claims
-- NO generic openers ("In today's fast-paced world...", "In an era of...")
-- NO empty jargon ("game-changer", "leverage", "synergy")
-
-═══════════════════════════════════════
-CONTENT REQUIREMENTS
-═══════════════════════════════════════
-1. Open with the most important fact or insight from the article (triggers AI Overview)
-2. Add business context: what does this news mean for ${feed.niche} professionals?
-3. Include original source citation: <a href="${art.url}" rel="nofollow">[Source name]</a>
-4. Add 3 practical takeaways as a numbered list
-5. FAQ section: 3 questions readers would actually ask, 80-120 words each
-6. Write 700-1000 words total
-7. Return clean HTML: <article>, <h1>, <h2>, <p>, <ol>, <section class="faq">
-8. No inline styles, no fixed widths — semantic HTML only
-9. Add Article JSON-LD schema with correct dates — datePublished = original article date, dateModified = today:
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"NewsArticle","headline":"[USE ACTUAL H1]","datePublished":"${newsDatePublished}","dateModified":"${newsDateModified}","author":{"@type":"Organization","name":"${feed.profile_name}"}}</script>
-
-Return ONLY the HTML starting with <article>. No markdown. No code fences.`;
-
-      try {
-        let rawHtml;
-        try {
-          // ✅ FORCE CLAUDE FOR NEWS REWRITING
-          const claudeNewsKey = resolveClaudeKey(req);
-          const sys = 'You are an elite SEO Content Architect. Rewrite news articles to be 100% original, plagiarism-free, and SEO-optimised. Include: Direct Answer box, TL;DR bullets, TOC, Key Takeaways, min 2 CTAs. NEVER invent stats — only use facts from the source article. Every <p> = max 2 sentences. Return only clean HTML starting with <article>. No markdown, no code fences.';
-          
-          rawHtml = await callClaudeForWrite(sys, rewritePrompt, 4000, claudeNewsKey);
-          
-          rawHtml = rawHtml.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-        } catch(e) { 
-          console.warn(`[news] Claude error for "${art.title}":`, e.message); 
-          continue; 
-        }
-        
-        if (!rawHtml) { 
-          console.warn(`[news] Empty for "${art.title}"`); 
-          continue; 
-        }
-        
-        const scrub = stripAiPlaceholders(rawHtml);
-        if (scrub.stripped) console.log(`🧹 [news] Stripped ${scrub.stripped} placeholder pattern type(s) from "${art.title}"`);
-        const html = scrub.html;
-        const htmlFinal = splitLongParagraphs(html);
-        const slug = art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 80);
-        const wc = html.replace(/<[^>]+>/g, '').split(/\s+/).length;
-        
-        const dbR = await pool.query(
-          `INSERT INTO content_news_articles (feed_id,profile_id,original_url,original_title,original_source,original_date,rewritten_title,rewritten_html,rewritten_slug,status,word_count) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'rewritten',$10) RETURNING *`,
-          [feed.id, feed.profile_id, art.url, art.title, feed.domain||feed.feed_url, art.date, art.title, htmlFinal, slug, wc]
-        );
-        rewritten.push(dbR.rows[0]);
-      } catch(e) { 
-        console.warn('Rewrite failed for:', art.title, e.message); 
-      }
-    }
-
-    await pool.query(`UPDATE content_news_feeds SET last_fetched=NOW() WHERE id=$1`, [feed.id]);
-    res.json({ success: true, found: articles.length, rewritten: rewritten.length, articles: rewritten });
-  } catch(e) { 
-    console.error('Feed fetch error:', e); 
-    res.status(500).json({ success: false, error: e.message }); 
-  }
-});
-
-app.get('/api/content/news-articles/:profileId', verifyEngineAccess, async (req, res) => {
-  try {
-    const r = await pool.query(`SELECT a.*, f.feed_name FROM content_news_articles a LEFT JOIN content_news_feeds f ON f.id=a.feed_id WHERE a.profile_id=$1 ORDER BY a.created_at DESC LIMIT 50`, [req.params.profileId]);
-    res.json({ success: true, articles: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.post('/api/content/news-articles/:id/publish-wp', verifyEngineAccess, async (req, res) => {
-  try {
-    const artR = await pool.query(`SELECT a.*, cp.wp_url, cp.wp_user, cp.wp_app_password FROM content_news_articles a JOIN content_profiles cp ON cp.id=a.profile_id WHERE a.id=$1`, [req.params.id]);
-    if (!artR.rows.length) return res.status(404).json({ success: false, error: 'Article not found' });
-    const art = artR.rows[0];
-    if (!art.wp_url || !art.wp_user || !art.wp_app_password) return res.status(400).json({ success: false, error: 'WP credentials not configured' });
-    
-    const wpApiUrl = art.wp_url.replace(/\/$/, '') + '/wp-json/wp/v2/posts';
-    const creds = Buffer.from(`${art.wp_user}:${art.wp_app_password}`).toString('base64');
-    
-    const wpR = await fetch(wpApiUrl, { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Basic ${creds}` 
-      }, 
-      body: JSON.stringify({
-          title: art.rewritten_title,
-          slug: art.rewritten_slug,
-          status: 'draft',
-          content: '<!-- wp:html -->\n' + (art.rewritten_html || '').trim() + '\n<!-- /wp:html -->'
-        })
-    });
-    
-    if (!wpR.ok) { 
-      const err = await wpR.text(); 
-      return res.status(400).json({ success: false, error: err.substring(0, 200) }); 
-    }
-    
-    const wpData = await wpR.json();
-    await pool.query(`UPDATE content_news_articles SET wp_post_id=$1,wp_url=$2,status='published',published_at=NOW() WHERE id=$3`, [wpData.id, wpData.link, art.id]);
-    res.json({ success: true, wp_post_id: wpData.id, wp_url: wpData.link });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.delete('/api/content/news-articles/:id', verifyEngineAccess, async (req, res) => {
-  try {
-    await pool.query(`DELETE FROM content_news_articles WHERE id=$1`, [req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
 // ══════════════════════════════════════════════════════════════════════════════
 // VIDEO → ARTICLE  (YouTube transcript → SEO article)
 // Uses: Serper for video search · YouTube Data API v3 for transcripts
@@ -21295,7 +20537,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                     <button type="button" onclick="setGaDealType('credits')" id="gaDealCredits" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#0891b2;color:#fff;border:1px solid #0284c7;cursor:pointer;">💳 Credit Pack</button>
                                     <button type="button" onclick="setGaDealType('lifetime')" id="gaDealLifetime" style="font-size:11px;padding:4px 12px;border-radius:4px;background:#1e293b;color:#94a3b8;border:1px solid #334155;cursor:pointer;">♾️ Lifetime Deal</button>
                                 </div>
-                                <div id="gaCreditPackWrap"><label style="font-size:11px;color:#38bdf8;font-weight:600;">🎯 Platform Credits <span style="color:#64748b;font-weight:400;">(leave blank = unlimited)</span></label><input id="gaPlatformCredits" type="number" min="1" placeholder="e.g. 50 credits — blank = unlimited" class="w-full rounded px-3 py-2 mt-1"><div style="font-size:11px;color:#64748b;margin-top:4px;">Research=3 · Brief=2 · Write=10 · Rewrite=8 · Cluster=3 · Analyse=2 · News=4 · Stats=2 · Bulk=5</div></div>
+                                <div id="gaCreditPackWrap"><label style="font-size:11px;color:#38bdf8;font-weight:600;">🎯 Platform Credits <span style="color:#64748b;font-weight:400;">(leave blank = unlimited)</span></label><input id="gaPlatformCredits" type="number" min="1" placeholder="e.g. 50 credits — blank = unlimited" class="w-full rounded px-3 py-2 mt-1"><div style="font-size:11px;color:#64748b;margin-top:4px;">Research=3 · Brief=2 · Write=10 · Rewrite=8 · Analyse=2 · News=4 · Stats=2 · Bulk=5</div></div>
                                 <div id="gaLifetimeWrap" style="display:none;padding:10px 12px;background:#0c1a0c;border:1px solid #166534;border-radius:8px;margin-top:8px;">
                                     <div style="font-size:12px;font-weight:600;color:#4ade80;margin-bottom:4px;">♾️ Lifetime Deal — Client Brings Own API Keys</div>
                                     <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">No cost to you · Unlimited access forever · Client pays their own API bills</div>
