@@ -3778,36 +3778,85 @@ async function performEngineReset() {
   toast('↺ Engine gereset — schone lei');
 }
 
-// ── Write Article ─────────────────────────────────────────────
-// GSC is now saved in the job at research time — no need to resend
+// ── Write Article (Async with polling) ────────────────────────
+let _activeWritePoll = null;
+
 async function writeArticle() {
   if (!_currentJobId) return;
   var btn = document.getElementById('btnWrite');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Schrijven (2-3 min)...';
+  btn.innerHTML = '<span class="spinner"></span> Starting writer...';
   var titleOverride = document.getElementById('titleOverride').value.trim();
+
+  // Kill any old poll
+  if (_activeWritePoll) { clearInterval(_activeWritePoll); _activeWritePoll = null; }
+
   try {
-    var payload = { title_override: titleOverride || undefined };
-    var d = await api('/api/content/write/' + _currentJobId, 'POST', payload);
+    var d = await api('/api/content/write/' + _currentJobId, 'POST', { title_override: titleOverride || undefined });
     if (!d.success) throw new Error(d.error);
-    _currentArticleId = d.article.id;
-    _currentArticleHtml = d.article.html_content;
-    _currentArticleTitle = d.article.title;
-    _currentArticle = d.article;
-    renderArticleReady(d.article);
-    document.getElementById('stepArticle').style.display = 'block';
-    document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth' });
-    saveDraftNow();
-    if (d.truncated) {
-      toast('⚠️ Artikel afgebroken bij maximum output — verkort template of splits content (' + d.article.word_count + ' woorden)', 'red');
-    } else {
-      toast('✅ Artikel klaar — ' + d.article.word_count + ' woorden!');
-    }
+
+    var writeJobId = d.write_job_id;
+    btn.innerHTML = '<span class="spinner"></span> Writing article... (2–5 min)';
+    toast('✍️ Article writing started — do not close this tab');
+
+    var pollCount = 0;
+    var maxPolls = 120; // 10 minutes at 5s intervals
+
+    _activeWritePoll = setInterval(async function() {
+      pollCount++;
+      try {
+        var status = await api('/api/content/write-job/' + writeJobId);
+        if (!status.success) throw new Error(status.error);
+
+        if (status.status === 'completed') {
+          clearInterval(_activeWritePoll); _activeWritePoll = null;
+          // Fetch the full article
+          var articleR = await api('/api/content/articles/' + _currentJobId);
+          var article = articleR.articles && articleR.articles[0];
+          if (article) {
+            _currentArticleId = article.id;
+            _currentArticleHtml = article.html_content;
+            _currentArticleTitle = article.title;
+            _currentArticle = article;
+            renderArticleReady(article);
+            document.getElementById('stepArticle').style.display = 'block';
+            document.getElementById('stepArticle').scrollIntoView({ behavior: 'smooth' });
+            saveDraftNow();
+            toast('✅ Artikel klaar — ' + (article.word_count || status.word_count) + ' woorden!');
+          } else {
+            toast('✅ Article written — refresh Articles tab to view', 'orange');
+          }
+          btn.disabled = false; btn.innerHTML = '✍️ Write Article';
+          return;
+        }
+
+        if (status.status === 'failed') {
+          clearInterval(_activeWritePoll); _activeWritePoll = null;
+          btn.disabled = false; btn.innerHTML = '✍️ Write Article';
+          toast('❌ Write failed: ' + (status.error || 'Unknown error'), 'red');
+          return;
+        }
+
+        // Still writing — update button text periodically
+        if (pollCount % 6 === 0) {
+          var mins = Math.round(pollCount * 5 / 60);
+          btn.innerHTML = '<span class="spinner"></span> Writing... (' + mins + ' min)';
+        }
+
+        if (pollCount >= maxPolls) {
+          clearInterval(_activeWritePoll); _activeWritePoll = null;
+          btn.disabled = false; btn.innerHTML = '✍️ Write Article';
+          toast('⏱ Write is taking longer than expected — check Articles tab shortly', 'orange');
+        }
+      } catch(e) {
+        console.warn('Write poll error:', e.message);
+      }
+    }, 5000);
+
   } catch(e) {
+    btn.disabled = false; btn.innerHTML = '✍️ Write Article';
     var msg = e.message || 'Write failed';
-    if (msg.includes('AI writer unavailable') || msg.includes('Claude API') || msg.includes('timed out')) {
-      toast('❌ AI writer timed out — article too complex. Try a shorter keyword or reduce template.', 'red');
-    } else if (msg.includes('Brief is missing')) {
+    if (msg.includes('Brief is missing')) {
       toast('❌ ' + msg + ' — click 📋 Generate Brief first', 'red');
     } else if (msg.includes('key not configured')) {
       toast('❌ Claude API key not set — contact admin', 'red');
@@ -3815,7 +3864,6 @@ async function writeArticle() {
       toast('Write failed: ' + msg, 'red');
     }
   }
-  finally { btn.disabled = false; btn.innerHTML = '✍️ Write Article'; }
 }
 
 // ── Init ─────────────────────────────────────────────────────
