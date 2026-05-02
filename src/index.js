@@ -9875,7 +9875,6 @@ const COST_RATES = {
   'gemini-2.0-flash': { input: 0.075e-6, output: 0.30e-6 },
   'gemini-1.5-flash-001': { input: 0.075e-6, output: 0.30e-6 },
   'claude-sonnet-4-20250514': { input: 3.00e-6, output: 15.00e-6 },
-  'claude-3-7-sonnet-20250219': { input: 3.00e-6, output: 15.00e-6 },
 };
 function estimateApiCost(model, inputTokens, outputTokens) {
   const rate = COST_RATES[model] || COST_RATES['gemini-2.5-flash'];
@@ -11537,7 +11536,7 @@ OUTPUT ONLY COMPLETE HTML.`;
       htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-20250514');
     } catch(claudeErr) {
       console.error('Claude Sonnet 4 failed, trying 3.7 fallback:', claudeErr.message);
-      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-3-7-sonnet-20250219');
+      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-20250514');
     }
 
     if (!htmlContent || htmlContent.length < 100) {
@@ -12851,7 +12850,7 @@ LAYOUT SIGNATURE: ${layoutSkeleton ? `${layoutSkeleton.sectionCount} sections, $
 BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
 
 GRAAF CONTENT SCORE (original page): ${originalGraafScan?.contentScore || 'not scanned'}/100
-GRAAF GAPS TO FIX IN REWRITE: ${(originalGraafScan?.recommendations||[]).filter(r=>r.priority==='high'||r.priority==='medium').slice(0,5).map(r=>'['+r.priority.toUpperCase()+'] '+r.title).join(' | ') || 'none detected'}
+GRAAF GAPS TO FIX IN REWRITE: ${(Array.isArray(originalGraafScan?.recommendations) ? originalGraafScan.recommendations : []).filter(r=>r.priority==='high'||r.priority==='medium').slice(0,5).map(r=>'['+r.priority.toUpperCase()+'] '+r.title).join(' | ') || 'none detected'}
 
 ═══════════════════════════════════════
 11-POINT SEO AUDIT — CHECK EACH AGAINST ORIGINAL HTML
