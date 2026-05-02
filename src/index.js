@@ -3812,6 +3812,7 @@ httpServer.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
 console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
+console.log(`🔍 Web Search: ${process.env.SERPAPI_KEY ? '✅ SerpAPI (real Google results)' : '⚠️ DuckDuckGo fallback (set SERPAPI_KEY for better results)'}`);
 console.log('\n✅ Elite scanner ready\n');
 });
 }
@@ -10679,13 +10680,39 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
       }
     } catch(e) {}
 
-    // ONE focused Gemini call — minimal prompt that fits in 28s
-    const year = new Date().getFullYear();
+    // STEP 1: REAL WEB SEARCH for statistics
     const locs = (profile.locations||[]).map(l=>l.location_value).join(', ') || profile.geo_focus || '';
+    const searchQueries = [
+      `${seed_keyword} ${profile.niche} statistics 2024 2025 2026`,
+      `${profile.niche} industry report ${locs} cost price data`,
+      `${seed_keyword} EPA government data statistics`,
+      `${profile.niche} market size revenue 2024 2025`
+    ];
+    console.log(`[research job ${jobId}] searching web: ${searchQueries.join(' | ')}`);
+    const webResults = await doWebSearch(searchQueries);
+    console.log(`[research job ${jobId}] web search: ${webResults.length} results`);
 
-    const prompt = `You are an expert SEO researcher. Research "${seed_keyword}" for a ${profile.niche} business in ${locs}.
+    // Format web results for Gemini context
+    const webContext = webResults.length > 0
+      ? webResults.slice(0, 15).map((r, i) =>
+          `SOURCE ${i+1}: ${r.title}\nURL: ${r.url}\nSNIPPET: ${r.snippet}\n---`
+        ).join('\n')
+      : 'No web results found. Use your training knowledge for statistics.';
 
-Your task: Find 8-12 REAL statistics from 2024-2026 with named sources. Search for: industry reports, government data (.gov), trade associations, reputable news sources, and academic studies. Every stat must have a real source name and year.
+    // STEP 2: Gemini call WITH real web data
+    const year = new Date().getFullYear();
+
+    const prompt = `You are an expert SEO researcher. Analyze these REAL web search results about "${seed_keyword}" for a ${profile.niche} business in ${locs}.
+
+REAL WEB SEARCH RESULTS:
+${webContext}
+
+Your task: Extract 8-12 REAL statistics from the search results above. For each stat, use the EXACT source URL provided. If the web results don't have enough stats, supplement with your knowledge but ONLY use real, verifiable data.
+
+CRITICAL: Every statistic MUST have:
+- A specific number (not vague ranges like "many" or "some")
+- A real source name and year
+- A real URL (from the search results above, or a well-known .gov/.edu/trade site)
 
 Return ONLY this JSON (fill every field with real, sourced content):
 {
@@ -10716,7 +10743,7 @@ Return ONLY this JSON (fill every field with real, sourced content):
   "voice_search_optimization": "Use natural language, answer in 30-50 words, include geo terms"
 }`;
 
-    console.log(`[research job ${jobId}] calling Gemini...`);
+    console.log(`[research job ${jobId}] calling Gemini with ${webResults.length} web results...`);
     const gemResult = await callGeminiWithFallback(
       geminiKey,
       { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096 } }
@@ -10751,6 +10778,56 @@ Return ONLY this JSON (fill every field with real, sourced content):
     await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [e.message, jobId]).catch(()=>{});
     _researchJobs.set(jobId, { status: 'error', error: e.message });
   }
+}
+
+// ── REAL WEB SEARCH for research ──────────────────────────────
+// Searches the web and returns raw results with URLs for stat extraction
+async function doWebSearch(queries) {
+  const allResults = [];
+  for (const query of queries.slice(0, 4)) { // max 4 queries to stay within time
+    try {
+      // Try SerpAPI if key is available
+      const serpKey = process.env.SERPAPI_KEY;
+      if (serpKey) {
+        const params = new URLSearchParams({
+          engine: 'google', q: query, api_key: serpKey,
+          num: '5', hl: 'en', gl: 'us'
+        });
+        const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(),8000);
+        const r = await fetch(`https://serpapi.com/search?${params}`, { signal: ctrl.signal });
+        clearTimeout(t);
+        const data = await r.json();
+        const snippets = (data.organic_results||[]).map(o => ({
+          title: o.title||'', snippet: o.snippet||'', url: o.link||'', source: 'serpapi'
+        }));
+        allResults.push(...snippets);
+        continue;
+      }
+      // Fallback: try DuckDuckGo instant answer API (no key needed)
+      const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      const ctrl2 = new AbortController(); const t2 = setTimeout(()=>ctrl2.abort(),8000);
+      const r = await fetch(ddgUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ResearchBot/1.0)' },
+        signal: ctrl2.signal
+      });
+      clearTimeout(t2);
+      const html = await r.text();
+      // Extract results from DuckDuckGo HTML
+      const resultRegex = /<a[^>]*class="result__a"[^>]*href="([^"]*)">(.*?)<\/a>.*?<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/gs;
+      let match;
+      while ((match = resultRegex.exec(html)) !== null && allResults.length < 20) {
+        const url = match[1].replace(/^\/\/duckduckgo.com\/l\/\?uddg=/, '').replace(/&rut=.*$/, '');
+        const title = match[2].replace(/<[^>]*>/g, '').trim();
+        const snippet = match[3].replace(/<[^>]*>/g, '').trim();
+        if (url && title && snippet) {
+          try { allResults.push({ title, snippet, url: decodeURIComponent(url), source: 'ddg' }); } catch(e) {}
+        }
+      }
+    } catch(e) {
+      console.log(`[web search] query "${query}" failed:`, e.message);
+    }
+  }
+  return allResults;
 }
 
 // ── Helpers used by endpoints ─────────────────────────────────
@@ -11278,16 +11355,37 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
     if (hasTemplate) {
       // User provided an HTML template with [AI: ...] placeholders
       // The template already has all business constants, CSS, schemas, structure
-      systemPrompt = `You are an elite SEO content writer. Follow the template's ENGINE RULES precisely.
+      systemPrompt = `You are an elite SEO content architect who writes content that dominates SERPs. Your output must match EXAMPLE QUALITY: real statistics with source URLs, expert blockquotes with full attribution, case studies with dollar amounts, 10 FAQ items with internal+external links, TL;DR with citations, Direct Answer box, clickable TOC, speakable schema, HowTo schema, and 220-word author bio with E-E-A-T.
+
+QUALITY BENCHMARK — every article must include:
+1. DIRECT ANSWER BOX: 40-60 word paragraph at top with primary keyword, stat, phone CTA. Wrap in <div class="direct-answer">.
+2. TL;DR: 5 bullet takeaways, EACH with a source citation link.
+3. TABLE OF CONTENTS: Clickable <ol> linking to every H2 section.
+4. STATISTICS: Minimum 8 real stats from 2024-2026 with named sources AND URLs. Format: <p><strong>Stat text</strong> — context. (<a href="URL" target="_blank" rel="noopener">Source, Year</a>)</p>
+5. EXPERT BLOCKQUOTES: Minimum 4 with FULL attribution — name, title, organization, year, article title. Format: <blockquote><p>Quote</p><cite>— Name, Org ( credential), <em>Article Title</em>, Year</cite></blockquote>
+6. CASE STUDIES: Minimum 2 with Challenge/Solution/Results structure. Include specific dollar amounts saved. Add <div class="lesson"><strong>Key Lesson:</strong> insight</div>
+7. FAQ: Minimum 10 questions, each 100-150 words. Each answer must contain 1 internal link (from sitemap) + 1 external authority link (.gov, .edu, trade association, or reputable industry source).
+8. INTERNAL LINKS: Minimum 8 links to other pages using descriptive anchor text (from sitemap URLs provided).
+9. EXTERNAL LINKS: Minimum 5 to .gov, .edu, trade associations, or reputable industry sources.
+10. AUTHOR BIO: 200+ words with credentials, E-E-A-T signals, link to contentscale.site.
+11. SCHEMA: Populate ALL JSON-LD schemas in the template with real content. FAQ schema must match body FAQ exactly. Add Speakable schema and HowTo schema if not present.
+12. VOICE SEARCH: Include natural-language Q&A format paragraphs ("What makes [brand] unique? We...") for speakable schema targets.
 
 CRITICAL RULES:
-- USE the STATISTICS listed in research data below — each has a source. Cite them properly.
-- If research stats are insufficient, actively search your knowledge for real 2024-2026 stats from named sources.
-- NEVER invent phone numbers, addresses, or business facts. Use ONLY what's in the template.
-- Fill EVERY [AI: ...] placeholder with real content. Remove the placeholder markers after writing.
-- Keep ALL hardcoded business constants exactly as-is (phone, address, schema, CSS, scripts).
-- Replace [PASTE WP MEDIA URL] with placeholder comments or realistic filenames.
-- Output ONLY the complete HTML document. No markdown wrappers. No explanations.`;
+- USE the STATISTICS listed in research data — each has a source. Cite with URL.
+- If research stats are insufficient, draw from your knowledge of real 2024-2026 data. Never fabricate.
+- NEVER invent phone numbers, addresses, or business facts. Use ONLY template constants.
+- Fill EVERY [AI: ...] placeholder with detailed, specific content. Remove placeholder markers after writing.
+- Keep ALL hardcoded CSS, schemas, scripts, business constants exactly as-is.
+- Every <p> max 4 sentences. Write 4000+ words total.
+- Keyword density: 0.8-1.2% (primary keyword ~20-30x in 2500 words).
+- Images: Include 6-8 <img> tags with descriptive ALT text containing the keyword, loading="lazy".
+- PAA questions: Answer the top 3 PAA questions as natural-language paragraph snippets within body text (30-50 words each, voice-search friendly).
+- CTAs: Use these exact BOFU phrases where appropriate: "Schedule Your Drain Inspection Today", "Get a Free Estimate for Root Removal", "Call Us Now for Emergency Drain Service". Minimum 5 CTAs total.
+- Reviews: 3 reviews, each mentioning a specific county name.
+- Follow the RECOMMENDED H2 HEADINGS from the brief exactly — do not invent different headings.
+- External links: Prioritize .gov (EPA, USA.gov), trade associations (PHCC), and reputable industry sources.
+- Output ONLY complete HTML. No markdown. No explanations.`;
 
       const researchData = `
 RESEARCH DATA — use this to fill [AI: ...] placeholders:
@@ -11325,7 +11423,16 @@ SITEMAP URLS (for internal links):
 ${internalLinksBlock}
 `;
 
-      userPrompt = `Fill in this HTML template. Replace every [AI: ...] instruction with real content based on the research data below. Keep ALL hardcoded CSS, schemas, scripts, and business constants exactly as they are. Remove the [AI: ...] markers after writing. Output ONLY the complete HTML.
+      userPrompt = `Write the complete HTML article by filling EVERY [AI: ...] placeholder in the template below. Use the research data and follow ALL 12 quality benchmarks in the system prompt.
+
+CONTENT STRUCTURE REQUIREMENTS:
+- Write 4000+ words total
+- Each H2 section: 350-500 words, 3 paragraphs (100-150w each), 1 Pro Tip, optionally 1 blockquote
+- Service cards: 2-3 descriptive sentences each (not generic)
+- Symptom table: real symptoms with specific causes
+- Reviews: authentic-sounding with specific outcomes and dollar amounts where applicable
+- Process steps: detailed what-happens text
+- All CTAs: specific action + phone number
 
 ${researchData}
 
@@ -11334,23 +11441,30 @@ ${researchData}
 ${job.html_template}`;
 
     } else {
-      // No template — fall back to compact prompt
-      systemPrompt = `You are an elite SEO content writer. Write complete HTML articles that rank #1.
+      // No template — fall back to full-quality prompt
+      systemPrompt = `You are an elite SEO content architect. Write 4000+ word HTML articles that dominate SERPs.
+
+MANDATORY ELEMENTS:
+1. Direct Answer box (40-60 words, stat + phone) at top
+2. TL;DR with 5 sourced bullets
+3. Clickable Table of Contents
+4. 8+ statistics from 2024-2026 with named sources AND URLs
+5. 4+ expert blockquotes with full attribution (name, title, org, year, article)
+6. 2+ case studies with Challenge/Solution/Results + dollar amounts
+7. 10 FAQ items (100-150w each) with internal + external links
+8. 8+ internal links (descriptive anchor text)
+9. 5+ external links (.gov, .edu, trade associations)
+10. 200+ word author bio with E-E-A-T
+11. All JSON-LD schemas: LocalBusiness, FAQPage, BreadcrumbList, Article, Speakable, HowTo
+12. Voice-search Q&A paragraphs for speakable schema
 
 RULES:
-- NEVER guess stats/quotes. Use [STAT NEEDED] if unverified.
-- 4 expert quotes with full attribution (name, title, org, year)
-- 2 case studies with real metrics (before/after)
-- 8+ statistics from 2024-2026 with named sources
+- Every <p> max 4 sentences
+- Never invent stats — cite real sources with URLs
 - Keyword density 0.5-1.5%
 - Primary keyword in H1, first H2, intro, conclusion
-- MIN 3 internal links (descriptive anchor text)
-- MIN 3 external authority links (.gov, .edu, industry)
 - Meta title 50-60 chars, description 140-155 chars
-- JSON-LD schemas: LocalBusiness + FAQPage + BreadcrumbList + Article
-- Phone E.164 format
-- Semantic HTML: article, section, aside
-- Output ONLY valid HTML. No markdown. No code blocks.`;
+- Output ONLY valid HTML. No markdown.`;
 
       userPrompt = `Write complete HTML article for:
 
