@@ -104,6 +104,8 @@ async function autoFillGSC(pageUrl, _gscServiceAccount, axios) {
 // Accepts either a URL (we fetch + strip) or already-provided HTML.
 // Returns { url, html, wordCount, headings, error } — at most 25k chars of body.
 async function fetchCompetitorHtml(input) {
+  // index.js passes either a string URL or {url, html?}
+  if (typeof input === 'string') input = { url: input };
   // input = { url, html? }
   if (input.html && input.html.length > 200) {
     return analyzeCompetitorHtml(input.url || 'manual-paste', input.html);
@@ -349,7 +351,7 @@ function validateBofuQuality(html) {
   }
 
   const score = Math.max(0, 100 - violations.length * 15);
-  return { ok: violations.length === 0, violations, score, wordCount: wc };
+  return { ok: violations.length === 0, violations: violations.map(v => v.hint || v), score, wordCount: wc };
 }
 
 // Pre-scrub obvious patterns before even showing to validator
