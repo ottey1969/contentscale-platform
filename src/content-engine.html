@@ -41,6 +41,8 @@ textarea{resize:vertical;min-height:100px;}
 .progress-fill{height:6px;border-radius:99px;background:linear-gradient(90deg,#7c3aed,#be185d);transition:width .5s;}
 .kw-chip{display:inline-block;background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;margin:3px;}
 .research-block{background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin-bottom:10px;}
+.fix-checkbox:hover{border-color:rgba(124,58,237,.3)!important;background:rgba(124,58,237,.06)!important;}
+.fix-checkbox input:checked + div{color:#c084fc!important;}
 .competitor-card{background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:8px;}
 .loc-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:6px;}
 .tab-panel{display:none;}
@@ -440,16 +442,52 @@ textarea{resize:vertical;min-height:100px;}
         <button class="btn btn-secondary" style="font-size:12px;" onclick="addRewriteImage()">+ Add</button>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="analyseRewrite()" id="btnAnalyse">🔍 Analyse & Plan</button>
+    <!-- STEP 1: Quick Meta Optimization (always safe) -->
+    <div style="margin-bottom:10px;padding:12px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:10px;">
+      <div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Step 1 — Quick Win (Safe)</div>
+      <button class="btn btn-primary" onclick="optimizeMetaOnly()" id="btnOptimizeMeta" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">📝 Optimize Meta Title & Description</button>
+      <span style="font-size:12px;color:#6b7280;margin-left:10px;">Title (50-60 chars) + Description (140-155 chars) — preserves all content</span>
+    </div>
+
+    <!-- STEP 2: Deep Research -->
+    <div style="margin-bottom:10px;padding:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:10px;">
+      <div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Step 2 — Deep Research</div>
+      <button class="btn btn-primary" onclick="analyseRewrite()" id="btnAnalyse" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">🔬 Research Page & Competitors</button>
+      <span style="font-size:12px;color:#6b7280;margin-left:10px;">PAA questions, AI Overview, voice search, competitor analysis</span>
+    </div>
   </div>
 
   <!-- Analysis Results -->
+  <!-- Research Dashboard -->
+  <div id="rwResearchCard" class="card" style="display:none;">
+    <div class="card-title">🔬 Research Dashboard — What's on Your Page vs The Competition</div>
+    <div id="rwResearchResults"></div>
+
+    <!-- STEP 3: Choose Your Action -->
+    <div style="margin-top:16px;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;">
+      <div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Step 3 — Choose Your Action</div>
+
+      <!-- Option A: Targeted Fixes (safe) -->
+      <div style="padding:12px;background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.12);border-radius:8px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px;">Option A — Surgical Fixes (Recommended, Low Risk)</div>
+        <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Select only what needs improvement. Your existing content stays intact.</div>
+        <div id="rwFixCheckboxes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-bottom:12px;"></div>
+        <button class="btn btn-primary" onclick="applyTargetedFixes()" id="btnApplyFixes" style="background:linear-gradient(135deg,#16a34a,#15803d);">⚡ Apply Selected Fixes</button>
+      </div>
+
+      <!-- Option B: Complete Rewrite (risky) -->
+      <div style="padding:12px;background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.12);border-radius:8px;">
+        <div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:6px;">Option B — Complete Rewrite (Higher Risk)</div>
+        <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">⚠️ Full page rewrite. Rankings may drop temporarily. Only use if your page scores below 60/100 or has major structural problems.</div>
+        <button class="btn btn-secondary" onclick="if(confirm('Are you sure? A complete rewrite may affect your rankings. Consider surgical fixes first.')) executeRewrite();" id="btnExecuteRewrite" style="border-color:#f87171;color:#f87171;">✍️ Complete Rewrite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Results (kept for backward compat) -->
   <div id="rwAnalysisCard" class="card" style="display:none;">
     <div class="card-title">📊 Analysis Results</div>
     <div id="rwAnalysisResults"></div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="executeRewrite()" id="btnExecuteRewrite">✍️ Execute Rewrite</button>
-    </div>
   </div>
 
   <!-- Rewrite Result -->
@@ -2681,11 +2719,85 @@ function renderRwImages() {
   }).join('');
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// STEP 1: Optimize Meta Only — quick, safe, always first
+// ═══════════════════════════════════════════════════════════════════
+async function optimizeMetaOnly() {
+  var profileId = document.getElementById('rwProfile').value;
+  if (!profileId) { toast('Select a profile first', 'red'); return; }
+  var url = document.getElementById('rwUrl').value.trim();
+  if (!url) { toast('Enter a page URL first', 'red'); return; }
+  var btn = document.getElementById('btnOptimizeMeta');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Optimizing...';
+  try {
+    // Create rewrite record first (minimal)
+    var competitors = [];
+    document.querySelectorAll('.rw-competitor-slot').forEach(function(slot){
+      var url = slot.querySelector('.rw-comp-url').value.trim();
+      var html = slot.querySelector('.rw-comp-html').value.trim();
+      if (url || html) competitors.push({ url: url || null, html: html || null });
+    });
+    var payload = {
+      profile_id: profileId,
+      original_url: url,
+      original_slug: document.getElementById('rwSlug').value.trim(),
+      original_title: document.getElementById('rwTitle').value.trim(),
+      original_html: document.getElementById('rwHtml').value.trim(),
+      gsc_impressions: parseInt(document.getElementById('rwImpressions').value) || 0,
+      gsc_clicks: parseInt(document.getElementById('rwClicks').value) || 0,
+      gsc_position: parseFloat(document.getElementById('rwPosition').value) || 0,
+      gsc_keyword: document.getElementById('rwKeyword').value.trim(),
+      gsc_pages: document.getElementById('rwGscPages').value.trim(),
+      gsc_queries: document.getElementById('rwGscQueries').value.trim(),
+      competitors: competitors
+    };
+    var d = await api('/api/content/analyse-rewrite', 'POST', payload);
+    if (!d.success) throw new Error(d.error);
+    _currentRewriteId = d.rewrite.id;
+
+    // Apply only title_meta fix
+    var fd = await api('/api/content/targeted-fix/' + _currentRewriteId, 'POST', { fixes: ['title_meta'] });
+    if (!fd.success) throw new Error(fd.error);
+    _currentRewriteHtml = fd.html_full;
+
+    // Show result
+    var el = document.getElementById('rwResult');
+    el.innerHTML =
+      '<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:14px;margin-bottom:10px;">' +
+      '<div style="font-size:13px;font-weight:700;color:#c084fc;margin-bottom:6px;">✅ Meta Title & Description Optimized</div>' +
+      '<div style="font-size:11px;color:#9ca3af;">Your page content is preserved. Only &lt;title&gt; and &lt;meta name="description"&gt; were updated.</div>' +
+      '<div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:200px;padding:10px;background:rgba(15,23,42,.5);border-radius:6px;">' +
+      '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">New Title</div>' +
+      '<div style="font-size:12px;color:#e2e8f0;font-weight:700;">' + escapeHtml(_currentRewriteHtml.match(/<title>([^<]+)<\/title>/i)?.[1] || 'Not found') + '</div>' +
+      '<div style="font-size:10px;color:#4ade80;margin-top:2px;">' + ((_currentRewriteHtml.match(/<title>([^<]+)<\/title>/i)?.[1] || '').length) + ' chars</div>' +
+      '</div>' +
+      '<div style="flex:1;min-width:200px;padding:10px;background:rgba(15,23,42,.5);border-radius:6px;">' +
+      '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">New Description</div>' +
+      '<div style="font-size:12px;color:#e2e8f0;">' + escapeHtml(_currentRewriteHtml.match(/<meta[^>]+name=["']?description["']?[^>]*content=["']([^"']+)["']/i)?.[1] || 'Not found') + '</div>' +
+      '<div style="font-size:10px;color:#4ade80;margin-top:2px;">' + ((_currentRewriteHtml.match(/<meta[^>]+name=["']?description["']?[^>]*content=["']([^"']+)["']/i)?.[1] || '').length) + ' chars</div>' +
+      '</div>' +
+      '</div></div>' +
+      '<textarea id="rwHtmlOutput" style="width:100%;min-height:400px;background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e2e8f0;font-family:monospace;font-size:12px;padding:12px;resize:vertical;box-sizing:border-box;" readonly>' + escapeHtml(_currentRewriteHtml) + '</textarea>';
+    document.getElementById('rwResultCard').style.display = 'block';
+    document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('rwPublishBtns').style.display = 'flex';
+    toast('✅ Meta title & description optimized — review and publish');
+  } catch(e) {
+    toast('Meta optimization failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '📝 Optimize Meta Title & Description';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STEP 2: Deep Research (NOT a rewrite — just analysis)
+// ═══════════════════════════════════════════════════════════════════
 async function analyseRewrite() {
   var profileId = document.getElementById('rwProfile').value;
-  if (!profileId) { alert('Select a profile first'); return; }
+  if (!profileId) { toast('Select a profile first', 'red'); return; }
   var btn = document.getElementById('btnAnalyse');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analysing...';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Researching...';
   try {
     // Collect competitors — URL or pasted HTML (up to 3)
     var competitors = [];
@@ -2719,9 +2831,17 @@ async function analyseRewrite() {
     if (d.competitor_count) toast('🎯 ' + d.competitor_count + ' competitor(s) analysed');
     renderAnalysis(d.analysis);
     document.getElementById('rwAnalysisCard').style.display = 'block';
-    document.getElementById('rwAnalysisCard').scrollIntoView({ behavior: 'smooth' });
-  } catch(e) { toast('Analysis failed: ' + e.message, 'red'); }
-  finally { btn.disabled = false; btn.innerHTML = '🔍 Analyse & Plan'; }
+    // Render research dashboard with selectable fixes
+    if (d.research) {
+      renderResearch(d.research, d.analysis);
+      document.getElementById('rwResearchCard').style.display = 'block';
+      document.getElementById('rwResearchCard').scrollIntoView({ behavior: 'smooth' });
+    } else {
+      document.getElementById('rwResearchCard').style.display = 'none';
+    }
+    toast('✅ Research complete — review findings and choose fixes or rewrite below');
+  } catch(e) { toast('Research failed: ' + e.message, 'red'); }
+  finally { btn.disabled = false; btn.innerHTML = '🔬 Research Page & Competitors'; }
 }
 
 // ═══ NEW: Auto-fill GSC from URL ═══
@@ -2849,6 +2969,221 @@ function renderAnalysis(a) {
     (a.related_keywords || []).map(function(k) { return '<span class="kw-chip" style="background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#a78bfa;">' + k + '</span>'; }).join('') +
     (!(a.related_keywords || []).length ? '<span style="font-size:12px;color:#6b7280;">None generated — re-run Analyse</span>' : '') +
     '</div></div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RESEARCH DASHBOARD — show page analysis + competitors + fix selection
+// ═══════════════════════════════════════════════════════════════════
+var _currentResearch = null;
+
+function renderResearch(r, a) {
+  _currentResearch = r;
+  var el = document.getElementById('rwResearchResults');
+  var y = r.your_page || {};
+  var c = r.competitors || {};
+  var ai = r.ai_overview || {};
+  var paa = r.paa || [];
+  var v = r.voice_search || {};
+  var g = r.gsc || {};
+
+  var schemaList = (y.schema_types || []).map(function(s) { return '<span class="tag">' + s + '</span>'; }).join(' ') || '<span style="color:#6b7280;font-size:12px;">None detected</span>';
+
+  // Build competitor comparison table
+  var compTable = '';
+  if ((c.top_5_analysis || []).length) {
+    compTable = '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:8px;">' +
+      '<tr style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">' +
+      '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Site</th>' +
+      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Words</th>' +
+      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">FAQ</th>' +
+      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">HowTo</th>' +
+      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Review</th>' +
+      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Speakable</th>' +
+      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Dir.Ans</th>' +
+      '</tr>';
+    // Your row
+    compTable += '<tr style="background:rgba(124,58,237,.08);">' +
+      '<td style="padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);"><strong style="color:#c084fc;">YOU</strong></td>' +
+      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.word_count || 0) + '</td>' +
+      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_faq ? '✅' : '❌') + '</td>' +
+      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_howto ? '✅' : '❌') + '</td>' +
+      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_review_schema ? '✅' : '❌') + '</td>' +
+      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_speakable ? '✅' : '❌') + '</td>' +
+      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_direct_answer ? '✅' : '❌') + '</td>' +
+      '</tr>';
+    // Competitor rows
+    (c.top_5_analysis || []).forEach(function(comp) {
+      var domain = comp.url ? comp.url.replace(/^https?:\/\//, '').split('/')[0] : '?';
+      compTable += '<tr>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px;">' + domain + '</td>' +
+        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.word_count || 0) + '</td>' +
+        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_faq ? '✅' : '❌') + '</td>' +
+        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_howto ? '✅' : '❌') + '</td>' +
+        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_review ? '✅' : '❌') + '</td>' +
+        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_speakable ? '✅' : '❌') + '</td>' +
+        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_direct_answer ? '✅' : '❌') + '</td>' +
+        '</tr>';
+    });
+    compTable += '</table>';
+  }
+
+  // Build PAA section
+  var paaHtml = '';
+  if (paa.length) {
+    paaHtml = '<div style="margin-top:10px;">' +
+      paa.map(function(q, i) {
+        return '<div style="padding:8px 10px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;margin-bottom:6px;">' +
+          '<div style="font-size:12px;font-weight:700;color:#e2e8f0;">Q: ' + q.question + '</div>' +
+          '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Google current: ' + (q.answer ? q.answer.slice(0, 120) + '...' : 'No answer') + '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>';
+  }
+
+  // Build AI Overview section
+  var aiHtml = '';
+  if (ai.detected) {
+    aiHtml = '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-top:10px;">' +
+      '<div style="font-size:12px;color:#fbbf24;font-weight:700;">⚠️ AI Overview Detected on Google</div>' +
+      '<div style="font-size:11px;color:#e2e8f0;margin-top:4px;">' + (ai.title || '') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Google says: ' + (ai.answer_preview || '') + '</div>' +
+      '<div style="font-size:11px;color:#4ade80;margin-top:6px;">💡 ' + (ai.strategy || '') + '</div>' +
+      '</div>';
+  } else {
+    aiHtml = '<div style="background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:8px;padding:10px;margin-top:10px;">' +
+      '<div style="font-size:12px;color:#4ade80;">✅ No AI Overview yet — first-mover opportunity</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">' + (ai.strategy || '') + '</div>' +
+      '</div>';
+  }
+
+  // GSC mini stats
+  var gscHtml = '';
+  if (g.impressions !== undefined || g.clicks !== undefined) {
+    gscHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">' +
+      '<div style="text-align:center;padding:8px 12px;background:rgba(15,23,42,.5);border-radius:6px;"><div style="font-size:16px;font-weight:800;color:#fbbf24;">' + (g.impressions || 0) + '</div><div style="font-size:10px;color:#6b7280;">Impressions</div></div>' +
+      '<div style="text-align:center;padding:8px 12px;background:rgba(15,23,42,.5);border-radius:6px;"><div style="font-size:16px;font-weight:800;color:#4ade80;">' + (g.clicks || 0) + '</div><div style="font-size:10px;color:#6b7280;">Clicks</div></div>' +
+      '<div style="text-align:center;padding:8px 12px;background:rgba(15,23,42,.5);border-radius:6px;"><div style="font-size:16px;font-weight:800;color:#60a5fa;">#' + (g.position || 0) + '</div><div style="font-size:10px;color:#6b7280;">Position</div></div>' +
+      '</div>';
+    if ((g.top_queries || []).length) {
+      gscHtml += '<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Top queries: ' + g.top_queries.slice(0, 5).join(', ') + '</div>';
+    }
+  }
+
+  el.innerHTML =
+    // Your page status
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Your Page</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;"><strong>Words:</strong> ' + (y.word_count || 0) + '</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;"><strong>H2s:</strong> ' + (y.h2_count || 0) + '</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;"><strong>Images:</strong> ' + (y.image_count || 0) + '</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;"><strong>CTAs:</strong> ' + (y.cta_count || 0) + '</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;margin-top:6px;"><strong>Schemas:</strong> ' + schemaList + '</div>' +
+    '<div style="font-size:12px;color:' + (y.graaf_score ? '#4ade80' : '#6b7280') + ';margin-top:6px;"><strong>GRAAF:</strong> ' + (y.graaf_score || 'Not scanned') + '/100</div>' +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">GSC Data</div>' + gscHtml +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">AI Overview</div>' + aiHtml +
+    '</div>' +
+    '<div class="research-block">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Voice Search</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;">Speakable: ' + (v.has_speakable_schema ? '✅' : '❌ missing') + '</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;">Direct answer: ' + (v.has_direct_answer ? '✅' : '❌ missing') + '</div>' +
+    '<div style="font-size:12px;color:#e2e8f0;margin-top:6px;">Target queries:</div>' +
+    (v.queries || []).map(function(q) { return '<div style="font-size:11px;color:#6b7280;padding:2px 0;">🎙️ ' + q + '</div>'; }).join('') +
+    '</div>' +
+    '</div>' +
+    // Competitor comparison
+    '<div class="research-block" style="margin-bottom:14px;">' +
+    '<div style="font-size:11px;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🏆 Competitor Comparison (You vs Top 5)</div>' + compTable +
+    '</div>' +
+    // PAA
+    '<div class="research-block" style="margin-bottom:14px;">' +
+    '<div style="font-size:11px;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">❓ People Also Ask — Real Google Questions (' + paa.length + ')</div>' + paaHtml +
+    '</div>' +
+    // Analysis recommendations (from Gemini)
+    (a.audit_11 && a.audit_11.length ? '<div class="research-block">' +
+    '<div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🎯 11-Point Audit Gaps</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;">' +
+    a.audit_11.map(function(item) {
+      var col = item.status === 'strong' ? '#4ade80' : item.status === 'missing' ? '#f87171' : '#fbbf24';
+      var icon = item.status === 'strong' ? '✅' : item.status === 'missing' ? '❌' : '⚠️';
+      return '<div style="padding:8px 10px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;">' +
+        '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + icon + ' ' + item.factor + '</div>' +
+        '<div style="font-size:10px;color:#6b7280;margin-top:3px;">' + (item.evidence || '') + '</div>' +
+        '</div>';
+    }).join('') +
+    '</div></div>' : '');
+
+  // Build fix checkboxes
+  var fixes = [
+    { key: 'title_meta', label: '📝 Meta Title & Description', desc: 'Optimize title (50-60 chars) + meta description (140-155 chars)', risk: 'low' },
+    { key: 'direct_answer', label: '💡 Direct Answer Box', desc: 'Strengthen the voice search answer at top of page', risk: 'low' },
+    { key: 'paa_improve', label: '❓ PAA Questions', desc: 'Add/improve all ' + paa.length + ' People Also Ask questions in FAQ', risk: 'low' },
+    { key: 'schema_add', label: '🏷️ Missing Schemas', desc: 'Add Speakable, HowTo, Review, Breadcrumb schemas', risk: 'none' },
+    { key: 'voice_optimize', label: '🎙️ Voice Search', desc: 'Add Speakable schema + direct answer IDs', risk: 'none' },
+    { key: 'cta_strengthen', label: '🔥 Stronger CTAs', desc: 'Replace weak CTAs with BOFU (Call/Book/Schedule + Free)', risk: 'low' },
+    { key: 'faq_enhance', label: '📚 FAQ Enhancement', desc: 'Longer answers + stats + internal links in existing FAQ', risk: 'low' },
+    { key: 'stats_add', label: '📊 Cited Statistics', desc: 'Add 4-6 real statistics with named sources', risk: 'low' },
+    { key: 'internal_links', label: '🔗 Internal Links', desc: 'Add 3-5 contextual internal links', risk: 'low' },
+    { key: 'image_alt', label: '🖼️ Image Alt Text', desc: 'Improve all alt texts with keyword + location', risk: 'none' },
+    { key: 'opening_hours', label: '🕐 Opening Hours Schema', desc: 'Add OpeningHoursSpecification to LocalBusiness', risk: 'none' },
+  ];
+
+  document.getElementById('rwFixCheckboxes').innerHTML = fixes.map(function(f) {
+    var riskColor = f.risk === 'none' ? '#4ade80' : f.risk === 'low' ? '#fbbf24' : '#f87171';
+    var disabled = f.key === 'paa_improve' && !paa.length ? 'disabled' : '';
+    var opacity = f.key === 'paa_improve' && !paa.length ? 'opacity:.4;' : '';
+    return '<label class="fix-checkbox" style="display:flex;align-items:flex-start;gap:8px;padding:10px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;cursor:pointer;' + opacity + '" ' + disabled + '>' +
+      '<input type="checkbox" value="' + f.key + '" style="margin-top:2px;accent-color:#c084fc;" ' + disabled + '>' +
+      '<div>' +
+      '<div style="font-size:12px;font-weight:700;color:#e2e8f0;">' + f.label + ' <span style="font-size:9px;color:' + riskColor + ';text-transform:uppercase;">' + f.risk + ' risk</span></div>' +
+      '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + f.desc + '</div>' +
+      '</div></label>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// APPLY TARGETED FIXES — only selected improvements
+// ═══════════════════════════════════════════════════════════════════
+async function applyTargetedFixes() {
+  if (!_currentRewriteId) { toast('Analyse first', 'red'); return; }
+  var checkboxes = document.querySelectorAll('#rwFixCheckboxes input[type="checkbox"]:checked');
+  var fixes = Array.from(checkboxes).map(function(cb) { return cb.value; });
+  if (!fixes.length) { toast('Select at least one fix', 'red'); return; }
+
+  var btn = document.getElementById('btnApplyFixes');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Applying ' + fixes.length + ' fix(es)...';
+  try {
+    var d = await api('/api/content/targeted-fix/' + _currentRewriteId, 'POST', { fixes: fixes });
+    if (!d.success) throw new Error(d.error);
+    _currentRewriteHtml = d.html_full;
+
+    // Show result preview
+    var el = document.getElementById('rwResult');
+    el.innerHTML =
+      '<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px;margin-bottom:10px;">' +
+      '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px;">✅ Targeted Fixes Applied</div>' +
+      '<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">' + fixes.map(function(f) {
+        var labels = { title_meta:'Title & Meta', direct_answer:'Direct Answer', paa_improve:'PAA Questions', schema_add:'Schemas', voice_optimize:'Voice Search', cta_strengthen:'CTAs', faq_enhance:'FAQ', stats_add:'Statistics', internal_links:'Internal Links', image_alt:'Alt Text', opening_hours:'Opening Hours' };
+        return labels[f] || f;
+      }).join(', ') + '</div>' +
+      '<div style="font-size:11px;color:#6b7280;">BOFU score: ' + (d.bofu_validation?.score || '?') + '/100</div>' +
+      '</div>' +
+      '<textarea id="rwHtmlOutput" style="width:100%;min-height:400px;background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e2e8f0;font-family:monospace;font-size:12px;padding:12px;resize:vertical;box-sizing:border-box;" readonly>' + escapeHtml(_currentRewriteHtml) + '</textarea>';
+    document.getElementById('rwResultCard').style.display = 'block';
+    document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
+
+    // Publish buttons
+    document.getElementById('rwPublishBtns').style.display = 'flex';
+    toast('✅ ' + fixes.length + ' fix(es) applied — review before publishing');
+  } catch(e) {
+    toast('Fix failed: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '⚡ Apply Selected Fixes';
+  }
 }
 
 async function executeRewrite() {

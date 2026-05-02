@@ -12778,9 +12778,12 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
 
     // Fallback competitor research via Serper.dev when no manual competitors
     let serpResults = [];
+    let paaQuestions = [];
+    let aiOverviewData = null;
+    let relatedSearches = [];
     const searchKw = gscData.keyword || queriesList[0] || original_title || original_slug?.replace(/-/g, ' ');
     const _serpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
-    if (competitorData.length === 0 && searchKw && _serpKey) {
+    if (searchKw && _serpKey) {
       try {
         const sr = await fetch('https://google.serper.dev/search', {
           method: 'POST',
@@ -12791,11 +12794,28 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
         if (sr.ok) {
           const sd = await sr.json();
           serpResults = (sd.organic || []).slice(0,5).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }));
-          // Also check for AI Overview
+
+          // AI Overview / Answer Box detection
           if (sd.answerBox) {
+            aiOverviewData = {
+              type: 'answerBox',
+              title: sd.answerBox.title || '',
+              answer: sd.answerBox.answer || sd.answerBox.snippet || '',
+              link: sd.answerBox.link || ''
+            };
             serpResults.unshift({ title: 'AI Overview / Answer Box', url: sd.answerBox.link||'', snippet: sd.answerBox.answer || sd.answerBox.snippet || '' });
           }
-          console.log(`[analyse-rewrite] Serper found ${serpResults.length} results for "${searchKw}"`);
+
+          // People Also Ask — REAL questions people search for
+          paaQuestions = (sd.peopleAlsoAsk || []).map(p => ({
+            question: p.question,
+            answer: p.answer || p.snippet || ''
+          })).slice(0, 8);
+
+          // Related searches — expand keyword coverage
+          relatedSearches = (sd.relatedSearches || []).map(r => r.query).filter(Boolean).slice(0, 10);
+
+          console.log(`[analyse-rewrite] Serper: ${serpResults.length} results, ${paaQuestions.length} PAA, ${relatedSearches.length} related for "${searchKw}"`);
         }
       } catch(e) { console.warn('[analyse-rewrite] Serper fallback failed:', e.message); }
     }
@@ -12807,6 +12827,62 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
     const gscExtended = (queriesList.length || pagesList.length) ? `
 GSC RANKING PAGES (${pagesList.length}): ${pagesList.join(', ') || 'none'}
 GSC REAL QUERIES (${queriesList.length}) — use these to drive keyword + H2 decisions: ${queriesList.join(', ') || 'none'}` : '';
+
+    // PAA (People Also Ask) — real questions from Google SERP
+    const paaContext = paaQuestions.length ? `
+PEOPLE ALSO ASK — REAL QUESTIONS FROM GOOGLE (${paaQuestions.length}):
+${paaQuestions.map((p, i) => `${i+1}. Q: "${p.question}"\n   Current Google answer: "${p.answer.slice(0,200)}"`).join('\n')}
+
+MANDATORY: Include ALL these PAA questions in the FAQ section. Answer each one better than Google's current answer. This is the #1 way to get cited in AI Overviews.` : 'No PAA data available — generate 10 relevant FAQ questions based on the keyword.';
+
+    // AI Overview deep-dive analysis
+    const aiOverviewContext = aiOverviewData ? `
+AI OVERVIEW DETECTED — GOOGLE ALREADY ANSWERS THIS QUERY:
+Title: "${aiOverviewData.title}"
+Answer: "${aiOverviewData.answer.slice(0,400)}"
+Source: ${aiOverviewData.link || 'Google directly'}
+
+STRATEGY: Your page must provide a BETTER, MORE DETAILED answer than the AI Overview. Use:
+- More specific statistics with real sources
+- Expert quotes with full attribution
+- Step-by-step HowTo schema
+- Direct answer box at top of page
+- Speakable schema for voice search` : 'No AI Overview detected — but optimise for future AI Overview inclusion using the PULSE framework: Predictable structure, Unique stats, Listed steps, Cited sources, Expert quotes.';
+
+    // Voice search queries — generated from GSC data + keyword
+    const voiceQueries = [...queriesList, searchKw].filter(Boolean).slice(0, 5);
+    const voiceContext = voiceQueries.length ? `
+VOICE SEARCH OPTIMISATION — Target these spoken queries:
+${voiceQueries.map((q, i) => `${i+1}. "${q}"`).join('\n')}
+
+MANDATORY: Add a <div id="direct-answer"> at the TOP of the page with:
+- 40-60 word direct answer to the primary question
+- Include price/time/specific numbers if relevant
+- Follow with <div id="voice-1"> and <div id="voice-2"> sections
+- Add Speakable schema targeting these CSS selectors` : '';
+
+    // Deep competitor content analysis
+    const competitorDeepDive = competitorData.length ? `
+COMPETITOR DEEP ANALYSIS — TOP ${competitorData.length} RANKING PAGES:
+${competitorData.map((c, i) => {
+  const html = c.html || '';
+  const h2s = (html.match(/<h2[^>]*>([^<]+)/gi) || []).join(', ');
+  const hasSchema = html.includes('application/ld+json');
+  const wordCount = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
+  const hasFAQ = html.includes('FAQPage') || html.toLowerCase().includes('frequently asked');
+  const hasHowTo = html.includes('HowTo');
+  const hasReview = html.includes('Review') && html.includes('ratingValue');
+  return `${i+1}. "${c.title}" (${c.url})
+   - Word count: ~${wordCount}
+   - Headings: ${h2s || 'none detected'}
+   - Schema: ${hasSchema ? 'YES' : 'NO'} (FAQ: ${hasFAQ ? 'Y' : 'N'}, HowTo: ${hasHowTo ? 'Y' : 'N'}, Review: ${hasReview ? 'Y' : 'N'})`;
+}).join('\n')}
+
+BEAT THEM BY: Having MORE cited stats, MORE expert quotes, LONGER direct answers, and ALL schema types they have + Speakable.` : (serpResults.length ? `
+TOP 5 SERP RESULTS FOR "${searchKw}":
+${serpResults.map((r, i) => `${i+1}. "${r.title}" (${r.url}) — "${r.snippet?.slice(0,120)}"`).join('\n')}
+
+STRATEGY: Match their best features, then exceed them with more depth and cited sources.` : 'No competitor data available.');
 
     const slugDecision = (gscData.impressions > 1000 && gscData.clicks < 10) ? 'HIGH_IMPRESSIONS_LOW_CLICKS' : 'NORMAL';
 
@@ -12843,6 +12919,14 @@ ${currentContent.substring(0, 3000)}
 ${competitorData.length ? 'MANUAL COMPETITORS (fully analysed):' : `TOP 5 COMPETITORS FOR "${searchKw}":`}
 ${competitorBlock}
 
+${paaContext}
+
+${aiOverviewContext}
+
+${voiceContext}
+
+${competitorDeepDive}
+
 DETECTED AUTHOR: ${author.name}${author.detected ? ' (PRESERVE — do not change)' : ' (default — apply to output)'}
 
 LAYOUT SIGNATURE: ${layoutSkeleton ? `${layoutSkeleton.sectionCount} sections, ${layoutSkeleton.imageCount} images, ${layoutSkeleton.ctaCount} CTAs, fonts=${layoutSkeleton.fonts.join('/')}` : 'no original HTML'}
@@ -12872,6 +12956,10 @@ Check the original HTML for these 11 critical SEO points. Report ONLY failures:
 Return audit findings as: {"audit_11": [{"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "what was found", "required": "what was required", "fix": "specific fix needed"}, ...]}
 
 CRITICAL RULES:
+- PAA QUESTIONS: If People Also Ask data is provided above, include ALL of them in paa_questions. If not provided, generate 8 relevant PAA questions based on the keyword.
+- AI OVERVIEW: If an AI Overview was detected above, set ai_overview_detected to true and create specific strategies to BEAT that overview with more cited stats and expert quotes.
+- VOICE SEARCH: Generate 5 conversational voice search phrases that people would SPEAK (not type) for this topic. These must be natural language questions.
+- COMPETITOR DEEP-DIVE: Analyse the competitor structure data provided above. What schema types do they have? What word count? What H2s? Create specific beat strategies.
 - SLUG IS SACRED: keep_slug is TRUE by default — only set false when the slug is factually wrong for the intent
 - NEVER change the slug if it would break the search intent of the phrase (even partially)
 - If impressions > 1000 but clicks < 10: keep slug, rewrite content better — do NOT change slug
@@ -12894,10 +12982,16 @@ Return ONLY valid JSON:
     { "url": "...", "what_they_do_well": "...", "weaknesses": "...", "word_count_estimate": 1500, "beat_strategy": "specific way we beat them" }
   ],
   "content_gaps": ["gap1","gap2","gap3"],
+  "paa_questions": [
+    { "question": "People Also Ask question 1", "answer": "how to answer better than current" },
+    { "question": "People Also Ask question 2", "answer": "how to answer better" }
+  ],
   "ai_overview_opportunities": ["how to appear in AIO 1","how to 2"],
+  "ai_overview_detected": false,
   "voice_search_opportunities": ["conversational phrase 1","conversational phrase 2"],
   "secondary_keywords": ["secondary kw 1","secondary kw 2","secondary kw 3"],
   "related_keywords": ["related kw 1","related kw 2","related kw 3","related kw 4","related kw 5"],
+  "related_searches": ["related search 1","related search 2"],
   "gsc_insight": "what the GSC data tells us",
   "rewrite_strategy": "detailed plan for rewriting this page better",
   "recommended_title": "improved title",
@@ -12951,7 +13045,7 @@ Return ONLY valid JSON:
       return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
     }
 
-    // ═══ Stash GSC + author + layout + competitors + GRAAF recs in analysis_data ═══
+    // ═══ Stash GSC + author + layout + competitors + GRAAF recs + PAA + AI Overview + Voice in analysis_data ═══
     analysis.gsc_pages = pagesList;
     analysis.gsc_queries = queriesList;
     analysis.gsc_auto_filled = gscData.autoFilled;
@@ -12960,6 +13054,12 @@ Return ONLY valid JSON:
     analysis.competitors_manual = competitorData;
     analysis.original_graaf_score = originalGraafScan?.contentScore || null;
     analysis.original_graaf_recs = originalGraafScan?.recommendations || [];
+    analysis.paa_questions = paaQuestions;
+    analysis.ai_overview_detected = !!aiOverviewData;
+    analysis.ai_overview_data = aiOverviewData;
+    analysis.related_searches = relatedSearches;
+    analysis.voice_search_queries = voiceQueries;
+    analysis.top_5_competitors = competitorDeepDive;
 
     const rwR = await pool.query(
       `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status)
@@ -12969,14 +13069,85 @@ Return ONLY valid JSON:
        JSON.stringify(analysis), analysis.recommendation,
        analysis.new_slug_suggestion||original_slug, analysis.stronger_seed_keyword||gscData.keyword||'']
     );
+    // ═══ Build rich research report for frontend ═══
+    const yourWordCount = (currentContentFullHtml || '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
+    const researchReport = {
+      // Your current page
+      your_page: {
+        url: original_url,
+        title: original_title,
+        slug: original_slug,
+        word_count: yourWordCount,
+        author: author,
+        has_schema: currentContentFullHtml?.includes('application/ld+json') || false,
+        schema_types: (currentContentFullHtml?.match(/"@type"\s*:\s*"([^"]+)"/g) || []).map(t => t.match(/"@type"\s*:\s*"([^"]+)"/)[1]),
+        has_direct_answer: currentContentFullHtml?.includes('id="direct-answer"') || false,
+        has_speakable: currentContentFullHtml?.includes('Speakable') || false,
+        has_faq: currentContentFullHtml?.includes('FAQPage') || false,
+        has_howto: currentContentFullHtml?.includes('HowTo') || false,
+        has_review_schema: currentContentFullHtml?.includes('"@type": "Review"') || false,
+        h2_count: (currentContentFullHtml?.match(/<h2/g) || []).length,
+        image_count: (currentContentFullHtml?.match(/<img/g) || []).length,
+        cta_count: (currentContentFullHtml?.match(/class="[^"]*cta/gi) || []).length,
+        graaf_score: originalGraafScan?.contentScore || null
+      },
+      // Competitor comparison
+      competitors: {
+        serp_results: serpResults,
+        top_5_analysis: competitorData.map(c => {
+          const html = c.html || '';
+          return {
+            url: c.url,
+            title: c.title,
+            word_count: html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length,
+            has_faq: html.includes('FAQPage'),
+            has_howto: html.includes('HowTo'),
+            has_review: html.includes('"@type": "Review"'),
+            has_speakable: html.includes('Speakable'),
+            has_direct_answer: html.includes('id="direct-answer"'),
+            schema_count: (html.match(/"@type"\s*:/g) || []).length,
+            h2s: (html.match(/<h2[^>]*>([^<]+)/gi) || []).map(h => h.replace(/<[^>]*>/g, '')).slice(0, 8)
+          };
+        })
+      },
+      // AI Overview
+      ai_overview: aiOverviewData ? {
+        detected: true,
+        title: aiOverviewData.title,
+        answer_preview: aiOverviewData.answer?.slice(0, 300),
+        strategy: 'Provide MORE cited stats + expert quotes + longer direct answer than the AI Overview'
+      } : { detected: false, strategy: 'No AI Overview yet — optimise for future inclusion with PULSE framework' },
+      // People Also Ask
+      paa: paaQuestions,
+      // Voice search
+      voice_search: {
+        queries: voiceQueries,
+        has_speakable_schema: currentContentFullHtml?.includes('Speakable') || false,
+        has_direct_answer: currentContentFullHtml?.includes('id="direct-answer"') || false
+      },
+      // Related searches
+      related_searches: relatedSearches,
+      // GSC data
+      gsc: {
+        impressions: gscData.impressions,
+        clicks: gscData.clicks,
+        position: gscData.position,
+        keyword: gscData.keyword,
+        top_queries: queriesList.slice(0, 10),
+        top_pages: pagesList.slice(0, 5)
+      }
+    };
+
     res.json({
       success: true,
       rewrite: rwR.rows[0],
       analysis,
+      research: researchReport,
       gsc_auto_filled: gscData.autoFilled,
       author_detected: author.detected,
       author_name: author.name,
-      competitor_count: competitorData.length
+      competitor_count: competitorData.length,
+      mode: 'smart-analyse' // indicates new targeted-fix mode is available
     });
   } catch(e) {
     console.error('Analyse error:', e);
@@ -13177,11 +13348,17 @@ DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
 STRUCTUUR: ${(analysis.recommended_h2s||[]).join(' | ')}
 SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
 RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
-AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
-VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
+PEOPLE ALSO ASK (ECHTE VRAGEN VAN GOOGLE — VERWERK IN FAQ):
+${(analysis.paa_questions||[]).map((q,i) => `${i+1}. "${q.question}" → Beantwoord beter dan: "${(q.answer||'').slice(0,100)}..."`).join('\n')}
 
-AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
-VOICE SEARCH (verwerk als FAQ-vragen): ${(analysis.voice_search_opportunities||[]).join(' | ')}
+AI OVERVIEW KANSEN — STRATEGIE OM GECITEERD TE WORDEN:
+${(analysis.ai_overview_opportunities||[]).join(' | ')}
+${analysis.ai_overview_detected ? `\nAI OVERVIEW GEDETECTEerd op de SERP. Google geeft al een antwoord. Jouw content moet SPECIFIEKER, MEER GECITEERD, en UITGEBREIDER zijn dan het AI Overview.` : ''}
+
+VOICE SEARCH — OPTIMALISATIE:
+${(analysis.voice_search_opportunities||[]).join(' | ')}
+MANDATORY: Gebruik <div id="direct-answer"> bovenaan met 40-60 woorden direct antwoord.
+Voeg Speakable schema toe met cssSelector: ["#direct-answer", "#voice-1", "#voice-2"]
 SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
 RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
 
@@ -13537,6 +13714,185 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
     console.error('Rewrite execute error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
     res.status(500).json({ success: false, error: msg, where: 'execute-rewrite' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// TARGETED FIX — apply specific improvements only (NOT full rewrite)
+// ═══════════════════════════════════════════════════════════════════════
+app.post('/api/content/targeted-fix/:rewriteId', verifyEngineAccess, requireCredits('targeted-fix'), async (req, res) => {
+  const { fixes = [] } = req.body; // e.g. ["direct_answer","paa_improve","schema_add"]
+  const FIX_TYPES = ['direct_answer','paa_improve','schema_add','cta_strengthen','voice_optimize','title_meta','faq_enhance','stats_add','internal_links','image_alt','opening_hours'];
+  try {
+    const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
+    if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
+    const rw = rwR.rows[0];
+    const analysis = (() => { try { return JSON.parse(rw.analysis_data||'{}'); } catch(e) { return {}; } })();
+    const currentHtml = rw.current_content_full || rw.original_content || '';
+    const claudeKey = process.env.CLAUDE_API_KEY;
+    if (!claudeKey) return res.status(500).json({ success: false, error: 'CLAUDE_API_KEY not set' });
+
+    // Validate fix types
+    const validFixes = fixes.filter(f => FIX_TYPES.includes(f));
+    if (!validFixes.length) return res.status(400).json({ success: false, error: 'No valid fix types. Choose from: ' + FIX_TYPES.join(', ') });
+
+    // ═══ Build targeted prompts per fix type ═══
+    const fixInstructions = {
+      direct_answer: `TARGETED FIX — DIRECT ANSWER OPTIMISATION:
+Find the <div id="direct-answer"> or the first paragraph after the H1.
+Replace it with a STRONGER 40-60 word direct answer that:
+- Answers the EXACT question someone would voice-search
+- Includes a specific NUMBER (price, time, percentage)
+- Mentions the brand name
+- Ends with a micro-CTA
+RULE: ONLY change the direct answer section. Preserve ALL other HTML exactly.`,
+
+      paa_improve: `TARGETED FIX — PAA (PEOPLE ALSO ASK) IMPROVEMENT:
+${(analysis.paa_questions||[]).map((q,i) => `PAA ${i+1}: "${q.question}"`).join('\n')}
+
+For EACH PAA question above:
+1. Find if it already exists in the FAQ section — if yes, STRENGTHEN the answer (add stat, add source, make it longer)
+2. If NOT in FAQ — add it as a new FAQ item with a 100-150 word answer including a real statistic
+RULE: ONLY modify the FAQ section. Preserve ALL other HTML exactly.`,
+
+      schema_add: `TARGETED FIX — SCHEMA ADDITION:
+Check what schemas the page currently has. Add these MISSING schema types by injecting <script type="application/ld+json"> tags in the <head>:
+${!currentHtml.includes('Speakable') ? '- Speakable schema (cssSelector: ["#direct-answer", "#voice-1"])' : ''}
+${!currentHtml.includes('HowTo') ? '- HowTo schema for the 4-step process' : ''}
+${!currentHtml.includes('Review') ? '- Review schema (AggregateRating + individual reviews)' : ''}
+${!currentHtml.includes('BreadcrumbList') ? '- BreadcrumbList schema' : ''}
+${!currentHtml.includes('FAQPage') ? '- FAQPage schema (match the on-page FAQs exactly)' : ''}
+RULE: ONLY add the missing script tags in <head>. Preserve ALL other HTML exactly.`,
+
+      cta_strengthen: `TARGETED FIX — CTA STRENGTHENING:
+Find ALL CTA buttons/links on the page. Replace weak CTAs with strong BOFU CTAs:
+WEAK (replace): "Learn More", "Read More", "Click Here", "Contact Us"
+STRONG (use): "Call (PHONE) for Free Inspection", "Book Your Free Estimate", "Get Started — Free Consultation", "Schedule Your Free (SERVICE) Assessment"
+RULE: ONLY change the text inside CTA elements. Preserve ALL other HTML exactly.`,
+
+      voice_optimize: `TARGETED FIX — VOICE SEARCH OPTIMISATION:
+1. Add <div id="direct-answer"> at the TOP of the body content (if missing) with 40-60 word direct answer
+2. Add Speakable schema targeting ["#direct-answer", "#voice-1", "#voice-2"]
+3. Ensure the first H2 has id="voice-1" and second H2 has id="voice-2"
+Voice queries to target: ${(analysis.voice_search_queries||[]).join(', ')}
+RULE: ONLY add voice search elements. Preserve ALL other HTML exactly.`,
+
+      title_meta: `TARGETED FIX — TITLE & META DESCRIPTION OPTIMISATION:
+1. Rewrite <title> to: [Primary Keyword in first 3 words] + [Power Word] + [Number] | [Brand]
+   - Must be 50-60 characters
+   - Must include the primary keyword
+2. Rewrite <meta name="description"> to:
+   - 140-155 characters
+   - Include keyword + stat + CTA
+   - Make it compelling (not just descriptive)
+RULE: ONLY change <title> and <meta name="description">. Preserve ALL other HTML exactly.`,
+
+      faq_enhance: `TARGETED FIX — FAQ SECTION ENHANCEMENT:
+For EACH existing FAQ question:
+1. Make the answer 100-150 words (not 1-2 sentences)
+2. Add 1 internal link to a related service page
+3. Add 1 real statistic with source
+4. End with a micro-CTA mentioning the phone number
+5. Add the phone number (862) 388-8649 naturally in 2-3 answers
+RULE: ONLY modify the FAQ section. Preserve ALL other HTML exactly.`,
+
+      stats_add: `TARGETED FIX — STATISTICS ADDITION:
+Add 4-6 REAL cited statistics to the page:
+1. Find the statistics/numbers section (or create one after the second H2)
+2. Add statistics from 2024-2026 with real source names and URLs
+3. Use this format: <strong>Number/Fact</strong> — context (<a href="URL">Source, Year</a>)
+Topic: ${rw.niche || 'the service area'}
+RULE: ONLY add/modify the statistics section. Preserve ALL other HTML exactly.`,
+
+      internal_links: `TARGETED FIX — INTERNAL LINKING:
+Add 3-5 internal links within the body content:
+1. Link service mentions to their service pages (e.g. "drain cleaning" → /drain-cleaning/)
+2. Link city/area mentions to city pages (e.g. "Bergen County" → /bergen-county/)
+3. Add 1 contextual link in the first 200 words
+Use relevant anchor text (not "click here")
+RULE: ONLY add <a> tags. Preserve ALL other HTML exactly.`,
+
+      image_alt: `TARGETED FIX — IMAGE ALT TEXT:
+For EVERY <img> tag on the page:
+1. Add or improve alt="" to be descriptive and include the primary keyword
+2. Format: "[Service] [Location] — [descriptive context]"
+Example: "Camera Inspection Services New Jersey — technician inspecting sewer line"
+RULE: ONLY change alt attributes. Preserve ALL other HTML exactly.`,
+
+      opening_hours: `TARGETED FIX — OPENING HOURS SCHEMA:
+Add OpeningHoursSpecification to the existing LocalBusiness schema:
+"openingHoursSpecification": [
+  { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "18:00" },
+  { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "14:00" },
+  { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Sunday"], "opens": "00:00", "closes": "00:00", "description": "Emergency service only" }
+]
+Also add paymentAccepted and currenciesAccepted if missing.
+RULE: ONLY modify schema JSON. Preserve ALL other HTML exactly.`
+    };
+
+    // ═══ Call Claude for targeted fixes ═══
+    const combinedInstructions = validFixes.map(f => fixInstructions[f] || '').join('\n\n═══════════════════════════════════════\n\n');
+    const userPrompt = `You are a surgical SEO editor. Apply ONLY the targeted fixes below to the HTML. Do NOT change anything else. Return ONLY the modified HTML.
+
+${combinedInstructions}
+
+CURRENT HTML TO MODIFY:
+${currentHtml.slice(0, 12000)}
+
+INSTRUCTIONS:
+1. Apply ONLY the fixes requested above
+2. Preserve ALL other HTML, CSS, and content exactly as-is
+3. Return the COMPLETE HTML document (not just the changed part)
+4. Do not add comments like "<!-- changed -->" or "<!-- fix applied -->"`;
+
+    const systemPrompt = `You are a surgical HTML editor. You apply ONLY the specific fixes requested. You never rewrite whole sections. You preserve all existing HTML structure, CSS, images, and content. You return complete valid HTML.`;
+
+    let htmlContent = '';
+    let costInfo = {};
+    try {
+      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 16000, claudeKey, 'claude-sonnet-4-20250514');
+    } catch (err) {
+      console.warn('[targeted-fix] Claude failed:', err.message);
+      return res.status(500).json({ success: false, error: 'Claude API failed: ' + err.message });
+    }
+
+    // Basic validation
+    const bofuCheck = rewriterHelpers.validateBofuQuality(htmlContent);
+
+    // Save
+    const appliedFixesStr = validFixes.join(',');
+    await pool.query(
+      `UPDATE content_rewrites SET rewritten_content=$1, rewritten_at=NOW(), rewrite_cost=$2, rewrite_model=$3, status='targeted_fix_applied', graaf_recs=$4 WHERE id=$5`,
+      [htmlContent, JSON.stringify(costInfo), 'claude-sonnet-4-targeted', `[Targeted Fixes Applied: ${appliedFixesStr}]`, req.params.rewriteId]
+    );
+
+    // Create snapshot
+    try {
+      await pool.query(
+        `INSERT INTO content_snapshots (profile_id, rewrite_id, type, content, meta) VALUES ($1,$2,'targeted_fix',$3,$4)`,
+        [rw.profile_id, req.params.rewriteId, htmlContent, JSON.stringify({ fixes_applied: validFixes, bofu_score: bofuCheck.score, bofu_ok: bofuCheck.ok, graaf_score: analysis.contentScore })]
+      );
+    } catch(e) { console.warn('[targeted-fix] snapshot error:', e.message); }
+
+    res.json({
+      success: true,
+      rewrite_id: req.params.rewriteId,
+      fixes_applied: validFixes,
+      bofu_validation: bofuCheck,
+      research: {
+        paa: analysis.paa_questions || [],
+        ai_overview: analysis.ai_overview_detected || false,
+        voice_queries: analysis.voice_search_queries || [],
+        competitors: (analysis.competitors_manual || []).length
+      },
+      html_preview: htmlContent.slice(0, 500) + '...',
+      html_full: htmlContent,
+      message: `Targeted fixes applied: ${appliedFixesStr}. Review the HTML and publish when ready.`
+    });
+
+  } catch(e) {
+    console.error('Targeted fix error:', e);
+    res.status(500).json({ success: false, error: e.message, where: 'targeted-fix' });
   }
 });
 
