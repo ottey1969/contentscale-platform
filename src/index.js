@@ -32,6 +32,34 @@ console.log('✅ CONTENTSCALE SERVER v3.0 - FINAL FIX - 1775546405');
 // ============================================
 // PGSSLMODE removed — pool config handles SSL (rejectUnauthorized: false for Railway)
 process.env.NODE_NO_WARNINGS = '1';
+
+// ── Polyfills for older Node.js versions ───────────────────────────────────
+if (typeof fetch === 'undefined') {
+  const nodeFetch = require('node-fetch');
+  global.fetch = nodeFetch;
+  global.Headers = nodeFetch.Headers;
+  global.Request = nodeFetch.Request;
+  global.Response = nodeFetch.Response;
+}
+if (typeof AbortSignal === 'undefined') {
+  global.AbortSignal = class AbortSignal { static timeout() { return null; } };
+}
+if (AbortSignal && !AbortSignal.timeout) {
+  AbortSignal.timeout = function(ms) {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), ms);
+    return ctrl.signal;
+  };
+}
+
+// ── Global crash protection ──────────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message, err.stack?.split('\n')[0]);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const fs = require('fs');
 const express = require('express');
 const path = require('path');
@@ -314,7 +342,8 @@ app.use((req, res, next) => {
 const origSend = res.send.bind(res);
 res.send = function(body) {
 if (typeof body === 'string' && body.includes('</body>') &&
-res.getHeader('Content-Type')?.includes('text/html')) {
+res.getHeader('Content-Type')?.includes('text/html') &&
+!req.path?.includes('content-engine')) {
 // Replace LAST </body> only — avoids hitting </body> inside JS template strings
 const lastIdx = body.lastIndexOf('</body>');
 if (lastIdx !== -1) {
@@ -13000,7 +13029,8 @@ Return ONLY valid JSON:
   "related_searches": ["related search 1","related search 2"],
   "gsc_insight": "what the GSC data tells us",
   "rewrite_strategy": "detailed plan for rewriting this page better",
-  "recommended_title": "improved title",
+  "recommended_title": "improved title — 50-60 chars, keyword first, power word, brand | pipe",
+  "recommended_meta_description": "improved description — 140-160 chars, keyword + stat + CTA, compelling not just descriptive",
   "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4"],
   "target_word_count": 2000,
   "images_to_keep": ["note about keeping existing images"],
@@ -13784,6 +13814,15 @@ Voice queries to target: ${(analysis.voice_search_queries||[]).join(', ')}
 RULE: ONLY add voice search elements. Preserve ALL other HTML exactly.`,
 
       title_meta: `TARGETED FIX — TITLE & META DESCRIPTION OPTIMISATION:
+Use the AI-recommended title and description from the analysis:
+- Recommended Title: ${analysis.recommended_title || 'not provided'}
+- Recommended Description: ${analysis.recommended_meta_description || 'not provided'}
+
+If recommendations are provided:
+1. Rewrite <title> to EXACTLY the recommended title
+2. Rewrite <meta name="description"> to EXACTLY the recommended description
+
+If NO recommendations provided, use these rules:
 1. Rewrite <title> to: [Primary Keyword in first 3 words] + [Power Word] + [Number] | [Brand]
    - Must be 50-60 characters
    - Must include the primary keyword

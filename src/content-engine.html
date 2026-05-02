@@ -102,6 +102,7 @@ textarea{resize:vertical;min-height:100px;}
 </div>
 <script>
 // VERSION: v2026-05-02-001 — cache bust: syntax fix + localStorage + research dashboard
+console.log('[ContentEngine] Version v2026-05-02-001 loaded');
 (function() {
   var ZONES = [
     { label: 'New York',    tz: 'America/New_York' },
@@ -927,6 +928,7 @@ textarea{resize:vertical;min-height:100px;}
 
 <script>
 // ── Auth: support both admin and engine share code users ──
+console.log('[ContentEngine] Main script starting...');
 var ADMIN_ID = localStorage.getItem('admin_id');
 var ENGINE_TOKEN = sessionStorage.getItem('engine_token');
 var ENGINE_GEMINI_KEY = sessionStorage.getItem('engine_gemini_key');
@@ -2789,6 +2791,7 @@ function saveRewriteForm() {
 function loadRewriteForm() {
   try {
     var raw = localStorage.getItem(RW_FORM_KEY);
+    console.log('[ContentEngine] loadRewriteForm raw:', raw ? 'found (' + raw.length + ' chars)' : 'none');
     if (!raw) return;
     var data = JSON.parse(raw);
     getRewriteFormFields().forEach(function(id) {
@@ -2839,9 +2842,8 @@ async function optimizeMetaOnly() {
   var url = document.getElementById('rwUrl').value.trim();
   if (!url) { toast('Enter a page URL first', 'red'); return; }
   var btn = document.getElementById('btnOptimizeMeta');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Optimizing...';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Researching best meta...';
   try {
-    // Create rewrite record first (minimal)
     var competitors = [];
     document.querySelectorAll('.rw-competitor-slot').forEach(function(slot){
       var url = slot.querySelector('.rw-comp-url').value.trim();
@@ -2866,34 +2868,81 @@ async function optimizeMetaOnly() {
     if (!d.success) throw new Error(d.error);
     _currentRewriteId = d.rewrite.id;
 
-    // Apply only title_meta fix
-    var fd = await api('/api/content/targeted-fix/' + _currentRewriteId, 'POST', { fixes: ['title_meta'] });
-    if (!fd.success) throw new Error(fd.error);
-    _currentRewriteHtml = fd.html_full;
+    // Show AI recommendation FIRST (before applying)
+    var analysis = d.analysis || {};
+    var recTitle = analysis.recommended_title || '';
+    var recDesc = analysis.recommended_meta_description || '';
+    
+    if (!recTitle && !recDesc) {
+      toast('AI did not generate meta recommendations. Try full Research first.', 'orange');
+      btn.disabled = false; btn.innerHTML = '📝 Optimize Meta Title & Description';
+      return;
+    }
 
-    // Show result
+    // Build recommendation card
     var el = document.getElementById('rwResult');
     el.innerHTML =
       '<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:14px;margin-bottom:10px;">' +
-      '<div style="font-size:13px;font-weight:700;color:#c084fc;margin-bottom:6px;">✅ Meta Title & Description Optimized</div>' +
-      '<div style="font-size:11px;color:#9ca3af;">Your page content is preserved. Only &lt;title&gt; and &lt;meta name="description"&gt; were updated.</div>' +
-      '<div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;">' +
-      '<div style="flex:1;min-width:200px;padding:10px;background:rgba(15,23,42,.5);border-radius:6px;">' +
-      '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">New Title</div>' +
-      '<div style="font-size:12px;color:#e2e8f0;font-weight:700;">' + escapeHtml(_currentRewriteHtml.match(/<title>([^<]+)<\/title>/i)?.[1] || 'Not found') + '</div>' +
-      '<div style="font-size:10px;color:#4ade80;margin-top:2px;">' + ((_currentRewriteHtml.match(/<title>([^<]+)<\/title>/i)?.[1] || '').length) + ' chars</div>' +
+      '<div style="font-size:13px;font-weight:700;color:#c084fc;margin-bottom:8px;">🤖 AI-Recommended Meta (Based on Research)</div>' +
+      '<div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">The system analysed competitors, PAA questions, voice search, GSC data, and GRAAF score to determine the best meta for this page.</div>' +
+      (recTitle ? '<div style="background:rgba(15,23,42,.5);border-radius:6px;padding:10px;margin-bottom:8px;">' +
+        '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Recommended Title <span style="color:#4ade80;">(' + recTitle.length + ' chars)</span></div>' +
+        '<div style="font-size:14px;color:#e2e8f0;font-weight:700;">' + escapeHtml(recTitle) + '</div>' +
+      '</div>' : '') +
+      (recDesc ? '<div style="background:rgba(15,23,42,.5);border-radius:6px;padding:10px;margin-bottom:12px;">' +
+        '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Recommended Description <span style="color:#4ade80;">(' + recDesc.length + ' chars)</span></div>' +
+        '<div style="font-size:13px;color:#e2e8f0;">' + escapeHtml(recDesc) + '</div>' +
+      '</div>' : '') +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button id="btnApplyMetaRec" class="btn btn-primary" style="font-size:13px;">✅ Apply This Meta</button>' +
+        '<button id="btnRejectMetaRec" class="btn btn-secondary" style="font-size:13px;">❌ Keep Current</button>' +
       '</div>' +
-      '<div style="flex:1;min-width:200px;padding:10px;background:rgba(15,23,42,.5);border-radius:6px;">' +
-      '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">New Description</div>' +
-      '<div style="font-size:12px;color:#e2e8f0;">' + escapeHtml(_currentRewriteHtml.match(/<meta[^>]+name=["']?description["']?[^>]*content=["']([^"']+)["']/i)?.[1] || 'Not found') + '</div>' +
-      '<div style="font-size:10px;color:#4ade80;margin-top:2px;">' + ((_currentRewriteHtml.match(/<meta[^>]+name=["']?description["']?[^>]*content=["']([^"']+)["']/i)?.[1] || '').length) + ' chars</div>' +
-      '</div>' +
-      '</div></div>' +
-      '<textarea id="rwHtmlOutput" style="width:100%;min-height:400px;background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e2e8f0;font-family:monospace;font-size:12px;padding:12px;resize:vertical;box-sizing:border-box;" readonly>' + escapeHtml(_currentRewriteHtml) + '</textarea>';
+      '</div>';
     document.getElementById('rwResultCard').style.display = 'block';
     document.getElementById('rwResultCard').scrollIntoView({ behavior: 'smooth' });
-    document.getElementById('rwPublishBtns').style.display = 'flex';
-    toast('✅ Meta title & description optimized — review and publish');
+    
+    // Bind apply button
+    document.getElementById('btnApplyMetaRec').addEventListener('click', async function() {
+      this.disabled = true; this.innerHTML = '<span class="spinner"></span> Applying...';
+      try {
+        var fd = await api('/api/content/targeted-fix/' + _currentRewriteId, 'POST', { fixes: ['title_meta'] });
+        if (!fd.success) throw new Error(fd.error);
+        _currentRewriteHtml = fd.html_full;
+        // Show applied result
+        el.innerHTML =
+          '<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px;margin-bottom:10px;">' +
+          '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px;">✅ Meta Applied Successfully</div>' +
+          '<div style="font-size:11px;color:#9ca3af;margin-bottom:10px;">Your page content is preserved. Only &lt;title&gt; and &lt;meta name="description"&gt; were updated.</div>' +
+          '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+          '<div style="flex:1;min-width:200px;padding:10px;background:rgba(15,23,42,.5);border-radius:6px;">' +
+          '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">New Title</div>' +
+          '<div style="font-size:12px;color:#e2e8f0;font-weight:700;">' + escapeHtml(_currentRewriteHtml.match(/<title>([^<]+)<\/title>/i)?.[1] || 'Not found') + '</div>' +
+          '<div style="font-size:10px;color:#4ade80;margin-top:2px;">' + ((_currentRewriteHtml.match(/<title>([^<]+)<\/title>/i)?.[1] || '').length) + ' chars</div>' +
+          '</div>' +
+          '<div style="flex:1;min-width:200px;padding:10px;background:rgba(15,23,42,.5);border-radius:6px;">' +
+          '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">New Description</div>' +
+          '<div style="font-size:12px;color:#e2e8f0;">' + escapeHtml(_currentRewriteHtml.match(/<meta[^>]+name=["']?description["']?[^>]*content=["']([^"']+)["']/i)?.[1] || 'Not found') + '</div>' +
+          '<div style="font-size:10px;color:#4ade80;margin-top:2px;">' + ((_currentRewriteHtml.match(/<meta[^>]+name=["']?description["']?[^>]*content=["']([^"']+)["']/i)?.[1] || '').length) + ' chars</div>' +
+          '</div>' +
+          '</div></div>' +
+          '<textarea id="rwHtmlOutput" style="width:100%;min-height:400px;background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#e2e8f0;font-family:monospace;font-size:12px;padding:12px;resize:vertical;box-sizing:border-box;" readonly>' + escapeHtml(_currentRewriteHtml) + '</textarea>';
+        document.getElementById('rwPublishBtns').style.display = 'flex';
+        toast('✅ Meta title & description applied — review and publish');
+      } catch(e) {
+        toast('Apply failed: ' + e.message, 'red');
+        this.disabled = false; this.innerHTML = '✅ Apply This Meta';
+      }
+    });
+    
+    // Bind reject button
+    document.getElementById('btnRejectMetaRec').addEventListener('click', function() {
+      el.innerHTML = '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;">' +
+        '<div style="font-size:13px;font-weight:700;color:#fbbf24;">⚠️ Meta Kept As-Is</div>' +
+        '<div style="font-size:11px;color:#9ca3af;">Your current title and description were not changed.</div></div>';
+      toast('Current meta kept — no changes applied');
+    });
+    
+    toast('🤖 AI recommended meta generated — review and apply');
   } catch(e) {
     toast('Meta optimization failed: ' + e.message, 'red');
   } finally {
@@ -3018,6 +3067,20 @@ function renderAnalysis(a) {
 
   var el = document.getElementById('rwAnalysisResults');
   el.innerHTML =
+    '<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:14px;margin-bottom:14px;">' +
+    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">&#127775; AI-Recommended Meta</div>' +
+    (a.recommended_title ? '<div style="background:rgba(15,23,42,.5);border-radius:6px;padding:10px;margin-bottom:8px;">' +
+      '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Title (' + a.recommended_title.length + ' chars)</div>' +
+      '<div style="font-size:14px;color:#e2e8f0;font-weight:700;">' + escapeHtml(a.recommended_title) + '</div>' +
+      '<div style="font-size:11px;color:#4ade80;margin-top:3px;">' + (a.recommended_title.length <= 60 ? '&#10004; Length OK' : '&#9888; Too long (' + a.recommended_title.length + '/60 max)') + '</div>' +
+    '</div>' : '') +
+    (a.recommended_meta_description ? '<div style="background:rgba(15,23,42,.5);border-radius:6px;padding:10px;margin-bottom:8px;">' +
+      '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Description (' + a.recommended_meta_description.length + ' chars)</div>' +
+      '<div style="font-size:13px;color:#e2e8f0;">' + escapeHtml(a.recommended_meta_description) + '</div>' +
+      '<div style="font-size:11px;color:#4ade80;margin-top:3px;">' + (a.recommended_meta_description.length <= 160 ? '&#10004; Length OK' : '&#9888; Too long (' + a.recommended_meta_description.length + '/160 max)') + '</div>' +
+    '</div>' : '') +
+    '<div style="font-size:12px;color:#9ca3af;">Based on research: competitors, PAA, voice search, GSC data, and GRAAF analysis.</div>' +
+    '</div>' +
     '<div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px;margin-bottom:14px;">' +
     '<div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Recommendation</div>' +
     '<div style="font-size:1rem;font-weight:800;color:' + recColor + ';">' + recLabel + '</div>' +
@@ -4121,6 +4184,8 @@ function handleRewritePagesCsv(input) {
     statusEl.style.color = '#4ade80';
     statusEl.textContent = '✓ ' + rows.length + ' pages loaded · ' + (totalClk >= 0 ? totalClk : '-') + ' clicks · avg pos ' + (avgPos?avgPos.toFixed(1):'-');
     renderGscPriorityPanel();
+    saveRewriteForm();
+    console.log('[CSV] Pages loaded:', rows.length, 'imp:', totalImp, 'clk:', totalClk, 'pos:', avgPos);
   };
   reader.readAsText(file);
 }
@@ -4140,6 +4205,7 @@ function handleRewriteQueriesCsv(input) {
     // Queries CSV fills ONLY the queries list — does NOT overwrite numeric fields
     statusEl.style.color = '#4ade80';
     statusEl.textContent = '✓ ' + rows.length + ' queries loaded';
+    saveRewriteForm();
   };
   reader.readAsText(file);
 }
@@ -4266,7 +4332,7 @@ function renderGscPriorityPanel() {
       '<div style="font-size:11px;color:#9ca3af;">' + getGscPriorityReason(row) + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">' +
-      '<button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="auditUrlForRewrite(' + JSON.stringify(row.url) + ',' + JSON.stringify(row.keyword) + ',' + (row.impressions || 0) + ',' + (row.clicks || 0) + ',' + (row.position || 0) + ')">🔍 Research</button>' +
+      '<button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="auditUrlForRewrite(decodeURIComponent(&#39;' + encodeURIComponent(row.url) + '&#39;),decodeURIComponent(&#39;' + encodeURIComponent(row.keyword || '') + '&#39;),' + (row.impressions || 0) + ',' + (row.clicks || 0) + ',' + (row.position || 0) + ')">🔍 Research</button>' +
       '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="window.open(\'' + row.url + '\',\'_blank\')">↗️ Open</button>' +
       '</div>' +
       '</div>';
@@ -4296,6 +4362,7 @@ function extractKeywordFromUrl(url) {
 }
 
 async function auditUrlForRewrite(url, keyword, impressions, clicks, position) {
+  console.log('[auditUrlForRewrite] called with:', { url: url, keyword: keyword, impressions: impressions, clicks: clicks, position: position });
   // 1. Switch to Rewrite tab
   showPanel('rewrite');
   
@@ -4319,6 +4386,8 @@ async function auditUrlForRewrite(url, keyword, impressions, clicks, position) {
   
   var posEl = document.getElementById('rwPosition');
   if (posEl) posEl.value = position || '';
+  
+  console.log('[auditUrlForRewrite] fields set:', { url: urlEl && urlEl.value, imp: impEl && impEl.value, clk: clkEl && clkEl.value, pos: posEl && posEl.value });
   
   // 3. Save to localStorage so it persists
   saveRewriteForm();
