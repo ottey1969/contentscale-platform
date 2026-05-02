@@ -78,7 +78,7 @@ textarea{resize:vertical;min-height:100px;}
     <button class="nav-tab" onclick="showPanel('preview',this);loadPreviewArticles();">👁 Preview</button>
     <button class="nav-tab" onclick="showPanel('rewrite',this)">🔄 Rewrite</button>
     <button class="nav-tab" onclick="showPanel('bulk',this)">⚡ Bulk Autopilot</button>
-    <button class="nav-tab" onclick="showPanel('news',this)">📰 News+Video</button>
+    <button class="nav-tab" onclick="showPanel('serviceareas',this);loadServiceAreaJobs();">🗺️ Service Areas</button>
     <button class="nav-tab" onclick="showPanel('stats',this)">📊 Stats Study</button>
     <button class="nav-tab" onclick="showPanel('tracker',this);loadTrackerPages();">📡 Gab Tracker</button>
   </div>
@@ -178,7 +178,7 @@ textarea{resize:vertical;min-height:100px;}
         <div><label>BTW / VAT</label><input id="pfBtw" placeholder="NL123456789B01"></div>
         <div><label>Founded Year</label><input id="pfFounded" placeholder="2010"></div>
         <div><label>Owner Name</label><input id="pfOwner" placeholder="Jan Janssen"></div>
-        <div><label>Schema Type</label><select id="pfSchemaType"><option value="LocalBusiness">LocalBusiness</option><option value="Organization">Organization</option><option value="ProfessionalService">ProfessionalService</option><option value="HomeAndConstructionBusiness">HomeAndConstructionBusiness</option><option value="Plumber">Plumber</option><option value="Electrician">Electrician</option><option value="RoofingContractor">RoofingContractor</option></select></div>
+        <div><label>Schema Type</label><select id="pfSchemaType"><option value="LocalBusiness">LocalBusiness</option><option value="Organization">Organization</option><option value="ProfessionalService">ProfessionalService</option><option value="HomeAndConstructionBusiness">HomeAndConstructionBusiness</option><option value="Person">Person</option><option value="Plumber">Plumber</option><option value="Electrician">Electrician</option><option value="RoofingContractor">RoofingContractor</option></select></div>
       </div>
       <div class="grid-2" style="margin-bottom:10px;">
         <div><label>Review Score</label><input id="pfReviewScore" placeholder="4.8"></div>
@@ -194,6 +194,7 @@ textarea{resize:vertical;min-height:100px;}
       <div style="margin-bottom:10px;"><label>Certifications (one per line)</label><textarea id="pfCerts" rows="3" placeholder="NVKL certified&#10;Licensed Master Plumber&#10;ISO 9001"></textarea></div>
       <div style="margin-bottom:10px;"><label>Unique Selling Points (one per line)</label><textarea id="pfUsps" rows="3" placeholder="24/7 emergency service&#10;Same-day appointments&#10;No hidden fees"></textarea></div>
       <div style="margin-bottom:10px;"><label>Service Areas (one per line)</label><textarea id="pfServiceAreas" rows="3" placeholder="Amsterdam&#10;Rotterdam&#10;Utrecht&#10;The Hague"></textarea></div>
+      <div style="margin-bottom:10px;"><label>Target Location External Links (one per line — Area: URL)</label><textarea id="pfLocationLinks" rows="3" placeholder="Netherlands: https://en.wikipedia.org/wiki/Netherlands&#10;Belgium: https://en.wikipedia.org/wiki/Belgium&#10;Luxembourg: https://en.wikipedia.org/wiki/Luxembourg&#10;Amsterdam: https://en.wikipedia.org/wiki/Amsterdam"></textarea></div>
       <div><label>FAQ (JSON format — optional)</label><textarea id="pfFaq" rows="3" placeholder='[{"question":"Do you offer emergency service?","answer":"Yes, 24/7 available."}]'></textarea></div>
     </div>
     <!-- Locations -->
@@ -1138,9 +1139,9 @@ function showProfileForm(profile) {
   document.getElementById('pfId').value = '';
   // Clear all fields
   ['pfName','pfDomain','pfSitemap','pfNiche','pfAudience','pfTemplate','pfWpUrl','pfWpUser','pfWpPw',
-   'pfPhone','pfEmail','pfAddress','pfCity','pfCountry','pfKvk','pfBtw','pfFounded','pfOwner',
+   'pfPhone','pfEmail','pfAddress','pfCity','pfCountry','pfKvk','pfBtw','pfFounded','pfOwner','pfSchemaType',
    'pfReviewScore','pfReviewCount','pfReviewPlatform','pfOpeningHours','pfYears','pfTeamSize',
-   'pfPricing','pfGuarantee','pfCerts','pfUsps','pfServiceAreas','pfFaq'].forEach(function(id) {
+   'pfPricing','pfGuarantee','pfCerts','pfUsps','pfServiceAreas','pfLocationLinks','pfFaq'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1193,6 +1194,11 @@ function showProfileForm(profile) {
     document.getElementById('pfCerts').value = (profile.certifications || []).join('\n');
     document.getElementById('pfUsps').value = (profile.unique_selling_points || []).join('\n');
     document.getElementById('pfServiceAreas').value = (profile.service_areas || []).join('\n');
+    // Location external links
+    var locLinks = bi.location_links || {};
+    var linkLines = [];
+    for (var area in locLinks) { if (locLinks.hasOwnProperty(area)) linkLines.push(area + ': ' + locLinks[area]); }
+    document.getElementById('pfLocationLinks').value = linkLines.join('\n');
     document.getElementById('pfFaq').value = profile.faq ? JSON.stringify(profile.faq, null, 2) : '';
     _pendingLocations = (profile.locations || []).map(function(l) { return Object.assign({}, l, { _saved: true }); });
     renderPendingLocations();
@@ -1361,7 +1367,21 @@ async function saveProfile() {
       review_count: document.getElementById('pfReviewCount').value.trim(),
       review_platform: document.getElementById('pfReviewPlatform').value.trim(),
       opening_hours: document.getElementById('pfOpeningHours').value.trim(),
-      schema_type: document.getElementById('pfSchemaType').value
+      schema_type: document.getElementById('pfSchemaType').value,
+      location_links: (function() {
+        var raw = document.getElementById('pfLocationLinks').value || '';
+        var lines = raw.split('\n');
+        var result = {};
+        lines.forEach(function(line) {
+          var parts = line.split(':');
+          if (parts.length >= 2) {
+            var area = parts[0].trim();
+            var url = parts.slice(1).join(':').trim();
+            if (area && url) result[area] = url;
+          }
+        });
+        return result;
+      })()
     }
   };
   console.log('[saveProfile] business_info being sent:', JSON.stringify(payload.business_info));
@@ -5182,9 +5202,114 @@ async function deleteTrackerPageFromDetail(pageId) {
   }
 }
 
-</script>
+// ════════════════════════════════════════════════════════════════
+// SERVICE AREA BULK GENERATOR FUNCTIONS
+// ════════════════════════════════════════════════════════════════
 
-<!-- ══ Billing / API Key Settings Modal ══ -->
+function loadServiceAreaProfile() {
+  var sel = document.getElementById('saProfileSelect');
+  var profileId = sel.value;
+  if (!profileId) return;
+  var profile = _profiles.find(function(p) { return p.id == profileId; });
+  if (!profile) return;
+  document.getElementById('saKeyword').value = (profile.niche || '').toLowerCase();
+}
+
+async function generateServiceAreas() {
+  var profileId = document.getElementById('saProfileSelect').value;
+  var keyword = document.getElementById('saKeyword').value.trim();
+  var citiesRaw = document.getElementById('saCities').value.trim();
+  var templateHtml = document.getElementById('saTemplate').value.trim();
+  var useBrief = document.getElementById('saUseBrief').checked;
+  
+  if (!profileId) { alert('Select a profile first'); return; }
+  if (!keyword) { alert('Enter a service keyword (e.g. "drain cleaning")'); return; }
+  if (!citiesRaw) { alert('Enter at least one city'); return; }
+  
+  var cities = citiesRaw.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+  if (cities.length === 0) { alert('Enter at least one city'); return; }
+  if (cities.length > 50) { alert('Maximum 50 cities per batch'); return; }
+  
+  document.getElementById('saProgress').style.display = 'block';
+  document.getElementById('saResults').style.display = 'none';
+  document.getElementById('saStatus').textContent = 'Starting ' + cities.length + ' pages...';
+  document.getElementById('saProgressBar').style.width = '0%';
+  
+  try {
+    var r = await api('/api/content/service-areas/generate', 'POST', {
+      profileId: parseInt(profileId), keyword: keyword, cities: cities,
+      templateHtml: templateHtml || null, useExistingBrief: useBrief
+    });
+    if (!r.success) { document.getElementById('saStatus').textContent = 'Error: ' + (r.error || 'Failed'); return; }
+    var masterJobId = r.masterJobId;
+    document.getElementById('saStatus').textContent = 'Job ' + masterJobId + ' started — ' + cities.length + ' cities';
+    _activeServiceAreaJobId = masterJobId;
+    pollServiceAreaProgress(masterJobId);
+  } catch(e) { document.getElementById('saStatus').textContent = 'Error: ' + e.message; }
+}
+
+var _activeServiceAreaJobId = null;
+
+async function pollServiceAreaProgress(jobId) {
+  if (!_activeServiceAreaJobId || _activeServiceAreaJobId !== jobId) return;
+  try {
+    var r = await api('/api/content/service-areas/' + jobId, 'GET');
+    var job = r.job, articles = r.articles || [];
+    var data = {}; try { data = JSON.parse(job.prompt || '{}'); } catch(e) {}
+    document.getElementById('saStatus').textContent = job.status + ' — ' + articles.length + ' / ' + (data.count || '?') + ' complete';
+    document.getElementById('saProgressBar').style.width = (job.progress || 0) + '%';
+    if (job.status === 'published' || job.status === 'failed') {
+      _activeServiceAreaJobId = null;
+      document.getElementById('saStatus').textContent = job.status === 'published' ? 'All ' + articles.length + ' pages complete!' : 'Failed: ' + (job.error || 'Unknown');
+      showServiceAreaResults(articles); loadServiceAreaJobs(); return;
+    }
+    setTimeout(function() { pollServiceAreaProgress(jobId); }, 5000);
+  } catch(e) { setTimeout(function() { pollServiceAreaProgress(jobId); }, 10000); }
+}
+
+function showServiceAreaResults(articles) {
+  var container = document.getElementById('saArticlesList');
+  container.innerHTML = '';
+  articles.forEach(function(a) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center';
+    div.innerHTML = '<div><strong>' + a.title + '</strong><br><span style="font-size:12px;color:#666">' + a.word_count + ' words · ' + a.slug + '</span></div><div><a href="/api/content/articles/' + a.id + '/preview" target="_blank" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Preview</a></div>';
+    container.appendChild(div);
+  });
+  document.getElementById('saResults').style.display = 'block';
+}
+
+async function loadServiceAreaJobs() {
+  var container = document.getElementById('saPreviousJobs');
+  if (!container) return;
+  try {
+    var r = await api('/api/content/jobs', 'GET');
+    var jobs = (r.jobs || []).filter(function(j) { return j.type === 'service_areas'; });
+    if (jobs.length === 0) { container.innerHTML = '<p style="color:#666;font-size:13px">No service area jobs yet. Generate your first batch above.</p>'; return; }
+    container.innerHTML = jobs.map(function(j) {
+      var data = {}; try { data = JSON.parse(j.prompt || '{}'); } catch(e) {}
+      return '<div style="padding:10px;border-bottom:1px solid #e2e8f0"><strong>Job #' + j.id + '</strong> · ' + (data.count || '?') + ' cities · ' + j.status + '<br><span style="font-size:12px;color:#666">Keyword: ' + j.keyword + ' · Progress: ' + (j.progress || 0) + '%</span><br><button onclick="viewServiceAreaJob(' + j.id + ')" class="btn btn-secondary" style="font-size:12px;padding:4px 10px;margin-top:4px">View Pages</button></div>';
+    }).join('');
+  } catch(e) { container.innerHTML = '<p style="color:#666;font-size:13px">Error loading jobs</p>'; }
+}
+
+async function viewServiceAreaJob(jobId) {
+  try { var r = await api('/api/content/service-areas/' + jobId, 'GET'); showServiceAreaResults(r.articles || []); }
+  catch(e) { alert('Error: ' + e.message); }
+}
+
+// Populate service area dropdown when profiles load
+var _origLoadProfiles2 = loadProfiles;
+loadProfiles = async function() {
+  await _origLoadProfiles2.apply(this, arguments);
+  var sel = document.getElementById('saProfileSelect');
+  if (!sel || !_profiles) return;
+  sel.innerHTML = '<option value="">-- Select Profile --</option>' + _profiles.map(function(p) {
+    return '<option value="' + p.id + '">' + (p.brand_name || p.name) + '</option>';
+  }).join('');
+};
+
+</script>
 <div id="billingModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:9999;justify-content:center;align-items:center;overflow-y:auto;">
   <div style="background:#0f0f1a;border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;margin-top:40px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">

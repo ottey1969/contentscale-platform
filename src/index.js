@@ -10737,6 +10737,7 @@ Return ONLY this JSON (fill every field with real, sourced content):
     {"stat": "Specific number/fact with context", "source": "Real source name and year", "url": "https://real-source-url.com"},
     {"stat": "Another verified number", "source": "Source Name, Year", "url": "https://source.com"}
   ],
+  "service_area_external_links": ${JSON.stringify(bi.location_links || {})},
   "bofu_ctas": ["Book a Free Consultation","Get a Quote Today","Call Now: ${profile.phone || 'us'}"],
   "ai_overview_tips": ["Direct answer first","FAQ schema","HowTo markup","Speakable schema"],
   "voice_search_queries": ["How do I ${seed_keyword}","What is the best ${seed_keyword} near me"],
@@ -11384,6 +11385,7 @@ CRITICAL RULES:
 - CTAs: Use these exact BOFU phrases where appropriate: "Schedule Your Drain Inspection Today", "Get a Free Estimate for Root Removal", "Call Us Now for Emergency Drain Service". Minimum 5 CTAs total.
 - Reviews: 3 reviews, each mentioning a specific county name.
 - Follow the RECOMMENDED H2 HEADINGS from the brief exactly — do not invent different headings.
+- SERVICE AREA EXTERNAL LINKS: When mentioning service areas or locations in body text, link to the provided Wikipedia/authority URLs from service_area_external_links. Use descriptive anchor text (e.g. "serving <a href='https://en.wikipedia.org/wiki/Netherlands'>the Netherlands</a> and <a href='https://en.wikipedia.org/wiki/Belgium'>Belgium</a>").
 - External links: Prioritize .gov (EPA, USA.gov), trade associations (PHCC), and reputable industry sources.
 - Output ONLY complete HTML. No markdown. No explanations.`;
 
@@ -11709,6 +11711,191 @@ app.post('/api/content/rewrites/:id/publish-wp', verifyEngineAccess, async (req,
     await pool.query(`UPDATE content_rewrites SET status='published', updated_at=NOW() WHERE id=$1`, [rw.id]);
     res.json({ success: true, wp_post_id: wpData.id, wp_url: wpData.link });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// SERVICE AREA BULK GENERATOR
+// Creates unique local pages for every city/region
+// Rule #1: Every page has 100% unique content — never duplicate text
+// ═══════════════════════════════════════════════════════════════
+
+app.post('/api/content/service-areas/generate', requireAuth, async (req, res) => {
+  const { profileId, keyword, cities, templateHtml, useExistingBrief } = req.body;
+  if (!profileId || !cities || !Array.isArray(cities) || cities.length === 0) {
+    return res.status(400).json({ error: 'profileId and cities array required' });
+  }
+  if (!keyword || keyword.trim().length === 0) {
+    return res.status(400).json({ error: 'keyword required (e.g. "drain cleaning")' });
+  }
+  
+  const profile = await getProfile(profileId, req);
+  if (!profile) return res.status(404).json({ error: 'Profile not found' });
+  
+  // Create a master research job
+  const masterJob = await pool.query(`
+    INSERT INTO content_jobs (profile_id, type, status, keyword, prompt, created_at)
+    VALUES ($1, 'service_areas', 'researching', $2, $3, NOW())
+    RETURNING id
+  `, [profileId, keyword, JSON.stringify({ cities, count: cities.length })]);
+  const masterJobId = masterJob.rows[0].id;
+  
+  res.json({ 
+    success: true, 
+    masterJobId, 
+    message: `Starting ${cities.length} service area pages`,
+    cities 
+  });
+  
+  // Run in background
+  (async () => {
+    try {
+      // Step 1: Web search for keyword stats
+      console.log(`[service areas ${masterJobId}] searching web for ${keyword}...`);
+      const webResults = await doWebSearch([
+        `${keyword} ${profile.niche} statistics 2024 2025 2026`,
+        `${profile.niche} industry report cost price data`,
+        `${keyword} EPA government data statistics`,
+        `${profile.niche} market size revenue 2024 2025`
+      ]);
+      
+      await pool.query(`UPDATE content_jobs SET status='writing' WHERE id=$1`, [masterJobId]);
+      
+      // Step 2: Generate each city page
+      for (let i = 0; i < cities.length; i++) {
+        const city = cities[i];
+        const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const slug = `${keyword.replace(/\s+/g, '-')}-${citySlug}/`;
+        
+        // City-specific web search
+        const cityWebResults = await doWebSearch([
+          `${city} ${keyword} local statistics infrastructure`,
+          `${city} ${profile.niche} neighborhoods service areas`
+        ]);
+        
+        // Build prompt
+        const systemPrompt = `You are an elite local SEO content writer. Write a COMPLETELY UNIQUE service area page for ${city}.
+
+CRITICAL: This page must be 100% different from any other city page. Use these strategies:
+1. City-specific hook: Start with a fact about ${city}'s unique infrastructure/weather/geography
+2. Local landmarks: Mention 2-3 real ${city} neighborhoods, districts, or features
+3. Unique statistics: Use stats specific to ${city} or its region (not generic national stats)
+4. Local case study: Create a realistic scenario for a ${city} address/neighborhood
+5. Vary sentence structure: Don't start paragraphs the same way as other city pages
+6. Unique review: Fake review from a ${city} resident mentioning a real ${city} area
+7. Local regulations: Mention any ${city}-specific building codes, pipe types, or climate factors
+8. Different H2 angle: Frame the same service from ${city}'s specific perspective
+
+STRUCTURE (fill each with city-specific content):
+- H1: "${keyword} ${city} — [AI: local angle] | ${profile.brand_name}"
+- Direct Answer: 40-60 words with ${city} context
+- TL;DR: 5 bullets, each citing a source
+- 7 H2 sections: 350-500 words each, 3 paragraphs (100-150w), 1 stat, 1 Pro Tip, 1 quote
+- Symptom table: 7 rows with ${city}-specific examples
+- 4-step process: Adapt steps to ${city} context
+- 8 stats: Real 2024-2026 data with sources AND URLs
+- 2 case studies: ${city} addresses, ${city} neighborhoods, specific dollar amounts
+- 3 reviews: ${city} residents, ${city} counties/areas
+- 10 FAQs: ${city}-specific questions, each 100-150w, 1 internal + 1 external link
+- Author bio: 200+ words
+
+BOFU CTAs:
+- "Schedule Your ${keyword.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ')} in ${city} Today"
+- "Get a Free ${keyword.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ')} Estimate in ${city}"
+- "Call Us Now for Emergency ${keyword.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ')} in ${city}"
+
+SCHEMAS: Article, LocalBusiness, FAQPage, BreadcrumbList, Speakable, HowTo
+URL: https://${(profile.domain || profile.website || 'brand.com').replace(/^https?:\/\//, '')}/${slug}
+
+Output ONLY valid HTML. No markdown. No explanations.`;
+
+        const userPrompt = `Write the complete HTML service area page for ${city}.
+
+REAL WEB SEARCH RESULTS (use these sources):
+${webResults.slice(0, 8).map((r, i) => `SOURCE ${i+1}: ${r.title}\nURL: ${r.url}\nSNIPPET: ${r.snippet}`).join('\n\n')}
+
+${cityWebResults.length > 0 ? `CITY-SPECIFIC RESULTS FOR ${city}:\n${cityWebResults.slice(0, 5).map((r, i) => `CITY SOURCE ${i+1}: ${r.title}\nURL: ${r.url}\nSNIPPET: ${r.snippet}`).join('\n\n')}` : ''}
+
+BUSINESS DATA:
+- Brand: ${profile.brand_name}
+- Phone: ${profile.phone}
+- Address: ${profile.address}, ${profile.city}
+- Services: ${(profile.service_areas || []).join(', ')}
+- Niche: ${profile.niche}
+
+TEMPLATE HTML (fill ALL [AI: ...] markers with ${city}-specific content):
+${templateHtml || 'Use standard service area structure.'}`;
+
+        const claudeResult = await callClaudeForWrite(systemPrompt, userPrompt, profile.api_key_mode || 'platform');
+        if (!claudeResult.ok) {
+          console.log(`[service area ${city}] Claude failed:`, claudeResult.error);
+          continue;
+        }
+        
+        let html = cleanHtmlOutput(claudeResult.text);
+        const wordCount = html.split(/\s+/).length;
+        
+        await pool.query(`
+          INSERT INTO content_articles 
+          (profile_id, job_id, title, slug, html_content, word_count, keywords, status, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, 'published', NOW())
+        `, [
+          profileId, masterJobId,
+          `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} ${city} — Local Experts`,
+          slug, html, wordCount,
+          JSON.stringify([keyword, city, profile.niche])
+        ]);
+        
+        console.log(`[service area ${city}] saved ${wordCount} words`);
+        
+        await pool.query(`
+          UPDATE content_jobs SET status=$1, progress=$2, updated_at=NOW() WHERE id=$3
+        `, [`writing ${i+1}/${cities.length}`, Math.round(((i+1)/cities.length)*100), masterJobId]);
+      }
+      
+      await pool.query(`UPDATE content_jobs SET status='published', progress=100 WHERE id=$1`, [masterJobId]);
+      console.log(`[service areas ${masterJobId}] all ${cities.length} pages complete`);
+      
+    } catch (err) {
+      console.error(`[service areas ${masterJobId}] error:`, err);
+      await pool.query(`UPDATE content_jobs SET status='failed', error=$1 WHERE id=$2`, [err.message, masterJobId]);
+    }
+  })();
+});
+
+app.get('/api/content/service-areas/:jobId', requireAuth, async (req, res) => {
+  try {
+    const job = await pool.query(`SELECT * FROM content_jobs WHERE id=$1 AND profile_id=$2`, [req.params.jobId, req.user.id]);
+    if (!job.rows.length) return res.status(404).json({ error: 'Not found' });
+    
+    const articles = await pool.query(`
+      SELECT id, title, slug, status, word_count, created_at 
+      FROM content_articles WHERE job_id=$1 ORDER BY id
+    `, [req.params.jobId]);
+    
+    res.json({ job: job.rows[0], articles: articles.rows, total: articles.rows.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/content/service-areas/:jobId/publish', requireAuth, async (req, res) => {
+  try {
+    const { articleIds, wpUrl, wpUser, wpPass } = req.body;
+    if (!articleIds || !Array.isArray(articleIds)) return res.status(400).json({ error: 'articleIds required' });
+    
+    const results = [];
+    for (const articleId of articleIds) {
+      const art = await pool.query(`SELECT * FROM content_articles WHERE id=$1`, [articleId]);
+      if (!art.rows.length) continue;
+      
+      const a = art.rows[0];
+      const wpResult = await publishToWordPress(a.html_content, a.title, a.slug, wpUrl, wpUser, wpPass);
+      results.push({ id: articleId, title: a.title, wpResult });
+      
+      await pool.query(`UPDATE content_articles SET status='published', published_url=$1 WHERE id=$2`,
+        [wpResult.url || null, articleId]);
+    }
+    
+    res.json({ success: true, published: results.length, results });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── Content Engine Page ──────────────────────────────────────
