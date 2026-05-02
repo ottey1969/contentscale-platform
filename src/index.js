@@ -11719,7 +11719,7 @@ app.post('/api/content/rewrites/:id/publish-wp', verifyEngineAccess, async (req,
 // Rule #1: Every page has 100% unique content — never duplicate text
 // ═══════════════════════════════════════════════════════════════
 
-app.post('/api/content/service-areas/generate', requireAuth, async (req, res) => {
+app.post('/api/content/service-areas/generate', verifyEngineAccess, async (req, res) => {
   const { profileId, keyword, cities, templateHtml, useExistingBrief } = req.body;
   if (!profileId || !cities || !Array.isArray(cities) || cities.length === 0) {
     return res.status(400).json({ error: 'profileId and cities array required' });
@@ -11862,7 +11862,7 @@ ${templateHtml || 'Use standard service area structure.'}`;
   })();
 });
 
-app.get('/api/content/service-areas/:jobId', requireAuth, async (req, res) => {
+app.get('/api/content/service-areas/:jobId', verifyEngineAccess, async (req, res) => {
   try {
     const job = await pool.query(`SELECT * FROM content_jobs WHERE id=$1 AND profile_id=$2`, [req.params.jobId, req.user.id]);
     if (!job.rows.length) return res.status(404).json({ error: 'Not found' });
@@ -11876,7 +11876,7 @@ app.get('/api/content/service-areas/:jobId', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/content/service-areas/:jobId/publish', requireAuth, async (req, res) => {
+app.post('/api/content/service-areas/:jobId/publish', verifyEngineAccess, async (req, res) => {
   try {
     const { articleIds, wpUrl, wpUser, wpPass } = req.body;
     if (!articleIds || !Array.isArray(articleIds)) return res.status(400).json({ error: 'articleIds required' });
