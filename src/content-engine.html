@@ -3506,6 +3506,8 @@ var _currentFeedId = null;
 function toggleFeedType() {
   var t = document.getElementById('feedType').value;
   document.getElementById('feedUrlField').style.display = t === 'rss' ? 'block' : 'none';
+  document.getElementById('feedDomainField').style.display = t === 'domain' ? 'block' : 'none';
+}
 
 // ── Feed Library ────────────────────────────────────────────────────────────
 var _feedLibrary = [
@@ -3643,8 +3645,6 @@ function pickFeedFromLibrary(f) {
 
 // Init library on page load
 (function() { renderFeedLibrary(_allFeedLibItems); })();
-  document.getElementById('feedDomainField').style.display = t === 'domain' ? 'block' : 'none';
-}
 
 async function loadFeeds() {
   var profileId = document.getElementById('newsProfileFilter').value;
