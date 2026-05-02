@@ -3000,7 +3000,15 @@ async function analyseRewrite() {
       document.getElementById('rwResearchCard').style.display = 'none';
     }
     toast('✅ Research complete — review findings and choose fixes or rewrite below');
-  } catch(e) { toast('Research failed: ' + e.message, 'red'); }
+  } catch(e) { 
+    var msg = e.message || 'Unknown error';
+    if (msg.includes('JSON') || msg.includes('json')) {
+      msg = 'AI returned invalid data. Usually means the AI model was overloaded or response too long. Try again in 30 seconds.';
+    } else if (msg.includes('502') || msg.includes('Bad Gateway') || msg.includes('timed out')) {
+      msg = 'AI service temporarily unavailable. Server may be restarting. Wait 10 seconds and try again.';
+    }
+    toast('Research failed: ' + msg, 'red');
+  }
   finally { btn.disabled = false; btn.innerHTML = '🔬 Research Page & Competitors'; }
 }
 

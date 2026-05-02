@@ -10211,7 +10211,7 @@ RULES:
 CURRENT HTML:
 ${(article.html_content || '').substring(0, 40000)}`;
 
-    const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 } });
+    const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' } });
     if (!resp.ok) return res.status(500).json({ success: false, error: resp.errorMessage || 'Gemini error' });
 
     let newHtml = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -10249,7 +10249,7 @@ RULES:
 CURRENT HTML:
 ${(rw.rewritten_html || '').substring(0, 40000)}`;
 
-    const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 } });
+    const resp = await callGeminiWithFallback(geminiKey, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' } });
     if (!resp.ok) return res.status(500).json({ success: false, error: resp.errorMessage || 'Gemini error' });
 
     let newHtml = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -12941,6 +12941,8 @@ Content preview: ${c.textPreview.slice(0, 1500)}
 
     const analysePrompt = `You are an expert SEO strategist. Analyse this page and provide a complete rewrite strategy.
 
+CRITICAL: Return ONLY raw JSON. No markdown code blocks (no \`\`\`json). No commentary outside JSON. The response must be valid parseable JSON only.
+
 PAGE: ${original_url || 'New content'}
 TITLE: ${original_title}
 SLUG: ${original_slug}
@@ -13052,7 +13054,7 @@ Return ONLY valid JSON:
 
     const analyseResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } }
+      { contents: [{ parts: [{ text: analysePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' } }
     );
     if (!analyseResult.ok) {
       const apiErr = analyseResult.errorMessage || `Gemini HTTP ${analyseResult.status}`;
@@ -13068,16 +13070,10 @@ Return ONLY valid JSON:
     }
     let analysis;
     try {
-      const cleaned = rawText.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      try {
-        analysis = JSON.parse(cleaned);
-      } catch (_) {
-        const jm = cleaned.match(/\{[\s\S]*\}/);
-        if (!jm) return res.status(502).json({ success: false, error: 'AI did not return valid JSON', raw_preview: rawText.slice(0, 300) });
-        analysis = JSON.parse(jm[0]);
-      }
+      analysis = extractJsonFromText(rawText);
     } catch (parseErr) {
       console.error('Analyse JSON parse failed:', parseErr.message);
+      console.error('Raw AI response (first 800 chars):', rawText.slice(0, 800));
       return res.status(502).json({ success: false, error: `AI returned invalid JSON: ${parseErr.message}`, raw_preview: rawText.slice(0, 300) });
     }
 
