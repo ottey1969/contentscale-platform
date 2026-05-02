@@ -3309,11 +3309,12 @@ function renderAnalysis(a) {
       html += '</div></div>';
     }
     
-    // 11-Point SEO Audit — Numbered Cards
+    // 11-Point SEO Audit — Clean Inline Format
     if (a && a.audit_11 && Array.isArray(a.audit_11) && a.audit_11.length > 0) {
+      var failCount = a.audit_11.filter(function(i){return i && i.status === 'FAIL'}).length;
       html += '<div class="research-section">';
-      html += '<div class="research-label">&#127919; 11-Point SEO Audit (' + a.audit_11.filter(function(i){return i && i.status === 'FAIL'}).length + ' gaps found)</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      html += '<div class="research-label">&#127919; 11-Point SEO Audit (' + failCount + ' gaps found)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:2px;">';
       a.audit_11.forEach(function(item, idx) {
         if (!item) return;
         var num = item.point || (idx + 1);
@@ -3324,24 +3325,21 @@ function renderAnalysis(a) {
         var fix = item.fix || '';
         var isPass = status === 'PASS' || status === 'OK' || status === 'GOOD';
         var isFail = status === 'FAIL' || status === 'MISSING' || status === 'WEAK';
-        var cardBg = isPass ? 'rgba(74,222,128,.06)' : isFail ? 'rgba(239,68,68,.06)' : 'rgba(255,255,255,.03)';
-        var borderColor = isPass ? 'rgba(74,222,128,.2)' : isFail ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.08)';
-        var statusColor = isPass ? '#4ade80' : isFail ? '#ef4444' : '#6b7280';
-        var statusIcon = isPass ? '&#10003;' : isFail ? '&#10007;' : '&#9679;';
-        html += '<div style="background:' + cardBg + ';border:1px solid ' + borderColor + ';border-radius:8px;padding:12px;">';
+        var numColor = isPass ? '#4ade80' : isFail ? '#ef4444' : '#6b7280';
+        html += '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
         html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">';
-        html += '<span style="font-size:16px;font-weight:800;color:' + statusColor + ';min-width:28px;">' + num + '.</span>';
+        html += '<span style="font-size:15px;font-weight:800;color:' + numColor + ';min-width:28px;">' + num + '.</span>';
         html += '<span style="font-size:13px;font-weight:700;color:#e2e8f0;flex:1;">' + escapeHtml(name) + '</span>';
-        html += '<span style="font-size:10px;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:' + cardBg + ';color:' + statusColor + ';border:1px solid ' + borderColor + ';">' + statusIcon + ' ' + status + '</span>';
+        html += '<span style="font-size:10px;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:' + (isPass ? 'rgba(74,222,128,.1)' : isFail ? 'rgba(239,68,68,.1)' : 'rgba(255,255,255,.05)') + ';color:' + numColor + ';border:1px solid ' + (isPass ? 'rgba(74,222,128,.2)' : isFail ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.1)') + ';">' + (isPass ? '&#10003; PASS' : isFail ? '&#10007; FAIL' : status) + '</span>';
         html += '</div>';
         if (found) {
-          html += '<div style="font-size:11px;color:#6b7280;margin-bottom:3px;"><span style="color:#9ca3af;">Found:</span> ' + escapeHtml(found) + '</div>';
+          html += '<div style="font-size:11px;color:#9ca3af;margin-bottom:2px;padding-left:38px;"><span style="color:#6b7280;">Found:</span> ' + escapeHtml(found) + '</div>';
         }
         if (required && !isPass) {
-          html += '<div style="font-size:11px;color:#6b7280;margin-bottom:3px;"><span style="color:#9ca3af;">Required:</span> ' + escapeHtml(required) + '</div>';
+          html += '<div style="font-size:11px;color:#9ca3af;margin-bottom:2px;padding-left:38px;"><span style="color:#6b7280;">Required:</span> ' + escapeHtml(required) + '</div>';
         }
         if (fix && !isPass) {
-          html += '<div style="font-size:11px;color:#fbbf24;"><span style="color:#f59e0b;">&#128295; Fix:</span> ' + escapeHtml(fix) + '</div>';
+          html += '<div style="font-size:11px;color:#fbbf24;padding-left:38px;"><span style="color:#f59e0b;">&#128295; Fix:</span> ' + escapeHtml(fix) + '</div>';
         }
         html += '</div>';
       });
@@ -3375,8 +3373,15 @@ function renderAnalysis(a) {
       }
       
       compList.slice(0, 5).forEach(function(comp, i) {
+        var compTitle = comp.title || 'Competitor';
+        var compUrl = comp.url || comp.targetUrl || comp.link || '';
         html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
-        html += '<td style="padding:6px;color:#e2e8f0;font-size:11px;">#' + (i+1) + ' ' + escapeHtml((comp.title || 'Competitor').substring(0, 35)) + '</td>';
+        html += '<td style="padding:6px;color:#e2e8f0;font-size:11px;">';
+        html += '<div>#' + (i+1) + ' <span style="font-weight:600;">' + escapeHtml(compTitle.substring(0, 60)) + '</span></div>';
+        if (compUrl) {
+          html += '<a href="' + compUrl + '" target="_blank" style="font-size:10px;color:#60a5fa;word-break:break-all;">' + escapeHtml(compUrl.substring(0, 80)) + '</a>';
+        }
+        html += '</td>';
         html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.word_count || comp.words || '&ndash;') + '</td>';
         html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.h2_count || comp.headings || '&ndash;') + '</td>';
         html += '<td style="text-align:center;padding:6px;color:#e2e8f0;font-size:10px;">' + (comp.schema_count || comp.schema || '&ndash;') + '</td>';

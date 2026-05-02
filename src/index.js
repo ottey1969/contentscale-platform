@@ -1443,6 +1443,30 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
 </div>
 <script>
    (function(){
+     // Rescan button handler
+     var rescanBtns = document.querySelectorAll('.rescan-btn');
+     for(var b=0; b<rescanBtns.length; b++){
+       rescanBtns[b].addEventListener('click', function(e){
+         e.preventDefault();
+         var url = this.getAttribute('data-url');
+         if(!url) return;
+         this.innerHTML = '⏳ Scanning...';
+         this.style.opacity = '0.7';
+         this.style.pointerEvents = 'none';
+         fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})})
+         .then(function(r){return r.json();})
+         .then(function(d){
+           if(d.success){
+             alert('✅ New score: '+(d.score||'N/A')+'/100\n\nPage will refresh to show updated report.');
+             location.reload();
+           }else{
+             alert('❌ Scan failed: '+(d.error||'Unknown error'));
+           }
+         })
+         .catch(function(err){alert('❌ Network error');console.error(err);});
+       });
+     }
+     // Tab title flicker
      var titles=['ContentScale ⚡','🎯 SEO Scanner'];
      var favs=['/favicon.svg','/favicon-pink.svg'];
      var t=0,iv=null;
@@ -3700,6 +3724,9 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#03071
 .score-num{font-size:2.2rem;font-weight:900;color:${scoreColor};line-height:1;}
 .score-max{font-size:0.75rem;color:#6b7280;}
 .score-lbl{font-size:0.8rem;color:${scoreColor};font-weight:600;margin-top:2px;}
+.rescan-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:99px;padding:8px 16px;font-size:0.78rem;font-weight:600;cursor:pointer;text-decoration:none;margin-top:10px;}
+.rescan-btn:hover{opacity:0.9;}
+.last-scanned-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:99px;padding:3px 10px;font-size:0.72rem;color:#fbbf24;}
 .breakdown{display:flex;gap:14px;flex-wrap:wrap;}
 .pill{background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;text-align:center;min-width:90px;}
 .pill-val{font-size:1.4rem;font-weight:800;}
@@ -3730,6 +3757,11 @@ ${report.country ? `<span class="chip">🌍 ${report.country}</span>` : ''}
 ${report.email_found ? `<span class="chip">✉ ${report.email_found}</span>` : ''}
 <span class="chip">📅 ${dateStr}</span>
 </div>
+<div style="margin-top:8px;">
+<span class="last-scanned-badge">⏱ Last scanned: ${dateStr}</span>
+${report.business_url ? `<a href="${report.business_url}" target="_blank" class="rescan-btn" data-url="${report.business_url}">🔄 Rescan Now</a>` : ''}
+</div>
+${score < 90 && new Date(report.created_at) < new Date(Date.now() - 7*24*60*60*1000) ? '<div style="margin-top:10px;padding:8px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;font-size:12px;color:#fbbf24;">⚠️ This score is from a previous scan. Your page may have changed since then. Click <strong>Rescan Now</strong> for the current score.</div>' : ''}
 <div class="score-block">
 <div class="score-circle">
 <div class="score-num">${score}</div>
@@ -3756,6 +3788,30 @@ ${recsHtml}
 <button class="pdf-btn" onclick="window.print()">⬇ Download PDF</button>
 <script>
    (function(){
+     // Rescan button handler
+     var rescanBtns = document.querySelectorAll('.rescan-btn');
+     for(var b=0; b<rescanBtns.length; b++){
+       rescanBtns[b].addEventListener('click', function(e){
+         e.preventDefault();
+         var url = this.getAttribute('data-url');
+         if(!url) return;
+         this.innerHTML = '⏳ Scanning...';
+         this.style.opacity = '0.7';
+         this.style.pointerEvents = 'none';
+         fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})})
+         .then(function(r){return r.json();})
+         .then(function(d){
+           if(d.success){
+             alert('✅ New score: '+(d.score||'N/A')+'/100\n\nPage will refresh to show updated report.');
+             location.reload();
+           }else{
+             alert('❌ Scan failed: '+(d.error||'Unknown error'));
+           }
+         })
+         .catch(function(err){alert('❌ Network error');console.error(err);});
+       });
+     }
+     // Tab title flicker
      var titles=['ContentScale ⚡','🎯 SEO Scanner'];
      var favs=['/favicon.svg','/favicon-pink.svg'];
      var t=0,iv=null;
@@ -12944,6 +13000,24 @@ Content preview: ${c.textPreview.slice(0, 1500)}
 CRITICAL: Return ONLY raw JSON. No markdown code blocks (no \`\`\`json). No commentary outside JSON. The response must be valid parseable JSON only.
 
 PAGE: ${original_url || 'New content'}
+
+REAL PAGE METRICS (use these exact numbers — do NOT estimate):
+- Word count: ${originalGraafScan?.wordCount || originalGraafScan?.word_count || 'unknown'}
+- H1 count: ${originalGraafScan?.headings?.h1 || 'unknown'}
+- H2 count: ${originalGraafScan?.headings?.h2 || 'unknown'}
+- Images: ${originalGraafScan?.images?.total || 'unknown'} total (${originalGraafScan?.images?.withAlt || 'unknown'} with alt text)
+- Internal links: ${originalGraafScan?.links?.internal || 'unknown'}
+- External links: ${originalGraafScan?.links?.external || 'unknown'}
+- Schema types: ${Array.isArray(originalGraafScan?.schema?.types) ? originalGraafScan.schema.types.join(', ') : 'none'}
+- Has FAQ schema: ${originalGraafScan?.schema?.hasFAQ ? 'Yes' : 'No'}
+- Has HowTo schema: ${originalGraafScan?.schema?.hasHowTo ? 'Yes' : 'No'}
+- Has Review schema: ${originalGraafScan?.schema?.hasReview ? 'Yes' : 'No'}
+- Has Speakable: ${originalGraafScan?.schema?.hasSpeakable ? 'Yes' : 'No'}
+- Has lazy loading: ${originalGraafScan?.performance?.hasLazyLoad ? 'Yes' : 'No'}
+- Content grade: ${originalGraafScan?.contentScore || 'unknown'}/100
+
+For the "Content Length" audit point: the page has ${originalGraafScan?.wordCount || originalGraafScan?.word_count || '?'} words. If this is >= 2500, status must be PASS.
+
 TITLE: ${original_title}
 SLUG: ${original_slug}
 ${gscContext}
