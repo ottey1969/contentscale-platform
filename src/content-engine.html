@@ -462,16 +462,9 @@ console.log('[ContentEngine] Version v2026-05-02-001 loaded');
         <button class="btn btn-secondary" style="font-size:12px;" onclick="addRewriteImage()">+ Add</button>
       </div>
     </div>
-    <!-- STEP 1: Quick Meta Optimization (always safe) -->
-    <div style="margin-bottom:10px;padding:12px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:10px;">
-      <div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Step 1 — Quick Win (Safe)</div>
-      <button class="btn btn-primary" onclick="optimizeMetaOnly()" id="btnOptimizeMeta" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);">📝 Optimize Meta Title & Description</button>
-      <span style="font-size:12px;color:#6b7280;margin-left:10px;">Title (50-60 chars) + Description (140-155 chars) — preserves all content</span>
-    </div>
-
-    <!-- STEP 2: Deep Research -->
+    <!-- Deep Research -->
     <div style="margin-bottom:10px;padding:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:10px;">
-      <div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Step 2 — Deep Research</div>
+      <div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Deep Research</div>
       <!-- Sitemap URL for internal linking context -->
       <div style="margin-top:12px;margin-bottom:10px;">
         <label style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">🗺️ Sitemap URL (optional — for contextual internal links)</label>
@@ -491,7 +484,7 @@ console.log('[ContentEngine] Version v2026-05-02-001 loaded');
 
     <!-- STEP 3: Choose Your Action -->
     <div style="margin-top:16px;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;">
-      <div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Step 3 — Choose Your Action</div>
+      <div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Choose Your Action</div>
 
       <!-- Option A: Targeted Fixes (safe) -->
       <div style="padding:12px;background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.12);border-radius:8px;margin-bottom:10px;">
@@ -3307,90 +3300,6 @@ function renderAnalysis(a) {
         html += '<span style="background:rgba(74,222,128,.08);border-radius:99px;padding:3px 10px;font-size:11px;color:#4ade80;">' + escapeHtml(s) + '</span>';
       });
       html += '</div></div>';
-    }
-    
-    // 11-Point SEO Audit — Clean Inline Format
-    if (a && a.audit_11 && Array.isArray(a.audit_11) && a.audit_11.length > 0) {
-      var failCount = a.audit_11.filter(function(i){return i && i.status === 'FAIL'}).length;
-      html += '<div class="research-section">';
-      html += '<div class="research-label">&#127919; 11-Point SEO Audit (' + failCount + ' gaps found)</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:2px;">';
-      a.audit_11.forEach(function(item, idx) {
-        if (!item) return;
-        var num = item.point || (idx + 1);
-        var name = item.name || 'Audit point ' + num;
-        var status = (item.status || 'UNKNOWN').toUpperCase();
-        var found = item.found || '';
-        var required = item.required || '';
-        var fix = item.fix || '';
-        var isPass = status === 'PASS' || status === 'OK' || status === 'GOOD';
-        var isFail = status === 'FAIL' || status === 'MISSING' || status === 'WEAK';
-        var numColor = isPass ? '#4ade80' : isFail ? '#ef4444' : '#6b7280';
-        html += '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
-        html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">';
-        html += '<span style="font-size:15px;font-weight:800;color:' + numColor + ';min-width:28px;">' + num + '.</span>';
-        html += '<span style="font-size:13px;font-weight:700;color:#e2e8f0;flex:1;">' + escapeHtml(name) + '</span>';
-        html += '<span style="font-size:10px;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:' + (isPass ? 'rgba(74,222,128,.1)' : isFail ? 'rgba(239,68,68,.1)' : 'rgba(255,255,255,.05)') + ';color:' + numColor + ';border:1px solid ' + (isPass ? 'rgba(74,222,128,.2)' : isFail ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.1)') + ';">' + (isPass ? '&#10003; PASS' : isFail ? '&#10007; FAIL' : status) + '</span>';
-        html += '</div>';
-        if (found) {
-          html += '<div style="font-size:11px;color:#9ca3af;margin-bottom:2px;padding-left:38px;"><span style="color:#6b7280;">Found:</span> ' + escapeHtml(found) + '</div>';
-        }
-        if (required && !isPass) {
-          html += '<div style="font-size:11px;color:#9ca3af;margin-bottom:2px;padding-left:38px;"><span style="color:#6b7280;">Required:</span> ' + escapeHtml(required) + '</div>';
-        }
-        if (fix && !isPass) {
-          html += '<div style="font-size:11px;color:#fbbf24;padding-left:38px;"><span style="color:#f59e0b;">&#128295; Fix:</span> ' + escapeHtml(fix) + '</div>';
-        }
-        html += '</div>';
-      });
-      html += '</div></div>';
-    }
-    
-    // You vs Competitors comparison table
-    if (r.your_page || compList.length > 0) {
-      html += '<div class="research-section">';
-      html += '<div class="research-label">You vs Top 5</div>';
-      html += '<div style="overflow-x:auto;">';
-      html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-      html += '<thead><tr style="border-bottom:1px solid rgba(255,255,255,.15);">';
-      html += '<th style="text-align:left;padding:6px;color:#6b7280;font-weight:600;">Page</th>';
-      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">Words</th>';
-      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">H2s</th>';
-      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">Schema</th>';
-      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">PAA</th>';
-      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">Speakable</th>';
-      html += '</tr></thead><tbody>';
-      
-      if (r.your_page) {
-        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.08);background:rgba(124,58,237,.05);">';
-        html += '<td style="padding:6px;color:#a78bfa;font-weight:700;font-size:11px;">&#127919; YOUR PAGE</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.word_count || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.h2_count || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;font-size:10px;">' + (r.your_page.schema_types ? r.your_page.schema_types.join(', ') : '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.paa_count || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.has_speakable ? '&#10003;' : '&#10007;') + '</td>';
-        html += '</tr>';
-      }
-      
-      compList.slice(0, 5).forEach(function(comp, i) {
-        var compTitle = comp.title || 'Competitor';
-        var compUrl = comp.url || comp.targetUrl || comp.link || '';
-        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
-        html += '<td style="padding:6px;color:#e2e8f0;font-size:11px;">';
-        html += '<div>#' + (i+1) + ' <span style="font-weight:600;">' + escapeHtml(compTitle.substring(0, 60)) + '</span></div>';
-        if (compUrl) {
-          html += '<a href="' + compUrl + '" target="_blank" style="font-size:10px;color:#60a5fa;word-break:break-all;">' + escapeHtml(compUrl.substring(0, 80)) + '</a>';
-        }
-        html += '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.word_count || comp.words || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.h2_count || comp.headings || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;font-size:10px;">' + (comp.schema_count || comp.schema || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.paa_count || comp.paa || '&ndash;') + '</td>';
-        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.has_speakable ? '&#10003;' : '&#10007;') + '</td>';
-        html += '</tr>';
-      });
-      
-      html += '</tbody></table></div></div>';
     }
     
     // AI Meta Recommendation
