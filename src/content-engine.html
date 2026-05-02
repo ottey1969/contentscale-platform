@@ -101,6 +101,7 @@ textarea{resize:vertical;min-height:100px;}
   <div id="tz-clocks" style="display:flex;gap:6px;"></div>
 </div>
 <script>
+// VERSION: v2026-05-02-001 — cache bust: syntax fix + localStorage + research dashboard
 (function() {
   var ZONES = [
     { label: 'New York',    tz: 'America/New_York' },
@@ -959,6 +960,7 @@ let _draftSaveTimer = null;
 let _activeWritePoll = null; // tracks active write polling interval
 let _draftLoading = false; // suppress auto-save while we restore
 let _activeResearchJobId = null; // tracks which job the current poll loop is for — kill old loops when new one starts
+const RW_FORM_KEY = 'cs_rewrite_form_v1';
 
 // ── Draft persistence (server primary, localStorage fallback) ─
 function _draftFields() {
@@ -2763,7 +2765,6 @@ function renderRwImages() {
 // ═══════════════════════════════════════════════════════════════════
 // FORM PERSISTENCE — save/load/reset GSC and rewrite form fields
 // ═══════════════════════════════════════════════════════════════════
-const RW_FORM_KEY = 'cs_rewrite_form_v1';
 
 function getRewriteFormFields() {
   return [

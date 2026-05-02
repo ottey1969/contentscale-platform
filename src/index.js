@@ -11903,7 +11903,13 @@ app.get('/engine-login', (req, res) => {
 });
 
 app.get('/content-engine', (req, res) => {
-  res.sendFile(require('path').join(__dirname, 'content-engine.html'));
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Vary', '*');
+  const html = require('fs').readFileSync(require('path').join(__dirname, 'content-engine.html'), 'utf8');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
 });
 // ══════════════════════════════════════════════════════════════════════════════
 // VIDEO → ARTICLE  (YouTube transcript → SEO article)
