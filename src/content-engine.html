@@ -418,23 +418,27 @@ console.log('[ContentEngine] Version v2026-05-02-001 loaded');
 
     <!-- Competitors (BOFU edge) -->
     <div style="background:#0a0a0f;border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin-bottom:10px;">🎯 Competitors (optional — for BOFU edge)</div>
-      <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">Add up to 3. Each slot accepts a URL (auto-scanned) OR pasted HTML content. The rewriter will analyse their weaknesses and generate content that specifically beats them.</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin-bottom:10px;">🎯 Competitors (auto-detected)</div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:10px;"><strong style="color:#a78bfa;">Leave empty and the AI will auto-find your top 5 competitors from Google.</strong> Or enter URLs manually below to override. Each slot accepts a URL (auto-scanned) OR pasted HTML content. The rewriter will analyse their weaknesses and generate content that specifically beats them.</div>
       <div id="rwCompetitorsList">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:11px;color:#6b7280;">Detected from research or enter manually — auto-saved</div>
+          <button class="btn btn-secondary" style="font-size:10px;padding:3px 8px;" onclick="clearAllCompetitors()">Clear All</button>
+        </div>
         <div class="rw-competitor-slot" data-idx="1" style="background:#1e293b;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:10px;margin-bottom:8px;">
           <div style="font-size:10px;color:#60a5fa;margin-bottom:6px;font-weight:700;">COMPETITOR 1</div>
-          <input class="rw-comp-url" placeholder="https://competitor.com/page" style="margin-bottom:6px;font-size:12px;">
-          <textarea class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional, overrides URL scan)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
+          <input id="comp1Url" class="rw-comp-url" placeholder="Leave empty → AI auto-finds from Google research" style="margin-bottom:6px;font-size:12px;">
+          <textarea id="comp1Html" class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional, overrides URL scan)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
         </div>
         <div class="rw-competitor-slot" data-idx="2" style="background:#1e293b;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:10px;margin-bottom:8px;">
           <div style="font-size:10px;color:#60a5fa;margin-bottom:6px;font-weight:700;">COMPETITOR 2</div>
-          <input class="rw-comp-url" placeholder="https://competitor.com/page" style="margin-bottom:6px;font-size:12px;">
-          <textarea class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
+          <input id="comp2Url" class="rw-comp-url" placeholder="Leave empty → AI auto-finds from Google research" style="margin-bottom:6px;font-size:12px;">
+          <textarea id="comp2Html" class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
         </div>
         <div class="rw-competitor-slot" data-idx="3" style="background:#1e293b;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:10px;">
           <div style="font-size:10px;color:#60a5fa;margin-bottom:6px;font-weight:700;">COMPETITOR 3</div>
-          <input class="rw-comp-url" placeholder="https://competitor.com/page" style="margin-bottom:6px;font-size:12px;">
-          <textarea class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
+          <input id="comp3Url" class="rw-comp-url" placeholder="Leave empty → AI auto-finds from Google research" style="margin-bottom:6px;font-size:12px;">
+          <textarea id="comp3Html" class="rw-comp-html" rows="2" placeholder="Or paste their HTML/content here (optional)" style="font-size:11px;font-family:monospace;min-height:50px;"></textarea>
         </div>
       </div>
     </div>
@@ -2771,7 +2775,8 @@ function renderRwImages() {
 function getRewriteFormFields() {
   return [
     'rwUrl','rwSlug','rwTitle','rwHtml','rwImpressions','rwClicks',
-    'rwPosition','rwKeyword','rwGscPages','rwGscQueries'
+    'rwPosition','rwKeyword','rwGscPages','rwGscQueries',
+    'comp1Url','comp1Html','comp2Url','comp2Html','comp3Url','comp3Html'
   ];
 }
 
@@ -2786,6 +2791,43 @@ function saveRewriteForm() {
   localStorage.setItem(RW_FORM_KEY, JSON.stringify(data));
   var status = document.getElementById('rwFormSavedStatus');
   if (status) { status.textContent = '💾 Saved at ' + new Date().toLocaleTimeString(); status.style.color = '#4ade80'; }
+}
+
+function autoFillCompetitors(research) {
+  if (!research) return;
+  var filled = 0;
+  // Try top_5_competitors from deep dive first
+  var autoCompetitors = research.top_5_competitors || [];
+  // Fall back to manual_competitors if deep dive empty
+  if (!autoCompetitors.length && research.manual_competitors) {
+    autoCompetitors = research.manual_competitors;
+  }
+  // Fall back to serp_results
+  if (!autoCompetitors.length && research.competitors && research.competitors.serp_results) {
+    autoCompetitors = research.competitors.serp_results;
+  }
+  autoCompetitors.slice(0, 3).forEach(function(comp, i) {
+    var urlField = document.getElementById('comp' + (i+1) + 'Url');
+    if (urlField && !urlField.value.trim()) {
+      urlField.value = comp.url || comp.link || comp.targetUrl || '';
+      filled++;
+    }
+  });
+  if (filled > 0) {
+    console.log('[autoFillCompetitors] Filled', filled, 'competitor slots from research');
+    saveRewriteForm();
+  }
+}
+
+function clearAllCompetitors() {
+  [1,2,3].forEach(function(i) {
+    var urlEl = document.getElementById('comp' + i + 'Url');
+    var htmlEl = document.getElementById('comp' + i + 'Html');
+    if (urlEl) urlEl.value = '';
+    if (htmlEl) htmlEl.value = '';
+  });
+  saveRewriteForm();
+  toast('Competitors cleared');
 }
 
 function loadRewriteForm() {
@@ -2867,6 +2909,8 @@ async function optimizeMetaOnly() {
     var d = await api('/api/content/analyse-rewrite', 'POST', payload);
     if (!d.success) throw new Error(d.error);
     _currentRewriteId = d.rewrite.id;
+    // Auto-fill competitor slots from research (only if empty)
+    if (d.research) autoFillCompetitors(d.research);
 
     // Show AI recommendation FIRST (before applying)
     var analysis = d.analysis || {};
@@ -2996,6 +3040,8 @@ async function analyseRewrite() {
       renderResearch(d.research, d.analysis);
       document.getElementById('rwResearchCard').style.display = 'block';
       document.getElementById('rwResearchCard').scrollIntoView({ behavior: 'smooth' });
+      // Auto-fill competitor slots from research (only if empty)
+      autoFillCompetitors(d.research);
     } else {
       document.getElementById('rwResearchCard').style.display = 'none';
     }

@@ -13167,7 +13167,11 @@ Return ONLY valid JSON:
         keyword: gscData.keyword,
         top_queries: queriesList.slice(0, 10),
         top_pages: pagesList.slice(0, 5)
-      }
+      },
+      // Auto-detected competitors from SERP deep dive
+      top_5_competitors: competitorDeepDive || [],
+      // Manual competitors that were already entered
+      manual_competitors: competitorData.filter(c => c.url || c.html)
     };
 
     res.json({
