@@ -13038,17 +13038,17 @@ Return ONLY valid JSON:
   "images_to_keep": ["note about keeping existing images"],
   "internal_links_needed": ["service page 1","money page 1"],
   "audit_11": [
-    {"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 2, "name": "Meta Description", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 3, "name": "Canonical Tag", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 4, "name": "H1", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 5, "name": "H2 Count", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 6, "name": "Word Count", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 7, "name": "Schema Markup", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 8, "name": "Images", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 9, "name": "Internal Links", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 10, "name": "External Links", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."},
-    {"point": 11, "name": "BOFU CTAs", "status": "PASS|FAIL", "found": "...", "required": "...", "fix": "..."}
+    {"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "current title length + keyword position", "required": "50-60 chars, keyword in first 3 words", "fix": "Rewrite title with keyword first + power word + number | brand"},
+    {"point": 2, "name": "Meta Description", "status": "PASS|FAIL", "found": "current description", "required": "140-155 chars, CTA, stat, compelling", "fix": "Add stat + urgency CTA in 140-155 chars"},
+    {"point": 3, "name": "Canonical Tag", "status": "PASS|FAIL", "found": "has or missing canonical", "required": "Canonical tag pointing to self", "fix": "Add <link rel=canonical> if missing"},
+    {"point": 4, "name": "H1 Heading", "status": "PASS|FAIL", "found": "H1 content", "required": "One H1 with exact or variant keyword", "fix": "Ensure single H1 with primary keyword"},
+    {"point": 5, "name": "H2 Headings", "status": "PASS|FAIL", "found": "number of H2s", "required": "Match or exceed top competitor H2 count", "fix": "Add H2s to match competitor structure"},
+    {"point": 6, "name": "Content Length", "status": "PASS|FAIL", "found": "current word count", "required": "Match or exceed top competitor word count", "fix": "Expand sections that are thinner than competitors"},
+    {"point": 7, "name": "Schema Markup", "status": "PASS|FAIL", "found": "detected schema types", "required": "Article + FAQ + LocalBusiness/BreadcrumbList + Speakable", "fix": "Add missing schemas (FAQPage, HowTo, Review)"},
+    {"point": 8, "name": "Image Alt Text", "status": "PASS|FAIL", "found": "X of Y images have alt text", "required": "ALL images must have descriptive keyword-rich alt text", "fix": "Add alt text to images missing it"},
+    {"point": 9, "name": "Internal Links", "status": "PASS|FAIL", "found": "internal link count", "required": "3-5 contextual internal links to related pages", "fix": "Add relevant internal links in first 300 words"},
+    {"point": 10, "name": "External Authority Links", "status": "PASS|FAIL", "found": "external link count", "required": "2-4 links to high-authority sources (gov, edu, .org)", "fix": "Add cited statistics with named sources"},
+    {"point": 11, "name": "BOFU Call-to-Action", "status": "PASS|FAIL", "found": "current CTAs", "required": "Bottom-of-funnel CTAs: Call/Book/Schedule + Free + Phone", "fix": "Add urgency-based CTA with phone number"}
   ]
 }`;
 

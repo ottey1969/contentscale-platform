@@ -2808,17 +2808,13 @@ function saveRewriteForm() {
 function autoFillCompetitors(research) {
   if (!research) return;
   var filled = 0;
-  // Try top_5_competitors from deep dive first
-  var autoCompetitors = research.top_5_competitors || [];
-  // Fall back to manual_competitors if deep dive empty
-  if (!autoCompetitors.length && research.manual_competitors) {
-    autoCompetitors = research.manual_competitors;
-  }
-  // Fall back to serp_results
-  if (!autoCompetitors.length && research.competitors && research.competitors.serp_results) {
-    autoCompetitors = research.competitors.serp_results;
-  }
-  autoCompetitors.slice(0, 3).forEach(function(comp, i) {
+  // Collect competitor sources, ensuring each is an array
+  var sources = [];
+  if (Array.isArray(research.top_5_competitors)) sources = sources.concat(research.top_5_competitors);
+  if (Array.isArray(research.manual_competitors)) sources = sources.concat(research.manual_competitors);
+  if (research.competitors && Array.isArray(research.competitors.serp_results)) sources = sources.concat(research.competitors.serp_results);
+  
+  sources.slice(0, 3).forEach(function(comp, i) {
     var urlField = document.getElementById('comp' + (i+1) + 'Url');
     if (urlField && !urlField.value.trim()) {
       urlField.value = comp.url || comp.link || comp.targetUrl || '';
@@ -2826,7 +2822,7 @@ function autoFillCompetitors(research) {
     }
   });
   if (filled > 0) {
-    console.log('[autoFillCompetitors] Filled', filled, 'competitor slots from research');
+    console.log('[autoFillCompetitors] Filled', filled, 'competitor slots');
     saveRewriteForm();
   }
 }
@@ -3313,21 +3309,40 @@ function renderAnalysis(a) {
       html += '</div></div>';
     }
     
-    // 11-Point Audit Gaps
+    // 11-Point SEO Audit — Numbered Cards
     if (a && a.audit_11 && Array.isArray(a.audit_11) && a.audit_11.length > 0) {
       html += '<div class="research-section">';
-      html += '<div class="research-label">11-Point Audit Gaps (' + a.audit_11.length + ' items)</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-      a.audit_11.forEach(function(item) {
+      html += '<div class="research-label">&#127919; 11-Point SEO Audit (' + a.audit_11.filter(function(i){return i && i.status === 'FAIL'}).length + ' gaps found)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      a.audit_11.forEach(function(item, idx) {
         if (!item) return;
-        var status = item.status || 'unknown';
-        var label = item.item || item.label || item.name || 'Unknown item';
-        var statusColor = status === 'missing' ? '#ef4444' : status === 'weak' ? '#f97316' : status === 'good' ? '#4ade80' : '#6b7280';
-        var statusIcon = status === 'missing' ? '&#10007;' : status === 'weak' ? '&#9888;' : status === 'good' ? '&#10003;' : '?';
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
-        html += '<span style="color:' + statusColor + ';font-size:13px;width:16px;">' + statusIcon + '</span>';
-        html += '<span style="font-size:12px;color:#e2e8f0;flex:1;">' + escapeHtml(label) + '</span>';
-        html += '<span style="font-size:10px;color:' + statusColor + ';text-transform:uppercase;">' + status + '</span>';
+        var num = item.point || (idx + 1);
+        var name = item.name || 'Audit point ' + num;
+        var status = (item.status || 'UNKNOWN').toUpperCase();
+        var found = item.found || '';
+        var required = item.required || '';
+        var fix = item.fix || '';
+        var isPass = status === 'PASS' || status === 'OK' || status === 'GOOD';
+        var isFail = status === 'FAIL' || status === 'MISSING' || status === 'WEAK';
+        var cardBg = isPass ? 'rgba(74,222,128,.06)' : isFail ? 'rgba(239,68,68,.06)' : 'rgba(255,255,255,.03)';
+        var borderColor = isPass ? 'rgba(74,222,128,.2)' : isFail ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.08)';
+        var statusColor = isPass ? '#4ade80' : isFail ? '#ef4444' : '#6b7280';
+        var statusIcon = isPass ? '&#10003;' : isFail ? '&#10007;' : '&#9679;';
+        html += '<div style="background:' + cardBg + ';border:1px solid ' + borderColor + ';border-radius:8px;padding:12px;">';
+        html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">';
+        html += '<span style="font-size:16px;font-weight:800;color:' + statusColor + ';min-width:28px;">' + num + '.</span>';
+        html += '<span style="font-size:13px;font-weight:700;color:#e2e8f0;flex:1;">' + escapeHtml(name) + '</span>';
+        html += '<span style="font-size:10px;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:' + cardBg + ';color:' + statusColor + ';border:1px solid ' + borderColor + ';">' + statusIcon + ' ' + status + '</span>';
+        html += '</div>';
+        if (found) {
+          html += '<div style="font-size:11px;color:#6b7280;margin-bottom:3px;"><span style="color:#9ca3af;">Found:</span> ' + escapeHtml(found) + '</div>';
+        }
+        if (required && !isPass) {
+          html += '<div style="font-size:11px;color:#6b7280;margin-bottom:3px;"><span style="color:#9ca3af;">Required:</span> ' + escapeHtml(required) + '</div>';
+        }
+        if (fix && !isPass) {
+          html += '<div style="font-size:11px;color:#fbbf24;"><span style="color:#f59e0b;">&#128295; Fix:</span> ' + escapeHtml(fix) + '</div>';
+        }
         html += '</div>';
       });
       html += '</div></div>';
@@ -3361,7 +3376,7 @@ function renderAnalysis(a) {
       
       compList.slice(0, 5).forEach(function(comp, i) {
         html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
-        html += '<td style="padding:6px;color:#e2e8f0;font-size:11px;">#' + (i+1) + ' ' + escapeHtml((comp.title || 'Competitor').substring(0, 25)) + '</td>';
+        html += '<td style="padding:6px;color:#e2e8f0;font-size:11px;">#' + (i+1) + ' ' + escapeHtml((comp.title || 'Competitor').substring(0, 35)) + '</td>';
         html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.word_count || comp.words || '&ndash;') + '</td>';
         html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.h2_count || comp.headings || '&ndash;') + '</td>';
         html += '<td style="text-align:center;padding:6px;color:#e2e8f0;font-size:10px;">' + (comp.schema_count || comp.schema || '&ndash;') + '</td>';
