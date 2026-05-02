@@ -1168,11 +1168,14 @@ function showProfileForm(profile) {
     document.getElementById('profileFormTitle').textContent = 'Edit — ' + profile.name;
     // Business data
     var bi = profile.business_info || {};
-    document.getElementById('pfPhone').value = bi.phone || '';
-    document.getElementById('pfEmail').value = bi.email || '';
-    document.getElementById('pfAddress').value = bi.address || '';
-    document.getElementById('pfCity').value = bi.city || '';
-    document.getElementById('pfCountry').value = bi.country || '';
+    if (typeof bi === 'string') { try { bi = JSON.parse(bi); } catch(e) { bi = {}; } }
+    console.log('[editProfile] business_info keys:', Object.keys(bi), 'full:', bi);
+    // Phone/email/address are stored as separate columns — load from profile root
+    document.getElementById('pfPhone').value = profile.phone || bi.phone || '';
+    document.getElementById('pfEmail').value = profile.email || bi.email || '';
+    document.getElementById('pfAddress').value = profile.address || bi.address || '';
+    document.getElementById('pfCity').value = profile.city || bi.city || '';
+    document.getElementById('pfCountry').value = profile.country || bi.country || '';
     document.getElementById('pfKvk').value = bi.kvk || '';
     document.getElementById('pfBtw').value = bi.btw || '';
     document.getElementById('pfFounded').value = bi.founded_year || '';
@@ -1361,6 +1364,7 @@ async function saveProfile() {
       schema_type: document.getElementById('pfSchemaType').value
     }
   };
+  console.log('[saveProfile] business_info being sent:', JSON.stringify(payload.business_info));
   var d = _editingProfileId ? await api('/api/content/profiles/' + _editingProfileId, 'PUT', payload) : await api('/api/content/profiles', 'POST', payload);
   if (!d.success) { alert('Error: ' + d.error); return; }
   var profileId = d.profile.id;
