@@ -349,12 +349,19 @@ textarea{resize:vertical;min-height:100px;}
   </div>
 
   <div class="card">
-    <div class="card-title">📋 Page to Analyse & Rewrite</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin:0;">📋 Page to Analyse & Rewrite</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="rwFormSavedStatus" style="font-size:11px;color:#6b7280;"></span>
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="saveRewriteForm()" title="Save all fields">💾 Save</button>
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="resetRewriteForm()" title="Clear all saved data">🗑️ Reset</button>
+      </div>
+    </div>
     <div class="grid-2" style="margin-bottom:12px;">
-      <div><label>Business Profile</label><select id="rwProfile" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;"><option value="">Select profile</option></select></div>
-      <div><label>Current Page URL (optional)</label><input id="rwUrl" placeholder="https://example.com/roof-repair"></div>
-      <div><label>Current Slug</label><input id="rwSlug" placeholder="roof-repair"></div>
-      <div><label>Current Title</label><input id="rwTitle" placeholder="Roof Repair Services"></div>
+      <div><label>Business Profile <span style="color:#6b7280;font-size:11px;">— who this page is for</span></label><select id="rwProfile" style="width:100%;background:#0a0a0f;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;"><option value="">Select profile</option></select></div>
+      <div><label>Current Page URL <span style="color:#6b7280;font-size:11px;">— the live page to analyse</span></label><input id="rwUrl" placeholder="https://example.com/roof-repair"></div>
+      <div><label>Current Slug <span style="color:#6b7280;font-size:11px;">— last part of URL, e.g. "roof-repair"</span></label><input id="rwSlug" placeholder="roof-repair"></div>
+      <div><label>Current Title <span style="color:#6b7280;font-size:11px;">— what appears in Google search results</span></label><input id="rwTitle" placeholder="Roof Repair Services"></div>
     </div>
     <!-- GSC Data -->
     <div style="background:#0a0a0f;border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;margin-bottom:12px;">
@@ -381,10 +388,10 @@ textarea{resize:vertical;min-height:100px;}
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
-        <div><label>Impressions</label><input id="rwImpressions" type="number" placeholder="10000"></div>
-        <div><label>Clicks</label><input id="rwClicks" type="number" placeholder="0"></div>
-        <div><label>Avg Position</label><input id="rwPosition" type="number" step="0.1" placeholder="8.5"></div>
-        <div><label>Top Keyword</label><input id="rwKeyword" placeholder="roof repair amsterdam"></div>
+        <div><label>Impressions <span style="color:#6b7280;font-size:11px;">— how often Google showed you</span></label><input id="rwImpressions" type="number" placeholder="10000"></div>
+        <div><label>Clicks <span style="color:#6b7280;font-size:11px;">— actual clicks from search</span></label><input id="rwClicks" type="number" placeholder="0"></div>
+        <div><label>Avg Position <span style="color:#6b7280;font-size:11px;">— lower is better (#1-10)</span></label><input id="rwPosition" type="number" step="0.1" placeholder="8.5"></div>
+        <div><label>Top Keyword <span style="color:#6b7280;font-size:11px;">— main query you rank for</span></label><input id="rwKeyword" placeholder="roof repair amsterdam"></div>
       </div>
       <div style="margin-bottom:8px;">
         <label>GSC Pages — rankende URL's voor dit onderwerp (één per regel)</label>
@@ -1128,6 +1135,7 @@ function showPanel(name, btn) {
   if (tzBar) { tzBar.style.display = name === 'tracker' ? 'flex' : 'none'; }
   if (name === 'tracker' && window._tzRender) window._tzRender();
   if (name === 'profiles') loadProfiles();
+  if (name === 'rewrite') { loadRewriteForm(); setupRewriteFormAutoSave(); }
   if (name === 'engine') {
     loadEngineProfiles();
   }
@@ -1478,6 +1486,36 @@ async function loadEngineProfiles() {
     var o = document.createElement('option');
     o.value = p.id; o.textContent = p.name; af.appendChild(o);
   });
+  // Also populate rewrite panel profile dropdown
+  var rwSel = document.getElementById('rwProfile');
+  if (rwSel) {
+    var rwCur = rwSel.value;
+    rwSel.innerHTML = '<option value="">Select profile</option>';
+    _profiles.forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.name + (p.domain ? ' (' + p.domain + ')' : '');
+      rwSel.appendChild(o);
+    });
+    if (rwCur) rwSel.value = rwCur;
+  }
+  // Also populate stats/news dropdowns
+  var statsSel = document.getElementById('statsProfile');
+  if (statsSel) {
+    statsSel.innerHTML = '<option value="">Select profile</option>';
+    _profiles.forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name; statsSel.appendChild(o);
+    });
+  }
+  var newsSel = document.getElementById('newsProfileFilter');
+  if (newsSel) {
+    newsSel.innerHTML = '<option value="">Select profile</option>';
+    _profiles.forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name; newsSel.appendChild(o);
+    });
+  }
 }
 
 function loadProfileInfo() {
@@ -2720,8 +2758,77 @@ function renderRwImages() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// STEP 1: Optimize Meta Only — quick, safe, always first
+// FORM PERSISTENCE — save/load/reset GSC and rewrite form fields
 // ═══════════════════════════════════════════════════════════════════
+const RW_FORM_KEY = 'cs_rewrite_form_v1';
+
+function getRewriteFormFields() {
+  return [
+    'rwUrl','rwSlug','rwTitle','rwHtml','rwImpressions','rwClicks',
+    'rwPosition','rwKeyword','rwGscPages','rwGscQueries'
+  ];
+}
+
+function saveRewriteForm() {
+  var data = {};
+  getRewriteFormFields().forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  var profileId = document.getElementById('rwProfile')?.value || '';
+  data.rwProfile = profileId;
+  localStorage.setItem(RW_FORM_KEY, JSON.stringify(data));
+  var status = document.getElementById('rwFormSavedStatus');
+  if (status) { status.textContent = '💾 Saved at ' + new Date().toLocaleTimeString(); status.style.color = '#4ade80'; }
+}
+
+function loadRewriteForm() {
+  try {
+    var raw = localStorage.getItem(RW_FORM_KEY);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    getRewriteFormFields().forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && data[id] !== undefined) el.value = data[id];
+    });
+    if (data.rwProfile && document.getElementById('rwProfile')) {
+      document.getElementById('rwProfile').value = data.rwProfile;
+    }
+    var status = document.getElementById('rwFormSavedStatus');
+    if (status) { status.textContent = '💾 Loaded saved data'; status.style.color = '#60a5fa'; }
+  } catch(e) { console.warn('loadRewriteForm error:', e.message); }
+}
+
+function resetRewriteForm() {
+  if (!confirm('Clear ALL saved form data? This cannot be undone.')) return;
+  localStorage.removeItem(RW_FORM_KEY);
+  getRewriteFormFields().forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var profileEl = document.getElementById('rwProfile');
+  if (profileEl) profileEl.value = '';
+  var status = document.getElementById('rwFormSavedStatus');
+  if (status) { status.textContent = '🗑️ Cleared'; status.style.color = '#f87171'; }
+  toast('Form data cleared');
+}
+
+// Auto-save on input changes (debounced)
+var _rwFormSaveTimer;
+function setupRewriteFormAutoSave() {
+  getRewriteFormFields().forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+      clearTimeout(_rwFormSaveTimer);
+      _rwFormSaveTimer = setTimeout(function() { saveRewriteForm(); }, 1500);
+    });
+    el.addEventListener('change', function() { saveRewriteForm(); });
+  });
+  var profileEl = document.getElementById('rwProfile');
+  if (profileEl) profileEl.addEventListener('change', function() { saveRewriteForm(); });
+}
+
 async function optimizeMetaOnly() {
   var profileId = document.getElementById('rwProfile').value;
   if (!profileId) { toast('Select a profile first', 'red'); return; }
@@ -4155,7 +4262,7 @@ function renderGscPriorityPanel() {
       '<div style="font-size:11px;color:#9ca3af;">' + getGscPriorityReason(row) + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">' +
-      '<button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="auditUrlForRewrite(\'' + row.url.replace(/'/g, '') + '\')">🔍 Audit</button>' +
+      '<button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="auditUrlForRewrite(' + JSON.stringify(row.url) + ',' + JSON.stringify(row.keyword) + ',' + (row.impressions || 0) + ',' + (row.clicks || 0) + ',' + (row.position || 0) + ')">🔍 Research</button>' +
       '<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="window.open(\'' + row.url + '\',\'_blank\')">↗️ Open</button>' +
       '</div>' +
       '</div>';
@@ -4184,14 +4291,51 @@ function extractKeywordFromUrl(url) {
   } catch(e) { return ''; }
 }
 
-async function auditUrlForRewrite(url) {
-  // Fill the rewrite URL field
-  document.getElementById('rwUrl').value = url;
-  // Extract keyword for display
-  var keyword = extractKeywordFromUrl(url);
-  toast('🔍 Auditing "' + url.replace(/^https?:\/\//, '').substring(0, 40) + '" — checking 11 SEO points...');
-  // Trigger the analyse function
-  await analyseRewrite();
+async function auditUrlForRewrite(url, keyword, impressions, clicks, position) {
+  // 1. Switch to Rewrite tab
+  showPanel('rewrite');
+  
+  // 2. Pre-fill all available GSC data from the tracker row
+  var urlEl = document.getElementById('rwUrl');
+  if (urlEl) urlEl.value = url || '';
+  
+  var slugEl = document.getElementById('rwSlug');
+  if (slugEl) {
+    try { slugEl.value = new URL(url).pathname.replace(/^\/|\/$/g, ''); } catch(e) { slugEl.value = ''; }
+  }
+  
+  var kwEl = document.getElementById('rwKeyword');
+  if (kwEl) kwEl.value = keyword || '';
+  
+  var impEl = document.getElementById('rwImpressions');
+  if (impEl) impEl.value = impressions || '';
+  
+  var clkEl = document.getElementById('rwClicks');
+  if (clkEl) clkEl.value = clicks || '';
+  
+  var posEl = document.getElementById('rwPosition');
+  if (posEl) posEl.value = position || '';
+  
+  // 3. Save to localStorage so it persists
+  saveRewriteForm();
+  
+  // 4. Scroll to the rewrite form with smooth animation
+  setTimeout(function() {
+    var formCard = document.querySelector('#rwFormCard, .card:has(#rwUrl)');
+    if (formCard) {
+      formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Flash highlight on the form
+    var form = document.querySelector('#rwUrl')?.closest('.card');
+    if (form) {
+      form.style.transition = 'box-shadow 0.3s ease';
+      form.style.boxShadow = '0 0 20px rgba(124,58,237,.3)';
+      setTimeout(function() { form.style.boxShadow = ''; }, 1500);
+    }
+  }, 300);
+  
+  toast('🔬 Data loaded from tracker. Review the form, then click "Optimize Meta" or "Research".');
 }
 
 async function refreshEngineGSC() {
@@ -4450,6 +4594,7 @@ async function writeArticle() {
 loadProfiles();
 loadEngineProfiles();
 attachDraftAutoSave();
+loadRewriteForm();
 // Auto-restore last used profile + draft after profiles load
 setTimeout(function() {
   var sel = document.getElementById('engineProfile');
@@ -5699,6 +5844,21 @@ loadProfiles = async function() {
     </div>
   </div>
 </div>
+
+<!-- Scroll to top button -->
+<button id="scrollToTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Scroll to top" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9999;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:20px;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.3);transition:opacity .3s,transform .2s;">&#8593;</button>
+<script>
+// Show/hide scroll-to-top button
+(function(){
+  var btn = document.getElementById('scrollToTopBtn');
+  if (!btn) return;
+  window.addEventListener('scroll', function() {
+    btn.style.display = window.scrollY > 400 ? 'block' : 'none';
+  });
+  btn.addEventListener('mouseenter', function() { btn.style.transform = 'scale(1.1)'; });
+  btn.addEventListener('mouseleave', function() { btn.style.transform = 'scale(1)'; });
+})();
+</script>
 
 </body>
 </html>
