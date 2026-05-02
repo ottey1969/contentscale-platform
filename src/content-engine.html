@@ -44,6 +44,10 @@ textarea{resize:vertical;min-height:100px;}
 .progress-fill{height:6px;border-radius:99px;background:linear-gradient(90deg,#7c3aed,#be185d);transition:width .5s;}
 .kw-chip{display:inline-block;background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;margin:3px;}
 .research-block{background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin-bottom:10px;}
+.research-section{border-bottom:1px solid rgba(255,255,255,.06);padding:12px 0;}
+.research-section:last-child{border-bottom:none;}
+.research-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:6px;}
+.research-value{font-size:13px;color:#e2e8f0;line-height:1.5;}
 .fix-checkbox:hover{border-color:rgba(124,58,237,.3)!important;background:rgba(124,58,237,.06)!important;}
 .fix-checkbox input:checked + div{color:#c084fc!important;}
 .competitor-card{background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:8px;}
@@ -468,8 +472,14 @@ console.log('[ContentEngine] Version v2026-05-02-001 loaded');
     <!-- STEP 2: Deep Research -->
     <div style="margin-bottom:10px;padding:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:10px;">
       <div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Step 2 — Deep Research</div>
+      <!-- Sitemap URL for internal linking context -->
+      <div style="margin-top:12px;margin-bottom:10px;">
+        <label style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">🗺️ Sitemap URL (optional — for contextual internal links)</label>
+        <input id="rwSitemapUrl" placeholder="https://yoursite.com/sitemap.xml — AI will suggest relevant internal links from your site" style="font-size:12px;margin-top:4px;">
+      </div>
+
       <button class="btn btn-primary" onclick="analyseRewrite()" id="btnAnalyse" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">🔬 Research Page & Competitors</button>
-      <span style="font-size:12px;color:#6b7280;margin-left:10px;">PAA questions, AI Overview, voice search, competitor analysis</span>
+      <span style="font-size:12px;color:#6b7280;margin-left:10px;">PAA questions, AI Overview, voice search, competitor analysis, internal links</span>
     </div>
   </div>
 
@@ -956,6 +966,7 @@ let _editingProfileId = null;
 let _currentJobId = null;
 let _currentArticleId = null;
 let _currentArticleHtml = '';
+let _availableFixes = [];
 let _currentArticleTitle = '';
 let _gscPagesCsv = []; // Stores all GSC Pages CSV data for priority panel
 // Draft snapshot — lets us restore last research/brief/article view on refresh
@@ -2776,7 +2787,8 @@ function getRewriteFormFields() {
   return [
     'rwUrl','rwSlug','rwTitle','rwHtml','rwImpressions','rwClicks',
     'rwPosition','rwKeyword','rwGscPages','rwGscQueries',
-    'comp1Url','comp1Html','comp2Url','comp2Html','comp3Url','comp3Html'
+    'comp1Url','comp1Html','comp2Url','comp2Html','comp3Url','comp3Html',
+    'rwSitemapUrl'
   ];
 }
 
@@ -3202,174 +3214,223 @@ function renderAnalysis(a) {
 // ═══════════════════════════════════════════════════════════════════
 // RESEARCH DASHBOARD — show page analysis + competitors + fix selection
 // ═══════════════════════════════════════════════════════════════════
-function renderResearch(r, a) {
-  _currentResearch = r;
-  var el = document.getElementById('rwResearchResults');
-  var y = r.your_page || {};
-  var c = r.competitors || {};
-  var ai = r.ai_overview || {};
-  var paa = r.paa || [];
-  var v = r.voice_search || {};
-  var g = r.gsc || {};
-
-  var schemaList = (y.schema_types || []).map(function(s) { return '<span class="tag">' + s + '</span>'; }).join(' ') || '<span style="color:#6b7280;font-size:12px;">None detected</span>';
-
-  // Build competitor comparison table
-  var compTable = '';
-  if ((c.top_5_analysis || []).length) {
-    compTable = '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:8px;">' +
-      '<tr style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">' +
-      '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Site</th>' +
-      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Words</th>' +
-      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">FAQ</th>' +
-      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">HowTo</th>' +
-      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Review</th>' +
-      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Speakable</th>' +
-      '<th style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);">Dir.Ans</th>' +
-      '</tr>';
-    // Your row
-    compTable += '<tr style="background:rgba(124,58,237,.08);">' +
-      '<td style="padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);"><strong style="color:#c084fc;">YOU</strong></td>' +
-      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.word_count || 0) + '</td>' +
-      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_faq ? '✅' : '❌') + '</td>' +
-      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_howto ? '✅' : '❌') + '</td>' +
-      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_review_schema ? '✅' : '❌') + '</td>' +
-      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_speakable ? '✅' : '❌') + '</td>' +
-      '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (y.has_direct_answer ? '✅' : '❌') + '</td>' +
-      '</tr>';
-    // Competitor rows
-    (c.top_5_analysis || []).forEach(function(comp) {
-      var domain = comp.url ? comp.url.replace(/^https?:\/\//, '').split('/')[0] : '?';
-      compTable += '<tr>' +
-        '<td style="padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px;">' + domain + '</td>' +
-        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.word_count || 0) + '</td>' +
-        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_faq ? '✅' : '❌') + '</td>' +
-        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_howto ? '✅' : '❌') + '</td>' +
-        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_review ? '✅' : '❌') + '</td>' +
-        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_speakable ? '✅' : '❌') + '</td>' +
-        '<td style="text-align:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);">' + (comp.has_direct_answer ? '✅' : '❌') + '</td>' +
-        '</tr>';
-    });
-    compTable += '</table>';
-  }
-
-  // Build PAA section
-  var paaHtml = '';
-  if (paa.length) {
-    paaHtml = '<div style="margin-top:10px;">' +
-      paa.map(function(q, i) {
-        return '<div style="padding:8px 10px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;margin-bottom:6px;">' +
-          '<div style="font-size:12px;font-weight:700;color:#e2e8f0;">Q: ' + q.question + '</div>' +
-          '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Google current: ' + (q.answer ? q.answer.slice(0, 120) + '...' : 'No answer') + '</div>' +
-          '</div>';
-      }).join('') +
-      '</div>';
-  }
-
-  // Build AI Overview section
-  var aiHtml = '';
-  if (ai.detected) {
-    aiHtml = '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-top:10px;">' +
-      '<div style="font-size:12px;color:#fbbf24;font-weight:700;">⚠️ AI Overview Detected on Google</div>' +
-      '<div style="font-size:11px;color:#e2e8f0;margin-top:4px;">' + (ai.title || '') + '</div>' +
-      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Google says: ' + (ai.answer_preview || '') + '</div>' +
-      '<div style="font-size:11px;color:#4ade80;margin-top:6px;">💡 ' + (ai.strategy || '') + '</div>' +
-      '</div>';
-  } else {
-    aiHtml = '<div style="background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:8px;padding:10px;margin-top:10px;">' +
-      '<div style="font-size:12px;color:#4ade80;">✅ No AI Overview yet — first-mover opportunity</div>' +
-      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">' + (ai.strategy || '') + '</div>' +
-      '</div>';
-  }
-
-  // GSC mini stats
-  var gscHtml = '';
-  if (g.impressions !== undefined || g.clicks !== undefined) {
-    gscHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">' +
-      '<div style="text-align:center;padding:8px 12px;background:rgba(15,23,42,.5);border-radius:6px;"><div style="font-size:16px;font-weight:800;color:#fbbf24;">' + (g.impressions || 0) + '</div><div style="font-size:10px;color:#6b7280;">Impressions</div></div>' +
-      '<div style="text-align:center;padding:8px 12px;background:rgba(15,23,42,.5);border-radius:6px;"><div style="font-size:16px;font-weight:800;color:#4ade80;">' + (g.clicks || 0) + '</div><div style="font-size:10px;color:#6b7280;">Clicks</div></div>' +
-      '<div style="text-align:center;padding:8px 12px;background:rgba(15,23,42,.5);border-radius:6px;"><div style="font-size:16px;font-weight:800;color:#60a5fa;">#' + (g.position || 0) + '</div><div style="font-size:10px;color:#6b7280;">Position</div></div>' +
-      '</div>';
-    if ((g.top_queries || []).length) {
-      gscHtml += '<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Top queries: ' + g.top_queries.slice(0, 5).join(', ') + '</div>';
+  function renderResearch(r, a) {
+    if (!r) return;
+    _currentResearch = r;
+    var html = '';
+    
+    // Priority score row
+    html += '<div class="research-section">';
+    html += '<div class="research-label">Priority Score</div>';
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;">';
+    html += '<div style="flex:1;min-width:100px;text-align:center;">';
+    html += '<div style="font-size:28px;font-weight:800;color:#a78bfa;">' + ((a && a.priority_score) ? a.priority_score : '&ndash;') + '</div>';
+    html += '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;">Score</div></div>';
+    html += '<div style="flex:1;min-width:100px;text-align:center;">';
+    html += '<div style="font-size:28px;font-weight:800;color:#4ade80;">' + (r.gsc && r.gsc.impressions ? r.gsc.impressions.toLocaleString() : '0') + '</div>';
+    html += '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;">Impressions</div></div>';
+    html += '<div style="flex:1;min-width:100px;text-align:center;">';
+    html += '<div style="font-size:28px;font-weight:800;color:#38bdf8;">' + (r.gsc && r.gsc.clicks ? r.gsc.clicks.toLocaleString() : '0') + '</div>';
+    html += '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;">Clicks</div></div>';
+    html += '<div style="flex:1;min-width:100px;text-align:center;">';
+    html += '<div style="font-size:28px;font-weight:800;color:#fbbf24;">' + (r.gsc && r.gsc.position ? r.gsc.position : '&ndash;') + '</div>';
+    html += '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;">Avg Pos</div></div>';
+    html += '</div></div>';
+    
+    // AI Overview
+    if (r.ai_overview && r.ai_overview.present) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">AI Overview Detected</div>';
+      html += '<div class="research-value" style="color:#c084fc;">' + escapeHtml(r.ai_overview.summary || 'Google is showing an AI-generated overview for this query.') + '</div>';
+      if (r.ai_overview.cited_sources && r.ai_overview.cited_sources.length > 0) {
+        html += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">Sources cited:</div>';
+        r.ai_overview.cited_sources.forEach(function(src) {
+          html += '<a href="' + (src.url || '#') + '" target="_blank" style="font-size:11px;color:#60a5fa;display:block;margin-bottom:2px;">' + escapeHtml(src.title || src.url || 'Unknown') + '</a>';
+        });
+      }
+      html += '</div>';
+    }
+    
+    // PAA Questions
+    var paa = (r.paa_questions && r.paa_questions.length > 0) ? r.paa_questions : [];
+    if (paa.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">People Also Ask &mdash; Real Google Questions (' + paa.length + ')</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+      paa.forEach(function(q) {
+        html += '<div style="padding:8px 12px;background:rgba(251,191,36,.06);border-radius:6px;font-size:12px;color:#e2e8f0;"><span style="color:#fbbf24;margin-right:6px;">&#10067;</span>' + escapeHtml(q) + '</div>';
+      });
+      html += '</div></div>';
+    }
+    
+    // Top Competitors
+    var compList = (r.competitors && r.competitors.serp_results) ? r.competitors.serp_results : (r.top_5_competitors || []);
+    if (compList.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">Top Competitors from Google SERP (' + compList.length + ')</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+      compList.slice(0, 5).forEach(function(comp, i) {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+        html += '<span style="font-size:12px;font-weight:700;color:#a78bfa;width:24px;">#' + (i+1) + '</span>';
+        html += '<div style="flex:1;min-width:0;">';
+        html += '<a href="' + (comp.url || comp.targetUrl || comp.link || '#') + '" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;word-break:break-all;">' + escapeHtml(comp.url || comp.targetUrl || comp.link || comp.title || 'Unknown') + '</a>';
+        html += '</div></div>';
+      });
+      html += '</div></div>';
+    }
+    
+    // GSC Top Queries
+    if (r.gsc && r.gsc.top_queries && r.gsc.top_queries.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">Top Queries from GSC (' + r.gsc.top_queries.length + ')</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      r.gsc.top_queries.forEach(function(q) {
+        var qText = typeof q === 'string' ? q : (q.query || q.keyword || JSON.stringify(q));
+        html += '<span style="background:rgba(56,189,248,.08);border-radius:99px;padding:3px 10px;font-size:11px;color:#38bdf8;">' + escapeHtml(qText) + '</span>';
+      });
+      html += '</div></div>';
+    }
+    
+    // Voice Search
+    if (r.voice_search && r.voice_search.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">Voice Search Queries (' + r.voice_search.length + ')</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+      r.voice_search.forEach(function(q) {
+        html += '<div style="padding:6px 12px;background:rgba(167,139,250,.06);border-radius:6px;font-size:12px;color:#a78bfa;">' + escapeHtml(q) + '</div>';
+      });
+      html += '</div></div>';
+    }
+    
+    // Related Searches
+    if (r.related_searches && r.related_searches.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">Related Searches (' + r.related_searches.length + ')</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      r.related_searches.forEach(function(s) {
+        html += '<span style="background:rgba(74,222,128,.08);border-radius:99px;padding:3px 10px;font-size:11px;color:#4ade80;">' + escapeHtml(s) + '</span>';
+      });
+      html += '</div></div>';
+    }
+    
+    // 11-Point Audit Gaps
+    if (a && a.audit_11 && Array.isArray(a.audit_11) && a.audit_11.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">11-Point Audit Gaps (' + a.audit_11.length + ' items)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+      a.audit_11.forEach(function(item) {
+        if (!item) return;
+        var status = item.status || 'unknown';
+        var label = item.item || item.label || item.name || 'Unknown item';
+        var statusColor = status === 'missing' ? '#ef4444' : status === 'weak' ? '#f97316' : status === 'good' ? '#4ade80' : '#6b7280';
+        var statusIcon = status === 'missing' ? '&#10007;' : status === 'weak' ? '&#9888;' : status === 'good' ? '&#10003;' : '?';
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+        html += '<span style="color:' + statusColor + ';font-size:13px;width:16px;">' + statusIcon + '</span>';
+        html += '<span style="font-size:12px;color:#e2e8f0;flex:1;">' + escapeHtml(label) + '</span>';
+        html += '<span style="font-size:10px;color:' + statusColor + ';text-transform:uppercase;">' + status + '</span>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+    
+    // You vs Competitors comparison table
+    if (r.your_page || compList.length > 0) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">You vs Top 5</div>';
+      html += '<div style="overflow-x:auto;">';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+      html += '<thead><tr style="border-bottom:1px solid rgba(255,255,255,.15);">';
+      html += '<th style="text-align:left;padding:6px;color:#6b7280;font-weight:600;">Page</th>';
+      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">Words</th>';
+      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">H2s</th>';
+      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">Schema</th>';
+      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">PAA</th>';
+      html += '<th style="text-align:center;padding:6px;color:#6b7280;font-weight:600;">Speakable</th>';
+      html += '</tr></thead><tbody>';
+      
+      if (r.your_page) {
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.08);background:rgba(124,58,237,.05);">';
+        html += '<td style="padding:6px;color:#a78bfa;font-weight:700;font-size:11px;">&#127919; YOUR PAGE</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.word_count || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.h2_count || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;font-size:10px;">' + (r.your_page.schema_types ? r.your_page.schema_types.join(', ') : '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.paa_count || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (r.your_page.has_speakable ? '&#10003;' : '&#10007;') + '</td>';
+        html += '</tr>';
+      }
+      
+      compList.slice(0, 5).forEach(function(comp, i) {
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);">';
+        html += '<td style="padding:6px;color:#e2e8f0;font-size:11px;">#' + (i+1) + ' ' + escapeHtml((comp.title || 'Competitor').substring(0, 25)) + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.word_count || comp.words || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.h2_count || comp.headings || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;font-size:10px;">' + (comp.schema_count || comp.schema || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.paa_count || comp.paa || '&ndash;') + '</td>';
+        html += '<td style="text-align:center;padding:6px;color:#e2e8f0;">' + (comp.has_speakable ? '&#10003;' : '&#10007;') + '</td>';
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table></div></div>';
+    }
+    
+    // AI Meta Recommendation
+    if (a && (a.recommended_title || a.recommended_meta_description)) {
+      html += '<div class="research-section">';
+      html += '<div class="research-label">AI-Recommended Meta (Based on Research)</div>';
+      if (a.recommended_title) {
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div style="font-size:10px;color:#6b7280;margin-bottom:3px;">Recommended Title <span style="color:#4ade80;">(' + a.recommended_title.length + ' chars)</span></div>';
+        html += '<div style="font-size:13px;color:#e2e8f0;font-weight:700;">' + escapeHtml(a.recommended_title) + '</div>';
+        html += '</div>';
+      }
+      if (a.recommended_meta_description) {
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div style="font-size:10px;color:#6b7280;margin-bottom:3px;">Recommended Description <span style="color:#4ade80;">(' + a.recommended_meta_description.length + ' chars)</span></div>';
+        html += '<div style="font-size:12px;color:#e2e8f0;">' + escapeHtml(a.recommended_meta_description) + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    
+    // Write research results
+    var el = document.getElementById('rwResearchResults');
+    if (el) el.innerHTML = html;
+    
+    // Build and write surgical fix checkboxes
+    var paaCount = paa.length;
+    _availableFixes = [
+      { key: 'title_meta', label: '&#128221; Meta Title & Description', desc: 'Optimize title (50-60 chars) + meta description (140-155 chars)', risk: 'low' },
+      { key: 'direct_answer', label: '&#128161; Direct Answer Box', desc: 'Strengthen the voice search answer at top of page', risk: 'low' },
+      { key: 'paa_improve', label: '&#10067; PAA Questions (' + paaCount + ')', desc: 'Add/improve all ' + paaCount + ' People Also Ask questions in FAQ', risk: 'low' },
+      { key: 'schema_add', label: '&#127991; Missing Schemas', desc: 'Add Speakable, HowTo, Review, Breadcrumb schemas', risk: 'none' },
+      { key: 'voice_optimize', label: '&#127908; Voice Search', desc: 'Add Speakable schema + direct answer IDs', risk: 'none' },
+      { key: 'cta_strengthen', label: '&#128293; Stronger CTAs', desc: 'Replace weak CTAs with BOFU (Call/Book/Schedule + Free)', risk: 'low' },
+      { key: 'faq_enhance', label: '&#128218; FAQ Enhancement', desc: 'Longer answers + stats + internal links in existing FAQ', risk: 'low' },
+      { key: 'stats_add', label: '&#128202; Cited Statistics', desc: 'Add 4-6 real statistics with named sources', risk: 'low' },
+      { key: 'internal_links', label: '&#128279; Internal Links', desc: 'Add 3-5 contextual internal links', risk: 'low' },
+      { key: 'entity_boost', label: '&#129504; Entity Boost', desc: 'Add Wikipedia/entity references to strengthen topical authority', risk: 'low' },
+      { key: 'competitor_gap', label: '&#129354; Competitor Gap Fill', desc: 'Cover topics that competitors have but you do not', risk: 'medium' },
+      { key: 'heading_restructure', label: '&#128203; Heading Restructure', desc: 'Match competitor heading count + improve hierarchy', risk: 'low' },
+      { key: 'table_add', label: '&#128202; Comparison Table', desc: 'Add comparison table (features/prices/services)', risk: 'low' },
+      { key: 'image_alt', label: '&#128444; Image Alt Text', desc: 'Add descriptive keyword-rich alt text to all images', risk: 'none' },
+      { key: 'readability', label: '&#128214; Readability', desc: 'Shorter sentences, simpler words, better structure', risk: 'none' },
+      { key: 'cta_enhance', label: '&#127919; CTA Enhancement', desc: 'More prominent, action-oriented call-to-action buttons', risk: 'low' }
+    ];
+    
+    var fixEl = document.getElementById('rwFixCheckboxes');
+    if (fixEl) {
+      fixEl.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin-bottom:10px;">Choose which improvements to apply:</div>' +
+        _availableFixes.map(function(f) {
+          return '<label class="fix-checkbox" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.02);">' +
+            '<input type="checkbox" value="' + f.key + '" style="margin-top:2px;accent-color:#7c3aed;" onchange="saveRewriteForm()">' +
+            '<div style="flex:1;">' +
+              '<div style="font-size:12px;color:#e2e8f0;font-weight:600;">' + f.label + '</div>' +
+              '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' + f.desc + '</div>' +
+              '<span style="display:inline-block;margin-top:4px;font-size:9px;text-transform:uppercase;padding:1px 6px;border-radius:99px;background:' + (f.risk === 'none' ? 'rgba(74,222,128,.1)' : f.risk === 'low' ? 'rgba(56,189,248,.1)' : 'rgba(251,191,36,.1)') + ';color:' + (f.risk === 'none' ? '#4ade80' : f.risk === 'low' ? '#38bdf8' : '#fbbf24') + ';">' + f.risk + ' risk</span>' +
+            '</div></label>';
+        }).join('');
     }
   }
-
-  el.innerHTML =
-    // Your page status
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">' +
-    '<div class="research-block">' +
-    '<div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Your Page</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;"><strong>Words:</strong> ' + (y.word_count || 0) + '</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;"><strong>H2s:</strong> ' + (y.h2_count || 0) + '</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;"><strong>Images:</strong> ' + (y.image_count || 0) + '</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;"><strong>CTAs:</strong> ' + (y.cta_count || 0) + '</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;margin-top:6px;"><strong>Schemas:</strong> ' + schemaList + '</div>' +
-    '<div style="font-size:12px;color:' + (y.graaf_score ? '#4ade80' : '#6b7280') + ';margin-top:6px;"><strong>GRAAF:</strong> ' + (y.graaf_score || 'Not scanned') + '/100</div>' +
-    '</div>' +
-    '<div class="research-block">' +
-    '<div style="font-size:11px;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">GSC Data</div>' + gscHtml +
-    '</div>' +
-    '<div class="research-block">' +
-    '<div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">AI Overview</div>' + aiHtml +
-    '</div>' +
-    '<div class="research-block">' +
-    '<div style="font-size:11px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Voice Search</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;">Speakable: ' + (v.has_speakable_schema ? '✅' : '❌ missing') + '</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;">Direct answer: ' + (v.has_direct_answer ? '✅' : '❌ missing') + '</div>' +
-    '<div style="font-size:12px;color:#e2e8f0;margin-top:6px;">Target queries:</div>' +
-    (v.queries || []).map(function(q) { return '<div style="font-size:11px;color:#6b7280;padding:2px 0;">🎙️ ' + q + '</div>'; }).join('') +
-    '</div>' +
-    '</div>' +
-    // Competitor comparison
-    '<div class="research-block" style="margin-bottom:14px;">' +
-    '<div style="font-size:11px;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🏆 Competitor Comparison (You vs Top 5)</div>' + compTable +
-    '</div>' +
-    // PAA
-    '<div class="research-block" style="margin-bottom:14px;">' +
-    '<div style="font-size:11px;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">❓ People Also Ask — Real Google Questions (' + paa.length + ')</div>' + paaHtml +
-    '</div>' +
-    // Analysis recommendations (from Gemini)
-    (a.audit_11 && a.audit_11.length ? '<div class="research-block">' +
-    '<div style="font-size:11px;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🎯 11-Point Audit Gaps</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;">' +
-    a.audit_11.map(function(item) {
-      var col = item.status === 'strong' ? '#4ade80' : item.status === 'missing' ? '#f87171' : '#fbbf24';
-      var icon = item.status === 'strong' ? '✅' : item.status === 'missing' ? '❌' : '⚠️';
-      return '<div style="padding:8px 10px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;">' +
-        '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + icon + ' ' + item.factor + '</div>' +
-        '<div style="font-size:10px;color:#6b7280;margin-top:3px;">' + (item.evidence || '') + '</div>' +
-        '</div>';
-    }).join('') +
-    '</div></div>' : '');
-
-  // Build fix checkboxes
-  var fixes = [
-    { key: 'title_meta', label: '📝 Meta Title & Description', desc: 'Optimize title (50-60 chars) + meta description (140-155 chars)', risk: 'low' },
-    { key: 'direct_answer', label: '💡 Direct Answer Box', desc: 'Strengthen the voice search answer at top of page', risk: 'low' },
-    { key: 'paa_improve', label: '❓ PAA Questions', desc: 'Add/improve all ' + paa.length + ' People Also Ask questions in FAQ', risk: 'low' },
-    { key: 'schema_add', label: '🏷️ Missing Schemas', desc: 'Add Speakable, HowTo, Review, Breadcrumb schemas', risk: 'none' },
-    { key: 'voice_optimize', label: '🎙️ Voice Search', desc: 'Add Speakable schema + direct answer IDs', risk: 'none' },
-    { key: 'cta_strengthen', label: '🔥 Stronger CTAs', desc: 'Replace weak CTAs with BOFU (Call/Book/Schedule + Free)', risk: 'low' },
-    { key: 'faq_enhance', label: '📚 FAQ Enhancement', desc: 'Longer answers + stats + internal links in existing FAQ', risk: 'low' },
-    { key: 'stats_add', label: '📊 Cited Statistics', desc: 'Add 4-6 real statistics with named sources', risk: 'low' },
-    { key: 'internal_links', label: '🔗 Internal Links', desc: 'Add 3-5 contextual internal links', risk: 'low' },
-    { key: 'image_alt', label: '🖼️ Image Alt Text', desc: 'Improve all alt texts with keyword + location', risk: 'none' },
-    { key: 'opening_hours', label: '🕐 Opening Hours Schema', desc: 'Add OpeningHoursSpecification to LocalBusiness', risk: 'none' },
-  ];
-
-  document.getElementById('rwFixCheckboxes').innerHTML = fixes.map(function(f) {
-    var riskColor = f.risk === 'none' ? '#4ade80' : f.risk === 'low' ? '#fbbf24' : '#f87171';
-    var disabled = f.key === 'paa_improve' && !paa.length ? 'disabled' : '';
-    var opacity = f.key === 'paa_improve' && !paa.length ? 'opacity:.4;' : '';
-    return '<label class="fix-checkbox" style="display:flex;align-items:flex-start;gap:8px;padding:10px;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.06);border-radius:6px;cursor:pointer;' + opacity + '" ' + disabled + '>' +
-      '<input type="checkbox" value="' + f.key + '" style="margin-top:2px;accent-color:#c084fc;" ' + disabled + '>' +
-      '<div>' +
-      '<div style="font-size:12px;font-weight:700;color:#e2e8f0;">' + f.label + ' <span style="font-size:9px;color:' + riskColor + ';text-transform:uppercase;">' + f.risk + ' risk</span></div>' +
-      '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + f.desc + '</div>' +
-      '</div></label>';
-  }).join('');
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // APPLY TARGETED FIXES — only selected improvements
