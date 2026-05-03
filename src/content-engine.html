@@ -301,13 +301,6 @@ async function connect() {
     btn.textContent = '✓ Connected'; btn.style.background = 'rgba(52,211,153,.15)';
     btn.style.color = 'var(--green)'; btn.style.border = '1px solid rgba(52,211,153,.3)';
 
-    // Load profiles for context
-    var pr = await api('/api/content/profiles');
-    if (pr.profiles && pr.profiles.length) {
-      _profile = pr.profiles[0]; // default to first
-      _context.profileId = _profile.id;
-    }
-
     // Load profiles
     var pr = await api('/api/content/profiles');
     if (pr.profiles && pr.profiles.length) {
@@ -440,7 +433,7 @@ function toggleBusinessInfo() {
     renderBizInfo();
     panel.style.display = 'block';
     section.style.display = 'none';
-    document.getElementById('gscUploadZone') && (document.getElementById('gscSection') || {style:{}}).style;
+    document.getElementById('gscUploadZone') && (document.getElementById('gscUploadZone') || {style:{}}).style;
   } else {
     hideBizInfo();
   }
@@ -1240,12 +1233,12 @@ function toast(msg, type) {
 
 async function api(endpoint, method, body) {
   var token = document.getElementById('engineToken').value.trim();
-  var gemini = document.getElementById('geminiKey').value.trim();
+  var claudeKey = document.getElementById('claudeKey') ? document.getElementById('claudeKey').value.trim() : '';
   var opts = {
     method: method || 'GET',
     headers: { 'Content-Type':'application/json', 'x-engine-token': token }
   };
-  if (gemini) opts.headers['x-gemini-key'] = gemini;
+  if (claudeKey) opts.headers['x-claude-key'] = claudeKey;
   if (body) opts.body = JSON.stringify(body);
   var r = await fetch(endpoint, opts);
   var text = await r.text();
