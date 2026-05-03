@@ -410,19 +410,28 @@ function renderProfileSelector(profiles) {
 function onProfileSwitch() {
   var sel = document.getElementById('profileSelect');
   var id = sel && sel.value;
+  if (!id) return;
   _profile = _allProfiles.find(function(p) { return String(p.id) === String(id); }) || null;
-  if (_profile) {
-    _context.profileId = _profile.id;
-    _context.url = null; _context.keyword = null; _context.score = null;
-    // Clear GSC for new profile
-    _gscPages = []; _gscQueries = [];
-    document.getElementById('gscUploadZone').style.display = 'block';
-    var gs = document.getElementById('gscStatus'); if (gs) gs.style.display = 'none';
-    updateContext();
-    hideBizInfo();
-    addAgentMsg('Switched to **' + _profile.name + '**' + (_profile.domain ? ' — ' + _profile.domain : '') + '. What are we working on?');
-  }
+  if (!_profile) return;
+
+  _context.profileId = _profile.id;
+  _context.url = null; _context.keyword = null; _context.score = null;
+
+  // Clear GSC — each profile has its own data
+  _gscPages = []; _gscQueries = [];
+  var zone = document.getElementById('gscUploadZone');
+  var stat = document.getElementById('gscStatus');
+  if (zone) zone.style.display = 'block';
+  if (stat) stat.style.display = 'none';
+
+  // Clear conversation and re-greet with new profile
+  var msgs = document.getElementById('messages');
+  if (msgs) msgs.innerHTML = '';
+
+  updateContext();
+  agentGreet();
 }
+
 
 function toggleBusinessInfo() {
   var panel = document.getElementById('bizInfoPanel');
@@ -493,30 +502,37 @@ function askAgentToUseTemplate() {
 
 function agentGreet() {
   hideWelcome();
-  var hasGSC = _gscPages.length > 0;
-  var topOpps = getTopOpportunities(3);
+  var hasGSC = _gscPages && _gscPages.length > 0;
+  var topOpps = hasGSC ? getTopOpportunities(3) : [];
+  var profileLine = _profile
+    ? '<strong>' + _profile.name + '</strong>' + (_profile.domain ? ' — <a href="https://' + _profile.domain + '" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">' + _profile.domain + '</a>' : '')
+    : null;
   var greeting = '';
-  
+
   if (hasGSC && topOpps.length) {
     var top = topOpps[0];
-    greeting = 'Connected. I can already see your GSC data — <strong>' + _gscPages.length + ' pages</strong> loaded.\n\n' +
-      'Your biggest opportunity right now: <strong>' + top.url.replace(/^https?:\/\//,'').split('/').filter(Boolean).join('/') + '</strong> ' +
-      '— position ' + top.position.toFixed(1) + ' with ' + top.impressions.toLocaleString() + ' impressions but only ' + top.ctr.toFixed(1) + '% CTR. ' +
-      'One well-executed rewrite could move that significantly.\n\nWhat would you like to tackle first?';
+    greeting = (profileLine ? 'Connected — working with ' + profileLine + '.' : 'Connected.') +
+      ' I can see <strong>' + _gscPages.length + ' GSC pages</strong> for this profile.\n\n' +
+      'Biggest opportunity: <strong>' + top.url.replace(/^https?:\/\//,'').split('/').filter(Boolean).join('/') + '</strong> ' +
+      '— position ' + top.position.toFixed(1) + ' with ' + top.impressions.toLocaleString() + ' impressions, ' + top.ctr.toFixed(1) + '% CTR. ' +
+      'One rewrite could move that significantly.\n\nWant to start there?';
     addActions([
       { label: 'Fix that page', fn: function(){ userSend('Let\'s fix ' + top.url); } },
       { label: 'Show all opportunities', fn: showAllOpportunities },
       { label: 'Something else', fn: function(){ document.getElementById('chatInput').focus(); } }
     ]);
+  } else if (profileLine) {
+    greeting = 'Connected — working with ' + profileLine + '.\n\n' +
+      'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks. ' +
+      'Or tell me what we\'re working on — a page to rewrite, a keyword to target, or a content cluster to build.\n\nWhat are we working on?';
   } else {
-    greeting = (_profile ? 'Connected — working with <strong>' + _profile.name + '</strong>' + (_profile.domain ? ' (' + _profile.domain + ')' : '') + '.' : 'Connected.') +
-      '\n\nTo get started, I\'ll need to know what we\'re working on. ' +
-      'You can also upload your GSC data (Pages + Queries CSV from Google Search Console) in the sidebar — that gives me direct insight into where you\'re losing clicks.\n\nWhat are we working on?';
+    greeting = 'Connected. Select a profile from the sidebar to load memory, GSC data, and business context — then tell me what we\'re working on.';
   }
-  
+
   addAgentMessage(greeting);
   updateContext();
 }
+
 
 // ══════════════════════════════════════════════════════════════
 // MESSAGE HANDLING
