@@ -2929,21 +2929,57 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
                const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOrganizationSchema=flatSchemas.some(s=>['Organization','LocalBusiness','WebSite'].includes(s['@type']));
                const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
-               const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300));
-               const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText);
+               const bodyText=cleanText.toLowerCase(); const _first300 = cleanText.split(/\s+/).slice(0,300).join(' '); const hasDirectAnswer = /\d/.test(_first300) && _first300.length > 150; // identiek aan single scan
+               const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml)
+               || (() => {
+                 const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
+                 for (const list of earlyLists) {
+                   const items = list.querySelectorAll('li');
+                   if (items.length >= 3) {
+                     const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
+                     const listText = list.innerText || '';
+                     const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
+                     if (listPos < bodyLen * 0.5) return true;
+                   }
+                 }
+                 return false;
+               })(); // identiek aan single scan
                const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase())||document.querySelector('nav[aria-label]')!==null;
                const hasAuthorBio=/written by|about the author|about the founder|meet the author/i.test(rawHtml.toLowerCase());
                const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())
                || /id=["'][^"']*faq[^"']*["']/i.test(rawHtml)
                || hasFAQPageSchema;
-               const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length;
+               const images=document.querySelectorAll('img').length; const imagesWithAlt=Array.from(document.querySelectorAll('img')).filter(img=>img.hasAttribute('alt')&&img.getAttribute('alt').trim().length>5).length; // identiek aan single scan
                let host=''; try{host=new URL(su).hostname;}catch(e){}
                const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length;
                const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
-               const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length;
-               const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length;
-               const expertQuoteCount=Math.max(bqCount, citeCount);
-               const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
+               // expertQuoteCount — identiek aan single scan logica
+               let expertQuoteCount = 0;
+               document.querySelectorAll('blockquote').forEach(bq => {
+                 const cite = bq.querySelector('cite');
+                 const txt  = bq.textContent.trim();
+                 if (txt.length > 30 && (cite || txt.length > 80)) expertQuoteCount++;
+               });
+               document.querySelectorAll('cite').forEach(cite => {
+                 if (!cite.closest('blockquote') && cite.textContent.trim().length > 3) expertQuoteCount++;
+               });
+               ['[class*="review"]','[class*="testimonial"]','[class*="quote"]'].forEach(sel => {
+                 try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch(e) {}
+               });
+               // caseStudyCount — container-gebaseerd, identiek aan single scan
+               let caseStudyCount = 0;
+               const _caseKws = ['case study','challenge','solution','results','roi','recovered','recovery','success rate'];
+               const _seen = new Set();
+               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"], div[class*="result"]').forEach(el => {
+                 if (_seen.has(el)) return;
+                 const _txt = el.textContent.toLowerCase();
+                 const _len = _txt.length;
+                 if (_len > 300 && _len < 6000) {
+                   const _hasKw = _caseKws.some(k => _txt.includes(k));
+                   const _hasMet = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(_txt);
+                   if (_hasKw && _hasMet) { caseStudyCount++; _seen.add(el); }
+                 }
+               });
                const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
                const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
                const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
@@ -2956,17 +2992,17 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const page = await browser.newPage();
                try {
                await page.setViewport({ width: 1280, height: 800 }); // smaller = less RAM
-               await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+               await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
                // Block images/fonts/media to save memory and speed up
                await page.setRequestInterception(true);
                page.on('request', req => {
                const rt = req.resourceType();
-               if (['image','media','font','stylesheet'].includes(rt)) req.abort();
+               if (['image','media','font'].includes(rt)) req.abort(); // stylesheets nodig voor getComputedStyle H1 visibility
                else req.continue();
                });
                try {
                await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
-               await new Promise(r => setTimeout(r, 1500)); // let JS render              
+               await new Promise(r => setTimeout(r, 2000)); // let JS render — matches single scan              
                } catch(e) {
                // Site unreachable/blocked — skip gracefully, don't waste retry time
                throw new Error('skip:' + e.message.substring(0,60));
@@ -10144,10 +10180,10 @@ app.post('/api/content/graaf-scan', verifyEngineAccess, async (req, res) => {
       browser = await puppeteer.launch({ executablePath: executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
     }
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (compatible; ContentScaleBot/1.0)');
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     try {
       await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await new Promise(r => setTimeout(r, 1500)); // let JS render
+      await new Promise(r => setTimeout(r, 2000)); // let JS render — matches single scan
     } catch(e) {
       await page.close();
       // Clean up temp slot even on error
