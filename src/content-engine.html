@@ -1486,12 +1486,20 @@ async function openTrackerDetail(pageId) {
       var W=560,H=120,PAD=24;
       var positions = posSnaps.map(function(s){ return parseFloat(s.google_position); });
       var maxP = Math.max.apply(null,positions), minP = Math.min.apply(null,positions);
-      var range = maxP - minP || 1;
+      var range = maxP - minP;
+      var allSame = range === 0;
+      if (allSame) range = 1; // prevent divide-by-zero
       var xStep = (W-PAD*2)/(posSnaps.length-1);
+      var midY = PAD + (H-PAD*2) * 0.5; // vertical centre for flat/stable chart
       var pts = posSnaps.map(function(s,i){
         var x = PAD + i * xStep;
-        var y = PAD + ((parseFloat(s.google_position)-minP)/range)*(H-PAD*2);
-        y = (H-PAD) - (y-PAD);
+        var y;
+        if (allSame) {
+          y = midY; // all same position — draw at midpoint so line is visible
+        } else {
+          y = PAD + ((parseFloat(s.google_position)-minP)/range)*(H-PAD*2);
+          y = (H-PAD) - (y-PAD);
+        }
         return {x:x, y:y, pos:s.google_position, date:new Date(s.checked_at).toLocaleDateString()};
       });
       var polyline = pts.map(function(p){ return p.x+','+p.y; }).join(' ');
@@ -1509,7 +1517,8 @@ async function openTrackerDetail(pageId) {
         '<polyline points="'+polyline+'" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
         dots,
         '</svg>'];
-      chartHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📈 Position History</div><div style="overflow-x:auto;">'+svgParts.join('')+'</div><div style="font-size:10px;color:#6b7280;margin-top:4px;">Lower # = better rank. Hover dots for date.</div></div>';
+      var stableNote = allSame ? '<div style="font-size:11px;color:#a78bfa;margin-top:4px;text-align:center;">📍 Position stable at #'+positions[0]+' across all checks</div>' : '';
+      chartHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📈 Position History</div><div style="overflow-x:auto;">'+svgParts.join('')+'</div><div style="font-size:10px;color:#6b7280;margin-top:4px;">Lower # = better rank. Hover dots for date.</div>'+stableNote+'</div>';
     } else if (posSnaps.length === 1) {
       chartHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;"><div style="font-size:24px;font-weight:900;color:#a78bfa;">#'+posSnaps[0].google_position+'</div><div style="font-size:11px;color:#6b7280;margin-top:4px;">Need 2+ checks for chart</div></div>';
     }
@@ -1528,16 +1537,33 @@ async function openTrackerDetail(pageId) {
       timelineHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:14px;"><div style="padding:8px 12px;font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.05);">🤖 AI Citation History</div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);"><th style="padding:6px 8px;text-align:left;font-size:9px;color:#6b7280;">Date</th><th style="padding:6px 8px;text-align:center;font-size:9px;color:#6b7280;">Pos</th><th style="padding:6px 8px;text-align:center;font-size:9px;color:#6b7280;">AI Overview</th><th style="padding:6px 8px;text-align:center;font-size:9px;color:#6b7280;">Perplexity</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     }
 
-    // Recommendations — robust parsing handles string, array, nested JSON
+    // Recommendations — handles all encoding depths:
+    // 1. Already an array of objects
+    // 2. JSON string of array of objects  
+    // 3. Double-encoded: JSON string of JSON string of array
+    // 4. Array of JSON strings (each item stringified)
     var recs2 = snap.recommendations;
-    if (recs2 && typeof recs2 === 'string') {
-      try { recs2 = JSON.parse(recs2); } catch(e) { recs2 = null; }
+    // Unwrap string layers until we have a non-string or can't parse further
+    var parseDepth = 0;
+    while (recs2 && typeof recs2 === 'string' && parseDepth < 3) {
+      try { recs2 = JSON.parse(recs2); parseDepth++; } catch(e) { break; }
     }
-    if (recs2 && !Array.isArray(recs2)) recs2 = [recs2];
+    // If single object, wrap in array
+    if (recs2 && !Array.isArray(recs2) && typeof recs2 === 'object') recs2 = [recs2];
+    // If array, ensure each item is an object (parse any remaining string items)
     if (Array.isArray(recs2)) {
-      recs2 = recs2.map(function(r) {
-        if (typeof r === 'string') { try { return JSON.parse(r); } catch(e) { return { title: r }; } }
-        return r;
+      recs2 = recs2.map(function(item) {
+        if (typeof item === 'string') {
+          // Try parsing the string item
+          var parsed = item;
+          var d = 0;
+          while (typeof parsed === 'string' && d < 2) {
+            try { parsed = JSON.parse(parsed); d++; } catch(e) { break; }
+          }
+          // If still a string, it's plain text — use as title
+          return (typeof parsed === 'object' && parsed !== null) ? parsed : { title: item };
+        }
+        return item;
       });
     }
     var recsHtml = '';
@@ -1545,14 +1571,14 @@ async function openTrackerDetail(pageId) {
       recsHtml = '<div style="margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 Recommendations ('+recs2.length+')</div>' +
         recs2.slice(0,5).map(function(r){
           var pI = r.priority==='high'?'🔴':r.priority==='medium'?'🟡':'🟢';
-          var titleText = r.title || r.description || r.name || '';
-          var actionText = r.action || r.fix || r.recommendation || '';
+          var title  = r.title  || r.description || r.name || '';
+          var action = r.action || r.fix || r.recommendation || '';
           return '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
             '<div style="display:flex;gap:8px;align-items:flex-start;">' +
-            '<span style="flex-shrink:0;margin-top:1px;">'+pI+'</span>' +
+            '<span style="flex-shrink:0;margin-top:2px;">'+pI+'</span>' +
             '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:12px;font-weight:600;color:#e2e8f0;line-height:1.5;white-space:normal;word-break:break-word;">'+escHtml(titleText)+'</div>' +
-            (actionText ? '<div style="font-size:11px;color:#9ca3af;margin-top:4px;line-height:1.5;white-space:normal;word-break:break-word;">→ '+escHtml(actionText)+'</div>' : '') +
+            '<div style="font-size:12px;font-weight:600;color:#e2e8f0;line-height:1.5;white-space:normal;word-break:break-word;">'+escHtml(title)+'</div>' +
+            (action ? '<div style="font-size:11px;color:#9ca3af;margin-top:4px;line-height:1.5;white-space:normal;word-break:break-word;">→ '+escHtml(action)+'</div>' : '') +
             '</div></div></div>';
         }).join('') + '</div>';
     }
@@ -1580,50 +1606,17 @@ async function createStatsStudy() {
   var btn = document.getElementById('btnStudy');
   btn.disabled = true; btn.textContent = '🔬 Researching with live search…';
   try {
-    var d = null;
-    // Retry once on 502/503 — server may be cold starting
-    for (var attempt = 0; attempt < 2; attempt++) {
-      try {
-        d = await api('/api/content/stats-study', 'POST', {
-          profile_id: _profile.id, topic: topic,
-          seed_keyword: document.getElementById('statsKeyword').value.trim()
-        });
-        if (d && d.success) break;
-        var isServerErr = d && d.error && (d.error.includes('502') || d.error.includes('503') || d.error.includes('Gateway'));
-        if (attempt === 0 && isServerErr) {
-          btn.textContent = '🔄 Retrying in 5s…';
-          await new Promise(function(r){ setTimeout(r, 5000); });
-          btn.textContent = '🔬 Researching…';
-          continue;
-        }
-        break;
-      } catch(fetchErr) {
-        if (attempt === 0) {
-          btn.textContent = '🔄 Retrying in 5s…';
-          await new Promise(function(r){ setTimeout(r, 5000); });
-          btn.textContent = '🔬 Researching…';
-          continue;
-        }
-        throw fetchErr;
-      }
-    }
-    if (!d || !d.success) {
-      var errMsg = d ? (d.error || 'Server error') : 'No response';
-      if (errMsg.includes('502') || errMsg.includes('Gateway')) {
-        errMsg = 'Server is starting up (502). Wait 30 seconds and try again.';
-      }
-      throw new Error(errMsg);
-    }
+    var d = await api('/api/content/stats-study', 'POST', {
+      profile_id: _profile.id, topic: topic,
+      seed_keyword: document.getElementById('statsKeyword').value.trim()
+    });
+    if (!d.success) throw new Error(d.error);
     _studyHtml = d.study.html_content;
     _studyTitle = d.study.title;
     renderStatsStudy(d.study, d.study_data);
     document.getElementById('studyResult').style.display = 'block';
     toast('Study created: ' + d.study.word_count + ' words!', 'ok');
-  } catch(e) {
-    var msg = e.message || 'Unknown error';
-    if (msg.includes('502') || msg.includes('Gateway')) msg = 'Server is starting up (502). Wait 30 seconds and try again.';
-    toast('Stats study: ' + msg, 'err');
-  }
+  } catch(e) { toast('Study failed: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = '🔬 Build Study with Live Research'; }
 }
 
