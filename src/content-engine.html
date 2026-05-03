@@ -1811,228 +1811,7 @@ function injectClusterSchemas(articleHtml, p, c, entry, pageNum) {
   var body = articleHtml.replace(/<!DOCTYPE[^>]*>/gi,'').replace(/<html[^>]*>/gi,'').replace(/<\/html>/gi,'').replace(/<head[\s\S]*?<\/head>/gi,'').replace(/<body[^>]*>/gi,'').replace(/<\/body>/gi,'').trim();
   var metaCmt = '<!-- META: '+p.title+' | /'+slug+'/ | '+p.target_keyword+' -->';
   var linkCmt = links.length ? '\n<!-- LINKS:\n'+links.map(function(lk){return '  -> /'+lk.to+'/ anchor: "'+lk.anchor_text+'" | '+lk.placement;}).join('\n')+'\n-->' : '';
-  return '<!DOCTYPE html>\n<html lang="'+lang+'">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'+metaCmt+'\n<title>'+p.title+'</title>\n<meta name="description" content="'+(p.meta_description||'')+'">\n<link rel="canonical" href="https://'+domain+'/'+slug+'/">\n'+schemas+'\n</head>\n<body>\n'+(p.image&&p.image.filename?'<!-- IMG: '+p.image.filename+' | alt: '+p.image.alt+' | 1200x630 -->\n':'')+'\n'+body+linkCmt+'\n
-<!-- PROFILES VIEW -->
-<div id="view-profiles" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;overflow-y:auto;padding:24px 28px;background:var(--bg);">
-
-  <div style="max-width:900px;margin:0 auto;">
-
-    <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-      <div>
-        <div style="font-size:18px;font-weight:800;color:var(--text);">👤 Profiles</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Create and manage clients or sites. Each profile has its own memory, GSC data, and conversation context.</div>
-      </div>
-      <button onclick="openProfileModal(null)" style="padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">+ New Profile</button>
-    </div>
-
-    <!-- What you need to start — checklist -->
-    <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:18px 20px;margin-bottom:20px;">
-      <div style="font-size:10px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;font-family:monospace;">✦ Minimum needed to start a new profile</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">①</span><span><strong style="color:var(--text);">Business name</strong> — used in schema markup and agent context</span></div>
-        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">②</span><span><strong style="color:var(--text);">Domain</strong> — e.g. example.com — for canonical URLs and internal links</span></div>
-        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">③</span><span><strong style="color:var(--text);">Niche</strong> — what the business does, in plain language</span></div>
-        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">④</span><span><strong style="color:var(--text);">Language</strong> — content language (en, nl, de…)</span></div>
-      </div>
-      <div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid rgba(255,255,255,.06);padding-top:10px;">Everything else — USPs, certifications, HTML template, WordPress credentials — can be added later and makes the agent smarter the more you fill in.</div>
-    </div>
-
-    <!-- Profile list -->
-    <div id="profilesList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
-      <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">
-        <div style="font-size:24px;margin-bottom:8px;">👤</div>
-        <div>Connect first to load profiles</div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- PROFILE MODAL -->
-<div id="profileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9300;overflow-y:auto;padding:24px;">
-<div style="max-width:680px;margin:0 auto;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;">
-
-  <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:16px;font-weight:700;color:var(--text);" id="profileModalTitle">New Profile</div>
-    <button onclick="closeProfileModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">✕</button>
-  </div>
-
-  <div style="padding:24px;" id="profileModalBody">
-
-    <!-- Tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:20px;background:rgba(255,255,255,.04);border-radius:8px;padding:4px;" id="profileTabs">
-      <button onclick="showProfileTab('basic')" id="ptab-basic" class="ptab active" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:rgba(245,109,0,.2);color:#f56d00;">① Basics</button>
-      <button onclick="showProfileTab('business')" id="ptab-business" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">② Business Info</button>
-      <button onclick="showProfileTab('template')" id="ptab-template" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">③ HTML Template</button>
-      <button onclick="showProfileTab('wordpress')" id="ptab-wordpress" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">④ WordPress</button>
-    </div>
-
-    <!-- TAB: Basics -->
-    <div id="ptab-content-basic">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Business Name *</label>
-          <input id="pf-name" placeholder="New Jersey Drain Pro" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Domain</label>
-          <input id="pf-domain" placeholder="example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Language</label>
-          <select id="pf-language" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-            <option value="en">English</option>
-            <option value="nl">Dutch (NL)</option>
-            <option value="de">German</option>
-            <option value="fr">French</option>
-            <option value="es">Spanish</option>
-          </select>
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Niche / What the Business Does</label>
-          <input id="pf-niche" placeholder="Drain cleaning and sewer repair, New Jersey" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Target Audience</label>
-          <input id="pf-audience" placeholder="Homeowners and property managers in NJ with drain/sewer problems" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Geographic Focus</label>
-          <input id="pf-geo" placeholder="New Jersey, USA" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Primary Goal</label>
-          <select id="pf-goal" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-            <option value="leads">Generate Leads</option>
-            <option value="traffic">Drive Traffic</option>
-            <option value="sales">Direct Sales</option>
-            <option value="awareness">Brand Awareness</option>
-          </select>
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Sitemap URL</label>
-          <input id="pf-sitemap" placeholder="https://example.com/sitemap.xml" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: Business Info -->
-    <div id="ptab-content-business" style="display:none;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Owner / Author Name</label>
-          <input id="pf-owner" placeholder="John Smith" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Phone</label>
-          <input id="pf-phone" placeholder="+1 555 000 0000" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Email</label>
-          <input id="pf-email" placeholder="info@example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Years in Business</label>
-          <input id="pf-years" placeholder="12" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Schema Type</label>
-          <select id="pf-schema" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-            <option value="LocalBusiness">LocalBusiness</option>
-            <option value="ProfessionalService">ProfessionalService</option>
-            <option value="HomeAndConstructionBusiness">Home &amp; Construction</option>
-            <option value="Plumber">Plumber</option>
-            <option value="Electrician">Electrician</option>
-            <option value="MedicalBusiness">Medical</option>
-            <option value="LegalService">Legal</option>
-            <option value="FinancialService">Financial</option>
-            <option value="Organization">Organization</option>
-            <option value="Corporation">Corporation</option>
-          </select>
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Review Score (e.g. 4.9)</label>
-          <input id="pf-review-score" placeholder="4.9" type="number" min="1" max="5" step="0.1" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Address</label>
-          <input id="pf-address" placeholder="123 Main St, Newark, NJ 07101" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Unique Selling Points <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
-          <textarea id="pf-usps" placeholder="24/7 emergency service&#10;Same-day appointments available&#10;Licensed and insured in all NJ counties&#10;100% satisfaction guarantee" rows="4" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Certifications &amp; Licences <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
-          <textarea id="pf-certs" placeholder="NJ Master Plumber Licence #12345&#10;EPA Certified&#10;BBB Accredited A+" rows="3" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Service Areas <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
-          <textarea id="pf-areas" placeholder="Newark, NJ&#10;Jersey City, NJ&#10;Hoboken, NJ&#10;Elizabeth, NJ" rows="3" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Guarantee</label>
-          <input id="pf-guarantee" placeholder="100% satisfaction guarantee or your money back" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Extra Info <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— anything else the agent should know</span></label>
-          <textarea id="pf-extra" placeholder="Brand voice: direct, no jargon, conversational.&#10;Pricing: $150 drain cleaning, $450+ sewer repair.&#10;Main competitor: rooterheroes.com&#10;Avoid mentioning: pricing before diagnosis." rows="4" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px;">This goes into the agent system prompt verbatim. Write anything: brand voice, pricing, competitors, things to avoid, seasonal focus.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: HTML Template -->
-    <div id="ptab-content-template" style="display:none;">
-      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
-        <div style="font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:4px;">What is the HTML template?</div>
-        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">Paste your full HTML article template here. PULSE + NEXUS will write all new content using this exact structure — schema types, CSS classes, heading hierarchy, everything. When you click "Write on Template" the agent produces ready-to-publish HTML matching this layout.</div>
-      </div>
-      <div id="pf-template-status" style="display:none;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#34d399;"></div>
-      <textarea id="pf-template" placeholder="Paste your full HTML template here..." rows="16" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:12px;color:var(--text);font-size:12px;outline:none;resize:vertical;font-family:'DM Mono',monospace;line-height:1.6;"></textarea>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-        <div id="pf-template-size" style="font-size:11px;color:var(--muted);"></div>
-        <button onclick="saveTemplateOnly()" style="padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);">💾 Save Template Now</button>
-      </div>
-    </div>
-
-    <!-- TAB: WordPress -->
-    <div id="ptab-content-wordpress" style="display:none;">
-      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
-        <div style="font-size:12px;color:#38bdf8;font-weight:600;margin-bottom:4px;">WordPress REST API credentials</div>
-        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">Used to publish articles directly from PULSE + NEXUS. In WordPress: Users → Your Profile → Application Passwords → add new → paste here.</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">WordPress URL</label>
-          <input id="pf-wpurl" placeholder="https://example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">WordPress Username</label>
-          <input id="pf-wpuser" placeholder="admin" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Application Password</label>
-          <input id="pf-wppass" type="password" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer buttons -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);">
-      <button id="pfDeleteBtn" onclick="deleteProfile()" style="display:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;">🗑 Delete Profile</button>
-      <div style="display:flex;gap:8px;margin-left:auto;">
-        <button onclick="closeProfileModal()" style="padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);">Cancel</button>
-        <button id="pfSaveBtn" onclick="saveProfile()" style="padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">💾 Save Profile</button>
-      </div>
-    </div>
-
-  </div><!-- /profileModalBody -->
-</div><!-- /modal-box -->
-</div><!-- /profileModal -->
-
-</body>\n</html>';
+  return '<!DOCTYPE html>\n<html lang="'+lang+'">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'+metaCmt+'\n<title>'+p.title+'</title>\n<meta name="description" content="'+(p.meta_description||'')+'">\n<link rel="canonical" href="https://'+domain+'/'+slug+'/">\n'+schemas+'\n</head>\n<body>\n'+(p.image&&p.image.filename?'<!-- IMG: '+p.image.filename+' | alt: '+p.image.alt+' | 1200x630 -->\n':'')+'\n'+body+linkCmt+'</body>\n</html>';
 }
 
 function buildShellPage(p,c,entry,pageNum){
@@ -2474,6 +2253,227 @@ document.addEventListener('click', function(e) {
 });
 
 </script>
+
+<!-- PROFILES VIEW -->
+<div id="view-profiles" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;overflow-y:auto;padding:24px 28px;background:var(--bg);">
+
+  <div style="max-width:900px;margin:0 auto;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);">👤 Profiles</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Create and manage clients or sites. Each profile has its own memory, GSC data, and conversation context.</div>
+      </div>
+      <button onclick="openProfileModal(null)" style="padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">+ New Profile</button>
+    </div>
+
+    <!-- What you need to start — checklist -->
+    <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:18px 20px;margin-bottom:20px;">
+      <div style="font-size:10px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;font-family:monospace;">✦ Minimum needed to start a new profile</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">①</span><span><strong style="color:var(--text);">Business name</strong> — used in schema markup and agent context</span></div>
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">②</span><span><strong style="color:var(--text);">Domain</strong> — e.g. example.com — for canonical URLs and internal links</span></div>
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">③</span><span><strong style="color:var(--text);">Niche</strong> — what the business does, in plain language</span></div>
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">④</span><span><strong style="color:var(--text);">Language</strong> — content language (en, nl, de…)</span></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid rgba(255,255,255,.06);padding-top:10px;">Everything else — USPs, certifications, HTML template, WordPress credentials — can be added later and makes the agent smarter the more you fill in.</div>
+    </div>
+
+    <!-- Profile list -->
+    <div id="profilesList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+      <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">
+        <div style="font-size:24px;margin-bottom:8px;">👤</div>
+        <div>Connect first to load profiles</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div id="profileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9300;overflow-y:auto;padding:24px;">
+<div style="max-width:680px;margin:0 auto;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;">
+
+  <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:16px;font-weight:700;color:var(--text);" id="profileModalTitle">New Profile</div>
+    <button onclick="closeProfileModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+  </div>
+
+  <div style="padding:24px;" id="profileModalBody">
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:20px;background:rgba(255,255,255,.04);border-radius:8px;padding:4px;" id="profileTabs">
+      <button onclick="showProfileTab('basic')" id="ptab-basic" class="ptab active" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:rgba(245,109,0,.2);color:#f56d00;">① Basics</button>
+      <button onclick="showProfileTab('business')" id="ptab-business" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">② Business Info</button>
+      <button onclick="showProfileTab('template')" id="ptab-template" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">③ HTML Template</button>
+      <button onclick="showProfileTab('wordpress')" id="ptab-wordpress" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">④ WordPress</button>
+    </div>
+
+    <!-- TAB: Basics -->
+    <div id="ptab-content-basic">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Business Name *</label>
+          <input id="pf-name" placeholder="New Jersey Drain Pro" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Domain</label>
+          <input id="pf-domain" placeholder="example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Language</label>
+          <select id="pf-language" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+            <option value="en">English</option>
+            <option value="nl">Dutch (NL)</option>
+            <option value="de">German</option>
+            <option value="fr">French</option>
+            <option value="es">Spanish</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Niche / What the Business Does</label>
+          <input id="pf-niche" placeholder="Drain cleaning and sewer repair, New Jersey" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Target Audience</label>
+          <input id="pf-audience" placeholder="Homeowners and property managers in NJ with drain/sewer problems" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Geographic Focus</label>
+          <input id="pf-geo" placeholder="New Jersey, USA" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Primary Goal</label>
+          <select id="pf-goal" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+            <option value="leads">Generate Leads</option>
+            <option value="traffic">Drive Traffic</option>
+            <option value="sales">Direct Sales</option>
+            <option value="awareness">Brand Awareness</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Sitemap URL</label>
+          <input id="pf-sitemap" placeholder="https://example.com/sitemap.xml" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Business Info -->
+    <div id="ptab-content-business" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Owner / Author Name</label>
+          <input id="pf-owner" placeholder="John Smith" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Phone</label>
+          <input id="pf-phone" placeholder="+1 555 000 0000" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Email</label>
+          <input id="pf-email" placeholder="info@example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Years in Business</label>
+          <input id="pf-years" placeholder="12" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Schema Type</label>
+          <select id="pf-schema" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+            <option value="LocalBusiness">LocalBusiness</option>
+            <option value="ProfessionalService">ProfessionalService</option>
+            <option value="HomeAndConstructionBusiness">Home &amp; Construction</option>
+            <option value="Plumber">Plumber</option>
+            <option value="Electrician">Electrician</option>
+            <option value="MedicalBusiness">Medical</option>
+            <option value="LegalService">Legal</option>
+            <option value="FinancialService">Financial</option>
+            <option value="Organization">Organization</option>
+            <option value="Corporation">Corporation</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Review Score (e.g. 4.9)</label>
+          <input id="pf-review-score" placeholder="4.9" type="number" min="1" max="5" step="0.1" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Address</label>
+          <input id="pf-address" placeholder="123 Main St, Newark, NJ 07101" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Unique Selling Points <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
+          <textarea id="pf-usps" placeholder="24/7 emergency service&#10;Same-day appointments available&#10;Licensed and insured in all NJ counties&#10;100% satisfaction guarantee" rows="4" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Certifications &amp; Licences <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
+          <textarea id="pf-certs" placeholder="NJ Master Plumber Licence #12345&#10;EPA Certified&#10;BBB Accredited A+" rows="3" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Service Areas <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
+          <textarea id="pf-areas" placeholder="Newark, NJ&#10;Jersey City, NJ&#10;Hoboken, NJ&#10;Elizabeth, NJ" rows="3" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Guarantee</label>
+          <input id="pf-guarantee" placeholder="100% satisfaction guarantee or your money back" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Extra Info <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— anything else the agent should know</span></label>
+          <textarea id="pf-extra" placeholder="Brand voice: direct, no jargon, conversational.&#10;Pricing: $150 drain cleaning, $450+ sewer repair.&#10;Main competitor: rooterheroes.com&#10;Avoid mentioning: pricing before diagnosis." rows="4" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">This goes into the agent system prompt verbatim. Write anything: brand voice, pricing, competitors, things to avoid, seasonal focus.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HTML Template -->
+    <div id="ptab-content-template" style="display:none;">
+      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:4px;">What is the HTML template?</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">Paste your full HTML article template here. PULSE + NEXUS will write all new content using this exact structure — schema types, CSS classes, heading hierarchy, everything. When you click "Write on Template" the agent produces ready-to-publish HTML matching this layout.</div>
+      </div>
+      <div id="pf-template-status" style="display:none;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#34d399;"></div>
+      <textarea id="pf-template" placeholder="Paste your full HTML template here..." rows="16" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:12px;color:var(--text);font-size:12px;outline:none;resize:vertical;font-family:'DM Mono',monospace;line-height:1.6;"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div id="pf-template-size" style="font-size:11px;color:var(--muted);"></div>
+        <button onclick="saveTemplateOnly()" style="padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);">💾 Save Template Now</button>
+      </div>
+    </div>
+
+    <!-- TAB: WordPress -->
+    <div id="ptab-content-wordpress" style="display:none;">
+      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-size:12px;color:#38bdf8;font-weight:600;margin-bottom:4px;">WordPress REST API credentials</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">Used to publish articles directly from PULSE + NEXUS. In WordPress: Users → Your Profile → Application Passwords → add new → paste here.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">WordPress URL</label>
+          <input id="pf-wpurl" placeholder="https://example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">WordPress Username</label>
+          <input id="pf-wpuser" placeholder="admin" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Application Password</label>
+          <input id="pf-wppass" type="password" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer buttons -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);">
+      <button id="pfDeleteBtn" onclick="deleteProfile()" style="display:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;">🗑 Delete Profile</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button onclick="closeProfileModal()" style="padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);">Cancel</button>
+        <button id="pfSaveBtn" onclick="saveProfile()" style="padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">💾 Save Profile</button>
+      </div>
+    </div>
+
+  </div><!-- /profileModalBody -->
+</div><!-- /modal-box -->
+</div><!-- /profileModal -->
+
 
 
 <!-- TRACKER VIEW -->
