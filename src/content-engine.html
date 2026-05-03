@@ -1486,9 +1486,37 @@ async function deleteTrackerPage(pageId) {
 function trPushToAgent(pageId) {
   var page = _trPages.find(function(p){ return p.id === pageId; });
   if (!page) return;
+
+  // Build message including the tracker's actual recommendations
+  var snap = page.latest_snapshot || {};
+  var recs = snap.recommendations;
+  if (recs && typeof recs === 'string') {
+    try { recs = JSON.parse(recs); } catch(e) { recs = null; }
+  }
+  if (recs && !Array.isArray(recs)) recs = [recs];
+  if (Array.isArray(recs)) {
+    recs = recs.map(function(r) {
+      if (typeof r === 'string') { try { return JSON.parse(r); } catch(e) { return { title: r }; } }
+      return r;
+    });
+  }
+
+  var recText = '';
+  if (Array.isArray(recs) && recs.length) {
+    recText = '\n\nThe tracker found these specific issues to fix:\n' +
+      recs.slice(0, 3).map(function(r, i) {
+        var title  = r.title  || r.description || r.name || '';
+        var action = r.action || r.fix || r.recommendation || '';
+        return (i+1) + '. ' + title + (action ? ' → ' + action : '');
+      }).join('\n');
+  }
+
+  var scoreText = snap.score ? ' (current ContentScore: ' + snap.score + '/100)' : '';
+  var kwText = page.keyword ? ' targeting keyword: "' + page.keyword + '"' : '';
+  var text = 'The tracker flagged this page' + scoreText + ': ' + page.url + kwText + '.' + recText + '\n\nPlease fix these specific issues and rewrite the affected sections.';
+
   switchView('agent');
   setTimeout(function() {
-    var text = 'Analyse and rewrite ' + page.url + (page.keyword ? ' for keyword: ' + page.keyword : '');
     document.getElementById('chatInput').value = text;
     sendMessage();
   }, 200);
