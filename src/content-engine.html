@@ -1477,7 +1477,7 @@ async function openTrackerDetail(pageId) {
     var snap = snapList.length ? snapList[snapList.length-1] : (page && page.latest_snapshot ? page.latest_snapshot : {});
 
     // Score card
-    var scoreHtml = snap && snap.score ? '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;align-items:center;"><div style="text-align:center;min-width:64px;"><div style="font-size:28px;font-weight:900;color:'+(snap.score>=70?'#34d399':snap.score>=50?'#fbbf24':'#f87171')+';">'+snap.score+'</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;">/100</div></div><div><div style="font-size:13px;font-weight:700;">ContentScore — '+(snap.score>=70?'Good':snap.score>=50?'Needs Work':'Critical')+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Last tracker scan</div></div></div>' : '';
+    var scoreHtml = snap && snap.score ? '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;align-items:center;"><div style="text-align:center;min-width:64px;"><div style="font-size:28px;font-weight:900;color:'+(snap.score>=70?'#34d399':snap.score>=50?'#fbbf24':'#f87171')+';">'+snap.score+'</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;">/100</div></div><div><div style="font-size:13px;font-weight:700;">ContentScore — '+(snap.score>=70?'Good':snap.score>=50?'Needs Work':'Critical')+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Score at last check &nbsp;·&nbsp; <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:#38bdf8;text-decoration:none;font-size:10px;">Run live scan ↗</a></div></div></div>' : '';
 
     // Position chart
     var chartHtml = '';
@@ -1528,16 +1528,32 @@ async function openTrackerDetail(pageId) {
       timelineHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin-bottom:14px;"><div style="padding:8px 12px;font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.05);">🤖 AI Citation History</div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);"><th style="padding:6px 8px;text-align:left;font-size:9px;color:#6b7280;">Date</th><th style="padding:6px 8px;text-align:center;font-size:9px;color:#6b7280;">Pos</th><th style="padding:6px 8px;text-align:center;font-size:9px;color:#6b7280;">AI Overview</th><th style="padding:6px 8px;text-align:center;font-size:9px;color:#6b7280;">Perplexity</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     }
 
-    // Recommendations
+    // Recommendations — robust parsing handles string, array, nested JSON
     var recs2 = snap.recommendations;
-    if (recs2 && typeof recs2 === 'string') { try { recs2 = JSON.parse(recs2); } catch(e){ recs2=null; } }
+    if (recs2 && typeof recs2 === 'string') {
+      try { recs2 = JSON.parse(recs2); } catch(e) { recs2 = null; }
+    }
+    if (recs2 && !Array.isArray(recs2)) recs2 = [recs2];
+    if (Array.isArray(recs2)) {
+      recs2 = recs2.map(function(r) {
+        if (typeof r === 'string') { try { return JSON.parse(r); } catch(e) { return { title: r }; } }
+        return r;
+      });
+    }
     var recsHtml = '';
     if (Array.isArray(recs2) && recs2.length) {
       recsHtml = '<div style="margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 Recommendations ('+recs2.length+')</div>' +
         recs2.slice(0,5).map(function(r){
-          var pC = r.priority==='high'?'#f87171':r.priority==='medium'?'#fbbf24':'#34d399';
           var pI = r.priority==='high'?'🔴':r.priority==='medium'?'🟡':'🟢';
-          return '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);"><span>'+pI+'</span><div><div style="font-size:12px;font-weight:600;color:#e2e8f0;">'+escHtml(r.title||r.description||'')+'</div>'+(r.action?'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">→ '+escHtml(r.action)+'</div>':'')+'</div></div>';
+          var titleText = r.title || r.description || r.name || '';
+          var actionText = r.action || r.fix || r.recommendation || '';
+          return '<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
+            '<div style="display:flex;gap:8px;align-items:flex-start;">' +
+            '<span style="flex-shrink:0;margin-top:1px;">'+pI+'</span>' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:12px;font-weight:600;color:#e2e8f0;line-height:1.5;white-space:normal;word-break:break-word;">'+escHtml(titleText)+'</div>' +
+            (actionText ? '<div style="font-size:11px;color:#9ca3af;margin-top:4px;line-height:1.5;white-space:normal;word-break:break-word;">→ '+escHtml(actionText)+'</div>' : '') +
+            '</div></div></div>';
         }).join('') + '</div>';
     }
 
@@ -1564,17 +1580,50 @@ async function createStatsStudy() {
   var btn = document.getElementById('btnStudy');
   btn.disabled = true; btn.textContent = '🔬 Researching with live search…';
   try {
-    var d = await api('/api/content/stats-study', 'POST', {
-      profile_id: _profile.id, topic: topic,
-      seed_keyword: document.getElementById('statsKeyword').value.trim()
-    });
-    if (!d.success) throw new Error(d.error);
+    var d = null;
+    // Retry once on 502/503 — server may be cold starting
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        d = await api('/api/content/stats-study', 'POST', {
+          profile_id: _profile.id, topic: topic,
+          seed_keyword: document.getElementById('statsKeyword').value.trim()
+        });
+        if (d && d.success) break;
+        var isServerErr = d && d.error && (d.error.includes('502') || d.error.includes('503') || d.error.includes('Gateway'));
+        if (attempt === 0 && isServerErr) {
+          btn.textContent = '🔄 Retrying in 5s…';
+          await new Promise(function(r){ setTimeout(r, 5000); });
+          btn.textContent = '🔬 Researching…';
+          continue;
+        }
+        break;
+      } catch(fetchErr) {
+        if (attempt === 0) {
+          btn.textContent = '🔄 Retrying in 5s…';
+          await new Promise(function(r){ setTimeout(r, 5000); });
+          btn.textContent = '🔬 Researching…';
+          continue;
+        }
+        throw fetchErr;
+      }
+    }
+    if (!d || !d.success) {
+      var errMsg = d ? (d.error || 'Server error') : 'No response';
+      if (errMsg.includes('502') || errMsg.includes('Gateway')) {
+        errMsg = 'Server is starting up (502). Wait 30 seconds and try again.';
+      }
+      throw new Error(errMsg);
+    }
     _studyHtml = d.study.html_content;
     _studyTitle = d.study.title;
     renderStatsStudy(d.study, d.study_data);
     document.getElementById('studyResult').style.display = 'block';
     toast('Study created: ' + d.study.word_count + ' words!', 'ok');
-  } catch(e) { toast('Study failed: ' + e.message, 'err'); }
+  } catch(e) {
+    var msg = e.message || 'Unknown error';
+    if (msg.includes('502') || msg.includes('Gateway')) msg = 'Server is starting up (502). Wait 30 seconds and try again.';
+    toast('Stats study: ' + msg, 'err');
+  }
   finally { btn.disabled = false; btn.textContent = '🔬 Build Study with Live Research'; }
 }
 
