@@ -267,10 +267,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow
 <aside class="sidebar">
   <!-- Profile select -->
   <div class="sb-section">
-    <div class="sb-label">Active Profile</div>
+    <div class="sb-label" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Active Profile</span>
+      <span id="profileCount" style="font-size:9px;color:var(--muted);"></span>
+    </div>
     <select class="sb-field" id="sbProfile" onchange="onProfileChange()" style="font-family:'Barlow',sans-serif;cursor:pointer;">
       <option value="">Loading profiles…</option>
     </select>
+    <div id="profileSwitchNote" style="display:none;font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5;">Each profile has its own memory, GSC data, and conversation context.</div>
   </div>
 
   <!-- GSC -->
@@ -460,6 +464,17 @@ var _busy = false;
 var _trPages = [];
 var _ctx = { url:null, keyword:null, score:null, recs:[], pos:0, impr:0, clicks:0, ctr:0, rewriteId:null };
 
+// Structured intake — tracks what NEXUS knows before acting
+var _intake = {
+  done: false,       // true once enough info collected
+  mode: null,        // 'rewrite' | 'new' | 'audit'
+  funnel: null,      // 'tofu' | 'mofu' | 'bofu'
+  competitor: null,  // specific competitor if mentioned
+  url: null,         // confirmed working URL
+  keyword: null,     // confirmed target keyword
+  step: 0            // which intake question we're on
+};
+
 // ── API helper ────────────────────────────────────────────────────
 async function api(endpoint, method, body) {
   method = method || 'GET';
@@ -501,15 +516,43 @@ async function loadProfiles() {
     el.innerHTML = '<option value="">Select profile</option>' +
       _profiles.map(function(p){ return '<option value="'+p.id+'">'+p.name+'</option>'; }).join('');
   });
-  if (_profiles.length) { sel.value = _profiles[0].id; onProfileChange(); }
+  if (_profiles.length) {
+    sel.value = _profiles[0].id;
+    // Show profile count
+    var countEl = document.getElementById('profileCount');
+    if (countEl) countEl.textContent = _profiles.length + ' profile' + (_profiles.length!==1?'s':'');
+    // Show switch note if multiple
+    var noteEl = document.getElementById('profileSwitchNote');
+    if (noteEl) noteEl.style.display = _profiles.length > 1 ? 'block' : 'none';
+    onProfileChange();
+  }
 }
 
 async function onProfileChange() {
   var sel = document.getElementById('sbProfile');
   var id = sel.value;
   _activeProfile = _profiles.find(function(p){ return p.id == id; }) || null;
+
   if (_activeProfile) {
+    // Reset intake for new profile context
+    resetIntake();
+    // Reset conversation history — new profile = fresh context
+    _history = [];
+    _ctx = { url:null, keyword:null, score:null, recs:[], pos:0, impr:0, clicks:0, ctr:0, rewriteId:null };
+    // Load profile-specific GSC data from session
+    loadGscForProfile(_activeProfile.id);
+    // Load profile memory
+    _memory = null;
     await loadMemory();
+    // Notify in chat if messages exist
+    var msgs = document.getElementById('messages');
+    if (msgs && msgs.children.length > 1) {
+      addAgentMsg('Switched to **' + _activeProfile.name + '**' +
+        (_activeProfile.domain ? ' (' + _activeProfile.domain + ')' : '') +
+        '. Memory and GSC data loaded for this profile. ' +
+        (_gscPages.length ? _gscPages.length + ' GSC pages available.' : 'No GSC data for this profile — upload a CSV or continue without it.'));
+    }
+    updateMemBadge(true);
   }
 }
 
@@ -710,14 +753,48 @@ function parseGscCsv(raw) {
 function updateGscStatus() {
   var zone = document.getElementById('gscDropZone');
   var status = document.getElementById('gscStatus');
-  if (!_gscPages.length && !_gscQueries.length) return;
+  if (!_gscPages.length && !_gscQueries.length) {
+    zone.style.display = 'block';
+    status.style.display = 'none';
+    return;
+  }
   zone.style.display = 'none';
   status.style.display = 'block';
   var topOpp = getTopOpportunities(1)[0];
-  status.innerHTML = '<strong>✓ GSC loaded</strong><br>' +
+  var profileId = _activeProfile ? _activeProfile.id : 'none';
+  status.innerHTML = '<strong>✓ GSC loaded</strong>' +
+    ' <span style="font-size:10px;color:var(--muted);">(' + (_activeProfile?_activeProfile.name:'no profile') + ')</span><br>' +
     (_gscPages.length ? _gscPages.length+' pages' : '') +
     (_gscQueries.length ? ' · '+_gscQueries.length+' queries' : '') +
-    (topOpp ? '<br><span style="color:var(--amber);">Top: pos '+topOpp.position.toFixed(1)+' · '+topOpp.impressions.toLocaleString()+' impr</span>' : '');
+    (topOpp ? '<br><span style="color:var(--amber);">Top: pos '+topOpp.position.toFixed(1)+' · '+topOpp.impressions.toLocaleString()+' impr</span>' : '') +
+    '<br><button onclick="resetGscData()" style="margin-top:6px;font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.06);color:var(--red);cursor:pointer;font-family:Barlow,sans-serif;">✕ Clear GSC data</button>';
+  // Save per-profile in sessionStorage
+  try {
+    sessionStorage.setItem('nexus_gsc_pages_' + profileId, JSON.stringify(_gscPages));
+    sessionStorage.setItem('nexus_gsc_queries_' + profileId, JSON.stringify(_gscQueries));
+  } catch(e) {}
+}
+
+function resetGscData() {
+  _gscPages = []; _gscQueries = [];
+  if (_activeProfile) {
+    try {
+      sessionStorage.removeItem('nexus_gsc_pages_' + _activeProfile.id);
+      sessionStorage.removeItem('nexus_gsc_queries_' + _activeProfile.id);
+    } catch(e) {}
+  }
+  updateGscStatus();
+  toast('GSC data cleared', 'info');
+}
+
+function loadGscForProfile(profileId) {
+  try {
+    var pages   = sessionStorage.getItem('nexus_gsc_pages_'   + profileId);
+    var queries = sessionStorage.getItem('nexus_gsc_queries_' + profileId);
+    _gscPages   = pages   ? JSON.parse(pages)   : [];
+    _gscQueries = queries ? JSON.parse(queries) : [];
+  } catch(e) { _gscPages = []; _gscQueries = []; }
+  updateGscStatus();
 }
 
 function getTopOpportunities(n) {
@@ -774,43 +851,112 @@ function buildSystemPrompt() {
   if (_ctx.pos) ctxStr += '\nGSC Position: ' + _ctx.pos;
 
   var profileStr = _activeProfile ? 
-    '\nProfile: '+_activeProfile.name+' | Domain: '+(_activeProfile.domain||'not set')+' | Niche: '+(_activeProfile.niche||'not set') : 
+    '\nProfile: '+_activeProfile.name+' | Domain: '+(_activeProfile.domain||'not set')+' | Niche: '+(_activeProfile.niche||'not set')+' | Language: '+(_activeProfile.language||'en') : 
     '\nNo profile selected.';
+
+  // Intake state context
+  var intakeStr = '';
+  if (_intake.done) {
+    intakeStr = '\n\n## CURRENT JOB (intake complete — do not re-ask these)';
+    if (_intake.mode) intakeStr += '\nMode: ' + _intake.mode.toUpperCase();
+    if (_intake.url) intakeStr += '\nURL: ' + _intake.url;
+    if (_intake.keyword) intakeStr += '\nKeyword: ' + _intake.keyword;
+    if (_intake.funnel) intakeStr += '\nFunnel stage: ' + _intake.funnel.toUpperCase() + ' — ' + {tofu:'awareness/informational',mofu:'consideration/comparison',bofu:'conversion/commercial'}[_intake.funnel];
+    if (_intake.competitor) intakeStr += '\nTarget competitor: ' + _intake.competitor;
+    else intakeStr += '\nCompetitors: find automatically from Google';
+    intakeStr += '\nIntake is DONE. Act on this job directly.';
+  } else if (_intake.step > 0) {
+    intakeStr = '\n\n## INTAKE IN PROGRESS (step ' + _intake.step + '/4 complete)';
+    if (_intake.mode) intakeStr += '\nMode confirmed: ' + _intake.mode;
+    if (_intake.url || _intake.keyword) intakeStr += '\nTarget confirmed: ' + (_intake.url||_intake.keyword);
+    if (_intake.funnel) intakeStr += '\nFunnel confirmed: ' + _intake.funnel;
+    intakeStr += '\nAsk the next missing intake question.';
+  }
 
   return `You are NEXUS — an elite SEO Intelligence Agent built into ContentScale. You are not a generic AI. You are a specialist who knows this specific site, its history, and exactly what needs to be done to rank higher and appear in AI Overviews.
 
-## YOUR IDENTITY
-- You work with the GRAAF Framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) — 50 points
-- CRAFT — 30 points (writing quality)  
-- Technical SEO — 20 points
-- Total ContentScore: 100 points
-- You know that AI Overviews require: direct answer in first 150 words, FAQ schema, Speakable schema, E-E-A-T signals
-- You know that ranking requires: higher CTR, better content than competitors, GSC signal improvement
+## YOUR IDENTITY & DEEP KNOWLEDGE
 
-## YOUR BEHAVIOUR
-1. Max ONE question per response. Never ask two things.
-2. When you have enough information, ACT — don't ask permission.
-3. Be brutally specific: "position 14 with 2,800 impressions" not "you have some traffic"
-4. Always explain WHY before WHAT. Logic first, then action.
-5. For existing ranked content: ALWAYS mention ranking risk before suggesting full rewrite.
-6. Prioritise: AI Overview gaps > CTR improvement > new pages. Always in this order.
-7. Keep responses under 120 words unless presenting data or results.
-8. Reference memory naturally: "Last time we worked on your /dakdekker page..."
+**ContentScore system (100 pts total):**
+- GRAAF = 50 pts: Genuinely credible (expert quotes, citations, author), Relevant (keyword alignment, intent match), Actionable (CTAs, next steps), Accurate (stats with sources, no fluff), Fresh (updated content, current data)
+- CRAFT = 30 pts: writing quality, scannability, sentence variation, reading level, hooks
+- Technical = 20 pts: title tag (55-60 chars), meta description (155-160 chars), schema markup, canonical, H1/H2 structure, internal links, image alt text
 
-## COMMANDS YOU CAN TRIGGER (use in your response, they execute silently)
-[SCAN url] — scan a page for ContentScore
-[RESEARCH keyword] — keyword + competitor + PAA + voice search research  
-[ANALYSE url keyword] — deep rewrite analysis with 11-point audit
-[SHOW_OPPORTUNITIES] — show GSC opportunity table
-[SAVE_TASK text] — save a task to memory for next session
+**AI Overviews — what makes Google cite a page:**
+- Direct answer paragraph in first 150 words (40-80 words, conversational tone)
+- FAQ schema (FAQPage type) with 5+ questions
+- Speakable schema marking the answer section
+- E-E-A-T signals: named author, credentials, publication date, citations
+- Score above 82/100 on ContentScore
+- Competitor pages cited in AI Overviews usually have 2,000+ words, 8+ statistics with sources, and structured H2s matching PAA questions
+
+**Competitor analysis — what NEXUS finds:**
+- Who ranks positions 1-5 for the target keyword
+- Their H2 structure, word count, schema types, and what topics they cover that you don't
+- Why Google shows them in AI Overviews and not you
+- Exploitable gaps: what they're weak on that you can dominate
+
+**Voice search:**
+- Conversational queries starting with How, What, Why, When, Where, Best
+- Answers must be 30-50 words, natural language, no jargon
+- Local queries: "near me", city names, "best [service] in [city]"
+- Add voice phrases as H2s or in FAQ answers
+
+**Funnel content strategy:**
+- TOFU (Top of Funnel): informational, broad keywords, "how to", "what is" — builds awareness, targets AI Overviews and featured snippets
+- MOFU (Middle of Funnel): comparison, "best X for Y", case studies — nurtures consideration, targets positions 1-5
+- BOFU (Bottom of Funnel): commercial intent, "hire", "price", "near me", "buy" — converts, targets local pack and direct conversions
+- Every page must serve ONE funnel stage. Mixed intent = weak rankings.
+
+**Ranking risk on rewrites:**
+- Position 1-3: surgical fixes ONLY. Full rewrite = serious risk. Change max 20% of content.
+- Position 4-10: surgical fixes recommended. Full rewrite only if score below 65.
+- Position 11-20: full rewrite justified if score below 70. High upside, moderate risk.
+- Position 21+: full rewrite recommended. Little to lose, much to gain.
+- Always: take GSC screenshot before publishing. Monitor for 30 days after.
+
+**GSC data interpretation:**
+- High impressions + low CTR (under 3%) = title/meta problem, not content problem
+- Position 4-10 + any impressions = page 1 is reachable with content improvement
+- Position 11-20 = "page 2 trap" — highest ROI for rewrites
+- CTR drops without position drops = someone else improved their snippet
+- Impressions drop = Google is de-indexing or downranking — content quality issue
+
+## YOUR INTAKE BEHAVIOUR
+Before acting on any request, you need to know 4 things. Ask them ONE AT A TIME:
+1. **Mode**: Are we rewriting an existing page, writing new content, or auditing a site?
+2. **URL or keyword**: What specific page or keyword are we targeting?
+3. **Funnel stage**: Is this TOFU (awareness), MOFU (consideration), or BOFU (conversion)?
+4. **Competitor context**: Is there a specific competitor you want to beat, or should I find them automatically?
+
+Once you know all 4, act immediately without asking more questions. Never ask two at once.
+
+**When intake is already complete** (you already know mode + url/keyword + funnel + competitor intent), skip directly to action. Don't re-ask what you already know from memory or context.
+
+## YOUR BEHAVIOUR RULES
+1. ONE question per response maximum. Never two.
+2. When you have enough info — ACT. Don't ask permission.
+3. Be specific with numbers: "position 14 with 2,847 impressions and 1.1% CTR" not "you have some traffic"
+4. WHY before WHAT. Always explain the logic first.
+5. For ranked content: state the ranking risk tier before suggesting rewrite type.
+6. Priority order: AI Overview gaps → CTR improvement → new BOFU pages → TOFU content
+7. Under 120 words unless presenting data/results.
+8. Reference memory naturally without announcing it.
+
+## COMMANDS (execute silently in background)
+[SCAN url] — GRAAF/CRAFT/Technical scan with full recommendations
+[RESEARCH keyword] — live web search + competitor analysis + PAA + voice search + AI Overview strategy
+[ANALYSE url keyword] — deep 11-point SEO audit + rewrite analysis + ranking risk assessment
+[SHOW_OPPORTUNITIES] — GSC opportunity table sorted by rewrite ROI
+[SAVE_TASK text] — save open task to memory
 [SAVE_PAGE url key value] — save page data to memory
-[SUMMARISE text] — save session summary to memory (use at end of productive sessions)
+[SUMMARISE text] — save session summary (use when wrapping up)
+[RESET_GSC] — clear all GSC data for this profile (trigger when user says wrong file, mistake, delete GSC, reset GSC, clear GSC)
 
 ## RESPONSE FORMAT
-Write conversational text. Use [COMMAND args] when triggering actions.
-At end, optionally: ACTIONS: option1 | option2 | option3
-Never use bullet points for everything. Be direct.
-${profileStr}${memStr}${gscStr}${ctxStr}`;
+Conversational prose. Commands in [brackets]. ACTIONS: option | option at end when useful.
+No bullet-pointing everything. Be direct. Sound like a senior consultant, not a chatbot.
+${profileStr}${intakeStr}${memStr}${gscStr}${ctxStr}`;
 }
 
 async function callClaude(messages) {
@@ -845,6 +991,35 @@ async function callClaude(messages) {
 
 function fallback(userMsg) {
   var lower = (userMsg||'').toLowerCase();
+
+  // If intake is done — auto-act instead of asking
+  if (_intake.done && !_intake._acted) {
+    _intake._acted = true;
+    var mode = _intake.mode;
+    var url  = _intake.url || _ctx.url;
+    var kw   = _intake.keyword || _ctx.keyword;
+    if (mode === 'rewrite' && url) { setTimeout(function(){cmdAnalyse(url,kw||'');},100); return 'On it — analysing ' + url.replace(/^https?:\/\//,'') + ' now.'; }
+    if (mode === 'new' && kw)      { setTimeout(function(){cmdResearch(kw);},100); return 'Running research on "' + kw + '" now.'; }
+    if (url)                       { setTimeout(function(){cmdScan(url);},100); return 'Scanning ' + url.replace(/^https?:\/\//,'') + ' now.'; }
+  }
+
+  // Intake question routing — ask one at a time
+  if (!_intake.mode) {
+    return 'Are we rewriting an existing page, writing new content, or auditing your site? ACTIONS: Rewrite a page | Write new content | Audit my site';
+  }
+  if (!_intake.url && !_intake.keyword) {
+    if (_intake.mode === 'rewrite') return 'Which page URL should I analyse?';
+    if (_intake.mode === 'new') return 'What keyword or topic should the new content target?';
+    if (_intake.mode === 'audit') {
+      if (_gscPages.length) { setTimeout(function(){showOpportunities();},100); return 'I can see your GSC data. Here are your top opportunities:'; }
+      return 'Share your site URL or upload your GSC Pages CSV and I'll identify the biggest opportunities.';
+    }
+  }
+  if (!_intake.funnel) {
+    return 'Is this page meant to **convert** (BOFU — service page, pricing, contact), **compare** (MOFU — reviews, best-of), or **inform** (TOFU — how-to, guides)? ACTIONS: Convert visitors (BOFU) | Compare options (MOFU) | Inform and educate (TOFU)';
+  }
+
+  // Standard fallbacks
   if (/what.*fix|priorit|where.*start|opportunities/.test(lower)) {
     if (_gscPages.length) return 'Let me show your top opportunities. [SHOW_OPPORTUNITIES]';
     return 'Upload your GSC Pages CSV in the sidebar — then I can immediately show you which pages have the most to gain. ACTIONS: I\'ll upload the CSV | Tell me the URL manually';
@@ -866,6 +1041,12 @@ function fallback(userMsg) {
     if (_memory && _memory.lastSummary) return 'Here\'s what I remember: ' + _memory.lastSummary;
     return 'No memory from previous sessions yet — we\'re just getting started. What are we working on today?';
   }
+  // GSC reset via natural language
+  if (/clear.*gsc|reset.*gsc|delete.*gsc|wrong.*gsc|gsc.*wrong|gsc.*mistake|remove.*gsc|gsc.*delete|gsc.*clear|gsc.*reset/i.test(lower)) {
+    resetGscData();
+    return 'Done — GSC data cleared. Upload a new CSV from the sidebar when you have the right file.';
+  }
+
   return 'Add your Claude API key to enable full intelligence. You can still upload GSC data and use the Tracker. What would you like to do? ACTIONS: Show GSC opportunities | Add a page to tracker';
 }
 
@@ -892,10 +1073,35 @@ async function executeCommand(cmd) {
     case 'SAVE_TASK': memRemember('task',null,{text:cmd.args.join(' ')}); break;
     case 'SAVE_PAGE': if(cmd.args.length>=3){var o={};o[cmd.args[1]]=cmd.args.slice(2).join(' ');memRemember('page',cmd.args[0],o);} break;
     case 'SUMMARISE': memRemember('session_summary',null,cmd.args.join(' ')); break;
+    case 'RESET_GSC':
+      resetGscData();
+      addAgentMsg('GSC data cleared. Upload a new CSV from the sidebar when ready.');
+      break;
   }
 }
 
 // ── SCAN ────────────────────────────────────────────────────────
+// -- AUTO-ACT when intake is complete ───────────────────────────
+async function autoActOnIntake() {
+  if (_intake._acted) return;
+  _intake._acted = true;
+  var mode = _intake.mode;
+  var url  = _intake.url || _ctx.url;
+  var kw   = _intake.keyword || _ctx.keyword;
+  if (mode === 'rewrite' && url) {
+    await cmdAnalyse(url, kw||'');
+  } else if (mode === 'new' && kw) {
+    await cmdResearch(kw);
+  } else if (mode === 'audit') {
+    if (url) await cmdScan(url);
+    else if (_gscPages.length) showOpportunities();
+  } else if (url) {
+    await cmdScan(url);
+  } else if (kw) {
+    await cmdResearch(kw);
+  }
+}
+
 async function cmdScan(url) {
   if (!url||url.length<5) return;
   _ctx.url = url;
@@ -924,7 +1130,9 @@ async function cmdResearch(keyword) {
   try {
     var startR = await api('/api/content/research', 'POST', {
       profile_id: _activeProfile.id, seed_keyword: keyword,
-      gsc_impressions: _ctx.impr, gsc_clicks: _ctx.clicks, gsc_position: _ctx.pos
+      gsc_impressions: _ctx.impr, gsc_clicks: _ctx.clicks, gsc_position: _ctx.pos,
+      funnel_stage: _intake.funnel || null,
+      search_intent: _intake.funnel === 'bofu' ? 'commercial' : _intake.funnel === 'mofu' ? 'commercial' : 'informational'
     });
     if (!startR.success) throw new Error(startR.error||'Failed to start');
     var jobId = startR.job_id;
@@ -957,7 +1165,9 @@ async function cmdAnalyse(url, keyword) {
       url, keyword: keyword||'',
       profile_id: _activeProfile ? _activeProfile.id : null,
       gsc_impressions: _ctx.impr, gsc_clicks: _ctx.clicks, gsc_position: _ctx.pos,
-      gsc_queries: _gscQueries.slice(0,20).map(function(q){return q.query;}).join('\n')
+      gsc_queries: _gscQueries.slice(0,20).map(function(q){return q.query;}).join('\n'),
+      funnel_stage: _intake.funnel || null,
+      competitor_url: (_intake.competitor && _intake.competitor !== 'auto') ? _intake.competitor : null
     };
     var d = await api('/api/content/analyse-rewrite','POST',body);
     progSet(pid,100); progRemove(pid);
@@ -1076,7 +1286,13 @@ function renderAnalysisResult(a, rewriteId) {
 function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
 function sendStarter(btn) { hideWelcome(); userSend(btn.textContent); }
 
+function resetIntake() {
+  _intake = { done:false, mode:null, funnel:null, competitor:null, url:null, keyword:null, step:0, _acted:false };
+}
+
 function userSend(text) {
+  // Reset intake if user explicitly starts something new
+  if (/start.*new|something.*new|different.*page|new.*page|new.*job/i.test(text)) resetIntake();
   text = text.replace(/^https?:\/\//,'https://').trim(); // normalize URLs
   var i = document.getElementById('chatInput'); if(i){i.value='';autoResize(i);}
   addUserMsg(text); processInput(text);
@@ -1089,10 +1305,82 @@ async function sendMessage() {
   addUserMsg(text); processInput(text);
 }
 
+// ── Intake parser — reads user message for intent signals ─────────
+function parseIntakeSignals(text) {
+  var lower = text.toLowerCase();
+  var changed = false;
+
+  // Mode detection
+  if (!_intake.mode) {
+    if (/rewrite|herschrijf|rewriting|update.*page|improve.*page|fix.*page|page.*fix|bestaande|existing/.test(lower)) {
+      _intake.mode = 'rewrite'; changed = true;
+    } else if (/new.*article|new.*content|write.*new|new.*page|nieuwe|write.*about|create.*page/.test(lower)) {
+      _intake.mode = 'new'; changed = true;
+    } else if (/audit|scan.*site|check.*site|analyse.*site|all.*pages|sitemap/.test(lower)) {
+      _intake.mode = 'audit'; changed = true;
+    }
+  }
+
+  // URL detection
+  var urlMatch = text.match(/https?:\/\/[^\s]+/);
+  if (urlMatch && !_intake.url) {
+    _intake.url = urlMatch[0];
+    _ctx.url = urlMatch[0];
+    // Auto-detect mode from URL if not set
+    if (!_intake.mode) { _intake.mode = 'rewrite'; }
+    changed = true;
+  }
+
+  // Keyword detection — any quoted text or text after "for" / "keyword"
+  var kwMatch = text.match(/"([^"]+)"|'([^']+)'/) || text.match(/keyword[:\s]+([^\s,\.]+(?:\s[^\s,\.]+){0,4})/i) || text.match(/rank(?:ing)? for[:\s]+([^\s,\.]+(?:\s[^\s,\.]+){0,4})/i);
+  if (kwMatch && !_intake.keyword) {
+    _intake.keyword = (kwMatch[1]||kwMatch[2]||kwMatch[1]||'').trim();
+    _ctx.keyword = _intake.keyword;
+    changed = true;
+  }
+
+  // Funnel detection
+  if (!_intake.funnel) {
+    if (/bofu|buy|price|prijs|hire|inhuren|near me|dichtbij|quote|offerte|contact|service page|conversion/.test(lower)) {
+      _intake.funnel = 'bofu'; changed = true;
+    } else if (/mofu|compar|vs|versus|best.*for|review|case stud|consider/.test(lower)) {
+      _intake.funnel = 'mofu'; changed = true;
+    } else if (/tofu|how to|what is|why|guide|tutorial|tips|beginners|informational|awareness/.test(lower)) {
+      _intake.funnel = 'tofu'; changed = true;
+    }
+  }
+
+  // Competitor detection
+  if (!_intake.competitor) {
+    var compMatch = text.match(/beat\s+(https?:\/\/[^\s]+)/i) || text.match(/competitor[:\s]+(https?:\/\/[^\s]+)/i) || text.match(/outrank\s+(https?:\/\/[^\s]+)/i);
+    if (compMatch) { _intake.competitor = compMatch[1]; changed = true; }
+    if (/auto|automatically|find.*competitor|you.*find|let.*you/.test(lower)) {
+      _intake.competitor = 'auto'; changed = true;
+    }
+  }
+
+  // Check if intake is now complete
+  var hasTarget = _intake.url || _intake.keyword;
+  var hasMode = !!_intake.mode;
+  var hasFunnel = !!_intake.funnel;
+  // Competitor is optional — auto-find if not specified after mode+target+funnel known
+  if (hasMode && hasTarget && hasFunnel) {
+    if (!_intake.competitor) _intake.competitor = 'auto';
+    _intake.done = true;
+  }
+
+  // Increment step counter
+  if (changed && _intake.step < 4) _intake.step++;
+
+  return changed;
+}
+
 async function processInput(text) {
   if (_busy) return; _busy=true;
   document.getElementById('sendBtn').disabled=true;
-  // Check if text contains a URL and prepend protocol if needed
+  // Parse intake signals from message
+  parseIntakeSignals(text);
+  // Normalize URLs
   text = text.replace(/\bhttps?:\/\/[^\s]+/g, function(u){ return u; });
   _history.push({role:'user',content:text});
   var tid = addTyping();
@@ -1103,6 +1391,10 @@ async function processInput(text) {
     _history.push({role:'assistant',content:resp});
     if (parsed.message) addAgentMsg(parsed.message);
     for (var c of parsed.commands) await executeCommand(c);
+    // If intake just completed and no command was triggered, auto-act
+    if (_intake.done && parsed.commands.length === 0) {
+      await autoActOnIntake();
+    }
     if (parsed.actions.length) addActions(parsed.actions);
   } catch(e) {
     removeTyping(tid);
@@ -1228,6 +1520,7 @@ function renderTrackerList() {
       '</div>'+
       '<div class="tr-pos"><div class="tr-pos-num">'+pos+'</div><div class="tr-pos-lbl">Google</div></div>'+
       '<div class="tr-actions">'+
+        '<button class="tr-btn" onclick="openTrackerDetail('+p.id+')">Details</button>'+
         '<button class="tr-btn" onclick="runTrackerCheck('+p.id+',this)">▶ Check</button>'+
         '<button class="tr-btn" onclick="pushToAgent('+p.id+')">→ Agent</button>'+
         '<button class="tr-btn red" onclick="deleteTrackerPage('+p.id+')">✕</button>'+
@@ -1239,6 +1532,200 @@ function renderTrackerList() {
 function openAddModal(){document.getElementById('addModal').classList.add('open');}
 function closeAddModal(){document.getElementById('addModal').classList.remove('open');}
 function closeDetailModal(){document.getElementById('detailModal').classList.remove('open');}
+
+var _trDetailPageId = null;
+
+async function openTrackerDetail(pageId) {
+  _trDetailPageId = pageId;
+  var modal = document.getElementById('detailModal');
+  var body  = document.getElementById('detailBody');
+  var page  = _trPages.find(function(p){ return p.id === pageId; });
+  var titleEl = document.getElementById('detailTitle');
+  if (page) {
+    titleEl.innerHTML = escH(page.title||page.url) +
+      (page.keyword ? '<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px;">🎯 '+escH(page.keyword)+'</span>' : '') +
+      '<button onclick="generateTrackerReport('+pageId+')" style="margin-left:10px;font-size:11px;padding:4px 10px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:6px;color:var(--amber);cursor:pointer;font-weight:600;">📋 Report</button>' +
+      '<button onclick="deleteTrackerPage('+pageId+')" style="margin-left:6px;font-size:11px;padding:4px 10px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:6px;color:var(--red);cursor:pointer;">🗑</button>';
+  }
+  modal.classList.add('open');
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">⏳ Loading…</div>';
+
+  try {
+    var snaps = await api('/api/tracker/pages/'+pageId+'/snapshots');
+    var snapList = (snaps.snapshots||[]).slice(0,20).reverse();
+    var snap = snapList.length ? snapList[snapList.length-1] : (page&&page.latest_snapshot?page.latest_snapshot:{});
+
+    // ── ContentScore card ──
+    var graafHtml = '';
+    if (snap && snap.score) {
+      var gC = snap.score>=70?'var(--green)':snap.score>=50?'var(--amber)':'var(--red)';
+      var gL = snap.score>=70?'Good':snap.score>=50?'Needs Work':'Critical';
+      graafHtml = '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">' +
+        '<div style="text-align:center;min-width:64px;"><div style="font-size:2rem;font-weight:900;color:'+gC+';font-family:Barlow Condensed,sans-serif;">'+snap.score+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">/100</div></div>' +
+        '<div><div style="font-size:13px;font-weight:700;color:var(--text);">ContentScore — '+gL+'</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">Last tracker scan</div></div>' +
+        '</div>';
+    }
+
+    // ── GSC baseline ──
+    var gscHtml = '';
+    if (page && (page.gsc_impressions||page.gsc_clicks||page.gsc_position)) {
+      gscHtml = '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px;">' +
+        '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;font-family:JetBrains Mono,monospace;">GSC Baseline <span style="color:var(--muted);font-weight:400;">(at time of rewrite)</span></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' +
+        (page.gsc_position ? '<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:var(--amber);">#'+page.gsc_position+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Position</div></div>' : '') +
+        (page.gsc_impressions ? '<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:var(--blue);">'+Number(page.gsc_impressions).toLocaleString()+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Impressions</div></div>' : '') +
+        (page.gsc_clicks ? '<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:var(--green);">'+Number(page.gsc_clicks).toLocaleString()+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">Clicks</div></div>' : '') +
+        (page.gsc_ctr ? '<div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:var(--purple);">'+parseFloat(page.gsc_ctr).toFixed(2)+'%</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;">CTR</div></div>' : '') +
+        '</div></div>';
+    }
+
+    // ── Position chart ──
+    var chartHtml = '';
+    var posSnaps = snapList.filter(function(s){return s.google_position!==null;});
+    if (posSnaps.length >= 2) {
+      var W=580,H=130,PAD=28;
+      var positions = posSnaps.map(function(s){return parseFloat(s.google_position);});
+      var maxP=Math.max.apply(null,positions), minP=Math.min.apply(null,positions);
+      var range=maxP-minP||1;
+      var xStep=(W-PAD*2)/(posSnaps.length-1);
+      var pts=posSnaps.map(function(s,i){
+        var x=PAD+i*xStep;
+        var y=PAD+((parseFloat(s.google_position)-minP)/range)*(H-PAD*2);
+        y=(H-PAD)-(y-PAD); // invert: lower pos # = higher on chart
+        return {x:x,y:y,pos:s.google_position,date:new Date(s.checked_at).toLocaleDateString()};
+      });
+      var polyline=pts.map(function(p){return p.x+','+p.y;}).join(' ');
+      var fillPath='M'+pts[0].x+','+H+' '+pts.map(function(p){return 'L'+p.x+','+p.y;}).join(' ')+' L'+pts[pts.length-1].x+','+H+' Z';
+      var dots=pts.map(function(p){return '<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="var(--purple)" stroke="var(--bg)" stroke-width="2"><title>#'+p.pos+' — '+p.date+'</title></circle><text x="'+p.x+'" y="'+(p.y-7)+'" text-anchor="middle" font-size="9" fill="var(--purple)">#'+p.pos+'</text>';}).join('');
+      var labels=pts.filter(function(p,i){return i===0||i===pts.length-1||(pts.length>4&&i%Math.ceil(pts.length/4)===0);}).map(function(p){return '<text x="'+p.x+'" y="'+(H+14)+'" text-anchor="middle" font-size="9" fill="var(--muted)">'+p.date+'</text>';}).join('');
+      chartHtml='<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:JetBrains Mono,monospace;">📈 Position History</div><div style="overflow-x:auto;"><svg viewBox="0 0 '+(W+16)+' '+(H+20)+'" style="width:100%;min-width:250px;height:auto;"><defs><linearGradient id="pGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a78bfa" stop-opacity=".2"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs><path d="'+fillPath+'" fill="url(#pGrad)"/><polyline points="'+polyline+'" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labels+'</svg></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Lower # = better rank. Hover dots for date.</div></div>';
+    } else if (posSnaps.length===1) {
+      chartHtml='<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;"><div style="font-size:2rem;font-weight:900;color:var(--purple);font-family:Barlow Condensed,sans-serif;">#'+posSnaps[0].google_position+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Current position · need 2+ checks for history chart</div></div>';
+    }
+
+    // ── AI citation timeline ──
+    var timelineHtml = '';
+    if (snapList.length) {
+      var recent = snapList.slice().reverse().slice(0,10);
+      timelineHtml = '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:14px;"><div style="padding:10px 14px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:JetBrains Mono,monospace;border-bottom:1px solid var(--border);">🤖 AI Citation History</div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:7px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Date</th><th style="padding:7px 10px;text-align:center;font-size:9px;color:var(--muted);">Pos</th><th style="padding:7px 10px;text-align:center;font-size:9px;color:var(--muted);">AI Overview</th><th style="padding:7px 10px;text-align:center;font-size:9px;color:var(--muted);">Perplexity</th></tr></thead><tbody>' +
+        recent.map(function(s){
+          var pos=s.google_position?'<b style="color:var(--purple);">#'+s.google_position+'</b>':'<span style="color:var(--muted);">—</span>';
+          var aio=s.ai_google_overview_cited?'✅':s.ai_google_overview_found?'⚠️':'❌';
+          var ppl=s.ai_perplexity_cited?'✅':'❌';
+          var d=new Date(s.checked_at);
+          return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:7px 10px;color:var(--muted2);">'+d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</td><td style="padding:7px 10px;text-align:center;">'+pos+'</td><td style="padding:7px 10px;text-align:center;">'+aio+'</td><td style="padding:7px 10px;text-align:center;">'+ppl+'</td></tr>';
+        }).join('') +
+      '</tbody></table></div>';
+    }
+
+    // ── Classification + action ──
+    var clsHtml = '';
+    var cls = page && page.latest_classification ? page.latest_classification : null;
+    if (cls && cls.status) {
+      var clsC=cls.status==='healthy'?'var(--green)':cls.status==='attention'?'var(--amber)':cls.status==='opportunity'?'var(--blue)':'var(--red)';
+      var clsE=cls.status==='healthy'?'🟢':cls.status==='attention'?'🟡':cls.status==='opportunity'?'💡':'🔴';
+      var clsL=cls.status==='healthy'?'HEALTHY':cls.status==='attention'?'NEEDS REFRESH':cls.status==='opportunity'?'OPPORTUNITY':'NEEDS REWRITE';
+      var actBtn='';
+      if (cls.next_action==='rewrite_needed') actBtn='<button onclick="pushToAgent('+pageId+')" style="font-size:11px;padding:5px 12px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:var(--red);cursor:pointer;font-weight:700;">✏️ Push to Agent → Rewrite</button>';
+      else if (cls.next_action==='refresh_content') actBtn='<button onclick="pushToAgent('+pageId+')" style="font-size:11px;padding:5px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:6px;color:var(--amber);cursor:pointer;font-weight:700;">🔄 Push to Agent → Refresh</button>';
+      else if (cls.next_action==='optimize_position') actBtn='<button onclick="pushToAgent('+pageId+')" style="font-size:11px;padding:5px 12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:6px;color:var(--blue);cursor:pointer;font-weight:700;">🚀 Push to Agent → Optimise</button>';
+      clsHtml='<div style="background:var(--surface2);border:1px solid var(--border2);border-left:3px solid '+clsC+';border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;"><div><div style="font-size:13px;font-weight:700;color:'+clsC+';">'+clsE+' '+clsL+' <span style="font-size:10px;font-weight:400;color:var(--muted);">('+( cls.score||0)+'/100)</span></div><div style="font-size:12px;color:var(--muted2);margin-top:3px;">'+(cls.reason||'')+'</div></div><div>'+actBtn+'</div></div>';
+    }
+
+    // ── Recommendations ──
+    var snap2 = page && page.latest_snapshot ? page.latest_snapshot : {};
+    var recs2 = snap2.recommendations;
+    if (recs2 && typeof recs2==='string'){try{recs2=JSON.parse(recs2);}catch(e){recs2=null;}}
+    var recsHtml2='';
+    if (Array.isArray(recs2)&&recs2.length) {
+      recsHtml2='<div style="margin-bottom:14px;"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:JetBrains Mono,monospace;">📋 Recommendations ('+recs2.length+')</div>'+
+        recs2.slice(0,6).map(function(r){
+          var pC=r.priority==='high'?'var(--red)':r.priority==='medium'?'var(--amber)':'var(--green)';
+          var pI=r.priority==='high'?'🔴':r.priority==='medium'?'🟡':'🟢';
+          return '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start;">'+
+            '<span style="flex-shrink:0;margin-top:1px;">'+pI+'</span>'+
+            '<div><div style="font-size:12px;font-weight:600;color:var(--text);">'+escH(r.title||r.description||'')+'</div>'+
+            (r.action?'<div style="font-size:11px;color:var(--muted2);margin-top:2px;">→ '+escH(r.action)+'</div>':'')+
+            '</div></div>';
+        }).join('')+
+      '</div>';
+    }
+
+    // ── Assemble ──
+    body.innerHTML = clsHtml + graafHtml + chartHtml + gscHtml + timelineHtml + recsHtml2 +
+      '<div style="display:flex;gap:8px;margin-top:8px;">' +
+      '<button onclick="runTrackerCheck('+pageId+',this)" class="act-btn" style="font-size:11px;padding:6px 12px;">▶ Run Check Now</button>' +
+      '<button onclick="generateTrackerReport('+pageId+')" class="act-btn amber" style="font-size:11px;padding:6px 12px;">📋 Generate Report</button>' +
+      '<button onclick="closeDetailModal()" class="act-btn" style="font-size:11px;padding:6px 12px;">Close</button>' +
+      '</div>';
+
+  } catch(e) {
+    body.innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load details: '+e.message+'</div>';
+  }
+}
+
+async function generateTrackerReport(pageId) {
+  var body = document.getElementById('detailBody');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Generating report…</div>';
+  try {
+    var data = await api('/api/tracker/pages/'+pageId+'/report','POST',{report_type:'biweekly'});
+    if (!data.success) throw new Error(data.error||'Failed');
+    var kpi = data.report.kpi ? JSON.parse(data.report.kpi||'{}') : {};
+    var summary = data.report.summary ? JSON.parse(data.report.summary||'{}') : {};
+    var actionPlan = data.report.action_plan ? JSON.parse(data.report.action_plan||'[]') : [];
+    var cls2 = data.classification || {};
+
+    function kpiCard(label,val,delta,color) {
+      return '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:12px;text-align:center;">' +
+        '<div style="font-size:1.6rem;font-weight:900;color:'+(color||'var(--text)')+';font-family:Barlow Condensed,sans-serif;">'+(val||'—')+'</div>' +
+        '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">'+label+'</div>' +
+        (delta?'<div style="font-size:10px;color:'+(color||'var(--muted)')+';margin-top:2px;">'+delta+'</div>':'') +
+      '</div>';
+    }
+
+    var posC=(kpi.position&&kpi.position.delta&&kpi.position.delta.direction==='up')?'var(--green)':'var(--text)';
+    var impC=(kpi.impressions&&kpi.impressions.delta&&kpi.impressions.delta.direction==='up')?'var(--green)':'var(--text)';
+    var clkC=(kpi.clicks&&kpi.clicks.delta&&kpi.clicks.delta.direction==='up')?'var(--green)':'var(--text)';
+
+    var kpiHtml='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">'+
+      kpiCard('Position',kpi.position&&kpi.position.after?'#'+kpi.position.after:null,kpi.position&&kpi.position.delta?kpi.position.delta.text:null,posC)+
+      kpiCard('Impressions',kpi.impressions&&kpi.impressions.after?Number(kpi.impressions.after).toLocaleString():null,kpi.impressions&&kpi.impressions.delta?kpi.impressions.delta.text:null,impC)+
+      kpiCard('Clicks',kpi.clicks&&kpi.clicks.after?Number(kpi.clicks.after).toLocaleString():null,kpi.clicks&&kpi.clicks.delta?kpi.clicks.delta.text:null,clkC)+
+      kpiCard('CTR',kpi.ctr&&kpi.ctr.after?kpi.ctr.after+'%':null,kpi.ctr&&kpi.ctr.delta?kpi.ctr.delta.text:null,'var(--purple)')+
+    '</div>';
+
+    var actHtml='';
+    var pending=(actionPlan||[]).filter(function(a){return !a.done;}).slice(0,5);
+    if (pending.length) {
+      actHtml='<div style="margin-bottom:14px;"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:JetBrains Mono,monospace;">🎯 Action Plan</div>'+
+        pending.map(function(a){
+          var pC=a.priority==='high'?'var(--red)':a.priority==='medium'?'var(--amber)':'var(--green)';
+          return '<div style="border-left:2px solid '+pC+';padding:8px 12px;margin-bottom:6px;background:var(--surface2);border-radius:0 6px 6px 0;">'+
+            '<div style="font-size:12px;font-weight:700;color:var(--text);">'+escH(a.title||'')+'</div>'+
+            '<div style="font-size:11px;color:var(--muted2);margin-top:2px;">'+escH(a.action||'')+'</div>'+
+            (a.expected_impact?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">📈 '+escH(a.expected_impact)+'</div>':'')+
+          '</div>';
+        }).join('')+'</div>';
+    }
+
+    body.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">📋 Bi-weekly report · '+(summary.period_days||'—')+' days · '+(summary.total_checks||0)+' checks</div>'+
+      kpiHtml + actHtml +
+      '<div style="display:flex;gap:8px;"><button onclick="copyReportEmail('+pageId+')" class="act-btn" style="font-size:11px;padding:6px 12px;">📧 Copy Email</button>' +
+      '<button onclick="openTrackerDetail('+pageId+')" class="act-btn" style="font-size:11px;padding:6px 12px;">← Back to Details</button></div>';
+
+    toast('Report ready', 'ok');
+  } catch(e) { toast('Report failed: '+e.message,'err'); await openTrackerDetail(pageId); }
+}
+
+async function copyReportEmail(pageId) {
+  try {
+    var data = await api('/api/tracker/pages/'+pageId+'/report','POST',{report_type:'biweekly'});
+    if (!data.success||!data.email_body){toast('No email body in report','err');return;}
+    if (navigator.clipboard) await navigator.clipboard.writeText(data.email_body);
+    else { var ta=document.createElement('textarea');ta.value=data.email_body;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove(); }
+    toast('📧 Email copied to clipboard','ok');
+  } catch(e){toast('Copy failed: '+e.message,'err');}
+}
 
 async function submitTrackerAdd() {
   var url=document.getElementById('trAddUrl').value.trim();
@@ -1380,23 +1867,40 @@ async function loadStudies(){
 // ══════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async function() {
   await loadProfiles();
-  // Welcome agent message after short delay
   setTimeout(function() {
+    hideWelcome();
     var hasMemory = _memory && (Object.keys(_memory.pages||{}).length > 0 || (_memory.tasks||[]).length > 0);
     var hasGsc = _gscPages.length > 0;
     var topOpp = getTopOpportunities(1)[0];
-    var greeting = '';
+    var openTasks = _memory ? (_memory.tasks||[]).filter(function(t){return !t.done;}) : [];
+
+    // RETURNING USER with memory
     if (hasMemory && _memory.lastSummary) {
-      greeting = 'Welcome back. Last session: ' + _memory.lastSummary + '\n\nWhat are we tackling today?';
-    } else if (hasGsc && topOpp) {
-      greeting = 'I can see your GSC data. Your biggest opportunity: **' + topOpp.url.replace(/^https?:\/\//,'') + '** — position ' + topOpp.position.toFixed(1) + ' with ' + topOpp.impressions.toLocaleString() + ' impressions but only ' + topOpp.ctr.toFixed(1) + '% CTR. Want to fix that first?';
-      addActions(['Fix that page', 'Show all opportunities', 'Something else']);
-    } else {
-      greeting = 'Ready. Upload your GSC data from the sidebar for immediate insights, or tell me what you want to work on.';
-      addActions(['What should I fix first?', 'Rewrite an existing page', 'Write new content']);
+      var msg = 'Welcome back.';
+      if (_memory.site && _memory.site.name) msg += ' ' + _memory.site.name + '.';
+      msg += ' Last session: **' + _memory.lastSummary + '**';
+      if (openTasks.length) msg += '\n\n' + openTasks.length + ' open task' + (openTasks.length>1?'s':'') + ': ' + openTasks.slice(0,2).map(function(t){return t.text;}).join(' · ');
+      msg += '\n\nPick up where we left off, or start something new.';
+      addAgentMsg(msg);
+      var actions = [];
+      if (openTasks.length) actions.push('Continue: ' + openTasks[0].text.substring(0,40));
+      if (topOpp) actions.push('Fix highest opportunity page');
+      actions.push('Start something new');
+      addActions(actions);
+      return;
     }
-    hideWelcome();
-    addAgentMsg(greeting);
+
+    // NEW USER with GSC data
+    if (hasGsc && topOpp) {
+      var ctrC = topOpp.ctr < 2 ? 'low CTR of ' + topOpp.ctr.toFixed(1) + '%' : 'CTR of ' + topOpp.ctr.toFixed(1) + '%';
+      addAgentMsg('Connected. I can already see your GSC data — **' + _gscPages.length + ' pages** loaded.\n\nYour biggest opportunity right now: **' + topOpp.url.replace(/^https?:\/\//,'') + '** is sitting at position ' + topOpp.position.toFixed(1) + ' with ' + topOpp.impressions.toLocaleString() + ' impressions but a ' + ctrC + '. That's the page 2 trap — one strong rewrite can break through.\n\nShould we start there?');
+      addActions(['Yes — fix that page', 'Show all opportunities first', 'I want to write something new']);
+      return;
+    }
+
+    // FRESH START — run intake
+    addAgentMsg('Connected. To point you in the right direction immediately — are we working on an **existing page** that needs improvement, writing **new content** from scratch, or doing a **full site audit**?');
+    addActions(['Rewrite an existing page', 'Write new content', 'Audit my site']);
   }, 600);
 });
 
