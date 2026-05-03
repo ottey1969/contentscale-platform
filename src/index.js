@@ -23857,11 +23857,22 @@ function graafAnalyzeHtml(html, pageUrl) {
   const statsRegex = /\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g;
   const statsFound = (bodyText.match(statsRegex)||[]).length;
 
-  return { wordCount, h1Text, h1VisibleCount, h1IsGeneric, h1IsTooShort, h2Count, h3Count,
+  // ── Fields missing from tracker vs live scanner — added to align scores ──
+  const h1Count       = h1Matches.length;          // alias for h1VisibleCount
+  const h1Length      = h1Text.length;             // char length of H1
+  const h1IsTooLong   = h1Text.length > 70;        // penalised in computeScore
+  const h1IsHidden    = false;                     // can't detect CSS server-side
+  const hasOrganizationSchema = flatSchemas.some(s =>
+    ['Organization','LocalBusiness','Corporation','ProfessionalService',
+     'HomeAndConstructionBusiness','MedicalBusiness','LegalService'].includes(s['@type'])
+  );
+
+  return { wordCount, h1Text, h1Count, h1VisibleCount, h1Length, h1IsGeneric,
+    h1IsTooShort, h1IsTooLong, h1IsHidden, h2Count, h3Count,
     listItemCount, avgParagraphLength, metaTitle, metaTitleLength, metaDescription, metaDescriptionLength,
-    hasCanonical, hasMetaViewport, hasArticleSchema, hasFAQPageSchema, hasOpenGraph, hasTwitterCard,
-    hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio, hasFAQContent, images, imagesWithAlt,
-    internalLinks, externalLinks, expertQuoteCount, caseStudyCount, statsFound };
+    hasCanonical, hasMetaViewport, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+    hasOpenGraph, hasTwitterCard, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio, hasFAQContent,
+    images, imagesWithAlt, internalLinks, externalLinks, expertQuoteCount, caseStudyCount, statsFound };
 }
 
 // Run a full GRAAF scan on raw HTML, returns { score, recommendations, breakdown }
