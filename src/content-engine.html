@@ -307,7 +307,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow
       <div class="starter-grid">
         <button class="starter" onclick="sendStarter(this)">What should I fix first?</button>
         <button class="starter" onclick="sendStarter(this)">Rewrite an existing page</button>
-        <button class="starter" onclick="sendStarter(this)">Write a new article</button>
+        <button class="starter" onclick="sendStarter(this)">Build a topical content cluster</button>
         <button class="starter" onclick="sendStarter(this)">How do I get into AI Overviews?</button>
         <button class="starter" onclick="sendStarter(this)">Show my GSC opportunities</button>
         <button class="starter" onclick="sendStarter(this)">What have we done before?</button>
@@ -908,6 +908,17 @@ function buildSystemPrompt() {
 - BOFU (Bottom of Funnel): commercial intent, "hire", "price", "near me", "buy" — converts, targets local pack and direct conversions
 - Every page must serve ONE funnel stage. Mixed intent = weak rankings.
 
+**Topical authority clusters (hub & spoke):**
+- A cluster = 1 hub page + 4-8 spoke pages around a core topic
+- Hub page: comprehensive, targets the broad head keyword, 2,500+ words, links to all spokes
+- Spoke pages: each targets one specific subtopic or long-tail variant, 1,200-1,800 words, links back to hub
+- Every spoke links to hub. Hub links to every spoke. Spokes can cross-link if topically adjacent.
+- Google sees one entity owning the topic → boosts all pages in the cluster
+- AI Overviews cite hub pages when they are the most comprehensive answer
+- Internal links use EXACT keyword anchor text for spokes, partial/natural anchors between spokes
+- Image strategy per page: 1 primary image (descriptive filename: topic-location-year.jpg), alt text = keyword variant, add ImageObject schema. NEXUS generates filenames, alt text, and schema — user uploads the actual image.
+- Cluster build order: hub first → highest-traffic spokes → remaining spokes → cross-links last
+
 **Ranking risk on rewrites:**
 - Position 1-3: surgical fixes ONLY. Full rewrite = serious risk. Change max 20% of content.
 - Position 4-10: surgical fixes recommended. Full rewrite only if score below 65.
@@ -952,6 +963,7 @@ Once you know all 4, act immediately without asking more questions. Never ask tw
 [SAVE_PAGE url key value] — save page data to memory
 [SUMMARISE text] — save session summary (use when wrapping up)
 [RESET_GSC] — clear all GSC data for this profile (trigger when user says wrong file, mistake, delete GSC, reset GSC, clear GSC)
+[CLUSTER topic] — build full topical authority cluster: hub page plan + spoke pages + interlink map + image brief (trigger when user wants to build content cluster, topical authority, content strategy, or multiple related pages)
 
 ## RESPONSE FORMAT
 Conversational prose. Commands in [brackets]. ACTIONS: option | option at end when useful.
@@ -1073,6 +1085,7 @@ async function executeCommand(cmd) {
     case 'SAVE_TASK': memRemember('task',null,{text:cmd.args.join(' ')}); break;
     case 'SAVE_PAGE': if(cmd.args.length>=3){var o={};o[cmd.args[1]]=cmd.args.slice(2).join(' ');memRemember('page',cmd.args[0],o);} break;
     case 'SUMMARISE': memRemember('session_summary',null,cmd.args.join(' ')); break;
+    case 'CLUSTER': await cmdCluster(cmd.args.join(' ')); break;
     case 'RESET_GSC':
       resetGscData();
       addAgentMsg('GSC data cleared. Upload a new CSV from the sidebar when ready.');
@@ -1088,7 +1101,9 @@ async function autoActOnIntake() {
   var mode = _intake.mode;
   var url  = _intake.url || _ctx.url;
   var kw   = _intake.keyword || _ctx.keyword;
-  if (mode === 'rewrite' && url) {
+  if (mode === 'cluster' && kw) {
+    await cmdCluster(kw);
+  } else if (mode === 'rewrite' && url) {
     await cmdAnalyse(url, kw||'');
   } else if (mode === 'new' && kw) {
     await cmdResearch(kw);
@@ -1314,6 +1329,8 @@ function parseIntakeSignals(text) {
   if (!_intake.mode) {
     if (/rewrite|herschrijf|rewriting|update.*page|improve.*page|fix.*page|page.*fix|bestaande|existing/.test(lower)) {
       _intake.mode = 'rewrite'; changed = true;
+    } else if (/cluster|topical|hub.*spoke|spoke.*hub|content.*strateg|authority.*content|multiple.*page|series.*page|interlink/.test(lower)) {
+      _intake.mode = 'cluster'; changed = true;
     } else if (/new.*article|new.*content|write.*new|new.*page|nieuwe|write.*about|create.*page/.test(lower)) {
       _intake.mode = 'new'; changed = true;
     } else if (/audit|scan.*site|check.*site|analyse.*site|all.*pages|sitemap/.test(lower)) {
@@ -1459,6 +1476,519 @@ function toast(msg,type){var w=document.getElementById('toastWrap');var el=docum
 // ══════════════════════════════════════════════════════════════════
 // TRACKER
 // ══════════════════════════════════════════════════════════════════
+
+// ── TOPICAL CLUSTER BUILDER ──────────────────────────────────────
+async function cmdCluster(topic) {
+  if (!topic) { addAgentMsg('What topic should the cluster be built around?'); return; }
+  if (!_activeProfile) { addAgentMsg('Select a profile first — I need the domain and niche to build a relevant cluster.'); return; }
+
+  var domain = _activeProfile.domain || 'your site';
+  var niche  = _activeProfile.niche  || 'your niche';
+  var pid    = addProgress('Building topical authority cluster for "' + topic + '" — researching live…');
+
+  try {
+    progSet(pid, 15, 'Researching topic and competitors…');
+
+    // ── Step 1: Claude researches the cluster via web_search ──────
+    var clusterPrompt = `You are building a topical authority cluster for a ${niche} business at ${domain}.
+
+Topic: "${topic}"
+
+Using web search, research:
+1. What are the top 5-8 subtopics Google shows for this topic? (search "${topic}" and look at PAA, related searches, SERP structure)
+2. What long-tail keywords exist for each subtopic?
+3. Which pages are currently ranking for this topic? What H2 structure do they use?
+4. Are there any AI Overview citations for this topic? What format do they use?
+
+Then produce a complete cluster plan as JSON. Return ONLY valid JSON, no markdown:
+
+{
+  "topic": "${topic}",
+  "hub": {
+    "title": "SEO title for hub page (55-60 chars)",
+    "slug": "url-slug-for-hub",
+    "target_keyword": "primary keyword",
+    "word_count": 2800,
+    "h2_structure": ["H2 One", "H2 Two", "H2 Three", "H2 Four", "H2 Five", "H2 Six"],
+    "meta_description": "155-160 char meta",
+    "ai_overview_angle": "What angle makes this get cited in AI Overviews",
+    "image": { "filename": "topic-location-year.jpg", "alt": "alt text with keyword", "schema_name": "Schema image name" }
+  },
+  "spokes": [
+    {
+      "title": "SEO title (55-60 chars)",
+      "slug": "url-slug",
+      "target_keyword": "long-tail keyword",
+      "funnel": "tofu|mofu|bofu",
+      "word_count": 1400,
+      "h2_structure": ["H2 One", "H2 Two", "H2 Three", "H2 Four"],
+      "meta_description": "155-160 char meta",
+      "search_intent": "what the searcher wants",
+      "voice_search_phrase": "conversational voice query this answers",
+      "image": { "filename": "spoke-topic-year.jpg", "alt": "descriptive alt text", "schema_name": "Schema image name" }
+    }
+  ],
+  "interlink_map": [
+    { "from": "hub-slug", "to": "spoke-slug", "anchor_text": "exact anchor text", "placement": "After H2: [heading name]" },
+    { "from": "spoke-slug", "to": "hub-slug", "anchor_text": "natural anchor text", "placement": "In introduction paragraph" }
+  ],
+  "build_order": ["hub-slug", "spoke-1-slug", "spoke-2-slug"],
+  "estimated_total_words": 9800,
+  "gsc_opportunity": "Which existing GSC pages can boost this cluster with 1 internal link"
+}
+
+Build 5-7 spokes covering TOFU, MOFU and BOFU. Make every title, slug, and H2 real and specific to the topic — not generic placeholders.`;
+
+    progSet(pid, 35, 'Generating cluster plan…');
+
+    var claudeKey = ENGINE_CLAUDE_KEY;
+    var clusterData = null;
+
+    if (claudeKey) {
+      var r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': claudeKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: clusterPrompt }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+        })
+      });
+      if (!r.ok) throw new Error('Claude error ' + r.status);
+      var d = await r.json();
+      var text = (d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+      // Extract JSON
+      var jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { clusterData = JSON.parse(jsonMatch[0]); } catch(e) { throw new Error('Could not parse cluster plan JSON'); }
+      } else {
+        throw new Error('No valid cluster plan returned');
+      }
+    } else {
+      // Fallback: build a generic structure without Claude
+      clusterData = buildFallbackCluster(topic, domain, niche);
+    }
+
+    progSet(pid, 80, 'Rendering cluster plan…');
+
+    // ── Step 2: Start research job for hub keyword ─────────────────
+    var hubKw = clusterData.hub && clusterData.hub.target_keyword;
+    if (hubKw && _activeProfile) {
+      try {
+        var resStart = await api('/api/content/research', 'POST', {
+          profile_id: _activeProfile.id,
+          seed_keyword: hubKw,
+          search_intent: 'informational'
+        });
+        if (resStart.success) clusterData._research_job_id = resStart.job_id;
+      } catch(e) {} // non-blocking
+    }
+
+    progSet(pid, 95);
+    progRemove(pid);
+
+    // ── Step 3: Save cluster to memory ────────────────────────────
+    memRemember('site', null, { cluster_topic: topic, cluster_built_at: new Date().toISOString() });
+    memRemember('task', null, { text: 'Build hub page: ' + (clusterData.hub && clusterData.hub.title || topic) });
+    (clusterData.spokes||[]).slice(0,3).forEach(function(s){
+      memRemember('task', null, { text: 'Build spoke: ' + s.title });
+    });
+    memRemember('task', null, { text: 'Apply interlink map after all pages published' });
+
+    // ── Step 4: Render ─────────────────────────────────────────────
+    renderClusterResult(clusterData, topic);
+
+    // ── Step 5: Agent interpretation ──────────────────────────────
+    var interp = await callClaude([..._history, {
+      role: 'user',
+      content: 'Cluster plan built for "' + topic + '": ' +
+        (clusterData.spokes||[]).length + ' spokes, ~' + (clusterData.estimated_total_words||0).toLocaleString() + ' total words. ' +
+        'In 2 sentences: what is the single most important thing to get right when building this cluster, and which spoke should be written second after the hub?'
+    }]);
+    var parsed = parseResponse(interp);
+    addAgentMsg(parsed.message);
+    addActions(['Start writing the hub page', 'Build the first spoke', 'Export the interlink map', 'Start something else']);
+
+  } catch(e) {
+    progRemove(pid);
+    addAgentMsg('Cluster build failed: ' + e.message + '. Try again or share the topic another way.');
+  }
+}
+
+// ── Fallback cluster (no Claude key) ────────────────────────────
+function buildFallbackCluster(topic, domain, niche) {
+  var slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g,'');
+  return {
+    topic: topic,
+    hub: {
+      title: topic.charAt(0).toUpperCase()+topic.slice(1)+' — Complete Guide',
+      slug: slug,
+      target_keyword: topic,
+      word_count: 2800,
+      h2_structure: ['What is '+topic, 'How '+topic+' works', 'Benefits of '+topic, 'Common questions', 'How to get started', 'FAQ'],
+      meta_description: 'Everything you need to know about '+topic+'. Expert guide with tips, costs, and answers to common questions.',
+      ai_overview_angle: 'Direct answer paragraph + FAQ schema targeting the top PAA questions',
+      image: { filename: slug+'-guide.jpg', alt: topic+' complete guide', schema_name: topic+' Guide' }
+    },
+    spokes: [
+      { title: topic+' Costs — What to Expect in 2025', slug: slug+'-costs', target_keyword: topic+' costs', funnel:'mofu', word_count:1400, h2_structure:['Average costs','Cost factors','Getting quotes','Is it worth it?'], meta_description:'Find out what '+topic+' costs in 2025. Prices, factors, and how to get the best deal.', search_intent:'How much does it cost', voice_search_phrase:'How much does '+topic+' cost?', image:{filename:slug+'-costs-2025.jpg',alt:topic+' cost breakdown',schema_name:topic+' Pricing'} },
+      { title: 'How to Choose a '+topic+' Service', slug: 'how-to-choose-'+slug, target_keyword:'how to choose '+topic, funnel:'tofu', word_count:1400, h2_structure:['What to look for','Questions to ask','Red flags','Making your decision'], meta_description:'How to choose the right '+topic+' service. What to look for, questions to ask, and red flags to avoid.', search_intent:'How to make the right choice', voice_search_phrase:'How do I choose a good '+topic+'?', image:{filename:'choose-'+slug+'.jpg',alt:'choosing '+topic+' service',schema_name:'How to Choose '+topic} },
+      { title: topic+' Near Me — Find a Local Expert', slug: slug+'-near-me', target_keyword: topic+' near me', funnel:'bofu', word_count:1200, h2_structure:['Why local matters','What to expect','Service areas','Get a quote'], meta_description:'Find trusted '+topic+' services near you. Local experts, fast response, fair pricing.', search_intent:'Find a local provider now', voice_search_phrase:'Where can I find '+topic+' near me?', image:{filename:slug+'-local-service.jpg',alt:'local '+topic+' service',schema_name:'Local '+topic+' Service'} },
+      { title: 'Common '+topic+' Questions Answered', slug: slug+'-faq', target_keyword: topic+' questions', funnel:'tofu', word_count:1400, h2_structure:['Top questions','Costs','Timeline','What to expect','Getting started'], meta_description:'Answers to the most common questions about '+topic+'. Everything you need to know before you start.', search_intent:'Get answers before deciding', voice_search_phrase:'What do I need to know about '+topic+'?', image:{filename:slug+'-faq.jpg',alt:topic+' frequently asked questions',schema_name:topic+' FAQ'} }
+    ],
+    interlink_map: [
+      {from:slug,to:slug+'-costs',anchor_text:topic+' costs',placement:'After H2: Benefits'},
+      {from:slug,to:'how-to-choose-'+slug,anchor_text:'how to choose a '+topic+' service',placement:'After H2: How it works'},
+      {from:slug,to:slug+'-near-me',anchor_text:'find '+topic+' near you',placement:'In introduction paragraph'},
+      {from:slug,to:slug+'-faq',anchor_text:'common '+topic+' questions',placement:'After H2: FAQ'},
+      {from:slug+'-costs',to:slug,anchor_text:topic+' complete guide',placement:'In introduction paragraph'},
+      {from:'how-to-choose-'+slug,to:slug,anchor_text:'learn more about '+topic,placement:'In conclusion'},
+      {from:slug+'-near-me',to:slug,anchor_text:topic+' guide',placement:'After H2: What to expect'},
+      {from:slug+'-faq',to:slug,anchor_text:'full '+topic+' guide',placement:'After last FAQ item'}
+    ],
+    build_order: [slug, slug+'-costs', 'how-to-choose-'+slug, slug+'-near-me', slug+'-faq'],
+    estimated_total_words: 8200,
+    gsc_opportunity: 'Check existing pages for mentions of '+topic+' and add 1 internal link to the hub page'
+  };
+}
+
+// ── RENDER CLUSTER ────────────────────────────────────────────────
+function renderClusterResult(c, topic) {
+  var msgs = document.getElementById('messages');
+  var div = document.createElement('div');
+  div.className = 'msg agent';
+
+  // ── Header ──
+  var spokeCount = (c.spokes||[]).length;
+  var totalWords = c.estimated_total_words || (c.spokes||[]).reduce(function(s,sp){return s+(sp.word_count||0);},0) + (c.hub&&c.hub.word_count||0);
+
+  // ── Hub card ──
+  var hub = c.hub || {};
+  var hubHtml = '<div style="background:linear-gradient(135deg,rgba(245,109,0,.08),rgba(245,109,0,.03));border:1px solid rgba(245,109,0,.3);border-radius:10px;padding:14px;margin-bottom:10px;">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+    '<span style="font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;font-family:JetBrains Mono,monospace;">⬡ HUB PAGE</span>' +
+    '<span style="font-size:10px;color:var(--muted);">' + (hub.word_count||2500).toLocaleString() + ' words</span>' +
+    '</div>' +
+    '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">' + escH(hub.title||'') + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);font-family:JetBrains Mono,monospace;margin-bottom:8px;">/' + escH(hub.slug||'') + ' · ' + escH(hub.target_keyword||'') + '</div>' +
+    (hub.meta_description ? '<div style="font-size:11px;color:var(--muted2);background:var(--bg);padding:7px 10px;border-radius:5px;margin-bottom:8px;line-height:1.5;">' + escH(hub.meta_description) + ' <span style="color:'+(hub.meta_description.length>=155&&hub.meta_description.length<=160?'var(--green)':'var(--amber)')+';">(' + hub.meta_description.length + ')</span></div>' : '') +
+    '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-family:JetBrains Mono,monospace;">H2 Structure</div>' +
+    (hub.h2_structure||[]).map(function(h,i){ return '<div style="font-size:12px;color:var(--text);padding:3px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);margin-right:6px;font-family:JetBrains Mono,monospace;">H2</span>' + escH(h) + '</div>'; }).join('') +
+    (hub.ai_overview_angle ? '<div style="margin-top:8px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:5px;padding:7px 10px;font-size:11px;color:var(--purple);">✦ AI Overview angle: ' + escH(hub.ai_overview_angle) + '</div>' : '') +
+    (hub.image ? '<div style="margin-top:8px;font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;">🖼 ' + escH(hub.image.filename) + ' · alt: "' + escH(hub.image.alt) + '"</div>' : '') +
+    '</div>';
+
+  // ── Spoke cards ──
+  var funnelColors = { tofu:'var(--blue)', mofu:'var(--purple)', bofu:'var(--green)' };
+  var funnelIcons  = { tofu:'📖', mofu:'🔍', bofu:'💰' };
+  var spokesHtml = (c.spokes||[]).map(function(s, i) {
+    var fc = funnelColors[s.funnel] || 'var(--muted)';
+    var fi = funnelIcons[s.funnel] || '📄';
+    return '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+      '<span style="font-size:10px;font-weight:800;color:var(--muted);font-family:JetBrains Mono,monospace;">SPOKE ' + (i+1) + '</span>' +
+      '<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:'+fc+'1a;border:1px solid '+fc+'44;color:'+fc+';font-weight:700;font-family:JetBrains Mono,monospace;">' + fi + ' ' + (s.funnel||'').toUpperCase() + '</span>' +
+      '<span style="font-size:10px;color:var(--muted);">' + (s.word_count||1400).toLocaleString() + ' words</span>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;">' + escH(s.title||'') + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;margin-bottom:6px;">/' + escH(s.slug||'') + ' · ' + escH(s.target_keyword||'') + '</div>' +
+      (s.search_intent ? '<div style="font-size:11px;color:var(--muted2);margin-bottom:4px;">Intent: ' + escH(s.search_intent) + '</div>' : '') +
+      (s.voice_search_phrase ? '<div style="font-size:11px;color:var(--blue);margin-bottom:4px;">🎙️ ' + escH(s.voice_search_phrase) + '</div>' : '') +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">' + (s.h2_structure||[]).slice(0,4).map(function(h){ return '<span style="font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--muted2);">H2: '+escH(h)+'</span>'; }).join('') + '</div>' +
+      (s.image ? '<div style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;">🖼 ' + escH(s.image.filename) + ' · alt: "' + escH(s.image.alt) + '"</div>' : '') +
+      '</div>';
+  }).join('');
+
+  // ── Interlink map ──
+  var linkMap = c.interlink_map || [];
+  var linkHtml = linkMap.length ?
+    '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;margin-bottom:10px;">' +
+    '<div style="padding:8px 12px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:JetBrains Mono,monospace;border-bottom:1px solid var(--border);">🔗 Interlink Map (' + linkMap.length + ' links)</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+    '<thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">From</th><th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">To</th><th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Anchor Text</th><th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Placement</th></tr></thead>' +
+    '<tbody>' +
+    linkMap.map(function(lk, i) {
+      var fromIsHub = lk.from === (c.hub&&c.hub.slug);
+      var toIsHub   = lk.to   === (c.hub&&c.hub.slug);
+      return '<tr style="border-bottom:1px solid var(--border);">' +
+        '<td style="padding:6px 10px;font-family:JetBrains Mono,monospace;color:'+(fromIsHub?'var(--accent)':'var(--muted2)')+';font-size:10px;">' + escH(lk.from||'') + '</td>' +
+        '<td style="padding:6px 10px;font-family:JetBrains Mono,monospace;color:'+(toIsHub?'var(--accent)':'var(--blue)')+';font-size:10px;">' + escH(lk.to||'') + '</td>' +
+        '<td style="padding:6px 10px;color:var(--text);font-style:italic;">"' + escH(lk.anchor_text||'') + '"</td>' +
+        '<td style="padding:6px 10px;color:var(--muted2);font-size:10px;">' + escH(lk.placement||'') + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>' +
+    '</div>' : '';
+
+  // ── Build order ──
+  var orderHtml = (c.build_order||[]).length ?
+    '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+    '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:JetBrains Mono,monospace;">📋 Build Order</div>' +
+    (c.build_order||[]).map(function(slug, i) {
+      var isHub = slug === (c.hub&&c.hub.slug);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">' +
+        '<span style="font-size:11px;font-weight:800;color:var(--muted);font-family:JetBrains Mono,monospace;width:20px;">' + (i+1) + '</span>' +
+        '<span style="font-size:12px;font-family:JetBrains Mono,monospace;color:'+(isHub?'var(--accent)':'var(--text)')+';font-weight:'+(isHub?'700':'400')+';">/' + escH(slug) + '</span>' +
+        (isHub?'<span style="font-size:9px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.06em;">HUB — build first</span>':'') +
+        '</div>';
+    }).join('') +
+    (c.gsc_opportunity ? '<div style="margin-top:8px;font-size:11px;color:var(--amber);">💡 GSC boost: ' + escH(c.gsc_opportunity) + '</div>' : '') +
+    '</div>' : '';
+
+  // ── Export button ──
+  var exportHtml = '<button onclick="exportClusterCsv(window._lastCluster)" class="act-btn green" style="font-size:11px;padding:6px 12px;margin-right:6px;">⬇ Export CSV</button>' +
+    '<button onclick="writeAndExportCluster(window._lastCluster)" class="act-btn primary" style="font-size:11px;padding:6px 12px;margin-right:6px;">✍️ Write &amp; Export HTML</button>' +
+    '<button onclick="copyClusterMarkdown(window._lastCluster)" class="act-btn" style="font-size:11px;padding:6px 12px;">📋 Copy Plan</button>';
+
+  // Store for export
+  window._lastCluster = c;
+
+  div.innerHTML =
+    '<div class="msg-av">⬡</div>' +
+    '<div class="msg-body"><div class="msg-name">NEXUS — Cluster Plan</div>' +
+    '<div class="bubble" style="padding:16px;max-width:800px;">' +
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
+    '<div style="font-family:Barlow Condensed,sans-serif;font-size:18px;font-weight:900;color:var(--accent);">' + escH(topic.toUpperCase()) + '</div>' +
+    '<div style="font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace;">1 hub · ' + spokeCount + ' spokes · ~' + totalWords.toLocaleString() + ' words total</div>' +
+    '</div>' +
+    hubHtml + spokesHtml + linkHtml + orderHtml +
+    '<div style="margin-top:8px;">' + exportHtml + '</div>' +
+    '</div></div>';
+
+  msgs.appendChild(div);
+  scrollBottom();
+}
+
+// ── EXPORT HELPERS ────────────────────────────────────────────────
+function exportClusterCsv(c) {
+  if (!c) { toast('No cluster to export', 'err'); return; }
+  var rows = [['Type','Title','Slug','Keyword','Funnel','Words','H2s','Meta Description','Image Filename','Image Alt']];
+  // Hub
+  var h = c.hub||{};
+  rows.push(['HUB', h.title||'', h.slug||'', h.target_keyword||'', 'authority', h.word_count||2800, (h.h2_structure||[]).join(' | '), h.meta_description||'', h.image&&h.image.filename||'', h.image&&h.image.alt||'']);
+  // Spokes
+  (c.spokes||[]).forEach(function(s,i){
+    rows.push(['SPOKE '+(i+1), s.title||'', s.slug||'', s.target_keyword||'', s.funnel||'', s.word_count||1400, (s.h2_structure||[]).join(' | '), s.meta_description||'', s.image&&s.image.filename||'', s.image&&s.image.alt||'']);
+  });
+  rows.push([]);
+  rows.push(['INTERLINK MAP','','','','','','','','','']);
+  rows.push(['From','To','Anchor Text','Placement','','','','','','']);
+  (c.interlink_map||[]).forEach(function(lk){
+    rows.push([lk.from||'', lk.to||'', lk.anchor_text||'', lk.placement||'','','','','','','']);
+  });
+  var csv = rows.map(function(r){return r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob = new Blob([csv],{type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (c.topic||'cluster').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-cluster-plan.csv';
+  a.click();
+  toast('Cluster plan exported as CSV', 'ok');
+}
+
+// ── EXPORT CLUSTER AS HTML PAGES ─────────────────────────────────
+async function writeAndExportCluster(c) {
+  if (!c) { toast('No cluster plan — build one first', 'err'); return; }
+  if (!_activeProfile) { toast('Select a profile first', 'err'); return; }
+
+  var pages = [];
+  if (c.hub) pages.push({ label:'HUB', order:1, page:c.hub });
+  (c.spokes||[]).forEach(function(s,i){ pages.push({ label:'SPOKE '+(i+1), order:i+2, page:s }); });
+
+  addAgentMsg('Writing all **' + pages.length + '** pages now — this takes a few minutes. Each file downloads automatically as it finishes.');
+  var pid = addProgress('Writing cluster page 1 of ' + pages.length + '…');
+  var written = 0;
+
+  for (var i = 0; i < pages.length; i++) {
+    var entry = pages[i];
+    var p = entry.page;
+    progSet(pid, Math.round((i/pages.length)*85), 'Writing ' + entry.label + ': ' + (p.title||'').substring(0,38) + '…');
+
+    try {
+      // 1. Research
+      var resResp = await api('/api/content/research', 'POST', {
+        profile_id:   _activeProfile.id,
+        seed_keyword: p.target_keyword || p.title,
+        search_intent: p.funnel==='bofu'?'commercial':p.funnel==='mofu'?'commercial':'informational',
+        funnel_stage: p.funnel || 'tofu'
+      });
+      if (!resResp.success) throw new Error('Research failed: ' + (resResp.error||'unknown'));
+      var jobId = resResp.job_id;
+
+      // 2. Poll research (max 90s)
+      var resResult = null;
+      for (var r=0; r<45; r++) {
+        await sleep(2000);
+        var rp = await api('/api/content/research/' + jobId);
+        if (rp.status==='completed') { resResult=rp; break; }
+        if (rp.status==='error') throw new Error('Research error: '+(rp.error||'unknown'));
+      }
+      if (!resResult) throw new Error('Research timed out for ' + p.title);
+
+      // 3. Write
+      var writeResp = await api('/api/content/write/' + jobId, 'POST', { title_override: p.title });
+      if (!writeResp.success) throw new Error('Write start failed: '+(writeResp.error||'unknown'));
+      var writeJobId = writeResp.write_job_id;
+
+      // 4. Poll write (max 3min)
+      var articleHtml = null;
+      var articleId   = null;
+      for (var w=0; w<90; w++) {
+        await sleep(2000);
+        var wp = await api('/api/content/write-job/' + writeJobId);
+        if (wp.status==='completed') {
+          articleId = wp.article_id;
+          if (articleId) {
+            var artResp = await api('/api/content/articles/' + _activeProfile.id);
+            var art = (artResp.articles||[]).find(function(a){ return a.id===articleId; });
+            if (art) articleHtml = art.html_content;
+          }
+          break;
+        }
+        if (wp.status==='error') throw new Error('Write error: '+(wp.error||'unknown'));
+      }
+      if (!articleHtml) throw new Error('No HTML returned for ' + p.title);
+
+      // 5. Inject schemas + download
+      var finalHtml = injectSchemasIntoHtml(articleHtml, p, c, entry, i+1);
+      downloadHtmlFile(finalHtml, String(entry.order).padStart(2,'0')+'-'+(entry.label==='HUB'?'HUB-':'SPOKE-')+(p.slug||'page')+'.html');
+
+      written++;
+      memRemember('page', 'https://'+(_activeProfile.domain||'site')+'/'+p.slug+'/', { written:true, writtenAt:new Date().toISOString(), articleId:articleId });
+      toast('✓ '+ entry.label +' written', 'ok');
+
+    } catch(e) {
+      toast('✗ '+entry.label+' failed: '+e.message, 'err');
+      // Export shell so nothing is lost
+      var shellHtml = buildShellHtml(p, c, entry, i+1);
+      downloadHtmlFile(shellHtml, String(entry.order).padStart(2,'0')+'-SHELL-'+(p.slug||'page')+'.html');
+    }
+
+    if (i < pages.length-1) await sleep(800);
+  }
+
+  progSet(pid,100,'Done!'); progRemove(pid);
+  addAgentMsg('Done — **' + written + '/' + pages.length + '** pages written and exported. ' +
+    'Each HTML file has full content, all 4 schema types, internal links, and image instructions built in.');
+  memRemember('session_summary', null, 'Wrote '+written+' cluster pages for: '+(c.topic||'cluster'));
+  addActions(['Scan all pages for ContentScore', 'Start a new cluster', 'Something else']);
+}
+
+function downloadHtmlFile(content, filename) {
+  var blob = new Blob([content], {type:'text/html'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function injectSchemasIntoHtml(articleHtml, p, c, entry, pageNum) {
+  var domain    = (_activeProfile&&_activeProfile.domain)||'example.com';
+  var siteName  = (_activeProfile&&_activeProfile.name)||'ContentScale';
+  var lang      = (_activeProfile&&_activeProfile.language)||'en';
+  var schemaType= (_activeProfile&&_activeProfile.schema_type)||'LocalBusiness';
+  var year      = new Date().getFullYear();
+  var isHub     = entry.label==='HUB';
+  var slug      = p.slug||'page-'+pageNum;
+  var links     = (c.interlink_map||[]).filter(function(lk){ return lk.from===slug; });
+
+  var articleSchema = {
+    "@context":"https://schema.org","@type":"Article",
+    "headline":p.title||'', "description":p.meta_description||'',
+    "author":{"@type":"Person","name":(_activeProfile&&_activeProfile.owner_name)||siteName},
+    "publisher":{"@type":schemaType,"name":siteName,"url":"https://"+domain},
+    "datePublished":year+"-01-01","dateModified":year+"-01-01",
+    "mainEntityOfPage":{"@type":"WebPage","@id":"https://"+domain+"/"+slug+"/"},
+    "inLanguage":lang,"wordCount":p.word_count||1400
+  };
+  if (p.image&&p.image.filename) articleSchema.image={"@type":"ImageObject",
+    "name":p.image.schema_name||p.title,"url":"https://"+domain+"/images/"+p.image.filename,"width":1200,"height":630};
+
+  var crumbs=[{"@type":"ListItem","position":1,"name":"Home","item":"https://"+domain+"/"}];
+  if (!isHub&&c.hub) {
+    crumbs.push({"@type":"ListItem","position":2,"name":c.hub.title||c.topic,"item":"https://"+domain+"/"+(c.hub.slug||"")+"/"});
+    crumbs.push({"@type":"ListItem","position":3,"name":p.title,"item":"https://"+domain+"/"+slug+"/"});
+  } else crumbs.push({"@type":"ListItem","position":2,"name":p.title,"item":"https://"+domain+"/"+slug+"/"});
+
+  var faqSchema = p.h2_structure&&p.h2_structure.length ? {"@context":"https://schema.org","@type":"FAQPage","mainEntity":
+    p.h2_structure.map(function(h){return {"@type":"Question","name":h+"?",
+      "acceptedAnswer":{"@type":"Answer","text":"See article section: "+h}};})} : null;
+
+  var speakableSchema={"@context":"https://schema.org","@type":"WebPage","name":p.title,
+    "speakable":{"@type":"SpeakableSpecification","cssSelector":["#direct-answer",".speakable","h1","h2"]},
+    "url":"https://"+domain+"/"+slug+"/"};
+
+  var schemas =
+    '<script type="application/ld+json">\n'+JSON.stringify(articleSchema,null,2)+'\n</script>\n'+
+    '<script type="application/ld+json">\n'+JSON.stringify({"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":crumbs},null,2)+'\n</script>\n'+
+    (faqSchema?'<script type="application/ld+json">\n'+JSON.stringify(faqSchema,null,2)+'\n</script>\n':'')+
+    '<script type="application/ld+json">\n'+JSON.stringify(speakableSchema,null,2)+'\n</script>';
+
+  var metaComment =
+    '<!-- ═══ META\nTitle:   '+p.title+'\nSlug:    /'+slug+'/\nKeyword: '+(p.target_keyword||'')+'\nFunnel:  '+(p.funnel||(isHub?'authority':''))+'\n════ -->';
+
+  var imgComment = p.image&&p.image.filename ?
+    '\n<!-- ═══ IMAGE\nFilename: '+p.image.filename+'\nAlt:      '+p.image.alt+'\nSize:     1200×630px\n════ -->' : '';
+
+  var linkComment = links.length ?
+    '\n<!-- ═══ INTERNAL LINKS\n'+links.map(function(lk){return '→ /'+lk.to+'/  anchor: "'+lk.anchor_text+'"  place: '+(lk.placement||'in body');}).join('\n')+'\n════ -->' : '';
+
+  // Strip existing head from written HTML, inject our head
+  var body = articleHtml
+    .replace(/<!DOCTYPE[^>]*>/gi,'')
+    .replace(/<html[^>]*>/gi,'').replace(/<\/html>/gi,'')
+    .replace(/<head[\s\S]*?<\/head>/gi,'')
+    .replace(/<body[^>]*>/gi,'').replace(/<\/body>/gi,'')
+    .trim();
+
+  return '<!DOCTYPE html>\n<html lang="'+lang+'">\n<head>\n'+
+    '<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'+
+    metaComment+'\n'+
+    '<title>'+p.title+'</title>\n'+
+    '<meta name="description" content="'+(p.meta_description||'')+'">\n'+
+    '<link rel="canonical" href="https://'+domain+'/'+slug+'/">\n'+
+    schemas+'\n</head>\n<body>\n'+
+    imgComment+'\n\n'+body+linkComment+'\n</body>\n</html>';
+}
+
+function buildShellHtml(p, c, entry, pageNum) {
+  return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>'+(p.title||'')+'</title>\n'+
+    '<meta name="description" content="'+(p.meta_description||'')+'">\n</head>\n<body>\n'+
+    '<h1>'+(p.title||'')+'</h1>\n<!-- NOTE: auto-write failed — fill content manually -->\n'+
+    (p.h2_structure||[]).map(function(h){return '<h2>'+h+'</h2>\n<p></p>\n';}).join('')+
+    '</body>\n</html>';
+}
+
+function copyClusterMarkdown(c) {
+  if (!c) { toast('No cluster to copy', 'err'); return; }
+  var md = '# Topical Cluster: ' + (c.topic||'') + '\n\n';
+  md += '## Hub Page\n';
+  md += '**Title:** ' + (c.hub&&c.hub.title||'') + '\n';
+  md += '**Slug:** /' + (c.hub&&c.hub.slug||'') + '\n';
+  md += '**Keyword:** ' + (c.hub&&c.hub.target_keyword||'') + '\n';
+  md += '**Words:** ' + (c.hub&&c.hub.word_count||2800) + '\n';
+  md += '**Meta:** ' + (c.hub&&c.hub.meta_description||'') + '\n\n';
+  md += '### H2 Structure\n' + (c.hub&&c.hub.h2_structure||[]).map(function(h,i){return (i+1)+'. '+h;}).join('\n') + '\n\n';
+  md += '## Spoke Pages\n\n';
+  (c.spokes||[]).forEach(function(s,i){
+    md += '### Spoke '+(i+1)+': '+s.title+'\n';
+    md += '- Slug: /'+s.slug+'\n- Keyword: '+s.target_keyword+'\n- Funnel: '+s.funnel+'\n- Words: '+s.word_count+'\n';
+    md += '- H2s: '+s.h2_structure.join(' / ')+'\n\n';
+  });
+  md += '## Interlink Map\n\n';
+  (c.interlink_map||[]).forEach(function(lk){
+    md += '- **'+lk.from+'** → **'+lk.to+'** | "'+lk.anchor_text+'" | '+lk.placement+'\n';
+  });
+  md += '\n## Build Order\n';
+  (c.build_order||[]).forEach(function(s,i){md += (i+1)+'. /'+s+'\n';});
+  if (navigator.clipboard) navigator.clipboard.writeText(md).then(function(){toast('Cluster plan copied as Markdown','ok');});
+  else { var ta=document.createElement('textarea');ta.value=md;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Cluster plan copied','ok'); }
+}
+
 async function loadTrackerPages() {
   try {
     var data = await api('/api/tracker/pages');
