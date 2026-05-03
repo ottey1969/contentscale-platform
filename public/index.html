@@ -1948,7 +1948,9 @@
          const priorityConfig = {
          high: { color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: '#7f1d1d', label: '🔴 High Priority' },
          medium: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: '#78350f', label: '🟡 Medium Priority' },
-         low: { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' },
+         low: score >= 90
+           ? { color: '#4ade80', bg: 'rgba(74,222,128,0.06)', border: '#14532d', label: '✨ Growth Opportunity' }
+           : { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: '#1e3a5f', label: '🔵 Quick Win' },
          none: { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: '#14532d', label: '✅ All Good' }
          };
          const highCount = recs.filter(r => r.priority === 'high').length;
@@ -1956,10 +1958,14 @@
          const lowCount = recs.filter(r => r.priority === 'low').length;
          const recCards = recs.map((rec, i) => {
          const p = priorityConfig[rec.priority] || priorityConfig.low;
+         // For Elite scores, clean up "Boost to Elite:" prefix since page IS Elite
+         const cleanTitle = score >= 90
+           ? rec.title.replace(/^(📈|💬|📊|🔵|🔴|🟡)\s*Boost to Elite:\s*/i, '').replace(/^Boost to Elite:\s*/i, '')
+           : rec.title;
          return `
          <div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:16px;margin-bottom:10px;">
          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
-         <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${rec.title}</div>
+         <div style="font-weight:700;font-size:0.95rem;color:#f1f5f9!important;line-height:1.3;">${score >= 90 ? '✨ ' : ''}${cleanTitle}</div>
          <span style="font-size:0.7rem;color:${p.color}!important;white-space:nowrap;font-weight:600;margin-top:2px;">${p.label}</span>
          </div>
          <p style="font-size:0.82rem;color:#94a3b8!important;margin-bottom:10px;line-height:1.5;">${rec.description}</p>
@@ -2019,14 +2025,64 @@
          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasArticleSchema ? '#4ade80' : '#f87171'}!important;">${stats.hasArticleSchema ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">schema</div></div>
          <div style="text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:${stats.hasCanonical ? '#4ade80' : '#f87171'}!important;">${stats.hasCanonical ? '✅' : '❌'}</div><div style="font-size:0.68rem;color:#6b7280!important;">canonical</div></div>
          </div>` : ''}
+
+         <!-- ═══ PULSE + NEXUS AUDIT EDUCATION BLOCK ═══ -->
+         <div style="background:linear-gradient(135deg,#0f1629,#0a0f1a);border:1px solid #1e3a5f;border-radius:12px;padding:20px;margin-bottom:18px;position:relative;overflow:hidden;">
+           <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#7e22ce,#3b82f6,#06b6d4);"></div>
+           <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
+             <div style="font-size:1.4rem;flex-shrink:0;margin-top:1px;">🔬</div>
+             <div>
+               <div style="font-weight:800;font-size:0.95rem;color:#f1f5f9!important;margin-bottom:3px;">${score >= 90 ? 'Your score is excellent — but the ContentScore only measures your page.' : "Your ContentScore measures the page. Rankings are decided by what\'s around it."}</div>
+               <div style="font-size:0.78rem;color:#94a3b8!important;line-height:1.6;">To actually move in Google rankings, you need to know <strong style="color:#e2e8f0!important;">why competitors outrank you</strong>, what Google puts in <strong style="color:#e2e8f0!important;">AI Overviews</strong> instead of your page, and which <strong style="color:#e2e8f0!important;">voice search queries</strong> you are missing. That requires a <strong style="color:#c084fc!important;">PULSE + NEXUS deep-dive audit</strong> — not just a page scan.</div>
+             </div>
+           </div>
+           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+             <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:8px;padding:12px;">
+               <div style="font-size:0.68rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">📊 PULSE Audit</div>
+               <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;">
+                 <li style="font-size:0.75rem;color:#c4b5fd!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#7c3aed!important;flex-shrink:0;">→</span>GSC data: clicks, impressions &amp; CTR gap by page</li>
+                 <li style="font-size:0.75rem;color:#c4b5fd!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#7c3aed!important;flex-shrink:0;">→</span>Why you rank but don't get clicks</li>
+                 <li style="font-size:0.75rem;color:#c4b5fd!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#7c3aed!important;flex-shrink:0;">→</span>Pages with highest ranking recovery potential</li>
+                 <li style="font-size:0.75rem;color:#c4b5fd!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#7c3aed!important;flex-shrink:0;">→</span>Voice search query analysis for your niche</li>
+               </ul>
+             </div>
+             <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:8px;padding:12px;">
+               <div style="font-size:0.68rem;font-weight:700;color:#67e8f9!important;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">🔭 NEXUS Audit</div>
+               <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;">
+                 <li style="font-size:0.75rem;color:#a5f3fc!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#0891b2!important;flex-shrink:0;">→</span>Who gets cited in AI Overviews — and exactly why</li>
+                 <li style="font-size:0.75rem;color:#a5f3fc!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#0891b2!important;flex-shrink:0;">→</span>What Google positions 1–5 have that your page lacks</li>
+                 <li style="font-size:0.75rem;color:#a5f3fc!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#0891b2!important;flex-shrink:0;">→</span>Competitor content gaps you can close to outrank</li>
+                 <li style="font-size:0.75rem;color:#a5f3fc!important;display:flex;gap:6px;align-items:flex-start;"><span style="color:#0891b2!important;flex-shrink:0;">→</span>Reverse-engineering AI Overview citations</li>
+               </ul>
+             </div>
+           </div>
+           <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;border-left:3px solid #7c3aed;">
+             <div style="font-size:0.72rem;color:#94a3b8!important;line-height:1.65;"><strong style="color:#e2e8f0!important;">ContentScore measures your page in isolation.</strong> PULSE + NEXUS measures it against your GSC data, your competitors, AI Overviews, and voice search — the four dimensions that decide whether a page actually climbs in 2026.</div>
+           </div>
+           <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20scanned%20${encodeURIComponent(data.url||'')}%20and%20got%20${score}/100.%20I%20want%20a%20PULSE%20%2B%20NEXUS%20deep-dive%20audit."
+              target="_blank" rel="noopener"
+              style="display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:white!important;padding:12px 18px;border-radius:9px;font-weight:700;text-decoration:none;font-size:0.85rem;width:100%;box-sizing:border-box;">
+             <i class="fab fa-whatsapp"></i> Get a PULSE + NEXUS Deep-Dive Audit — WhatsApp Ottmar
+           </a>
+         </div>
+         <!-- ═══ END PULSE + NEXUS BLOCK ═══ -->
+         ${score >= 90 ? `
+         <div style="background:linear-gradient(135deg,rgba(16,163,74,0.12),rgba(74,222,128,0.06));border:1px solid rgba(74,222,128,0.3);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+           <span style="font-size:1.8rem;line-height:1;">🏅</span>
+           <div>
+             <div style="font-weight:800;font-size:0.95rem;color:#4ade80!important;">Elite Score — This Page Is Performing Excellently</div>
+             <div style="font-size:0.78rem;color:#86efac!important;margin-top:2px;">No critical or medium issues found. The items below are optional growth opportunities to push even further.</div>
+           </div>
+         </div>` : ''}
          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
          <div style="font-weight:800;font-size:1rem;color:#f1f5f9!important;">
-         📋 ${recs.length} Recommendation${recs.length !== 1 ? 's' : ''}
+         ${score >= 90 ? `✨ ${recs.length} Growth Opportunit${recs.length !== 1 ? 'ies' : 'y'}` : `📋 ${recs.length} Recommendation${recs.length !== 1 ? 's' : ''}`}
          </div>
          <div style="display:flex;gap:8px;font-size:0.75rem;">
          ${highCount > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#f87171!important;padding:2px 8px;border-radius:99px;border:1px solid #7f1d1d;">${highCount} high</span>` : ''}
          ${medCount > 0 ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24!important;padding:2px 8px;border-radius:99px;border:1px solid #78350f;">${medCount} medium</span>` : ''}
-         ${lowCount > 0 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa!important;padding:2px 8px;border-radius:99px;border:1px solid #1e3a5f;">${lowCount} quick win${lowCount !== 1 ? 's' : ''}</span>` : ''}
+         ${lowCount > 0 && score < 90 ? `<span style="background:rgba(96,165,250,0.15);color:#60a5fa!important;padding:2px 8px;border-radius:99px;border:1px solid #1e3a5f;">${lowCount} quick win${lowCount !== 1 ? 's' : ''}</span>` : ''}
+         ${lowCount > 0 && score >= 90 ? `<span style="background:rgba(74,222,128,0.12);color:#4ade80!important;padding:2px 8px;border-radius:99px;border:1px solid #166534;">${lowCount} optional</span>` : ''}
          </div>
          </div>
          ${recCards}
@@ -2158,7 +2214,7 @@
          ${r.target ? `<p style="font-size:12px;color:#16a34a;margin:8px 0 0;font-weight:600;">🎯 Target: ${r.target}</p>` : ''}
          </div>`;
          }).join('');
-         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Report — ${url}</title><style>* { box-sizing:border-box; margin:0; padding:0; }body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }@media print {.no-print { display:none !important; }body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }.page-break { page-break-before:always; }}</style></head><body style="max-width:800px;margin:0 auto;padding:0;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Website SEO Report</h1><p style="font-size:14px;opacity:0.85;">Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendations</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr></table></div></div></div>${recRows}<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button><p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p></div></body></html>`;
+         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ContentScale Single Page Report — ${url}</title><style>* { box-sizing:border-box; margin:0; padding:0; }body { font-family:Arial,Helvetica,sans-serif; background:#fff; color:#111827; }@media print {.no-print { display:none !important; }body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }.page-break { page-break-before:always; }}</style></head><body style="max-width:800px;margin:0 auto;padding:0;"><div style="background:linear-gradient(135deg,#5b21b6,#7e22ce,#be185d);padding:40px 40px 36px;color:white;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;"><div><div style="font-size:22px;font-weight:900;letter-spacing:-0.5px;">ContentScale</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">SEO Recovery Platform · Amsterdam</div></div><div style="text-align:right;"><div style="font-size:12px;opacity:0.75;">Generated</div><div style="font-size:13px;font-weight:700;">${today}</div></div></div><div style="font-size:13px;opacity:0.7;word-break:break-all;margin-bottom:6px;">${url}</div><h1 style="font-size:28px;font-weight:900;margin-bottom:6px;line-height:1.2;">Single Page SEO Report</h1><p style="font-size:14px;opacity:0.85;">${score >= 90 ? `Full GRAAF + CRAFT analysis · Elite Score · ${recs.length} growth opportunit${recs.length!==1?"ies":"y"}` : `Full GRAAF + CRAFT analysis with ${recs.length} actionable recommendation${recs.length!==1?"s":""}`}</p></div><div style="padding:32px 40px;background:#f9fafb;border-bottom:2px solid #e5e7eb;"><div style="display:flex;align-items:center;gap:40px;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div><div style="font-size:14px;color:#6b7280;margin-top:2px;">out of 100</div><div style="display:inline-block;background:${scoreColor};color:white;font-size:12px;font-weight:700;padding:4px 16px;border-radius:99px;margin-top:8px;">${scoreLabel}</div><div style="display:inline-block;background:rgba(255,255,255,0.15);color:white;font-size:11px;font-weight:600;padding:3px 12px;border-radius:99px;margin-top:6px;margin-left:6px;">📄 Single Page Scan</div></div><div style="flex:1;min-width:200px;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 6px;"><tr><td style="background:#f5f3ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">GRAAF <span style="font-weight:400;color:#9ca3af;font-size:12px;">Credibility &amp; Relevance</span></td><td style="background:#f5f3ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#7e22ce;text-align:right;white-space:nowrap;">${metrics.graaf||0} / 50</td></tr><tr><td style="background:#eff6ff;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">CRAFT <span style="font-weight:400;color:#9ca3af;font-size:12px;">Content Quality</span></td><td style="background:#eff6ff;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#1d4ed8;text-align:right;white-space:nowrap;">${metrics.craft||0} / 30</td></tr><tr><td style="background:#fefce8;padding:12px 16px;border-radius:8px 0 0 8px;font-size:14px;font-weight:600;color:#374151;">Technical <span style="font-weight:400;color:#9ca3af;font-size:12px;">Speed &amp; Structure</span></td><td style="background:#fefce8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:18px;font-weight:900;color:#b45309;text-align:right;white-space:nowrap;">${metrics.technical||0} / 20</td></tr></table></div></div></div>${score >= 90 ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:18px 24px;margin:24px 40px 0;"><div style="font-weight:800;font-size:14px;color:#166534;margin-bottom:4px;">🏅 Elite Score — Excellent Performance</div><p style="font-size:13px;color:#15803d;margin:0;">No critical or medium priority issues were found. The items below are optional growth opportunities to push this page even further.</p></div>` : ""}${score >= 90 ? recRows.replace(/actionable recommendation/g,"growth opportunit") : recRows}<div style="background:#111827;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;"><div><div style="color:white;font-weight:700;font-size:14px;">ContentScale SEO Platform</div><div style="color:#9ca3af;font-size:12px;margin-top:2px;">Ottmar JG Francisca · Amsterdam, Netherlands</div></div><div style="text-align:right;"><div style="color:#9ca3af;font-size:12px;">app.contentscale.site</div><div style="color:#9ca3af;font-size:12px;">+31 6 2807 3996</div></div></div><div class="no-print" style="text-align:center;padding:24px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button><p style="color:#9ca3af;font-size:12px;margin-top:10px;">Use your browser's Print → Save as PDF option</p></div></body></html>`;
          const win = window.open('', '_blank');
          if (!win) { alert('Please allow popups to export the PDF report.'); if (btn) { btn.disabled = false; btn.textContent = '⬇ Export PDF'; } return; }
          win.document.write(html);
