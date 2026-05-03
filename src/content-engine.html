@@ -476,8 +476,8 @@ function renderBizInfo() {
   ].filter(function(f) { return f.val; });
 
   var usps = p.unique_selling_points ? (typeof p.unique_selling_points === 'string' ? p.unique_selling_points.split('\n') : p.unique_selling_points) : [];
-  var certs = p.certifications ? (typeof p.certifications === 'string' ? p.certifications.split('
-') : p.certifications) : [];
+  var certs = p.certifications ? (typeof p.certifications === 'string' ? p.certifications.split('\n') : p.certifications) : [];
+
 
   el.innerHTML = fields.map(function(f) {
     return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:8px;"><span style="color:var(--muted);flex-shrink:0;width:72px;">' + f.label + '</span><span style="color:var(--text);word-break:break-word;">' + escHtml(String(f.val)) + '</span></div>';
@@ -1790,7 +1790,7 @@ function injectClusterSchemas(articleHtml, p, c, entry, pageNum) {
   var faqSchema = p.h2_structure&&p.h2_structure.length ? {"@context":"https://schema.org","@type":"FAQPage","mainEntity":p.h2_structure.map(function(h){return{"@type":"Question","name":h+"?","acceptedAnswer":{"@type":"Answer","text":"See article section: "+h}};})} : null;
   var spSchema = {"@context":"https://schema.org","@type":"WebPage","name":p.title,"speakable":{"@type":"SpeakableSpecification","cssSelector":["#direct-answer",".speakable","h1","h2"]},"url":"https://"+domain+"/"+slug+"/"};
 
-  // Build schema script tags safely (split tag so HTML parser doesn't see </script>)
+  // Build schema script tags safely (split tag so HTML parser doesn't see closing script tag)
   var scr = '<scr'+'ipt type="application/ld+json">';
   var endScr = '<'+'/script>';
   var schemas = scr+'\n'+JSON.stringify(aSchema,null,2)+'\n'+endScr+'\n'+
