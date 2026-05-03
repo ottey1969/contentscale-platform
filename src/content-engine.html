@@ -176,6 +176,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
       <button id="navStats" onclick="switchView('stats')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📊 Stats</button>
+      <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
     </div>
     <div class="topbar-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1810,7 +1811,228 @@ function injectClusterSchemas(articleHtml, p, c, entry, pageNum) {
   var body = articleHtml.replace(/<!DOCTYPE[^>]*>/gi,'').replace(/<html[^>]*>/gi,'').replace(/<\/html>/gi,'').replace(/<head[\s\S]*?<\/head>/gi,'').replace(/<body[^>]*>/gi,'').replace(/<\/body>/gi,'').trim();
   var metaCmt = '<!-- META: '+p.title+' | /'+slug+'/ | '+p.target_keyword+' -->';
   var linkCmt = links.length ? '\n<!-- LINKS:\n'+links.map(function(lk){return '  -> /'+lk.to+'/ anchor: "'+lk.anchor_text+'" | '+lk.placement;}).join('\n')+'\n-->' : '';
-  return '<!DOCTYPE html>\n<html lang="'+lang+'">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'+metaCmt+'\n<title>'+p.title+'</title>\n<meta name="description" content="'+(p.meta_description||'')+'">\n<link rel="canonical" href="https://'+domain+'/'+slug+'/">\n'+schemas+'\n</head>\n<body>\n'+(p.image&&p.image.filename?'<!-- IMG: '+p.image.filename+' | alt: '+p.image.alt+' | 1200x630 -->\n':'')+'\n'+body+linkCmt+'\n</body>\n</html>';
+  return '<!DOCTYPE html>\n<html lang="'+lang+'">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'+metaCmt+'\n<title>'+p.title+'</title>\n<meta name="description" content="'+(p.meta_description||'')+'">\n<link rel="canonical" href="https://'+domain+'/'+slug+'/">\n'+schemas+'\n</head>\n<body>\n'+(p.image&&p.image.filename?'<!-- IMG: '+p.image.filename+' | alt: '+p.image.alt+' | 1200x630 -->\n':'')+'\n'+body+linkCmt+'\n
+<!-- PROFILES VIEW -->
+<div id="view-profiles" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;overflow-y:auto;padding:24px 28px;background:var(--bg);">
+
+  <div style="max-width:900px;margin:0 auto;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);">👤 Profiles</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Create and manage clients or sites. Each profile has its own memory, GSC data, and conversation context.</div>
+      </div>
+      <button onclick="openProfileModal(null)" style="padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">+ New Profile</button>
+    </div>
+
+    <!-- What you need to start — checklist -->
+    <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:18px 20px;margin-bottom:20px;">
+      <div style="font-size:10px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;font-family:monospace;">✦ Minimum needed to start a new profile</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">①</span><span><strong style="color:var(--text);">Business name</strong> — used in schema markup and agent context</span></div>
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">②</span><span><strong style="color:var(--text);">Domain</strong> — e.g. example.com — for canonical URLs and internal links</span></div>
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">③</span><span><strong style="color:var(--text);">Niche</strong> — what the business does, in plain language</span></div>
+        <div style="font-size:13px;color:var(--muted2);display:flex;gap:8px;align-items:flex-start;"><span style="color:#a78bfa;flex-shrink:0;">④</span><span><strong style="color:var(--text);">Language</strong> — content language (en, nl, de…)</span></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid rgba(255,255,255,.06);padding-top:10px;">Everything else — USPs, certifications, HTML template, WordPress credentials — can be added later and makes the agent smarter the more you fill in.</div>
+    </div>
+
+    <!-- Profile list -->
+    <div id="profilesList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+      <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">
+        <div style="font-size:24px;margin-bottom:8px;">👤</div>
+        <div>Connect first to load profiles</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div id="profileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9300;overflow-y:auto;padding:24px;">
+<div style="max-width:680px;margin:0 auto;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;">
+
+  <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:16px;font-weight:700;color:var(--text);" id="profileModalTitle">New Profile</div>
+    <button onclick="closeProfileModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+  </div>
+
+  <div style="padding:24px;" id="profileModalBody">
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:20px;background:rgba(255,255,255,.04);border-radius:8px;padding:4px;" id="profileTabs">
+      <button onclick="showProfileTab('basic')" id="ptab-basic" class="ptab active" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:rgba(245,109,0,.2);color:#f56d00;">① Basics</button>
+      <button onclick="showProfileTab('business')" id="ptab-business" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">② Business Info</button>
+      <button onclick="showProfileTab('template')" id="ptab-template" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">③ HTML Template</button>
+      <button onclick="showProfileTab('wordpress')" id="ptab-wordpress" class="ptab" style="flex:1;padding:7px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);">④ WordPress</button>
+    </div>
+
+    <!-- TAB: Basics -->
+    <div id="ptab-content-basic">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Business Name *</label>
+          <input id="pf-name" placeholder="New Jersey Drain Pro" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Domain</label>
+          <input id="pf-domain" placeholder="example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Language</label>
+          <select id="pf-language" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+            <option value="en">English</option>
+            <option value="nl">Dutch (NL)</option>
+            <option value="de">German</option>
+            <option value="fr">French</option>
+            <option value="es">Spanish</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Niche / What the Business Does</label>
+          <input id="pf-niche" placeholder="Drain cleaning and sewer repair, New Jersey" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Target Audience</label>
+          <input id="pf-audience" placeholder="Homeowners and property managers in NJ with drain/sewer problems" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Geographic Focus</label>
+          <input id="pf-geo" placeholder="New Jersey, USA" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Primary Goal</label>
+          <select id="pf-goal" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+            <option value="leads">Generate Leads</option>
+            <option value="traffic">Drive Traffic</option>
+            <option value="sales">Direct Sales</option>
+            <option value="awareness">Brand Awareness</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Sitemap URL</label>
+          <input id="pf-sitemap" placeholder="https://example.com/sitemap.xml" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;" oninput="pfChanged()">
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Business Info -->
+    <div id="ptab-content-business" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Owner / Author Name</label>
+          <input id="pf-owner" placeholder="John Smith" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Phone</label>
+          <input id="pf-phone" placeholder="+1 555 000 0000" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Email</label>
+          <input id="pf-email" placeholder="info@example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Years in Business</label>
+          <input id="pf-years" placeholder="12" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Schema Type</label>
+          <select id="pf-schema" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+            <option value="LocalBusiness">LocalBusiness</option>
+            <option value="ProfessionalService">ProfessionalService</option>
+            <option value="HomeAndConstructionBusiness">Home &amp; Construction</option>
+            <option value="Plumber">Plumber</option>
+            <option value="Electrician">Electrician</option>
+            <option value="MedicalBusiness">Medical</option>
+            <option value="LegalService">Legal</option>
+            <option value="FinancialService">Financial</option>
+            <option value="Organization">Organization</option>
+            <option value="Corporation">Corporation</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Review Score (e.g. 4.9)</label>
+          <input id="pf-review-score" placeholder="4.9" type="number" min="1" max="5" step="0.1" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Address</label>
+          <input id="pf-address" placeholder="123 Main St, Newark, NJ 07101" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Unique Selling Points <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
+          <textarea id="pf-usps" placeholder="24/7 emergency service&#10;Same-day appointments available&#10;Licensed and insured in all NJ counties&#10;100% satisfaction guarantee" rows="4" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Certifications &amp; Licences <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
+          <textarea id="pf-certs" placeholder="NJ Master Plumber Licence #12345&#10;EPA Certified&#10;BBB Accredited A+" rows="3" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Service Areas <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(one per line)</span></label>
+          <textarea id="pf-areas" placeholder="Newark, NJ&#10;Jersey City, NJ&#10;Hoboken, NJ&#10;Elizabeth, NJ" rows="3" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Guarantee</label>
+          <input id="pf-guarantee" placeholder="100% satisfaction guarantee or your money back" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Extra Info <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— anything else the agent should know</span></label>
+          <textarea id="pf-extra" placeholder="Brand voice: direct, no jargon, conversational.&#10;Pricing: $150 drain cleaning, $450+ sewer repair.&#10;Main competitor: rooterheroes.com&#10;Avoid mentioning: pricing before diagnosis." rows="4" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">This goes into the agent system prompt verbatim. Write anything: brand voice, pricing, competitors, things to avoid, seasonal focus.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HTML Template -->
+    <div id="ptab-content-template" style="display:none;">
+      <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-size:12px;color:#a78bfa;font-weight:600;margin-bottom:4px;">What is the HTML template?</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">Paste your full HTML article template here. PULSE + NEXUS will write all new content using this exact structure — schema types, CSS classes, heading hierarchy, everything. When you click "Write on Template" the agent produces ready-to-publish HTML matching this layout.</div>
+      </div>
+      <div id="pf-template-status" style="display:none;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#34d399;"></div>
+      <textarea id="pf-template" placeholder="Paste your full HTML template here..." rows="16" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:12px;color:var(--text);font-size:12px;outline:none;resize:vertical;font-family:'DM Mono',monospace;line-height:1.6;"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div id="pf-template-size" style="font-size:11px;color:var(--muted);"></div>
+        <button onclick="saveTemplateOnly()" style="padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);">💾 Save Template Now</button>
+      </div>
+    </div>
+
+    <!-- TAB: WordPress -->
+    <div id="ptab-content-wordpress" style="display:none;">
+      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-size:12px;color:#38bdf8;font-weight:600;margin-bottom:4px;">WordPress REST API credentials</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">Used to publish articles directly from PULSE + NEXUS. In WordPress: Users → Your Profile → Application Passwords → add new → paste here.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">WordPress URL</label>
+          <input id="pf-wpurl" placeholder="https://example.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">WordPress Username</label>
+          <input id="pf-wpuser" placeholder="admin" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Application Password</label>
+          <input id="pf-wppass" type="password" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer buttons -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);">
+      <button id="pfDeleteBtn" onclick="deleteProfile()" style="display:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;">🗑 Delete Profile</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button onclick="closeProfileModal()" style="padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);">Cancel</button>
+        <button id="pfSaveBtn" onclick="saveProfile()" style="padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">💾 Save Profile</button>
+      </div>
+    </div>
+
+  </div><!-- /profileModalBody -->
+</div><!-- /modal-box -->
+</div><!-- /profileModal -->
+
+</body>\n</html>';
 }
 
 function buildShellPage(p,c,entry,pageNum){
@@ -1876,6 +2098,380 @@ function exportWriterBriefing(c, articles) {
 
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function escHtml(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+
+
+// ════════════════════════════════════════════════════════════════
+// PROFILE MANAGER
+// ════════════════════════════════════════════════════════════════
+
+var _editingProfileId = null;
+
+// ── switchView: handle profiles tab ──────────────────────────────
+var _origSwitchView = switchView;
+switchView = function(view) {
+  _origSwitchView(view);
+  if (view === 'profiles') {
+    document.getElementById('view-profiles').style.display = 'block';
+    loadProfilesList();
+  } else {
+    document.getElementById('view-profiles').style.display = 'none';
+  }
+  // update profiles nav button style
+  var np = document.getElementById('navProfiles');
+  if (np) {
+    if (view === 'profiles') {
+      np.style.background = 'rgba(167,139,250,.15)';
+      np.style.borderColor = 'rgba(167,139,250,.4)';
+      np.style.color = '#a78bfa';
+      np.style.fontWeight = '700';
+    } else {
+      np.style.background = 'transparent';
+      np.style.borderColor = 'rgba(255,255,255,.1)';
+      np.style.color = '#6b7280';
+      np.style.fontWeight = '600';
+    }
+  }
+};
+
+// ── Load and render profiles list ───────────────────────────────
+async function loadProfilesList() {
+  var el = document.getElementById('profilesList');
+  if (!_connected) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">Connect with your engine code first.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);grid-column:1/-1;">⏳ Loading…</div>';
+  try {
+    var d = await api('/api/content/profiles');
+    var profiles = d.profiles || [];
+    if (!profiles.length) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;"><div style="font-size:32px;margin-bottom:10px;">👤</div><div style="font-weight:600;margin-bottom:4px;">No profiles yet</div><div style="font-size:13px;margin-bottom:16px;">Create your first profile to get started.</div><button onclick="openProfileModal(null)" style="padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,var(--accent),#e85d0a);color:#fff;">+ New Profile</button></div>';
+      return;
+    }
+    el.innerHTML = profiles.map(function(p) {
+      var initials = (p.name||'?').split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+      var usps = p.unique_selling_points;
+      if (typeof usps === 'string') { try { usps = JSON.parse(usps); } catch(e) { usps = []; } }
+      var uspCount = Array.isArray(usps) ? usps.length : 0;
+      var hasTpl = p.html_template && p.html_template.length > 100;
+      var hasWP  = !!(p.wp_url);
+      return '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s;cursor:pointer;" onmouseenter="this.style.borderColor=\'rgba(245,109,0,.3)\'" onmouseleave="this.style.borderColor=\'rgba(255,255,255,.08)\'">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
+        '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#c8440a);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;">' + escHtml(initials) + '</div>' +
+        '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.name) + '</div>' +
+        '<div style="font-size:11px;color:#60a5fa;">' + escHtml(p.domain||'no domain') + '</div></div></div>' +
+        '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + escHtml((p.niche||'').substring(0,60)) + '</div>' +
+        '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">' +
+        (hasTpl ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:#a78bfa;">📄 Template</span>' : '') +
+        (hasWP  ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);color:#38bdf8;">🚀 WP</span>' : '') +
+        (uspCount ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#34d399;">' + uspCount + ' USPs</span>' : '') +
+        '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--muted);">' + escHtml(p.content_language||p.language||'en').toUpperCase() + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:5px;margin-top:8px;">' +
+        '<button onclick="useProfileFromList(' + p.id + ')" style="flex:1;padding:7px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">🧠 Use</button>' +
+        '<button onclick="openProfileModal(' + p.id + ')" style="flex:1;padding:7px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--muted);">✏️ Edit</button>' +
+        '</div></div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:#f87171;padding:20px;grid-column:1/-1;">Error: ' + e.message + '</div>';
+  }
+}
+
+// ── Use a profile from the list → switch to agent ───────────────
+function useProfileFromList(profileId) {
+  // Find profile and set as active
+  if (_allProfiles && _allProfiles.length) {
+    var p = _allProfiles.find(function(x){ return String(x.id) === String(profileId); });
+    if (p) {
+      _profile = p;
+      _context.profileId = p.id;
+      var sel = document.getElementById('profileSelect');
+      if (sel) sel.value = String(p.id);
+      // Re-render profile selector if needed
+      updateContext();
+    }
+  }
+  switchView('agent');
+  setTimeout(function() {
+    // Clear messages and greet with new profile
+    var msgs = document.getElementById('messages');
+    if (msgs) msgs.innerHTML = '';
+    agentGreet();
+  }, 100);
+}
+
+// ── Open profile modal ───────────────────────────────────────────
+function openProfileModal(profileId) {
+  _editingProfileId = profileId;
+  var modal = document.getElementById('profileModal');
+  var title = document.getElementById('profileModalTitle');
+  var delBtn = document.getElementById('pfDeleteBtn');
+  modal.style.display = 'block';
+  showProfileTab('basic');
+
+  if (!profileId) {
+    // New profile — clear all fields
+    title.textContent = '+ New Profile';
+    if (delBtn) delBtn.style.display = 'none';
+    clearProfileForm();
+  } else {
+    // Edit existing — load data
+    title.textContent = 'Edit Profile';
+    if (delBtn) delBtn.style.display = 'block';
+    loadProfileIntoForm(profileId);
+  }
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal').style.display = 'none';
+  _editingProfileId = null;
+}
+
+function clearProfileForm() {
+  var fields = ['pf-name','pf-domain','pf-language','pf-niche','pf-audience','pf-geo','pf-goal',
+    'pf-sitemap','pf-owner','pf-phone','pf-email','pf-years','pf-schema','pf-review-score',
+    'pf-address','pf-usps','pf-certs','pf-areas','pf-guarantee','pf-extra',
+    'pf-template','pf-wpurl','pf-wpuser','pf-wppass'];
+  fields.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var langEl = document.getElementById('pf-language');
+  if (langEl) langEl.value = 'en';
+  var goalEl = document.getElementById('pf-goal');
+  if (goalEl) goalEl.value = 'leads';
+  var schemaEl = document.getElementById('pf-schema');
+  if (schemaEl) schemaEl.value = 'LocalBusiness';
+  updateTemplateSize();
+}
+
+async function loadProfileIntoForm(profileId) {
+  try {
+    var d = await api('/api/content/profiles');
+    var p = (d.profiles||[]).find(function(x){ return String(x.id) === String(profileId); });
+    if (!p) { toast('Profile not found','err'); return; }
+
+    function set(id, val) { var el=document.getElementById(id); if(el) el.value = val||''; }
+
+    set('pf-name', p.name);
+    set('pf-domain', p.domain);
+    set('pf-niche', p.niche);
+    set('pf-audience', p.target_audience);
+    set('pf-geo', p.geo_focus);
+    set('pf-sitemap', p.sitemap_url);
+    set('pf-owner', p.owner_name || (p.business_info&&p.business_info.owner_name));
+    set('pf-phone', p.phone || (p.business_info&&p.business_info.phone));
+    set('pf-email', p.email || (p.business_info&&p.business_info.email));
+    set('pf-years', p.years_experience);
+    set('pf-address', p.address || (p.business_info&&p.business_info.address));
+    set('pf-guarantee', p.guarantee);
+    set('pf-wpurl', p.wp_url);
+    set('pf-wpuser', p.wp_user);
+    set('pf-wppass', p.wp_app_password ? '••••••••' : '');
+    set('pf-template', p.html_template || '');
+    set('pf-review-score', p.review_score || (p.business_info&&p.business_info.review_score));
+
+    var langEl = document.getElementById('pf-language');
+    if (langEl) langEl.value = p.content_language || p.language || 'en';
+    var goalEl = document.getElementById('pf-goal');
+    if (goalEl) goalEl.value = p.primary_goal || 'leads';
+    var schemaEl = document.getElementById('pf-schema');
+    if (schemaEl) schemaEl.value = p.schema_type || (p.business_info&&p.business_info.schema_type) || 'LocalBusiness';
+
+    // Array fields
+    function toLines(val) {
+      if (!val) return '';
+      if (typeof val === 'string') { try { val = JSON.parse(val); } catch(e) { return val; } }
+      return Array.isArray(val) ? val.join('\n') : String(val);
+    }
+    set('pf-usps',  toLines(p.unique_selling_points));
+    set('pf-certs', toLines(p.certifications));
+    set('pf-areas', toLines(p.service_areas));
+
+    // Extra info from business_info
+    var bi = p.business_info || {};
+    if (typeof bi === 'string') { try { bi = JSON.parse(bi); } catch(e) { bi = {}; } }
+    set('pf-extra', bi.extra_info || bi.notes || '');
+
+    updateTemplateSize();
+  } catch(e) { toast('Load failed: ' + e.message, 'err'); }
+}
+
+// ── Show/hide profile tabs ───────────────────────────────────────
+function showProfileTab(tab) {
+  ['basic','business','template','wordpress'].forEach(function(t) {
+    var content = document.getElementById('ptab-content-' + t);
+    var btn = document.getElementById('ptab-' + t);
+    if (content) content.style.display = t === tab ? 'block' : 'none';
+    if (btn) {
+      if (t === tab) {
+        btn.style.background = 'rgba(245,109,0,.2)';
+        btn.style.color = '#f56d00';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--muted)';
+      }
+    }
+  });
+}
+
+function pfChanged() {
+  // Auto-format domain: strip https:// if pasted
+  var domEl = document.getElementById('pf-domain');
+  if (domEl && domEl.value) domEl.value = domEl.value.replace(/^https?:\/\//,'').replace(/\/$/,'');
+}
+
+function updateTemplateSize() {
+  var ta = document.getElementById('pf-template');
+  var sz = document.getElementById('pf-template-size');
+  if (ta && sz) {
+    var len = (ta.value||'').length;
+    sz.textContent = len ? Math.round(len/1024*10)/10 + 'kb' : '';
+  }
+}
+document.addEventListener('input', function(e){ if(e.target&&e.target.id==='pf-template') updateTemplateSize(); });
+
+// ── Save template only (PATCH endpoint) ─────────────────────────
+async function saveTemplateOnly() {
+  if (!_editingProfileId) { toast('Save the profile first', 'err'); return; }
+  var tpl = document.getElementById('pf-template').value;
+  var btn = document.querySelector('[onclick="saveTemplateOnly()"]');
+  if (btn) { btn.disabled=true; btn.textContent='Saving…'; }
+  try {
+    var d = await api('/api/content/profiles/' + _editingProfileId + '/template', 'PATCH', { html_template: tpl });
+    if (!d.success) throw new Error(d.error||'Failed');
+    var stat = document.getElementById('pf-template-status');
+    if (stat) { stat.textContent = '✓ Template saved — ' + Math.round(tpl.length/1024*10)/10 + 'kb'; stat.style.display='block'; }
+    toast('Template saved (' + Math.round(tpl.length/1024) + 'kb)', 'ok');
+  } catch(e) { toast('Save failed: ' + e.message, 'err'); }
+  finally { if(btn){btn.disabled=false;btn.textContent='💾 Save Template Now';} }
+}
+
+// ── Save full profile ────────────────────────────────────────────
+async function saveProfile() {
+  var name = document.getElementById('pf-name').value.trim();
+  if (!name) { toast('Business name is required','err'); showProfileTab('basic'); return; }
+
+  var btn = document.getElementById('pfSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  function lines(id) {
+    var el = document.getElementById(id);
+    if (!el || !el.value.trim()) return [];
+    return el.value.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  }
+  function val(id) { var el=document.getElementById(id); return el?el.value.trim():''; }
+  function selVal(id) { var el=document.getElementById(id); return el?el.value:''; }
+
+  var extra = val('pf-extra');
+  var biBase = {};
+  if (_editingProfileId) {
+    // Preserve existing business_info fields
+    try {
+      var d0 = await api('/api/content/profiles');
+      var ex = (d0.profiles||[]).find(function(x){return String(x.id)===String(_editingProfileId);});
+      if (ex && ex.business_info) biBase = typeof ex.business_info==='string'?JSON.parse(ex.business_info):ex.business_info;
+    } catch(e) {}
+  }
+  biBase.extra_info      = extra;
+  biBase.schema_type     = selVal('pf-schema');
+  biBase.owner_name      = val('pf-owner');
+  biBase.phone           = val('pf-phone');
+  biBase.email           = val('pf-email');
+  biBase.address         = val('pf-address');
+  biBase.review_score    = val('pf-review-score');
+
+  var payload = {
+    name:                  name,
+    domain:                val('pf-domain'),
+    niche:                 val('pf-niche'),
+    target_audience:       val('pf-audience'),
+    geo_focus:             val('pf-geo'),
+    sitemap_url:           val('pf-sitemap'),
+    primary_goal:          selVal('pf-goal'),
+    content_language:      selVal('pf-language'),
+    years_experience:      val('pf-years'),
+    guarantee:             val('pf-guarantee'),
+    unique_selling_points: lines('pf-usps'),
+    certifications:        lines('pf-certs'),
+    service_areas:         lines('pf-areas'),
+    business_info:         biBase,
+    html_template:         val('pf-template') || undefined,
+    wp_url:                val('pf-wpurl'),
+    wp_user:               val('pf-wpuser'),
+  };
+
+  // Don't overwrite password if it shows bullets
+  var wppass = val('pf-wppass');
+  if (wppass && wppass !== '••••••••') payload.wp_app_password = wppass;
+
+  try {
+    var endpoint = _editingProfileId
+      ? '/api/content/profiles/' + _editingProfileId
+      : '/api/content/profiles';
+    var method = _editingProfileId ? 'PUT' : 'POST';
+    var d = await api(endpoint, method, payload);
+    if (!d.success) throw new Error(d.error||'Save failed');
+
+    toast(_editingProfileId ? '✓ Profile updated' : '✓ Profile created', 'ok');
+    closeProfileModal();
+
+    // Reload profiles list + selector
+    await reloadAllProfiles();
+    loadProfilesList();
+
+    // If new profile, switch to it automatically
+    if (!_editingProfileId && d.profile) {
+      _profile = d.profile;
+      _context.profileId = d.profile.id;
+      var sel = document.getElementById('profileSelect');
+      if (sel) sel.value = String(d.profile.id);
+      updateContext();
+      toast('Switched to ' + d.profile.name, 'ok');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Save Profile';
+  }
+}
+
+// ── Delete profile ───────────────────────────────────────────────
+async function deleteProfile() {
+  if (!_editingProfileId) return;
+  var name = document.getElementById('pf-name').value || 'this profile';
+  if (!confirm('Delete "' + name + '"? This cannot be undone. All articles and tracker pages for this profile will also be deleted.')) return;
+  try {
+    var d = await api('/api/content/profiles/' + _editingProfileId, 'DELETE');
+    if (!d.success) throw new Error(d.error||'Delete failed');
+    toast('Profile deleted', 'ok');
+    closeProfileModal();
+    await reloadAllProfiles();
+    loadProfilesList();
+    // If we deleted the active profile, clear it
+    if (_profile && String(_profile.id) === String(_editingProfileId)) {
+      _profile = _allProfiles && _allProfiles[0] || null;
+      _context.profileId = _profile ? _profile.id : null;
+      renderProfileSelector(_allProfiles || []);
+    }
+  } catch(e) { toast('Delete failed: ' + e.message, 'err'); }
+}
+
+// ── Reload all profiles into _allProfiles + selector ────────────
+async function reloadAllProfiles() {
+  try {
+    var d = await api('/api/content/profiles');
+    _allProfiles = d.profiles || [];
+    renderProfileSelector(_allProfiles);
+  } catch(e) {}
+}
+
+// Close modal on backdrop click
+document.addEventListener('click', function(e) {
+  var modal = document.getElementById('profileModal');
+  if (e.target === modal) closeProfileModal();
+});
 
 </script>
 
