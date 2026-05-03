@@ -192,6 +192,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <input class="token-input" id="engineToken" placeholder="ENG-XXXX engine code" type="password">
       <input class="token-input" id="claudeKey" placeholder="Claude API key (sk-ant-...)" type="password" style="margin-top:6px;">
       <button class="sidebar-btn primary" onclick="connect()" id="connectBtn" style="margin-top:8px;">Connect →</button>
+      <div id="forgetLink" style="display:none;text-align:center;margin-top:6px;">
+        <button onclick="forgetLogin()" style="background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0;">Forget saved login</button>
+      </div>
     </div>
 
     <!-- Profile selector -->
@@ -285,6 +288,25 @@ var _busy        = false;
 // ══════════════════════════════════════════════════════════════
 // AUTH / CONNECT
 // ══════════════════════════════════════════════════════════════
+function forgetLogin() {
+  try {
+    localStorage.removeItem('nexus_engine_token');
+    localStorage.removeItem('nexus_claude_key');
+  } catch(e) {}
+  document.getElementById('engineToken').value = '';
+  document.getElementById('claudeKey').value = '';
+  document.getElementById('forgetLink').style.display = 'none';
+  var btn = document.getElementById('connectBtn');
+  btn.textContent = 'Connect →';
+  btn.style.background = '';
+  btn.style.color = '';
+  btn.style.border = '';
+  btn.disabled = false;
+  _connected = false;
+  setStatus('off', 'not connected');
+  toast('Login cleared', 'ok');
+}
+
 async function connect() {
   var token = document.getElementById('engineToken').value.trim();
   if (!token) { toast('Enter your engine code', 'err'); return; }
@@ -301,6 +323,15 @@ async function connect() {
     document.getElementById('sendBtn').disabled = false;
     btn.textContent = '✓ Connected'; btn.style.background = 'rgba(52,211,153,.15)';
     btn.style.color = 'var(--green)'; btn.style.border = '1px solid rgba(52,211,153,.3)';
+    // Show forget link
+    var forgetEl = document.getElementById('forgetLink');
+    if (forgetEl) forgetEl.style.display = 'block';
+    // Persist credentials so login survives tab close / browser restart
+    try {
+      localStorage.setItem('nexus_engine_token', token);
+      var ck = document.getElementById('claudeKey').value.trim();
+      if (ck) localStorage.setItem('nexus_claude_key', ck);
+    } catch(e) {}
 
     // Load profiles
     var pr = await api('/api/content/profiles');
@@ -2293,6 +2324,38 @@ document.addEventListener('click', function(e) {
   var modal = document.getElementById('profileModal');
   if (e.target === modal) closeProfileModal();
 });
+
+
+// ── Auto-restore credentials and reconnect on page load ──────────
+(function() {
+  var savedToken  = '';
+  var savedClaude = '';
+  try {
+    savedToken  = localStorage.getItem('nexus_engine_token') || '';
+    savedClaude = localStorage.getItem('nexus_claude_key')   || '';
+  } catch(e) {}
+
+  if (!savedToken) return;
+
+  var tokenEl  = document.getElementById('engineToken');
+  var claudeEl = document.getElementById('claudeKey');
+  if (tokenEl)  tokenEl.value  = savedToken;
+  if (claudeEl && savedClaude) claudeEl.value = savedClaude;
+
+  setTimeout(function() {
+    var btn = document.getElementById('connectBtn');
+    if (btn) {
+      btn.textContent = 'Reconnecting…';
+      connect().catch(function() {
+        try {
+          localStorage.removeItem('nexus_engine_token');
+          localStorage.removeItem('nexus_claude_key');
+        } catch(e) {}
+        if (btn) { btn.textContent = 'Connect →'; btn.disabled = false; }
+      });
+    }
+  }, 300);
+})();
 
 </script>
 
