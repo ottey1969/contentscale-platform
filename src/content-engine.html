@@ -671,7 +671,7 @@ function buildSystemPrompt() {
   if (_context.keyword) contextStr += '\nTarget keyword: ' + _context.keyword;
   if (_context.score !== null) contextStr += '\nContentScore: ' + _context.score + '/100';
   if (_context.recs && _context.recs.length) {
-    contextStr += '\nTop recommendations from GRAAF scan:\n' + _context.recs.slice(0,5).map(function(r){ return '- ['+r.priority+'] ' + r.title; }).join('\n');
+    contextStr += '\nTop recommendations from GRAAF scan:\n' + parseRecs(_context.recs).slice(0,5).map(function(r){ return '- ['+r.priority+'] ' + (r.title||r.description||''); }).join('\n');
   }
 
   return `You are an elite SEO Intelligence Agent for ContentScale. You are concise, direct, and genuinely expert — not generic. You think like a senior SEO consultant who has seen thousands of sites.
@@ -793,7 +793,7 @@ async function cmdScan(url) {
     if (!d || !d.score) throw new Error('Scan returned no score');
 
     _context.score = d.score;
-    _context.recs = d.recommendations || [];
+    _context.recs = parseRecs(d.recommendations);
     updateContext();
 
     // Render scan results in chat
@@ -1008,10 +1008,26 @@ function addActions(actions) {
   scrollBottom();
 }
 
+function parseRecs(raw) {
+  if (!raw) return [];
+  // Unwrap string layers
+  var depth = 0;
+  while (typeof raw === 'string' && depth < 3) {
+    try { raw = JSON.parse(raw); depth++; } catch(e) { break; }
+  }
+  if (!Array.isArray(raw)) raw = raw ? [raw] : [];
+  return raw.map(function(item) {
+    if (typeof item === 'string') {
+      try { return JSON.parse(item); } catch(e) { return { title: item }; }
+    }
+    return item;
+  }).filter(Boolean);
+}
+
 function addScanResult(d) {
   var scoreColor = d.score >= 90 ? 'var(--green)' : d.score >= 70 ? 'var(--accent2)' : d.score >= 50 ? 'var(--amber)' : 'var(--red)';
   var tier = d.score >= 90 ? 'Elite' : d.score >= 80 ? 'Strong' : d.score >= 70 ? 'Qualified' : d.score >= 50 ? 'Opportunity' : 'Critical';
-  var recs = (d.recommendations || []).slice(0, 5);
+  var recs = parseRecs(d.recommendations).slice(0, 5);
   var recsHtml = recs.map(function(r) {
     var cls = r.priority === 'high' ? 'rec-high' : r.priority === 'medium' ? 'rec-med' : 'rec-low';
     var icon = r.priority === 'high' ? '🔴' : r.priority === 'medium' ? '🟡' : '🟢';
