@@ -348,7 +348,7 @@ res.getHeader('Content-Type')?.includes('text/html') &&
 const lastIdx = body.lastIndexOf('</body>');
 if (lastIdx !== -1) {
 body = body.slice(0, lastIdx) +
-'<script src="https://app.contentscale.site/badge-loader.js?v=3"></script>' +
+'<script src="https://app.contentscale.site/badge-loader.js?v=4"></script>' +
 '<script src="https://app.contentscale.site/consent-widget.js?v=1"></script></body>' +
 body.slice(lastIdx + 7);
 }
@@ -3039,6 +3039,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                content_stats: { wordCount: result.content_stats?.wordCount, h1Text: result.content_stats?.h1Text }
                } : { success: false, url, error: result.error, score: 0 };
                job.results.push(slim);
+               // Save each successful page scan to scan_log so badges work per-slug
+               if (result.success && pool) {
+                 pool.query(
+                   `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'bulk', NOW())`,
+                   [result.url, result.score]
+                 ).catch(err => console.error('[bulk scan_log] insert failed:', err.message, '| url:', result.url));
+               }
                job.done++;
                if (!result || !result.success) job.failed++;
                // Persist every 25 pages
@@ -3326,7 +3333,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  pool.query(
                    `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'single', NOW())`,
                    [scanUrl, result.score]
-                 ).catch(() => {});
+                 ).catch(err => console.error('[scan_log] insert failed:', err.message, '| url:', scanUrl));
                }
                } catch (error) {
                console.error('❌ Scan error:', error.message);
@@ -4432,6 +4439,13 @@ extractedEmail: result.content_stats?.extractedEmail
 }
 } : { success: false, url, error: result?.error || 'failed', score: 0 };
 job.results.push(slim);
+// Save each successful page scan to scan_log so badges work per-slug
+if (result && result.success && pool) {
+  pool.query(
+    `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'sitemap', NOW())`,
+    [result.url, result.score]
+  ).catch(err => console.error('[sitemap scan_log] insert failed:', err.message, '| url:', result.url));
+}
 job.done++;
 await delay();
 }
@@ -4671,39 +4685,79 @@ res.json({ success: true });
 // ── ContentScore Badge API ────────────────────────────────────────────────────
 app.get('/api/score', async (req, res) => {
 res.setHeader('Access-Control-Allow-Origin', '*');
+res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+res.setHeader('Pragma', 'no-cache');
+res.setHeader('Expires', '0');
 const { url } = req.query;
 if (!url) return res.json({ success: false, error: 'url required' });
 if (!pool) return res.json({ success: false, error: 'DB unavailable' });
+
+// Normalizes a URL: strips protocol, www, trailing slash, lowercase
+const normalize = u => {
+  if (!u) return '';
+  return u.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').toLowerCase();
+};
+
 try {
-const normalize = u => u.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').toLowerCase();
 const norm = normalize(url);
 const domain = norm.split('/')[0];
 const isHomepage = norm === domain;
-// 1. Exact URL match in scan_log (specific page score) — per-slug, no domain bleed
-const exact = await pool.query(
-`SELECT score, business_url FROM scan_log
-WHERE LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) = $1
-OR LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) = $2
-OR LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', '')) = $1
-OR LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', '')) = $2
-ORDER BY created_at DESC LIMIT 1`,
-[norm, norm + '/']
+
+// ── Strategy 1: scan_log — fetch candidates for this domain, match in JS for true per-slug accuracy ──
+const recent = await pool.query(
+  `SELECT score, business_url FROM scan_log
+   WHERE created_at > NOW() - INTERVAL '30 days'
+     AND (business_url ILIKE $1 OR business_url ILIKE $2 OR business_url ILIKE $3 OR business_url ILIKE $4)
+   ORDER BY created_at DESC LIMIT 100`,
+  ['%://' + domain + '/%', '%://www.' + domain + '/%', domain + '/%', domain]
 );
-if (exact.rows.length && exact.rows[0].score) {
-return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, source: 'scan_log_exact' });
+
+// JS-level exact normalized match — both sides normalized identically, no SQL mismatch
+const match = recent.rows.find(r => {
+  const storedNorm = normalize(r.business_url);
+  return storedNorm === norm || storedNorm === norm + '/';
+});
+
+if (match && match.score != null) {
+  console.log('[badge] scan_log hit:', url, '→', match.score, '| stored:', match.business_url);
+  return res.json({ success: true, url: match.business_url, score: match.score, source: 'scan_log_exact' });
 }
-// 2. Leaderboard — only for homepage queries
+
+// ── Strategy 2: scans table fallback ──
+const scansFallback = await pool.query(
+  `SELECT score, url FROM scans
+   WHERE created_at > NOW() - INTERVAL '30 days'
+     AND (url ILIKE $1 OR url ILIKE $2 OR url ILIKE $3 OR url ILIKE $4)
+   ORDER BY created_at DESC LIMIT 50`,
+  ['%://' + domain + '/%', '%://www.' + domain + '/%', domain + '/%', domain]
+);
+const scansMatch = scansFallback.rows.find(r => {
+  const storedNorm = normalize(r.url);
+  return storedNorm === norm || storedNorm === norm + '/';
+});
+if (scansMatch && scansMatch.score != null) {
+  console.log('[badge] scans table hit:', url, '→', scansMatch.score);
+  return res.json({ success: true, url: scansMatch.url, score: scansMatch.score, source: 'scans_table' });
+}
+
+// ── Strategy 3: Leaderboard — only for homepage queries ──
 if (isHomepage) {
 const lb = await pool.query(`SELECT score, graaf_score, craft_score, technical_score, url FROM leaderboard WHERE admin_verified = TRUE ORDER BY created_at DESC LIMIT 200`);
 const lbMatch = lb.rows.find(r => normalize(r.url) === domain);
 if (lbMatch) {
-return res.json({ success: true, url: lbMatch.url, score: lbMatch.score,
-graaf: lbMatch.graaf_score, craft: lbMatch.craft_score, technical: lbMatch.technical_score, source: 'leaderboard' });
+  console.log('[badge] leaderboard hit:', url, '→', lbMatch.score);
+  return res.json({ success: true, url: lbMatch.url, score: lbMatch.score,
+    graaf: lbMatch.graaf_score, craft: lbMatch.craft_score, technical: lbMatch.technical_score, source: 'leaderboard' });
 }
 }
-// 3. Not found — no domain fallback (badge should show "Not scanned yet")
+
+// Nothing found
+console.log('[badge] miss:', url, '| norm:', norm);
 res.json({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
-} catch (e) { res.status(500).json({ success: false, error: e.message }); }
+} catch (e) {
+console.error('[badge] error:', e.message, '| url:', url);
+res.status(500).json({ success: false, error: e.message });
+}
 });
 // ── Badge loader script ──────────────────────────────────────────────────────
 app.get('/consent-widget.js', (req, res) => {
