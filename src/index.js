@@ -3007,8 +3007,12 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                else req.continue();
                });
                try {
-               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
-               await new Promise(r => setTimeout(r, 2000)); // let JS render — matches single scan              
+               const response = await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 12000 });
+               // Do not score 404s or server errors
+               if (response && response.status() >= 400) {
+                 throw new Error('skip:HTTP ' + response.status() + ' — page not found or server error');
+               }
+               await new Promise(r => setTimeout(r, 2000)); // let JS render — matches single scan
                } catch(e) {
                // Site unreachable/blocked — skip gracefully, don't waste retry time
                throw new Error('skip:' + e.message.substring(0,60));
@@ -3146,7 +3150,12 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const page = await browser.newPage();
                await page.setViewport({ width: 1920, height: 1080 });
                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-               await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               const response = await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               // Reject 404s and server errors — do not score missing pages
+               if (response && response.status() >= 400) {
+                 await page.close();
+                 return res.status(404).json({ success: false, error: 'Page not found (HTTP ' + response.status() + ')' });
+               }
                await new Promise(r => setTimeout(r, 2000)); // let JS render
                const analysis = await page.evaluate((scanUrlParam) => {
                let text = document.body ? document.body.innerText : '';
