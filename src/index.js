@@ -4813,7 +4813,7 @@ res.setHeader('Access-Control-Allow-Origin', '*');
 res.send(`(function() {
 var badges = document.querySelectorAll('[data-cs-badge]');
 if (!badges.length) return;
-var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
+var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
 // Cache-busting: every page load gets a fresh API call — no stale scores
 var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl) + '&_cb=' + Date.now();
 function getTier(s) {
