@@ -348,7 +348,7 @@ res.getHeader('Content-Type')?.includes('text/html') &&
 const lastIdx = body.lastIndexOf('</body>');
 if (lastIdx !== -1) {
 body = body.slice(0, lastIdx) +
-'<script src="https://app.contentscale.site/badge-loader.js?v=4"></script>' +
+'<script src="https://app.contentscale.site/badge-loader.js?v=5"></script>' +
 '<script src="https://app.contentscale.site/consent-widget.js?v=1"></script></body>' +
 body.slice(lastIdx + 7);
 }
@@ -2424,7 +2424,13 @@ app.post('/api/scan/paste', async (req, res) => {
     const result = computeScore(scanUrl, analysis, []);
     console.log(`✅ scan/paste: ${scanUrl} → ${result.score}/100 (${wordCount} words)`);
     res.json(result);
-    
+    // Save to scan_log so badge can find paste scans too
+    if (pool && scanUrl !== 'pasted-html') {
+      pool.query(
+        `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'paste', NOW())`,
+        [scanUrl, result.score]
+      ).catch(err => console.error('[paste scan_log] insert failed:', err.message, '| url:', scanUrl));
+    }
   } catch (error) {
     console.error('❌ scan/paste error:', error.message);
     res.status(500).json({ success: false, error: 'Paste scan failed: ' + error.message });
@@ -4106,7 +4112,7 @@ await pool.query(
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'discover',0)
 ON CONFLICT DO NOTHING`,
 ['batch_job_' + jobId, place.url, place.name, niche, city, country, place.email || null, place.email ? 'has_email' : 'no_email']
-).catch(() => {});
+).catch(err => console.error('[discover scan_log] insert failed:', err.message, '| url:', place.url));
 }
 await updateJob({
 progress: Math.min(Math.round(((ci+1) / combos.length) * 95), 95),
@@ -4703,7 +4709,26 @@ const norm = normalize(url);
 const domain = norm.split('/')[0];
 const isHomepage = norm === domain;
 
-// ── Strategy 1: scan_log — fetch candidates for this domain, match in JS for true per-slug accuracy ──
+// Build all URL variations the page could be stored as
+const V = [url, url.replace(/\/$/, ''), url.replace(/\/$/, '') + '/'];
+if (/^https:\/\//.test(url)) { V.push(url.replace(/^https/, 'http')); V.push(url.replace(/^https/, 'http').replace(/\/$/, '')); }
+if (!/www\./.test(url)) { V.push(url.replace(/^(https:\/\/)/, '$1www.')); V.push(url.replace(/^(https:\/\/)/, '$1www.').replace(/\/$/, '')); }
+const variants = [...new Set(V)]; // dedupe
+
+// ── Step 1: Exact URL match in scan_log (newest wins) ──
+const placeholders = variants.map((_, i) => '$' + (i + 1)).join(',');
+const exact = await pool.query(
+  `SELECT score, business_url FROM scan_log
+   WHERE business_url IN (${placeholders}) AND score IS NOT NULL
+   ORDER BY created_at DESC LIMIT 1`,
+  variants
+);
+if (exact.rows.length) {
+  console.log('[badge] exact hit:', url, '→', exact.rows[0].score, '| stored:', exact.rows[0].business_url);
+  return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, source: 'scan_log_exact' });
+}
+
+// ── Step 2: Domain-wide scan_log search with JS-level exact slug matching ──
 const recent = await pool.query(
   `SELECT score, business_url FROM scan_log
    WHERE created_at > NOW() - INTERVAL '30 days'
@@ -4711,36 +4736,33 @@ const recent = await pool.query(
    ORDER BY created_at DESC LIMIT 100`,
   ['%://' + domain + '/%', '%://www.' + domain + '/%', domain + '/%', domain]
 );
-
-// JS-level exact normalized match — both sides normalized identically, no SQL mismatch
 const match = recent.rows.find(r => {
   const storedNorm = normalize(r.business_url);
   return storedNorm === norm || storedNorm === norm + '/';
 });
-
 if (match && match.score != null) {
-  console.log('[badge] scan_log hit:', url, '→', match.score, '| stored:', match.business_url);
-  return res.json({ success: true, url: match.business_url, score: match.score, source: 'scan_log_exact' });
+  console.log('[badge] slug hit:', url, '→', match.score, '| stored:', match.business_url);
+  return res.json({ success: true, url: match.business_url, score: match.score, source: 'scan_log_slug' });
 }
 
-// ── Strategy 2: scans table fallback ──
-const scansFallback = await pool.query(
+// ── Step 3: scans table fallback ──
+const scansRows = await pool.query(
   `SELECT score, url FROM scans
    WHERE created_at > NOW() - INTERVAL '30 days'
      AND (url ILIKE $1 OR url ILIKE $2 OR url ILIKE $3 OR url ILIKE $4)
    ORDER BY created_at DESC LIMIT 50`,
   ['%://' + domain + '/%', '%://www.' + domain + '/%', domain + '/%', domain]
 );
-const scansMatch = scansFallback.rows.find(r => {
+const scansMatch = scansRows.rows.find(r => {
   const storedNorm = normalize(r.url);
   return storedNorm === norm || storedNorm === norm + '/';
 });
 if (scansMatch && scansMatch.score != null) {
-  console.log('[badge] scans table hit:', url, '→', scansMatch.score);
+  console.log('[badge] scans hit:', url, '→', scansMatch.score);
   return res.json({ success: true, url: scansMatch.url, score: scansMatch.score, source: 'scans_table' });
 }
 
-// ── Strategy 3: Leaderboard — only for homepage queries ──
+// ── Step 4: Leaderboard — only for homepage ──
 if (isHomepage) {
 const lb = await pool.query(`SELECT score, graaf_score, craft_score, technical_score, url FROM leaderboard WHERE admin_verified = TRUE ORDER BY created_at DESC LIMIT 200`);
 const lbMatch = lb.rows.find(r => normalize(r.url) === domain);
@@ -4775,14 +4797,16 @@ res.send("console.warn('consent-widget.js not found');");
 
 app.get('/badge-loader.js', (req, res) => {
 res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+res.setHeader('Pragma', 'no-cache');
+res.setHeader('Expires', '0');
 res.setHeader('Access-Control-Allow-Origin', '*');
-res.send(`
-(function() {
+res.send(`(function() {
 var badges = document.querySelectorAll('[data-cs-badge]');
 if (!badges.length) return;
-var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
-var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
+var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
+// Cache-busting: every page load gets a fresh API call — no stale scores
+var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl) + '&_cb=' + Date.now();
 function getTier(s) {
 if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
 if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
@@ -4793,7 +4817,7 @@ return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca
 function bar(on, color) {
 return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
 }
-fetch(apiUrl)
+fetch(apiUrl, { cache: 'no-store' })
 .then(function(r) { return r.json(); })
 .then(function(data) {
 if (!data.success || !data.score) {
@@ -4832,8 +4856,7 @@ var html = '<div style="display:inline-flex;align-items:center;border-radius:10p
 badges.forEach(function(el) { el.innerHTML = html; });
 })
 .catch(function() {});
-})();
-`);
+})();`);
 });
 
 
