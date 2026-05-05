@@ -4679,13 +4679,15 @@ const normalize = u => u.replace(/^https?:\/\//, '').replace(/^www\./, '').repla
 const norm = normalize(url);
 const domain = norm.split('/')[0];
 const isHomepage = norm === domain;
-// 1. Exact URL match in scan_log (specific page score)
+// 1. Exact URL match in scan_log (specific page score) — per-slug, no domain bleed
 const exact = await pool.query(
 `SELECT score, business_url FROM scan_log
-WHERE LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) ILIKE $1
-OR LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', '')) ILIKE $1
+WHERE LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) = $1
+OR LOWER(REPLACE(REPLACE(business_url, 'https://', ''), 'http://', '')) = $2
+OR LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', '')) = $1
+OR LOWER(REPLACE(REPLACE(business_url, 'https://www.', ''), 'http://www.', '')) = $2
 ORDER BY created_at DESC LIMIT 1`,
-[norm.replace(/\/$/, '') + '%']
+[norm, norm + '/']
 );
 if (exact.rows.length && exact.rows[0].score) {
 return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, source: 'scan_log_exact' });
