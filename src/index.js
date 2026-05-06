@@ -10851,23 +10851,27 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
     if (job.status === 'error' || (inMemory && inMemory.status === 'error')) {
       return res.json({ success: false, status: 'error', error: job.error_message || (inMemory && inMemory.error) || 'Unknown error' });
     }
-    // Still researching
-    res.json({ success: true, status: 'researching', job: { id: job.id, status: 'researching', seed_keyword: job.seed_keyword } });
+    // Still researching — include step + message for progress display
+    res.json({ success: true, status: 'researching', 
+      step: inMemory?.step || 'researching',
+      message: inMemory?.message || 'Researching...',
+      job: { id: job.id, status: 'researching', seed_keyword: job.seed_keyword } });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 async function _runResearchJob(jobId, profile_id, seed_keyword) {
   console.log(`[research job ${jobId}] starting for "${seed_keyword}"`);
-  _researchJobs.set(jobId, { status: 'researching' });
+  _researchJobs.set(jobId, { status: 'researching', step: 'init', message: 'Starting research...' });
 
   // Safety timeout — 2.5 minutes max for entire job
   const safetyTimeout = setTimeout(async () => {
     console.error(`[research job ${jobId}] SAFETY TIMEOUT after 2.5 min`);
-    _researchJobs.set(jobId, { status: 'error', error: 'Timed out' });
+    _researchJobs.set(jobId, { status: 'error', error: 'Timed out', step: 'timeout' });
     await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out', jobId]).catch(()=>{});
   }, 150000);
 
   try {
+    _researchJobs.set(jobId, { status: 'researching', step: 'profile', message: 'Loading profile...' });
     const profileR = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id=cp.id WHERE cp.id=$1 GROUP BY cp.id`, [profile_id]);
     if (!profileR.rows.length) throw new Error('Profile not found');
     const profile = profileR.rows[0];
@@ -10877,6 +10881,7 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
     if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
 
     // Fetch sitemap (5s timeout)
+    _researchJobs.set(jobId, { status: 'researching', step: 'sitemap', message: 'Fetching sitemap...' });
     let sitemapLinks = [];
     try {
       if (profile.sitemap_url) {
@@ -10889,6 +10894,7 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
     } catch(e) {}
 
     // STEP 1: REAL WEB SEARCH for statistics
+    _researchJobs.set(jobId, { status: 'researching', step: 'web_search', message: 'Searching web for real statistics...' });
     const locs = (profile.locations||[]).map(l=>l.location_value).join(', ') || profile.geo_focus || '';
     const searchQueries = [
       `${seed_keyword} ${profile.niche} statistics 2024 2025 2026`,
@@ -10908,6 +10914,7 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
       : 'No web results found. Use your training knowledge for statistics.';
 
     // STEP 2: Gemini call WITH real web data
+    _researchJobs.set(jobId, { status: 'researching', step: 'ai_analysis', message: `Analyzing ${webResults.length} sources with AI...` });
     const year = new Date().getFullYear();
 
     const prompt = `You are an expert SEO researcher. Analyze these REAL web search results about "${seed_keyword}" for a ${profile.niche} business in ${locs}.
@@ -10973,11 +10980,12 @@ Return ONLY this JSON (fill every field with real, sourced content):
     }
 
     // Save as COMPLETED immediately
+    _researchJobs.set(jobId, { status: 'researching', step: 'saving', message: 'Saving research results...' });
     await pool.query(
       `UPDATE content_jobs SET status='completed', completed_at=NOW(), keyword_data=$1 WHERE id=$2`,
       [JSON.stringify(keywordData), jobId]
     );
-    _researchJobs.set(jobId, { status: 'completed', result: keywordData });
+    _researchJobs.set(jobId, { status: 'completed', result: keywordData, step: 'done', message: 'Research complete!' });
     clearTimeout(safetyTimeout);
     console.log(`[research job ${jobId}] DONE`);
 
@@ -10985,7 +10993,7 @@ Return ONLY this JSON (fill every field with real, sourced content):
     console.error(`[research job ${jobId}] ERROR:`, e.message);
     clearTimeout(safetyTimeout);
     await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [e.message, jobId]).catch(()=>{});
-    _researchJobs.set(jobId, { status: 'error', error: e.message });
+    _researchJobs.set(jobId, { status: 'error', error: e.message, step: 'error', message: 'Error: ' + e.message });
   }
 }
 
@@ -12927,27 +12935,49 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
     safeProfileLocations(profile);
 
     // ═══ GSC AUTO-FILL when user didn't supply GSC data ═══
+    // SANITIZE: ensure numeric fields are integers, not strings like 'drain' or 'scale'
+    const safeInt = (v) => {
+      if (v === undefined || v === null || v === '') return 0;
+      const n = parseInt(String(v).replace(/[^0-9.-]/g, ''), 10);
+      return isNaN(n) ? 0 : n;
+    };
+    const safeFloat = (v) => {
+      if (v === undefined || v === null || v === '') return 0;
+      const n = parseFloat(String(v).replace(/[^0-9.-]/g, ''));
+      return isNaN(n) ? 0 : n;
+    };
     let gscData = {
-      impressions: gsc_impressions || 0,
-      clicks: gsc_clicks || 0,
-      position: gsc_position || 0,
-      keyword: gsc_keyword || '',
+      impressions: safeInt(gsc_impressions),
+      clicks: safeInt(gsc_clicks),
+      position: safeFloat(gsc_position),
+      keyword: String(gsc_keyword || '').trim(),
       autoFilled: false
     };
     let topQueriesFromGSC = [];
+    // Auto-fill GSC with 8s timeout — don't block if GSC is not connected
     if (!gsc_impressions && original_url && _gscServiceAccount) {
-      const pulled = await rewriterHelpers.autoFillGSC(original_url, _gscServiceAccount, axios);
-      if (pulled) {
-        gscData = {
-          impressions: pulled.impressions,
-          clicks: pulled.clicks,
-          position: pulled.position,
-          keyword: pulled.topKeyword,
-          autoFilled: true
-        };
-        topQueriesFromGSC = pulled.topQueries || [];
-        console.log(`[analyse-rewrite] GSC auto-filled for ${original_url}: ${pulled.impressions} impr, pos ${pulled.position}`);
+      try {
+        const pulled = await Promise.race([
+          rewriterHelpers.autoFillGSC(original_url, _gscServiceAccount, axios),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('GSC timeout')), 8000))
+        ]);
+        if (pulled) {
+          gscData = {
+            impressions: safeInt(pulled.impressions),
+            clicks: safeInt(pulled.clicks),
+            position: safeFloat(pulled.position),
+            keyword: String(pulled.topKeyword || '').trim(),
+            autoFilled: true
+          };
+          topQueriesFromGSC = pulled.topQueries || [];
+          console.log(`[analyse-rewrite] GSC auto-filled for ${original_url}: ${pulled.impressions} impr, pos ${pulled.position}`);
+        }
+      } catch(gscErr) {
+        console.warn(`[analyse-rewrite] GSC auto-fill skipped: ${gscErr.message}`);
+        // Continue without GSC data — agent will ask user to connect GSC
       }
+    } else if (!gsc_impressions && original_url && !_gscServiceAccount) {
+      console.log(`[analyse-rewrite] No GSC service account configured — skipping auto-fill`);
     }
 
     // Normalize manual multi-line GSC inputs + merge auto-filled queries
@@ -13169,17 +13199,20 @@ LAYOUT SIGNATURE: ${layoutSkeleton ? `${layoutSkeleton.sectionCount} sections, $
 BUSINESS: ${profile.name} — ${profile.niche} — Goal: ${profile.primary_goal}
 
 GRAAF CONTENT SCORE (original page): ${originalGraafScan?.contentScore || 'not scanned'}/100
+GRAAF BREAKDOWN — Craft: ${originalGraafScan?.craftScore || 'N/A'}/100 | Technical: ${originalGraafScan?.technicalScore || 'N/A'}/100 | GRAAF: ${originalGraafScan?.graafScore || 'N/A'}/100
 GRAAF GAPS TO FIX IN REWRITE: ${(Array.isArray(originalGraafScan?.recommendations) ? originalGraafScan.recommendations : []).filter(r=>r.priority==='high'||r.priority==='medium').slice(0,5).map(r=>'['+r.priority.toUpperCase()+'] '+r.title).join(' | ') || 'none detected'}
+
+IMPORTANT: Even if the ContentScore is 95-100, ALWAYS provide at least 3-5 specific improvement recommendations. Perfect content can still be sharpened with fresher statistics, better schema, or more voice-search optimization.
 
 ═══════════════════════════════════════
 11-POINT SEO AUDIT — CHECK EACH AGAINST ORIGINAL HTML
 ═══════════════════════════════════════
 Check the original HTML for these 11 critical SEO points. Report ONLY failures:
 
-1. META TITLE: Must be 50-60 characters, keyword in first 3 words, include a number or power word. Report if missing, too short/long, or keyword not first.
-2. META DESCRIPTION: Must be 140-155 characters, include keyword + price/number + CTA with phone. Report if missing or wrong length.
+1. META TITLE: Must be 55-60 characters. Focus keyword MUST be in the FIRST 3 words. Must contain a NUMBER. Must contain a POWER WORD (e.g., Ultimate, Complete, Essential, Proven, Exclusive, Official). Must have positive or negative sentiment. Report EXACT character count and each missing element.
+2. META DESCRIPTION: Must be 155-160 characters. Must include focus keyword + price/number + CTA with phone. Report EXACT character count and missing elements.
 3. CANONICAL TAG: Must have <link rel="canonical" href="...">. Report if missing.
-4. H1: Exactly ONE <h1> on the page, keyword must be present. Report if 0, multiple, or keyword missing.
+4. H1: Exactly ONE <h1> on the page, focus keyword must be present. Report if 0, multiple, or keyword missing.
 5. H2 COUNT: Minimum 8 <h2> headings with keyword variations. Report actual count if < 8.
 6. WORD COUNT: Minimum 2500 words in body content. Report actual count if < 2500.
 7. SCHEMA MARKUP: Must have 4 JSON-LD schemas (LocalBusiness/Article + FAQPage + BreadcrumbList + Article/Service). Report which are missing.
@@ -13187,6 +13220,9 @@ Check the original HTML for these 11 critical SEO points. Report ONLY failures:
 9. INTERNAL LINKS: Minimum 3 internal links with descriptive anchor text (not "click here"). Report actual count if < 3.
 10. EXTERNAL LINKS: Minimum 3 external authority links (.gov/.edu/industry) with rel="noopener noreferrer nofollow" target="_blank". Report actual count if < 3.
 11. BOFU CTAs: Phone number visible above the fold, minimum 5 CTAs per page. Report if phone not in first screen or CTAs < 5.
+12. TITLE SENTIMENT: Check if title has emotional trigger (positive: Best, Ultimate, Proven, Guaranteed, Exclusive OR negative: Avoid, Stop, Never, Mistakes, Worst). Report which sentiment is used.
+13. TITLE POWER WORD: Verify title contains at least one power word. If missing, suggest the best power word for this niche.
+14. FOCUS KEYWORD POSITION: Confirm focus keyword is within the FIRST 3 words of the SEO title. If not, this is a CRITICAL FAIL.
 
 Return audit findings as: {"audit_11": [{"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "what was found", "required": "what was required", "fix": "specific fix needed"}, ...]}
 
@@ -13283,6 +13319,8 @@ Return ONLY valid JSON:
     analysis.layout_skeleton = layoutSkeleton;
     analysis.competitors_manual = competitorData;
     analysis.original_graaf_score = originalGraafScan?.contentScore || null;
+    analysis.original_craft_score = originalGraafScan?.craftScore || null;
+    analysis.original_technical_score = originalGraafScan?.technicalScore || null;
     analysis.original_graaf_recs = originalGraafScan?.recommendations || [];
     analysis.paa_questions = paaQuestions;
     analysis.ai_overview_detected = !!aiOverviewData;
@@ -13416,12 +13454,15 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireC
     const origGraafScore = analysis.original_graaf_score || null;
     const graafReqBlock = origGraafRecs.length ? `
 ═══════════════════════════════════════
-GRAAF CONTENT SCORE ORIGINAL: ${origGraafScore || '?'}/100
-VERPLICHT OP TE LOSSEN IN DIT HERSCHRIJVEN:
+GRAAF CONTENT SCORE ORIGINAL: ${origGraafScore || '?'}/100 (Craft: ${analysis.original_craft_score||'?'}/100 | Technical: ${analysis.original_technical_score||'?'}/100)
+VERPLICHT OP TE LOSSEN IN DIT HERSCHRIJVEN — zelfs als score 95-100 is, geef ALTIJD 3-5 specifieke verbeterpunten:
 ${origGraafRecs.filter(r => r.priority === 'high' || r.priority === 'medium').slice(0, 8).map(r =>
   `• [${(r.priority||'').toUpperCase()}] ${r.title}: ${r.action || r.description || ''}`
 ).join('\n')}
-═══════════════════════════════════════` : '';
+═══════════════════════════════════════` : `
+═══════════════════════════════════════
+GEEN GRAAF SCAN BESCHIKBAAR — schrijf content alsof de huidige score 0/100 is. Maximaliseer alle GRAAF, CRAFT en Technical SEO punten.
+═══════════════════════════════════════`;
 
     // Extract original publication date from existing schema — preserve for SEO authority
     let originalDatePublished = '';
@@ -13941,6 +13982,15 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
              'Baseline GSC data captured at time of rewrite']
           ).catch(e => console.warn('[tracker] Baseline snapshot failed:', e.message));
           console.log('[tracker] Baseline snapshot created for page', trackerPageId);
+        }
+
+        // Update tracker page with latest rewritten HTML + score so tracker shows current data
+        if (trackerPageId) {
+          await pool.query(
+            `UPDATE tracker_pages SET html_content=$1, last_graaf_score=$2 WHERE id=$3`,
+            [html || rw.original_html || '', finalGraafResult?.contentScore || null, trackerPageId]
+          ).catch(e => console.warn('[tracker] HTML+score update failed:', e.message));
+          console.log('[tracker] Updated html_content + score for page', trackerPageId, 'score=', finalGraafResult?.contentScore);
         }
       } catch(e) { console.warn('[tracker] Auto-add failed:', e.message); }
     }
@@ -23081,7 +23131,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
       `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
-       gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null,
+       parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
        gsc_queries ? JSON.stringify(gsc_queries) : null,
        gsc_pages ? JSON.stringify(gsc_pages) : null,
        gsc_keyword || null]
@@ -23963,13 +24013,24 @@ function graafAnalyzeHtml(html, pageUrl) {
     images, imagesWithAlt, internalLinks, externalLinks, expertQuoteCount, caseStudyCount, statsFound };
 }
 
-// Run a full GRAAF scan on raw HTML, returns { score, recommendations, breakdown }
+// Run a full GRAAF scan on raw HTML, returns structured score data
 function graafScanHtml(html, pageUrl) {
   const analysis = graafAnalyzeHtml(html, pageUrl);
   if (!analysis) return null;
   const result = computeScore(pageUrl || 'internal', analysis, []);
-  result.analysis = analysis;
-  return result;
+  // Normalize return shape so callers can use contentScore, craftScore, etc.
+  return {
+    score: result.score,
+    contentScore: result.score,
+    quality: result.quality,
+    graafScore: result.metrics.graal,
+    craftScore: result.metrics.craft,
+    technicalScore: result.metrics.technical,
+    metrics: result.metrics,
+    recommendations: result.recommendations,
+    content_stats: result.content_stats,
+    analysis: analysis
+  };
 }
 
 // ── Language detection utility ────────────────────────────────────────────────
@@ -24043,17 +24104,22 @@ async function runTrackerCheck(page, geminiKey, keys) {
     if (!html || html.length < 500) return 'too_small';
     const textOnly = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const textRatio = textOnly.length / html.length;
-    if (textRatio < 0.05) return 'low_text_ratio';
+    if (textRatio < 0.03) return 'low_text_ratio'; // was 0.05, WordPress/Gutenberg often has higher HTML overhead
     const pTags = (html.match(/<p[\s>]/gi) || []).length;
     const articleTags = (html.match(/<article[\s>]/gi) || []).length;
     const mainTags = (html.match(/<main[\s>]/gi) || []).length;
     const h1h2Tags = (html.match(/<h[12][\s>]/gi) || []).length;
-    if (pTags < 3 && articleTags === 0 && mainTags === 0 && h1h2Tags === 0) return 'no_content_tags';
+    const sectionTags = (html.match(/<section[\s>]/gi) || []).length;
+    const divTags = (html.match(/<div[\s>]/gi) || []).length;
+    // WordPress/Gutenberg pages often have 0 <article>/<main> but many <section>/<div> with content
+    const hasContentStructure = pTags >= 3 || h1h2Tags >= 2 || sectionTags >= 2 || articleTags > 0 || mainTags > 0;
+    if (!hasContentStructure && divTags < 10) return 'no_content_tags';
+    // Only flag JS SPA if truly empty (no headings, no paragraphs, no sections)
     const rootMarkers = ['id="root"', 'id="__next"', 'id="app"', 'id="__nuxt"', 'window.__INITIAL_STATE__', 'window.__DATA__'];
     const hasRoot = rootMarkers.some(m => html.includes(m));
     const scriptCount = (html.match(/<script[\s>]/gi) || []).length;
-    if (hasRoot && scriptCount > 5 && pTags < 5) return 'js_spa';
-    return null; // not suspicious
+    if (hasRoot && scriptCount > 8 && pTags < 2 && h1h2Tags === 0 && sectionTags === 0) return 'js_spa';
+    return null; // not suspicious — use this HTML
   }
 
   let effectiveHtml = page.html_content || '';   // wat we uiteindelijk gaan analyseren

@@ -162,6 +162,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.ok{background:#064e3b;color:#34d399;border:1px solid rgba(52,211,153,.3);}
 .toast.err{background:#7f1d1d;color:#f87171;border:1px solid rgba(248,113,113,.3);}
+
+/* ═══════════════════════════════════════════════════════════
+   PAGES OVERVIEW — Visual card grid
+   ═══════════════════════════════════════════════════════════ */
+.pg-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all .15s;position:relative;overflow:hidden;display:flex;flex-direction:column;}
+.pg-card:hover{border-color:rgba(124,58,237,.4);box-shadow:0 4px 20px rgba(124,58,237,.08);transform:translateY(-1px);}
+.pg-card .pg-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px;}
+.pg-card .pg-slug{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);word-break:break-all;line-height:1.4;flex:1;}
+.pg-card .pg-badge{font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;white-space:nowrap;font-weight:700;flex-shrink:0;}
+.pg-badge-good{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.2);}
+.pg-badge-ok{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.2);}
+.pg-badge-bad{background:rgba(244,63,63,.12);color:#f87171;border:1px solid rgba(244,63,63,.2);}
+.pg-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0;}
+.pg-metric{background:rgba(255,255,255,.03);border-radius:6px;padding:7px 10px;text-align:center;}
+.pg-metric-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--text);}
+.pg-metric-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;}
+.pg-kw{font-size:10px;color:var(--muted);margin-bottom:10px;padding:4px 8px;background:rgba(124,58,237,.06);border-radius:4px;border-left:2px solid var(--accent);word-break:break-all;}
+.pg-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:10px;border-top:1px solid var(--border);}
+.pg-kpi-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;text-align:center;}
+.pg-kpi-val{font-size:22px;font-weight:900;color:var(--text);}
+.pg-kpi-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px;}
 </style>
 </head>
 <body>
@@ -174,6 +195,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="topbar-title"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · Intelligence Agent</div>
     <div style="display:flex;gap:4px;margin-left:8px;">
       <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
+      <button id="navPages" onclick="switchView('pages')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">🗂️ Pages</button>
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
       <button id="navStats" onclick="switchView('stats')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📊 Stats</button>
       <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
@@ -993,17 +1015,30 @@ function removeProgress(id) {
   if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(function(){ el.remove(); }, 300); }
 }
 
+// Global action handler registry for quick buttons
+var _actionRegistry = {};
+var _actionIdCounter = 0;
+
 function addActions(actions) {
   var msgs = document.getElementById('messages');
   var div = document.createElement('div');
   div.className = 'msg agent';
   var btns = actions.map(function(a, i) {
     var cls = i === 0 ? 'action-btn primary' : 'action-btn';
-    return '<button class="' + cls + '" onclick="(' + a.fn.toString() + ')(this.parentElement.parentElement.parentElement.parentElement)">' + a.label + '</button>';
+    var aid = '_qa_' + (++_actionIdCounter);
+    _actionRegistry[aid] = a.fn;
+    return '<button class="' + cls + '" data-aid="' + aid + '">' + escHtml(a.label) + '</button>';
   }).join('');
   div.innerHTML =
     '<div class="msg-avatar" style="visibility:hidden"></div>' +
     '<div class="msg-body"><div class="action-card"><div class="action-btns">' + btns + '</div></div></div>';
+  // Attach click handlers properly (preserves closures, no .toString())
+  div.querySelectorAll('button[data-aid]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var fn = _actionRegistry[this.dataset.aid];
+      if (fn) fn(this);
+    });
+  });
   msgs.appendChild(div);
   scrollBottom();
 }
@@ -1316,17 +1351,22 @@ async function api(endpoint, method, body) {
 function switchView(view) {
   document.getElementById('view-tracker').style.display = 'none';
   document.getElementById('view-stats').style.display = 'none';
+  var viewPages = document.getElementById('view-pages');
+  if (viewPages) viewPages.style.display = 'none';
   // Agent view: show chat area, hide others
   var chatArea = document.querySelector('.chat-area');
-  if (chatArea) chatArea.style.visibility = view === 'agent' ? 'visible' : 'hidden';
+  if (chatArea) chatArea.style.visibility = (view === 'agent' || view === 'pages') ? 'visible' : 'hidden';
   if (view === 'tracker') {
     document.getElementById('view-tracker').style.display = 'block';
     loadTrackerPages();
   } else if (view === 'stats') {
     document.getElementById('view-stats').style.display = 'block';
+  } else if (view === 'pages') {
+    if (viewPages) viewPages.style.display = 'block';
+    renderPagesOverview();
   }
   // Update nav button styles
-  ['agent','tracker','stats'].forEach(function(v) {
+  ['agent','pages','tracker','stats'].forEach(function(v) {
     var btn = document.getElementById('nav' + v.charAt(0).toUpperCase() + v.slice(1));
     if (!btn) return;
     if (v === view) {
@@ -2401,6 +2441,282 @@ document.addEventListener('click', function(e) {
   }, 300);
 })();
 
+// ════════════════════════════════════════════════════════════════
+// PAGES OVERVIEW — Visual grid with GSC + Push to Agent
+// ════════════════════════════════════════════════════════════════
+var _pagesOverviewData = []; // {url, slug, keyword, position, impressions, clicks, ctr, score, status}
+var _pagesGscQueryMap = {};  // keyword → {pos, impr, ctr}
+
+function openPagesImportModal() {
+  document.getElementById('pagesImportModal').style.display = 'flex';
+}
+
+function handlePagesCSVDrop(e) {
+  e.preventDefault();
+  var files = e.dataTransfer.files;
+  if (files.length) processPagesCSV(files[0]);
+}
+
+function handlePagesCSVFile(input) {
+  if (input.files.length) processPagesCSV(input.files[0]);
+  input.value = '';
+}
+
+function processPagesCSV(file) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var lines = ev.target.result.trim().split('\n');
+    if (lines.length < 2) { toast('⚠ Empty CSV', 3000, 'err'); return; }
+    var header = lines[0].toLowerCase().replace(/"/g, '').split(',');
+    var iUrl = header.findIndex(function(h) { return h.includes('page') || h.includes('url'); });
+    var iImpr = header.findIndex(function(h) { return h.includes('impression'); });
+    var iCtr = header.findIndex(function(h) { return h.includes('ctr'); });
+    var iClicks = header.findIndex(function(h) { return h.includes('click'); });
+    var iPos = header.findIndex(function(h) { return h.includes('position'); });
+    if (iUrl < 0) iUrl = 0; if (iImpr < 0) iImpr = 2; if (iPos < 0) iPos = 4;
+
+    var added = 0;
+    for (var i = 1; i < lines.length; i++) {
+      var cols = lines[i].replace(/"/g, '').split(',');
+      var url = (cols[iUrl] || '').trim();
+      if (!url || !url.startsWith('http')) continue;
+      var impr = parseInt(cols[iImpr]) || 0;
+      var pos = parseFloat(cols[iPos]) || 0;
+      var ctr = parseFloat((cols[iCtr] || '0').replace('%', '')) || 0;
+      var clicks = parseInt(cols[iClicks]) || 0;
+      var slug = '';
+      try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
+      var existing = _pagesOverviewData.find(function(p) { return p.url === url; });
+      if (existing) {
+        existing.impressions = Math.max(existing.impressions, impr);
+        existing.position = pos || existing.position;
+        existing.ctr = ctr || existing.ctr;
+        existing.clicks = clicks || existing.clicks;
+      } else {
+        _pagesOverviewData.push({
+          url: url, slug: slug, keyword: '',
+          position: pos, impressions: impr, clicks: clicks, ctr: ctr,
+          score: '', scoreStatus: '', added: new Date().toISOString()
+        });
+        added++;
+      }
+    }
+    // Auto-assign keywords from query map
+    if (Object.keys(_pagesGscQueryMap).length) autoAssignPageKeywords();
+    // Persist to server (syncs with Tracker tab)
+    _pagesOverviewData.forEach(function(p) {
+      if (p.tracker_id) return; // already on server
+      api('/api/tracker/pages', 'POST', {
+        url: p.url, keyword: p.keyword, gsc_position: p.position,
+        gsc_impressions: p.impressions, gsc_clicks: p.clicks, gsc_ctr: p.ctr
+      }).then(function(r) {
+        if (r.id) p.tracker_id = r.id;
+      }).catch(function(){});
+    });
+    // Cache locally as fallback
+    try { localStorage.setItem('cs_pages_overview_cache', JSON.stringify(_pagesOverviewData)); } catch(e) {}
+    document.getElementById('pagesImportModal').style.display = 'none';
+    renderPagesOverview();
+    // Also refresh Tracker data
+    _trPages = [];
+    setTimeout(function() { loadTrackerPages(); }, 500);
+    toast('✅ ' + added + ' pages imported & synced to Tracker', 3000, 'ok');
+  };
+  reader.readAsText(file);
+}
+
+function autoAssignPageKeywords() {
+  var queries = Object.entries(_pagesGscQueryMap);
+  if (!queries.length) return;
+  var assigned = 0;
+  _pagesOverviewData.forEach(function(p) {
+    if (p.keyword) return;
+    var urlPath = '';
+    try { urlPath = new URL(p.url).pathname.toLowerCase().replace(/[-_\/]/g, ' ').trim(); } catch(e) { urlPath = p.url.toLowerCase(); }
+    var urlWords = urlPath.split(/\s+/).filter(function(w) { return w.length > 2; });
+    var best = null, bestScore = -1;
+    queries.forEach(function(entry) {
+      var q = entry[0].toLowerCase();
+      var data = entry[1];
+      var pos = typeof data === 'object' ? data.pos : data;
+      var impr = typeof data === 'object' ? data.impr : 0;
+      var matches = urlWords.filter(function(w) { return q.includes(w); }).length;
+      var score = (matches * 50) + Math.min(impr / 100, 20) + Math.max(0, 50 - pos);
+      if (score > bestScore) { bestScore = score; best = entry[0]; }
+    });
+    if (best) { p.keyword = best; assigned++; }
+  });
+  if (assigned) toast('🔑 ' + assigned + ' keywords auto-assigned', 2000, 'ok');
+}
+
+function loadPagesOverview(forceRefresh) {
+  // Always load from server (same API as Tracker) — keeps all tabs in sync
+  api('/api/tracker/pages').then(function(d) {
+    var pages = d.pages || [];
+    _pagesOverviewData = pages.map(function(tp) {
+      var slug = '';
+      try { slug = new URL(tp.url).pathname || '/'; } catch(e) { slug = tp.url; }
+      var snap = tp.latest_snapshot || {};
+      return {
+        url: tp.url, slug: slug, keyword: tp.keyword || '',
+        position: tp.gsc_position || 0, impressions: tp.gsc_impressions || 0,
+        clicks: tp.gsc_clicks || 0, ctr: tp.gsc_ctr || 0,
+        score: snap.score || tp.last_graaf_score || '', scoreStatus: tp.status || '',
+        added: tp.created_at || new Date().toISOString(),
+        tracker_id: tp.id // keep ref for push-to-agent
+      };
+    });
+    // Also update Tracker's internal cache so Tracker tab sees same data
+    _trPages = pages;
+    renderPagesOverview();
+    if (forceRefresh) toast('✅ ' + _pagesOverviewData.length + ' pages synced from server', 2000, 'ok');
+  }).catch(function(e) {
+    // Fallback: localStorage cache
+    try {
+      var saved = localStorage.getItem('cs_pages_overview_cache');
+      if (saved) { _pagesOverviewData = JSON.parse(saved); renderPagesOverview(); }
+    } catch(e2) {}
+  });
+}
+
+function renderPagesOverview() {
+  var grid = document.getElementById('pagesGrid');
+  var kpis = document.getElementById('pagesKpis');
+  var empty = document.getElementById('pagesEmpty');
+  var search = (document.getElementById('pagesSearch') || {}).value || '';
+  var sort = (document.getElementById('pagesSort') || {}).value || 'impressions';
+
+  if (!_pagesOverviewData.length) {
+    grid.innerHTML = ''; kpis.innerHTML = '';
+    empty.style.display = 'block'; return;
+  }
+  empty.style.display = 'none';
+
+  // Filter
+  var data = _pagesOverviewData.filter(function(p) {
+    if (!search) return true;
+    var s = search.toLowerCase();
+    return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
+  });
+
+  // Sort
+  data.sort(function(a, b) {
+    if (sort === 'impressions') return b.impressions - a.impressions;
+    if (sort === 'clicks') return b.clicks - a.clicks;
+    if (sort === 'position') {
+      var ap = a.position || 999, bp = b.position || 999;
+      var as = ap >= 11 && ap <= 30 ? 0 : ap >= 1 && ap <= 10 ? 1 : 2;
+      var bs = bp >= 11 && bp <= 30 ? 0 : bp >= 1 && bp <= 10 ? 1 : 2;
+      return as - bs || ap - bp;
+    }
+    if (sort === 'score') return (b.score || 0) - (a.score || 0);
+    return (a.url || '').localeCompare(b.url || '');
+  });
+
+  // KPIs
+  var totalImp = data.reduce(function(s, p) { return s + (p.impressions || 0); }, 0);
+  var avgPos = data.length ? (data.reduce(function(s, p) { return s + (p.position || 0); }, 0) / data.length).toFixed(1) : '—';
+  var totalClicks = data.reduce(function(s, p) { return s + (p.clicks || 0); }, 0);
+  var avgCtr = data.length ? (data.reduce(function(s, p) { return s + (p.ctr || 0); }, 0) / data.length).toFixed(1) + '%' : '—';
+  var avgScore = data.filter(function(p) { return p.score; }).length ?
+    Math.round(data.filter(function(p) { return p.score; }).reduce(function(s, p) { return s + (parseInt(p.score) || 0); }, 0) / data.filter(function(p) { return p.score; }).length) + '/100' : '—';
+
+  kpis.innerHTML =
+    '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#38bdf8;">' + data.length + '</div><div class="pg-kpi-label">Pages</div></div>' +
+    '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#a78bfa;">' + totalImp.toLocaleString() + '</div><div class="pg-kpi-label">Impressions</div></div>' +
+    '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#34d399;">' + totalClicks.toLocaleString() + '</div><div class="pg-kpi-label">Clicks</div></div>' +
+    '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#fbbf24;">' + avgPos + '</div><div class="pg-kpi-label">Avg Position</div></div>' +
+    '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#fb923c;">' + avgCtr + '</div><div class="pg-kpi-label">Avg CTR</div></div>' +
+    '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#e2e8f0;">' + avgScore + '</div><div class="pg-kpi-label">Avg Score</div></div>';
+
+  // Grid
+  grid.innerHTML = data.map(function(p) {
+    var pos = p.position || 0;
+    var posLabel = pos >= 1 && pos <= 10 ? 'Top 10' : pos >= 11 && pos <= 30 ? 'Page 2-3' : pos > 30 ? 'Page 4+' : 'No data';
+    var posClass = pos >= 1 && pos <= 10 ? 'pg-badge-good' : pos >= 11 && pos <= 30 ? 'pg-badge-ok' : 'pg-badge-bad';
+    var scoreVal = p.score ? (parseInt(p.score) || 0) : '';
+    var scoreClass = scoreVal >= 90 ? 'pg-badge-good' : scoreVal >= 70 ? 'pg-badge-ok' : scoreVal ? 'pg-badge-bad' : '';
+    var scoreLabel = scoreVal ? scoreVal + '/100' : '—';
+
+    return '<div class="pg-card">' +
+      '<div class="pg-top">' +
+        '<div class="pg-slug" title="' + escHtml(p.url) + '">' + escHtml(p.slug || '/') + '</div>' +
+        '<span class="pg-badge ' + posClass + '">' + posLabel + '</span>' +
+      '</div>' +
+      (p.keyword ? '<div class="pg-kw">🔑 ' + escHtml(p.keyword) + '</div>' : '') +
+      '<div class="pg-metrics">' +
+        '<div class="pg-metric"><div class="pg-metric-val" style="color:#a78bfa;">' + (p.impressions || 0).toLocaleString() + '</div><div class="pg-metric-label">Impressions</div></div>' +
+        '<div class="pg-metric"><div class="pg-metric-val" style="color:#34d399;">' + (p.clicks || 0).toLocaleString() + '</div><div class="pg-metric-label">Clicks</div></div>' +
+        '<div class="pg-metric"><div class="pg-metric-val" style="color:#fbbf24;">' + (p.position ? Math.round(p.position * 10) / 10 : '—') + '</div><div class="pg-metric-label">Position</div></div>' +
+        '<div class="pg-metric"><div class="pg-metric-val" style="color:#38bdf8;">' + (p.ctr ? p.ctr + '%' : '—') + '</div><div class="pg-metric-label">CTR</div></div>' +
+      '</div>' +
+      '<div class="pg-actions">' +
+        '<button onclick="pushPageToAgent(' + escHtml(JSON.stringify(p.url)) + ')" style="padding:6px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-family:DM Mono,monospace;flex:1;">🧠 Push to Agent</button>' +
+        '<a href="' + escHtml(p.url) + '" target="_blank" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;text-decoration:none;font-family:DM Mono,monospace;">↗ Open</a>' +
+        '<button onclick="scanPageScore(' + escHtml(JSON.stringify(p.url)) + ')" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#34d399;font-family:DM Mono,monospace;">📊 Scan</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function pushPageToAgent(url) {
+  // Switch to agent view
+  switchView('agent');
+  // Build rich context message
+  var page = _pagesOverviewData.find(function(p) { return p.url === url; });
+  var ctx = '🗂️ **Page:** ' + url + '\n';
+  if (page) {
+    if (page.keyword) ctx += '🔑 **Keyword:** ' + page.keyword + '\n';
+    if (page.position) ctx += '📊 **GSC Position:** ' + Math.round(page.position * 10) / 10 + '\n';
+    if (page.impressions) ctx += '👁 **Impressions:** ' + page.impressions.toLocaleString() + '\n';
+    if (page.clicks) ctx += '🖱 **Clicks:** ' + page.clicks + '\n';
+    if (page.ctr) ctx += '📈 **CTR:** ' + page.ctr + '%\n';
+    if (page.score) ctx += '⭐ **ContentScore:** ' + page.score + '/100\n';
+  }
+  ctx += '\nPlease audit this page and provide specific optimization recommendations.';
+
+  // Set as user message and auto-send
+  var inp = document.getElementById('userInput');
+  if (inp) { inp.value = ctx; sendMessage(); }
+}
+
+function scanPageScore(url) {
+  var btn = event.target;
+  btn.textContent = '⏳'; btn.disabled = true;
+  fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url }) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.score) {
+        var p = _pagesOverviewData.find(function(pg) { return pg.url === url; });
+        if (p) p.score = d.score;
+        // Also update server tracker so all tabs see the new score
+        var trackerP = (_trPages || []).find(function(tp) { return tp.url === url; });
+        if (trackerP && trackerP.id) {
+          api('/api/tracker/pages/' + trackerP.id + '/snapshot', 'POST', {
+            score: d.score, metrics: d.metrics, graaf_score: d.graaf_score,
+            craft_score: d.craft_score, technical_score: d.technical_score
+          }).catch(function(){});
+        }
+        try { localStorage.setItem('cs_pages_overview_cache', JSON.stringify(_pagesOverviewData)); } catch(e) {}
+        renderPagesOverview();
+        renderTrackerKpis(); // refresh Tracker KPIs too
+        toast('✅ Score: ' + d.score + '/100', 3000, 'ok');
+      } else {
+        toast('⚠ Scan failed', 3000, 'err');
+      }
+      btn.textContent = '📊 Scan'; btn.disabled = false;
+    })
+    .catch(function(e) {
+      toast('⚠ ' + e.message, 3000, 'err');
+      btn.textContent = '📊 Scan'; btn.disabled = false;
+    });
+}
+
+// Init: load pages overview on first open
+document.addEventListener('DOMContentLoaded', function() {
+  loadPagesOverview();
+});
+
 </script>
 
 <!-- PROFILES VIEW -->
@@ -2624,6 +2940,64 @@ document.addEventListener('click', function(e) {
 </div><!-- /profileModal -->
 
 
+
+<!-- ════════════════════════════════════════════════════════════════
+     PAGES OVERVIEW — Visual grid with GSC data + Push to Agent
+     ════════════════════════════════════════════════════════════════ -->
+<div id="view-pages" style="display:none;position:fixed;top:52px;left:280px;right:0;bottom:0;overflow-y:auto;padding:24px 28px;background:var(--bg);z-index:5;">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <div style="font-size:18px;font-weight:800;background:linear-gradient(90deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">🗂️ Pages Overview</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px;">All your pages with GSC metrics — one-click push to Agent</div>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      <input id="pagesSearch" placeholder="Search URL or keyword..." oninput="renderPagesOverview()"
+        style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;min-width:180px;">
+      <select id="pagesSort" onchange="renderPagesOverview()"
+        style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);outline:none;">
+        <option value="impressions">Sort: Impressions</option>
+        <option value="position">Sort: Position</option>
+        <option value="clicks">Sort: Clicks</option>
+        <option value="score">Sort: ContentScore</option>
+        <option value="url">Sort: URL A-Z</option>
+      </select>
+      <button onclick="loadPagesOverview(true)" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-family:'DM Mono',monospace;">↺ Refresh</button>
+      <button onclick="openPagesImportModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">+ Import GSC CSV</button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div id="pagesKpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px;"></div>
+
+  <!-- Page Grid -->
+  <div id="pagesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;"></div>
+
+  <!-- Empty state -->
+  <div id="pagesEmpty" style="display:none;text-align:center;padding:60px 20px;color:var(--muted);">
+    <div style="font-size:40px;margin-bottom:12px;">🗂️</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">No pages yet</div>
+    <div style="font-size:12px;margin-bottom:16px;">Import a GSC Pages CSV or add URLs manually to see your visual overview.</div>
+    <button onclick="openPagesImportModal()" style="padding:8px 18px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
+  </div>
+</div>
+
+<!-- Pages Import Modal -->
+<div id="pagesImportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px;">📊 Import GSC Pages CSV</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Go to Google Search Console → Performance → Pages → Export CSV. Drag or click below.</div>
+    <div style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;position:relative;" ondragover="this.style.borderColor='var(--accent)';this.style.background='rgba(124,58,237,.05)';event.preventDefault();" ondragleave="this.style.borderColor='var(--border)';this.style.background='';" ondrop="handlePagesCSVDrop(event);this.style.borderColor='var(--border)';this.style.background='';" onclick="document.getElementById('pagesImportInput').click()">
+      <div style="font-size:28px;margin-bottom:8px;">📁</div>
+      <div style="font-size:11px;color:var(--muted);">Drop GSC Pages CSV here or click to browse</div>
+      <input type="file" id="pagesImportInput" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;" onchange="handlePagesCSVFile(this)">
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+      <button onclick="document.getElementById('pagesImportModal').style.display='none'" style="padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- TRACKER VIEW -->
 <div id="view-tracker" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:20px 24px;background:#07090e;">
