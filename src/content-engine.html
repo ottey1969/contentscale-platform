@@ -355,17 +355,18 @@ async function connect() {
       if (ck) localStorage.setItem('nexus_claude_key', ck);
     } catch(e) {}
 
-    // Load profiles
+    // Load profiles — DON'T auto-select first one
     var pr = await api('/api/content/profiles');
     if (pr.profiles && pr.profiles.length) {
       _allProfiles = pr.profiles;
-      _profile = pr.profiles[0];
-      _context.profileId = _profile.id;
-      renderProfileSelector(pr.profiles);
+      // No auto-select — user must explicitly choose
+      _profile = null;
+      _context.profileId = null;
+      renderProfileSelector(pr.profiles, true); // true = show placeholder
       document.getElementById('profileSection').style.display = 'block';
     }
 
-    // Trigger agent welcome
+    // Trigger agent welcome (will prompt for profile selection)
     agentGreet();
   } catch(e) {
     toast('Connection failed: ' + e.message, 'err');
@@ -450,14 +451,19 @@ function updateGscStatus() {
 // ══════════════════════════════════════════════════════════════
 // AGENT GREETING
 // ══════════════════════════════════════════════════════════════
-function renderProfileSelector(profiles) {
+function renderProfileSelector(profiles, showPlaceholder) {
   var sel = document.getElementById('profileSelect');
   var lbl = document.getElementById('profileCountLabel');
   if (!sel) return;
-  sel.innerHTML = profiles.map(function(p) {
+  var html = '';
+  if (showPlaceholder) {
+    html += '<option value="" disabled selected>-- Select a profile --</option>';
+  }
+  html += profiles.map(function(p) {
     return '<option value="' + p.id + '">' + p.name + (p.domain ? ' (' + p.domain + ')' : '') + '</option>';
   }).join('');
-  sel.value = profiles[0] && profiles[0].id;
+  sel.innerHTML = html;
+  if (!showPlaceholder && profiles[0]) sel.value = profiles[0].id;
   if (lbl) lbl.textContent = profiles.length + ' profile' + (profiles.length !== 1 ? 's' : '');
 }
 
@@ -477,6 +483,9 @@ function onProfileSwitch() {
   var stat = document.getElementById('gscStatus');
   if (zone) zone.style.display = 'block';
   if (stat) stat.style.display = 'none';
+
+  // Show confirmation toast
+  toast('✅ Profile selected: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : ''), 2500, 'ok');
 
   // Clear conversation and re-greet with new profile
   var msgs = document.getElementById('messages');
@@ -580,7 +589,14 @@ function agentGreet() {
       'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks. ' +
       'Or tell me what we\'re working on — a page to rewrite, a keyword to target, or a content cluster to build.\n\nWhat are we working on?';
   } else {
-    greeting = 'Connected. Select a profile from the sidebar to load memory, GSC data, and business context — then tell me what we\'re working on.';
+    greeting = '👋 Welcome! I\'m your SEO content agent.\n\n<strong>⚠️ Please select a profile from the dropdown above</strong> to load your business context, GSC data, and memory.\n\nOnce selected, I\'ll know your niche, target geo, conversion goals, and past work — so every recommendation is tailored to you.\n\nOr create a new profile if this is your first time.';
+    // Highlight the profile selector visually
+    var sel = document.getElementById('profileSelect');
+    if (sel) {
+      sel.style.borderColor = '#f59e0b';
+      sel.style.boxShadow = '0 0 0 2px rgba(245,158,11,.3)';
+      setTimeout(function() { sel.style.borderColor = ''; sel.style.boxShadow = ''; }, 3000);
+    }
   }
 
   addAgentMessage(greeting);
@@ -613,6 +629,13 @@ async function sendMessage() {
   var text = input.value.trim();
   if (!text || _busy) return;
   if (!_connected) { toast('Connect first using your engine code', 'err'); return; }
+  // Block sending if no profile selected — prompt user
+  if (!_profile) {
+    toast('⚠️ Select a profile from the dropdown above first', 3000, 'err');
+    var sel = document.getElementById('profileSelect');
+    if (sel) { sel.focus(); sel.style.borderColor = '#f59e0b'; setTimeout(function(){ sel.style.borderColor = ''; }, 2000); }
+    return;
+  }
   hideWelcome();
   input.value = '';
   autoResize(input);
