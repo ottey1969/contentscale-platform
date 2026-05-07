@@ -23212,6 +23212,26 @@ app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res)
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Push a scan result as a snapshot (from frontend scan → tracker) ─────────
+app.post('/api/tracker/pages/:id/snapshot', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    const { score, metrics, graaf_score, craft_score, technical_score } = req.body;
+    const breakdown = metrics || (graaf_score !== undefined ? { graaf: graaf_score, craft: craft_score || 0, technical: technical_score || 0 } : null);
+    const r = await pool.query(
+      `INSERT INTO tracker_snapshots (page_id, checked_at, score, graaf_breakdown)
+       VALUES ($1, NOW(), $2, $3) RETURNING *`,
+      [pageId, score || null, breakdown]
+    );
+    res.json({ success: true, snapshot: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) => {
   try {
     const eu = req.engineUser;
