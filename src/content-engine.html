@@ -1618,9 +1618,21 @@ function renderTrackerList() {
               '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(75,85,99,.1);border:1px solid rgba(75,85,99,.2);color:#6b7280;">— Perplexity</span>';
     var lastCh = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never';
     var recs = snap.recommendations;
-    if (recs && typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { recs = null; } }
-    var topRec = Array.isArray(recs) && recs.length ? recs[0] : null;
-    var recHtml = topRec ? '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+(topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399')+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;">'+escHtml(topRec.title||topRec.description||'')+'</div>' : '';
+    // Unwrap string layers
+    var rDepth = 0;
+    while (recs && typeof recs === 'string' && rDepth < 3) { try { recs = JSON.parse(recs); rDepth++; } catch(e) { break; } }
+    // Handle { all: [...], count: N } shape from GRAAF
+    if (recs && recs.all && Array.isArray(recs.all)) recs = recs.all;
+    var topRec = Array.isArray(recs) && recs.length && typeof recs[0] === 'object' ? recs[0] : null;
+    // Build recommendation HTML — show title + truncated action
+    var recHtml = '';
+    if (topRec) {
+      var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
+      var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'Recommendation');
+      var rAction = escHtml(topRec.action||topRec.fix||topRec.recommendation||'');
+      var rFull = rTitle + (rAction ? ' — ' + rAction.substring(0,120) + (rAction.length>120?'...':'') : '');
+      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;white-space:normal;word-break:break-word;line-height:1.4;">'+rFull+'</div>';
+    }
 
     return '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:12px;align-items:flex-start;">' +
       '<div style="flex:1;min-width:0;">' +
@@ -1768,8 +1780,11 @@ async function openTrackerDetail(pageId) {
     var snapList = (snaps.snapshots || []).slice(0, 20).reverse();
     var snap = snapList.length ? snapList[snapList.length-1] : (page && page.latest_snapshot ? page.latest_snapshot : {});
 
-    // Score card
-    var scoreHtml = snap && snap.score ? '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;margin-bottom:14px;display:flex;gap:14px;align-items:center;"><div style="text-align:center;min-width:64px;"><div style="font-size:28px;font-weight:900;color:'+(snap.score>=70?'#34d399':snap.score>=50?'#fbbf24':'#f87171')+';">'+snap.score+'</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;">/100</div></div><div><div style="font-size:13px;font-weight:700;">ContentScore — '+(snap.score>=70?'Good':snap.score>=50?'Needs Work':'Critical')+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Score at last check &nbsp;·&nbsp; <a data-pageid="' + pageId + '" href="#" onclick="forceTrackerRescan(this.dataset.pageid); return false;" style="color:#38bdf8;text-decoration:none;font-size:10px;">Run live scan ↗</a></div></div></div>' : '';
+    // Score card with GRAAF/CRAFT/TECHNICAL breakdown
+    var _tierLabel = snap.score>=90 ? 'Elite' : snap.score>=75 ? 'Strong' : snap.score>=60 ? 'Good' : snap.score>=40 ? 'Needs Work' : 'Critical';
+    var _tierColor = snap.score>=90 ? '#34d399' : snap.score>=75 ? '#34d399' : snap.score>=60 ? '#fbbf24' : snap.score>=40 ? '#fb923c' : '#f87171';
+    var _bd = snap.graaf_breakdown || {};
+    var scoreHtml = snap && snap.score ? '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;margin-bottom:14px;"><div style="display:flex;gap:14px;align-items:center;margin-bottom:10px;"><div style="text-align:center;min-width:64px;"><div style="font-size:28px;font-weight:900;color:'+_tierColor+';">'+snap.score+'</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;">/100</div></div><div><div style="font-size:13px;font-weight:700;">ContentScore — '+_tierLabel+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Score at last check &nbsp;·&nbsp; <a data-pageid="' + pageId + '" href="#" onclick="forceTrackerRescan(this.dataset.pageid); return false;" style="color:#38bdf8;text-decoration:none;font-size:10px;">Run live scan ↗</a></div></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"><div style="background:rgba(13,17,23,.6);border-radius:6px;padding:6px;text-align:center;border:1px solid rgba(255,255,255,.05);"><div style="font-size:14px;font-weight:800;color:#34d399;">'+(_bd.graaf||'—')+'</div><div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">GRAAF /50</div></div><div style="background:rgba(13,17,23,.6);border-radius:6px;padding:6px;text-align:center;border:1px solid rgba(255,255,255,.05);"><div style="font-size:14px;font-weight:800;color:#a78bfa;">'+(_bd.craft||'—')+'</div><div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">CRAFT /30</div></div><div style="background:rgba(13,17,23,.6);border-radius:6px;padding:6px;text-align:center;border:1px solid rgba(255,255,255,.05);"><div style="font-size:14px;font-weight:800;color:#38bdf8;">'+(_bd.technical||'—')+'</div><div style="font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">TECHNICAL /20</div></div></div></div>' : '';
 
     // Position chart
     var chartHtml = '';
@@ -1834,11 +1849,16 @@ async function openTrackerDetail(pageId) {
     // 2. JSON string of array of objects  
     // 3. Double-encoded: JSON string of JSON string of array
     // 4. Array of JSON strings (each item stringified)
+    // 5. Object with .all array (from GRAAF recommendations shape)
     var recs2 = snap.recommendations;
     // Unwrap string layers until we have a non-string or can't parse further
     var parseDepth = 0;
     while (recs2 && typeof recs2 === 'string' && parseDepth < 3) {
       try { recs2 = JSON.parse(recs2); parseDepth++; } catch(e) { break; }
+    }
+    // Handle GRAAF recommendations shape: { all: [...], count: N }
+    if (recs2 && typeof recs2 === 'object' && !Array.isArray(recs2) && recs2.all && Array.isArray(recs2.all)) {
+      recs2 = recs2.all;
     }
     // If single object, wrap in array
     if (recs2 && !Array.isArray(recs2) && typeof recs2 === 'object') recs2 = [recs2];
@@ -1856,7 +1876,7 @@ async function openTrackerDetail(pageId) {
           return (typeof parsed === 'object' && parsed !== null) ? parsed : { title: item };
         }
         return item;
-      });
+      }).filter(function(item) { return item && typeof item === 'object'; }); // filter out any non-objects
     }
     var recsHtml = '';
     if (Array.isArray(recs2) && recs2.length) {

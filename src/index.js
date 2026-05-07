@@ -24224,7 +24224,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         const graafResult = graafScanHtml(effectiveHtml, page.url || '');
         if (graafResult) {
           graafScore = graafResult.totalScore || graafResult.score || null;
-          graafBreakdown = graafResult.breakdown || null;
+          graafBreakdown = graafResult.metrics || null;  // metrics = { graaf, craft, technical }
           graafRecs = graafResult.recommendations || null;
           _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100' + (fetchReliable ? '' : ' (handmatige scan aangeraden voor nauwkeurigheid)'));
         } else {
@@ -24284,12 +24284,23 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
           // ── Position: find our URL in organic results ──────────────────────
           const organic = sData.organic || [];
+          let bestMatchIndex = -1;
+          let bestMatchScore = 0; // 0 = none, 1 = domain match, 2 = exact match
           for(let i = 0; i < organic.length; i++) {
             const link = (organic[i].link || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-            if(link === cleanHost || link.startsWith(domain)) {
-              snapshot.google_position = organic[i].position || (i + 1);
-              break;
+            if(link === cleanHost) {
+              bestMatchIndex = i;
+              bestMatchScore = 2; // exact match — best possible
+              break; // can't beat exact match
+            } else if(bestMatchScore < 2 && link.startsWith(domain + '/')) {
+              // Same domain with a sub-path — only match if no exact match found yet
+              // Require the link to start with "domain/" to avoid matching unrelated subdomains
+              bestMatchIndex = i;
+              bestMatchScore = 1;
             }
+          }
+          if(bestMatchIndex >= 0) {
+            snapshot.google_position = organic[bestMatchIndex].position || (bestMatchIndex + 1);
           }
 
           // ── AI Overview: Serper returns answerBox with type 'ai_overview' ──
@@ -24545,9 +24556,9 @@ Zero generic advice. Skip anything our content already clearly has.`;
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
-     snapshot.recommendations ? JSON.stringify(snapshot.recommendations) : null, snapshot.html_hash, snapshot.score,
-     snapshot.graaf_breakdown ? JSON.stringify(snapshot.graaf_breakdown) : null,
-     snapshot.graaf_recommendations ? JSON.stringify(snapshot.graaf_recommendations) : null]
+     snapshot.recommendations || null, snapshot.html_hash, snapshot.score,
+     snapshot.graaf_breakdown || null,
+     snapshot.graaf_recommendations || null]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
