@@ -3163,8 +3163,9 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  return res.status(404).json({ success: false, error: 'Page not found (HTTP ' + response.status() + ')' });
                }
                await new Promise(r => setTimeout(r, 2000)); // let JS render
+               var analysis;
                try {
-               const analysis = await page.evaluate((scanUrlParam) => {
+               analysis = await page.evaluate((scanUrlParam) => {
                let text = document.body ? document.body.innerText : '';
                let cleanText = text.replace(/\s+/g, ' ').trim();
                let wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
