@@ -23894,16 +23894,17 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
       r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     }
     if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
-    const page = r.rows[0];
+        const page = r.rows[0];
     const pageId = page.id;
+    const forceRescan = req.body && req.body.force === true;
     const existing = _trackerCheckStatus.get(pageId);
     if(existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
     _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null });
     res.json({ success: true, message: 'Check started', page_id: pageId });
     const _checkKeys = { gemini: resolveGeminiKey(req), serpapiKey: resolveSerpapiKey(req), youKey: resolveYouApiKey(req), perplexityKey: resolvePerplexityKey(req) };
     setImmediate(async () => {
-      try { await runTrackerCheck(page, _checkKeys.gemini, _checkKeys); }
-      catch(e) { console.warn('[tracker-check]', e.message); }
+  try { await runTrackerCheck(page, _checkKeys.gemini, _checkKeys, forceRescan); }
+  catch(e) { console.warn('[tracker-check]', e.message); }
       finally {
         const st = _trackerCheckStatus.get(pageId);
         if(st) { st.running = false; st.finishedAt = new Date().toISOString(); }
@@ -24023,7 +24024,7 @@ function graafScanHtml(html, pageUrl) {
     score: result.score,
     contentScore: result.score,
     quality: result.quality,
-    graafScore: result.metrics.graal,
+    graafScore: result.metrics.graaf,
     craftScore: result.metrics.craft,
     technicalScore: result.metrics.technical,
     metrics: result.metrics,
@@ -24062,7 +24063,7 @@ function detectContentLanguage(html) {
 // ── Core check function ───────────────────────────────────────────────────────
 // Real APIs: Google CSE · Perplexity Sonar · You.com · Bing (optional)
 
-async function runTrackerCheck(page, geminiKey, keys) {
+async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   keys = keys || {};
   const _sk  = keys.serpapiKey    || process.env.SERPAPI_KEY            || '';
   const _yk  = keys.youKey        || process.env.YOU_API_KEY            || '';
@@ -24208,8 +24209,8 @@ async function runTrackerCheck(page, geminiKey, keys) {
         [pageId]
       );
       const prevSnap = prevSnapR.rows[0] || null;
-      if (prevSnap && prevSnap.html_hash === effectiveHash && prevSnap.score !== null) {
-        graafScore = prevSnap.score;
+if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap.score !== null) {
+  graafScore = prevSnap.score;
         graafBreakdown = prevSnap.graaf_breakdown;
         graafRecs = prevSnap.graaf_recommendations;
         inherited = true;
