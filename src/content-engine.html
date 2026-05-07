@@ -219,6 +219,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="sidebar-label">Engine Access</div>
       <input class="token-input" id="engineToken" placeholder="ENG-XXXX engine code" type="password">
       <input class="token-input" id="claudeKey" placeholder="Claude API key (sk-ant-...)" type="password" style="margin-top:6px;">
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">
+        <span style="color:var(--green);">✓</span> Gemini research runs free via platform · you only pay for Claude writing
+      </div>
       <button class="sidebar-btn primary" onclick="connect()" id="connectBtn" style="margin-top:8px;">Connect →</button>
       <div id="forgetLink" style="display:none;text-align:center;margin-top:6px;">
         <button onclick="forgetLogin()" style="background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0;">Forget saved login</button>
