@@ -3140,17 +3140,23 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                let scanUrl = url.startsWith('http') ? url : 'https://' + url;
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
-               let browser = await getBrowser();
+               let browser;
+               try { browser = await getBrowser(); } catch(e) { console.error('[scan] Browser launch failed:', e.message); }
                               // One retry — force fresh browser if first attempt returns null
                if (!browser) {
                  browserInstance = null;
-                 browser = await getBrowser();
+                 try { browser = await getBrowser(); } catch(e) { console.error('[scan] Browser retry failed:', e.message); }
                }
-               if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable — please try again in 10 seconds' });
-               const page = await browser.newPage();
+               if (!browser) return res.status(503).json({ success: false, error: 'Browser unavailable — Puppeteer may need restart. Try again in 10 seconds.', step: 'browser_launch' });
+               let page;
+               try { page = await browser.newPage(); } catch(e) { return res.status(500).json({ success: false, error: 'Failed to create browser page: ' + e.message, step: 'newPage' }); }
+               try {
                await page.setViewport({ width: 1920, height: 1080 });
                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-               const response = await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+               } catch(e) { console.warn('[scan] Viewport/UA setup failed:', e.message); /* non-fatal */ }
+               let response;
+               try { response = await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }); }
+               catch(e) { await page.close().catch(()=>{}); return res.status(500).json({ success: false, error: 'Failed to load page: ' + e.message, step: 'navigation', detail: 'URL may be blocking bots or timed out after 15s' }); }
                // Reject 404s and server errors — do not score missing pages
                if (response && response.status() >= 400) {
                  await page.close();
@@ -3327,6 +3333,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
                };
                }, scanUrl);
+               } catch(e) { await page.close().catch(()=>{}); return res.status(500).json({ success: false, error: 'Page analysis failed: ' + e.message, step: 'evaluate', detail: 'JavaScript evaluation in the browser page threw an error. The page may have complex scripts that interfere with analysis.' }); }
                let extractedEmails = [];
                try {
                const pageHtml = await page.content();
@@ -3337,11 +3344,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
                );
                extractedEmails = allEmails.slice(0, 3);
-               } catch (e) {}
-               await page.close();
+               } catch (e) { console.warn('[scan] Email extraction failed:', e.message); }
+               await page.close().catch(()=>{});
                // ── SCORING ──
-               const result = computeScore(scanUrl, analysis, extractedEmails);
-               console.log(`✅ Scan: ${scanUrl} → ${result.score}/100`);
+               var result;
+               try { result = computeScore(scanUrl, analysis, extractedEmails); }
+               catch(e) { return res.status(500).json({ success: false, error: 'Scoring failed: ' + e.message, step: 'computeScore' }); }
+               console.log(`✅ Scan: ${scanUrl} → ${result.score}/100 (G:${result.metrics?.graaf||0} C:${result.metrics?.craft||0} T:${result.metrics?.technical||0})`);
                res.json(result);
                // Auto-save to scan_log so badge can find it
                if (pool) {
@@ -3351,8 +3360,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  ).catch(err => console.error('[scan_log] insert failed:', err.message, '| url:', scanUrl));
                }
                } catch (error) {
-               console.error('❌ Scan error:', error.message);
-               res.status(500).json({ success: false, error: 'Scan failed', details: error.message });
+               console.error('❌ Scan error (outer):', error.message, error.stack);
+               res.status(500).json({ success: false, error: 'Scan failed unexpectedly', details: error.message, step: 'outer_catch' });
                }
                });
 
