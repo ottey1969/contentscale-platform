@@ -3169,7 +3169,6 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                let text = document.body ? document.body.innerText : '';
                let cleanText = text.replace(/\s+/g, ' ').trim();
                let wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-               // Fallback: textContent catches content in DOM but not yet visible (JS frameworks)
                if (wordCount < 200 && document.body) {
                  const clone = document.body.cloneNode(true);
                  clone.querySelectorAll('script, style, noscript').forEach(el => el.remove());
@@ -3180,9 +3179,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const rawHtml = document.documentElement.outerHTML;
                const h1Els = document.querySelectorAll('h1');
                const h1Count = h1Els.length;
-               let h1Text = '';
-               let h1IsHidden = false;
-               let h1VisibleCount = 0;
+               let h1Text = '', h1IsHidden = false, h1VisibleCount = 0;
                h1Els.forEach(el => {
                const style = window.getComputedStyle(el);
                const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
@@ -3190,7 +3187,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                else { h1IsHidden = true; }
                });
                const h1Length = h1Text.length;
-               const GENERIC_H1 = ['welcome', 'home', 'hello', 'untitled', 'page', 'index', 'main', 'default', 'test', 'new page', 'coming soon'];
+               const GENERIC_H1 = ['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
                const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
                const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
                const h1IsTooLong  = h1Text.length > 70;
@@ -3198,9 +3195,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const h3Count = document.querySelectorAll('h3').length;
                const listItemCount = document.querySelectorAll('li').length;
                const paragraphs = Array.from(document.querySelectorAll('p'));
-               const avgParagraphLength = paragraphs.length > 0
-               ? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0) / paragraphs.length
-               : 0;
+               const avgParagraphLength = paragraphs.length > 0 ? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0) / paragraphs.length : 0;
                const metaTitle = (document.querySelector('title') || {}).textContent || '';
                const metaTitleLength = metaTitle.length;
                const metaDescEl = document.querySelector('meta[name="description"]');
@@ -3211,129 +3206,30 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
                const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
                const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-               let hasArticleSchema = false;
-               let hasFAQPageSchema = false;
-               let hasOrganizationSchema = false;
-               const checkSchemaType = (typeVal) => {
-               if (!typeVal) return;
-               const types = Array.isArray(typeVal) ? typeVal : [typeVal];
-               if (types.some(t => ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle'].includes(t))) hasArticleSchema = true;
-               if (types.includes('FAQPage')) hasFAQPageSchema = true;
-               if (types.some(t => ['Organization', 'LocalBusiness', 'Corporation'].includes(t))) hasOrganizationSchema = true;
-               };
-               schemaScripts.forEach(script => {
-               try {
-               const data = JSON.parse(script.textContent);
-               if (Array.isArray(data)) { data.forEach(item => { checkSchemaType(item['@type']); }); }
-               else {
-               checkSchemaType(data['@type']);
-               if (Array.isArray(data['@graph'])) { data['@graph'].forEach(item => { checkSchemaType(item['@type']); }); }
-               }
-               } catch (e) {}
-               });
-
-
-                 
-             const hasFAQContent = (() => {
-    // Check headings text
-    const headingMatch = Array.from(document.querySelectorAll('h2, h3, h4')).some(h =>
-        h.textContent.toLowerCase().includes('faq') ||
-        h.textContent.toLowerCase().includes('frequently asked') ||
-        h.textContent.toLowerCase().includes('common question')
-    );
-    // Check for id="faq" or id containing "faq" on any element
-    const idMatch = Array.from(document.querySelectorAll('[id]')).some(el =>
-        el.id.toLowerCase().includes('faq')
-    );
-    // Check for section/div with class containing faq
-    const classMatch = Array.from(document.querySelectorAll('[class]')).some(el => {
-        const cn = el.className;
-        if (!cn) return false;
-        // Handle both string and SVGAnimatedString
-        const classNameStr = typeof cn === 'string' ? cn : cn.baseVal || '';
-        return classNameStr.toLowerCase().includes('faq');
-    });
-    // Check raw text for FAQ patterns
-    const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
-    const textMatch = bodyText.includes('frequently asked') || bodyText.includes('common questions');
-    return headingMatch || idMatch || classMatch || textMatch;
-})();
-
-                 
+               let hasArticleSchema = false, hasFAQPageSchema = false, hasOrganizationSchema = false;
+               const checkSchemaType = (typeVal) => { if(!typeVal)return; const types=Array.isArray(typeVal)?typeVal:[typeVal]; if(types.some(t=>['Article','BlogPosting','NewsArticle','TechArticle'].includes(t)))hasArticleSchema=true; if(types.includes('FAQPage'))hasFAQPageSchema=true; if(types.some(t=>['Organization','LocalBusiness','Corporation'].includes(t)))hasOrganizationSchema=true; };
+               schemaScripts.forEach(script => { try { const data=JSON.parse(script.textContent); if(Array.isArray(data))data.forEach(i=>checkSchemaType(i['@type'])); else { checkSchemaType(data['@type']); if(Array.isArray(data['@graph']))data['@graph'].forEach(i=>checkSchemaType(i['@type'])); } } catch(e){} });
+               const hasFAQContent = (() => { const headingMatch=Array.from(document.querySelectorAll('h2,h3,h4')).some(h=>h.textContent.toLowerCase().includes('faq')||h.textContent.toLowerCase().includes('frequently asked')||h.textContent.toLowerCase().includes('common question')); const idMatch=Array.from(document.querySelectorAll('[id]')).some(el=>el.id.toLowerCase().includes('faq')); const classMatch=Array.from(document.querySelectorAll('[class]')).some(el=>{const cn=el.className; const cns=typeof cn==='string'?cn:cn.baseVal||''; return cns.toLowerCase().includes('faq');}); const bodyText=document.body?document.body.innerText.toLowerCase():''; const textMatch=bodyText.includes('frequently asked')||bodyText.includes('common questions'); return headingMatch||idMatch||classMatch||textMatch; })();
                const images = document.querySelectorAll('img');
                const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
-               let baseHostname = '';
-               try { baseHostname = new URL(scanUrlParam).hostname.replace('www.', ''); } catch (e) {}
+               let baseHostname = ''; try { baseHostname = new URL(scanUrlParam).hostname.replace('www.',''); } catch(e) {}
                const allLinks = Array.from(document.querySelectorAll('a[href]'));
-               const internalLinks = allLinks.filter(a => {
-               try { return new URL(a.href).hostname.replace('www.', '') === baseHostname; } catch (e) { return false; }
-               }).length;
-               const externalLinks = allLinks.filter(a => {
-               try {
-               const h = new URL(a.href).hostname.replace('www.', '');
-               return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:');
-               } catch (e) { return false; }
-               }).length;
+               const internalLinks = allLinks.filter(a => { try { return new URL(a.href).hostname.replace('www.','') === baseHostname; } catch(e) { return false; } }).length;
+               const externalLinks = allLinks.filter(a => { try { const h = new URL(a.href).hostname.replace('www.',''); return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:'); } catch(e) { return false; } }).length;
                let expertQuoteCount = 0;
-               document.querySelectorAll('blockquote').forEach(bq => {
-               const cite = bq.querySelector('cite');
-               const text = bq.textContent.trim();
-               // Count if: has cite, OR is long enough to be a real quote (>80 chars)
-               if (text.length > 30 && (cite || text.length > 80)) expertQuoteCount++;
-               });
-               // Also count standalone <cite> tags not inside blockquote
-               document.querySelectorAll('cite').forEach(cite => {
-               if (!cite.closest('blockquote') && cite.textContent.trim().length > 3) expertQuoteCount++;
-               });
-               const testimonialSelectors = ['.review', '.testimonial', '[class*="review"]', '[class*="testimonial"]', '[class*="quote"]'];
-               testimonialSelectors.forEach(sel => {
-               try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch (e) {}
-               });
-               let caseStudyCount = 0;
-               const caseStudyKeywords = ['case study', 'challenge', 'solution', 'results', 'roi', 'recovered', 'recovery', 'success rate'];
-               const seen = new Set();
-               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"]').forEach(el => {
-               if (seen.has(el)) return;
-               const txt = el.textContent.toLowerCase();
-               const len = txt.length;
-               if (len > 300 && len < 6000) {
-               const hasKeyword = caseStudyKeywords.some(k => txt.includes(k));
-               const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
-               if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
-               }
-               });
+               document.querySelectorAll('blockquote').forEach(bq => { const cite=bq.querySelector('cite'); const txt=bq.textContent.trim(); if(txt.length>30&&(cite||txt.length>80))expertQuoteCount++; });
+               document.querySelectorAll('cite').forEach(cite => { if(!cite.closest('blockquote')&&cite.textContent.trim().length>3)expertQuoteCount++; });
+               ['.review','.testimonial','[class*="review"]','[class*="testimonial"]','[class*="quote"]'].forEach(sel => { try { document.querySelectorAll(sel).forEach(el=>{if(el.textContent.trim().length>40)expertQuoteCount++;}); } catch(e){} });
+               let caseStudyCount = 0; const seen=new Set(); const csKeywords=['case study','challenge','solution','results','roi','recovered','recovery','success rate'];
+               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"]').forEach(el => { if(seen.has(el))return; const txt=el.textContent.toLowerCase(); const len=txt.length; if(len>300&&len<6000){ const hasK=csKeywords.some(k=>txt.includes(k)); const hasM=/\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt); if(hasK&&hasM){caseStudyCount++;seen.add(el);} } });
                const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
                const statsFound = (cleanText.match(statsPattern) || []).length;
                const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
                const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
-               const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
-               (() => {
-               const earlyLists = Array.from(document.querySelectorAll('ul, ol'));
-               for (const list of earlyLists) {
-               const items = list.querySelectorAll('li');
-               if (items.length >= 3) {
-               const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999;
-               const listText = list.innerText || '';
-               const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50));
-               if (listPos < bodyLen * 0.5) return true;
-               }
-               }
-               return false;
-               })();
-               const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) ||
-               !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
-               const hasAuthorBio = (
-               !!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') ||
-               /about the author|about the founder|written by|meet the author/i.test(rawHtml)
-               ) && /years of experience|certified|specializ|founder|director|ceo|operations|amsterdam/i.test(rawHtml);
-               return {
-               wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength,
-               metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
-               hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
-               hasFAQContent, images: images.length, imagesWithAlt,
-               internalLinks, externalLinks, expertQuoteCount, caseStudyCount,
-               statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
-               };
+               const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) || (() => { const earlyLists=Array.from(document.querySelectorAll('ul, ol')); for(const list of earlyLists){ const items=list.querySelectorAll('li'); if(items.length>=3){ const bodyLen=(document.body||{}).innerText?document.body.innerText.length:9999; const listText=list.innerText||''; const listPos=(document.body.innerText||'').indexOf(listText.substring(0,50)); if(listPos<bodyLen*0.5)return true; } } return false; })();
+               const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) || !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
+               const hasAuthorBio = (!!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') || /about the author|about the founder|written by|meet the author/i.test(rawHtml)) && /years of experience|certified|specializ|founder|director|ceo|operations|amsterdam/i.test(rawHtml);
+               return { wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count, listItemCount, avgParagraphLength, metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical, hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema, hasFAQContent, images: images.length, imagesWithAlt, internalLinks, externalLinks, expertQuoteCount, caseStudyCount, statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio };
                }, scanUrl);
                } catch(e) { await page.close().catch(()=>{}); return res.status(500).json({ success: false, error: 'Page analysis failed: ' + e.message, step: 'evaluate', detail: 'JavaScript evaluation in the browser page threw an error. The page may have complex scripts that interfere with analysis.' }); }
                let extractedEmails = [];
@@ -3341,10 +3237,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const pageHtml = await page.content();
                const mailtoMatches = [...pageHtml.matchAll(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)].map(m => m[1].toLowerCase());
                const textMatches  = [...pageHtml.matchAll(/\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b/gi)].map(m => m[1].toLowerCase());
-               const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e =>
-               !e.includes('example') && !e.includes('sentry') && !e.includes('wix') &&
-               !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg')
-               );
+               const allEmails = [...new Set([...mailtoMatches, ...textMatches])].filter(e => !e.includes('example') && !e.includes('sentry') && !e.includes('wix') && !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.svg'));
                extractedEmails = allEmails.slice(0, 3);
                } catch (e) { console.warn('[scan] Email extraction failed:', e.message); }
                await page.close().catch(()=>{});

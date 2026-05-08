@@ -496,6 +496,10 @@ function onProfileSwitch() {
   // Show confirmation toast
   toast('✅ Profile selected: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : ''), 2500, 'ok');
 
+  // Reload pages for this profile (Pages + Tracker tabs)
+  loadPagesOverview();
+  loadTrackerPages();
+
   // Clear conversation and re-greet with new profile
   var msgs = document.getElementById('messages');
   if (msgs) msgs.innerHTML = '';
@@ -2668,6 +2672,7 @@ document.addEventListener('click', function(e) {
 // PAGES OVERVIEW — Visual grid with GSC + Push to Agent
 // ════════════════════════════════════════════════════════════════
 var _pagesOverviewData = []; // {url, slug, keyword, position, impressions, clicks, ctr, score, status}
+var _filteredPageCount = 0;  // pages after profile filter
 var _pagesGscQueryMap = {};  // keyword → {pos, impr, ctr}
 
 function openPagesImportModal() {
@@ -2773,7 +2778,6 @@ function autoAssignPageKeywords() {
 }
 
 function loadPagesOverview(forceRefresh) {
-  // Filter by current profile so only this profile's pages show
   var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
   api('/api/tracker/pages' + profileFilter).then(function(d) {
     var pages = d.pages || [];
@@ -2787,12 +2791,12 @@ function loadPagesOverview(forceRefresh) {
         clicks: tp.gsc_clicks || 0, ctr: tp.gsc_ctr || 0,
         score: snap.score || tp.last_graaf_score || '', scoreStatus: tp.status || '',
         added: tp.created_at || new Date().toISOString(),
-        tracker_id: tp.id,
+        tracker_id: tp.id, profile_id: tp.profile_id,
         opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0)
       };
     });
     renderPagesOverview();
-    if (forceRefresh) toast('✅ ' + _pagesOverviewData.length + ' pages synced', 2000, 'ok');
+    if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
   }).catch(function(e) {
     try {
       var saved = localStorage.getItem('cs_pages_overview_cache');
@@ -2818,6 +2822,13 @@ function renderPagesOverview() {
   var empty = document.getElementById('pagesEmpty');
   var search = (document.getElementById('pagesSearch') || {}).value || '';
   var sort = (document.getElementById('pagesSort') || {}).value || 'impressions';
+  // Show active profile name in header
+  var profileLabel = document.getElementById('pagesProfileLabel');
+  if (profileLabel && _profile) {
+    profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') + ' — ' + (_filteredPageCount || 0) + ' pages';
+  } else if (profileLabel) {
+    profileLabel.textContent = 'No profile selected — showing all pages';
+  }
 
   if (!_pagesOverviewData.length) {
     grid.innerHTML = ''; kpis.innerHTML = '';
@@ -2825,12 +2836,18 @@ function renderPagesOverview() {
   }
   empty.style.display = 'none';
 
-  // Filter
+  // Client-side profile filter: only show pages matching current profile
+  var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   var data = _pagesOverviewData.filter(function(p) {
+    // If we have a profile selected, only show pages for that profile
+    if (activeProfileId) {
+      if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
+    }
     if (!search) return true;
     var s = search.toLowerCase();
     return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
   });
+  _filteredPageCount = data.length;
 
   // Sort
   data.sort(function(a, b) {
@@ -2891,9 +2908,9 @@ function renderPagesOverview() {
         '<div class="pg-metric"><div class="pg-metric-val" style="color:#38bdf8;">' + (p.ctr ? p.ctr + '%' : '—') + '</div><div class="pg-metric-label">CTR</div></div>' +
       '</div>' +
       '<div class="pg-actions">' +
-        '<button onclick="pushPageToAgent(' + escHtml(JSON.stringify(p.url)) + ')" style="padding:6px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-family:DM Mono,monospace;flex:1;">🧠 Push to Agent</button>' +
+        '<button onclick="pushPageToAgent(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-family:DM Mono,monospace;flex:1;">🧠 Push to Agent</button>' +
         '<a href="' + escHtml(p.url) + '" target="_blank" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;text-decoration:none;font-family:DM Mono,monospace;">↗ Open</a>' +
-        '<button onclick="scanPageScore(' + escHtml(JSON.stringify(p.url)) + ')" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#34d399;font-family:DM Mono,monospace;">📊 Scan</button>' +
+        '<button onclick="scanPageScore(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#34d399;font-family:DM Mono,monospace;">📊 Scan</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -3190,7 +3207,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
     <div>
       <div style="font-size:18px;font-weight:800;background:linear-gradient(90deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">🗂️ Pages Overview</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px;">All your pages with GSC metrics — one-click push to Agent</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px;" id="pagesProfileLabel">All your pages with GSC metrics — one-click push to Agent</div>
     </div>
     <div style="display:flex;gap:7px;flex-wrap:wrap;">
       <input id="pagesSearch" placeholder="Search URL or keyword..." oninput="renderPagesOverview()"
