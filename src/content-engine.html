@@ -1675,11 +1675,21 @@ function renderTrackerKpis() {
 
 function renderTrackerList() {
   var el = document.getElementById('trPagesList');
-  if (!_trPages.length) {
+  var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
+  if (!activeProfileId) {
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">👤</div><div style="font-weight:600;margin-bottom:4px;">Select a profile first</div><div style="font-size:12px;">Choose a profile from the sidebar to see tracker data</div></div>';
+    return;
+  }
+  // Filter tracker pages by profile
+  var trData = _trPages.filter(function(p) {
+    if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
+    return true;
+  });
+  if (!trData.length) {
     el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Add published URLs to start tracking</div></div>';
     return;
   }
-  el.innerHTML = '<div style="padding:0 16px;">' + _trPages.map(function(p) {
+  el.innerHTML = '<div style="padding:0 16px;">' + trData.map(function(p) {
     var snap = p.latest_snapshot || {};
     var pos = snap.google_position ? '#'+snap.google_position : '—';
     var aiG = snap.ai_google_overview_cited ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;margin-right:4px;">✅ AI Overview</span>' :
@@ -2961,24 +2971,29 @@ function renderPagesOverview() {
   }
   empty.style.display = 'none';
 
-  // Client-side profile filter: only show pages matching current profile
+  // NO profile = NO pages shown. Must select a profile first.
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
+  if (!activeProfileId) {
+    grid.innerHTML = '';
+    kpis.innerHTML = '';
+    empty.style.display = 'block';
+    if (profileLabel) profileLabel.textContent = 'Select a profile to see pages';
+    return;
+  }
+
+  // Client-side profile filter: only show pages matching current profile
   var data = _pagesOverviewData.filter(function(p) {
-    if (activeProfileId) {
-      if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
-    }
+    if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
     if (!search) return true;
     var s = search.toLowerCase();
     return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
   });
   _filteredPageCount = data.length;
 
-  // Show active profile name + REAL page count (after filter, not stale)
+  // Show active profile name + REAL page count
   var profileLabel = document.getElementById('pagesProfileLabel');
   if (profileLabel && _profile) {
     profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') + ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '');
-  } else if (profileLabel) {
-    profileLabel.textContent = 'No profile selected — showing all ' + data.length + ' page' + (data.length !== 1 ? 's' : '');
   }
 
   // Sort
@@ -3540,12 +3555,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <!-- Empty state -->
   <div id="pagesEmpty" style="display:none;text-align:center;padding:60px 20px;color:var(--muted);">
     <div style="font-size:40px;margin-bottom:12px;">🗂️</div>
-    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">No pages yet</div>
-    <div style="font-size:12px;margin-bottom:16px;">Add a URL manually or import from GSC to track performance and get AI recommendations.</div>
-    <div style="display:flex;gap:10px;justify-content:center;">
-      <button onclick="openAddUrlModal()" style="padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#a78bfa;">+ Add URL</button>
-      <button onclick="openPagesImportModal()" style="padding:8px 18px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
-    </div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Select a profile first</div>
+    <div style="font-size:12px;margin-bottom:16px;">Choose a profile from the sidebar to see pages and tracker data for that site.</div>
   </div>
 </div>
 
