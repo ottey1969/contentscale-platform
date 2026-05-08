@@ -24065,6 +24065,159 @@ function graafScanHtml(html, pageUrl) {
   };
 }
 
+// ── Browser-based HTML analysis (same as /api/scan) ─────────────────────────
+// Takes raw HTML, loads it into a Puppeteer page, runs the same DOM analysis.
+// This ensures tracker scores match single-scan scores exactly.
+async function browserScanHtml(html, pageUrl) {
+  if (!html || html.length < 200) return null;
+  let browser, page;
+  try {
+    browser = await getBrowser();
+    if (!browser) return null;
+    page = await browser.newPage();
+    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
+    await new Promise(r => setTimeout(r, 1500)); // let any inline JS render
+
+    const analysis = await page.evaluate((scanUrlParam) => {
+      let text = document.body ? document.body.innerText : '';
+      let cleanText = text.replace(/\s+/g, ' ').trim();
+      let wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+      if (wordCount < 200 && document.body) {
+        const clone = document.body.cloneNode(true);
+        clone.querySelectorAll('script, style, noscript').forEach(el => el.remove());
+        const fbText = clone.textContent.replace(/\s+/g, ' ').trim();
+        const fbCount = fbText.split(/\s+/).filter(w => w.length > 0).length;
+        if (fbCount > wordCount) { wordCount = fbCount; cleanText = fbText; text = fbText; }
+      }
+      const rawHtml = document.documentElement.outerHTML;
+      const h1Els = document.querySelectorAll('h1');
+      const h1Count = h1Els.length;
+      let h1Text = '', h1IsHidden = false, h1VisibleCount = 0;
+      h1Els.forEach(el => {
+        const style = window.getComputedStyle(el);
+        const isHidden = style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || el.hasAttribute('hidden');
+        if (!isHidden) { h1VisibleCount++; if (!h1Text) h1Text = el.textContent.trim(); }
+        else { h1IsHidden = true; }
+      });
+      const h1Length = h1Text.length;
+      const GENERIC_H1 = ['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
+      const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
+      const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
+      const h1IsTooLong = h1Text.length > 70;
+      const h2Count = document.querySelectorAll('h2').length;
+      const h3Count = document.querySelectorAll('h3').length;
+      const listItemCount = document.querySelectorAll('li').length;
+      const paragraphs = Array.from(document.querySelectorAll('p'));
+      const avgParagraphLength = paragraphs.length > 0
+        ? paragraphs.map(p => p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0) / paragraphs.length
+        : 0;
+      const metaTitle = (document.querySelector('title') || {}).textContent || '';
+      const metaTitleLength = metaTitle.length;
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      const metaDescription = metaDescEl ? metaDescEl.getAttribute('content') || '' : '';
+      const metaDescriptionLength = metaDescription.length;
+      const hasMetaViewport = !!document.querySelector('meta[name="viewport"]');
+      const hasCanonical = !!document.querySelector('link[rel="canonical"]');
+      const hasOpenGraph = !!document.querySelector('meta[property="og:title"]');
+      const hasTwitterCard = !!document.querySelector('meta[name="twitter:card"]');
+      const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+      let hasArticleSchema = false, hasFAQPageSchema = false, hasOrganizationSchema = false;
+      const checkSchemaType = (typeVal) => {
+        if (!typeVal) return;
+        const types = Array.isArray(typeVal) ? typeVal : [typeVal];
+        if (types.some(t => ['Article','BlogPosting','NewsArticle','TechArticle'].includes(t))) hasArticleSchema = true;
+        if (types.includes('FAQPage')) hasFAQPageSchema = true;
+        if (types.some(t => ['Organization','LocalBusiness','Corporation'].includes(t))) hasOrganizationSchema = true;
+      };
+      schemaScripts.forEach(script => {
+        try {
+          const data = JSON.parse(script.textContent);
+          if (Array.isArray(data)) data.forEach(item => checkSchemaType(item['@type']));
+          else { checkSchemaType(data['@type']); if (Array.isArray(data['@graph'])) data['@graph'].forEach(item => checkSchemaType(item['@type'])); }
+        } catch(e) {}
+      });
+      const hasFAQContent = (() => {
+        const headingMatch = Array.from(document.querySelectorAll('h2,h3,h4')).some(h =>
+          h.textContent.toLowerCase().includes('faq') || h.textContent.toLowerCase().includes('frequently asked') || h.textContent.toLowerCase().includes('common question'));
+        const idMatch = Array.from(document.querySelectorAll('[id]')).some(el => el.id.toLowerCase().includes('faq'));
+        const classMatch = Array.from(document.querySelectorAll('[class]')).some(el => {
+          const cn = el.className; const classNameStr = typeof cn === 'string' ? cn : cn.baseVal || '';
+          return classNameStr.toLowerCase().includes('faq');
+        });
+        const bodyText = document.body ? document.body.innerText.toLowerCase() : '';
+        const textMatch = bodyText.includes('frequently asked') || bodyText.includes('common questions');
+        return headingMatch || idMatch || classMatch || textMatch;
+      })();
+      const images = document.querySelectorAll('img');
+      const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
+      let baseHostname = '';
+      try { baseHostname = new URL(scanUrlParam).hostname.replace('www.',''); } catch(e) {}
+      const allLinks = Array.from(document.querySelectorAll('a[href]'));
+      const internalLinks = allLinks.filter(a => { try { return new URL(a.href).hostname.replace('www.','') === baseHostname; } catch(e) { return false; }}).length;
+      const externalLinks = allLinks.filter(a => { try { const h = new URL(a.href).hostname.replace('www.',''); return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:'); } catch(e) { return false; }}).length;
+      let expertQuoteCount = 0;
+      document.querySelectorAll('blockquote').forEach(bq => {
+        const cite = bq.querySelector('cite'); const txt = bq.textContent.trim();
+        if (txt.length > 30 && (cite || txt.length > 80)) expertQuoteCount++;
+      });
+      document.querySelectorAll('cite').forEach(cite => {
+        if (!cite.closest('blockquote') && cite.textContent.trim().length > 3) expertQuoteCount++;
+      });
+      ['.review','.testimonial','[class*="review"]','[class*="testimonial"]','[class*="quote"]'].forEach(sel => {
+        try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch(e) {}
+      });
+      let caseStudyCount = 0;
+      const seen = new Set();
+      document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"]').forEach(el => {
+        if (seen.has(el)) return;
+        const txt = el.textContent.toLowerCase(); const len = txt.length;
+        if (len > 300 && len < 6000) {
+          const hasKeyword = ['case study','challenge','solution','results','roi','recovered','recovery','success rate'].some(k => txt.includes(k));
+          const hasMetric = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt);
+          if (hasKeyword && hasMetric) { caseStudyCount++; seen.add(el); }
+        }
+      });
+      const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
+      const statsFound = (cleanText.match(statsPattern) || []).length;
+      const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+      const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
+      const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|what you('ll| will) get|why choose|key benefits|what we do|highlights|our approach|how it works/i.test(rawHtml) ||
+        (() => { const earlyLists = Array.from(document.querySelectorAll('ul, ol')); for (const list of earlyLists) { const items = list.querySelectorAll('li'); if (items.length >= 3) { const bodyLen = (document.body || {}).innerText ? document.body.innerText.length : 9999; const listText = list.innerText || ''; const listPos = (document.body.innerText || '').indexOf(listText.substring(0, 50)); if (listPos < bodyLen * 0.5) return true; } } return false; })();
+      const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml) || !!document.querySelector('[class*="toc"], [id*="toc"], [class*="table-of-contents"]');
+      const hasAuthorBio = (!!document.querySelector('[class*="author"], [class*="bio"], .vcard, [rel="author"]') || /about the author|about the founder|written by|meet the author/i.test(rawHtml)) && /years of experience|certified|specializ|founder|director|ceo|operations|amsterdam/i.test(rawHtml);
+      return {
+        wordCount, h1Count, h1Text, h1Length, h1IsHidden, h1VisibleCount, h1IsGeneric, h1IsTooShort, h1IsTooLong, h2Count, h3Count,
+        listItemCount, avgParagraphLength, metaTitleLength, metaDescriptionLength, hasMetaViewport, hasCanonical,
+        hasOpenGraph, hasTwitterCard, hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
+        hasFAQContent, images: images.length, imagesWithAlt, internalLinks, externalLinks,
+        expertQuoteCount, caseStudyCount, statsFound, hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
+      };
+    }, pageUrl || '');
+
+    await page.close().catch(()=>{});
+
+    if (!analysis) return null;
+    const result = computeScore(pageUrl || 'internal', analysis, []);
+    return {
+      score: result.score,
+      contentScore: result.score,
+      quality: result.quality,
+      graafScore: result.metrics.graaf,
+      craftScore: result.metrics.craft,
+      technicalScore: result.metrics.technical,
+      metrics: result.metrics,
+      recommendations: result.recommendations,
+      content_stats: result.content_stats,
+      analysis: analysis
+    };
+  } catch(e) {
+    console.warn('[browserScanHtml]', e.message);
+    if (page) await page.close().catch(()=>{});
+    return null;
+  }
+}
+
 // ── Language detection utility ────────────────────────────────────────────────
 // Detects language from HTML lang attribute or content word frequency
 function detectContentLanguage(html) {
@@ -24251,8 +24404,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
     if (!inherited) {
       // Frisse scan — altijd bij suspicious fetch, nieuwe pagina, of content gewijzigd
+      // NU: gebruik browser-based scan (zelfde als /api/scan) voor identieke scores
       try {
-        const graafResult = graafScanHtml(effectiveHtml, page.url || '');
+        const graafResult = await browserScanHtml(effectiveHtml, page.url || '');
         if (graafResult) {
           graafScore = graafResult.totalScore || graafResult.score || null;
           graafBreakdown = graafResult.metrics || null;  // metrics = { graaf, craft, technical }
