@@ -250,15 +250,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <button class="sidebar-btn" onclick="askAgentToUseTemplate()" style="margin-top:8px;font-size:10px;padding:5px;" id="useTemplateBtn" style="display:none;">📋 Write on Profile Template</button>
     </div>
 
-    <!-- GSC Upload -->
+    <!-- Data Uploads -->
     <div class="sidebar-section">
-      <div class="sidebar-label">GSC Data (optional but powerful)</div>
-      <div id="gscUploadZone" class="drop-zone">
+      <div class="sidebar-label">Data Sources (optional)</div>
+      <!-- GSC Upload -->
+      <div id="gscUploadZone" class="drop-zone" style="margin-bottom:8px;">
         <input type="file" accept=".csv" multiple onchange="handleGscUpload(this)">
         <div class="drop-zone-icon">📊</div>
-        <div class="drop-zone-text">Drop Pages + Queries CSV<br>or click to browse</div>
+        <div class="drop-zone-text">GSC Pages + Queries CSV</div>
       </div>
-      <div id="gscStatus" style="display:none;" class="gsc-loaded"></div>
+      <div id="gscStatus" style="display:none;font-size:10px;color:#34d399;margin-bottom:10px;"></div>
+      <!-- Sitemap Upload -->
+      <div id="sitemapUploadZone" class="drop-zone">
+        <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
+        <div class="drop-zone-icon">🗺️</div>
+        <div class="drop-zone-text">Sitemap XML or URL list</div>
+      </div>
+      <div id="sitemapStatus" style="display:none;font-size:10px;color:#34d399;margin-top:6px;"></div>
     </div>
 
     <!-- Context -->
@@ -427,6 +435,57 @@ function handleGscUpload(input) {
     };
     reader.readAsText(file);
   });
+}
+
+// ── Sitemap XML/TXT upload: extract URLs for internal link discovery ──────────
+function handleSitemapUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var urls = [];
+    // Try XML sitemap first
+    if (text.trim().startsWith('<')) {
+      var locMatches = text.matchAll(/<loc>([^<]+)<\/loc>/gi);
+      for (var m of locMatches) { if (m[1]) urls.push(m[1].trim()); }
+    } else {
+      // Plain text: one URL per line
+      urls = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l && l.startsWith('http'); });
+    }
+    if (!urls.length) { toast('No URLs found in sitemap', 3000, 'warn'); return; }
+    // Filter to current profile domain if profile is set
+    var profileDomain = (_profile && _profile.domain) || '';
+    var matched = urls;
+    if (profileDomain) {
+      matched = urls.filter(function(u){ try { return new URL(u).hostname.replace('www.','') === profileDomain.replace('www.',''); } catch(e){ return false; } });
+    }
+    _sitemapUrls = matched;
+    var statusEl = document.getElementById('sitemapStatus');
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' found' + (profileDomain ? ' for ' + profileDomain : '') + ' <button onclick="addSitemapUrlsToTracker()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Add all</button>';
+    }
+    toast('✓ Sitemap: ' + matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' for this profile', 3000, 'ok');
+  };
+  reader.readAsText(file);
+}
+
+var _sitemapUrls = []; // URLs from last sitemap upload
+
+function addSitemapUrlsToTracker() {
+  if (!_sitemapUrls.length) return;
+  var added = 0, skipped = 0;
+  var existingUrls = _pagesOverviewData.map(function(p){ return p.url; });
+  _sitemapUrls.forEach(function(url) {
+    if (existingUrls.indexOf(url) >= 0) { skipped++; return; }
+    var slug = '';
+    try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
+    _pagesOverviewData.push({ url: url, slug: slug, keyword: '', position: 0, impressions: 0, clicks: 0, ctr: 0, score: '', scoreStatus: '', added: new Date().toISOString(), tracker_id: null, profile_id: _context.profileId || (_profile && _profile.id) || null, opportunity: 0 });
+    added++;
+  });
+  renderPagesOverview();
+  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + ' from sitemap' + (skipped ? ' (' + skipped + ' already existed)' : ''), 3000, 'ok');
 }
 
 function parseCSV(text) {
@@ -2679,66 +2738,142 @@ function openPagesImportModal() {
   document.getElementById('pagesImportModal').style.display = 'flex';
 }
 
-function handlePagesCSVDrop(e) {
-  e.preventDefault();
-  var files = e.dataTransfer.files;
-  if (files.length) processPagesCSV(files[0]);
+function openAddUrlModal() {
+  document.getElementById('addUrlModal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('addUrlInput').focus(); }, 100);
 }
 
-function handlePagesCSVFile(input) {
-  if (input.files.length) processPagesCSV(input.files[0]);
+function closeAddUrlModal() {
+  document.getElementById('addUrlModal').style.display = 'none';
+  document.getElementById('addUrlInput').value = '';
+  document.getElementById('addUrlKeyword').value = '';
+}
+
+function submitAddUrl() {
+  var url = document.getElementById('addUrlInput').value.trim();
+  var keyword = document.getElementById('addUrlKeyword').value.trim();
+  if (!url) { toast('Please enter a URL', 2000, 'warn'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  // Validate URL
+  try { new URL(url); } catch(e) { toast('Invalid URL format', 2000, 'warn'); return; }
+  // Add to tracker via API
+  api('/api/tracker/pages', 'POST', { url: url, keyword: keyword || null }).then(function(d) {
+    if (d.success || d.id) {
+      toast('✅ URL added: ' + url, 3000, 'ok');
+      closeAddUrlModal();
+      loadPagesOverview();
+    } else {
+      toast('Error: ' + (d.error || 'Failed to add URL'), 3000, 'warn');
+    }
+  }).catch(function(e) {
+    toast('Failed to add URL: ' + (e.message || ''), 3000, 'warn');
+  });
+}
+
+function handlePagesGscDrop(e) {
+  e.preventDefault();
+  var files = Array.from(e.dataTransfer.files).filter(function(f) { return f.name.endsWith('.csv'); });
+  if (files.length) processPagesGscFiles(files);
+}
+
+function handlePagesGscFile(input) {
+  if (input.files.length) processPagesGscFiles(Array.from(input.files));
   input.value = '';
 }
 
-function processPagesCSV(file) {
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var lines = ev.target.result.trim().split('\n');
-    if (lines.length < 2) { toast('⚠ Empty CSV', 3000, 'err'); return; }
-    var header = lines[0].toLowerCase().replace(/"/g, '').split(',');
-    var iUrl = header.findIndex(function(h) { return h.includes('page') || h.includes('url'); });
-    var iImpr = header.findIndex(function(h) { return h.includes('impression'); });
-    var iCtr = header.findIndex(function(h) { return h.includes('ctr'); });
-    var iClicks = header.findIndex(function(h) { return h.includes('click'); });
-    var iPos = header.findIndex(function(h) { return h.includes('position'); });
-    if (iUrl < 0) iUrl = 0; if (iImpr < 0) iImpr = 2; if (iPos < 0) iPos = 4;
+// Process both Pages + Queries CSV using shared GSC state
+function processPagesGscFiles(files) {
+  var pagesLoaded = 0, queriesLoaded = 0;
+  var pending = files.length;
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var rows = parseCSV(e.target.result);
+      if (!rows.length) { pending--; return; }
+      var headers = Object.keys(rows[0]).map(function(h) { return h.toLowerCase(); });
+      var isPages   = headers.includes('page') || headers.includes('top pages') || headers.includes('url');
+      var isQueries = headers.includes('query') || headers.includes('top queries') || headers.includes('search query');
 
-    var added = 0;
-    for (var i = 1; i < lines.length; i++) {
-      var cols = lines[i].replace(/"/g, '').split(',');
-      var url = (cols[iUrl] || '').trim();
-      if (!url || !url.startsWith('http')) continue;
-      var impr = parseInt(cols[iImpr]) || 0;
-      var pos = parseFloat(cols[iPos]) || 0;
-      var ctr = parseFloat((cols[iCtr] || '0').replace('%', '')) || 0;
-      var clicks = parseInt(cols[iClicks]) || 0;
-      var slug = '';
-      try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
-      var existing = _pagesOverviewData.find(function(p) { return p.url === url; });
-      if (existing) {
-        existing.impressions = Math.max(existing.impressions, impr);
-        existing.position = pos || existing.position;
-        existing.ctr = ctr || existing.ctr;
-        existing.clicks = clicks || existing.clicks;
-      } else {
-        _pagesOverviewData.push({
-          url: url, slug: slug, keyword: '',
-          position: pos, impressions: impr, clicks: clicks, ctr: ctr,
-          score: '', scoreStatus: '', added: new Date().toISOString()
-        });
-        added++;
+      if (isPages) {
+        _gscPages = rows.map(function(r) {
+          var keys = Object.keys(r);
+          return {
+            url:         r[keys.find(function(k){ return /url|page/i.test(k); })] || '',
+            clicks:      parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0),
+            impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0),
+            ctr:         parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')),
+            position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0),
+            keyword:     r[keys.find(function(k){ return /keyword|query/i.test(k); })] || ''
+          };
+        }).filter(function(r){ return r.url && r.url.startsWith('http'); });
+        pagesLoaded = _gscPages.length;
       }
+      if (isQueries) {
+        _gscQueries = rows.map(function(r) {
+          var keys = Object.keys(r);
+          return {
+            query:       r[keys.find(function(k){ return /query|keyword/i.test(k); })] || '',
+            clicks:      parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0),
+            impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0),
+            ctr:         parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')),
+            position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0)
+          };
+        }).filter(function(r){ return r.query; });
+        queriesLoaded = _gscQueries.length;
+      }
+      pending--;
+      if (pending === 0) {
+        // Sync shared GSC data into pages overview
+        syncGscToPages();
+        // Show status
+        var statusEl = document.getElementById('pagesImportStatus');
+        if (statusEl) {
+          statusEl.style.display = 'block';
+          statusEl.innerHTML = '✓ ' + (pagesLoaded ? pagesLoaded + ' pages' : '') + (pagesLoaded && queriesLoaded ? ' + ' : '') + (queriesLoaded ? queriesLoaded + ' queries' : '') + ' loaded. GSC data is now shared across the system.';
+        }
+        updateGscStatus(); // sidebar status too
+        toast('✓ GSC: ' + (pagesLoaded || 0) + ' pages, ' + (queriesLoaded || 0) + ' queries loaded', 'ok');
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+// Push shared _gscPages into _pagesOverviewData + persist to server
+function syncGscToPages() {
+  var added = 0, updated = 0;
+  _gscPages.forEach(function(gsc) {
+    var existing = _pagesOverviewData.find(function(p) { return p.url === gsc.url; });
+    if (existing) {
+      existing.impressions = Math.max(existing.impressions || 0, gsc.impressions);
+      existing.clicks = Math.max(existing.clicks || 0, gsc.clicks);
+      existing.position = gsc.position || existing.position;
+      existing.ctr = gsc.ctr || existing.ctr;
+      existing.keyword = existing.keyword || gsc.keyword;
+      updated++;
+    } else {
+      var slug = '';
+      try { slug = new URL(gsc.url).pathname || '/'; } catch(e) { slug = gsc.url; }
+      _pagesOverviewData.push({
+        url: gsc.url, slug: slug, keyword: gsc.keyword || '',
+        position: gsc.position, impressions: gsc.impressions, clicks: gsc.clicks, ctr: gsc.ctr,
+        score: '', scoreStatus: '', added: new Date().toISOString(), tracker_id: null,
+        profile_id: _context.profileId || (_profile && _profile.id) || null,
+        opportunity: _calcOpportunity(gsc.impressions || 0, gsc.clicks || 0, gsc.position || 0, 0)
+      });
+      added++;
     }
-    // Auto-assign keywords from query map
-    if (Object.keys(_pagesGscQueryMap).length) autoAssignPageKeywords();
-    // Persist to server (syncs with Tracker tab)
-    _pagesOverviewData.forEach(function(p) {
-      if (p.tracker_id) return; // already on server
-      api('/api/tracker/pages', 'POST', {
-        url: p.url, keyword: p.keyword, gsc_position: p.position,
-        gsc_impressions: p.impressions, gsc_clicks: p.clicks, gsc_ctr: p.ctr
-      }).then(function(r) {
-        if (r.id) p.tracker_id = r.id;
+  });
+  // Auto-assign keywords from queries
+  if (_gscQueries.length) autoAssignPageKeywords();
+  // Persist new pages to server
+  _pagesOverviewData.forEach(function(p) {
+    if (p.tracker_id) return;
+    api('/api/tracker/pages', 'POST', {
+      url: p.url, keyword: p.keyword, gsc_position: p.position,
+      gsc_impressions: p.impressions, gsc_clicks: p.clicks, gsc_ctr: p.ctr
+    }).then(function(r) {
+      if (r.id) p.tracker_id = r.id;
       }).catch(function(){});
     });
     // Cache locally as fallback
@@ -2749,8 +2884,6 @@ function processPagesCSV(file) {
     _trPages = [];
     setTimeout(function() { loadTrackerPages(); }, 500);
     toast('✅ ' + added + ' pages imported & synced to Tracker', 3000, 'ok');
-  };
-  reader.readAsText(file);
 }
 
 function autoAssignPageKeywords() {
@@ -2821,15 +2954,7 @@ function renderPagesOverview() {
   var kpis = document.getElementById('pagesKpis');
   var empty = document.getElementById('pagesEmpty');
   var search = (document.getElementById('pagesSearch') || {}).value || '';
-  var sort = (document.getElementById('pagesSort') || {}).value || 'impressions';
-  // Show active profile name in header
-  var profileLabel = document.getElementById('pagesProfileLabel');
-  if (profileLabel && _profile) {
-    profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') + ' — ' + (_filteredPageCount || 0) + ' pages';
-  } else if (profileLabel) {
-    profileLabel.textContent = 'No profile selected — showing all pages';
-  }
-
+  var sort = (document.getElementById('pagesSort') || {}).value || 'opportunity';
   if (!_pagesOverviewData.length) {
     grid.innerHTML = ''; kpis.innerHTML = '';
     empty.style.display = 'block'; return;
@@ -2839,7 +2964,6 @@ function renderPagesOverview() {
   // Client-side profile filter: only show pages matching current profile
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   var data = _pagesOverviewData.filter(function(p) {
-    // If we have a profile selected, only show pages for that profile
     if (activeProfileId) {
       if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
     }
@@ -2849,15 +2973,22 @@ function renderPagesOverview() {
   });
   _filteredPageCount = data.length;
 
+  // Show active profile name + REAL page count (after filter, not stale)
+  var profileLabel = document.getElementById('pagesProfileLabel');
+  if (profileLabel && _profile) {
+    profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') + ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '');
+  } else if (profileLabel) {
+    profileLabel.textContent = 'No profile selected — showing all ' + data.length + ' page' + (data.length !== 1 ? 's' : '');
+  }
+
   // Sort
   data.sort(function(a, b) {
     if (sort === 'impressions') return b.impressions - a.impressions;
     if (sort === 'clicks') return b.clicks - a.clicks;
     if (sort === 'position') {
+      // Position 1 first, then 2, 3, 4... pages with no position go last
       var ap = a.position || 999, bp = b.position || 999;
-      var as = ap >= 11 && ap <= 30 ? 0 : ap >= 1 && ap <= 10 ? 1 : 2;
-      var bs = bp >= 11 && bp <= 30 ? 0 : bp >= 1 && bp <= 10 ? 1 : 2;
-      return as - bs || ap - bp;
+      return ap - bp;
     }
     if (sort === 'score') return (b.score || 0) - (a.score || 0);
     if (sort === 'opportunity') return (b.opportunity || 0) - (a.opportunity || 0);
@@ -2881,7 +3012,12 @@ function renderPagesOverview() {
     '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#e2e8f0;">' + avgScore + '</div><div class="pg-kpi-label">Avg Score</div></div>';
 
   // Grid
-  grid.innerHTML = data.map(function(p) {
+  // Pre-calculate opportunity ranks for clear priority display
+  var oppRanks = {};
+  var oppSorted = data.slice().sort(function(a, b) { return (b.opportunity || 0) - (a.opportunity || 0); });
+  oppSorted.forEach(function(pg, idx) { if ((pg.opportunity || 0) >= 40) oppRanks[pg.url] = idx + 1; });
+
+  grid.innerHTML = data.map(function(p, cardIdx) {
     var pos = p.position || 0;
     var posLabel = pos >= 1 && pos <= 10 ? 'Top 10' : pos >= 11 && pos <= 30 ? 'Page 2-3' : pos > 30 ? 'Page 4+' : 'No data';
     var posClass = pos >= 1 && pos <= 10 ? 'pg-badge-good' : pos >= 11 && pos <= 30 ? 'pg-badge-ok' : 'pg-badge-bad';
@@ -2889,10 +3025,14 @@ function renderPagesOverview() {
     var scoreClass = scoreVal >= 90 ? 'pg-badge-good' : scoreVal >= 70 ? 'pg-badge-ok' : scoreVal ? 'pg-badge-bad' : '';
     var scoreLabel = scoreVal ? scoreVal + '/100' : '—';
 
-    // Opportunity badge: high = work on this FIRST
+    // Opportunity badge: % format with actual priority rank (#1, #2, #3...)
     var opp = p.opportunity || 0;
-    var oppBadge = opp >= 60 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(245,109,0,.12);border:1px solid rgba(245,109,0,.3);color:#f56d00;margin-bottom:8px;font-weight:600;">🔥 Work on this first — ' + opp + '/100 opportunity</div>' :
-                 opp >= 40 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fbbf24;margin-bottom:8px;">⚡ Good opportunity — ' + opp + '/100</div>' : '';
+    var oppRank = oppRanks[p.url] || 0;
+    var oppPct = opp + '%';
+    var oppBadge = oppRank === 1 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(245,109,0,.12);border:1px solid rgba(245,109,0,.3);color:#f56d00;margin-bottom:8px;font-weight:700;">🔥 #1 DO FIRST — ' + oppPct + ' opportunity</div>' :
+                 oppRank === 2 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(245,109,0,.08);border:1px solid rgba(245,109,0,.2);color:#f56d00;margin-bottom:8px;font-weight:600;">⚡ #2 Priority — ' + oppPct + '</div>' :
+                 oppRank === 3 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fbbf24;margin-bottom:8px;font-weight:600;">💡 #3 Priority — ' + oppPct + '</div>' :
+                 opp >= 40 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);color:#94a3b8;margin-bottom:8px;">' + (oppRank ? '#' + oppRank + ' ' : '') + 'Priority — ' + oppPct + '</div>' : '';
 
     return '<div class="pg-card">' +
       '<div class="pg-top">' +
@@ -2908,33 +3048,186 @@ function renderPagesOverview() {
         '<div class="pg-metric"><div class="pg-metric-val" style="color:#38bdf8;">' + (p.ctr ? p.ctr + '%' : '—') + '</div><div class="pg-metric-label">CTR</div></div>' +
       '</div>' +
       '<div class="pg-actions">' +
-        '<button onclick="pushPageToAgent(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-family:DM Mono,monospace;flex:1;">🧠 Push to Agent</button>' +
-        '<a href="' + escHtml(p.url) + '" target="_blank" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;text-decoration:none;font-family:DM Mono,monospace;">↗ Open</a>' +
-        '<button onclick="scanPageScore(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#34d399;font-family:DM Mono,monospace;">📊 Scan</button>' +
+        (p.tracker_id
+          ? '<div style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.1);color:#34d399;font-family:DM Mono,monospace;flex:1;text-align:center;">✓ In Tracker</div>'
+          : '<button onclick="pushPageToTracker(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid rgba(167,139,250,.4);background:rgba(167,139,250,.15);color:#a78bfa;font-family:DM Mono,monospace;flex:1;">📌 Push to Tracker</button>'
+        ) +
+        '<button onclick="pushPageToAgent(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-family:DM Mono,monospace;">🧠 Agent</button>' +
+        '<a href="' + escHtml(p.url) + '" target="_blank" style="padding:6px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;text-decoration:none;font-family:DM Mono,monospace;">↗</a>' +
+        '<button onclick="scanPageScore(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#34d399;font-family:DM Mono,monospace;">📊</button>' +
       '</div>' +
     '</div>';
   }).join('');
+
+  // Update Audit Advisor after rendering pages
+  renderAuditAdvisor();
+}
+
+function pushPageToTracker(url) {
+  var page = _pagesOverviewData.find(function(p) { return p.url === url; });
+  if (!page) { toast('Page not found', 2000, 'warn'); return; }
+  if (page.tracker_id) { toast('Already in Tracker', 2000, 'ok'); return; }
+  api('/api/tracker/pages', 'POST', {
+    url: page.url,
+    keyword: page.keyword || null,
+    gsc_position: page.position || null,
+    gsc_impressions: page.impressions || null,
+    gsc_clicks: page.clicks || null,
+    gsc_ctr: page.ctr || null
+  }).then(function(d) {
+    if (d.success || d.id) {
+      page.tracker_id = d.id || d.page_id;
+      toast('✅ Pushed to Tracker: ' + page.url, 3000, 'ok');
+      renderPagesOverview(); // refresh to show "✓ In Tracker"
+    } else {
+      toast('Error: ' + (d.error || 'Failed'), 3000, 'warn');
+    }
+  }).catch(function(e) {
+    toast('Failed: ' + (e.message || ''), 3000, 'warn');
+  });
 }
 
 function pushPageToAgent(url) {
-  // Switch to agent view
   switchView('agent');
-  // Build rich context message
   var page = _pagesOverviewData.find(function(p) { return p.url === url; });
-  var ctx = '🗂️ **Page:** ' + url + '\n';
+  var opp = page ? page.opportunity || 0 : 0;
+
+  // Build action command — tells agent exactly what to do, no user typing needed
+  var ctx = '[SYSTEM: Page pushed from Pages Tracker]\n\n' +
+    '🗂️ **Page:** ' + url + '\n';
   if (page) {
     if (page.keyword) ctx += '🔑 **Keyword:** ' + page.keyword + '\n';
-    if (page.position) ctx += '📊 **GSC Position:** ' + Math.round(page.position * 10) / 10 + '\n';
+    if (page.position) ctx += '📈 **Google Position:** #' + Math.round(page.position * 10) / 10 + '\n';
     if (page.impressions) ctx += '👁 **Impressions:** ' + page.impressions.toLocaleString() + '\n';
     if (page.clicks) ctx += '🖱 **Clicks:** ' + page.clicks + '\n';
-    if (page.ctr) ctx += '📈 **CTR:** ' + page.ctr + '%\n';
+    if (page.ctr) ctx += '📊 **CTR:** ' + page.ctr.toFixed(1) + '%\n';
     if (page.score) ctx += '⭐ **ContentScore:** ' + page.score + '/100\n';
+    if (opp >= 60) ctx += '🔥 **Opportunity:** ' + opp + '/100 — HIGH PRIORITY quick win\n';
+    else if (opp >= 40) ctx += '⚡ **Opportunity:** ' + opp + '/100 — good improvement potential\n';
   }
-  ctx += '\nPlease audit this page and provide specific optimization recommendations.';
+  ctx += '\n' +
+    '**Your task:**\n' +
+    '1. Run a full content audit on this page\n' +
+    '2. Check its current Google position vs competitors\n' +
+    '3. Identify the TOP 3 changes that will move it up in rankings\n' +
+    '4. For each change, explain WHY it helps and HOW to implement it\n' +
+    '5. Prioritize by effort vs impact — quick wins first\n' +
+    '\nDo not ask the user what to do. Take action immediately.';
 
-  // Set as user message and auto-send
-  var inp = document.getElementById('userInput');
-  if (inp) { inp.value = ctx; sendMessage(); }
+  // Put text in the correct input field and use sendMessage() — has connection/profile checks
+  var chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    chatInput.value = ctx;
+    autoResize(chatInput);
+    sendMessage();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUDIT ADVISOR — per-page task checklist with priority
+// ══════════════════════════════════════════════════════════════
+var _auditTasks = {}; // url -> [{id, label, priority, done}]
+
+function generateAuditTasks(page) {
+  var tasks = [];
+  var url = page.url;
+  // Priority 1: ContentScore below 70
+  if (!page.score || page.score < 70) {
+    tasks.push({ id: url + '_score', label: 'Improve ContentScore (currently ' + (page.score || '?') + '/100)', priority: 1, done: false });
+  }
+  // Priority 1: No keyword set
+  if (!page.keyword) {
+    tasks.push({ id: url + '_keyword', label: 'Set target keyword for this page', priority: 1, done: false });
+  }
+  // Priority 1: Position 11-30 (page 2-3 of Google) — biggest quick win
+  if (page.position >= 11 && page.position <= 30) {
+    tasks.push({ id: url + '_p2', label: 'Push from page ' + Math.round(page.position) + ' to page 1 (quick win)', priority: 1, done: false });
+  }
+  // Priority 2: Position 4-10 (page 1 but not top 3)
+  if (page.position >= 4 && page.position <= 10) {
+    tasks.push({ id: url + '_top3', label: 'Break into top 3 (currently #' + Math.round(page.position) + ')', priority: 2, done: false });
+  }
+  // Priority 2: Low CTR
+  if (page.ctr && page.ctr < 2) {
+    tasks.push({ id: url + '_ctr', label: 'Fix CTR (' + page.ctr.toFixed(1) + '% — improve title/description)', priority: 2, done: false });
+  }
+  // Priority 2: High impressions but low clicks
+  if (page.impressions > 1000 && page.clicks < 10) {
+    tasks.push({ id: url + '_imp', label: 'Optimize for ' + page.impressions.toLocaleString() + ' impressions (only ' + page.clicks + ' clicks)', priority: 2, done: false });
+  }
+  // Priority 3: Missing GSC data
+  if (!page.impressions && !page.position) {
+    tasks.push({ id: url + '_gsc', label: 'Add GSC data or run live scan for metrics', priority: 3, done: false });
+  }
+  // Priority 3: Good position but could be better
+  if (page.position > 0 && page.position < 4) {
+    tasks.push({ id: url + '_p1', label: 'Secure position #' + Math.round(page.position) + ' and target featured snippet', priority: 3, done: false });
+  }
+  return tasks.sort(function(a, b) { return a.priority - b.priority; });
+}
+
+function toggleAuditAdvisor() {
+  var panel = document.getElementById('auditAdvisorTasks');
+  if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleAuditTask(taskId) {
+  var task = null, pageUrl = '';
+  for (var url in _auditTasks) {
+    var found = _auditTasks[url].find(function(t) { return t.id === taskId; });
+    if (found) { task = found; pageUrl = url; break; }
+  }
+  if (task) {
+    task.done = !task.done;
+    renderAuditAdvisor();
+  }
+}
+
+function renderAuditAdvisor() {
+  var advisorPanel = document.getElementById('auditAdvisorPanel');
+  var tasksDiv = document.getElementById('auditAdvisorTasks');
+  var nextDiv = document.getElementById('auditAdvisorNext');
+  if (!advisorPanel || !_pagesOverviewData.length) return;
+
+  // Generate tasks for all visible pages
+  var allTasks = [];
+  _pagesOverviewData.forEach(function(page) {
+    if (!_auditTasks[page.url]) {
+      _auditTasks[page.url] = generateAuditTasks(page);
+    }
+    _auditTasks[page.url].forEach(function(t) {
+      if (!t.done) allTasks.push({ page: page.url, slug: page.slug, task: t });
+    });
+  });
+
+  // Sort by priority
+  allTasks.sort(function(a, b) { return a.task.priority - b.task.priority; });
+
+  if (!allTasks.length) {
+    advisorPanel.style.display = 'none';
+    return;
+  }
+  advisorPanel.style.display = 'block';
+
+  // Show the #1 next task
+  var nextUp = allTasks[0];
+  var priLabel = nextUp.task.priority === 1 ? '🔥 DO FIRST' : nextUp.task.priority === 2 ? '⚡ Next' : '💡 Later';
+  if (nextDiv) {
+    nextDiv.innerHTML = '<b>' + priLabel + ':</b> ' + escHtml(nextUp.slug || nextUp.page) + ' — ' + escHtml(nextUp.task.label);
+  }
+
+  // Render full task list
+  if (tasksDiv) {
+    var html = '<div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">All pending tasks (' + allTasks.length + ')</div>';
+    allTasks.slice(0, 20).forEach(function(item) {
+      var priColor = item.task.priority === 1 ? '#f87171' : item.task.priority === 2 ? '#fbbf24' : '#6b7280';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
+        '<button onclick="toggleAuditTask(decodeURIComponent(\'' + encodeURIComponent(item.task.id) + '\'))" style="flex-shrink:0;width:18px;height:18px;border-radius:4px;border:1px solid ' + priColor + ';background:transparent;cursor:pointer;font-size:10px;color:' + priColor + ';padding:0;line-height:16px;">✓</button>' +
+        '<div style="flex:1;font-size:11px;color:#e2e8f0;"><span style="color:' + priColor + ';font-weight:700;">P' + item.task.priority + '</span> ' + escHtml(item.task.label) + ' <span style="color:#6b7280;">— ' + escHtml(item.slug || item.page) + '</span></div>' +
+        '</div>';
+    });
+    tasksDiv.innerHTML = html;
+  }
 }
 
 function scanPageScore(url) {
@@ -3214,16 +3507,28 @@ document.addEventListener('DOMContentLoaded', function() {
         style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;min-width:180px;">
       <select id="pagesSort" onchange="renderPagesOverview()"
         style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);outline:none;">
+        <option value="opportunity" selected>🔥 Sort: Opportunity (quick wins first)</option>
+        <option value="position">Sort: Position (rank order)</option>
         <option value="impressions">Sort: Impressions</option>
-        <option value="position">Sort: Position</option>
         <option value="clicks">Sort: Clicks</option>
         <option value="score">Sort: ContentScore</option>
-        <option value="opportunity">🔥 Sort: Opportunity (work first)</option>
         <option value="url">Sort: URL A-Z</option>
       </select>
       <button onclick="loadPagesOverview(true)" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-family:'DM Mono',monospace;">↺ Refresh</button>
-      <button onclick="openPagesImportModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">+ Import GSC CSV</button>
+      <button onclick="openAddUrlModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#a78bfa;">+ Add URL</button>
+      <button onclick="openPagesImportModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
     </div>
+  </div>
+
+  <!-- Audit Advisor Panel -->
+  <div id="auditAdvisorPanel" style="background:rgba(245,109,0,.06);border:1px solid rgba(245,109,0,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:16px;">🎯</span>
+      <div style="font-size:13px;font-weight:700;color:#f56d00;">Audit Advisor</div>
+      <div id="auditAdvisorNext" style="font-size:11px;color:var(--muted);flex:1;"></div>
+      <button onclick="toggleAuditAdvisor()" style="font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(245,109,0,.3);background:transparent;color:#f56d00;cursor:pointer;">Toggle</button>
+    </div>
+    <div id="auditAdvisorTasks" style="display:none;"></div>
   </div>
 
   <!-- KPI Cards -->
@@ -3236,26 +3541,52 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="pagesEmpty" style="display:none;text-align:center;padding:60px 20px;color:var(--muted);">
     <div style="font-size:40px;margin-bottom:12px;">🗂️</div>
     <div style="font-size:15px;font-weight:600;margin-bottom:6px;">No pages yet</div>
-    <div style="font-size:12px;margin-bottom:16px;">Import a GSC Pages CSV or add URLs manually to see your visual overview.</div>
-    <button onclick="openPagesImportModal()" style="padding:8px 18px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
+    <div style="font-size:12px;margin-bottom:16px;">Add a URL manually or import from GSC to track performance and get AI recommendations.</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button onclick="openAddUrlModal()" style="padding:8px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#a78bfa;">+ Add URL</button>
+      <button onclick="openPagesImportModal()" style="padding:8px 18px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
+    </div>
   </div>
 </div>
 
 <!-- Pages Import Modal -->
 <div id="pagesImportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20000;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto;">
-    <div style="font-size:15px;font-weight:700;margin-bottom:6px;">📊 Import GSC Pages CSV</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Go to Google Search Console → Performance → Pages → Export CSV. Drag or click below.</div>
-    <div style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;position:relative;" ondragover="this.style.borderColor='var(--accent)';this.style.background='rgba(124,58,237,.05)';event.preventDefault();" ondragleave="this.style.borderColor='var(--border)';this.style.background='';" ondrop="handlePagesCSVDrop(event);this.style.borderColor='var(--border)';this.style.background='';" onclick="document.getElementById('pagesImportInput').click()">
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px;">📊 Import GSC Pages + Queries CSV</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Go to Google Search Console → Performance → Export both <b>Pages</b> and <b>Queries</b> CSV. Drop both files together or click to browse.</div>
+    <div style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;position:relative;" ondragover="this.style.borderColor='var(--accent)';this.style.background='rgba(124,58,237,.05)';event.preventDefault();" ondragleave="this.style.borderColor='var(--border)';this.style.background='';" ondrop="handlePagesGscDrop(event);this.style.borderColor='var(--border)';this.style.background='';" onclick="document.getElementById('pagesImportInput').click()">
       <div style="font-size:28px;margin-bottom:8px;">📁</div>
-      <div style="font-size:11px;color:var(--muted);">Drop GSC Pages CSV here or click to browse</div>
-      <input type="file" id="pagesImportInput" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;" onchange="handlePagesCSVFile(this)">
+      <div style="font-size:11px;color:var(--muted);">Drop Pages + Queries CSV here</div>
+      <input type="file" id="pagesImportInput" accept=".csv" multiple onchange="handlePagesGscFile(this)">
     </div>
+    <div id="pagesImportStatus" style="display:none;margin-top:12px;font-size:11px;padding:10px;border-radius:6px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#34d399;"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-      <button onclick="document.getElementById('pagesImportModal').style.display='none'" style="padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
+      <button onclick="document.getElementById('pagesImportModal').style.display='none'" style="padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Close</button>
     </div>
   </div>
 </div>
+
+  <!-- Add URL Modal -->
+  <div id="addUrlModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20000;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:420px;width:90%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:700;">+ Add URL</div>
+        <button onclick="closeAddUrlModal()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Page URL *</label>
+        <input id="addUrlInput" placeholder="https://contentscale.site/page" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Target Keyword (optional)</label>
+        <input id="addUrlKeyword" placeholder="content scale" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="closeAddUrlModal()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
+        <button onclick="submitAddUrl()" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Add URL</button>
+      </div>
+    </div>
+  </div>
 
 <!-- TRACKER VIEW -->
 <div id="view-tracker" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:20px 24px;background:#07090e;">
