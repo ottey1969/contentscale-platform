@@ -1649,7 +1649,23 @@ async function loadTrackerPages() {
 }
 
 function renderTrackerKpis() {
-  var p = _trPages;
+  var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
+  var p = activeProfileId ? _trPages.filter(function(x) {
+    return !x.profile_id || String(x.profile_id) === String(activeProfileId);
+  }) : [];
+
+  function set(id, val, color) { var el=document.getElementById(id); if(el){el.textContent=val;if(color)el.style.color=color;} }
+
+  if (!activeProfileId || !p.length) {
+    set('trKpiPages', '—');
+    set('trKpiCitedG', '—');
+    set('trKpiCitedP', '—');
+    set('trKpiGain', '—');
+    set('trKpiCiteRate', '—');
+    set('trKpiGraaf', '—');
+    return;
+  }
+
   var withSnap = p.filter(function(x){ return x.latest_snapshot; });
   var citedG = withSnap.filter(function(x){ return x.latest_snapshot && x.latest_snapshot.ai_google_overview_cited; }).length;
   var citedP = withSnap.filter(function(x){ return x.latest_snapshot && x.latest_snapshot.ai_perplexity_cited; }).length;
@@ -1660,11 +1676,7 @@ function renderTrackerKpis() {
   });
   var citedAny = withSnap.filter(function(x){ var c=x.latest_snapshot||{}; return c.ai_google_overview_cited||c.ai_perplexity_cited||c.ai_bing_cited; }).length;
   var cRate = withSnap.length ? Math.round(citedAny/withSnap.length*100) : 0;
-  var pagesG=0, totalG=0;
-  withSnap.forEach(function(x){ var s=x.latest_snapshot||{}; if(s.score){pagesG++;totalG+=s.score;} });
-  var avgG = pagesG ? Math.round(totalG/pagesG) : null;
 
-  function set(id, val, color) { var el=document.getElementById(id); if(el){el.textContent=val;if(color)el.style.color=color;} }
   set('trKpiPages', p.length);
   set('trKpiCitedG', citedG, '#34d399');
   set('trKpiCitedP', citedP, '#38bdf8');
