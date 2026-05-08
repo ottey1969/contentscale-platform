@@ -24076,8 +24076,17 @@ async function browserScanHtml(html, pageUrl) {
     if (!browser) return null;
     page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
-    await new Promise(r => setTimeout(r, 1500)); // let any inline JS render
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    // Prefer page.goto() for identical rendering to /api/scan — only fall back to setContent()
+    var useUrl = pageUrl && pageUrl.startsWith('http');
+    if (useUrl) {
+      try { await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }); }
+      catch(e) { useUrl = false; } // fallback to setContent on navigation failure
+    }
+    if (!useUrl) {
+      await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
+    }
+    await new Promise(r => setTimeout(r, useUrl ? 2000 : 1500)); // let JS render
 
     const analysis = await page.evaluate((scanUrlParam) => {
       let text = document.body ? document.body.innerText : '';

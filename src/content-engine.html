@@ -1574,7 +1574,8 @@ var _trPages = [];
 
 async function loadTrackerPages() {
   try {
-    var d = await api('/api/tracker/pages');
+    var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
+    var d = await api('/api/tracker/pages' + profileFilter);
     _trPages = d.pages || [];
     renderTrackerKpis();
     renderTrackerList();
@@ -2772,8 +2773,9 @@ function autoAssignPageKeywords() {
 }
 
 function loadPagesOverview(forceRefresh) {
-  // Always load from server (same API as Tracker) — keeps all tabs in sync
-  api('/api/tracker/pages').then(function(d) {
+  // Filter by current profile so only this profile's pages show
+  var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
+  api('/api/tracker/pages' + profileFilter).then(function(d) {
     var pages = d.pages || [];
     _pagesOverviewData = pages.map(function(tp) {
       var slug = '';
@@ -2785,20 +2787,29 @@ function loadPagesOverview(forceRefresh) {
         clicks: tp.gsc_clicks || 0, ctr: tp.gsc_ctr || 0,
         score: snap.score || tp.last_graaf_score || '', scoreStatus: tp.status || '',
         added: tp.created_at || new Date().toISOString(),
-        tracker_id: tp.id // keep ref for push-to-agent
+        tracker_id: tp.id,
+        opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0)
       };
     });
-    // Also update Tracker's internal cache so Tracker tab sees same data
-    _trPages = pages;
     renderPagesOverview();
-    if (forceRefresh) toast('✅ ' + _pagesOverviewData.length + ' pages synced from server', 2000, 'ok');
+    if (forceRefresh) toast('✅ ' + _pagesOverviewData.length + ' pages synced', 2000, 'ok');
   }).catch(function(e) {
-    // Fallback: localStorage cache
     try {
       var saved = localStorage.getItem('cs_pages_overview_cache');
       if (saved) { _pagesOverviewData = JSON.parse(saved); renderPagesOverview(); }
     } catch(e2) {}
   });
+}
+
+// Opportunity score: 0-100. High = work on this FIRST.
+// Pages with high impressions but low CTR/position are the biggest quick wins.
+function _calcOpportunity(impressions, clicks, position, score) {
+  if (!impressions) return score > 0 ? Math.round(score * 0.3) : 0;
+  var ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  var impScore = impressions >= 10000 ? 40 : impressions >= 1000 ? 30 : impressions >= 100 ? 20 : 10;
+  var ctrScore = ctr < 1 ? 30 : ctr < 3 ? 20 : ctr < 5 ? 10 : 0;
+  var posScore = position >= 4 && position <= 10 ? 25 : position >= 11 && position <= 20 ? 20 : position > 0 && position < 4 ? 5 : 10;
+  return Math.min(100, impScore + ctrScore + posScore);
 }
 
 function renderPagesOverview() {
@@ -2832,6 +2843,7 @@ function renderPagesOverview() {
       return as - bs || ap - bp;
     }
     if (sort === 'score') return (b.score || 0) - (a.score || 0);
+    if (sort === 'opportunity') return (b.opportunity || 0) - (a.opportunity || 0);
     return (a.url || '').localeCompare(b.url || '');
   });
 
@@ -2860,12 +2872,18 @@ function renderPagesOverview() {
     var scoreClass = scoreVal >= 90 ? 'pg-badge-good' : scoreVal >= 70 ? 'pg-badge-ok' : scoreVal ? 'pg-badge-bad' : '';
     var scoreLabel = scoreVal ? scoreVal + '/100' : '—';
 
+    // Opportunity badge: high = work on this FIRST
+    var opp = p.opportunity || 0;
+    var oppBadge = opp >= 60 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(245,109,0,.12);border:1px solid rgba(245,109,0,.3);color:#f56d00;margin-bottom:8px;font-weight:600;">🔥 Work on this first — ' + opp + '/100 opportunity</div>' :
+                 opp >= 40 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fbbf24;margin-bottom:8px;">⚡ Good opportunity — ' + opp + '/100</div>' : '';
+
     return '<div class="pg-card">' +
       '<div class="pg-top">' +
         '<div class="pg-slug" title="' + escHtml(p.url) + '">' + escHtml(p.slug || '/') + '</div>' +
         '<span class="pg-badge ' + posClass + '">' + posLabel + '</span>' +
       '</div>' +
       (p.keyword ? '<div class="pg-kw">🔑 ' + escHtml(p.keyword) + '</div>' : '') +
+      oppBadge +
       '<div class="pg-metrics">' +
         '<div class="pg-metric"><div class="pg-metric-val" style="color:#a78bfa;">' + (p.impressions || 0).toLocaleString() + '</div><div class="pg-metric-label">Impressions</div></div>' +
         '<div class="pg-metric"><div class="pg-metric-val" style="color:#34d399;">' + (p.clicks || 0).toLocaleString() + '</div><div class="pg-metric-label">Clicks</div></div>' +
@@ -3183,6 +3201,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <option value="position">Sort: Position</option>
         <option value="clicks">Sort: Clicks</option>
         <option value="score">Sort: ContentScore</option>
+        <option value="opportunity">🔥 Sort: Opportunity (work first)</option>
         <option value="url">Sort: URL A-Z</option>
       </select>
       <button onclick="loadPagesOverview(true)" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-family:'DM Mono',monospace;">↺ Refresh</button>
