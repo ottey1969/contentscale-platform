@@ -3115,39 +3115,83 @@ function pushPageToTracker(url) {
 }
 
 function pushPageToAgent(url) {
-  switchView('agent');
   var page = _pagesOverviewData.find(function(p) { return p.url === url; });
+  var keyword = page ? (page.keyword || '') : '';
   var opp = page ? page.opportunity || 0 : 0;
 
-  // Build action command — tells agent exactly what to do, no user typing needed
-  var ctx = '[SYSTEM: Page pushed from Pages Tracker]\n\n' +
-    '🗂️ **Page:** ' + url + '\n';
-  if (page) {
-    if (page.keyword) ctx += '🔑 **Keyword:** ' + page.keyword + '\n';
-    if (page.position) ctx += '📈 **Google Position:** #' + Math.round(page.position * 10) / 10 + '\n';
-    if (page.impressions) ctx += '👁 **Impressions:** ' + page.impressions.toLocaleString() + '\n';
-    if (page.clicks) ctx += '🖱 **Clicks:** ' + page.clicks + '\n';
-    if (page.ctr) ctx += '📊 **CTR:** ' + page.ctr.toFixed(1) + '%\n';
-    if (page.score) ctx += '⭐ **ContentScore:** ' + page.score + '/100\n';
-    if (opp >= 60) ctx += '🔥 **Opportunity:** ' + opp + '/100 — HIGH PRIORITY quick win\n';
-    else if (opp >= 40) ctx += '⚡ **Opportunity:** ' + opp + '/100 — good improvement potential\n';
-  }
-  ctx += '\n' +
-    '**Your task:**\n' +
-    '1. Run a full content audit on this page\n' +
-    '2. Check its current Google position vs competitors\n' +
-    '3. Identify the TOP 3 changes that will move it up in rankings\n' +
-    '4. For each change, explain WHY it helps and HOW to implement it\n' +
-    '5. Prioritize by effort vs impact — quick wins first\n' +
-    '\nDo not ask the user what to do. Take action immediately.';
+  // Show loading toast
+  toast('🔍 Fetching live competitor data...', 2000, 'ok');
 
-  // Put text in the correct input field and use sendMessage() — has connection/profile checks
-  var chatInput = document.getElementById('chatInput');
-  if (chatInput) {
-    chatInput.value = ctx;
-    autoResize(chatInput);
-    sendMessage();
-  }
+  // Fetch live competitor data from SerpAPI
+  var competitorPromise = keyword
+    ? api('/api/serp/competitors?keyword=' + encodeURIComponent(keyword)).catch(function(e) { return null; })
+    : Promise.resolve(null);
+
+  competitorPromise.then(function(serp) {
+    switchView('agent');
+
+    // Build action command with live competitive intelligence
+    var ctx = '[SYSTEM: Page pushed from Pages Tracker — Live Competitive Intelligence attached]\n\n' +
+      '🗂️ **Page:** ' + url + '\n';
+    if (page) {
+      if (page.keyword) ctx += '🔑 **Target Keyword:** ' + page.keyword + '\n';
+      if (page.position) ctx += '📈 **Current Google Position:** #' + Math.round(page.position * 10) / 10 + '\n';
+      if (page.impressions) ctx += '👁 **Impressions:** ' + page.impressions.toLocaleString() + '\n';
+      if (page.clicks) ctx += '🖱 **Clicks:** ' + page.clicks + '\n';
+      if (page.ctr) ctx += '📊 **CTR:** ' + page.ctr.toFixed(1) + '%\n';
+      if (page.score) ctx += '⭐ **ContentScore:** ' + page.score + '/100\n';
+      if (opp >= 60) ctx += '🔥 **Opportunity:** ' + opp + '% — HIGH PRIORITY quick win\n';
+      else if (opp >= 40) ctx += '⚡ **Opportunity:** ' + opp + '% — improvement potential\n';
+    }
+
+    // Attach live competitor data
+    if (serp && serp.top5 && serp.top5.length) {
+      ctx += '\n🌐 **LIVE TOP 5 GOOGLE COMPETITORS for "' + serp.keyword + '":**\n';
+      serp.top5.forEach(function(c, i) {
+        ctx += (i + 1) + '. **' + (c.title || 'No title') + '**\n   URL: ' + (c.url || '') + '\n   Snippet: ' + (c.snippet || 'N/A').substring(0, 200) + '\n';
+      });
+    }
+
+    // Attach People Also Ask
+    if (serp && serp.people_also_ask && serp.people_also_ask.length) {
+      ctx += '\n❓ **PEOPLE ALSO ASK (PPA) — What users are asking:**\n';
+      serp.people_also_ask.forEach(function(q, i) {
+        ctx += (i + 1) + '. ' + q.question + '\n   → ' + (q.snippet || '').substring(0, 150) + '\n';
+      });
+    }
+
+    // Attach AI Overview
+    if (serp && serp.ai_overview) {
+      ctx += '\n🤖 **GOOGLE AI OVERVIEW (what Google tells users):**\n' + serp.ai_overview.answer + '\n';
+    }
+
+    // Attach related searches
+    if (serp && serp.related_searches && serp.related_searches.length) {
+      ctx += '\n🔎 **RELATED SEARCHES:** ' + serp.related_searches.slice(0, 6).join(', ') + '\n';
+    }
+
+    ctx += '\n' +
+      '🎯 **YOUR MISSION — Beat the competition:**\n' +
+      '1. Analyze the TOP 5 competitors above — what are they doing that our page is NOT?\n' +
+      '2. Check if our page answers the PEOPLE ALSO ASK questions better than them\n' +
+      '3. Identify EXACTLY what to change to outrank each competitor\n' +
+      '4. Write the improved content section (headings, body, meta) — ready to paste\n' +
+      '5. Target the AI Overview — what structure gets our page cited by Google AI?\n' +
+      '6. Add voice search optimization — natural language answers for "' + (keyword || 'this topic') + '"\n' +
+      '\n📋 **OUTPUT FORMAT for each recommendation:**\n' +
+      '- **Gap:** What competitor does vs what we miss\n' +
+      '- **Fix:** Exact text to add/change (write it out, ready to use)\n' +
+      '- **Impact:** How many positions this could gain\n' +
+      '\n🔥 Start with the highest-impact change. Do not ask questions. Execute immediately.';
+
+    // Send to agent
+    var chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+      chatInput.value = ctx;
+      autoResize(chatInput);
+      sendMessage();
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════

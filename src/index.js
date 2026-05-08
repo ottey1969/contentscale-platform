@@ -9863,6 +9863,65 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
   }
 });
   
+// ── COMPETITOR ANALYSIS via SerpAPI ─────────────────────────────────────────
+// Fetches live top 5 Google results + People Also Ask for competitive gap analysis
+app.get('/api/serp/competitors', verifyEngineAccess, async (req, res) => {
+  const keyword = req.query.keyword;
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+  const serpKey = resolveSerpapiKey(req);
+  if (!serpKey) return res.status(503).json({ success: false, error: 'SerpAPI key not configured' });
+
+  try {
+    const params = new URLSearchParams({
+      engine: 'google', q: keyword, api_key: serpKey,
+      num: '5', hl: 'en', gl: 'us'
+    });
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(`https://serpapi.com/search?${params}`, { signal: ctrl.signal });
+    clearTimeout(t);
+    const data = await r.json();
+
+    // Extract top 5 organic results
+    const top5 = (data.organic_results || []).slice(0, 5).map(function(o) {
+      return { position: o.position, title: o.title || '', snippet: o.snippet || '', url: o.link || '', displayed_url: o.displayed_link || '' };
+    });
+
+    // Extract People Also Ask
+    const ppa = (data.related_questions || []).map(function(q) {
+      return { question: q.question || '', snippet: q.snippet || '' };
+    }).slice(0, 8);
+
+    // Extract AI Overview (if present)
+    var aiOverview = null;
+    if (data.answer_box) {
+      aiOverview = {
+        type: data.answer_box.type || 'overview',
+        title: data.answer_box.title || '',
+        answer: data.answer_box.answer || data.answer_box.snippet || ''
+      };
+    }
+
+    // Extract related searches
+    const related = (data.related_searches || []).map(function(s) {
+      return s.query || '';
+    }).filter(Boolean).slice(0, 10);
+
+    res.json({
+      success: true,
+      keyword: keyword,
+      top5: top5,
+      people_also_ask: ppa,
+      ai_overview: aiOverview,
+      related_searches: related,
+      total_results: data.search_information?.total_results || 'unknown'
+    });
+  } catch(e) {
+    console.error('[serp competitors]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
 const resolveSerpapiKey      = (req) => req.headers['x-serpapi-key']       || process.env.SERPAPI_KEY;
