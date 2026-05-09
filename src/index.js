@@ -1026,6 +1026,9 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS service_areas JSONB DEFAULT '[]'`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS faq JSONB DEFAULT '[]'`).catch(()=>{});
    await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS business_info JSONB DEFAULT '{}'`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS author_name VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS author_bio TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS author_location VARCHAR(255)`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS content_jobs (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -11204,10 +11207,10 @@ app.get('/api/content/profiles', async (req, res, next) => {
 
 app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
   try {
-    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language, years_experience, team_size, pricing_model, free_consultation, guarantee, certifications, unique_selling_points, service_areas, faq, business_info } = req.body;
+    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language, years_experience, team_size, pricing_model, free_consultation, guarantee, certifications, unique_selling_points, service_areas, faq, business_info, author_name, author_bio, author_location } = req.body;
     const r = await pool.query(
-      `INSERT INTO content_profiles (name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language,years_experience,team_size,pricing_model,free_consultation,guarantee,certifications,unique_selling_points,service_areas,faq,business_info) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
-      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal||'leads',html_template,wp_url,wp_user,wp_app_password,content_language||'en',years_experience,team_size,pricing_model,free_consultation,guarantee,JSON.stringify(certifications||[]),JSON.stringify(unique_selling_points||[]),JSON.stringify(service_areas||[]),JSON.stringify(faq||[]),JSON.stringify(business_info||{})]
+      `INSERT INTO content_profiles (name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language,years_experience,team_size,pricing_model,free_consultation,guarantee,certifications,unique_selling_points,service_areas,faq,business_info,author_name,author_bio,author_location) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
+      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal||'leads',html_template,wp_url,wp_user,wp_app_password,content_language||'en',years_experience,team_size,pricing_model,free_consultation,guarantee,JSON.stringify(certifications||[]),JSON.stringify(unique_selling_points||[]),JSON.stringify(service_areas||[]),JSON.stringify(faq||[]),JSON.stringify(business_info||{}),author_name||null,author_bio||null,author_location||null]
     );
     res.json({ success: true, profile: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -11215,10 +11218,10 @@ app.post('/api/content/profiles', verifyEngineAccess, async (req, res) => {
 
 app.put('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => {
   try {
-    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language, years_experience, team_size, pricing_model, free_consultation, guarantee, certifications, unique_selling_points, service_areas, faq, business_info } = req.body;
+    const { name, domain, sitemap_url, niche, target_audience, geo_focus, primary_goal, html_template, wp_url, wp_user, wp_app_password, content_language, years_experience, team_size, pricing_model, free_consultation, guarantee, certifications, unique_selling_points, service_areas, faq, business_info, author_name, author_bio, author_location } = req.body;
     const r = await pool.query(
-      `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,content_language=$12,years_experience=$13,team_size=$14,pricing_model=$15,free_consultation=$16,guarantee=$17,certifications=$18,unique_selling_points=$19,service_areas=$20,faq=$21,business_info=$22,updated_at=NOW() WHERE id=$23 RETURNING *`,
-      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language||'en',years_experience,team_size,pricing_model,free_consultation,guarantee,JSON.stringify(certifications||[]),JSON.stringify(unique_selling_points||[]),JSON.stringify(service_areas||[]),JSON.stringify(faq||[]),JSON.stringify(business_info||{}),req.params.id]
+      `UPDATE content_profiles SET name=$1,domain=$2,sitemap_url=$3,niche=$4,target_audience=$5,geo_focus=$6,primary_goal=$7,html_template=$8,wp_url=$9,wp_user=$10,wp_app_password=$11,content_language=$12,years_experience=$13,team_size=$14,pricing_model=$15,free_consultation=$16,guarantee=$17,certifications=$18,unique_selling_points=$19,service_areas=$20,faq=$21,business_info=$22,author_name=$23,author_bio=$24,author_location=$25,updated_at=NOW() WHERE id=$26 RETURNING *`,
+      [name,domain,sitemap_url,niche,target_audience,geo_focus,primary_goal,html_template,wp_url,wp_user,wp_app_password,content_language||'en',years_experience,team_size,pricing_model,free_consultation,guarantee,JSON.stringify(certifications||[]),JSON.stringify(unique_selling_points||[]),JSON.stringify(service_areas||[]),JSON.stringify(faq||[]),JSON.stringify(business_info||{}),author_name||null,author_bio||null,author_location||null,req.params.id]
     );
     res.json({ success: true, profile: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -14111,11 +14114,7 @@ GEEN GRAAF SCAN BESCHIKBAAR — schrijf content alsof de huidige score 0/100 is.
 
     const gscPagesRW = Array.isArray(analysis.gsc_pages) ? analysis.gsc_pages : [];
     const gscQueriesRW = Array.isArray(analysis.gsc_queries) ? analysis.gsc_queries : [];
-    const author = analysis.author || rewriterHelpers.DEFAULT_AUTHOR;
-    const layoutSkeleton = analysis.layout_skeleton || null;
-    const competitorsManual = Array.isArray(analysis.competitors_manual) ? analysis.competitors_manual : [];
-
-    const gscBlockRW = (gscPagesRW.length || gscQueriesRW.length) ? `
+const gscBlockRW = (gscPagesRW.length || gscQueriesRW.length) ? `
 GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${gscPagesRW.join(', ') || '—'}
 GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in headings en body:
 ${gscQueriesRW.join(', ') || '—'}
@@ -14126,8 +14125,22 @@ ${gscQueriesRW.join(', ') || '—'}
 
     const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
 
-    const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain FROM content_profiles WHERE id=$1`, [rw.profile_id]);
+    const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain, author_name, author_bio, author_location FROM content_profiles WHERE id=$1`, [rw.profile_id]);
     const profBi = profBiR.rows[0] || {};
+
+    // Use profile author as fallback (replaces hardcoded DEFAULT_AUTHOR for new clients)
+    const profileAuthorFallback = {
+      name: profBi.author_name || 'Content Team',
+      bio: profBi.author_bio || '',
+      location: profBi.author_location || '',
+      organization: profBi.business_name || '',
+      jobTitle: 'Content Strategist',
+      url: profBi.domain || ''
+    };
+    const author = analysis.author || (profBi.author_name ? profileAuthorFallback : rewriterHelpers.DEFAULT_AUTHOR);
+    const layoutSkeleton = analysis.layout_skeleton || null;
+    const competitorsManual = Array.isArray(analysis.competitors_manual) ? analysis.competitors_manual : [];
+
     const biRW = safeParse(profBi.business_info, {}) || {};
     const verifiedFactsRW = [
       biRW.phone         ? `- Telefoon: ${biRW.phone}` : null,
@@ -25017,20 +25030,44 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
     if (!inherited) {
       // Frisse scan — altijd bij suspicious fetch, nieuwe pagina, of content gewijzigd
-      // NU: gebruik browser-based scan (zelfde als /api/scan) voor identieke scores
+      // PRIMARY: browser-based scan (zelfde als /api/scan) voor identieke scores
+      // FALLBACK: regex-based scan als browser niet beschikbaar is
+      var graafResult = null;
       try {
-        const graafResult = await browserScanHtml(effectiveHtml, page.url || '');
+        graafResult = await browserScanHtml(effectiveHtml, page.url || '');
         if (graafResult) {
           graafScore = graafResult.totalScore || graafResult.score || null;
           graafBreakdown = graafResult.metrics || null;  // metrics = { graaf, craft, technical }
           graafRecs = graafResult.recommendations || null;
-          _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100' + (fetchReliable ? '' : ' (handmatige scan aangeraden voor nauwkeurigheid)'));
-        } else {
-          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan geen resultaat');
+          _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100 (G:' + (graafBreakdown?.graaf||0) + ' C:' + (graafBreakdown?.craft||0) + ' T:' + (graafBreakdown?.technical||0) + ')' + (fetchReliable ? '' : ' (handmatige scan aangeraden voor nauwkeurigheid)'));
         }
       } catch(e) {
-        console.warn('[tracker-graaf]', e.message);
-        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error');
+        console.warn('[tracker-graaf] browserScanHtml failed:', e.message);
+      }
+
+      // FALLBACK: als browser scan faalt of null returned, gebruik regex-based scan
+      if (!graafResult) {
+        console.log('[tracker-graaf] Falling back to regex-based graafAnalyzeHtml for page', pageId);
+        try {
+          const fallbackResult = graafAnalyzeHtml(effectiveHtml, page.url || '');
+          if (fallbackResult) {
+            graafScore = fallbackResult.totalScore || fallbackResult.score || null;
+            // Map breakdown fields: graafAnalyzeHtml uses different structure than browserScanHtml
+            var fbMetrics = fallbackResult.metrics || fallbackResult.breakdown || {};
+            graafBreakdown = {
+              graaf: fbMetrics.graaf || fbMetrics.content || 0,
+              craft: fbMetrics.craft || fbMetrics.structure || 0,
+              technical: fbMetrics.technical || fbMetrics.meta || 0
+            };
+            graafRecs = fallbackResult.recommendations || null;
+            _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100 (G:' + graafBreakdown.graaf + ' C:' + graafBreakdown.craft + ' T:' + graafBreakdown.technical + ') [regex fallback]');
+          } else {
+            _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan geen resultaat');
+          }
+        } catch(e2) {
+          console.warn('[tracker-graaf] Fallback also failed:', e2.message);
+          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error');
+        }
       }
     }
 

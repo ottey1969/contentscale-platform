@@ -1075,10 +1075,26 @@ async function cmdScan(url) {
     // Render scan results in chat
     addScanResult(d);
 
-    // Now ask agent to interpret
+    // Now ask agent to interpret — PASS THE ACTUAL SCAN DATA
+    var scanReport = '[SYSTEM: Scan completed for ' + url + ']\n\n' +
+      'SCORE: ' + d.score + '/100\n' +
+      'QUALITY: ' + (d.quality || 'N/A') + '\n' +
+      'GRAAF: ' + (d.metrics?.graaf || 0) + '/50, CRAFT: ' + (d.metrics?.craft || 0) + '/30, TECHNICAL: ' + (d.metrics?.technical || 0) + '/20\n' +
+      'WORD COUNT: ' + (d.content_stats?.total_words || 'N/A') + '\n' +
+      'HEADINGS: ' + (d.content_stats?.headings || 'N/A') + '\n' +
+      'PARAGRAPHS: ' + (d.content_stats?.paragraphs || 'N/A') + '\n' +
+      'IMAGES: ' + (d.content_stats?.images || 'N/A') + '\n' +
+      'EXTERNAL LINKS: ' + (d.content_stats?.external_links || 'N/A') + '\n' +
+      'EMAILS: ' + (d.emails?.length || 0) + '\n' +
+      '\nRECOMMENDATIONS:\n' +
+      (d.recommendations || []).slice(0, 5).map(function(r) {
+        return '- [' + (r.priority || 'medium').toUpperCase() + '] ' + (r.title || r.description || 'Fix needed');
+      }).join('\n') + '\n\n' +
+      'Based on this scan, what are the TOP 3 specific changes I should make to improve this score? Be very specific about what to change and why.';
+
     var interp = await callClaude(buildSystemPrompt(), [
       ..._history,
-      { role: 'user', content: 'The scan is done. Interpret the results and tell me what the most impactful next step is. Be specific. Max 3 sentences.' }
+      { role: 'user', content: scanReport }
     ]);
     addAgentMessage(interp);
 
@@ -2950,7 +2966,7 @@ function clearProfileForm() {
   var fields = ['pf-name','pf-domain','pf-language','pf-niche','pf-audience','pf-geo','pf-goal',
     'pf-sitemap','pf-owner','pf-phone','pf-email','pf-years','pf-schema','pf-review-score',
     'pf-address','pf-usps','pf-certs','pf-areas','pf-guarantee','pf-extra',
-    'pf-template','pf-wpurl','pf-wpuser','pf-wppass'];
+    'pf-template','pf-wpurl','pf-wpuser','pf-wppass','pf-author-name','pf-author-bio','pf-author-location'];
   fields.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
@@ -2985,6 +3001,9 @@ async function loadProfileIntoForm(profileId) {
     set('pf-address', p.address || (p.business_info&&p.business_info.address));
     set('pf-guarantee', p.guarantee);
     set('pf-wpurl', p.wp_url);
+    set('pf-author-name', p.author_name);
+    set('pf-author-bio', p.author_bio);
+    set('pf-author-location', p.author_location);
     set('pf-wpuser', p.wp_user);
     set('pf-wppass', p.wp_app_password ? '••••••••' : '');
     set('pf-template', p.html_template || '');
@@ -3118,6 +3137,9 @@ async function saveProfile() {
     html_template:         val('pf-template') || undefined,
     wp_url:                val('pf-wpurl'),
     wp_user:               val('pf-wpuser'),
+    author_name:           val('pf-author-name'),
+    author_bio:            val('pf-author-bio'),
+    author_location:       val('pf-author-location'),
   };
 
   // Don't overwrite password if it shows bullets
@@ -3920,6 +3942,18 @@ document.addEventListener('DOMContentLoaded', function() {
         <div>
           <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Owner / Author Name</label>
           <input id="pf-owner" placeholder="John Smith" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Author Name (for content)</label>
+          <input id="pf-author-name" placeholder="Jane Doe — Content Lead at Company" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Author Bio</label>
+          <input id="pf-author-bio" placeholder="Jane is a content strategist with 10+ years of experience..." style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Author Location</label>
+          <input id="pf-author-location" placeholder="San Francisco, CA" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
         </div>
         <div>
           <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:monospace;">Phone</label>
