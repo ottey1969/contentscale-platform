@@ -796,6 +796,8 @@ function buildSystemPrompt() {
 YOUR CAPABILITIES (you can trigger these with commands):
 - [SCAN url] — scan a page for GRAAF/CRAFT score + recommendations  
 - [RESEARCH keyword profileId] — run keyword + competitor research
+- [INTELLIGENCE keyword url] — deep competitor content analysis + beat-them brief
+- [META keyword "current title"] — meta title + description research with CTR-optimized alternatives
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
 - [REWRITE rewriteId fixes] — apply targeted fixes (fixes = comma-separated keys)
 - [SHOW_OPPORTUNITIES] — show GSC page opportunities
@@ -891,6 +893,15 @@ async function executeCommand(cmd) {
       break;
     case 'REWRITE':
       await cmdRewrite(cmd.args[0], cmd.args[1]);
+      break;
+    case 'INTELLIGENCE':
+      await cmdIntelligence(cmd.args[0], cmd.args[1]);
+      break;
+    case 'PIPELINE':
+      await cmdPipeline(cmd.args[0], cmd.args[1]);
+      break;
+    case 'META':
+      await cmdMetaResearch(cmd.args[0], cmd.args[1]);
       break;
   }
 }
@@ -1127,6 +1138,438 @@ async function cmdResearch(keyword, profileId) {
     removeProgress(prog);
     addAgentMessage('Research error: ' + e.message);
   }
+}
+
+async function cmdMetaResearch(keyword, currentTitle) {
+  if (!keyword) { addAgentMessage('I need a keyword to research meta titles. Example: `[META content scale]` or `[META content scale "Your Current Title"]`'); return; }
+
+  var prog = addProgress('Researching meta titles + descriptions for "' + keyword + '" — analyzing CTR patterns from top 10 competitors...', 0);
+  try {
+    var data = await api('/api/serp/meta-research?keyword=' + encodeURIComponent(keyword) + (currentTitle ? '&current_title=' + encodeURIComponent(currentTitle) : ''));
+    if (!data.success) throw new Error(data.error || 'Meta research failed');
+
+    setProgress(prog, 60);
+
+    var html = '<div style="background:rgba(245,109,0,.06);border:1px solid rgba(245,109,0,.2);border-radius:10px;padding:16px;margin:12px 0;">' +
+      '<div style="font-size:14px;font-weight:800;color:#f56d00;margin-bottom:12px;">🏷️ Meta Research: "' + escHtml(keyword) + '"</div>';
+
+    // Current meta score
+    if (data.current_meta_score) {
+      var s = data.current_meta_score;
+      var titleColor = s.title_score >= 70 ? '#34d399' : s.title_score >= 50 ? '#fbbf24' : '#f87171';
+      var descColor = s.description_score >= 70 ? '#34d399' : s.description_score >= 50 ? '#fbbf24' : '#f87171';
+      html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-bottom:12px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">📊 Your Current Meta</div>' +
+        '<div style="display:flex;gap:16px;margin-bottom:8px;">' +
+          '<div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:' + titleColor + ';">' + s.title_score + '</div><div style="font-size:8px;color:#6b7280;">TITLE /100</div></div>' +
+          '<div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:' + descColor + ';">' + s.description_score + '</div><div style="font-size:8px;color:#6b7280;">DESC /100</div></div>' +
+        '</div>';
+      if (s.issues && s.issues.length) {
+        html += '<div style="font-size:10px;color:#fbbf24;margin-bottom:4px;"><b>⚠️ Issues:</b></div>';
+        s.issues.forEach(function(issue) {
+          html += '<div style="font-size:9px;color:#fca5a5;padding:2px 0;">• ' + escHtml(issue) + '</div>';
+        });
+      }
+      html += '</div>';
+    }
+
+    // Competitor meta table
+    if (data.competitor_meta && data.competitor_meta.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">🌐 Competitor Meta (Top ' + data.competitor_meta.length + ')</div>' +
+        '<div style="overflow-x:auto;"><table style="width:100%;font-size:9px;border-collapse:collapse;">' +
+        '<tr style="color:#6b7280;border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:3px;">#</th><th style="text-align:left;padding:3px;">Title</th><th style="text-align:right;padding:3px;">Len</th><th style="text-align:center;padding:3px;">#</th><th style="text-align:center;padding:3px;">PW</th></tr>';
+      data.competitor_meta.forEach(function(c) {
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);">' +
+          '<td style="padding:3px;color:#a78bfa;font-weight:700;">' + c.position + '</td>' +
+          '<td style="padding:3px;color:#e2e8f0;">' + escHtml(c.title).substring(0, 55) + '</td>' +
+          '<td style="padding:3px;text-align:right;color:#9ca3af;">' + c.title_length + '</td>' +
+          '<td style="padding:3px;text-align:center;color:' + (c.has_number ? '#34d399' : '#6b7280') + ';">' + (c.has_number ? '✓' : '—') + '</td>' +
+          '<td style="padding:3px;text-align:center;color:' + (c.has_power_word ? '#34d399' : '#6b7280') + ';">' + (c.has_power_word ? '✓' : '—') + '</td>' +
+          '</tr>';
+      });
+      html += '</table></div>';
+    }
+
+    // CTR Patterns
+    if (data.patterns) {
+      var p = data.patterns;
+      html += '<div style="margin-top:12px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:10px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:8px;">📈 CTR Patterns Found</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:9px;">' +
+          '<div style="color:' + (p.use_numbers ? '#34d399' : '#6b7280') + ';">' + (p.use_numbers ? '✓' : '✗') + ' Numbers in title (+36% CTR)</div>' +
+          '<div style="color:' + (p.use_year ? '#34d399' : '#6b7280') + ';">' + (p.use_year ? '✓' : '✗') + ' Year in title (freshness)</div>' +
+          '<div style="color:' + (p.use_power_words ? '#34d399' : '#6b7280') + ';">' + (p.use_power_words ? '✓' : '✗') + ' Power words (Best, Ultimate)</div>' +
+          '<div style="color:' + (p.use_questions ? '#34d399' : '#6b7280') + ';">' + (p.use_questions ? '✓' : '✗') + ' Question format</div>' +
+          '<div style="color:' + (p.use_brackets ? '#34d399' : '#6b7280') + ';">' + (p.use_brackets ? '✓' : '✗') + ' Brackets [Guide]</div>' +
+          '<div style="color:#9ca3af;">Avg title: ' + p.avg_title_length + ' chars</div>' +
+        '</div>' +
+        (p.dominant_patterns && p.dominant_patterns.length ? '<div style="font-size:9px;color:#fbbf24;margin-top:6px;"><b>Winning patterns:</b> ' + p.dominant_patterns.join(', ') + '</div>' : '') +
+        '</div>';
+    }
+
+    // Alternatives
+    if (data.alternatives && data.alternatives.alternatives && data.alternatives.alternatives.length) {
+      html += '<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:8px;">🎯 CTR-Optimized Alternatives</div>';
+      data.alternatives.alternatives.forEach(function(alt, i) {
+        var liftColor = alt.predicted_ctr_lift === 'high' ? '#f87171' : alt.predicted_ctr_lift === 'medium' ? '#fbbf24' : '#6b7280';
+        html += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+          '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">' +
+            '<span style="font-size:10px;font-weight:800;color:#34d399;">#' + (i + 1) + '</span>' +
+            '<span style="font-size:8px;padding:2px 6px;border-radius:3px;background:' + liftColor + '22;color:' + liftColor + ';">' + (alt.predicted_ctr_lift || '?').toUpperCase() + ' LIFT</span>' +
+          '</div>' +
+          '<div style="font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">' + escHtml(alt.title) + ' <span style="font-size:8px;color:#6b7280;">(' + alt.title.length + ' chars)</span></div>' +
+          '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;">' + escHtml(alt.description) + '</div>' +
+          '<div style="font-size:9px;color:#fbbf24;">' + escHtml(alt.why_it_works) + '</div>' +
+          '<div style="display:flex;gap:6px;margin-top:6px;">' +
+            '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(alt.title) + '\')).then(function(){toast(\'✓ Title copied\',2000,\'ok\')})" style="font-size:8px;padding:3px 8px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.1);color:#34d399;cursor:pointer;">📋 Copy Title</button>' +
+            '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(alt.description) + '\')).then(function(){toast(\'✓ Description copied\',2000,\'ok\')})" style="font-size:8px;padding:3px 8px;border-radius:3px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.1);color:#34d399;cursor:pointer;">📝 Copy Description</button>' +
+          '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Analysis summary
+    if (data.alternatives && data.alternatives.analysis) {
+      html += '<div style="margin-top:10px;font-size:10px;color:#e2e8f0;line-height:1.5;">' + escHtml(data.alternatives.analysis) + '</div>';
+    }
+
+    html += '</div>';
+
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'agent-msg';
+    msgDiv.innerHTML = html;
+    document.getElementById('chatBody').appendChild(msgDiv);
+    scrollToEnd();
+
+    setProgress(prog, 100);
+    removeProgress(prog);
+
+  } catch(e) {
+    removeProgress(prog);
+    addAgentMessage('🏷️ Meta research error: ' + e.message);
+  }
+}
+
+async function cmdIntelligence(keyword, url) {
+  if (!keyword) { addAgentMessage('I need a keyword to run content intelligence. What keyword should I analyze?'); return; }
+
+  var prog = addProgress('Running content intelligence on "' + keyword + '" — analyzing top 10 competitors, content gaps, and generating beat-them brief…', 0);
+  try {
+    var data = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
+    if (!data.success) throw new Error(data.error || 'Intelligence failed');
+
+    setProgress(prog, 50);
+
+    // Build rich intelligence display
+    var html = '<div style="background:rgba(245,109,0,.06);border:1px solid rgba(245,109,0,.2);border-radius:10px;padding:16px;margin:12px 0;">' +
+      '<div style="font-size:14px;font-weight:800;color:#f56d00;margin-bottom:12px;">🧠 Content Intelligence: "' + escHtml(keyword) + '"</div>';
+
+    // Your analysis
+    if (data.your_analysis && !data.your_analysis.error) {
+      var y = data.your_analysis;
+      html += '<div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:10px;margin-bottom:10px;">' +
+        '<div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px;">📊 YOUR PAGE' + (url ? ': ' + escHtml(url) : '') + '</div>' +
+        '<div style="font-size:10px;color:#9ca3af;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">' +
+        '<div><b style="color:#e2e8f0;">' + y.wordCount.toLocaleString() + '</b> words</div>' +
+        '<div><b style="color:#e2e8f0;">' + y.headingCount + '</b> headings</div>' +
+        '<div><b style="color:#e2e8f0;">' + y.images + '</b> images</div>' +
+        '<div>Meta title: <b style="color:#e2e8f0;">' + y.metaTitleLength + '</b>/60</div>' +
+        '<div>Meta desc: <b style="color:#e2e8f0;">' + y.metaDescLength + '</b>/155</div>' +
+        '<div>Schema: <b style="color:#e2e8f0;">' + (y.schemaTypes.join(', ') || 'None') + '</b></div>' +
+        '</div></div>';
+    }
+
+    // Competitor comparison table
+    if (data.competitors && data.competitors.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">🌐 TOP ' + data.competitors.length + ' COMPETITORS</div>' +
+        '<div style="overflow-x:auto;"><table style="width:100%;font-size:10px;border-collapse:collapse;">' +
+        '<tr style="color:#6b7280;border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:4px;">#</th><th style="text-align:left;padding:4px;">Title</th><th style="text-align:right;padding:4px;">Words</th><th style="text-align:right;padding:4px;">H2s</th><th style="text-align:right;padding:4px;">Schema</th></tr>';
+      data.competitors.forEach(function(c) {
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);">' +
+          '<td style="padding:4px;color:#a78bfa;font-weight:700;">' + c.position + '</td>' +
+          '<td style="padding:4px;"><a href="' + escHtml(c.url) + '" target="_blank" style="color:#38bdf8;text-decoration:none;">' + escHtml(c.title || c.url).substring(0, 50) + '</a></td>' +
+          '<td style="padding:4px;text-align:right;color:#e2e8f0;">' + (c.word_count || '?') + '</td>' +
+          '<td style="padding:4px;text-align:right;color:#e2e8f0;">' + (c.h2s ? c.h2s.length : 0) + '</td>' +
+          '<td style="padding:4px;text-align:right;color:#e2e8f0;font-size:9px;">' + (c.schema_types ? c.schema_types.join(', ') : '—') + '</td>' +
+          '</tr>';
+      });
+      html += '</table></div>';
+
+      // Average stats
+      var avgWords = Math.round(data.competitors.reduce(function(s,c){return s+(c.word_count||0)},0)/data.competitors.length);
+      var avgHeadings = Math.round(data.competitors.reduce(function(s,c){return s+(c.h2s?c.h2s.length:0)},0)/data.competitors.length);
+      html += '<div style="font-size:10px;color:#fbbf24;margin-top:8px;">📈 Avg competitor: ' + avgWords.toLocaleString() + ' words, ' + avgHeadings + ' H2s</div>';
+    }
+
+    // Content gaps
+    if (data.intelligence_brief && data.intelligence_brief.content_gaps && data.intelligence_brief.content_gaps.length) {
+      html += '<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:6px;">⚠️ CONTENT GAPS — What competitors cover that you don\'t:</div>';
+      data.intelligence_brief.content_gaps.forEach(function(gap) {
+        html += '<div style="font-size:10px;color:#fca5a5;padding:3px 0;border-bottom:1px solid rgba(248,113,113,.1);">• ' + escHtml(gap) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Beat Them Brief
+    if (data.intelligence_brief && data.intelligence_brief.beat_them_brief) {
+      var b = data.intelligence_brief.beat_them_brief;
+      html += '<div style="margin-top:12px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:12px;">' +
+        '<div style="font-size:12px;font-weight:800;color:#a78bfa;margin-bottom:10px;">🎯 BEAT THEM BRIEF</div>';
+
+      if (b.target_word_count) html += '<div style="font-size:10px;margin-bottom:6px;">📝 <b>Target word count:</b> ' + b.target_word_count.toLocaleString() + ' words</div>';
+      if (b.recommended_h2s && b.recommended_h2s.length) {
+        html += '<div style="font-size:10px;margin-bottom:6px;">📌 <b>Recommended H2 headings:</b></div>';
+        b.recommended_h2s.forEach(function(h) { html += '<div style="font-size:10px;color:#c4b5fd;padding:2px 8px;margin:2px 0;background:rgba(167,139,250,.05);border-radius:3px;">' + escHtml(h) + '</div>'; });
+      }
+      if (b.topics_to_cover && b.topics_to_cover.length) {
+        html += '<div style="font-size:10px;margin-top:6px;margin-bottom:6px;">📋 <b>Topics to cover:</b> ' + b.topics_to_cover.map(escHtml).join(', ') + '</div>';
+      }
+      if (b.statistics_to_include && b.statistics_to_include.length) {
+        html += '<div style="font-size:10px;margin-bottom:6px;">📊 <b>Include statistics:</b></div>';
+        b.statistics_to_include.forEach(function(s) { html += '<div style="font-size:10px;color:#9ca3af;padding:2px 0;">• ' + escHtml(s) + '</div>'; });
+      }
+      if (b.meta_title_suggestion) html += '<div style="font-size:10px;margin-bottom:6px;">🏷️ <b>Meta title:</b> <span style="color:#e2e8f0;">' + escHtml(b.meta_title_suggestion) + '</span></div>';
+      if (b.meta_description_suggestion) html += '<div style="font-size:10px;margin-bottom:6px;">📝 <b>Meta description:</b> <span style="color:#e2e8f0;">' + escHtml(b.meta_description_suggestion) + '</span></div>';
+      if (b.voice_search_optimization) html += '<div style="font-size:10px;margin-bottom:6px;">🎙️ <b>Voice search answer:</b> <span style="color:#e2e8f0;">' + escHtml(b.voice_search_optimization) + '</span></div>';
+      if (b.schema_to_add && b.schema_to_add.length) html += '<div style="font-size:10px;margin-bottom:6px;">🏗️ <b>Add schema:</b> ' + b.schema_to_add.join(', ') + '</div>';
+      html += '</div>';
+    }
+
+    // Priority actions
+    if (data.intelligence_brief && data.intelligence_brief.priority_actions && data.intelligence_brief.priority_actions.length) {
+      html += '<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px;">🔥 PRIORITY ACTIONS (do these first):</div>';
+      data.intelligence_brief.priority_actions.forEach(function(a) {
+        var impactColor = a.impact === 'high' ? '#f87171' : a.impact === 'medium' ? '#fbbf24' : '#6b7280';
+        html += '<div style="font-size:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
+          '<span style="color:' + impactColor + ';font-weight:700;">[' + a.impact.toUpperCase() + ']</span> ' +
+          escHtml(a.action) + ' <span style="color:#6b7280;">(effort: ' + a.effort + '/10)</span></div>';
+      });
+      html += '</div>';
+    }
+
+    // PPA
+    if (data.people_also_ask && data.people_also_ask.length) {
+      html += '<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;">❓ People Also Ask — answer these:</div>';
+      data.people_also_ask.forEach(function(q) {
+        html += '<div style="font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);"><b style="color:#e2e8f0;">' + escHtml(q.question) + '</b></div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+
+    // Render in chat
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'agent-msg';
+    msgDiv.innerHTML = html;
+    document.getElementById('chatBody').appendChild(msgDiv);
+    scrollToEnd();
+
+    setProgress(prog, 100);
+    removeProgress(prog);
+
+    // Store in context
+    _context.intelligence = data;
+    _context.keyword = keyword;
+    updateContext();
+
+    // Generate summary via AI
+    var summary = await callClaude(buildSystemPrompt(), [
+      ..._history,
+      { role: 'user', content: 'Content intelligence for "' + keyword + '" is complete. ' + data.competitors.length + ' competitors analyzed. In 2-3 sentences: what is the single highest-impact change to make right now?' }
+    ]);
+    addAgentMessage(summary);
+
+  } catch(e) {
+    removeProgress(prog);
+    addAgentMessage('🧠 Intelligence error: ' + e.message + '. Try again or check your SerpAPI key.');
+  }
+}
+
+async function cmdPipeline(keyword, url) {
+  if (!keyword) { addAgentMessage('I need a keyword to run the content pipeline. Example: `[PIPELINE content scale https://contentscale.site]`'); return; }
+
+  var pipelineId = 'pipeline_' + Date.now();
+  var chatBody = document.getElementById('chatBody');
+
+  // Build pipeline UI
+  var pipelineHtml = '<div id="' + pipelineId + '" style="background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin:12px 0;">' +
+    '<div style="font-size:14px;font-weight:800;background:linear-gradient(90deg,#f56d00,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;">🚀 Content Pipeline: "' + escHtml(keyword) + '"</div>' +
+    '<div style="display:flex;gap:4px;margin-bottom:16px;overflow-x:auto;">' +
+      _stageBadge(pipelineId, 'research', '1', 'RESEARCH', 'active') +
+      _stageArrow() +
+      _stageBadge(pipelineId, 'brief', '2', 'BRIEF', 'pending') +
+      _stageArrow() +
+      _stageBadge(pipelineId, 'draft', '3', 'DRAFT', 'pending') +
+      _stageArrow() +
+      _stageBadge(pipelineId, 'review', '4', 'REVIEW', 'pending') +
+      _stageArrow() +
+      _stageBadge(pipelineId, 'publish', '5', 'PUBLISH', 'pending') +
+    '</div>' +
+    '<div id="' + pipelineId + '_output" style="font-size:11px;color:#9ca3af;">⚡ Starting pipeline...</div>' +
+    '</div>';
+
+  var msgDiv = document.createElement('div');
+  msgDiv.className = 'agent-msg';
+  msgDiv.innerHTML = pipelineHtml;
+  chatBody.appendChild(msgDiv);
+  scrollToEnd();
+
+  try {
+    // Call pipeline API
+    _updateStage(pipelineId, 'research', 'active', 'Fetching competitor data, PAA, AI Overview...');
+    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null });
+
+    if (!data.success || !data.pipeline) {
+      _updateStage(pipelineId, 'research', 'failed', 'Pipeline failed: ' + (data.error || 'Unknown error'));
+      return;
+    }
+
+    var p = data.pipeline;
+
+    // ═══ STAGE 1: RESEARCH ═══════════════════════════════════════════════════
+    if (p.stages.research) {
+      var r = p.stages.research;
+      var rHtml = '<div style="margin-top:8px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px;">📊 Research Results</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-bottom:8px;">';
+      r.top5.forEach(function(c) {
+        rHtml += '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:6px;font-size:9px;">' +
+          '<div style="color:#a78bfa;font-weight:700;">#' + c.position + '</div>' +
+          '<div style="color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(c.title || '').substring(0, 40) + '</div></div>';
+      });
+      rHtml += '</div>';
+      if (r.people_also_ask && r.people_also_ask.length) {
+        rHtml += '<div style="font-size:9px;color:#6b7280;margin-bottom:4px;">❓ ' + r.people_also_ask.length + ' People Also Ask questions found</div>';
+      }
+      if (r.competitor_avg_words) {
+        rHtml += '<div style="font-size:9px;color:#fbbf24;">📈 Avg competitor: ' + r.competitor_avg_words.toLocaleString() + ' words</div>';
+      }
+      rHtml += '</div>';
+      _updateStage(pipelineId, 'research', 'complete', rHtml);
+    }
+
+    // ═══ STAGE 2: BRIEF ══════════════════════════════════════════════════════
+    _updateStage(pipelineId, 'brief', 'active', 'Generating content brief...');
+    if (p.stages.brief && p.stages.brief.brief && !p.stages.brief.brief.error) {
+      var b = p.stages.brief.brief;
+      var bHtml = '<div style="margin-top:8px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;">🎯 Content Brief</div>' +
+        (b.title ? '<div style="font-size:10px;color:#e2e8f0;margin-bottom:4px;"><b>Title:</b> ' + escHtml(b.title) + '</div>' : '') +
+        (b.meta_description ? '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;"><b>Meta:</b> ' + escHtml(b.meta_description) + '</div>' : '') +
+        (b.target_word_count ? '<div style="font-size:10px;color:#fbbf24;margin-bottom:4px;"><b>Target:</b> ' + b.target_word_count.toLocaleString() + ' words</div>' : '') +
+        (b.h2_outline && b.h2_outline.length ? '<div style="font-size:9px;color:#9ca3af;margin-bottom:4px;"><b>Outline:</b><br>' + b.h2_outline.map(function(h) { return '→ ' + escHtml(h); }).join('<br>') + '</div>' : '') +
+        (b.topics_to_cover && b.topics_to_cover.length ? '<div style="font-size:9px;color:#9ca3af;margin-bottom:4px;"><b>Topics:</b> ' + b.topics_to_cover.map(escHtml).join(', ') + '</div>' : '') +
+        '</div>';
+      _updateStage(pipelineId, 'brief', 'complete', bHtml);
+    } else {
+      _updateStage(pipelineId, 'brief', 'failed', 'Brief generation failed');
+    }
+
+    // ═══ STAGE 3: DRAFT ══════════════════════════════════════════════════════
+    _updateStage(pipelineId, 'draft', 'active', 'Writing content...');
+    if (p.stages.draft && p.stages.draft.content) {
+      var d = p.stages.draft;
+      // Show first 300 chars + expandable
+      var preview = d.content.substring(0, 300).replace(/<[^>]+>/g, ' ').trim();
+      var dHtml = '<div style="margin-top:8px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#38bdf8;margin-bottom:6px;">📝 Draft — ' + d.word_count.toLocaleString() + ' words</div>' +
+        '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:10px;color:#e2e8f0;max-height:200px;overflow-y:auto;line-height:1.5;">' + preview + '...</div>' +
+        '<div style="display:flex;gap:6px;margin-top:6px;">' +
+          '<button onclick="this.nextElementSibling.style.display=\'block\';this.style.display=\'none\';" style="font-size:9px;padding:4px 10px;border-radius:4px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.1);color:#38bdf8;cursor:pointer;">Show Full Draft</button>' +
+          '<div style="display:none;background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:10px;color:#e2e8f0;max-height:400px;overflow-y:auto;line-height:1.5;">' + escHtml(d.content) + '</div>' +
+        '</div>' +
+        '</div>';
+      _updateStage(pipelineId, 'draft', 'complete', dHtml);
+    } else {
+      _updateStage(pipelineId, 'draft', 'failed', 'Draft generation failed');
+    }
+
+    // ═══ STAGE 4: REVIEW ═════════════════════════════════════════════════════
+    _updateStage(pipelineId, 'review', 'active', 'Scoring content...');
+    if (p.stages.review) {
+      var rev = p.stages.review;
+      var gradeColor = rev.grade === 'A+' ? '#34d399' : rev.grade === 'A' ? '#34d399' : rev.grade === 'B' ? '#fbbf24' : '#f87171';
+      var revHtml = '<div style="margin-top:8px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#fbbf24;margin-bottom:6px;">📊 Review</div>' +
+        '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">' +
+          '<div style="text-align:center;"><div style="font-size:24px;font-weight:900;color:' + gradeColor + ';">' + (rev.score || '?') + '</div><div style="font-size:8px;color:#6b7280;">/100</div></div>' +
+          '<div><div style="font-size:14px;font-weight:800;color:' + gradeColor + ';">Grade ' + (rev.grade || '?') + '</div><div style="font-size:9px;color:#6b7280;">' + (rev.word_count || 0).toLocaleString() + ' words</div></div>' +
+        '</div>';
+      if (rev.gaps && rev.gaps.length) {
+        revHtml += '<div style="font-size:9px;color:#f87171;margin-bottom:4px;"><b>Gaps to fix:</b></div>';
+        rev.gaps.forEach(function(g) { revHtml += '<div style="font-size:9px;color:#fca5a5;padding:2px 0;">• ' + escHtml(g) + '</div>'; });
+      } else if (rev.score >= 75) {
+        revHtml += '<div style="font-size:9px;color:#34d399;">✓ Content looks strong — ready to publish!</div>';
+      }
+      revHtml += '</div>';
+      _updateStage(pipelineId, 'review', 'complete', revHtml);
+    } else {
+      _updateStage(pipelineId, 'review', 'failed', 'Review failed');
+    }
+
+    // ═══ STAGE 5: PUBLISH ════════════════════════════════════════════════════
+    if (p.stages.publish && p.stages.publish.can_publish) {
+      var pub = p.stages.publish;
+      var pubHtml = '<div style="margin-top:8px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px;">🚀 Ready to Publish</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+          '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(p.stages.draft.content) + '\')).then(function(){toast(\'✓ HTML copied to clipboard\',2000,\'ok\')})" style="font-size:9px;padding:5px 12px;border-radius:4px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:700;">📋 Copy HTML</button>' +
+          '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(pub.title) + '\')).then(function(){toast(\'✓ Title copied\',2000,\'ok\')})" style="font-size:9px;padding:5px 12px;border-radius:4px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.1);color:#a78bfa;cursor:pointer;">🏷️ Copy Title</button>' +
+          '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(pub.meta_description) + '\')).then(function(){toast(\'✓ Meta copied\',2000,\'ok\')})" style="font-size:9px;padding:5px 12px;border-radius:4px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.1);color:#a78bfa;cursor:pointer;">📝 Copy Meta</button>' +
+        '</div>' +
+        '</div>';
+      _updateStage(pipelineId, 'publish', 'complete', pubHtml);
+    } else {
+      _updateStage(pipelineId, 'publish', 'failed', 'Nothing to publish — draft failed');
+    }
+
+    scrollToEnd();
+
+  } catch(e) {
+    _updateStage(pipelineId, 'research', 'failed', 'Pipeline error: ' + e.message);
+  }
+}
+
+// Pipeline stage UI helpers
+function _stageBadge(pipelineId, stageId, num, label, state) {
+  var colors = {
+    pending: { bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)', text: '#6b7280' },
+    active:  { bg: 'rgba(245,109,0,.12)', border: 'rgba(245,109,0,.4)', text: '#f56d00' },
+    complete:{ bg: 'rgba(52,211,153,.1)', border: 'rgba(52,211,153,.3)', text: '#34d399' },
+    failed:  { bg: 'rgba(248,113,113,.1)', border: 'rgba(248,113,113,.3)', text: '#f87171' }
+  };
+  var c = colors[state] || colors.pending;
+  return '<div id="' + pipelineId + '_stage_' + stageId + '" style="background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:6px;padding:4px 8px;text-align:center;min-width:60px;">' +
+    '<div style="font-size:8px;color:' + c.text + ';font-weight:800;">' + num + '</div>' +
+    '<div style="font-size:8px;color:' + c.text + ';text-transform:uppercase;letter-spacing:.06em;">' + label + '</div></div>';
+}
+
+function _stageArrow() {
+  return '<div style="display:flex;align-items:center;color:#6b7280;font-size:10px;">→</div>';
+}
+
+function _updateStage(pipelineId, stageId, state, output) {
+  var stageEl = document.getElementById(pipelineId + '_stage_' + stageId);
+  var outputEl = document.getElementById(pipelineId + '_output');
+  if (stageEl) {
+    var colors = {
+      pending: { bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)', text: '#6b7280' },
+      active:  { bg: 'rgba(245,109,0,.12)', border: 'rgba(245,109,0,.4)', text: '#f56d00' },
+      complete:{ bg: 'rgba(52,211,153,.1)', border: 'rgba(52,211,153,.3)', text: '#34d399' },
+      failed:  { bg: 'rgba(248,113,113,.1)', border: 'rgba(248,113,113,.3)', text: '#f87171' }
+    };
+    var c = colors[state] || colors.pending;
+    stageEl.style.background = c.bg;
+    stageEl.style.borderColor = c.border;
+    stageEl.querySelectorAll('div').forEach(function(d) { d.style.color = c.text; });
+  }
+  if (outputEl) {
+    outputEl.innerHTML = output;
+    outputEl.style.color = state === 'failed' ? '#f87171' : '#9ca3af';
+  }
+  scrollToEnd();
 }
 
 async function cmdAnalyse(url, keyword) {
@@ -2359,6 +2802,20 @@ function exportWriterBriefing(c, articles) {
 
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function escHtml(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Extract JSON from AI response text (handles markdown code blocks)
+function extractJsonFromText(text) {
+  if (!text) return null;
+  // Try direct JSON parse first
+  try { return JSON.parse(text); } catch(e) {}
+  // Try stripping markdown code block
+  var clean = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+  try { return JSON.parse(clean); } catch(e) {}
+  // Try extracting first { ... } block
+  var match = text.match(/\{[\s\S]*\}/);
+  if (match) try { return JSON.parse(match[0]); } catch(e) {}
+  return null;
+}
 
 
 

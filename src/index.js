@@ -9922,6 +9922,659 @@ app.get('/api/serp/competitors', verifyEngineAccess, async (req, res) => {
   }
 });
 
+// ── CONTENT INTELLIGENCE — Deep competitor analysis + content gaps ────────────
+// Analyzes top 10 competitors for a keyword, extracts content patterns,
+// identifies gaps vs your page, and generates a "beat them" brief.
+app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
+  const keyword = req.query.keyword;
+  const yourUrl = req.query.url || '';
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+  const serpKey = resolveSerpapiKey(req);
+  const geminiKey = resolveGeminiKey(req);
+  if (!serpKey) return res.status(503).json({ success: false, error: 'SerpAPI key not configured' });
+
+  try {
+    // 1. Fetch top 10 Google results
+    const params = new URLSearchParams({
+      engine: 'google', q: keyword, api_key: serpKey,
+      num: '10', hl: 'en', gl: 'us'
+    });
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(`https://serpapi.com/search?${params}`, { signal: ctrl.signal });
+    clearTimeout(t);
+    const serpData = await r.json();
+
+    const organic = (serpData.organic_results || []).slice(0, 10);
+    const paa = (serpData.related_questions || []).slice(0, 8).map(q => ({ question: q.question || '', snippet: q.snippet || '' }));
+    const related = (serpData.related_searches || []).slice(0, 10).map(s => s.query || '').filter(Boolean);
+    const aiOverview = serpData.answer_box ? {
+      type: serpData.answer_box.type || 'overview',
+      answer: serpData.answer_box.answer || serpData.answer_box.snippet || ''
+    } : null;
+
+    // 2. Analyze each competitor page
+    const competitorAnalysis = [];
+    for (const result of organic) {
+      const compUrl = result.link || '';
+      if (!compUrl || compUrl === yourUrl) continue;
+      try {
+        const compData = await quickPageAnalyze(compUrl);
+        competitorAnalysis.push({
+          position: result.position,
+          url: compUrl,
+          title: result.title || '',
+          snippet: result.snippet || '',
+          word_count: compData.wordCount,
+          heading_count: compData.headingCount,
+          h1: compData.h1,
+          h2s: compData.h2s,
+          has_schema: compData.hasSchema,
+          schema_types: compData.schemaTypes,
+          has_faq: compData.hasFAQ,
+          has_author: compData.hasAuthor,
+          internal_links: compData.internalLinks,
+          external_links: compData.externalLinks,
+          images: compData.images,
+          images_with_alt: compData.imagesWithAlt,
+          meta_title_length: compData.metaTitleLength,
+          meta_desc_length: compData.metaDescLength,
+          avg_paragraph_length: compData.avgParagraphLength
+        });
+      } catch(e) {
+        competitorAnalysis.push({
+          position: result.position,
+          url: compUrl,
+          title: result.title || '',
+          snippet: result.snippet || '',
+          error: e.message
+        });
+      }
+    }
+
+    // 3. Analyze your page (if URL provided)
+    let yourAnalysis = null;
+    if (yourUrl) {
+      try {
+        yourAnalysis = await quickPageAnalyze(yourUrl);
+      } catch(e) {
+        yourAnalysis = { error: e.message };
+      }
+    }
+
+    // 4. Generate intelligence brief via Gemini
+    let brief = null;
+    if (geminiKey && competitorAnalysis.length) {
+      const prompt = `You are an elite SEO content strategist. Analyze this competitor data and generate a "beat them" content brief.
+
+KEYWORD: "${keyword}"
+${yourUrl ? 'YOUR PAGE: ' + yourUrl : ''}
+${yourAnalysis && !yourAnalysis.error ? 'YOUR STATS: ' + JSON.stringify(yourAnalysis) : ''}
+
+COMPETITORS (${competitorAnalysis.length} analyzed):
+${JSON.stringify(competitorAnalysis, null, 2)}
+
+PEOPLE ALSO ASK:
+${paa.map(q => '- ' + q.question).join('\n')}
+
+RELATED SEARCHES: ${related.join(', ')}
+
+Generate a JSON response with this exact structure:
+{
+  "content_gaps": ["topic competitors cover that you don't", "another gap"],
+  "competitor_patterns": {"avg_word_count": 2500, "common_h2s": ["h2 1", "h2 2"], "schema_types_used": ["FAQPage", "Article"]},
+  "beat_them_brief": {
+    "target_word_count": 2800,
+    "recommended_h2s": ["Better H2 One", "Better H2 Two", "Better H2 Three"],
+    "topics_to_cover": ["topic 1", "topic 2"],
+    "schema_to_add": ["FAQPage", "HowTo"],
+    "statistics_to_include": ["Find 2-3 real statistics about this topic"],
+    "paa_to_answer": ["answer these people also ask questions directly"],
+    "meta_title_suggestion": "SEO Title with Number and Year: Benefit",
+    "meta_description_suggestion": "Compelling 155-char description with CTA",
+    "voice_search_optimization": "30-50 word natural language answer for voice"
+  },
+  "priority_actions": [
+    {"action": "specific action", "impact": "high/medium/low", "effort": "1-10"}
+  ]
+}`;
+
+      try {
+        const gemResult = await callGeminiWithFallback(geminiKey, {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+        });
+        if (gemResult.ok) {
+          const rawText = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          brief = extractJsonFromText(rawText);
+        }
+      } catch(e) { console.warn('[intelligence] Gemini brief failed:', e.message); }
+    }
+
+    res.json({
+      success: true,
+      keyword: keyword,
+      your_url: yourUrl,
+      your_analysis: yourAnalysis,
+      competitors: competitorAnalysis,
+      people_also_ask: paa,
+      related_searches: related,
+      ai_overview: aiOverview,
+      intelligence_brief: brief
+    });
+
+  } catch(e) {
+    console.error('[serp intelligence]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Quick page analysis — fetches a URL and extracts content stats
+async function quickPageAnalyze(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    clearTimeout(timeout);
+    const html = await response.text();
+    return analyzeHtmlStats(html, url);
+  } catch(e) {
+    clearTimeout(timeout);
+    throw e;
+  }
+}
+
+// Extract content stats from HTML string
+function analyzeHtmlStats(html, url) {
+  const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  const cleanText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = cleanText.split(/\s+/).filter(w => w.length > 0);
+  const wordCount = words.length;
+
+  const h1s = [...text.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+  const h2s = [...text.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+  const h3s = [...text.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+
+  const schemaScripts = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+  const schemaTypes = [];
+  schemaScripts.forEach(s => {
+    try {
+      const data = JSON.parse(s);
+      const extractTypes = (obj) => {
+        if (Array.isArray(obj)) obj.forEach(extractTypes);
+        else if (obj && obj['@type']) {
+          const types = Array.isArray(obj['@type']) ? obj['@type'] : [obj['@type']];
+          types.forEach(t => { if (!schemaTypes.includes(t)) schemaTypes.push(t); });
+        }
+        if (obj && obj['@graph']) extractTypes(obj['@graph']);
+      };
+      extractTypes(data);
+    } catch(e) {}
+  });
+
+  const hasFAQ = /<[^>]*class=["'][^"']*faq[^"']*["']|<[^>]*id=["'][^"']*faq[^"']*["']/i.test(html) ||
+    /frequently asked|common questions/i.test(cleanText);
+  const hasAuthor = /<[^>]*class=["'][^"']*author[^"']*["']|<[^>]*rel=["']author["']/i.test(html) ||
+    /about the author|written by/i.test(html);
+
+  const links = [...html.matchAll(/<a[^>]+href=["']([^"']+)["']/gi)].map(m => m[1]);
+  let baseDomain = '';
+  try { baseDomain = new URL(url).hostname.replace('www.', ''); } catch(e) {}
+  const internalLinks = links.filter(l => {
+    try { return new URL(l, url).hostname.replace('www.', '') === baseDomain; } catch(e) { return false; }
+  }).length;
+  const externalLinks = links.filter(l => {
+    try { return new URL(l, url).hostname.replace('www.', '') !== baseDomain && !l.startsWith('#') && !l.startsWith('mailto:'); } catch(e) { return false; }
+  }).length;
+
+  const images = [...html.matchAll(/<img[^>]*>/gi)].length;
+  const imagesWithAlt = [...html.matchAll(/<img[^>]*alt=["'][^"']+["'][^>]*>/gi)].length;
+
+  const metaTitle = (html.match(/<title>([\s\S]*?)<\/title>/i) || ['', ''])[1].trim();
+  const metaDesc = (html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i) || ['', ''])[1].trim();
+
+  const paragraphs = cleanText.split(/\n+/).filter(p => p.trim().length > 20);
+  const avgParagraphLength = paragraphs.length ? Math.round(paragraphs.reduce((s, p) => s + p.split(/\s+/).length, 0) / paragraphs.length) : 0;
+
+  return {
+    wordCount, headingCount: h1s.length + h2s.length + h3s.length,
+    h1: h1s[0] || '', h2s: h2s.slice(0, 10), h3s: h3s.slice(0, 10),
+    hasSchema: schemaTypes.length > 0, schemaTypes,
+    hasFAQ, hasAuthor,
+    internalLinks, externalLinks, images, imagesWithAlt,
+    metaTitleLength: metaTitle.length, metaDescLength: metaDesc.length,
+    avgParagraphLength
+  };
+}
+
+// ── META TITLE + DESCRIPTION RESEARCH — CTR-optimized competitor analysis ─────
+// Extracts all competitor meta titles + descriptions from Google SERP,
+// analyzes CTR patterns (numbers, power words, length, emotion),
+// and generates 5+ alternatives that beat the competition.
+app.get('/api/serp/meta-research', verifyEngineAccess, async (req, res) => {
+  const keyword = req.query.keyword;
+  const currentTitle = req.query.current_title || '';
+  const currentDesc = req.query.current_description || '';
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+  const serpKey = resolveSerpapiKey(req);
+  const geminiKey = resolveGeminiKey(req);
+  if (!serpKey) return res.status(503).json({ success: false, error: 'SerpAPI key not configured' });
+
+  try {
+    // 1. Fetch Google SERP
+    const params = new URLSearchParams({
+      engine: 'google', q: keyword, api_key: serpKey,
+      num: '10', hl: 'en', gl: 'us'
+    });
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(`https://serpapi.com/search?${params}`, { signal: ctrl.signal });
+    clearTimeout(t);
+    const serpData = await r.json();
+
+    const organic = (serpData.organic_results || []).slice(0, 10);
+
+    // 2. Extract + analyze each competitor's meta title + description
+    const competitors = organic.map(function(o) {
+      var title = o.title || '';
+      var desc = o.snippet || '';
+      return {
+        position: o.position,
+        url: o.link || '',
+        title: title,
+        description: desc,
+        title_length: title.length,
+        desc_length: desc.length,
+        has_number: /\d/.test(title),
+        has_year: /20\d\d/.test(title),
+        has_power_word: /\b(best|ultimate|complete|guide|proven|secret|exclusive|free|top|essential|definitive|expert|exclusive|now|today|easy|quick|simple|ultimate)\b/i.test(title),
+        has_question: /\?/.test(title),
+        has_brackets: /[\[\{\(]/.test(title),
+        has_pipe_dash: /\||\s-\s/.test(title),
+        emotion_score: _scoreEmotion(title),
+        word_count: title.split(/\s+/).length
+      };
+    });
+
+    // 3. Pattern analysis
+    var withNumbers = competitors.filter(function(c) { return c.has_number; }).length;
+    var withYear = competitors.filter(function(c) { return c.has_year; }).length;
+    var withPowerWord = competitors.filter(function(c) { return c.has_power_word; }).length;
+    var withQuestion = competitors.filter(function(c) { return c.has_question; }).length;
+    var withBrackets = competitors.filter(function(c) { return c.has_brackets; }).length;
+    var avgTitleLen = Math.round(competitors.reduce(function(s,c){return s+c.title_length},0) / competitors.length);
+    var avgDescLen = Math.round(competitors.reduce(function(s,c){return s+c.desc_length},0) / competitors.length);
+
+    var patterns = {
+      use_numbers: withNumbers >= competitors.length * 0.4,
+      use_year: withYear >= competitors.length * 0.3,
+      use_power_words: withPowerWord >= competitors.length * 0.5,
+      use_questions: withQuestion >= competitors.length * 0.2,
+      use_brackets: withBrackets >= competitors.length * 0.2,
+      avg_title_length: avgTitleLen,
+      avg_description_length: avgDescLen,
+      dominant_patterns: []
+    };
+    if (patterns.use_numbers) patterns.dominant_patterns.push('Numbers in title');
+    if (patterns.use_year) patterns.dominant_patterns.push('Year (2025) in title');
+    if (patterns.use_power_words) patterns.dominant_patterns.push('Power words (Best, Ultimate, Guide)');
+    if (patterns.use_questions) patterns.dominant_patterns.push('Question format');
+    if (patterns.use_brackets) patterns.dominant_patterns.push('Brackets/parentheses');
+
+    // 4. Score current meta (if provided)
+    var currentScore = null;
+    if (currentTitle) {
+      currentScore = {
+        title_score: _scoreMetaTitle(currentTitle, patterns),
+        description_score: _scoreMetaDescription(currentDesc, patterns),
+        issues: []
+      };
+      if (currentTitle.length < 30) currentScore.issues.push('Title too short (< 30 chars)');
+      if (currentTitle.length > 60) currentScore.issues.push('Title too long (> 60 chars)');
+      if (!/\d/.test(currentTitle)) currentScore.issues.push('No number in title — reduces CTR by ~36%');
+      if (!/[A-Z]/.test(currentTitle)) currentScore.issues.push('No capitalization/emphasis');
+      if (currentDesc.length < 80) currentScore.issues.push('Description too short (< 80 chars)');
+      if (currentDesc.length > 155) currentScore.issues.push('Description too long (> 155 chars)');
+      if (!/\b(best|ultimate|complete|guide|proven|learn|discover|find out|see why)\b/i.test(currentDesc)) currentScore.issues.push('No action verb in description');
+    }
+
+    // 5. Generate alternatives via Gemini
+    var alternatives = null;
+    if (geminiKey) {
+      var altPrompt = `You are an elite CTR copywriter. Analyze these competitor meta titles and descriptions for "${keyword}", then generate 5+ alternatives that will OUTPERFORM them.
+
+CURRENT COMPETITOR META DATA:
+${competitors.slice(0, 7).map(function(c,i) {
+  return (i+1) + '. "' + c.title + '"\n   "' + c.description + '"';
+}).join('\n')}
+${currentTitle ? '\nYOUR CURRENT META:\nTitle: "' + currentTitle + '"\nDesc: "' + currentDesc + '"' : ''}
+
+PATTERNS FOUND:
+- ${patterns.dominant_patterns.join('\n- ') || 'None dominant'}
+- Avg title length: ${avgTitleLen} chars
+- Avg description length: ${avgDescLen} chars
+
+CTR BEST PRACTICES:
+- Include specific numbers (increases CTR 36%)
+- Use year when relevant (signals freshness)
+- Power words: Best, Ultimate, Proven, Complete, Essential, Expert
+- Brackets increase CTR: [2025 Guide], (Step-by-Step)
+- Front-load the keyword
+- Description: action verb + benefit + urgency
+- 50-60 chars for title, 140-155 for description
+
+Generate JSON:
+{
+  "analysis": "2-3 sentence summary of what competitors are doing and the biggest opportunity",
+  "alternatives": [
+    {
+      "title": "Optimized title 50-60 chars with number + power word + year",
+      "description": "Optimized description 140-155 chars with action verb + benefit",
+      "why_it_works": "Specific explanation of CTR psychology used",
+      "predicted_ctr_lift": "high/medium/low"
+    }
+  ],
+  "best_practices_checklist": [
+    "✓ Numbers in title (36% CTR boost)",
+    "✓ Power words (Best, Ultimate, Guide)",
+    "✓ Year signals freshness",
+    "✓ Description has action CTA"
+  ]
+}`;
+
+      try {
+        var gemResult = await callGeminiWithFallback(geminiKey, {
+          contents: [{ parts: [{ text: altPrompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+        });
+        if (gemResult.ok) {
+          var raw = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          alternatives = extractJsonFromText(raw);
+        }
+      } catch(e) { console.warn('[meta-research] Gemini failed:', e.message); }
+    }
+
+    res.json({
+      success: true,
+      keyword: keyword,
+      competitors_analyzed: competitors.length,
+      patterns: patterns,
+      competitor_meta: competitors.slice(0, 7),
+      current_meta_score: currentScore,
+      alternatives: alternatives
+    });
+
+  } catch(e) {
+    console.error('[meta-research]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Score emotion/persuasion in a meta title
+function _scoreEmotion(title) {
+  var score = 0;
+  if (/\d/.test(title)) score += 2; // numbers
+  if (/20\d\d/.test(title)) score += 1; // year
+  if (/\b(best|ultimate|top|essential)\b/i.test(title)) score += 3; // superlatives
+  if (/\b(proven|secret|exclusive|guaranteed)\b/i.test(title)) score += 2; // trust
+  if (/\b(now|today|urgent|limited)\b/i.test(title)) score += 2; // urgency
+  if (/\b(how to|why|what)\b/i.test(title)) score += 1; // curiosity
+  if (/\?/.test(title)) score += 2; // question
+  if (/[\[\{\(]/i.test(title)) score += 2; // brackets
+  if (/\b(free|save|easy|quick|simple)\b/i.test(title)) score += 1; // benefit
+  return Math.min(score, 15);
+}
+
+// Score a meta title against competitor patterns
+function _scoreMetaTitle(title, patterns) {
+  var score = 50; // base
+  var len = title.length;
+  if (len >= 45 && len <= 60) score += 15;
+  else if (len >= 30 && len < 45) score += 5;
+  else if (len > 60) score -= 10;
+  else score -= 5;
+  if (/\d/.test(title)) score += 10;
+  if (/20\d\d/.test(title)) score += 5;
+  if (/\b(best|ultimate|complete|guide|proven|top|essential|definitive)\b/i.test(title)) score += 10;
+  if (/\?/.test(title)) score += 5;
+  if (/[\[\{\(]/i.test(title)) score += 5;
+  if (patterns.use_brackets && /[\[\{\(]/i.test(title)) score += 3;
+  if (/\b(now|today)\b/i.test(title)) score += 3;
+  if (/[A-Z]{2,}/.test(title)) score -= 5; // ALL CAPS penalty
+  return Math.min(100, Math.max(0, score));
+}
+
+// Score a meta description against competitor patterns
+function _scoreMetaDescription(desc, patterns) {
+  var score = 50;
+  var len = desc.length;
+  if (len >= 120 && len <= 155) score += 15;
+  else if (len >= 80 && len < 120) score += 5;
+  else if (len > 155) score -= 10;
+  else score -= 5;
+  if (/\b(learn|discover|find out|see why|read|get|download|try|start)\b/i.test(desc)) score += 10; // CTA
+  if (/\b(best|ultimate|proven|essential|free)\b/i.test(desc)) score += 5;
+  if (/\b(now|today|limited|exclusive)\b/i.test(desc)) score += 5; // urgency
+  if (/\d/.test(desc)) score += 5;
+  if (/\?/.test(desc)) score += 3;
+  if (/\.{3}$/.test(desc)) score += 3; // ellipsis creates curiosity
+  return Math.min(100, Math.max(0, score));
+}
+
+// Extract JSON from text (handles markdown code blocks)
+function extractJsonFromText(text) {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch(e) {}
+  var clean = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+  try { return JSON.parse(clean); } catch(e) {}
+  var match = text.match(/\{[\s\S]*\}/);
+  if (match) try { return JSON.parse(match[0]); } catch(e) {}
+  return null;
+}
+
+// ── CONTENT PIPELINE: RESEARCH → BRIEF → DRAFT → REVIEW → PUBLISH ───────────
+app.post('/api/content/pipeline', verifyEngineAccess, async (req, res) => {
+  const { keyword, url, profile_id } = req.body;
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+  const geminiKey = resolveGeminiKey(req);
+  const claudeKey = resolveClaudeKey(req);
+  const serpKey = resolveSerpapiKey(req);
+
+  const pipeline = {
+    keyword, url,
+    stages: { research: null, brief: null, draft: null, review: null, publish: null },
+    started_at: new Date().toISOString()
+  };
+
+  try {
+    // ═══ STAGE 1: RESEARCH ═══════════════════════════════════════════════════
+    console.log(`[pipeline] Stage 1/5: RESEARCH — "${keyword}"`);
+    const serpParams = new URLSearchParams({ engine: 'google', q: keyword, api_key: serpKey, num: '10', hl: 'en', gl: 'us' });
+    const serpCtrl = new AbortController();
+    setTimeout(() => serpCtrl.abort(), 12000);
+    const serpR = await fetch(`https://serpapi.com/search?${serpParams}`, { signal: serpCtrl.signal });
+    const serpData = await serpR.json();
+
+    const organic = (serpData.organic_results || []).slice(0, 10);
+    const paa = (serpData.related_questions || []).slice(0, 8).map(q => ({ question: q.question || '', snippet: q.snippet || '' }));
+    const related = (serpData.related_searches || []).slice(0, 10).map(s => s.query || '').filter(Boolean);
+    const aiOverview = serpData.answer_box ? { type: serpData.answer_box.type || 'overview', answer: serpData.answer_box.answer || serpData.answer_box.snippet || '' } : null;
+
+    // Quick competitor analysis
+    const competitorPromises = organic.slice(0, 5).map(async (result) => {
+      try {
+        const stats = await quickPageAnalyze(result.link);
+        return { position: result.position, url: result.link, title: result.title || '', snippet: result.snippet || '', word_count: stats.wordCount, heading_count: stats.headingCount, h2_count: stats.h2s.length, schema_types: stats.schemaTypes, has_faq: stats.hasFAQ };
+      } catch(e) { return { position: result.position, url: result.link, title: result.title || '', snippet: result.snippet || '', error: e.message }; }
+    });
+    const competitors = (await Promise.all(competitorPromises)).filter(c => !c.error);
+    const avgWords = competitors.length ? Math.round(competitors.reduce((s, c) => s + (c.word_count || 0), 0) / competitors.length) : 0;
+
+    pipeline.stages.research = {
+      status: 'complete',
+      keyword, url,
+      top5: organic.slice(0, 5).map(o => ({ position: o.position, title: o.title, url: o.link, snippet: o.snippet })),
+      people_also_ask: paa,
+      related_searches: related,
+      ai_overview: aiOverview,
+      competitors: competitors.slice(0, 5),
+      competitor_avg_words: avgWords
+    };
+
+    // ═══ STAGE 2: BRIEF ══════════════════════════════════════════════════════
+    console.log(`[pipeline] Stage 2/5: BRIEF — generating content brief`);
+    let brief = null;
+    if (geminiKey) {
+      const briefPrompt = `Create a professional content brief for the keyword "${keyword}". Base it on this research data:
+
+COMPETITORS: ${competitors.length} pages analyzed, avg ${avgWords} words
+TOP H2 HEADINGS USED: ${[...new Set(competitors.flatMap(c => c.h2_count ? ['Example H2'] : []))].join(', ')}
+PEOPLE ALSO ASK: ${paa.map(q => q.question).join('; ')}
+RELATED SEARCHES: ${related.join(', ')}
+
+Generate JSON:
+{
+  "target_word_count": ${Math.round(avgWords * 1.15)},
+  "title": "SEO-optimized title for ${keyword}",
+  "meta_description": "Compelling 155-char meta description",
+  "h1": "Main H1 heading",
+  "h2_outline": ["H2 One: topic", "H2 Two: topic", "H2 Three: topic", "H2 Four: topic", "H2 Five: topic"],
+  "topics_to_cover": ["topic 1", "topic 2", "topic 3"],
+  "paa_to_answer": ["${paa[0]?.question || 'Question 1'}"],
+  "statistics_to_find": ["relevant statistic 1", "relevant statistic 2"],
+  "schema_types": ["Article", "FAQPage"],
+  "voice_search_answer": "30-50 word natural language answer",
+  "internal_linking": ["suggested internal page to link"],
+  "cta": "Call-to-action for the end"
+}`;
+      try {
+        const gemResult = await callGeminiWithFallback(geminiKey, {
+          contents: [{ parts: [{ text: briefPrompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+        });
+        if (gemResult.ok) {
+          const raw = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          brief = extractJsonFromText(raw);
+        }
+      } catch(e) { console.warn('[pipeline] Brief generation failed:', e.message); }
+    }
+
+    pipeline.stages.brief = {
+      status: brief ? 'complete' : 'failed',
+      brief: brief || { error: 'Brief generation failed — AI key may be missing' }
+    };
+
+    // ═══ STAGE 3: DRAFT ══════════════════════════════════════════════════════
+    console.log(`[pipeline] Stage 3/5: DRAFT — writing content`);
+    let draft = null;
+    if (claudeKey && brief) {
+      const draftPrompt = `Write a complete, optimized article for the keyword "${keyword}".
+
+CONTENT BRIEF:
+- Target: ${brief.target_word_count || avgWords} words
+- Title: ${brief.title || keyword}
+- H1: ${brief.h1 || keyword}
+- Outline: ${(brief.h2_outline || []).join(' → ')}
+- Topics: ${(brief.topics_to_cover || []).join(', ')}
+- Answer these PAA questions: ${(brief.paa_to_answer || []).join('; ')}
+- Include statistics: ${(brief.statistics_to_find || []).join(', ')}
+- Schema: ${(brief.schema_types || []).join(', ')}
+- CTA: ${brief.cta || 'Subscribe/learn more'}
+
+PEOPLE ALSO ASK TO ANSWER:
+${paa.map(q => 'Q: ' + q.question).join('\n')}
+
+COMPETITOR INSIGHTS:
+${competitors.slice(0, 3).map(c => '- ' + c.title + ' (' + c.word_count + ' words)').join('\n')}
+
+REQUIREMENTS:
+1. Write in a professional, engaging tone
+2. Use H2 and H3 headings throughout
+3. Include bullet points and numbered lists where helpful
+4. Add a FAQ section at the end with 5+ questions
+5. Include the voice search answer as a clear definition early in the content
+6. Add a strong CTA at the end
+7. Mark where statistics should go with [STAT: description]
+8. Output as clean HTML (headings, paragraphs, lists only — no CSS, no scripts)`;
+
+      try {
+        const draftResult = await callClaude(claudeKey, {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8192,
+          messages: [{ role: 'user', content: draftPrompt }]
+        });
+        if (draftResult.ok) {
+          draft = draftResult.data?.content?.[0]?.text || draftResult.data?.completion || '';
+        }
+      } catch(e) { console.warn('[pipeline] Draft generation failed:', e.message); }
+    }
+
+    pipeline.stages.draft = {
+      status: draft ? 'complete' : 'failed',
+      word_count: draft ? draft.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length : 0,
+      content: draft || null,
+      error: draft ? null : 'Draft generation failed — Claude key may be missing'
+    };
+
+    // ═══ STAGE 4: REVIEW ═════════════════════════════════════════════════════
+    console.log(`[pipeline] Stage 4/5: REVIEW — scoring draft`);
+    let review = null;
+    if (draft) {
+      try {
+        const scoreResult = await browserScanHtml(draft, url || keyword);
+        if (scoreResult) {
+          review = {
+            score: scoreResult.score,
+            metrics: scoreResult.metrics,
+            recommendations: scoreResult.recommendations,
+            quality: scoreResult.quality,
+            word_count: scoreResult.content_stats?.total_words || pipeline.stages.draft.word_count,
+            grade: scoreResult.score >= 90 ? 'A+' : scoreResult.score >= 75 ? 'A' : scoreResult.score >= 60 ? 'B' : scoreResult.score >= 40 ? 'C' : 'D'
+          };
+        }
+      } catch(e) { console.warn('[pipeline] Review scoring failed:', e.message); }
+    }
+
+    pipeline.stages.review = {
+      status: review ? 'complete' : (draft ? 'partial' : 'skipped'),
+      score: review?.score || null,
+      grade: review?.grade || null,
+      metrics: review?.metrics || null,
+      recommendations: review?.recommendations || null,
+      word_count: review?.word_count || pipeline.stages.draft.word_count || 0,
+      gaps: brief && review ? [
+        review.word_count < (brief.target_word_count * 0.9) ? `Word count low: ${review.word_count} vs target ${brief.target_word_count}` : null,
+        !review.metrics?.faq ? 'Missing FAQ section' : null,
+        review.score < 70 ? `Score needs improvement: ${review.score}/100` : null
+      ].filter(Boolean) : []
+    };
+
+    // ═══ STAGE 5: PUBLISH ════════════════════════════════════════════════════
+    console.log(`[pipeline] Stage 5/5: PUBLISH — ready`);
+    pipeline.stages.publish = {
+      status: 'ready',
+      html_content: draft,
+      title: brief?.title || keyword,
+      meta_description: brief?.meta_description || '',
+      h1: brief?.h1 || keyword,
+      schema_types: brief?.schema_types || ['Article'],
+      can_publish: !!draft,
+      publish_methods: ['webhook', 'copy_html']
+    };
+
+    pipeline.completed_at = new Date().toISOString();
+    res.json({ success: true, pipeline });
+
+  } catch(e) {
+    console.error('[pipeline] Error:', e.message);
+    pipeline.error = e.message;
+    res.status(500).json({ success: false, error: e.message, pipeline });
+  }
+});
+
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
 const resolveSerpapiKey      = (req) => req.headers['x-serpapi-key']       || process.env.SERPAPI_KEY;
@@ -24156,8 +24809,6 @@ async function browserScanHtml(html, pageUrl) {
       };
     }, pageUrl || '');
 
-    await page.close().catch(()=>{});
-
     if (!analysis) return null;
     const result = computeScore(pageUrl || 'internal', analysis, []);
     return {
@@ -24174,8 +24825,9 @@ async function browserScanHtml(html, pageUrl) {
     };
   } catch(e) {
     console.warn('[browserScanHtml]', e.message);
-    if (page) await page.close().catch(()=>{});
     return null;
+  } finally {
+    if (page) await page.close().catch(()=>{});
   }
 }
 
