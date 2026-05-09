@@ -743,9 +743,23 @@ async function processUserInput(text) {
     // Display the message
     addAgentMessage(parsed.message);
 
-    // Execute any commands
-    for (var i = 0; i < parsed.commands.length; i++) {
-      await executeCommand(parsed.commands[i]);
+    // Execute any commands automatically + show clickable buttons for them
+    if (parsed.commands.length) {
+      var cmdButtons = parsed.commands.map(function(c) {
+        var label = c.cmd;
+        if (c.cmd === 'SCAN' && c.args[0]) label = '🔍 Scan ' + (c.args[0].length > 30 ? c.args[0].substring(0, 30) + '…' : c.args[0]);
+        if (c.cmd === 'META' && c.args[0]) label = '🏷 Meta: ' + c.args[0];
+        if (c.cmd === 'INTELLIGENCE' && c.args[0]) label = '🧠 Intel: ' + c.args[0];
+        if (c.cmd === 'REWRITE' && c.args[0]) label = '✍ Rewrite ' + c.args[0];
+        if (c.cmd === 'RESEARCH' && c.args[0]) label = '🔬 Research ' + c.args[0];
+        if (c.cmd === 'PIPELINE' && c.args[0]) label = '🚀 Pipeline ' + c.args[0];
+        return { label: label, cmd: c, fn: (function(cmd){ return function(){ executeCommand(cmd); }; })(c) };
+      });
+      addCommandButtons(cmdButtons);
+      // Auto-execute commands silently
+      for (var i = 0; i < parsed.commands.length; i++) {
+        await executeCommand(parsed.commands[i]);
+      }
     }
 
     // Show action buttons if suggested
@@ -804,7 +818,7 @@ YOUR CAPABILITIES (you can trigger these with commands):
 
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
-2. When you have enough info, act immediately — don't ask permission to do what you already know needs doing.
+2. When you have enough info, ACT IMMEDIATELY — output the [COMMAND] and execute it. Never ask "would you like me to scan?" — just scan and show results.
 3. Always explain WHY before WHAT. The user needs to understand the logic, not just follow instructions.
 4. For every scan/analysis, interpret the numbers in plain language. "43/100 means your page exists but wouldn't convince Google or a reader to trust it."
 5. Be specific about the opportunity: "Position 14 with 2,800 impressions is exactly the kind of page where a single well-executed rewrite moves you to page 1. Here's why..."
@@ -813,11 +827,14 @@ YOUR BEHAVIOUR:
 8. You know the GRAAF framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) and CRAFT. Reference them by name when relevant.
 9. Keep responses under 150 words unless you're presenting data/results. Brevity is intelligence.
 
-RESPONSE FORMAT:
-- Write conversational text
-- Use [COMMAND arg1 arg2] syntax when you want to trigger an action
-- Use ACTION: option1 | option2 | option3 at the end to suggest choices
-- Never bullet-point everything. Use bullets only for actual lists of things.
+CRITICAL — COMMAND FORMAT:
+- When you want to run a scan, analysis, or research, you MUST output the command in EXACTLY this format: [SCAN https://example.com/page] or [META "keyword" "current title"]
+- The system detects commands inside [BRACKETS] and executes them automatically + shows clickable buttons
+- NEVER write "I can scan this for you" without the [SCAN url] command — always include the bracket command so it actually runs
+- NEVER write "try [SCAN url]" as text — output [SCAN https://actual-url.com] so it executes
+- Always use real URLs from the conversation, never placeholder examples
+- For META research: [META "target keyword" "current page title"]
+- For INTELLIGENCE: [INTELLIGENCE "target keyword" "https://url.com"]
 ${gscSummary}${contextStr}
 
 ${(function() {
@@ -851,13 +868,31 @@ function parseAgentResponse(text) {
   var actions = [];
   var message = text;
 
-  // Extract commands [CMD arg1 arg2]
+  // Extract commands [CMD arg1 arg2] — handles quoted args and URLs
   var cmdRegex = /\[([A-Z_]+)\s+([^\]]+)\]/g;
   var match;
   while ((match = cmdRegex.exec(text)) !== null) {
     var cmd = match[1];
-    var args = match[2].trim().split(/\s+/);
-    commands.push({ cmd: cmd, args: args });
+    var argStr = match[2].trim();
+    // Parse args: respect quoted strings, treat URLs as single tokens
+    var args = [];
+    var argMatch;
+    var quotedRegex = /"([^"]*)"/g;
+    var usedRanges = [];
+    while ((argMatch = quotedRegex.exec(argStr)) !== null) {
+      args.push(argMatch[1]);
+      usedRanges.push([argMatch.index, quotedRegex.lastIndex]);
+    }
+    // Extract remaining unquoted tokens (URLs, single words)
+    var remaining = argStr;
+    for (var ri = usedRanges.length - 1; ri >= 0; ri--) {
+      remaining = remaining.substring(0, usedRanges[ri][0]) + remaining.substring(usedRanges[ri][1]);
+    }
+    remaining.split(/\s+/).forEach(function(t) {
+      t = t.trim();
+      if (t && t !== ' ') args.push(t);
+    });
+    commands.push({ cmd: cmd, args: args, raw: match[0] });
     message = message.replace(match[0], ''); // Remove from display
   }
 
@@ -1739,6 +1774,29 @@ function addActions(actions) {
     '<div class="msg-avatar" style="visibility:hidden"></div>' +
     '<div class="msg-body"><div class="action-card"><div class="action-btns">' + btns + '</div></div></div>';
   // Attach click handlers properly (preserves closures, no .toString())
+  div.querySelectorAll('button[data-aid]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var fn = _actionRegistry[this.dataset.aid];
+      if (fn) fn(this);
+    });
+  });
+  msgs.appendChild(div);
+  scrollBottom();
+}
+
+// Render clickable command buttons below agent message (re-run SCAN, META, etc.)
+function addCommandButtons(cmdButtons) {
+  var msgs = document.getElementById('messages');
+  var div = document.createElement('div');
+  div.className = 'msg agent';
+  var btns = cmdButtons.map(function(cb) {
+    var cid = '_cmd_' + (++_actionIdCounter);
+    _actionRegistry[cid] = cb.fn;
+    return '<button class="action-btn" data-aid="' + cid + '" title="Click to run ' + escHtml(cb.cmd.cmd) + '">' + escHtml(cb.label) + '</button>';
+  }).join('');
+  div.innerHTML =
+    '<div class="msg-avatar" style="visibility:hidden"></div>' +
+    '<div class="msg-body"><div style="font-size:10px;color:var(--muted);margin-bottom:6px;">⚡ Auto-executed — click to re-run:</div><div class="action-btns">' + btns + '</div></div>';
   div.querySelectorAll('button[data-aid]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var fn = _actionRegistry[this.dataset.aid];
