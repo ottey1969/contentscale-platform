@@ -3871,7 +3871,7 @@ async function runRewriteFromModal() {
 
     // STEP 2: Execute — generate the rewritten HTML with mode
     setProgress(prog, 85);
-    addAgentMessage('✍ Step 2/2: Writing ' + modeLabels[mode] + '…');
+    addAgentMessage('✍ Step 2/2: Writing ' + modeNames + '…');
     var rewriteResult = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', { rewrite_mode: modes[0], rewrite_modes: modes });
     if (!rewriteResult || !rewriteResult.success) throw new Error((rewriteResult && rewriteResult.error) || 'Rewrite execution failed');
 
