@@ -1731,7 +1731,7 @@ function renderTrackerList() {
     var csBadge = snap.score ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);color:#a78bfa;margin-left:6px;vertical-align:1px;" title="ContentScore from live scan (not GRAAF)">CS:'+snap.score+'</span>' : '';
     // GSC data line — only when gsc_impressions exists
     var hasGsc = p.gsc_impressions !== null && p.gsc_impressions !== undefined;
-    var gscLine = hasGsc ? '<div style="font-size:10px;color:#34d399;margin-top:3px;">📊 GSC: ' + Number(p.gsc_impressions).toLocaleString() + ' impr · ' + Number(p.gsc_clicks).toLocaleString() + ' clicks · CTR ' + (p.gsc_ctr||0).toFixed(1) + '% · avg pos ' + (p.gsc_position||'—') + '</div>' : '';
+    var gscLine = hasGsc ? '<div style="font-size:10px;color:#34d399;margin-top:3px;">📊 GSC: ' + Number(p.gsc_impressions).toLocaleString() + ' impr · ' + Number(p.gsc_clicks).toLocaleString() + ' clicks · CTR ' + Number(p.gsc_ctr||0).toFixed(1) + '% · avg pos ' + (p.gsc_position||'—') + '</div>' : '';
 
     return '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:12px;align-items:flex-start;">' +
       '<div style="flex:1;min-width:0;">' +
@@ -2994,8 +2994,20 @@ function renderPagesOverview() {
   }
 
   // Client-side profile filter: only show pages matching current profile
+  var profileDomain = (_profile && _profile.domain) || '';
   var data = _pagesOverviewData.filter(function(p) {
-    if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
+    // If page has explicit profile_id, check it
+    if (p.profile_id) {
+      if (String(p.profile_id) !== String(activeProfileId)) return false;
+    } else {
+      // No profile_id: check URL domain matches current profile domain
+      if (profileDomain) {
+        try {
+          var pageDomain = new URL(p.url).hostname.replace('www.', '');
+          if (pageDomain !== profileDomain.replace('www.', '')) return false;
+        } catch(e) { return false; } // invalid URL, skip
+      }
+    }
     if (!search) return true;
     var s = search.toLowerCase();
     return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
