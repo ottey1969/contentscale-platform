@@ -1255,8 +1255,9 @@ async function cmdMetaResearch(keyword, currentTitle) {
     var msgDiv = document.createElement('div');
     msgDiv.className = 'agent-msg';
     msgDiv.innerHTML = html;
-    document.getElementById('chatBody').appendChild(msgDiv);
-    scrollToEnd();
+    var msgs = document.getElementById('messages');
+    if (msgs) msgs.appendChild(msgDiv);
+    scrollBottom();
 
     setProgress(prog, 100);
     removeProgress(prog);
@@ -1379,8 +1380,9 @@ async function cmdIntelligence(keyword, url) {
     var msgDiv = document.createElement('div');
     msgDiv.className = 'agent-msg';
     msgDiv.innerHTML = html;
-    document.getElementById('chatBody').appendChild(msgDiv);
-    scrollToEnd();
+    var msgs = document.getElementById('messages');
+    if (msgs) msgs.appendChild(msgDiv);
+    scrollBottom();
 
     setProgress(prog, 100);
     removeProgress(prog);
@@ -1407,7 +1409,7 @@ async function cmdPipeline(keyword, url) {
   if (!keyword) { addAgentMessage('I need a keyword to run the content pipeline. Example: `[PIPELINE content scale https://contentscale.site]`'); return; }
 
   var pipelineId = 'pipeline_' + Date.now();
-  var chatBody = document.getElementById('chatBody');
+  var msgs = document.getElementById('messages');
 
   // Build pipeline UI
   var pipelineHtml = '<div id="' + pipelineId + '" style="background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin:12px 0;">' +
@@ -1429,7 +1431,7 @@ async function cmdPipeline(keyword, url) {
   var msgDiv = document.createElement('div');
   msgDiv.className = 'agent-msg';
   msgDiv.innerHTML = pipelineHtml;
-  chatBody.appendChild(msgDiv);
+  if (msgs) msgs.appendChild(msgDiv);
   scrollToEnd();
 
   try {
@@ -2016,8 +2018,9 @@ function hideWelcome() {
 
 function scrollBottom() {
   var msgs = document.getElementById('messages');
-  setTimeout(function(){ msgs.scrollTop = msgs.scrollHeight; }, 50);
+  if (msgs) setTimeout(function(){ msgs.scrollTop = msgs.scrollHeight; }, 50);
 }
+function scrollToEnd() { scrollBottom(); }
 
 function autoResize(el) {
   el.style.height = 'auto';
