@@ -10695,7 +10695,18 @@ REQUIREMENTS:
 
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
-const resolveSerpapiKey      = (req) => req.headers['x-serpapi-key']       || process.env.SERPAPI_KEY;
+const resolveSerpapiKey = (req) => {
+  // Priority: header > per-code key (from engineUser) > platform env
+  const headerKey = req.headers['x-serpapi-key'];
+  const codeKey = req.engineUser && req.engineUser.code ? req.engineUser.code.serpapi_key : null;
+  const envKey = process.env.SERPAPI_KEY;
+  
+  if (headerKey) { console.log('[keys] SerpAPI: using header key'); return headerKey; }
+  if (codeKey) { console.log('[keys] SerpAPI: using per-code key for code', req.engineUser.codeId); return codeKey; }
+  if (envKey) { console.log('[keys] SerpAPI: using platform env key'); return envKey; }
+  console.log('[keys] SerpAPI: NO KEY FOUND');
+  return null;
+};
 const resolveYouApiKey       = (req) => req.headers['x-you-api-key']        || process.env.YOU_API_KEY;
 const resolvePerplexityKey   = (req) => req.headers['x-perplexity-key']     || process.env.PERPLEXITY_API_KEY;
 
