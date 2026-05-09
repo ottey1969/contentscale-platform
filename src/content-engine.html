@@ -1178,9 +1178,23 @@ async function cmdScan(url) {
 async function cmdResearch(keyword, profileId) {
   if (!keyword) return;
   _context.keyword = keyword;
-  // "default" or other non-numeric strings are not valid profile IDs
-  var pid = (profileId && /^\d+$/.test(String(profileId))) ? profileId : (_context.profileId || null);
-  if (!pid) { addAgentMessage('I need a profile to run research. Which profile should I use?'); return; }
+  // Resolve profile: numeric ID > domain match > current context > first available
+  var pid = null;
+  if (profileId && /^\d+$/.test(String(profileId))) {
+    pid = profileId;
+  } else if (_context.profileId) {
+    pid = _context.profileId;
+  } else if (profileId && _profiles && _profiles.length) {
+    // Try to match by domain name substring
+    var domainHint = String(profileId).toLowerCase().replace(/[^a-z0-9]/g, '');
+    var match = _profiles.find(function(p) {
+      return (p.domain || '').toLowerCase().replace(/[^a-z0-9]/g, '').indexOf(domainHint) >= 0 ||
+             domainHint.indexOf((p.domain || '').toLowerCase().replace(/[^a-z0-9]/g, '')) >= 0;
+    });
+    if (match) pid = match.id;
+  }
+  if (!pid && _profiles && _profiles.length) pid = _profiles[0].id;
+  if (!pid) { addAgentMessage('I need a profile to run research. Select a profile first.'); return; }
 
   var prog = addProgress('Researching "' + keyword + '" — competitors, PAA, AI Overviews…', 0);
   try {
@@ -1524,7 +1538,7 @@ async function cmdPipeline(keyword, url) {
   try {
     // Call pipeline API
     _updateStage(pipelineId, 'research', 'active', 'Fetching competitor data, PAA, AI Overview...');
-    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null });
+    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null, profile_id: _context.profileId || null });
 
     if (!data.success || !data.pipeline) {
       _updateStage(pipelineId, 'research', 'failed', 'Pipeline failed: ' + (data.error || 'Unknown error'));
@@ -3699,11 +3713,13 @@ function loadPagesOverview(forceRefresh) {
   var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
   api('/api/tracker/pages' + profileFilter).then(function(d) {
     var pages = d.pages || [];
-    _pagesOverviewData = pages.map(function(tp) {
+    // Merge duplicate URLs — keep the entry with the most data (highest dataScore)
+    var urlMap = {};
+    pages.forEach(function(tp) {
       var slug = '';
       try { slug = new URL(tp.url).pathname || '/'; } catch(e) { slug = tp.url; }
       var snap = tp.latest_snapshot || {};
-      return {
+      var entry = {
         url: tp.url, slug: slug, keyword: tp.keyword || '',
         position: tp.gsc_position || 0, impressions: tp.gsc_impressions || 0,
         clicks: tp.gsc_clicks || 0, ctr: tp.gsc_ctr || 0,
@@ -3713,9 +3729,40 @@ function loadPagesOverview(forceRefresh) {
         import_batch: tp.import_batch || '',
         content_changed: snap.content_changed || false,
         last_checked: snap.checked_at || '',
-        opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0)
+        opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0),
+        // Data score: how much useful data this entry has (higher = better)
+        _dataScore: (tp.gsc_impressions || 0) + (tp.gsc_clicks || 0) + (tp.keyword ? 10 : 0) + (snap.score ? 20 : 0) + (tp.gsc_position ? 5 : 0)
       };
+      var key = tp.url;
+      if (!urlMap[key]) {
+        urlMap[key] = entry;
+      } else {
+        // MERGE: keep the best data from both entries
+        var existing = urlMap[key];
+        // Keep GSC data from whichever entry has it
+        if (entry.impressions > existing.impressions) {
+          existing.impressions = entry.impressions;
+          existing.clicks = entry.clicks;
+          existing.position = entry.position;
+          existing.ctr = entry.ctr;
+        }
+        // Keep keyword from whichever entry has it
+        if (!existing.keyword && entry.keyword) existing.keyword = entry.keyword;
+        if (!entry.keyword && existing.keyword) entry.keyword = existing.keyword;
+        // Keep the higher score
+        if (entry.score && (!existing.score || entry.score > existing.score)) {
+          existing.score = entry.score;
+          existing.scoreStatus = entry.scoreStatus;
+        }
+        // Keep the higher opportunity
+        if (entry.opportunity > existing.opportunity) existing.opportunity = entry.opportunity;
+        // Keep tracker_id if either has it
+        if (!existing.tracker_id && entry.tracker_id) existing.tracker_id = entry.tracker_id;
+        // Recalculate opportunity with merged data
+        existing.opportunity = _calcOpportunity(existing.impressions, existing.clicks, existing.position, existing.score);
+      }
     });
+    _pagesOverviewData = Object.values(urlMap);
     renderPagesOverview();
     if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
   }).catch(function(e) {
@@ -3882,6 +3929,7 @@ function renderPagesOverview() {
         '<button onclick="pushPageToAgent(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-family:DM Mono,monospace;">🧠 Agent</button>' +
         '<a href="' + escHtml(p.url) + '" target="_blank" style="padding:6px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;text-decoration:none;font-family:DM Mono,monospace;">↗</a>' +
         '<button onclick="scanPageScore(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#34d399;font-family:DM Mono,monospace;">📊</button>' +
+        '<button onclick="deletePageByUrl(decodeURIComponent(\'' + encodeURIComponent(p.url) + '\'))" style="padding:6px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.08);color:#f87171;font-family:DM Mono,monospace;" title="Delete this page">🗑</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -3992,6 +4040,39 @@ function pushPageToAgent(url) {
       sendMessage();
     }
   });
+}
+
+// ── Delete a single page by URL ──────────────────────────────
+async function deletePageByUrl(url) {
+  var page = _pagesOverviewData.find(function(p) { return p.url === url; });
+  if (!page) { toast('Page not found', 2000, 'warn'); return; }
+  if (!confirm('🗑 Delete "' + (page.slug || page.url) + '"' + (page.keyword ? ' (' + page.keyword + ')' : '') + '?\n\nThis removes it from Pages. The data in Tracker is not affected.')) return;
+  // Find all tracker entries for this URL and delete the duplicate (no GSC data, no keyword)
+  try {
+    var d = await api('/api/tracker/pages?profile_id=' + (_context.profileId || ''));
+    var allPages = d.pages || [];
+    var dups = allPages.filter(function(tp) { return tp.url === url; });
+    if (dups.length > 1) {
+      // Delete the one with less data (no keyword + no impressions = likely the empty duplicate)
+      var toDelete = dups.sort(function(a, b) {
+        var scoreA = (a.gsc_impressions || 0) + (a.keyword ? 10 : 0) + (a.latest_snapshot?.score || 0);
+        var scoreB = (b.gsc_impressions || 0) + (b.keyword ? 10 : 0) + (b.latest_snapshot?.score || 0);
+        return scoreA - scoreB; // lowest first
+      })[0];
+      if (toDelete && toDelete.id) {
+        await api('/api/tracker/pages/' + toDelete.id, 'DELETE');
+        toast('✅ Deleted duplicate (no data)', 2000, 'ok');
+        loadPagesOverview(true);
+        return;
+      }
+    }
+    // If only one entry, just remove from the UI (don't delete from tracker — it may have snapshots)
+    _pagesOverviewData = _pagesOverviewData.filter(function(p) { return p.url !== url; });
+    renderPagesOverview();
+    toast('✅ Removed from Pages view', 2000, 'ok');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 2000, 'err');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
