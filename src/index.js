@@ -3268,8 +3268,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 
 
 
-               // Routes
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+               // Routes (root served above with cache-control + badge injection)
 
 // ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
 app.get('/lead-crawler', (req, res) => {
