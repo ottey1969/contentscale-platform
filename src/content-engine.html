@@ -824,7 +824,7 @@ YOUR CAPABILITIES (you can trigger these with commands):
 - [INTELLIGENCE keyword url] — deep competitor content analysis + beat-them brief
 - [META keyword "current title"] — meta title + description research with CTR-optimized alternatives
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
-- [REWRITE rewriteId fixes] — apply targeted fixes (fixes = comma-separated keys)
+- [REWRITE 123 fixes] — apply targeted fixes to rewrite ID 123 (fixes = comma-separated keys). The ID is a NUMBER from a previous ANALYSE result, never the word "rewriteId".
 - [SHOW_OPPORTUNITIES] — show GSC page opportunities
 
 YOUR BEHAVIOUR:
@@ -843,7 +843,9 @@ CRITICAL — COMMAND FORMAT & AUTO-EXECUTION:
 - The system DETECTS commands inside [BRACKETS], executes them AUTOMATICALLY, and shows clickable buttons
 - NEVER say "I can scan this" or "Let me scan first" — just output [SCAN https://actual-url.com] and it runs instantly
 - NEVER say "then we'll need to manually research" — just chain the commands: [SCAN url] followed immediately by [INTELLIGENCE "keyword" url] in the SAME response
-- After a SCAN completes, the system automatically shows buttons for: Intelligence, Meta Research, Rewrite — so you don't need to offer those separately
+- ALWAYS include [INTELLIGENCE "keyword" url] in your response when interpreting a SCAN. This is mandatory — the user needs competitor data immediately.
+- NEVER suggest the user "run a more specific keyword search" — YOU run it. Output [INTELLIGENCE "new keyword" url] yourself.
+- After a SCAN completes, the system automatically runs INTELLIGENCE if a keyword is set. You STILL need to output the command in your response so the user sees what's happening.
 - Always use real URLs from the conversation, never placeholder examples
 - Chain commands in a single response when they logically follow each other:
   Example: "Scanning now and pulling competitor data. [SCAN https://site.com/page] [INTELLIGENCE "keyword" "https://site.com/page"]"
@@ -1004,12 +1006,17 @@ async function forceTrackerRescan(pageId) {
 
 async function cmdRewrite(rewriteId, fixes) {
   if (!rewriteId) { addAgentMessage('Missing rewrite ID. Cannot apply fixes.'); return; }
+  // Validate rewriteId is numeric (not the literal string "rewriteId")
+  if (!/^\d+$/.test(String(rewriteId))) {
+    addAgentMessage('❌ Invalid rewrite ID: "' + rewriteId + '". The rewrite ID must be a number (e.g., 42). Use the ID shown in the rewrite result card above, or run a new analysis with [ANALYSE url keyword].');
+    return;
+  }
 
   var prog = addProgress('Applying targeted fixes and generating HTML…', 10);
   setProgress(prog, 20);
 
   try {
-    var d = await api('/api/content/rewrite/' + rewriteId, 'POST', {
+    var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', {
       fixes: fixes ? fixes.split(',') : [],
       profile_id: _context.profileId
     });
@@ -1160,8 +1167,15 @@ async function cmdScan(url) {
     ]);
     addAgentMessage(interp);
 
-    // Auto-chain: show follow-up action buttons
+    // Auto-chain: if keyword is set, auto-run intelligence + show buttons
     var kw = _context.keyword || '';
+    if (kw) {
+      addAgentMessage('🔄 Auto-running intelligence for "' + kw + '"…');
+      setTimeout(function() {
+        executeCommand({cmd:'INTELLIGENCE', args:[kw, url]});
+      }, 500);
+    }
+    // Always show follow-up buttons
     var followUp = [
       { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run intelligence.'); } },
       { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run meta research.'); } },
@@ -3730,15 +3744,27 @@ function loadPagesOverview(forceRefresh) {
   var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
   api('/api/tracker/pages' + profileFilter).then(function(d) {
     var pages = d.pages || [];
-    // Step 1: Count URLs to detect duplicates BEFORE merging
+    // Normalize URL helper — strips trailing slashes for comparison
+    function normalizeUrl(u) {
+      try {
+        var parsed = new URL(u);
+        // Keep trailing slash for homepage only (path === '/')
+        if (parsed.pathname === '/') return parsed.origin + '/';
+        // For all other paths, strip trailing slash
+        return (parsed.origin + parsed.pathname).replace(/\/+$/, '');
+      } catch(e) { return u.replace(/\/+$/, ''); }
+    }
+    // Step 1: Count normalized URLs to detect duplicates BEFORE merging
     var rawUrlCounts = {};
-    pages.forEach(function(tp) { rawUrlCounts[tp.url] = (rawUrlCounts[tp.url] || 0) + 1; });
+    pages.forEach(function(tp) { var nu = normalizeUrl(tp.url); rawUrlCounts[nu] = (rawUrlCounts[nu] || 0) + 1; });
     // Step 2: Merge duplicate URLs — keep the entry with the most data
     var urlMap = {};
     pages.forEach(function(tp) {
       var slug = '';
       try { slug = new URL(tp.url).pathname || '/'; } catch(e) { slug = tp.url; }
       var snap = tp.latest_snapshot || {};
+      var normUrl = normalizeUrl(tp.url);
+      var isDup = (rawUrlCounts[normUrl] || 0) > 1;
       var entry = {
         url: tp.url, slug: slug, keyword: tp.keyword || '',
         position: tp.gsc_position || 0, impressions: tp.gsc_impressions || 0,
@@ -3750,11 +3776,12 @@ function loadPagesOverview(forceRefresh) {
         content_changed: snap.content_changed || false,
         last_checked: snap.checked_at || '',
         opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0),
-        isDuplicate: (rawUrlCounts[tp.url] || 0) > 1,  // ← flag set BEFORE merge
-        dupCount: rawUrlCounts[tp.url] || 1,          // ← how many raw entries
+        isDuplicate: isDup,     // ← flag set BEFORE merge
+        dupCount: rawUrlCounts[normUrl] || 1,  // ← how many raw entries
+        _normUrl: normUrl,      // internal key for merging
         _dataScore: (tp.gsc_impressions || 0) + (tp.gsc_clicks || 0) + (tp.keyword ? 10 : 0) + (snap.score ? 20 : 0) + (tp.gsc_position ? 5 : 0)
       };
-      var key = tp.url;
+      var key = normUrl;  // use normalized URL as merge key
       if (!urlMap[key]) {
         urlMap[key] = entry;
       } else {
@@ -4124,11 +4151,12 @@ function findDuplicates() {
 }
 
 function updateMergeButton() {
-  var dups = findDuplicates();
+  // Use the isDuplicate flag set during loadPagesOverview merge
+  var dupCount = _pagesOverviewData.filter(function(p) { return p.isDuplicate; }).length;
   var btn = document.getElementById('pagesMergeBtn');
   if (btn) {
-    btn.style.display = dups.length ? 'inline-block' : 'none';
-    btn.textContent = '🔀 Merge ' + dups.length + ' dup' + (dups.length !== 1 ? 's' : '');
+    btn.style.display = dupCount ? 'inline-block' : 'none';
+    btn.textContent = '🔀 Merge ' + dupCount + ' dup' + (dupCount !== 1 ? 's' : '');
   }
 }
 
