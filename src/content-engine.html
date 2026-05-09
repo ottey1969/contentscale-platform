@@ -3366,11 +3366,12 @@ function uploadGscFiles(pagesFile, queriesFile) {
 
 function uploadGscFile(file, type) {
   return new Promise(function(resolve, reject) {
+    var token = document.getElementById('engineToken').value.trim() || localStorage.getItem('nexus_engine_token') || '';
     var formData = new FormData();
     formData.append('file', file);
     formData.append('profile_id', _context.profileId);
     formData.append('type', type);
-    fetch('/api/gsc/upload-csv', { method: 'POST', headers: { 'x-engine-token': _engineToken || '' }, body: formData })
+    fetch('/api/gsc/upload-csv', { method: 'POST', headers: { 'x-engine-token': token }, body: formData })
       .then(function(r) { return r.json(); })
       .then(function(d) { if (d.success) resolve({ type: type, inserted: d.inserted || 0 }); else reject(new Error(d.error)); })
       .catch(function(e) { reject(e); });
