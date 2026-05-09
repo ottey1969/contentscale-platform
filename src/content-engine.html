@@ -880,14 +880,23 @@ ${(function() {
 function parseAgentResponse(text) {
   var commands = [];
   var actions = [];
-  var message = text;
 
   // Extract commands [CMD arg1 arg2] — handles quoted args and URLs
+  // Use matchAll to get all matches at once, avoiding lastIndex corruption
+  var allMatches = [];
   var cmdRegex = /\[([A-Z_]+)\s+([^\]]+)\]/g;
-  var match;
-  while ((match = cmdRegex.exec(text)) !== null) {
+  var m;
+  while ((m = cmdRegex.exec(text)) !== null) {
+    allMatches.push(m);
+  }
+
+  // Parse each match and build replacement string
+  var message = text;
+  for (var mi = allMatches.length - 1; mi >= 0; mi--) {
+    var match = allMatches[mi];
     var cmd = match[1];
     var argStr = match[2].trim();
+
     // Parse args: respect quoted strings, treat URLs as single tokens
     var args = [];
     var argMatch;
@@ -897,18 +906,22 @@ function parseAgentResponse(text) {
       args.push(argMatch[1]);
       usedRanges.push([argMatch.index, quotedRegex.lastIndex]);
     }
-    // Extract remaining unquoted tokens (URLs, single words)
+    // Extract remaining unquoted tokens
     var remaining = argStr;
     for (var ri = usedRanges.length - 1; ri >= 0; ri--) {
       remaining = remaining.substring(0, usedRanges[ri][0]) + remaining.substring(usedRanges[ri][1]);
     }
     remaining.split(/\s+/).forEach(function(t) {
       t = t.trim();
-      if (t && t !== ' ') args.push(t);
+      if (t && t !== '' && t !== ' ') args.push(t);
     });
+
     commands.push({ cmd: cmd, args: args, raw: match[0] });
-    message = message.replace(match[0], ''); // Remove from display
+    // Remove command from message (replace from end to preserve indices)
+    message = message.substring(0, match.index) + message.substring(match.index + match[0].length);
   }
+  // Reverse so commands are in original order
+  commands.reverse();
 
   // Extract ACTION: suggestions
   var actionMatch = message.match(/ACTION:\s*(.+?)(?:\n|$)/i);
@@ -1165,7 +1178,8 @@ async function cmdScan(url) {
 async function cmdResearch(keyword, profileId) {
   if (!keyword) return;
   _context.keyword = keyword;
-  var pid = profileId || _context.profileId;
+  // "default" or other non-numeric strings are not valid profile IDs
+  var pid = (profileId && /^\d+$/.test(String(profileId))) ? profileId : (_context.profileId || null);
   if (!pid) { addAgentMessage('I need a profile to run research. Which profile should I use?'); return; }
 
   var prog = addProgress('Researching "' + keyword + '" — competitors, PAA, AI Overviews…', 0);
