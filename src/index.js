@@ -14772,10 +14772,19 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       }
 
       if (validationResult.ok || validationResult.score >= 70) {
-        break; // Good enough
+        break; // Good enough — score 70+ accepted
       }
       violationHistory.push(validationResult.violations);
     }
+
+    // Safety: if loop exited without setting html (shouldn't happen, but guard)
+    if (!html && validationResult) {
+      html = candidate || '';
+      bestScore = validationResult.score;
+      bestViolations = validationResult.violations;
+    }
+    // Always accept — never hard-fail. Return best with warnings if needed.
+    console.log(`[execute-rewrite] Final: accepting score=${bestScore} after ${attemptsUsed} attempt(s)`);
 
     // ═══ GRAAF scan the rewritten output — apply remaining high-priority recs ═══
     let finalGraafResult = null;

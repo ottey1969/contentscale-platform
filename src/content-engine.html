@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="4.2.2-2026-05-10">
+<meta name="app-version" content="4.2.3-2026-05-10">
 <title>PULSE + NEXUS · by ContentScale</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -3886,9 +3886,9 @@ async function runRewriteFromModal() {
     var graafScore = rewriteResult.graaf_score || d.score || 0;
     var grade = graafScore >= 90 ? 'A+' : graafScore >= 80 ? 'A' : graafScore >= 70 ? 'B' : graafScore >= 60 ? 'C' : 'D';
     var scoreColor = graafScore >= 80 ? '#34d399' : graafScore >= 60 ? '#fbbf24' : '#f87171';
-    // BOFU quality check display
+    // BOFU quality check display — use parseRecs to handle JSONB string arrays
     var bofuScore = rewriteResult.bofu_score;
-    var bofuViolations = rewriteResult.bofu_violations || [];
+    var bofuViolations = parseRecs(rewriteResult.bofu_violations);
     var bofuWarning = '';
     if (bofuScore !== undefined && bofuScore < 70) {
       bofuWarning = '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-bottom:12px;">' +
