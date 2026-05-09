@@ -135,20 +135,21 @@ async function detectBestGeminiModel(apiKey) {
 }
 
 // Call Gemini with automatic fallback to a secondary model on overload/quota errors.
-// No retry delays — just one shot on primary, one shot on fallback if primary was transient-failed.
 // Returns: { ok, status, data, modelUsed, errorMessage }
-async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel) {
+// Strategy: retry primary up to 3× with exponential backoff → fallback Gemini model → Claude cross-provider fallback
+async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel, maxRetries = 3) {
   const FALLBACK = fallbackModel || 'gemini-2.5-flash-lite';
   const primary = primaryModel || GEMINI_MODEL;
-  const shouldFallback = (status, errMsg) => {
-    // Timeout (408), overload (503), rate limit (429), server error (500), and bad gateway (502) all trigger fallback
+  const shouldRetry = (status, errMsg) => {
     if (status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true;
     const m = (errMsg || '').toLowerCase();
     return m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota') || m.includes('timeout') || m.includes('timed out');
   };
-  const tryModel = async (model) => {
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  const tryModel = async (model, attemptNum) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 28000); // 28s timeout (Railway kills at 30s)
+    const timer = setTimeout(() => controller.abort(), 28000);
     try {
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -167,16 +168,55 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel)
       return { ok: false, status: 0, data: {}, modelUsed: model, errorMessage: fetchErr.message || 'Network error' };
     }
   };
-  const first = await tryModel(primary);
-  if (first.ok) return first;
-  if (primary !== FALLBACK && shouldFallback(first.status, first.errorMessage)) {
-    console.warn(`⚠️ Gemini primary (${primary}) failed with "${first.errorMessage || first.status}" — falling back to ${FALLBACK}`);
-    const second = await tryModel(FALLBACK);
-    if (second.ok) { console.log(`✅ Gemini fallback (${FALLBACK}) succeeded`); return second; }
-    // Return the fallback failure so the caller sees the most recent error
-    return second;
+
+  // PHASE 1: Retry primary model with exponential backoff
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const result = await tryModel(primary, attempt);
+    if (result.ok) return result;
+    if (shouldRetry(result.status, result.errorMessage) && attempt < maxRetries) {
+      const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 15000); // 2s, 4s, 8s max 15s
+      console.warn(`⚠️ Gemini ${primary} attempt ${attempt}/${maxRetries} failed: "${result.errorMessage || result.status}" — retrying in ${Math.round(delay/1000)}s...`);
+      await sleep(delay);
+    } else if (!shouldRetry(result.status, result.errorMessage)) {
+      return result; // Hard error, don't retry
+    } else {
+      console.warn(`⚠️ Gemini ${primary} exhausted all ${maxRetries} retries`);
+    }
   }
-  return first;
+
+  // PHASE 2: Try fallback Gemini model once
+  if (primary !== FALLBACK) {
+    console.warn(`🔄 Falling back to Gemini ${FALLBACK}...`);
+    const fb = await tryModel(FALLBACK, 1);
+    if (fb.ok) { console.log(`✅ Gemini fallback (${FALLBACK}) succeeded`); return fb; }
+    console.warn(`⚠️ Gemini fallback (${FALLBACK}) also failed: "${fb.errorMessage || fb.status}"`);
+  }
+
+  // PHASE 3: Cross-provider fallback to Claude (Anthropic) — for write operations
+  const claudeKey = process.env.ANTHROPIC_API_KEY;
+  const userPrompt = body?.contents?.[0]?.parts?.[0]?.text || '';
+  if (claudeKey && userPrompt.length > 50) {
+    console.warn(`🔄 Cross-provider fallback: trying Claude Sonnet 4...`);
+    try {
+      const claudeText = await callClaudeForWrite(
+        'You are an elite SEO content architect. Write complete HTML articles. Output ONLY valid HTML. No markdown.',
+        userPrompt,
+        8000,
+        claudeKey,
+        'claude-sonnet-4-20250514'
+      );
+      if (claudeText && claudeText.length > 200) {
+        console.log(`✅ Claude fallback succeeded (${claudeText.length} chars)`);
+        // Normalize Claude output to Gemini format
+        return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: claudeText }] } }] }, modelUsed: 'claude-sonnet-4-20250514', errorMessage: '' };
+      }
+    } catch(claudeErr) {
+      console.warn(`⚠️ Claude fallback also failed: ${claudeErr.message}`);
+    }
+  }
+
+  // All providers exhausted
+  return { ok: false, status: 503, data: {}, modelUsed: 'all-exhausted', errorMessage: 'All AI providers (Gemini primary + fallback, Claude) are currently experiencing high demand. Please wait 30-60 seconds and retry.' };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -14696,6 +14736,9 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     let modelUsed = '';
     let attemptsUsed = 0;
     const violationHistory = [];
+    let bestScore = -1;
+    let bestViolations = [];
+    let bestWordCount = 0;
 
     for (let attempt = 0; attempt <= max_regen; attempt++) {
       attemptsUsed = attempt + 1;
@@ -14720,25 +14763,18 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
 
       console.log(`[execute-rewrite] Attempt ${attemptsUsed}: score=${validationResult.score} violations=${validationResult.violations.length}`);
 
-      if (validationResult.ok) {
-        html = candidate;
-        break;
+      // Track best candidate across all attempts
+      if (validationResult.score > bestScore) {
+        bestScore = validationResult.score;
+        bestViolations = validationResult.violations;
+        bestWordCount = validationResult.wordCount;
+        html = candidate; // Save best
+      }
+
+      if (validationResult.ok || validationResult.score >= 70) {
+        break; // Good enough
       }
       violationHistory.push(validationResult.violations);
-
-      // HARD FAIL — return 422 after max_regen attempts with no pass
-      if (attempt === max_regen) {
-        console.warn(`[execute-rewrite] HARD FAIL after ${attemptsUsed} attempts — BOFU score ${validationResult.score}`);
-        return res.status(422).json({
-          success: false,
-          error: 'Rewrite failed BOFU quality validation after ' + attemptsUsed + ' attempts. Tighten profile data (niche, USPs, audience) or supply stronger competitor examples and try again.',
-          bofu_score: validationResult.score,
-          bofu_violations: validationResult.violations,
-          regeneration_attempts: attemptsUsed,
-          word_count: validationResult.wordCount,
-          hint: 'Common causes: (1) profile has empty niche/audience, (2) no verified business facts, (3) no competitors provided, (4) prompt keywords too generic.'
-        });
-      }
     }
 
     // ═══ GRAAF scan the rewritten output — apply remaining high-priority recs ═══
@@ -14830,9 +14866,9 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
       recommendation: analysis.recommendation,
       truncated: wasTruncated,
       model_used: modelUsed,
-      bofu_score: validationResult?.score,
-      bofu_passed: true,
-      bofu_violations: [],
+      bofu_score: bestScore,
+      bofu_passed: bestScore >= 70,
+      bofu_violations: bestViolations,
       regeneration_attempts: attemptsUsed,
       mode_used: hasTemplate ? 'template' : hasOriginalLayout ? 'layout_preserved' : 'free_write',
       author_used: author.name,

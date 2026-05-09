@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="4.2.0-2026-05-10">
+<meta name="app-version" content="4.2.2-2026-05-10">
 <title>PULSE + NEXUS · by ContentScale</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -3886,8 +3886,26 @@ async function runRewriteFromModal() {
     var graafScore = rewriteResult.graaf_score || d.score || 0;
     var grade = graafScore >= 90 ? 'A+' : graafScore >= 80 ? 'A' : graafScore >= 70 ? 'B' : graafScore >= 60 ? 'C' : 'D';
     var scoreColor = graafScore >= 80 ? '#34d399' : graafScore >= 60 ? '#fbbf24' : '#f87171';
+    // BOFU quality check display
+    var bofuScore = rewriteResult.bofu_score;
+    var bofuViolations = rewriteResult.bofu_violations || [];
+    var bofuWarning = '';
+    if (bofuScore !== undefined && bofuScore < 70) {
+      bofuWarning = '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-bottom:12px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#fbbf24;margin-bottom:6px;">⚠️ Quality Check: ' + bofuScore + '/100 — Review Recommended</div>' +
+        '<div style="font-size:9px;color:#e2e8f0;line-height:1.5;margin-bottom:4px;">The content passed with warnings. Review these items:</div>' +
+        '<ul style="margin:0;padding-left:16px;font-size:9px;color:#9ca3af;line-height:1.6;">' +
+        bofuViolations.map(function(v) { return '<li>' + escHtml(v) + '</li>'; }).join('') +
+        '</ul>' +
+        '<div style="font-size:9px;color:#fbbf24;margin-top:6px;">💡 Tip: Strengthen your profile (niche, USPs, audience) or paste competitor examples for better results.</div>' +
+        '</div>';
+    } else if (bofuScore !== undefined) {
+      bofuWarning = '<div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:8px;margin-bottom:12px;font-size:10px;color:#34d399;">✅ Quality Check: ' + bofuScore + '/100 — Clean</div>';
+    }
+
     var resultHtml = '<div style="background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin:12px 0;">' +
       '<div style="font-size:14px;font-weight:800;background:linear-gradient(90deg,#7c3aed,#f56d00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;">✍ Rewrite Complete</div>' +
+      bofuWarning +
       '<div style="display:flex;gap:16px;margin-bottom:12px;">' +
         '<div style="text-align:center;"><div style="font-size:28px;font-weight:900;color:' + scoreColor + ';">' + (graafScore || '?') + '</div><div style="font-size:8px;color:#6b7280;">/100 · Grade ' + grade + '</div></div>' +
         '<div style="flex:1;">' +
@@ -3911,7 +3929,12 @@ async function runRewriteFromModal() {
     toast('✍ Rewrite complete — Grade ' + grade + ' · ' + (rewriteResult.word_count || 0).toLocaleString() + ' words', 3000, 'ok');
   } catch(e) {
     removeProgress(prog);
-    addAgentMessage('❌ Rewrite error: ' + e.message);
+    var errMsg = e.message || '';
+    if (errMsg.includes('high demand') || errMsg.includes('unavailable') || errMsg.includes('503') || errMsg.includes('all-exhausted')) {
+      addAgentMessage('⚠️ <b>All AI providers busy</b> — Gemini and Claude are experiencing high demand.<br><br>💡 <b>What to do:</b><br>1. Wait 30-60 seconds<br>2. Click <b>🚀 Execute Selected</b> again — the system will retry with backoff<br>3. If it keeps failing, try a shorter HTML input or fewer selected modes<br><br>Error: ' + escHtml(errMsg.substring(0, 200)));
+    } else {
+      addAgentMessage('❌ Rewrite error: ' + escHtml(errMsg));
+    }
   }
 }
 
