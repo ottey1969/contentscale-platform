@@ -827,13 +827,16 @@ YOUR BEHAVIOUR:
 8. You know the GRAAF framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) and CRAFT. Reference them by name when relevant.
 9. Keep responses under 150 words unless you're presenting data/results. Brevity is intelligence.
 
-CRITICAL — COMMAND FORMAT:
-- When you want to run a scan, analysis, or research, you MUST output the command in EXACTLY this format: [SCAN https://example.com/page] or [META "keyword" "current title"]
-- The system detects commands inside [BRACKETS] and executes them automatically + shows clickable buttons
-- NEVER write "I can scan this for you" without the [SCAN url] command — always include the bracket command so it actually runs
-- NEVER write "try [SCAN url]" as text — output [SCAN https://actual-url.com] so it executes
+CRITICAL — COMMAND FORMAT & AUTO-EXECUTION:
+- When you want to run a scan, analysis, or research, output the command in EXACTLY this format: [SCAN https://example.com/page] or [META "keyword" "current title"]
+- The system DETECTS commands inside [BRACKETS], executes them AUTOMATICALLY, and shows clickable buttons
+- NEVER say "I can scan this" or "Let me scan first" — just output [SCAN https://actual-url.com] and it runs instantly
+- NEVER say "then we'll need to manually research" — just chain the commands: [SCAN url] followed immediately by [INTELLIGENCE "keyword" url] in the SAME response
+- After a SCAN completes, the system automatically shows buttons for: Intelligence, Meta Research, Rewrite — so you don't need to offer those separately
 - Always use real URLs from the conversation, never placeholder examples
-- For META research: [META "target keyword" "current page title"]
+- Chain commands in a single response when they logically follow each other:
+  Example: "Scanning now and pulling competitor data. [SCAN https://site.com/page] [INTELLIGENCE "keyword" "https://site.com/page"]"
+- For META: [META "target keyword" "current page title"]
 - For INTELLIGENCE: [INTELLIGENCE "target keyword" "https://url.com"]
 ${gscSummary}${contextStr}
 
@@ -1133,6 +1136,15 @@ async function cmdScan(url) {
     ]);
     addAgentMessage(interp);
 
+    // Auto-chain: show follow-up action buttons
+    var kw = _context.keyword || '';
+    var followUp = [
+      { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run intelligence.'); } },
+      { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run meta research.'); } },
+      { label: '✍ Rewrite This Page', fn: function(){ switchView('rewrite'); toast('Switching to Rewrite tab — paste your HTML there',3000,'ok'); } }
+    ];
+    addActions(followUp);
+
   } catch(e) {
     removeProgress(prog);
     addAgentMessage('Scan failed: ' + e.message + '. Can you check the URL is accessible?');
@@ -1297,6 +1309,13 @@ async function cmdMetaResearch(keyword, currentTitle) {
     setProgress(prog, 100);
     removeProgress(prog);
 
+    // Auto-chain: show follow-up action buttons
+    var followUp = [
+      { label: '🧠 Intelligence: ' + keyword, fn: function(){ executeCommand({cmd:'INTELLIGENCE',args:[keyword,'']}); } },
+      { label: '✍ Rewrite This Page', fn: function(){ switchView('rewrite'); toast('Switching to Rewrite tab',3000,'ok'); } }
+    ];
+    addActions(followUp);
+
   } catch(e) {
     removeProgress(prog);
     addAgentMessage('🏷️ Meta research error: ' + e.message);
@@ -1433,6 +1452,14 @@ async function cmdIntelligence(keyword, url) {
       { role: 'user', content: 'Content intelligence for "' + keyword + '" is complete. ' + data.competitors.length + ' competitors analyzed. In 2-3 sentences: what is the single highest-impact change to make right now?' }
     ]);
     addAgentMessage(summary);
+
+    // Auto-chain: show follow-up action buttons
+    var followUp = [
+      { label: '🏷 Meta Research: ' + keyword, fn: function(){ executeCommand({cmd:'META',args:[keyword,'']}); } },
+      { label: '✍ Rewrite This Page', fn: function(){ switchView('rewrite'); toast('Switching to Rewrite tab — paste your HTML there',3000,'ok'); } },
+      { label: '📊 Scan: ' + (url || ''), fn: function(){ if(url) executeCommand({cmd:'SCAN',args:[url]}); } }
+    ];
+    addActions(followUp);
 
   } catch(e) {
     removeProgress(prog);
