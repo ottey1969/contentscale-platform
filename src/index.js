@@ -25505,6 +25505,15 @@ Zero generic advice. Skip anything our content already clearly has.`;
   snapshot.content_changed = contentChanged;
 
   _trSetStep(pageId, 'save', 'running', 'Saving results to database…');
+  // Safely stringify JSONB fields — prevents "invalid input syntax for type json"
+  function safeJSONB(val) {
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'string') {
+      // Already a string — validate it's JSON
+      try { JSON.parse(val); return val; } catch(e) { return null; }
+    }
+    try { return JSON.stringify(val); } catch(e) { return null; }
+  }
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
@@ -25514,9 +25523,11 @@ Zero generic advice. Skip anything our content already clearly has.`;
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
-     snapshot.recommendations || null, snapshot.html_hash, snapshot.score,
-     snapshot.graaf_breakdown || null,
-     snapshot.graaf_recommendations || null,
+     safeJSONB(snapshot.recommendations),
+     snapshot.html_hash,
+     snapshot.score,
+     safeJSONB(snapshot.graaf_breakdown),
+     safeJSONB(snapshot.graaf_recommendations),
      contentChanged]
   );
   const snapId = snapR.rows[0].id;
