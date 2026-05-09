@@ -3901,10 +3901,12 @@ function renderPagesOverview() {
     '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#e2e8f0;">' + avgScore + '</div><div class="pg-kpi-label">Avg Score</div></div>';
 
   // Grid
-  // Pre-calculate opportunity ranks for clear priority display
+  // Pre-calculate opportunity ranks and duplicate URLs
   var oppRanks = {};
+  var urlCounts = {};
   var oppSorted = data.slice().sort(function(a, b) { return (b.opportunity || 0) - (a.opportunity || 0); });
   oppSorted.forEach(function(pg, idx) { if ((pg.opportunity || 0) >= 40) oppRanks[pg.url] = idx + 1; });
+  data.forEach(function(pg) { urlCounts[pg.url] = (urlCounts[pg.url] || 0) + 1; });
 
   grid.innerHTML = data.map(function(p, cardIdx) {
     var pos = p.position || 0;
@@ -3923,6 +3925,9 @@ function renderPagesOverview() {
                  oppRank === 3 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fbbf24;margin-bottom:8px;font-weight:600;">💡 #3 Priority — ' + oppPct + '</div>' :
                  opp >= 40 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);color:#94a3b8;margin-bottom:8px;">' + (oppRank ? '#' + oppRank + ' ' : '') + 'Priority — ' + oppPct + '</div>' : '';
 
+    var isDup = (urlCounts[p.url] || 0) > 1;
+    var dupBadge = isDup ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b;margin-bottom:6px;display:inline-block;font-weight:600;cursor:pointer;" onclick="openMergeModal()" title="Click to merge duplicates">🔀 Duplicate — click to merge</div>' : '';
+
     return '<div class="pg-card">' +
       '<div class="pg-top">' +
         '<div class="pg-slug" title="' + escHtml(p.url) + '">' + escHtml(p.slug || '/') + '</div>' +
@@ -3930,6 +3935,7 @@ function renderPagesOverview() {
       '</div>' +
       (p.keyword ? '<div class="pg-kw">🔑 ' + escHtml(p.keyword) + '</div>' : '') +
       (p.import_batch ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.15);color:#a78bfa;margin-bottom:6px;display:inline-block;">📥 GSC Import</div>' : '') +
+      dupBadge +
       (p.content_changed ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(245,109,0,.08);border:1px solid rgba(245,109,0,.15);color:#f56d00;margin-bottom:6px;display:inline-block;margin-left:4px;font-weight:600;">⚡ Content Changed</div>' : '') +
       oppBadge +
       '<div class="pg-metrics">' +
@@ -3950,6 +3956,9 @@ function renderPagesOverview() {
       '</div>' +
     '</div>';
   }).join('');
+
+  // Show/hide merge button based on duplicates
+  updateMergeButton();
 
   // Update Audit Advisor after rendering pages
   renderAuditAdvisor();
@@ -4089,6 +4098,115 @@ async function deletePageByUrl(url) {
     toast('✅ Removed from Pages view', 2000, 'ok');
   } catch(e) {
     toast('Delete failed: ' + e.message, 2000, 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MERGE DUPLICATES — find & merge pages with same URL
+// ══════════════════════════════════════════════════════════════
+var _mergePairs = []; // [{url, entries: [page1, page2], keepIndex}]
+
+function findDuplicates() {
+  var urlGroups = {};
+  _pagesOverviewData.forEach(function(p, idx) {
+    if (!urlGroups[p.url]) urlGroups[p.url] = [];
+    urlGroups[p.url].push({ page: p, index: idx });
+  });
+  var dups = [];
+  Object.keys(urlGroups).forEach(function(url) {
+    if (urlGroups[url].length > 1) {
+      dups.push({ url: url, entries: urlGroups[url] });
+    }
+  });
+  return dups;
+}
+
+function updateMergeButton() {
+  var dups = findDuplicates();
+  var btn = document.getElementById('pagesMergeBtn');
+  if (btn) {
+    btn.style.display = dups.length ? 'inline-block' : 'none';
+    btn.textContent = '🔀 Merge ' + dups.length + ' dup' + (dups.length !== 1 ? 's' : '');
+  }
+}
+
+function openMergeModal() {
+  var modal = document.getElementById('mergeModal');
+  var list = document.getElementById('mergeList');
+  if (!modal || !list) return;
+  var dups = findDuplicates();
+  if (!dups.length) { toast('No duplicates found', 2000, 'ok'); return; }
+  _mergePairs = dups;
+  var html = '';
+  dups.forEach(function(group, gi) {
+    html += '<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px;">🔗 ' + escHtml(group.url) + ' — ' + group.entries.length + ' entries</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    group.entries.forEach(function(e, ei) {
+      var p = e.page;
+      var hasData = (p.impressions || p.clicks || p.position) ? true : false;
+      var hasKeyword = p.keyword ? true : false;
+      html += '<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:8px;font-size:10px;">' +
+        '<div style="color:' + (hasData ? '#34d399' : '#6b7280') + ';margin-bottom:3px;">📊 Data: ' + (hasData ? (p.impressions || 0) + ' impr · Pos ' + (p.position || '—') : 'None') + '</div>' +
+        '<div style="color:' + (hasKeyword ? '#a78bfa' : '#6b7280') + ';margin-bottom:3px;">🔑 Keyword: ' + (p.keyword || 'None') + '</div>' +
+        '<div style="color:var(--muted);">Score: ' + (p.score || '—') + ' · Opp: ' + (p.opportunity || 0) + '%</div>' +
+        '</div>';
+    });
+    html += '</div>' +
+      '<div style="font-size:9px;color:#34d399;margin-top:6px;">✓ Will merge: best GSC data + best keyword → one entry</div>' +
+      '</div>';
+  });
+  list.innerHTML = html;
+  modal.style.display = 'flex';
+}
+
+function closeMergeModal() {
+  document.getElementById('mergeModal').style.display = 'none';
+}
+
+async function confirmMerge() {
+  var btn = document.getElementById('mergeConfirmBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Merging…'; }
+  try {
+    // Fetch all tracker pages for this profile to find the real DB IDs
+    var d = await api('/api/tracker/pages?profile_id=' + (_context.profileId || ''));
+    var allPages = d.pages || [];
+    var merged = 0, deleted = 0;
+    for (var gi = 0; gi < _mergePairs.length; gi++) {
+      var group = _mergePairs[gi];
+      // Find DB entries for this URL
+      var dbEntries = allPages.filter(function(tp) { return tp.url === group.url; });
+      if (dbEntries.length < 2) continue;
+      // Sort by data richness (most data first)
+      dbEntries.sort(function(a, b) {
+        var scoreA = (a.gsc_impressions || 0) + (a.gsc_clicks || 0) + (a.keyword ? 10 : 0) + (a.latest_snapshot?.score || 0);
+        var scoreB = (b.gsc_impressions || 0) + (b.gsc_clicks || 0) + (b.keyword ? 10 : 0) + (b.latest_snapshot?.score || 0);
+        return scoreB - scoreA;
+      });
+      var keeper = dbEntries[0];
+      // Merge keywords from all entries
+      var bestKeyword = keeper.keyword;
+      for (var i = 1; i < dbEntries.length; i++) {
+        if (!bestKeyword && dbEntries[i].keyword) bestKeyword = dbEntries[i].keyword;
+      }
+      // Update keeper with best keyword if needed
+      if (bestKeyword && bestKeyword !== keeper.keyword) {
+        await api('/api/tracker/pages/' + keeper.id, 'PUT', { keyword: bestKeyword }).catch(function(){/*silent*/});
+      }
+      // Delete the rest
+      for (var j = 1; j < dbEntries.length; j++) {
+        await api('/api/tracker/pages/' + dbEntries[j].id, 'DELETE').catch(function(){/*silent*/});
+        deleted++;
+      }
+      merged++;
+    }
+    toast('✅ Merged ' + merged + ' groups · Deleted ' + deleted + ' duplicates', 3000, 'ok');
+    closeMergeModal();
+    loadPagesOverview(true);
+  } catch(e) {
+    toast('Merge failed: ' + e.message, 3000, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔀 Merge All'; }
   }
 }
 
@@ -4499,6 +4617,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <button onclick="openAddUrlModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#a78bfa;">+ Add URL</button>
       <button onclick="openPagesImportModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
       <button onclick="clearAllPages()" id="pagesClearBtn" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;margin-left:4px;" title="Remove all pages for this profile">🗑 Reset All</button>
+      <button onclick="openMergeModal()" id="pagesMergeBtn" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.08);color:#f59e0b;margin-left:4px;display:none;" title="Find and merge duplicate pages">🔀 Merge Dups</button>
     </div>
   </div>
 
@@ -4561,6 +4680,22 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
       <button onclick="closeGscPreview()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
       <button onclick="confirmGscImport()" id="gscConfirmBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Import Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- Merge Duplicates Modal -->
+<div id="mergeModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20004;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:560px;width:95%;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;">🔀 Merge Duplicate Pages</div>
+      <button onclick="closeMergeModal()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">These pages share the same URL. The merge keeps the <b>best GSC data</b> (impressions, clicks, position) and the <b>best keyword</b> from each. Empty duplicates will be deleted from the server.</div>
+    <div id="mergeList" style="max-height:50vh;overflow-y:auto;"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <button onclick="closeMergeModal()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
+      <button onclick="confirmMerge()" id="mergeConfirmBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;">🔀 Merge All</button>
     </div>
   </div>
 </div>

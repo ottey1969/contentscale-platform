@@ -24343,7 +24343,7 @@ app.get('/api/tracker/profile/:profileId/report', verifyEngineAccess, async (req
       `SELECT p.*,
         (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
         (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at ASC LIMIT 1) AS baseline_snapshot
-       FROM tracker_pages p WHERE p.profile_id=$1 AND p.is_active=TRUE ORDER BY p.created_at DESC`,
+       FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`,
       [profileId]
     );
     const pages = pagesR.rows;
@@ -24416,7 +24416,7 @@ app.get('/api/tracker/profile/:profileId/report.csv', verifyEngineAccess, async 
       `SELECT p.*,
         (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
         (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at ASC LIMIT 1) AS baseline_snapshot
-       FROM tracker_pages p WHERE p.profile_id=$1 AND p.is_active=TRUE ORDER BY p.created_at DESC`,
+       FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`,
       [profileId]
     );
     const pages = pagesR.rows;
@@ -25615,7 +25615,7 @@ function startTrackerScheduler() {
     try {
       const due = await pool.query(
         `SELECT p.* FROM tracker_pages p
-         WHERE p.is_active=TRUE AND p.next_check_at <= NOW()
+         WHERE (p.next_check_at <= NOW() OR p.next_check_at IS NULL)
          ORDER BY
            CASE p.check_frequency
              WHEN 'daily' THEN 1
@@ -25625,7 +25625,7 @@ function startTrackerScheduler() {
              WHEN '1week' THEN 3
              ELSE 4
            END,
-           p.next_check_at ASC
+           p.next_check_at ASC NULLS FIRST
          LIMIT 10`
       );
       for(const page of due.rows) {
