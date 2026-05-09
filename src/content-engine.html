@@ -1404,15 +1404,24 @@ async function cmdIntelligence(keyword, url) {
         '</div></div>';
     }
 
+    // Server notice (errors, empty results)
+    if (data.notice) {
+      html += '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;margin-bottom:10px;font-size:10px;color:#fbbf24;">⚠️ ' + escHtml(data.notice) + '</div>';
+    }
+
     // Competitor comparison table
     if (data.competitors && data.competitors.length) {
-      html += '<div style="font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">🌐 TOP ' + data.competitors.length + ' COMPETITORS</div>' +
+      var okComps = data.competitors.filter(function(c) { return !c._fetch_error; });
+      var errComps = data.competitors.filter(function(c) { return c._fetch_error; });
+      html += '<div style="font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">🌐 TOP ' + data.competitors.length + ' COMPETITORS' + (errComps.length ? ' (' + okComps.length + ' analyzed, ' + errComps.length + ' fetch-failed)' : '') + '</div>' +
         '<div style="overflow-x:auto;"><table style="width:100%;font-size:10px;border-collapse:collapse;">' +
         '<tr style="color:#6b7280;border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:4px;">#</th><th style="text-align:left;padding:4px;">Title</th><th style="text-align:right;padding:4px;">Words</th><th style="text-align:right;padding:4px;">H2s</th><th style="text-align:right;padding:4px;">Schema</th></tr>';
       data.competitors.forEach(function(c) {
-        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);">' +
+        var titleText = escHtml(c.title || c.url).substring(0, 50);
+        if (c._fetch_error) titleText += ' ⚠️';
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);' + (c._fetch_error ? 'opacity:.6;' : '') + '">' +
           '<td style="padding:4px;color:#a78bfa;font-weight:700;">' + c.position + '</td>' +
-          '<td style="padding:4px;"><a href="' + escHtml(c.url) + '" target="_blank" style="color:#38bdf8;text-decoration:none;">' + escHtml(c.title || c.url).substring(0, 50) + '</a></td>' +
+          '<td style="padding:4px;"><a href="' + escHtml(c.url) + '" target="_blank" style="color:#38bdf8;text-decoration:none;">' + titleText + '</a></td>' +
           '<td style="padding:4px;text-align:right;color:#e2e8f0;">' + (c.word_count || '?') + '</td>' +
           '<td style="padding:4px;text-align:right;color:#e2e8f0;">' + (c.h2s ? c.h2s.length : 0) + '</td>' +
           '<td style="padding:4px;text-align:right;color:#e2e8f0;font-size:9px;">' + (c.schema_types ? c.schema_types.join(', ') : '—') + '</td>' +
@@ -1420,10 +1429,32 @@ async function cmdIntelligence(keyword, url) {
       });
       html += '</table></div>';
 
-      // Average stats
-      var avgWords = Math.round(data.competitors.reduce(function(s,c){return s+(c.word_count||0)},0)/data.competitors.length);
-      var avgHeadings = Math.round(data.competitors.reduce(function(s,c){return s+(c.h2s?c.h2s.length:0)},0)/data.competitors.length);
-      html += '<div style="font-size:10px;color:#fbbf24;margin-top:8px;">📈 Avg competitor: ' + avgWords.toLocaleString() + ' words, ' + avgHeadings + ' H2s</div>';
+      // Average stats (only from successfully analyzed)
+      if (okComps.length) {
+        var avgWords = Math.round(okComps.reduce(function(s,c){return s+(c.word_count||0)},0)/okComps.length);
+        var avgHeadings = Math.round(okComps.reduce(function(s,c){return s+(c.h2s?c.h2s.length:0)},0)/okComps.length);
+        html += '<div style="font-size:10px;color:#fbbf24;margin-top:8px;">📈 Avg competitor: ' + avgWords.toLocaleString() + ' words, ' + avgHeadings + ' H2s</div>';
+      }
+    } else {
+      html += '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:12px;margin:12px 0;text-align:center;">' +
+        '<div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:6px;">🌐 No Competitors Analyzed</div>' +
+        '<div style="font-size:10px;color:#fca5a5;margin-bottom:8px;">The SERP was fetched but competitor pages could not be analyzed. This usually means competitor sites blocked the request or are temporarily unavailable.</div>' +
+        '<div style="font-size:10px;color:#fbbf24;">💡 Try: different keyword, check SerpAPI key, or retry in a few minutes.</div></div>';
+    }
+
+    // People Also Ask — always show if available
+    if (data.people_also_ask && data.people_also_ask.length) {
+      html += '<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;">❓ PEOPLE ALSO ASK</div>';
+      data.people_also_ask.forEach(function(q) {
+        html += '<details style="margin-bottom:4px;"><summary style="font-size:10px;color:#e2e8f0;cursor:pointer;padding:4px 0;">' + escHtml(q.question) + '</summary>' +
+          '<div style="font-size:10px;color:#9ca3af;padding:4px 8px;">' + escHtml(q.snippet || 'No answer available') + '</div></details>';
+      });
+      html += '</div>';
+    }
+
+    // Related Searches — always show if available
+    if (data.related_searches && data.related_searches.length) {
+      html += '<div style="margin-top:10px;font-size:10px;color:#a78bfa;">🔎 Related: ' + data.related_searches.map(escHtml).join(' · ') + '</div>';
     }
 
     // Content gaps
@@ -3623,12 +3654,44 @@ function runPipelineFromModal() {
 }
 
 // ── Rewrite Modal ─────────────────────────────────────────────
+var _rewriteMode = 'complete'; // current mode: complete|sections|meta|compete|voice|paa
+
+function setRewriteMode(mode) {
+  _rewriteMode = mode;
+  // Update visual state
+  document.querySelectorAll('.rewrite-mode-btn').forEach(function(btn) {
+    btn.classList.remove('rewrite-mode-active');
+    btn.style.border = '1px solid var(--border)';
+    btn.style.background = 'transparent';
+    btn.style.color = 'var(--text)';
+  });
+  var active = document.getElementById('rewriteMode' + mode.charAt(0).toUpperCase() + mode.slice(1));
+  if (active) {
+    active.classList.add('rewrite-mode-active');
+    active.style.border = '1px solid rgba(124,58,237,.3)';
+    active.style.background = 'rgba(124,58,237,.1)';
+    active.style.color = '#a78bfa';
+  }
+}
+
 function openRewriteModal() {
   var modal = document.getElementById('rewriteModal');
   if (!modal) return;
   // Pre-fill with context
   document.getElementById('rewriteKeyword').value = _context.keyword || '';
   document.getElementById('rewriteUrl').value = _context.url || '';
+  // Show scan context if available
+  var panel = document.getElementById('rewriteContextPanel');
+  var body = document.getElementById('rewriteContextBody');
+  if (panel && body && _context.score) {
+    panel.style.display = 'block';
+    body.innerHTML =
+      '<div>Score: <b style="color:#e2e8f0;">' + _context.score + '/100</b> · Keyword: <b style="color:#e2e8f0;">' + escHtml(_context.keyword || '—') + '</b></div>' +
+      (_context.lastRewriteHtml ? '<div style="margin-top:4px;color:#34d399;">✓ Previous rewrite available — you can refine it</div>' : '') +
+      (_context.intelBrief ? '<div style="margin-top:4px;color:#fbbf24;">✓ Competitor intelligence loaded</div>' : '');
+  } else if (panel) {
+    panel.style.display = 'none';
+  }
   modal.style.display = 'flex';
 }
 function closeRewriteModal() {
@@ -3640,26 +3703,43 @@ async function runRewriteFromModal() {
   var html = document.getElementById('rewriteHtml').value.trim();
   if (!keyword) { toast('Enter a target keyword', 'warn'); return; }
   if (!html) { toast('Paste your page HTML', 'warn'); return; }
+  var mode = _rewriteMode || 'complete';
+  var modeLabels = { complete: 'Complete Rewrite', sections: 'Add Sections', meta: 'Better Meta', compete: 'Beat Competitors', voice: 'Voice Search', paa: 'Answer PAA' };
   closeRewriteModal();
   // Run the rewrite via agent
-  addAgentMessage('✍ Starting rewrite for "' + escHtml(keyword) + '"…');
-  var prog = addProgress('Rewriting with GRAAF/CRAFT optimization…', 0);
+  addAgentMessage('✍ Starting <b>' + modeLabels[mode] + '</b> for "' + escHtml(keyword) + '"…');
+  var prog = addProgress(modeLabels[mode] + ' — analyzing…', 0);
   try {
     setProgress(prog, 30);
     // First scan the existing HTML
     var body = { html: html, url: url || 'https://example.com', keyword: keyword, profile_id: _context.profileId || null };
     var d = await api('/api/scan/paste', 'POST', body);
     if (!d || !d.success) throw new Error(d?.error || 'Paste scan failed');
-    setProgress(prog, 60);
+    setProgress(prog, 50);
     // Store context
     _context.score = d.score;
     _context.recs = parseRecs(d.recommendations);
     _context.url = url || '';
     _context.keyword = keyword;
     updateContext();
-    // STEP 1: Analyse — create a rewrite analysis
+
+    // If mode is sections, meta, compete, voice, or paa — fetch intelligence first for context
+    var intelContext = null;
+    if (mode !== 'complete') {
+      setProgress(prog, 55);
+      addAgentMessage('🔬 Fetching competitive intelligence for targeted ' + modeLabels[mode] + '…');
+      try {
+        var intel = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
+        if (intel && intel.success) {
+          intelContext = intel;
+          _context.intelBrief = intel.intelligence_brief;
+        }
+      } catch(e) { /* silent fail — proceed without intelligence */ }
+    }
+
+    // STEP 1: Analyse — create a rewrite analysis with mode context
     setProgress(prog, 65);
-    addAgentMessage('📋 Step 1/2: Analyzing content and competitors…');
+    addAgentMessage('📋 Step 1/2: Analyzing with ' + modeLabels[mode] + ' focus…');
     var slug = '';
     try { slug = new URL(url || 'https://example.com').pathname.split('/').filter(Boolean).pop() || '/'; } catch(e) { slug = '/'; }
     var analyseResult = await api('/api/content/analyse-rewrite', 'POST', {
@@ -3668,16 +3748,18 @@ async function runRewriteFromModal() {
       original_slug: slug,
       original_title: d.meta_title || '',
       original_html: html,
-      gsc_keyword: keyword
+      gsc_keyword: keyword,
+      rewrite_mode: mode,
+      intelligence_context: intelContext ? JSON.stringify({ competitors: intelContext.competitors, paa: intelContext.people_also_ask, brief: intelContext.intelligence_brief }) : null
     });
     if (!analyseResult || !analyseResult.success) throw new Error((analyseResult && analyseResult.error) || 'Analysis failed');
     var rewriteId = analyseResult.rewrite_id;
     if (!rewriteId) throw new Error('No rewrite ID returned from analysis');
 
-    // STEP 2: Execute — generate the rewritten HTML
+    // STEP 2: Execute — generate the rewritten HTML with mode
     setProgress(prog, 85);
-    addAgentMessage('✍ Step 2/2: Writing optimized content…');
-    var rewriteResult = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', {});
+    addAgentMessage('✍ Step 2/2: Writing ' + modeLabels[mode] + '…');
+    var rewriteResult = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', { rewrite_mode: mode });
     if (!rewriteResult || !rewriteResult.success) throw new Error((rewriteResult && rewriteResult.error) || 'Rewrite execution failed');
 
     setProgress(prog, 100);
@@ -4755,12 +4837,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Rewrite Modal -->
   <div id="rewriteModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20003;align-items:center;justify-content:center;">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div style="font-size:15px;font-weight:700;">✍ Rewrite Page</div>
         <button onclick="closeRewriteModal()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Paste your page HTML and target keyword. The agent will rewrite it with full GRAAF/CRAFT optimization, schema markup, and E-E-A-T signals.</div>
+
+      <!-- Scan Context Panel -->
+      <div id="rewriteContextPanel" style="display:none;background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px;">📊 Last Scan Context</div>
+        <div id="rewriteContextBody" style="font-size:10px;color:#9ca3af;line-height:1.6;"></div>
+      </div>
+
+      <!-- Inputs -->
       <div style="margin-bottom:10px;">
         <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Target Keyword *</label>
         <input id="rewriteKeyword" placeholder="drain cleaning services new jersey" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
@@ -4771,11 +4860,49 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       <div style="margin-bottom:12px;flex:1;">
         <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Current HTML *</label>
-        <textarea id="rewriteHtml" placeholder="&lt;!DOCTYPE html&gt;... paste your full page HTML here" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:12px;outline:none;font-family:'DM Mono',monospace;min-height:120px;resize:vertical;"></textarea>
+        <textarea id="rewriteHtml" placeholder="&lt;!DOCTYPE html&gt;... paste your full page HTML here" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:12px;outline:none;font-family:'DM Mono',monospace;min-height:100px;resize:vertical;"></textarea>
       </div>
+
+      <!-- Rewrite Mode Selection -->
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;">What would you like to do?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button onclick="setRewriteMode('complete')" id="rewriteModeComplete" class="rewrite-mode-btn rewrite-mode-active" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.1);color:#a78bfa;text-align:left;">
+            <div style="font-size:14px;margin-bottom:2px;">🔄</div>
+            <div>Complete Rewrite</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">Full page rewrite with GRAAF/CRAFT</div>
+          </button>
+          <button onclick="setRewriteMode('sections')" id="rewriteModeSections" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
+            <div style="font-size:14px;margin-bottom:2px;">➕</div>
+            <div>Add Sections</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">FAQ, Schema, Voice Search, PAA</div>
+          </button>
+          <button onclick="setRewriteMode('meta')" id="rewriteModeMeta" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
+            <div style="font-size:14px;margin-bottom:2px;">🏷</div>
+            <div>Better Meta</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">Title + description optimization</div>
+          </button>
+          <button onclick="setRewriteMode('compete')" id="rewriteModeCompete" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
+            <div style="font-size:14px;margin-bottom:2px;">🎯</div>
+            <div>Beat Competitors</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">Close content gaps vs top 5</div>
+          </button>
+          <button onclick="setRewriteMode('voice')" id="rewriteModeVoice" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
+            <div style="font-size:14px;margin-bottom:2px;">🎙</div>
+            <div>Voice Search</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">AI Overview + natural language</div>
+          </button>
+          <button onclick="setRewriteMode('paa')" id="rewriteModePaa" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
+            <div style="font-size:14px;margin-bottom:2px;">❓</div>
+            <div>Answer PAA</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">People Also Ask questions</div>
+          </button>
+        </div>
+      </div>
+
       <div style="display:flex;justify-content:flex-end;gap:8px;">
         <button onclick="closeRewriteModal()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
-        <button onclick="runRewriteFromModal()" id="rewriteRunBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Rewrite</button>
+        <button onclick="runRewriteFromModal()" id="rewriteRunBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">🚀 Execute</button>
       </div>
     </div>
   </div>

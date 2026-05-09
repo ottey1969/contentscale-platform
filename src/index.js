@@ -10039,7 +10039,17 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
     clearTimeout(t);
     const serpData = await r.json();
 
+    // Check for SerpAPI errors
+    if (serpData.error) {
+      console.error('[serp intelligence] SerpAPI error:', serpData.error);
+      return res.status(503).json({ success: false, error: 'SerpAPI: ' + (typeof serpData.error === 'string' ? serpData.error : JSON.stringify(serpData.error)) });
+    }
+
     const organic = (serpData.organic_results || []).slice(0, 10);
+    if (!organic.length) {
+      return res.json({ success: true, keyword, your_url: yourUrl, competitors: [], people_also_ask: [], related_searches: [], ai_overview: null, intelligence_brief: null, notice: 'No organic results found for this keyword. Try a broader or more specific search term.' });
+    }
+
     const paa = (serpData.related_questions || []).slice(0, 8).map(q => ({ question: q.question || '', snippet: q.snippet || '' }));
     const related = (serpData.related_searches || []).slice(0, 10).map(s => s.query || '').filter(Boolean);
     const aiOverview = serpData.answer_box ? {
@@ -10047,7 +10057,7 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
       answer: serpData.answer_box.answer || serpData.answer_box.snippet || ''
     } : null;
 
-    // 2. Analyze each competitor page
+    // 2. Analyze each competitor page (with fallback to basic SERP data)
     const competitorAnalysis = [];
     for (const result of organic) {
       const compUrl = result.link || '';
@@ -10076,14 +10086,28 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
           avg_paragraph_length: compData.avgParagraphLength
         });
       } catch(e) {
+        // FALLBACK: still include competitor with basic SERP data even if deep analysis fails
         competitorAnalysis.push({
           position: result.position,
           url: compUrl,
           title: result.title || '',
           snippet: result.snippet || '',
-          error: e.message
+          word_count: null, heading_count: null,
+          h1: '', h2s: [],
+          has_schema: false, schema_types: [],
+          has_faq: false, has_author: false,
+          internal_links: 0, external_links: 0,
+          images: 0, images_with_alt: 0,
+          meta_title_length: 0, meta_desc_length: 0,
+          avg_paragraph_length: 0,
+          _fetch_error: e.message
         });
       }
+    }
+
+    // If NO competitors were successfully analyzed at all, still return basic SERP data
+    if (!competitorAnalysis.length) {
+      return res.json({ success: true, keyword, your_url: yourUrl, competitors: [], people_also_ask: paa, related_searches: related, ai_overview: aiOverview, intelligence_brief: null, notice: 'Competitor pages could not be fetched for analysis, but SERP data is available.' });
     }
 
     // 3. Analyze your page (if URL provided)
@@ -12370,31 +12394,88 @@ ${job.html_template}`;
 
     } else {
       // No template — fall back to full-quality prompt
-      systemPrompt = `You are an elite SEO content architect. Write 4000+ word HTML articles that dominate SERPs.
+      systemPrompt = `You are an elite SEO content architect who writes content that scores 95-100/100 on ContentScale. Follow this EXACT framework.
 
-MANDATORY ELEMENTS:
-1. Direct Answer box (40-60 words, stat + phone) at top
-2. TL;DR with 5 sourced bullets
-3. Clickable Table of Contents
-4. 8+ statistics from 2024-2026 with named sources AND URLs
-5. 4+ expert blockquotes with full attribution (name, title, org, year, article)
-6. 2+ case studies with Challenge/Solution/Results + dollar amounts
-7. 10 FAQ items (100-150w each) with internal + external links
-8. 8+ internal links (descriptive anchor text)
-9. 5+ external links (.gov, .edu, trade associations)
-10. 200+ word author bio with E-E-A-T
-11. All JSON-LD schemas: LocalBusiness, FAQPage, BreadcrumbList, Article, Speakable, HowTo
-12. Voice-search Q&A paragraphs for speakable schema
+═══ MANDATORY OUTPUT STRUCTURE (Do NOT skip any) ═══
 
-RULES:
-- Every <p> max 4 sentences
-- Never invent stats — cite real sources with URLs
-- Keyword density 0.5-1.5%
-- Primary keyword in H1, first H2, intro, conclusion
-- Meta title 50-60 chars, description 140-155 chars
-- Output ONLY valid HTML. No markdown.`;
+1. DIRECT ANSWER BOX: 40-60 word paragraph at very top. Include primary keyword, one statistic, expert name + title. Wrap in <div class="direct-answer">.
 
-      userPrompt = `Write complete HTML article for:
+2. TL;DR — 5 KEY TAKEAWAYS: Exactly 5 bullet points. Each 15-25 words with a source citation link. Include keyword in 2 bullets.
+
+3. TABLE OF CONTENTS: Clickable <ol> linking to every H2 section via anchor IDs.
+
+4. MAIN CONTENT — 2500+ words, 5-7 H2 Sections:
+   EACH H2 Section MUST include:
+   - Opening paragraph (100-150 words)
+   - Detail paragraph (100-150 words)
+   - Application paragraph (100-150 words)
+   - 1 Expert Quote with FULL attribution: Name, Title, Organization, Year, Article Title
+   - 1 Statistic with named source and URL
+   - 1 Pro Tip callout
+   - Optional: Comparison table
+
+5. CASE STUDIES — Minimum 2:
+   EACH (200-300 words): Industry + Company Size + Timeline, Challenge with numbers, Solution (3-5 steps), Results with concrete metrics ($X saved, Y% increase), Key Lesson, Client quote.
+
+6. FAQ SECTION — Minimum 10 questions:
+   EACH answer (100-150 words): Direct answer in first sentence + 1 internal link + 1 external authority link (.gov, .edu, trade association).
+
+7. STATISTICS — Minimum 8: All from 2024-2026 only. Format: <p><strong>X%</strong> of [group] [outcome] (<a href="URL">Source, Year</a>)</p>
+
+8. EXPERT QUOTES — Minimum 4: Each 20-60 words. Format: <blockquote><p>Quote</p><cite>— Name, Title, Organization, <em>Article Title</em>, Year</cite></blockquote>
+
+9. AUTHOR BIO — 200-250 words: Role + years experience, 3+ expertise areas, certifications, notable achievements with numbers, published work, contact info. Wrap in <div class="author-bio">.
+
+10. SCHEMA MARKUP — ALL JSON-LD:
+    - Article schema: headline, description, image, author, publisher, dates
+    - FAQPage schema: ALL FAQ questions with exact answers from body
+    - Speakable schema: Identify key paragraphs for voice search
+    - HowTo schema: For procedural content
+    - LocalBusiness schema: With real business data from profile
+
+11. VOICE SEARCH: Natural-language Q&A paragraphs ("What makes [brand] unique? We...") 30-50 words each for speakable schema targets.
+
+12. META TAGS:
+    - Meta title: 50-60 chars, keyword at front, year or number, power word
+    - Meta description: 150-160 chars, keyword, benefit, CTA
+    - Open Graph title + description
+
+═══ SCORING FRAMEWORK (Score 95-100/100) ═══
+
+GRAAF (50/50):
+- Keyword density 0.8-1.2% (primary keyword 20-30x in 2500 words)
+- 8+ statistics (2024-2026) with named sources and URLs
+- 4+ expert quotes with full attribution
+- 2+ case studies with real numbers
+- Author bio 200-250 words with E-E-A-T credentials
+
+CRAFT (30/30):
+- 2500+ words minimum
+- Sentences average 15-18 words, max 20
+- Paragraphs 3-4 sentences, max 100 words
+- 10+ FAQ (100+ words each)
+- 6-8 images with descriptive ALT text containing keyword
+- Comparison tables where relevant
+
+Technical SEO (20/20):
+- Meta title 50-60 chars, description 150-160 chars
+- H1/H2/H3 hierarchy
+- Article + FAQPage + Speakable + HowTo schema JSON-LD
+- 8-12 internal links with descriptive anchor text
+- 5-8 external authority links (.gov, .edu, trade)
+
+═══ CRITICAL RULES ═══
+- NEVER invent statistics — use real data with real source URLs
+- NEVER invent phone numbers, addresses, or business facts — use ONLY profile constants
+- If research stats are insufficient, use your knowledge of real 2024-2026 industry data
+- Every <p> max 4 sentences. Active voice 80%+
+- Primary keyword in: H1, first H2, intro, conclusion, naturally throughout
+- Output ONLY valid HTML. No markdown. No raw text outside HTML tags.`;
+
+      userPrompt = `TARGET SCORE: 95-100/100 ContentScale (GRAAF 48-50 + CRAFT 28-30 + Technical 19-20)
+CURRENT SCORE: ${rw.last_graaf_score || 'unknown'}/100
+
+Write complete HTML article for:
 
 TITLE: ${brief.title || kd.primary_keyword}
 PRIMARY KEYWORD: ${kd.primary_keyword || brief.primary_keyword}
@@ -14038,6 +14119,8 @@ Return ONLY valid JSON:
     analysis.related_searches = relatedSearches;
     analysis.voice_search_queries = voiceQueries;
     analysis.top_5_competitors = competitorDeepDive;
+    analysis.rewrite_mode = req.body.rewrite_mode || 'complete';
+    analysis.intelligence_context = safeParse(req.body.intelligence_context, null);
 
     const rwR = await pool.query(
       `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status)
@@ -14304,6 +14387,18 @@ Heeft schema: ${c.hasSchema} | Heeft FAQ: ${c.hasFaq} | Heeft table: ${c.hasTabl
 VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Meer specifiek, meer cited, meer concreet'}`).join('\n')}`
       : '';
 
+    // ═══ REWRITE MODE — user-selected targeted rewrite ═══
+    const rewriteMode = analysis.rewrite_mode || 'complete';
+    const modeInstructions = {
+      complete: `SCHRIJF DE VOLLEDIGE PAGINA OVER — complete rewrite met ALLE GRAAF/CRAFT/Technical optimalisaties. Behoud structuur waar mogelijk, maar herschrijf ALLE content.`,
+      sections: `VOEG SPECIFIEKE SECTIES TOE aan de bestaande content zonder de rest te herschrijven. Voeg toe: FAQ schema met 5-8 vragen, HowTo schema, Direct Answer sectie, Vergelijkingstabel, CTA secties, Interne links. Behoud bestaande content intact.`,
+      meta: `OPTIMALISEER ALLEEN de meta-titel en meta-beschrijving. Schrijf 3 varianten van de title (50-60 chars, met keyword vooraan, jaar, getal, power word). Schrijf 3 varianten van de meta description (150-160 chars, met CTA, USP, keyword). Geef ook Open Graph title + description.`,
+      compete: `SLUIT DE CONTENT GAPS met de top 5 concurrenten. Analyseer wat concurrenten hebben die jij mist: heading topics, schema types, FAQ vragen, woordaantal, internal links. Voeg die elementen strategisch toe zonder te kopiëren. Focus op "wat hebben zij dat wij niet hebben".`,
+      voice: `OPTIMALISEER VOOR VOICE SEARCH en AI Overviews. Gebruik natuurlijke taal, vraag-antwoord format, concise antwoorden (29-41 woorden), speakable schema markup, FAQ-pairs, conversational headings. Focus op "hoe", "wat", "waarom" vragen.`,
+      paa: `CREEER EEN PAA (People Also Ask) ANSWER SECTIE. Onderzoek de top 8-10 PAA vragen voor deze keyword. Schrijf korte, directe antwoorden (40-60 woorden) voor elke vraag in FAQ schema format. Gebruik concise, factual language die AI Overviews kan citeren.`
+    };
+    const modeBlockRW = `\n═══ REWRITE MODE: ${rewriteMode.toUpperCase()} ═══\n${modeInstructions[rewriteMode] || modeInstructions.complete}\n`;
+
     // ═══ BUILD PROMPT — THREE MODES ═══
     const hasTemplate = rw.html_template && rw.html_template.trim().length > 50;
     const hasOriginalLayout = layoutSkeleton && rw.original_html && rw.original_html.length > 500;
@@ -14335,6 +14430,7 @@ GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
 ${gscBlockRW}
 ${competitorBeatBlock}
+${modeBlockRW}
 REWRITE STRATEGIE:
 ${analysis.rewrite_strategy || ''}
 
@@ -14416,6 +14512,7 @@ BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
 ${competitorBeatBlock}
+${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
 DOELWOORDTELLING: ${analysis.target_word_count || 2500}+ (dezelfde layout, betere tekst)
 
@@ -14453,6 +14550,7 @@ GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als pla
 ${antiFacts}
 ${gscBlockRW}
 ${competitorBeatBlock}
+${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
 AANBEVOLEN TITEL: ${analysis.recommended_title || rw.original_title}
 DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
