@@ -512,7 +512,7 @@ function updateGscStatus() {
     status.innerHTML = '✓ GSC loaded<br>' +
       (_gscPages.length ? _gscPages.length + ' pages · ' : '') +
       (_gscQueries.length ? _gscQueries.length + ' queries' : '') +
-      (topOpp ? '<div class="ctx-opportunity" style="margin-top:8px;"><div class="ctx-opp-title">Top Opportunity</div><div class="ctx-opp-url">'+topOpp.url.replace(/^https?:\/\//,'').substring(0,40)+'</div><div class="ctx-opp-stats">Pos ' + topOpp.position.toFixed(1) + ' · ' + topOpp.impressions.toLocaleString() + ' impr · CTR ' + topOpp.ctr.toFixed(1) + '%</div></div>' : '');
+      (topOpp ? '<div class="ctx-opportunity" style="margin-top:8px;"><div class="ctx-opp-title">Top Opportunity</div><div class="ctx-opp-url">'+topOpp.url.replace(/^https?:\/\//,'').substring(0,40)+'</div><div class="ctx-opp-stats">Pos ' + Number(topOpp.position).toFixed(1) + ' · ' + topOpp.impressions.toLocaleString() + ' impr · CTR ' + Number(topOpp.ctr).toFixed(1) + '%</div></div>' : '');
   }
 }
 
@@ -649,7 +649,7 @@ function agentGreet() {
     greeting = (profileLine ? 'Connected — working with ' + profileLine + '.' : 'Connected.') +
       ' I can see <strong>' + _gscPages.length + ' GSC pages</strong> for this profile.\n\n' +
       'Biggest opportunity: <strong>' + top.url.replace(/^https?:\/\//,'').split('/').filter(Boolean).join('/') + '</strong> ' +
-      '— position ' + top.position.toFixed(1) + ' with ' + top.impressions.toLocaleString() + ' impressions, ' + top.ctr.toFixed(1) + '% CTR. ' +
+      '— position ' + Number(top.position).toFixed(1) + ' with ' + top.impressions.toLocaleString() + ' impressions, ' + Number(top.ctr).toFixed(1) + '% CTR. ' +
       'One rewrite could move that significantly.\n\nWant to start there?';
     addActions([
       { label: 'Fix that page', fn: function(){ userSend('Let\'s fix ' + top.url); } },
@@ -774,12 +774,12 @@ function buildSystemPrompt() {
     gscSummary = '\n\nGSC DATA LOADED (' + _gscPages.length + ' pages, ' + _gscQueries.length + ' queries):\n';
     gscSummary += 'Top opportunities (high impressions, low CTR, position 4-30):\n';
     topOpps.forEach(function(p, i) {
-      gscSummary += (i+1) + '. ' + p.url + '\n   Pos: ' + p.position.toFixed(1) + ' | Impr: ' + p.impressions + ' | Clicks: ' + p.clicks + ' | CTR: ' + p.ctr.toFixed(2) + '%\n';
+      gscSummary += (i+1) + '. ' + p.url + '\n   Pos: ' + Number(p.position).toFixed(1) + ' | Impr: ' + p.impressions + ' | Clicks: ' + p.clicks + ' | CTR: ' + Number(p.ctr).toFixed(2) + '%\n';
     });
     // Top queries
     var topQ = _gscQueries.sort(function(a,b){ return b.impressions-a.impressions; }).slice(0,10);
     if (topQ.length) {
-      gscSummary += '\nTop queries: ' + topQ.map(function(q){ return '"'+q.query+'" (pos '+q.position.toFixed(1)+')'; }).join(', ');
+      gscSummary += '\nTop queries: ' + topQ.map(function(q){ return '"'+q.query+'" (pos '+Number(q.position).toFixed(1)+')'; }).join(', ');
     }
   }
 
@@ -1155,7 +1155,7 @@ async function cmdAnalyse(url, keyword) {
 
     // Agent interpretation + risk check
     var pos = _context.position;
-    var riskNote = pos > 0 && pos <= 20 ? '\n\nIMPORTANT: This page ranks at position ' + pos.toFixed(1) + '. Mention ranking risk before suggesting rewrite.' : '';
+    var riskNote = pos > 0 && pos <= 20 ? '\n\nIMPORTANT: This page ranks at position ' + Number(pos).toFixed(1) + '. Mention ranking risk before suggesting rewrite.' : '';
     var interp = await callClaude(buildSystemPrompt() + riskNote, [
       ..._history,
       { role: 'user', content: 'Analysis complete. What are the 2 most impactful actions? Surgical fix or full rewrite — which do you recommend and why? Be direct.' }
@@ -1380,7 +1380,7 @@ function addAnalysisResult(a, rewriteId) {
   if (pos > 0 && pos <= 20) {
     riskHtml = '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:12px;margin-bottom:12px;">' +
       '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px;">⚠️ Ranking Risk</div>' +
-      '<div style="font-size:12px;color:#d1d5db;">This page ranks at position ' + pos.toFixed(1) + '. A full rewrite may cause a 7–30 day dip while Google reindexes. Surgical fixes are safer.</div>' +
+      '<div style="font-size:12px;color:#d1d5db;">This page ranks at position ' + Number(pos).toFixed(1) + '. A full rewrite may cause a 7–30 day dip while Google reindexes. Surgical fixes are safer.</div>' +
       '</div>';
   }
 
@@ -1413,8 +1413,8 @@ function showAllOpportunities() {
       '</td>' +
       '<td style="padding:7px 10px;text-align:right;font-size:12px;color:var(--text);">' + p.impressions.toLocaleString() + '</td>' +
       '<td style="padding:7px 10px;text-align:right;font-size:12px;color:#38bdf8;">' + p.clicks.toLocaleString() + '</td>' +
-      '<td style="padding:7px 10px;text-align:right;font-size:12px;font-weight:700;color:' + ctrColor + ';">' + p.ctr.toFixed(1) + '%</td>' +
-      '<td style="padding:7px 10px;text-align:right;font-size:12px;color:#fbbf24;">' + p.position.toFixed(1) + '</td>' +
+      '<td style="padding:7px 10px;text-align:right;font-size:12px;font-weight:700;color:' + ctrColor + ';">' + Number(p.ctr).toFixed(1) + '%</td>' +
+      '<td style="padding:7px 10px;text-align:right;font-size:12px;color:#fbbf24;">' + Number(p.position).toFixed(1) + '</td>' +
       '<td style="padding:7px 10px;">' +
         '<button style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.1);color:#a78bfa;cursor:pointer;" ' +
         'onclick="userSend(\'Analyse and rewrite ' + p.url + '\')">Audit →</button>' +
@@ -1522,7 +1522,7 @@ function updateContext() {
   if (_context.url) items.push({ label: 'Page', val: _context.url.replace(/^https?:\/\//,'').substring(0,35) });
   if (_context.keyword) items.push({ label: 'Keyword', val: _context.keyword });
   if (_context.score !== null) items.push({ label: 'ContentScore', val: _context.score + '/100' });
-  if (_context.position) items.push({ label: 'GSC Position', val: _context.position.toFixed(1) });
+  if (_context.position) items.push({ label: 'GSC Position', val: Number(_context.position).toFixed(1) });
   if (_gscPages.length) items.push({ label: 'GSC Pages', val: _gscPages.length });
 
   panel.innerHTML = '<div class="sidebar-label">Session Context</div>' +
@@ -1650,8 +1650,18 @@ async function loadTrackerPages() {
 
 function renderTrackerKpis() {
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
+  var profileDomain = (_profile && _profile.domain) || '';
   var p = activeProfileId ? _trPages.filter(function(x) {
-    return !x.profile_id || String(x.profile_id) === String(activeProfileId);
+    // Check profile_id
+    if (x.profile_id && String(x.profile_id) !== String(activeProfileId)) return false;
+    // Always check domain
+    if (profileDomain && x.url) {
+      try {
+        var d = new URL(x.url).hostname.replace('www.', '');
+        if (d !== profileDomain.replace('www.', '')) return false;
+      } catch(e) {}
+    }
+    return true;
   }) : [];
 
   function set(id, val, color) { var el=document.getElementById(id); if(el){el.textContent=val;if(color)el.style.color=color;} }
@@ -1692,9 +1702,16 @@ function renderTrackerList() {
     el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">👤</div><div style="font-weight:600;margin-bottom:4px;">Select a profile first</div><div style="font-size:12px;">Choose a profile from the sidebar to see tracker data</div></div>';
     return;
   }
-  // Filter tracker pages by profile
+  // Filter tracker pages by profile + domain
+  var profileDomain = (_profile && _profile.domain) || '';
   var trData = _trPages.filter(function(p) {
     if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
+    if (profileDomain && p.url) {
+      try {
+        var d = new URL(p.url).hostname.replace('www.', '');
+        if (d !== profileDomain.replace('www.', '')) return false;
+      } catch(e) {}
+    }
     return true;
   });
   if (!trData.length) {
@@ -2993,20 +3010,17 @@ function renderPagesOverview() {
     return;
   }
 
-  // Client-side profile filter: only show pages matching current profile
+  // Client-side profile filter: ONLY pages matching current profile domain
   var profileDomain = (_profile && _profile.domain) || '';
   var data = _pagesOverviewData.filter(function(p) {
-    // If page has explicit profile_id, check it
-    if (p.profile_id) {
-      if (String(p.profile_id) !== String(activeProfileId)) return false;
-    } else {
-      // No profile_id: check URL domain matches current profile domain
-      if (profileDomain) {
-        try {
-          var pageDomain = new URL(p.url).hostname.replace('www.', '');
-          if (pageDomain !== profileDomain.replace('www.', '')) return false;
-        } catch(e) { return false; } // invalid URL, skip
-      }
+    // Always check profile_id first
+    if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
+    // Always check URL domain matches current profile — catches wrong-profile uploads
+    if (profileDomain && p.url) {
+      try {
+        var pageDomain = new URL(p.url).hostname.replace('www.', '');
+        if (pageDomain !== profileDomain.replace('www.', '')) return false;
+      } catch(e) { /* relative URL, allow through if profile_id matches */ }
     }
     if (!search) return true;
     var s = search.toLowerCase();
@@ -3036,9 +3050,9 @@ function renderPagesOverview() {
 
   // KPIs
   var totalImp = data.reduce(function(s, p) { return s + (p.impressions || 0); }, 0);
-  var avgPos = data.length ? (data.reduce(function(s, p) { return s + (p.position || 0); }, 0) / data.length).toFixed(1) : '—';
+  var avgPos = data.length ? (data.reduce(function(s, p) { return s + Number(p.position || 0); }, 0) / data.length).toFixed(1) : '—';
   var totalClicks = data.reduce(function(s, p) { return s + (p.clicks || 0); }, 0);
-  var avgCtr = data.length ? (data.reduce(function(s, p) { return s + (p.ctr || 0); }, 0) / data.length).toFixed(1) + '%' : '—';
+  var avgCtr = data.length ? (data.reduce(function(s, p) { return s + Number(p.ctr || 0); }, 0) / data.length).toFixed(1) + '%' : '—';
   var avgScore = data.filter(function(p) { return p.score; }).length ?
     Math.round(data.filter(function(p) { return p.score; }).reduce(function(s, p) { return s + (parseInt(p.score) || 0); }, 0) / data.filter(function(p) { return p.score; }).length) + '/100' : '—';
 
@@ -3150,7 +3164,7 @@ function pushPageToAgent(url) {
       if (page.position) ctx += '📈 **Current Google Position:** #' + Math.round(page.position * 10) / 10 + '\n';
       if (page.impressions) ctx += '👁 **Impressions:** ' + page.impressions.toLocaleString() + '\n';
       if (page.clicks) ctx += '🖱 **Clicks:** ' + page.clicks + '\n';
-      if (page.ctr) ctx += '📊 **CTR:** ' + page.ctr.toFixed(1) + '%\n';
+      if (page.ctr) ctx += '📊 **CTR:** ' + Number(page.ctr).toFixed(1) + '%\n';
       if (page.score) ctx += '⭐ **ContentScore:** ' + page.score + '/100\n';
       if (opp >= 60) ctx += '🔥 **Opportunity:** ' + opp + '% — HIGH PRIORITY quick win\n';
       else if (opp >= 40) ctx += '⚡ **Opportunity:** ' + opp + '% — improvement potential\n';
@@ -3232,7 +3246,7 @@ function generateAuditTasks(page) {
   }
   // Priority 2: Low CTR
   if (page.ctr && page.ctr < 2) {
-    tasks.push({ id: url + '_ctr', label: 'Fix CTR (' + page.ctr.toFixed(1) + '% — improve title/description)', priority: 2, done: false });
+    tasks.push({ id: url + '_ctr', label: 'Fix CTR (' + Number(page.ctr).toFixed(1) + '% — improve title/description)', priority: 2, done: false });
   }
   // Priority 2: High impressions but low clicks
   if (page.impressions > 1000 && page.clicks < 10) {
