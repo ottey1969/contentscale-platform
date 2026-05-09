@@ -9959,6 +9959,40 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
 
 // ── COMPETITOR ANALYSIS via SerpAPI ─────────────────────────────────────────
 // Fetches live top 5 Google results + People Also Ask for competitive gap analysis
+// Key diagnostic — shows which SerpAPI key source is active (does NOT expose the key)
+app.get('/api/serp/key-status', verifyEngineAccess, async (req, res) => {
+  const serpKey = resolveSerpapiKey(req);
+  const geminiKey = resolveGeminiKey(req);
+  const hasCodeKey = !!(req.engineUser && req.engineUser.code && req.engineUser.code.serpapi_key);
+  const hasEnvKey = !!process.env.SERPAPI_KEY;
+  const hasHeaderKey = !!req.headers['x-serpapi-key'];
+
+  // Test the key with a simple search
+  let serpTest = 'not_tested';
+  if (serpKey) {
+    try {
+      const testR = await fetch('https://serpapi.com/search?engine=google&q=test&num=1&api_key=' + encodeURIComponent(serpKey), { signal: AbortSignal.timeout(5000) });
+      const testD = await testR.json();
+      serpTest = testD.error ? ('invalid: ' + (typeof testD.error === 'string' ? testD.error : JSON.stringify(testD.error).substring(0, 100))) : 'valid';
+    } catch(e) { serpTest = 'error: ' + e.message; }
+  }
+
+  res.json({
+    success: true,
+    serpapi: {
+      configured: !!serpKey,
+      source: hasHeaderKey ? 'header' : (hasCodeKey ? 'per-code' : (hasEnvKey ? 'platform-env' : 'none')),
+      key_prefix: serpKey ? serpKey.substring(0, 4) + '...' + serpKey.substring(serpKey.length - 4) : null,
+      test_result: serpTest,
+      code_id: req.engineUser ? req.engineUser.codeId : null
+    },
+    gemini: {
+      configured: !!geminiKey,
+      source: req.headers['x-gemini-key'] ? 'header' : (process.env.GEMINI_API_KEY ? 'env' : 'none')
+    }
+  });
+});
+
 app.get('/api/serp/competitors', verifyEngineAccess, async (req, res) => {
   const keyword = req.query.keyword;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
@@ -10033,16 +10067,48 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
       engine: 'google', q: keyword, api_key: serpKey,
       num: '10', hl: 'en', gl: 'us'
     });
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 12000);
-    const r = await fetch(`https://serpapi.com/search?${params}`, { signal: ctrl.signal });
-    clearTimeout(t);
-    const serpData = await r.json();
+    let serpData;
+    let usedFallback = false;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 12000);
+      const r = await fetch(`https://serpapi.com/search?${params}`, { signal: ctrl.signal });
+      clearTimeout(t);
+      serpData = await r.json();
+    } catch(e) {
+      console.warn('[serp intelligence] SerpAPI fetch failed:', e.message, '— trying Serper fallback');
+      serpData = { error: e.message };
+    }
 
-    // Check for SerpAPI errors
-    if (serpData.error) {
-      console.error('[serp intelligence] SerpAPI error:', serpData.error);
-      return res.status(503).json({ success: false, error: 'SerpAPI: ' + (typeof serpData.error === 'string' ? serpData.error : JSON.stringify(serpData.error)) });
+    // If SerpAPI fails (auth error, timeout), try Serper.dev fallback
+    if (serpData.error || !serpData.organic_results) {
+      console.warn('[serp intelligence] SerpAPI error/fallback, trying Serper:', typeof serpData.error === 'string' ? serpData.error : 'no results');
+      try {
+        const serperCtrl = new AbortController();
+        const serperT = setTimeout(() => serperCtrl.abort(), 10000);
+        const serperR = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serpKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
+          signal: serperCtrl.signal
+        });
+        clearTimeout(serperT);
+        const serperData = await serperR.json();
+        if (serperData && serperData.organic) {
+          // Normalize Serper format to match SerpAPI
+          serpData = {
+            organic_results: serperData.organic.map((r, i) => ({ position: i + 1, title: r.title, link: r.link, snippet: r.snippet })),
+            related_questions: (serperData.peopleAlsoAsk || []).map(q => ({ question: q.question, snippet: q.snippet })),
+            related_searches: (serperData.relatedSearches || []).map(s => s.query || s).filter(Boolean),
+            answer_box: serperData.answerBox ? { type: 'overview', answer: serperData.answerBox.answer || serperData.answerBox.snippet || '' } : null
+          };
+          usedFallback = true;
+          console.log('[serp intelligence] Serper fallback successful,', serpData.organic_results.length, 'results');
+        }
+      } catch(serperErr) {
+        console.error('[serp intelligence] Serper fallback also failed:', serperErr.message);
+        return res.status(503).json({ success: false, error: 'SerpAPI: ' + (typeof serpData.error === 'string' ? serpData.error : 'Both SerpAPI and Serper failed. Check your API key.') + (usedFallback ? '' : ' Your key may be expired or for a different service.') });
+      }
     }
 
     const organic = (serpData.organic_results || []).slice(0, 10);
@@ -13829,7 +13895,7 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
     let aiOverviewData = null;
     let relatedSearches = [];
     const searchKw = gscData.keyword || queriesList[0] || original_title || original_slug?.replace(/-/g, ' ');
-    const _serpKey = (req.headers['x-serpapi-key'] || process.env.SERPAPI_KEY || '').trim();
+    const _serpKey = (resolveSerpapiKey(req) || '').trim();
     if (searchKw && _serpKey) {
       try {
         const sr = await fetch('https://google.serper.dev/search', {
@@ -14131,7 +14197,9 @@ Return ONLY valid JSON:
     analysis.voice_search_queries = voiceQueries;
     analysis.top_5_competitors = competitorDeepDive;
     analysis.rewrite_mode = req.body.rewrite_mode || 'complete';
+    analysis.rewrite_modes = req.body.rewrite_modes || [analysis.rewrite_mode];
     analysis.intelligence_context = safeParse(req.body.intelligence_context, null);
+    analysis.manual_competitor_intel = req.body.manual_competitor_intel || null;
 
     const rwR = await pool.query(
       `INSERT INTO content_rewrites (profile_id,original_url,original_slug,original_title,original_html,gsc_impressions,gsc_clicks,gsc_position,gsc_keyword,analysis_data,recommendation,new_slug,new_seed_keyword,status)
@@ -14214,16 +14282,18 @@ Return ONLY valid JSON:
       manual_competitors: competitorData.filter(c => c.url || c.html)
     };
 
+    const rwRow = rwR.rows[0];
     res.json({
       success: true,
-      rewrite: rwR.rows[0],
+      rewrite: rwRow,
+      rewrite_id: rwRow.id,  // ← explicit ID for frontend
       analysis,
       research: researchReport,
       gsc_auto_filled: gscData.autoFilled,
       author_detected: author.detected,
       author_name: author.name,
       competitor_count: competitorData.length,
-      mode: 'smart-analyse' // indicates new targeted-fix mode is available
+      mode: 'smart-analyse'
     });
   } catch(e) {
     console.error('Analyse error:', e);
@@ -14390,16 +14460,22 @@ CONTENT KWALITEIT — STRIKTE REGELS
     if (biRW.email)   schemaObjRW['email'] = biRW.email;
     if (biRW.address) schemaObjRW['address'] = {'@type':'PostalAddress','streetAddress':biRW.address,'addressLocality':biRW.city,'addressCountry':biRW.country};
 
-    const competitorBeatBlock = competitorsManual.length
-      ? `\n═══ CONCURRENTEN DIE JE MOET VERSLAAN ═══\n${competitorsManual.map((c, i) => `
+    // Build competitor block from live data OR manual paste
+    var competitorBeatBlock = '';
+    if (competitorsManual.length) {
+      competitorBeatBlock = `\n═══ CONCURRENTEN DIE JE MOET VERSLAAN (LIVE DATA) ═══\n${competitorsManual.map((c, i) => `
 CONCURRENT ${i+1}: ${c.url} (${c.wordCount} woorden)
 Headings: ${c.headings.slice(0,5).map(h=>h.text).join(' | ')}
 Heeft schema: ${c.hasSchema} | Heeft FAQ: ${c.hasFaq} | Heeft table: ${c.hasTable}
-VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Meer specifiek, meer cited, meer concreet'}`).join('\n')}`
-      : '';
+VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Meer specifiek, meer cited, meer concreet'}`).join('\n')}`;
+    } else if (analysis.manual_competitor_intel) {
+      competitorBeatBlock = `\n═══ CONCURRENTEN DIE JE MOET VERSLAAN (HANDMATIG INGEVOERD) ═══\nDe gebruiker heeft deze concurrentie-informatie handmatig ingevoerd omdat live data niet beschikbaar was. Gebruik deze informatie om de content te optimaliseren:\n\n${analysis.manual_competitor_intel}\n\nVERSLAANSTRATEGIE: Analyseer wat deze concurrenten bieden en zorg dat jouw content specifieker, gedetailleerder en beter geciteerd is.`;
+    } else {
+      competitorBeatBlock = '';
+    }
 
-    // ═══ REWRITE MODE — user-selected targeted rewrite ═══
-    const rewriteMode = analysis.rewrite_mode || 'complete';
+    // ═══ REWRITE MODE — user-selected targeted rewrite(s) ═══
+    const rewriteModes = analysis.rewrite_modes || [analysis.rewrite_mode || 'complete'];
     const modeInstructions = {
       complete: `SCHRIJF DE VOLLEDIGE PAGINA OVER — complete rewrite met ALLE GRAAF/CRAFT/Technical optimalisaties. Behoud structuur waar mogelijk, maar herschrijf ALLE content.`,
       sections: `VOEG SPECIFIEKE SECTIES TOE aan de bestaande content zonder de rest te herschrijven. Voeg toe: FAQ schema met 5-8 vragen, HowTo schema, Direct Answer sectie, Vergelijkingstabel, CTA secties, Interne links. Behoud bestaande content intact.`,
@@ -14408,7 +14484,12 @@ VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Me
       voice: `OPTIMALISEER VOOR VOICE SEARCH en AI Overviews. Gebruik natuurlijke taal, vraag-antwoord format, concise antwoorden (29-41 woorden), speakable schema markup, FAQ-pairs, conversational headings. Focus op "hoe", "wat", "waarom" vragen.`,
       paa: `CREEER EEN PAA (People Also Ask) ANSWER SECTIE. Onderzoek de top 8-10 PAA vragen voor deze keyword. Schrijf korte, directe antwoorden (40-60 woorden) voor elke vraag in FAQ schema format. Gebruik concise, factual language die AI Overviews kan citeren.`
     };
-    const modeBlockRW = `\n═══ REWRITE MODE: ${rewriteMode.toUpperCase()} ═══\n${modeInstructions[rewriteMode] || modeInstructions.complete}\n`;
+    // Build combined mode block for multiple selections
+    var modeBlocks = rewriteModes.map(function(m) { return modeInstructions[m] || modeInstructions.complete; });
+    var modeBlockRW = '\n═══ REWRITE MODE(S): ' + rewriteModes.join(' + ').toUpperCase() + ' ═══\n' + modeBlocks.join('\n\n') + '\n';
+    if (rewriteModes.length > 1) {
+      modeBlockRW += '\nBELANGRIJK: Combineer ALLE geselecteerde modes in ÉÉN coherente pagina. Geen losse secties — alles moet naadloos in elkaar overgaan.\n';
+    }
 
     // ═══ BUILD PROMPT — THREE MODES ═══
     const hasTemplate = rw.html_template && rw.html_template.trim().length > 50;

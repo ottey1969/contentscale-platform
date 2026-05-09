@@ -1179,7 +1179,7 @@ async function cmdScan(url) {
     var followUp = [
       { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run intelligence.'); } },
       { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run meta research.'); } },
-      { label: '✍ Rewrite This Page', fn: function(){ switchView('rewrite'); toast('Switching to Rewrite tab — paste your HTML there',3000,'ok'); } }
+      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } }
     ];
     addActions(followUp);
 
@@ -1365,7 +1365,7 @@ async function cmdMetaResearch(keyword, currentTitle) {
     // Auto-chain: show follow-up action buttons
     var followUp = [
       { label: '🧠 Intelligence: ' + keyword, fn: function(){ executeCommand({cmd:'INTELLIGENCE',args:[keyword,'']}); } },
-      { label: '✍ Rewrite This Page', fn: function(){ switchView('rewrite'); toast('Switching to Rewrite tab',3000,'ok'); } }
+      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } }
     ];
     addActions(followUp);
 
@@ -1540,7 +1540,7 @@ async function cmdIntelligence(keyword, url) {
     // Auto-chain: show follow-up action buttons
     var followUp = [
       { label: '🏷 Meta Research: ' + keyword, fn: function(){ executeCommand({cmd:'META',args:[keyword,'']}); } },
-      { label: '✍ Rewrite This Page', fn: function(){ switchView('rewrite'); toast('Switching to Rewrite tab — paste your HTML there',3000,'ok'); } },
+      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } },
       { label: '📊 Scan: ' + (url || ''), fn: function(){ if(url) executeCommand({cmd:'SCAN',args:[url]}); } }
     ];
     addActions(followUp);
@@ -3654,24 +3654,76 @@ function runPipelineFromModal() {
 }
 
 // ── Rewrite Modal ─────────────────────────────────────────────
-var _rewriteMode = 'complete'; // current mode: complete|sections|meta|compete|voice|paa
+var _rewriteModes = ['complete']; // default selected modes
 
-function setRewriteMode(mode) {
-  _rewriteMode = mode;
-  // Update visual state
-  document.querySelectorAll('.rewrite-mode-btn').forEach(function(btn) {
-    btn.classList.remove('rewrite-mode-active');
-    btn.style.border = '1px solid var(--border)';
-    btn.style.background = 'transparent';
-    btn.style.color = 'var(--text)';
+function getSelectedModes() {
+  var checked = [];
+  document.querySelectorAll('input[name="rewriteMode"]:checked').forEach(function(cb) {
+    checked.push(cb.value);
   });
-  var active = document.getElementById('rewriteMode' + mode.charAt(0).toUpperCase() + mode.slice(1));
-  if (active) {
-    active.classList.add('rewrite-mode-active');
-    active.style.border = '1px solid rgba(124,58,237,.3)';
-    active.style.background = 'rgba(124,58,237,.1)';
-    active.style.color = '#a78bfa';
+  return checked.length ? checked : ['complete'];
+}
+
+function setSelectedModes(modes) {
+  _rewriteModes = modes;
+  document.querySelectorAll('input[name="rewriteMode"]').forEach(function(cb) {
+    cb.checked = modes.indexOf(cb.value) >= 0;
+  });
+}
+
+// Auto-select modes based on scan gaps + position risk
+function autoSelectModes() {
+  var modes = [];
+  var advice = [];
+  var pos = _context.position || 0;
+  var score = parseInt(_context.score) || 0;
+  var recs = _context.recs || [];
+
+  // Position-based risk + recommendation
+  if (pos >= 1 && pos <= 3) {
+    // Position 1-3: high risk for full rewrite, suggest targeted only
+    modes = ['meta', 'voice', 'paa'];
+    advice.push('Position ' + pos + ': You are at the top. AVOID full rewrite. Only optimize meta, voice search, and PAA.');
+  } else if (pos >= 4 && pos <= 10) {
+    // Position 4-10: moderate risk, suggest compete + targeted
+    modes = ['compete', 'voice', 'paa'];
+    advice.push('Position ' + pos + ': Page 1 but not top. Beat competitors + voice search to break into top 3.');
+  } else if (pos >= 11 && pos <= 20) {
+    // Position 11-20: can rewrite safely, suggest compete + sections
+    modes = ['compete', 'sections', 'voice'];
+    advice.push('Position ' + pos + ': Page 2 — safe to improve. Close competitor gaps + add sections.');
+  } else if (pos > 20 || pos === 0) {
+    // Position 20+ or no position: full rewrite acceptable
+    modes = ['complete'];
+    if (score < 70) advice.push('Position ' + (pos || 'unknown') + ' with score ' + score + '/100: Full rewrite recommended.');
+    else { modes = ['compete', 'sections', 'paa']; advice.push('Score is decent (' + score + '/100). Target competitor gaps + PAA instead of full rewrite.'); }
   }
+
+  // Score-based additions
+  if (score < 50) {
+    if (modes.indexOf('complete') < 0) modes.unshift('complete');
+    advice.push('Score below 50: Content needs fundamental improvement.');
+  }
+  if (score < 70 && modes.indexOf('sections') < 0) {
+    modes.push('sections');
+    advice.push('Score below 70: Add FAQ, HowTo, and schema sections.');
+  }
+
+  // Check recommendation types from scan
+  var hasSchemaIssue = recs.some(function(r) { return (r.title + ' ' + r.description).match(/schema|structured|faq/i); });
+  var hasMetaIssue = recs.some(function(r) { return (r.title + ' ' + r.description).match(/meta|title|description/i); });
+  var hasContentGap = recs.some(function(r) { return (r.title + ' ' + r.description).match(/content|word|depth|section/i); });
+
+  if (hasSchemaIssue && modes.indexOf('sections') < 0) { modes.push('sections'); advice.push('Schema/FAQ gaps detected — adding sections recommended.'); }
+  if (hasMetaIssue && modes.indexOf('meta') < 0) { modes.push('meta'); advice.push('Meta title/description issues detected.'); }
+  if (hasContentGap && modes.indexOf('compete') < 0) { modes.push('compete'); advice.push('Content depth gaps vs competitors detected.'); }
+
+  // Always include PAA if not present
+  if (modes.indexOf('paa') < 0) modes.push('paa');
+
+  setSelectedModes(modes);
+  toast('✨ Auto-selected: ' + modes.join(', ') + ' based on position ' + (pos || '—') + ' and score ' + score, 4000, 'ok');
+  return advice;
 }
 
 function openRewriteModal() {
@@ -3680,18 +3732,43 @@ function openRewriteModal() {
   // Pre-fill with context
   document.getElementById('rewriteKeyword').value = _context.keyword || '';
   document.getElementById('rewriteUrl').value = _context.url || '';
-  // Show scan context if available
-  var panel = document.getElementById('rewriteContextPanel');
-  var body = document.getElementById('rewriteContextBody');
-  if (panel && body && _context.score) {
-    panel.style.display = 'block';
-    body.innerHTML =
-      '<div>Score: <b style="color:#e2e8f0;">' + _context.score + '/100</b> · Keyword: <b style="color:#e2e8f0;">' + escHtml(_context.keyword || '—') + '</b></div>' +
-      (_context.lastRewriteHtml ? '<div style="margin-top:4px;color:#34d399;">✓ Previous rewrite available — you can refine it</div>' : '') +
-      (_context.intelBrief ? '<div style="margin-top:4px;color:#fbbf24;">✓ Competitor intelligence loaded</div>' : '');
-  } else if (panel) {
-    panel.style.display = 'none';
+
+  // Show/hide score breakdown panel
+  var scorePanel = document.getElementById('rewriteScorePanel');
+  var riskBanner = document.getElementById('rewriteRiskBanner');
+  var riskText = document.getElementById('rewriteRiskText');
+  var scoreAdvice = document.getElementById('rewriteScoreAdvice');
+  var pos = _context.position || 0;
+  var score = parseInt(_context.score) || 0;
+
+  if (_context.score) {
+    scorePanel.style.display = 'block';
+    document.getElementById('rewriteScoreTotal').textContent = score + '/100';
+    document.getElementById('rScoreGraaf').textContent = _context.graafScore || '—';
+    document.getElementById('rScoreCraft').textContent = _context.craftScore || '—';
+    document.getElementById('rScoreTech').textContent = _context.techScore || '—';
+
+    // Risk warning
+    if (pos >= 1 && pos <= 10) {
+      riskBanner.style.display = 'block';
+      riskText.innerHTML = 'You are at <b>position ' + pos + '</b>. A complete rewrite carries ranking risk. Consider using "Beat Competitors" + "Answer PAA" instead of a full rewrite. Your current page is already ranking — targeted improvements are safer.';
+    } else {
+      riskBanner.style.display = 'none';
+    }
+
+    // Advice
+    var advice = [];
+    if (_context.graafScore && parseInt(_context.graafScore) < 40) advice.push('GRAAF is weak — add expert quotes, statistics, case studies');
+    if (_context.craftScore && parseInt(_context.craftScore) < 20) advice.push('CRAFT needs work — improve readability, add FAQ, sections');
+    if (_context.techScore && parseInt(_context.techScore) < 15) advice.push('Technical SEO gaps — schema markup, meta tags, links');
+    scoreAdvice.innerHTML = advice.length ? '💡 ' + advice.join('<br>💡 ') : 'All pillars look balanced. Consider competitor-focused improvements.';
+  } else {
+    scorePanel.style.display = 'none';
+    riskBanner.style.display = 'none';
   }
+
+  // Default selection
+  setSelectedModes(['complete']);
   modal.style.display = 'flex';
 }
 function closeRewriteModal() {
@@ -3703,12 +3780,13 @@ async function runRewriteFromModal() {
   var html = document.getElementById('rewriteHtml').value.trim();
   if (!keyword) { toast('Enter a target keyword', 'warn'); return; }
   if (!html) { toast('Paste your page HTML', 'warn'); return; }
-  var mode = _rewriteMode || 'complete';
+  var modes = getSelectedModes();
   var modeLabels = { complete: 'Complete Rewrite', sections: 'Add Sections', meta: 'Better Meta', compete: 'Beat Competitors', voice: 'Voice Search', paa: 'Answer PAA' };
+  var modeNames = modes.map(function(m) { return modeLabels[m] || m; }).join(' + ');
   closeRewriteModal();
   // Run the rewrite via agent
-  addAgentMessage('✍ Starting <b>' + modeLabels[mode] + '</b> for "' + escHtml(keyword) + '"…');
-  var prog = addProgress(modeLabels[mode] + ' — analyzing…', 0);
+  addAgentMessage('✍ Starting <b>' + modeNames + '</b> for "' + escHtml(keyword) + '"…');
+  var prog = addProgress(modeNames + ' — analyzing…', 0);
   try {
     setProgress(prog, 30);
     // First scan the existing HTML
@@ -3723,23 +3801,28 @@ async function runRewriteFromModal() {
     _context.keyword = keyword;
     updateContext();
 
-    // If mode is sections, meta, compete, voice, or paa — fetch intelligence first for context
+    // If any non-complete mode selected — fetch intelligence first for context
     var intelContext = null;
-    if (mode !== 'complete') {
+    var needsIntel = modes.some(function(m) { return m !== 'complete'; });
+    if (needsIntel) {
       setProgress(prog, 55);
-      addAgentMessage('🔬 Fetching competitive intelligence for targeted ' + modeLabels[mode] + '…');
+      addAgentMessage('🔬 Fetching competitive intelligence for ' + modeNames + '…');
       try {
         var intel = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
         if (intel && intel.success) {
           intelContext = intel;
           _context.intelBrief = intel.intelligence_brief;
+        } else {
+          addAgentMessage('⚠ Intelligence unavailable: ' + ((intel && intel.error) || 'competitor data unavailable') + '. <b>You can paste competitor data manually</b> in the Rewrite modal under "Competitor Intelligence (optional)" to improve results.');
         }
-      } catch(e) { /* silent fail — proceed without intelligence */ }
+      } catch(e) {
+        addAgentMessage('⚠ Intelligence unavailable (' + e.message + '). <b>You can paste competitor data manually</b> in the Rewrite modal under "Competitor Intelligence (optional)" to improve results.');
+      }
     }
 
-    // STEP 1: Analyse — create a rewrite analysis with mode context
+    // STEP 1: Analyse — create a rewrite analysis with modes context
     setProgress(prog, 65);
-    addAgentMessage('📋 Step 1/2: Analyzing with ' + modeLabels[mode] + ' focus…');
+    addAgentMessage('📋 Step 1/2: Analyzing with ' + modeNames + ' focus…');
     var slug = '';
     try { slug = new URL(url || 'https://example.com').pathname.split('/').filter(Boolean).pop() || '/'; } catch(e) { slug = '/'; }
     var analyseResult = await api('/api/content/analyse-rewrite', 'POST', {
@@ -3749,8 +3832,10 @@ async function runRewriteFromModal() {
       original_title: d.meta_title || '',
       original_html: html,
       gsc_keyword: keyword,
-      rewrite_mode: mode,
-      intelligence_context: intelContext ? JSON.stringify({ competitors: intelContext.competitors, paa: intelContext.people_also_ask, brief: intelContext.intelligence_brief }) : null
+      rewrite_modes: modes,
+      rewrite_mode: modes[0],  // backward compat
+      intelligence_context: intelContext ? JSON.stringify({ competitors: intelContext.competitors, paa: intelContext.people_also_ask, brief: intelContext.intelligence_brief }) : null,
+      manual_competitor_intel: document.getElementById('rewriteCompIntel').value.trim() || null
     });
     if (!analyseResult || !analyseResult.success) throw new Error((analyseResult && analyseResult.error) || 'Analysis failed');
     var rewriteId = analyseResult.rewrite_id;
@@ -3759,7 +3844,7 @@ async function runRewriteFromModal() {
     // STEP 2: Execute — generate the rewritten HTML with mode
     setProgress(prog, 85);
     addAgentMessage('✍ Step 2/2: Writing ' + modeLabels[mode] + '…');
-    var rewriteResult = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', { rewrite_mode: mode });
+    var rewriteResult = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', { rewrite_mode: modes[0], rewrite_modes: modes });
     if (!rewriteResult || !rewriteResult.success) throw new Error((rewriteResult && rewriteResult.error) || 'Rewrite execution failed');
 
     setProgress(prog, 100);
@@ -4837,16 +4922,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Rewrite Modal -->
   <div id="rewriteModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20003;align-items:center;justify-content:center;">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:640px;width:95%;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div style="font-size:15px;font-weight:700;">✍ Rewrite Page</div>
         <button onclick="closeRewriteModal()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button>
       </div>
 
-      <!-- Scan Context Panel -->
-      <div id="rewriteContextPanel" style="display:none;background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:14px;">
-        <div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px;">📊 Last Scan Context</div>
-        <div id="rewriteContextBody" style="font-size:10px;color:#9ca3af;line-height:1.6;"></div>
+      <!-- Risk Warning Banner -->
+      <div id="rewriteRiskBanner" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:2px;">⚠️ Ranking Risk Detected</div>
+        <div id="rewriteRiskText" style="font-size:10px;color:#fca5a5;line-height:1.5;"></div>
+      </div>
+
+      <!-- Score Breakdown Panel -->
+      <div id="rewriteScorePanel" style="display:none;background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:#34d399;">📊 Score Breakdown</div>
+          <div id="rewriteScoreTotal" style="font-size:16px;font-weight:900;color:#e2e8f0;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+          <div style="background:rgba(255,255,255,.03);border-radius:6px;padding:6px;text-align:center;">
+            <div id="rScoreGraaf" style="font-size:14px;font-weight:800;color:#a78bfa;">—</div>
+            <div style="font-size:8px;color:#6b7280;">GRAAF /50</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border-radius:6px;padding:6px;text-align:center;">
+            <div id="rScoreCraft" style="font-size:14px;font-weight:800;color:#38bdf8;">—</div>
+            <div style="font-size:8px;color:#6b7280;">CRAFT /30</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border-radius:6px;padding:6px;text-align:center;">
+            <div id="rScoreTech" style="font-size:14px;font-weight:800;color:#fbbf24;">—</div>
+            <div style="font-size:8px;color:#6b7280;">TECH /20</div>
+          </div>
+        </div>
+        <div id="rewriteScoreAdvice" style="font-size:10px;color:#fbbf24;margin-top:8px;line-height:1.5;"></div>
       </div>
 
       <!-- Inputs -->
@@ -4858,51 +4966,52 @@ document.addEventListener('DOMContentLoaded', function() {
         <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Page URL (for context)</label>
         <input id="rewriteUrl" placeholder="https://newjerseydrainpro.com" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;">
       </div>
-      <div style="margin-bottom:12px;flex:1;">
+      <div style="margin-bottom:10px;flex:1;">
         <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Current HTML *</label>
         <textarea id="rewriteHtml" placeholder="&lt;!DOCTYPE html&gt;... paste your full page HTML here" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:12px;outline:none;font-family:'DM Mono',monospace;min-height:100px;resize:vertical;"></textarea>
       </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;">Competitor Intelligence <span style="color:#fbbf24;">(optional — paste Google SERP results here when live scan fails)</span></label>
+        <textarea id="rewriteCompIntel" placeholder="Paste competitor titles, snippets, and URLs from Google search results here. Example:\n\n1. Elite Rooter — Emergency Drain Cleaning NJ (24/7 Service)\n   snippet: 24/7 emergency drain cleaning across New Jersey. Same-day service. Call now.\n\n2. Canyon Hills Plumbing — Drain Cleaning Services\n   snippet: Professional drain cleaning with hydro jetting. Serving NJ for 20+ years.\n\nThis replaces live intelligence when SerpAPI is unavailable." style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:var(--text);font-size:11px;outline:none;font-family:'DM Mono',monospace;min-height:80px;resize:vertical;"></textarea>
+      </div>
 
-      <!-- Rewrite Mode Selection -->
+      <!-- Multi-Select Mode Checkboxes -->
       <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;">What would you like to do?</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <button onclick="setRewriteMode('complete')" id="rewriteModeComplete" class="rewrite-mode-btn rewrite-mode-active" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.1);color:#a78bfa;text-align:left;">
-            <div style="font-size:14px;margin-bottom:2px;">🔄</div>
-            <div>Complete Rewrite</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">Full page rewrite with GRAAF/CRAFT</div>
-          </button>
-          <button onclick="setRewriteMode('sections')" id="rewriteModeSections" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
-            <div style="font-size:14px;margin-bottom:2px;">➕</div>
-            <div>Add Sections</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">FAQ, Schema, Voice Search, PAA</div>
-          </button>
-          <button onclick="setRewriteMode('meta')" id="rewriteModeMeta" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
-            <div style="font-size:14px;margin-bottom:2px;">🏷</div>
-            <div>Better Meta</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">Title + description optimization</div>
-          </button>
-          <button onclick="setRewriteMode('compete')" id="rewriteModeCompete" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
-            <div style="font-size:14px;margin-bottom:2px;">🎯</div>
-            <div>Beat Competitors</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">Close content gaps vs top 5</div>
-          </button>
-          <button onclick="setRewriteMode('voice')" id="rewriteModeVoice" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
-            <div style="font-size:14px;margin-bottom:2px;">🎙</div>
-            <div>Voice Search</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">AI Overview + natural language</div>
-          </button>
-          <button onclick="setRewriteMode('paa')" id="rewriteModePaa" class="rewrite-mode-btn" style="padding:10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);text-align:left;">
-            <div style="font-size:14px;margin-bottom:2px;">❓</div>
-            <div>Answer PAA</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;">People Also Ask questions</div>
-          </button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <label style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Select what to improve (check multiple)</label>
+          <button onclick="autoSelectModes()" style="font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">✨ Auto-Select from Gaps</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(124,58,237,.2);background:rgba(124,58,237,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="complete" style="margin-top:2px;accent-color:#a78bfa;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">🔄 Complete Rewrite</div><div style="font-size:9px;color:#6b7280;">Full page with GRAAF/CRAFT</div></div>
+          </label>
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(56,189,248,.2);background:rgba(56,189,248,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="sections" style="margin-top:2px;accent-color:#38bdf8;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">➕ Add Sections</div><div style="font-size:9px;color:#6b7280;">FAQ, HowTo, Comparison</div></div>
+          </label>
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(245,158,11,.2);background:rgba(245,158,11,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="meta" style="margin-top:2px;accent-color:#f59e0b;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">🏷 Better Meta</div><div style="font-size:9px;color:#6b7280;">Title + description + Open Graph</div></div>
+          </label>
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="compete" style="margin-top:2px;accent-color:#ef4444;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">🎯 Beat Competitors</div><div style="font-size:9px;color:#6b7280;">Close gaps vs top 5 (live data)</div></div>
+          </label>
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(34,197,94,.2);background:rgba(34,197,94,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="voice" style="margin-top:2px;accent-color:#22c55e;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">🎙 Voice Search</div><div style="font-size:9px;color:#6b7280;">AI Overview + speakable</div></div>
+          </label>
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(168,85,247,.2);background:rgba(168,85,247,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="paa" style="margin-top:2px;accent-color:#a855f7;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">❓ Answer PAA</div><div style="font-size:9px;color:#6b7280;">People Also Ask questions</div></div>
+          </label>
         </div>
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:8px;">
         <button onclick="closeRewriteModal()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
-        <button onclick="runRewriteFromModal()" id="rewriteRunBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">🚀 Execute</button>
+        <button onclick="runRewriteFromModal()" id="rewriteRunBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">🚀 Execute Selected</button>
       </div>
     </div>
   </div>
