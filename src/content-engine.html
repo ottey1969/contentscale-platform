@@ -3730,7 +3730,10 @@ function loadPagesOverview(forceRefresh) {
   var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
   api('/api/tracker/pages' + profileFilter).then(function(d) {
     var pages = d.pages || [];
-    // Merge duplicate URLs — keep the entry with the most data (highest dataScore)
+    // Step 1: Count URLs to detect duplicates BEFORE merging
+    var rawUrlCounts = {};
+    pages.forEach(function(tp) { rawUrlCounts[tp.url] = (rawUrlCounts[tp.url] || 0) + 1; });
+    // Step 2: Merge duplicate URLs — keep the entry with the most data
     var urlMap = {};
     pages.forEach(function(tp) {
       var slug = '';
@@ -3747,7 +3750,8 @@ function loadPagesOverview(forceRefresh) {
         content_changed: snap.content_changed || false,
         last_checked: snap.checked_at || '',
         opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0),
-        // Data score: how much useful data this entry has (higher = better)
+        isDuplicate: (rawUrlCounts[tp.url] || 0) > 1,  // ← flag set BEFORE merge
+        dupCount: rawUrlCounts[tp.url] || 1,          // ← how many raw entries
         _dataScore: (tp.gsc_impressions || 0) + (tp.gsc_clicks || 0) + (tp.keyword ? 10 : 0) + (snap.score ? 20 : 0) + (tp.gsc_position ? 5 : 0)
       };
       var key = tp.url;
@@ -3777,6 +3781,7 @@ function loadPagesOverview(forceRefresh) {
         if (!existing.tracker_id && entry.tracker_id) existing.tracker_id = entry.tracker_id;
         // Recalculate opportunity with merged data
         existing.opportunity = _calcOpportunity(existing.impressions, existing.clicks, existing.position, existing.score);
+        // Preserve duplicate flag (already set from first entry)
       }
     });
     _pagesOverviewData = Object.values(urlMap);
@@ -3901,12 +3906,10 @@ function renderPagesOverview() {
     '<div class="pg-kpi-card"><div class="pg-kpi-val" style="color:#e2e8f0;">' + avgScore + '</div><div class="pg-kpi-label">Avg Score</div></div>';
 
   // Grid
-  // Pre-calculate opportunity ranks and duplicate URLs
+  // Pre-calculate opportunity ranks
   var oppRanks = {};
-  var urlCounts = {};
   var oppSorted = data.slice().sort(function(a, b) { return (b.opportunity || 0) - (a.opportunity || 0); });
   oppSorted.forEach(function(pg, idx) { if ((pg.opportunity || 0) >= 40) oppRanks[pg.url] = idx + 1; });
-  data.forEach(function(pg) { urlCounts[pg.url] = (urlCounts[pg.url] || 0) + 1; });
 
   grid.innerHTML = data.map(function(p, cardIdx) {
     var pos = p.position || 0;
@@ -3925,8 +3928,7 @@ function renderPagesOverview() {
                  oppRank === 3 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:#fbbf24;margin-bottom:8px;font-weight:600;">💡 #3 Priority — ' + oppPct + '</div>' :
                  opp >= 40 ? '<div style="font-size:10px;padding:4px 8px;border-radius:4px;background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.2);color:#94a3b8;margin-bottom:8px;">' + (oppRank ? '#' + oppRank + ' ' : '') + 'Priority — ' + oppPct + '</div>' : '';
 
-    var isDup = (urlCounts[p.url] || 0) > 1;
-    var dupBadge = isDup ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b;margin-bottom:6px;display:inline-block;font-weight:600;cursor:pointer;" onclick="openMergeModal()" title="Click to merge duplicates">🔀 Duplicate — click to merge</div>' : '';
+    var dupBadge = p.isDuplicate ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b;margin-bottom:6px;display:inline-block;font-weight:600;cursor:pointer;" onclick="openMergeModal()" title="Click to merge ' + (p.dupCount || 2) + ' duplicates">🔀 ' + (p.dupCount || 2) + ' Duplicates — click to merge</div>' : '';
 
     return '<div class="pg-card">' +
       '<div class="pg-top">' +
