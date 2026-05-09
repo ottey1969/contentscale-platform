@@ -3305,96 +3305,161 @@ function handlePagesGscFile(input) {
   input.value = '';
 }
 
-// Process both Pages + Queries CSV using shared GSC state
+// Process both Pages + Queries CSV — upload to server, then show preview
 function processPagesGscFiles(files) {
-  var pagesLoaded = 0, queriesLoaded = 0;
-  var pending = files.length;
+  if (!_context.profileId) { toast('Select a profile first', 'err'); return; }
+  var statusEl = document.getElementById('pagesImportStatus');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '⏳ Uploading CSV to server…'; statusEl.style.color = '#fbbf24'; }
+
+  var pagesFile = null, queriesFile = null;
+  var checkPending = files.length;
+
   files.forEach(function(file) {
     var reader = new FileReader();
     reader.onload = function(e) {
       var rows = parseCSV(e.target.result);
-      if (!rows.length) { pending--; return; }
-      var headers = Object.keys(rows[0]).map(function(h) { return h.toLowerCase(); });
-      var isPages   = headers.includes('page') || headers.includes('top pages') || headers.includes('url');
-      var isQueries = headers.includes('query') || headers.includes('top queries') || headers.includes('search query');
-
-      if (isPages) {
-        _gscPages = rows.map(function(r) {
-          var keys = Object.keys(r);
-          return {
-            url:         r[keys.find(function(k){ return /url|page/i.test(k); })] || '',
-            clicks:      parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0),
-            impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0),
-            ctr:         parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')),
-            position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0),
-            keyword:     r[keys.find(function(k){ return /keyword|query/i.test(k); })] || ''
-          };
-        }).filter(function(r){ return r.url && r.url.startsWith('http'); });
-        pagesLoaded = _gscPages.length;
-      }
-      if (isQueries) {
-        _gscQueries = rows.map(function(r) {
-          var keys = Object.keys(r);
-          return {
-            query:       r[keys.find(function(k){ return /query|keyword/i.test(k); })] || '',
-            clicks:      parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0),
-            impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0),
-            ctr:         parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')),
-            position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0)
-          };
-        }).filter(function(r){ return r.query; });
-        queriesLoaded = _gscQueries.length;
-      }
-      pending--;
-      if (pending === 0) {
-        // Sync shared GSC data into pages overview
-        syncGscToPages();
-        // Show status
-        var statusEl = document.getElementById('pagesImportStatus');
-        if (statusEl) {
-          statusEl.style.display = 'block';
-          statusEl.innerHTML = '✓ ' + (pagesLoaded ? pagesLoaded + ' pages' : '') + (pagesLoaded && queriesLoaded ? ' + ' : '') + (queriesLoaded ? queriesLoaded + ' queries' : '') + ' loaded. GSC data is now shared across the system.';
-        }
-        updateGscStatus(); // sidebar status too
-        toast('✓ GSC: ' + (pagesLoaded || 0) + ' pages, ' + (queriesLoaded || 0) + ' queries loaded', 'ok');
-      }
+      var headers = rows.length ? Object.keys(rows[0]).map(function(h) { return h.toLowerCase(); }) : [];
+      var isPages = headers.some(function(h) { return /page|url/i.test(h); });
+      var isQueries = headers.some(function(h) { return /query|keyword/i.test(h); });
+      if (isPages && !isQueries) pagesFile = file;
+      if (isQueries && !isPages) queriesFile = file;
+      if (isPages && isQueries) pagesFile = file; // mixed, treat as pages
+      checkPending--;
+      if (checkPending === 0) uploadGscFiles(pagesFile, queriesFile);
     };
     reader.readAsText(file);
   });
 }
 
-// Push shared _gscPages into _pagesOverviewData + persist to server
-function syncGscToPages() {
-  var added = 0, updated = 0;
-  _gscPages.forEach(function(gsc) {
-    var existing = _pagesOverviewData.find(function(p) { return p.url === gsc.url; });
-    if (existing) {
-      existing.impressions = Math.max(existing.impressions || 0, gsc.impressions);
-      existing.clicks = Math.max(existing.clicks || 0, gsc.clicks);
-      existing.position = gsc.position || existing.position;
-      existing.ctr = gsc.ctr || existing.ctr;
-      existing.keyword = existing.keyword || gsc.keyword;
-      updated++;
-    } else {
-      var slug = '';
-      try { slug = new URL(gsc.url).pathname || '/'; } catch(e) { slug = gsc.url; }
-      _pagesOverviewData.push({
-        url: gsc.url, slug: slug, keyword: gsc.keyword || '',
-        position: gsc.position, impressions: gsc.impressions, clicks: gsc.clicks, ctr: gsc.ctr,
-        score: '', scoreStatus: '', added: new Date().toISOString(), tracker_id: null,
-        profile_id: _context.profileId || (_profile && _profile.id) || null,
-        opportunity: _calcOpportunity(gsc.impressions || 0, gsc.clicks || 0, gsc.position || 0, 0)
-      });
-      added++;
+// Upload CSV files to server, then show preview
+function uploadGscFiles(pagesFile, queriesFile) {
+  var statusEl = document.getElementById('pagesImportStatus');
+  var uploads = [];
+  if (pagesFile) uploads.push(uploadGscFile(pagesFile, 'pages'));
+  if (queriesFile) uploads.push(uploadGscFile(queriesFile, 'queries'));
+
+  Promise.all(uploads).then(function(results) {
+    var totalPages = results.reduce(function(s, r) { return s + (r.type === 'pages' ? r.inserted : 0); }, 0);
+    if (totalPages > 0 && statusEl) {
+      statusEl.innerHTML = '✓ ' + totalPages + ' URLs uploaded. Loading preview…';
+      statusEl.style.color = '#34d399';
     }
+    // Client-side parse for _gscQueries and _gscPages
+    if (queriesFile) {
+      var qReader = new FileReader();
+      qReader.onload = function(e) {
+        var rows = parseCSV(e.target.result);
+        _gscQueries = rows.map(function(r) {
+          var keys = Object.keys(r);
+          return { query: r[keys.find(function(k){ return /query|keyword/i.test(k); })] || '', clicks: parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0), impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0), ctr: parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')), position: parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0) };
+        }).filter(function(r){ return r.query; });
+        updateGscStatus();
+      };
+      qReader.readAsText(queriesFile);
+    }
+    // Show preview for pages
+    setTimeout(function() { showGscPreview(); }, 300);
+  }).catch(function(e) {
+    if (statusEl) { statusEl.innerHTML = '❌ Upload failed: ' + e.message; statusEl.style.color = '#f87171'; }
   });
-  // Auto-assign keywords from queries
-  if (_gscQueries.length) autoAssignPageKeywords();
-  // Cache locally as fallback
-  try { localStorage.setItem('cs_pages_overview_cache', JSON.stringify(_pagesOverviewData)); } catch(e) {}
-  document.getElementById('pagesImportModal').style.display = 'none';
-  renderPagesOverview();
-  toast('✅ ' + added + ' page' + (added !== 1 ? 's' : '') + ' imported to Pages — ' + updated + ' updated. Use "📌 Push to Tracker" to send to Tracker when ready.', 3000, 'ok');
+}
+
+function uploadGscFile(file, type) {
+  return new Promise(function(resolve, reject) {
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('profile_id', _context.profileId);
+    formData.append('type', type);
+    fetch('/api/gsc/upload-csv', { method: 'POST', headers: { 'x-engine-token': _engineToken || '' }, body: formData })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (d.success) resolve({ type: type, inserted: d.inserted || 0 }); else reject(new Error(d.error)); })
+      .catch(function(e) { reject(e); });
+  });
+}
+
+// ── GSC Preview: show unimported URLs with checkboxes ─────────
+function showGscPreview() {
+  if (!_context.profileId) { toast('Select a profile first', 'err'); return; }
+  var modal = document.getElementById('pagesImportModal');
+  if (modal) modal.style.display = 'none';
+  var previewModal = document.getElementById('gscPreviewModal');
+  var list = document.getElementById('gscPreviewList');
+  var countEl = document.getElementById('gscPreviewCount');
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Loading preview…</div>';
+  previewModal.style.display = 'flex';
+  _gscPreviewUrls = []; // global for confirm
+
+  api('/api/gsc/preview?profile_id=' + _context.profileId).then(function(d) {
+    if (!d.success) { list.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(d.error) + '</div>'; return; }
+    if (!d.urls || !d.urls.length) {
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">✅ All GSC URLs are already imported.<br><br>No new URLs to add.</div>';
+      countEl.textContent = '0 selected';
+      return;
+    }
+    _gscPreviewUrls = d.urls;
+    renderGscPreviewList();
+  }).catch(function(e) {
+    list.innerHTML = '<div style="color:#f87171;padding:20px;">Failed to load preview: ' + escHtml(e.message) + '</div>';
+  });
+}
+
+function renderGscPreviewList() {
+  var list = document.getElementById('gscPreviewList');
+  var countEl = document.getElementById('gscPreviewCount');
+  var html = '<div style="display:flex;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);font-weight:700;">' +
+    '<input type="checkbox" id="gscPreviewHeader" onchange="gscPreviewSelectAll(this.checked)" style="margin-right:8px;" checked>' +
+    '<span style="flex:1;">URL</span><span style="width:55px;text-align:right;">Clicks</span><span style="width:65px;text-align:right;margin-left:8px;">Impressions</span><span style="width:45px;text-align:right;margin-left:8px;">Pos</span></div>';
+  var selectedCount = 0;
+  _gscPreviewUrls.forEach(function(u, idx) {
+    var checked = u._selected !== false ? 'checked' : '';
+    if (u._selected !== false) selectedCount++;
+    var urlShort = u.url.replace(/^https?:\/\/[^\/]+/, '');
+    html += '<div style="display:flex;align-items:center;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;" onmouseenter="this.style.background=\'rgba(124,58,237,.05)\'" onmouseleave="this.style.background=\'\'">' +
+      '<input type="checkbox" data-gsc-idx="' + idx + '" onchange="gscPreviewToggle(' + idx + ')" style="margin-right:8px;flex-shrink:0;" ' + checked + '>' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e2e8f0;" title="' + escHtml(u.url) + '">' + escHtml(urlShort || u.url) + '</span>' +
+      '<span style="width:55px;text-align:right;color:#34d399;font-family:DM Mono,monospace;font-size:10px;">' + (parseInt(u.clicks)||0).toLocaleString() + '</span>' +
+      '<span style="width:65px;text-align:right;color:#a78bfa;font-family:DM Mono,monospace;font-size:10px;margin-left:8px;">' + (parseInt(u.impressions)||0).toLocaleString() + '</span>' +
+      '<span style="width:45px;text-align:right;color:#fbbf24;font-family:DM Mono,monospace;font-size:10px;margin-left:8px;">' + (parseFloat(u.position)||'—') + '</span></div>';
+  });
+  list.innerHTML = html;
+  countEl.textContent = selectedCount + ' / ' + _gscPreviewUrls.length + ' selected';
+  document.getElementById('gscPreviewHeader').checked = selectedCount === _gscPreviewUrls.length;
+}
+
+function gscPreviewToggle(idx) {
+  if (_gscPreviewUrls[idx]) _gscPreviewUrls[idx]._selected = !_gscPreviewUrls[idx]._selected;
+  renderGscPreviewList();
+}
+
+function gscPreviewSelectAll(select) {
+  _gscPreviewUrls.forEach(function(u) { u._selected = select; });
+  renderGscPreviewList();
+}
+
+function closeGscPreview() {
+  document.getElementById('gscPreviewModal').style.display = 'none';
+  _gscPreviewUrls = [];
+}
+
+function confirmGscImport() {
+  var selected = _gscPreviewUrls.filter(function(u) { return u._selected !== false; }).map(function(u) { return u.url; });
+  if (!selected.length) { toast('Select at least one URL', 'warn'); return; }
+  var btn = document.getElementById('gscConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Importing ' + selected.length + '…';
+  api('/api/gsc/confirm-import', 'POST', { profile_id: _context.profileId, urls: selected })
+    .then(function(d) {
+      if (d.success) {
+        toast('✅ Imported ' + d.imported + ' pages' + (d.skipped ? ' (' + d.skipped + ' already exist)' : ''), 'ok');
+        closeGscPreview();
+        loadPagesOverview(true);
+      } else {
+        toast('Error: ' + (d.error || 'Import failed'), 'err');
+      }
+    }).catch(function(e) {
+      toast('Import failed: ' + e.message, 'err');
+    }).finally(function() {
+      btn.disabled = false; btn.textContent = 'Import Selected';
+    });
 }
 
 function autoAssignPageKeywords() {
@@ -3432,6 +3497,9 @@ function loadPagesOverview(forceRefresh) {
         score: snap.score || tp.last_graaf_score || '', scoreStatus: tp.status || '',
         added: tp.created_at || new Date().toISOString(),
         tracker_id: tp.id, profile_id: tp.profile_id,
+        import_batch: tp.import_batch || '',
+        content_changed: snap.content_changed || false,
+        last_checked: snap.checked_at || '',
         opportunity: _calcOpportunity(tp.gsc_impressions || 0, tp.gsc_clicks || 0, tp.gsc_position || 0, snap.score || 0)
       };
     });
@@ -3443,6 +3511,29 @@ function loadPagesOverview(forceRefresh) {
       if (saved) { _pagesOverviewData = JSON.parse(saved); renderPagesOverview(); }
     } catch(e2) {}
   });
+}
+
+// ── Reset: delete all pages for the current profile ───────────
+async function clearAllPages() {
+  if (!_context.profileId) { toast('Select a profile first', 'err'); return; }
+  var profileName = (_profile && _profile.name) || 'this profile';
+  if (!confirm('🗑️ RESET ALL PAGES for "' + profileName + '"?\n\nThis will delete ALL ' + (_filteredPageCount || 0) + ' pages from the Pages tab.\nThis cannot be undone.\n\nClick OK to confirm.')) return;
+  var btn = document.getElementById('pagesClearBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+  try {
+    var d = await api('/api/tracker/pages', 'DELETE', { profile_id: _context.profileId, confirm: 'DELETE_ALL' });
+    if (d.success) {
+      toast('✅ Deleted ' + (d.deleted || 0) + ' pages', 'ok');
+      _pagesOverviewData = [];
+      renderPagesOverview();
+    } else {
+      toast('Error: ' + (d.error || 'Delete failed'), 'err');
+    }
+  } catch(e) {
+    toast('Reset failed: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Reset All'; }
+  }
 }
 
 // Opportunity score: 0-100. High = work on this FIRST.
@@ -3561,6 +3652,8 @@ function renderPagesOverview() {
         '<span class="pg-badge ' + posClass + '">' + posLabel + '</span>' +
       '</div>' +
       (p.keyword ? '<div class="pg-kw">🔑 ' + escHtml(p.keyword) + '</div>' : '') +
+      (p.import_batch ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.15);color:#a78bfa;margin-bottom:6px;display:inline-block;">📥 GSC Import</div>' : '') +
+      (p.content_changed ? '<div style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(245,109,0,.08);border:1px solid rgba(245,109,0,.15);color:#f56d00;margin-bottom:6px;display:inline-block;margin-left:4px;font-weight:600;">⚡ Content Changed</div>' : '') +
       oppBadge +
       '<div class="pg-metrics">' +
         '<div class="pg-metric"><div class="pg-metric-val" style="color:#a78bfa;">' + (p.impressions || 0).toLocaleString() + '</div><div class="pg-metric-label">Impressions</div></div>' +
@@ -4094,6 +4187,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <button onclick="loadPagesOverview(true)" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-family:'DM Mono',monospace;">↺ Refresh</button>
       <button onclick="openAddUrlModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#a78bfa;">+ Add URL</button>
       <button onclick="openPagesImportModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
+      <button onclick="clearAllPages()" id="pagesClearBtn" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;margin-left:4px;" title="Remove all pages for this profile">🗑 Reset All</button>
     </div>
   </div>
 
@@ -4135,6 +4229,27 @@ document.addEventListener('DOMContentLoaded', function() {
     <div id="pagesImportStatus" style="display:none;margin-top:12px;font-size:11px;padding:10px;border-radius:6px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#34d399;"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:14px;">
       <button onclick="document.getElementById('pagesImportModal').style.display='none'" style="padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- GSC Preview Modal (step 2: select which URLs to import) -->
+<div id="gscPreviewModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:20001;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:600px;width:95%;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:15px;font-weight:700;">👀 Preview Import</div>
+      <button onclick="closeGscPreview()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Select which URLs to import into Pages. Already-imported URLs are hidden. GSC data (clicks, impressions, position) will be attached.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <button onclick="gscPreviewSelectAll(true)" style="padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.1);color:#a78bfa;">Select All</button>
+      <button onclick="gscPreviewSelectAll(false)" style="padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Deselect All</button>
+      <div id="gscPreviewCount" style="font-size:11px;color:var(--muted);margin-left:auto;align-self:center;">0 selected</div>
+    </div>
+    <div id="gscPreviewList" style="flex:1;overflow-y:auto;max-height:50vh;border:1px solid var(--border);border-radius:8px;padding:8px;"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+      <button onclick="closeGscPreview()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
+      <button onclick="confirmGscImport()" id="gscConfirmBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Import Selected</button>
     </div>
   </div>
 </div>

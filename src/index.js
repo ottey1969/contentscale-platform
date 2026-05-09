@@ -670,6 +670,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_page_hash VARCHAR(64)`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_graaf_score INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS fetch_reliable BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -696,6 +697,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    // GRAAF score stability columns
    await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS graaf_breakdown JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS graaf_recommendations JSONB`).catch(()=>{});
+   // Content change detection
+   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS content_changed BOOLEAN DEFAULT FALSE`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
      id SERIAL PRIMARY KEY,
@@ -9859,13 +9862,102 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
       }
     }
 
-    res.json({ success: true, inserted, total: rows.length, type });
+    res.json({ success: true, inserted, total: rows.length, type, preview_ready: type === 'pages' && rows.length > 0 });
   } catch (error) {
     console.error('❌ GSC CSV upload error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
-  
+
+// ── GSC PREVIEW: show uploaded URLs not yet in tracker_pages ────────────────
+app.get('/api/gsc/preview', verifyEngineAccess, async (req, res) => {
+  try {
+    const profileId = req.query.profile_id;
+    if (!profileId) return res.status(400).json({ success: false, error: 'profile_id required' });
+    // Get latest GSC pages for this profile that aren't in tracker_pages yet
+    const gscR = await pool.query(
+      `SELECT g.url, g.clicks, g.impressions, g.ctr, g.position, g.uploaded_at
+       FROM gsc_pages g
+       WHERE g.profile_id = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM tracker_pages t
+         WHERE t.profile_id = $1 AND t.url = g.url
+       )
+       ORDER BY g.clicks DESC, g.impressions DESC
+       LIMIT 200`,
+      [profileId]
+    );
+    // Also get recently uploaded ones that ARE already in tracker (for dedup info)
+    const existingR = await pool.query(
+      `SELECT g.url FROM gsc_pages g
+       JOIN tracker_pages t ON t.profile_id = g.profile_id AND t.url = g.url
+       WHERE g.profile_id = $1
+       LIMIT 1`,
+      [profileId]
+    );
+    res.json({
+      success: true,
+      urls: gscR.rows,
+      already_imported_count: existingR.rows.length,
+      total_available: gscR.rows.length
+    });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── GSC CONFIRM IMPORT: import selected URLs into tracker_pages ─────────────
+app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
+  try {
+    const { profile_id, urls, batch_label } = req.body;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+    if (!Array.isArray(urls) || !urls.length) return res.status(400).json({ success: false, error: 'urls array required' });
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    const batchId = batch_label || ('gsc_' + Date.now());
+    let imported = 0;
+    let skipped = 0;
+    const results = [];
+    for (const url of urls) {
+      try {
+        // Get GSC data for this URL
+        const gscR = await pool.query(
+          'SELECT clicks, impressions, ctr, position FROM gsc_pages WHERE profile_id = $1 AND url = $2',
+          [profile_id, url]
+        );
+        const gsc = gscR.rows[0] || {};
+        const urlObj = new URL(url);
+        const slug = urlObj.pathname.split('/').filter(Boolean).pop() || '/';
+        const r = await pool.query(
+          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, import_batch, is_active)
+           VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7,$8,$9,$10,$11,TRUE)
+           ON CONFLICT DO NOTHING
+           RETURNING id`,
+          [codeId, profile_id, url, slug, null, '3days',
+           parseInt(gsc.impressions) || null,
+           parseInt(gsc.clicks) || null,
+           parseFloat(gsc.position) || null,
+           parseFloat(gsc.ctr) || null,
+           batchId]
+        );
+        if (r.rows.length) {
+          imported++;
+          results.push({ url, id: r.rows[0].id, status: 'imported' });
+        } else {
+          skipped++;
+          results.push({ url, status: 'already_exists' });
+        }
+      } catch(e) {
+        skipped++;
+        results.push({ url, status: 'error', error: e.message });
+      }
+    }
+    res.json({ success: true, imported, skipped, batch_id: batchId, results });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── COMPETITOR ANALYSIS via SerpAPI ─────────────────────────────────────────
 // Fetches live top 5 Google results + People Also Ask for competitive gap analysis
 app.get('/api/serp/competitors', verifyEngineAccess, async (req, res) => {
@@ -23813,6 +23905,30 @@ app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// Bulk delete: clear ALL pages for a profile (with confirmation required)
+app.delete('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+  try {
+    const { profile_id, confirm } = req.body;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+    if (confirm !== 'DELETE_ALL') return res.status(400).json({ success: false, error: 'confirm must be DELETE_ALL' });
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    // Count what will be deleted
+    const countR = codeId
+      ? await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId])
+      : await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE profile_id=$1', [profile_id]);
+    const count = parseInt(countR.rows[0].count) || 0;
+    if (count === 0) return res.json({ success: true, deleted: 0, message: 'No pages to delete' });
+    // Delete
+    if (codeId) {
+      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId]);
+    } else {
+      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1', [profile_id]);
+    }
+    res.json({ success: true, deleted: count });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ── Snapshots & change history for a page ───────────────────────────────────
 
 app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res) => {
@@ -25381,19 +25497,27 @@ Zero generic advice. Skip anything our content already clearly has.`;
   }
 
   // 6. Save snapshot
+  // Content change detection: did hash change since last check?
+  let contentChanged = false;
+  if (effectiveHash && page.last_page_hash) {
+    contentChanged = effectiveHash !== page.last_page_hash;
+  }
+  snapshot.content_changed = contentChanged;
+
   _trSetStep(pageId, 'save', 'running', 'Saving results to database…');
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
-       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
      snapshot.recommendations || null, snapshot.html_hash, snapshot.score,
      snapshot.graaf_breakdown || null,
-     snapshot.graaf_recommendations || null]
+     snapshot.graaf_recommendations || null,
+     contentChanged]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
