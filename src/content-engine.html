@@ -3643,46 +3643,63 @@ async function runRewriteFromModal() {
     _context.url = url || '';
     _context.keyword = keyword;
     updateContext();
-    // Now call the rewrite API
-    var rewriteResult = await api('/api/content/rewrite', 'POST', {
-      html: html,
-      url: url || '',
-      keyword: keyword,
+    // STEP 1: Analyse — create a rewrite analysis
+    setProgress(prog, 65);
+    addAgentMessage('📋 Step 1/2: Analyzing content and competitors…');
+    var slug = '';
+    try { slug = new URL(url || 'https://example.com').pathname.split('/').filter(Boolean).pop() || '/'; } catch(e) { slug = '/'; }
+    var analyseResult = await api('/api/content/analyse-rewrite', 'POST', {
       profile_id: _context.profileId || null,
-      scan_result: d
+      original_url: url || '',
+      original_slug: slug,
+      original_title: d.meta_title || '',
+      original_html: html,
+      gsc_keyword: keyword
     });
+    if (!analyseResult || !analyseResult.success) throw new Error((analyseResult && analyseResult.error) || 'Analysis failed');
+    var rewriteId = analyseResult.rewrite_id;
+    if (!rewriteId) throw new Error('No rewrite ID returned from analysis');
+
+    // STEP 2: Execute — generate the rewritten HTML
+    setProgress(prog, 85);
+    addAgentMessage('✍ Step 2/2: Writing optimized content…');
+    var rewriteResult = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', {});
+    if (!rewriteResult || !rewriteResult.success) throw new Error((rewriteResult && rewriteResult.error) || 'Rewrite execution failed');
+
     setProgress(prog, 100);
     removeProgress(prog);
-    if (rewriteResult && rewriteResult.success && rewriteResult.html) {
-      // Show rewrite result in chat
-      var grade = rewriteResult.grade || (rewriteResult.score >= 80 ? 'A' : rewriteResult.score >= 60 ? 'B' : 'C');
-      var scoreColor = rewriteResult.score >= 80 ? '#34d399' : rewriteResult.score >= 60 ? '#fbbf24' : '#f87171';
-      var htmlPreview = '<div style="background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin:12px 0;">' +
-        '<div style="font-size:14px;font-weight:800;background:linear-gradient(90deg,#7c3aed,#f56d00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;">✍ Rewrite Complete</div>' +
-        '<div style="display:flex;gap:16px;margin-bottom:12px;">' +
-          '<div style="text-align:center;"><div style="font-size:28px;font-weight:900;color:' + scoreColor + ';">' + (rewriteResult.score || '?') + '</div><div style="font-size:8px;color:#6b7280;">/100 · Grade ' + grade + '</div></div>' +
-          '<div style="flex:1;">' +
-            '<div style="font-size:10px;color:#e2e8f0;margin-bottom:4px;"><b>Title:</b> ' + escHtml(rewriteResult.title || keyword) + '</div>' +
-            '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;"><b>Meta:</b> ' + escHtml(rewriteResult.meta_description || '') + '</div>' +
-            '<div style="font-size:10px;color:#fbbf24;"><b>Words:</b> ' + (rewriteResult.word_count || 'N/A') + '</div>' +
-          '</div>' +
+
+    // Store context
+    _context.currentRewriteId = rewriteId;
+    _context.lastRewriteHtml = rewriteResult.html;
+
+    // Show rewrite result in chat
+    var graafScore = rewriteResult.graaf_score || d.score || 0;
+    var grade = graafScore >= 90 ? 'A+' : graafScore >= 80 ? 'A' : graafScore >= 70 ? 'B' : graafScore >= 60 ? 'C' : 'D';
+    var scoreColor = graafScore >= 80 ? '#34d399' : graafScore >= 60 ? '#fbbf24' : '#f87171';
+    var resultHtml = '<div style="background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin:12px 0;">' +
+      '<div style="font-size:14px;font-weight:800;background:linear-gradient(90deg,#7c3aed,#f56d00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;">✍ Rewrite Complete</div>' +
+      '<div style="display:flex;gap:16px;margin-bottom:12px;">' +
+        '<div style="text-align:center;"><div style="font-size:28px;font-weight:900;color:' + scoreColor + ';">' + (graafScore || '?') + '</div><div style="font-size:8px;color:#6b7280;">/100 · Grade ' + grade + '</div></div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:10px;color:#e2e8f0;margin-bottom:4px;"><b>Title:</b> ' + escHtml(rewriteResult.title || keyword) + '</div>' +
+          '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;"><b>Words:</b> ' + (rewriteResult.word_count || 'N/A').toLocaleString() + '</div>' +
+          '<div style="font-size:10px;color:#fbbf24;"><b>Model:</b> ' + escHtml(rewriteResult.model_used || 'Gemini') + '</div>' +
         '</div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-          '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(rewriteResult.html) + '\')).then(function(){toast(\'✓ HTML copied\',2000,\'ok\')})" style="font-size:9px;padding:5px 12px;border-radius:4px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:700;">📋 Copy Full HTML</button>' +
-          '<button onclick="navigator.clipboard.writeText(decodeURIComponent(\'' + encodeURIComponent(rewriteResult.title || '') + '\')).then(function(){toast(\'✓ Title copied\',2000,\'ok\')})" style="font-size:9px;padding:5px 12px;border-radius:4px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.1);color:#a78bfa;cursor:pointer;">🏷 Copy Title</button>' +
-        '</div>' +
-        '<details style="margin-top:10px;"><summary style="font-size:10px;color:var(--muted);cursor:pointer;">Preview content</summary>' +
-        '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:10px;color:#e2e8f0;max-height:300px;overflow-y:auto;margin-top:6px;line-height:1.5;">' + escHtml(rewriteResult.html.substring(0, 2000)) + (rewriteResult.html.length > 2000 ? '…' : '') + '</div></details>' +
-        '</div>';
-      var msgDiv = document.createElement('div');
-      msgDiv.className = 'msg agent';
-      msgDiv.innerHTML = htmlPreview;
-      var msgs = document.getElementById('messages');
-      if (msgs) msgs.appendChild(msgDiv);
-      scrollBottom();
-    } else {
-      addAgentMessage('❌ Rewrite failed: ' + ((rewriteResult && rewriteResult.error) || 'Unknown error'));
-    }
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button onclick="copyRewriteHtml()" style="font-size:9px;padding:5px 12px;border-radius:4px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:700;">📋 Copy Full HTML</button>' +
+        '<button onclick="downloadRewriteHtml()" style="font-size:9px;padding:5px 12px;border-radius:4px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.1);color:#38bdf8;cursor:pointer;">⬇ Download HTML</button>' +
+        '<button onclick="showFullRewriteHtml()" style="font-size:9px;padding:5px 12px;border-radius:4px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;">👁 Show Full HTML</button>' +
+      '</div>' +
+      '</div>';
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'msg agent';
+    msgDiv.innerHTML = resultHtml;
+    var msgs = document.getElementById('messages');
+    if (msgs) msgs.appendChild(msgDiv);
+    scrollBottom();
+    toast('✍ Rewrite complete — Grade ' + grade + ' · ' + (rewriteResult.word_count || 0).toLocaleString() + ' words', 3000, 'ok');
   } catch(e) {
     removeProgress(prog);
     addAgentMessage('❌ Rewrite error: ' + e.message);
