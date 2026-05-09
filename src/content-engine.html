@@ -2771,7 +2771,7 @@ document.addEventListener('click', function(e) {
 // ════════════════════════════════════════════════════════════════
 var _pagesOverviewData = []; // {url, slug, keyword, position, impressions, clicks, ctr, score, status}
 var _filteredPageCount = 0;  // pages after profile filter
-var _pagesGscQueryMap = {};  // keyword → {pos, impr, ctr}
+
 
 function openPagesImportModal() {
   document.getElementById('pagesImportModal').style.display = 'flex';
@@ -2795,18 +2795,21 @@ function submitAddUrl() {
   if (!url.startsWith('http')) url = 'https://' + url;
   // Validate URL
   try { new URL(url); } catch(e) { toast('Invalid URL format', 2000, 'warn'); return; }
-  // Add to tracker via API
-  api('/api/tracker/pages', 'POST', { url: url, keyword: keyword || null }).then(function(d) {
-    if (d.success || d.id) {
-      toast('✅ URL added: ' + url, 3000, 'ok');
-      closeAddUrlModal();
-      loadPagesOverview();
-    } else {
-      toast('Error: ' + (d.error || 'Failed to add URL'), 3000, 'warn');
-    }
-  }).catch(function(e) {
-    toast('Failed to add URL: ' + (e.message || ''), 3000, 'warn');
+  // Add to Pages workspace ONLY (not Tracker — user pushes to Tracker manually)
+  var slug = '';
+  try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
+  if (_pagesOverviewData.find(function(p) { return p.url === url; })) {
+    toast('URL already in Pages', 2000, 'warn'); return;
+  }
+  _pagesOverviewData.push({
+    url: url, slug: slug, keyword: keyword || '', position: 0, impressions: 0,
+    clicks: 0, ctr: 0, score: '', scoreStatus: '', added: new Date().toISOString(),
+    tracker_id: null, profile_id: _context.profileId || (_profile && _profile.id) || null,
+    opportunity: 0
   });
+  renderPagesOverview();
+  toast('✅ URL added to Pages: ' + url, 3000, 'ok');
+  closeAddUrlModal();
 }
 
 function handlePagesGscDrop(e) {
@@ -2905,29 +2908,15 @@ function syncGscToPages() {
   });
   // Auto-assign keywords from queries
   if (_gscQueries.length) autoAssignPageKeywords();
-  // Persist new pages to server
-  _pagesOverviewData.forEach(function(p) {
-    if (p.tracker_id) return;
-    api('/api/tracker/pages', 'POST', {
-      url: p.url, keyword: p.keyword, gsc_position: p.position,
-      gsc_impressions: p.impressions, gsc_clicks: p.clicks, gsc_ctr: p.ctr
-    }).then(function(r) {
-      if (r.id) p.tracker_id = r.id;
-      }).catch(function(){});
-    });
-    // Cache locally as fallback
-    try { localStorage.setItem('cs_pages_overview_cache', JSON.stringify(_pagesOverviewData)); } catch(e) {}
-    document.getElementById('pagesImportModal').style.display = 'none';
-    renderPagesOverview();
-    // Also refresh Tracker data
-    _trPages = [];
-    setTimeout(function() { loadTrackerPages(); }, 500);
-    toast('✅ ' + added + ' pages imported & synced to Tracker', 3000, 'ok');
+  // Cache locally as fallback
+  try { localStorage.setItem('cs_pages_overview_cache', JSON.stringify(_pagesOverviewData)); } catch(e) {}
+  document.getElementById('pagesImportModal').style.display = 'none';
+  renderPagesOverview();
+  toast('✅ ' + added + ' page' + (added !== 1 ? 's' : '') + ' imported to Pages — ' + updated + ' updated. Use "📌 Push to Tracker" to send to Tracker when ready.', 3000, 'ok');
 }
 
 function autoAssignPageKeywords() {
-  var queries = Object.entries(_pagesGscQueryMap);
-  if (!queries.length) return;
+  if (!_gscQueries.length) return;
   var assigned = 0;
   _pagesOverviewData.forEach(function(p) {
     if (p.keyword) return;
@@ -2935,14 +2924,11 @@ function autoAssignPageKeywords() {
     try { urlPath = new URL(p.url).pathname.toLowerCase().replace(/[-_\/]/g, ' ').trim(); } catch(e) { urlPath = p.url.toLowerCase(); }
     var urlWords = urlPath.split(/\s+/).filter(function(w) { return w.length > 2; });
     var best = null, bestScore = -1;
-    queries.forEach(function(entry) {
-      var q = entry[0].toLowerCase();
-      var data = entry[1];
-      var pos = typeof data === 'object' ? data.pos : data;
-      var impr = typeof data === 'object' ? data.impr : 0;
-      var matches = urlWords.filter(function(w) { return q.includes(w); }).length;
-      var score = (matches * 50) + Math.min(impr / 100, 20) + Math.max(0, 50 - pos);
-      if (score > bestScore) { bestScore = score; best = entry[0]; }
+    _gscQueries.forEach(function(q) {
+      var qLower = q.query.toLowerCase();
+      var matches = urlWords.filter(function(w) { return qLower.includes(w); }).length;
+      var score = (matches * 50) + Math.min(q.impressions / 100, 20) + Math.max(0, 50 - Number(q.position));
+      if (score > bestScore) { bestScore = score; best = q.query; }
     });
     if (best) { p.keyword = best; assigned++; }
   });
