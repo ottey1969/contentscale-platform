@@ -15065,20 +15065,25 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
 // ═══════════════════════════════════════════════════════════════════════
 // TARGETED FIX — apply specific improvements only (NOT full rewrite)
 // ═══════════════════════════════════════════════════════════════════════
-app.post('/api/content/targeted-fix/:rewriteId', verifyEngineAccess, requireCredits('targeted-fix'), async (req, res) => {
+app.post('/api/content/targeted-fix/:rewriteId', verifyEngineAccess, requireCredits('targeted-fix'), asyncHandler(async (req, res) => {
   const { fixes = [] } = req.body; // e.g. ["direct_answer","paa_improve","schema_add"]
   const FIX_TYPES = ['direct_answer','paa_improve','schema_add','cta_strengthen','voice_optimize','title_meta','faq_enhance','stats_add','internal_links','image_alt','opening_hours'];
-  try {
-    const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
-    if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
-    const rw = rwR.rows[0];
-    const analysis = (() => { try { return JSON.parse(rw.analysis_data||'{}'); } catch(e) { return {}; } })();
-    const currentHtml = rw.current_content_full || rw.original_content || '';
-    const claudeKey = process.env.CLAUDE_API_KEY;
-    if (!claudeKey) return res.status(500).json({ success: false, error: 'CLAUDE_API_KEY not set' });
+  const rwR = await pool.query(`SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`, [req.params.rewriteId]);
+  if (!rwR.rows.length) return res.status(404).json({ success: false, error: 'Rewrite not found' });
+  const rw = rwR.rows[0];
+  const analysis = (() => { try { return JSON.parse(rw.analysis_data||'{}'); } catch(e) { return {}; } })();
+  const currentHtml = rw.current_content_full || rw.original_content || '';
 
-    // Validate fix types
-    const validFixes = fixes.filter(f => FIX_TYPES.includes(f));
+  // Claude primary → Gemini fallback (resolveClaudeKey checks x-claude-key header + ANTHROPIC_API_KEY env)
+  const claudeKey = resolveClaudeKey(req);
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const useGemini = !claudeKey;
+  if (useGemini && !geminiKey) {
+    return res.status(500).json({ success: false, error: 'No AI API key available. Add ANTHROPIC_API_KEY (Claude) or GEMINI_API_KEY.' });
+  }
+
+  // Validate fix types
+  const validFixes = fixes.filter(f => FIX_TYPES.includes(f));
     if (!validFixes.length) return res.status(400).json({ success: false, error: 'No valid fix types. Choose from: ' + FIX_TYPES.join(', ') });
 
     // ═══ Build targeted prompts per fix type ═══
@@ -15201,13 +15206,27 @@ INSTRUCTIONS:
 
     const systemPrompt = `You are a surgical HTML editor. You apply ONLY the specific fixes requested. You never rewrite whole sections. You preserve all existing HTML structure, CSS, images, and content. You return complete valid HTML.`;
 
+    // ═══ Call AI for targeted fixes (Claude → Gemini fallback) ═══
     let htmlContent = '';
-    let costInfo = {};
+    let modelUsed = '';
     try {
-      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 16000, claudeKey, 'claude-sonnet-4-20250514');
+      if (!useGemini) {
+        htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 16000, claudeKey, 'claude-sonnet-4-20250514');
+        modelUsed = 'claude-sonnet-4-targeted';
+      } else {
+        const gemResult = await callGeminiWithFallback(geminiKey, {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 65536 }
+        });
+        if (!gemResult.ok) throw new Error('Gemini: ' + (gemResult.errorMessage || gemResult.status));
+        htmlContent = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        htmlContent = htmlContent.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
+        modelUsed = gemResult.modelUsed || 'gemini-2.5-flash';
+      }
     } catch (err) {
-      console.warn('[targeted-fix] Claude failed:', err.message);
-      return res.status(500).json({ success: false, error: 'Claude API failed: ' + err.message });
+      console.warn('[targeted-fix] AI failed:', err.message);
+      return res.status(502).json({ success: false, error: (useGemini ? 'Gemini' : 'Claude') + ' API failed: ' + err.message });
     }
 
     // Basic validation
@@ -15217,7 +15236,7 @@ INSTRUCTIONS:
     const appliedFixesStr = validFixes.join(',');
     await pool.query(
       `UPDATE content_rewrites SET rewritten_content=$1, rewritten_at=NOW(), rewrite_cost=$2, rewrite_model=$3, status='targeted_fix_applied', graaf_recs=$4 WHERE id=$5`,
-      [htmlContent, JSON.stringify(costInfo), 'claude-sonnet-4-targeted', `[Targeted Fixes Applied: ${appliedFixesStr}]`, req.params.rewriteId]
+      [htmlContent, JSON.stringify({ model: modelUsed }), modelUsed, `[Targeted Fixes Applied: ${appliedFixesStr}]`, req.params.rewriteId]
     );
 
     // Create snapshot
@@ -15243,12 +15262,7 @@ INSTRUCTIONS:
       html_full: htmlContent,
       message: `Targeted fixes applied: ${appliedFixesStr}. Review the HTML and publish when ready.`
     });
-
-  } catch(e) {
-    console.error('Targeted fix error:', e);
-    res.status(500).json({ success: false, error: e.message, where: 'targeted-fix' });
-  }
-});
+}));
 
 app.get('/api/content/rewrites/:profileId', verifyEngineAccess, async (req, res) => {
   try {
@@ -15256,6 +15270,81 @@ app.get('/api/content/rewrites/:profileId', verifyEngineAccess, async (req, res)
     res.json({ success: true, rewrites: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+// AI PROXY — Claude calls from frontend go through backend (key stays on server)
+// ═══════════════════════════════════════════════════════════════════════
+app.post('/api/ai/chat', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const { systemPrompt, messages } = req.body;
+  if (!messages || !Array.isArray(messages)) return res.status(400).json({ success: false, error: 'messages array required' });
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not configured on server' });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system: systemPrompt || '',
+        messages: messages.slice(-12)
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error?.message || 'Claude ' + r.status);
+    const text = data?.content?.[0]?.text || '';
+    res.json({ success: true, text, model: data.model || 'claude-sonnet-4-20250514' });
+  } catch(e) {
+    clearTimeout(timer);
+    console.error('[ai/chat]', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+}));
+
+app.post('/api/ai/cluster', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const { topic, domain, niche } = req.body;
+  if (!topic) return res.status(400).json({ success: false, error: 'topic required' });
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not configured on server' });
+
+  const prompt = 'Build a topical authority cluster for a '+(niche||'business')+' at '+(domain||'example.com')+'. Topic: "'+topic+'". Search the web to research subtopics, PAA questions, and competition. Return ONLY valid JSON: {"topic":"","hub":{"title":"","slug":"","target_keyword":"","word_count":2800,"h2_structure":[],"meta_description":"","ai_overview_angle":"","image":{"filename":"","alt":"","schema_name":""}},"spokes":[{"title":"","slug":"","target_keyword":"","funnel":"tofu|mofu|bofu","word_count":1400,"h2_structure":[],"meta_description":"","search_intent":"","voice_search_phrase":"","image":{"filename":"","alt":"","schema_name":""}}],"interlink_map":[{"from":"","to":"","anchor_text":"","placement":""}],"build_order":[],"estimated_total_words":0,"gsc_opportunity":""}. Build 5-7 spokes. Make titles, slugs, and H2s real and specific.';
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60000);
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{role:'user',content:prompt}],
+        tools: [{type:'web_search_20250305',name:'web_search'}]
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error?.message || 'Claude ' + r.status);
+    const text = data?.content?.[0]?.text || '';
+    // Extract JSON from response
+    let cluster;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      cluster = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch(e) { cluster = null; }
+    res.json({ success: true, text, cluster, model: data.model || 'claude-sonnet-4-20250514' });
+  } catch(e) {
+    clearTimeout(timer);
+    console.error('[ai/cluster]', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+}));
 
 // ═══════════════════════════════════════════════════════════════════════
 // BULK AUTOPILOT SYSTEM

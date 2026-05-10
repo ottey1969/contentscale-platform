@@ -228,9 +228,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="sidebar-section">
       <div class="sidebar-label">Engine Access</div>
       <input class="token-input" id="engineToken" placeholder="ENG-XXXX engine code" type="password">
-      <input class="token-input" id="claudeKey" placeholder="Claude API key (sk-ant-...)" type="password" style="margin-top:6px;">
       <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">
-        <span style="color:var(--green);">✓</span> Gemini research runs free via platform · you only pay for Claude writing
+        AI keys are configured securely on the server. No API keys stored in your browser.
       </div>
       <button class="sidebar-btn primary" onclick="connect()" id="connectBtn" style="margin-top:8px;">Connect →</button>
       <div id="forgetLink" style="display:none;text-align:center;margin-top:6px;">
@@ -284,6 +283,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="sidebar-label">Tools</div>
       <button class="sidebar-btn" onclick="openPipelineModal()" title="Write a complete article from research to publish-ready HTML" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;">🚀 Content Pipeline</button>
       <button class="sidebar-btn" onclick="openRewriteModal()" title="Rewrite existing page HTML with AI optimization" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:6px;">✍ Rewrite Page</button>
+      <button class="sidebar-btn" onclick="runDirectSurgicalFixes()" title="Apply 6 targeted surgical fixes to the last rewrite" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:6px;">🔧 Surgical Fixes</button>
+      <button class="sidebar-btn" onclick="runDirectFullRewrite()" title="Run a full AI rewrite of the last analysis" style="border-color:rgba(251,191,36,.3);color:#fbbf24;margin-top:6px;">♻ Full Rewrite</button>
     </div>
 
     <!-- Context -->
@@ -347,10 +348,8 @@ var _busy        = false;
 function forgetLogin() {
   try {
     localStorage.removeItem('nexus_engine_token');
-    localStorage.removeItem('nexus_claude_key');
   } catch(e) {}
   document.getElementById('engineToken').value = '';
-  document.getElementById('claudeKey').value = '';
   document.getElementById('forgetLink').style.display = 'none';
   var btn = document.getElementById('connectBtn');
   btn.textContent = 'Connect →';
@@ -382,11 +381,9 @@ async function connect() {
     // Show forget link
     var forgetEl = document.getElementById('forgetLink');
     if (forgetEl) forgetEl.style.display = 'block';
-    // Persist credentials so login survives tab close / browser restart
+    // Persist engine token so login survives tab close / browser restart
     try {
       localStorage.setItem('nexus_engine_token', token);
-      var ck = document.getElementById('claudeKey').value.trim();
-      if (ck) localStorage.setItem('nexus_claude_key', ck);
     } catch(e) {}
 
     // Load profiles — DON'T auto-select first one
@@ -1064,6 +1061,82 @@ async function cmdRewrite(rewriteId, fixes) {
   } catch(e) {
     removeProgress(prog);
     addAgentMessage('❌ Rewrite failed: ' + e.message + '. The page may need manual editing.');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// DIRECT TOOL EXECUTORS — bypass agent, use real rewrite ID
+// ══════════════════════════════════════════════════════════════
+
+async function runDirectSurgicalFixes() {
+  var rewriteId = _context.currentRewriteId;
+  if (!rewriteId) {
+    addAgentMessage('❌ No rewrite ID available. Run an analysis first (ANALYSE or Rewrite tool) to create a rewrite entry.');
+    return;
+  }
+  var fixes = ['direct_answer','title_meta','cta_strengthen','schema_add','paa_improve','voice_optimize'];
+  var prog = addProgress('🔧 Applying surgical fixes (6 targeted improvements)…', 20);
+  try {
+    setProgress(prog, 40);
+    var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', {
+      fixes: fixes,
+      profile_id: _context.profileId
+    });
+    setProgress(prog, 80);
+    if (!d || !d.success) throw new Error(d?.error || 'Surgical fix failed');
+    setProgress(prog, 100);
+    removeProgress(prog);
+    _context.currentRewriteId = d.rewrite_id || rewriteId;
+    _context.lastRewriteHtml = d.html_content;
+    addAgentMessage('🔧 <b>Surgical fixes applied</b> to rewrite #' + rewriteId + '. Targeted improvements: Direct Answer, Meta, CTAs, Schema, PAA, Voice Search.');
+    addRewriteResult(d);
+    addActions([
+      { label: '📋 Copy HTML', fn: function(){ copyRewriteHtml(); } },
+      { label: '🔍 Scan result', fn: function(){ userSend('Scan the rewritten page'); } },
+      { label: '✍ Full rewrite instead', fn: function(){ runDirectFullRewrite(); } }
+    ]);
+  } catch(e) {
+    removeProgress(prog);
+    addAgentMessage('❌ Surgical fix failed: ' + e.message);
+  }
+}
+
+async function runDirectFullRewrite() {
+  var rewriteId = _context.currentRewriteId;
+  if (!rewriteId) {
+    addAgentMessage('❌ No rewrite ID available. Run an analysis first (ANALYSE or Rewrite tool) to create a rewrite entry.');
+    return;
+  }
+  // Warn about position risk
+  var pos = _context.position || 0;
+  if (pos && pos <= 3) {
+    if (!confirm('⚠️ You rank at position ' + pos + '. A full rewrite can cause a 7–30 day ranking dip. Continue?')) return;
+  } else if (pos && pos <= 10) {
+    if (!confirm('⚠️ You rank at position ' + pos + '. Consider surgical fixes instead. Continue with full rewrite?')) return;
+  }
+  var prog = addProgress('✍ Running full rewrite…', 10);
+  try {
+    setProgress(prog, 50);
+    var d = await api('/api/content/execute-rewrite/' + rewriteId, 'POST', { max_regen: 2 });
+    setProgress(prog, 90);
+    if (!d || !d.success) throw new Error(d?.error || 'Full rewrite failed');
+    setProgress(prog, 100);
+    removeProgress(prog);
+    _context.currentRewriteId = rewriteId;
+    _context.lastRewriteHtml = d.html;
+    var modelUsed = d.model_used || 'AI';
+    var bofuScore = d.bofu_score || 0;
+    var graafScore = d.graaf_score || 0;
+    addAgentMessage('✍ <b>Full rewrite complete</b> (rewrite #' + rewriteId + '). Model: ' + modelUsed + ' · BOFU: ' + bofuScore + '/100 · GRAAF: ' + graafScore + '/100.');
+    addRewriteResult(d);
+    addActions([
+      { label: '📋 Copy HTML', fn: function(){ copyRewriteHtml(); } },
+      { label: '🔍 Scan result', fn: function(){ userSend('Scan the rewritten page'); } },
+      { label: '🔧 Apply more surgical fixes', fn: function(){ runDirectSurgicalFixes(); } }
+    ]);
+  } catch(e) {
+    removeProgress(prog);
+    addAgentMessage('❌ Full rewrite failed: ' + e.message + '. The AI model may be unavailable — wait 30s and retry, or try surgical fixes instead.');
   }
 }
 
@@ -1789,9 +1862,9 @@ async function cmdAnalyse(url, keyword) {
     ]);
     addAgentMessage(interp);
     addActions([
-      { label: 'Apply surgical fixes', fn: function(){ userSend('Apply the surgical fixes'); } },
-      { label: 'Full rewrite', fn: function(){ userSend('Do a full rewrite'); } },
-      { label: 'Explain more first', fn: function(){ userSend('Explain what the analysis found before we do anything'); } }
+      { label: '🔧 Apply surgical fixes', fn: function(){ runDirectSurgicalFixes(); } },
+      { label: '✍ Full rewrite', fn: function(){ runDirectFullRewrite(); } },
+      { label: '💡 Explain more first', fn: function(){ userSend('Explain what the analysis found before we do anything'); } }
     ]);
 
   } catch(e) {
@@ -2107,33 +2180,20 @@ function showAllOpportunities() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// CLAUDE API CALL (via Anthropic API in browser)
+// CLAUDE API CALL (proxied through backend — key stays on server)
 // ══════════════════════════════════════════════════════════════
 async function callClaude(systemPrompt, messages) {
-  var apiKey = document.getElementById('claudeKey').value.trim();
-  if (!apiKey) {
-    // Fallback: use rule-based responses if no Claude key
-    return fallbackResponse(messages[messages.length-1].content);
+  try {
+    var d = await api('/api/ai/chat', 'POST', {
+      systemPrompt: systemPrompt || '',
+      messages: messages
+    });
+    if (!d || !d.success) throw new Error(d?.error || 'AI chat failed');
+    return d.text || '';
+  } catch(e) {
+    console.error('[callClaude] Proxy failed:', e.message);
+    return fallbackResponse(messages[messages.length-1]?.content || '');
   }
-
-  var r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      system: systemPrompt,
-      messages: messages.slice(-12) // Keep last 12 turns for context
-    })
-  });
-  if (!r.ok) {
-    var errText = 'Claude API error ' + r.status;
-    try { var errJson = await r.json(); errText = errJson.error?.message || errText; } catch(e) { /* body may not be JSON on 529 */ }
-    if (r.status === 529) throw new Error('Claude is temporarily overloaded (HTTP 529). Please wait a moment and try again.');
-    throw new Error(errText);
-  }
-  var d = await r.json();
-  return d.content[0].text;
 }
 
 // ── Fallback without Claude key ──────────────────────────────
@@ -2246,12 +2306,10 @@ function toast(msg, type) {
 
 async function api(endpoint, method, body) {
   var token = document.getElementById('engineToken').value.trim();
-  var claudeKey = document.getElementById('claudeKey') ? document.getElementById('claudeKey').value.trim() : '';
   var opts = {
     method: method || 'GET',
     headers: { 'Content-Type':'application/json', 'x-engine-token': token }
   };
-  if (claudeKey) opts.headers['x-claude-key'] = claudeKey;
   if (body) opts.body = JSON.stringify(body);
   var r = await fetch(endpoint, opts);
   var text = await r.text();
@@ -2781,34 +2839,18 @@ async function buildTopicalCluster(topic) {
 
   var pid = addProgress('Building PULSE + NEXUS cluster for "' + topic + '" — researching live…');
   try {
-    var claudeKey = document.getElementById('claudeKey').value.trim();
-    if (!claudeKey) throw new Error('Claude API key required for cluster building.');
-
     var domain = _profile.domain || 'example.com';
     var niche  = _profile.niche  || 'your niche';
-    var prompt = 'Build a topical authority cluster for a '+niche+' business at '+domain+'. Topic: "'+topic+'". Search the web to research subtopics, PAA questions, and competition. Return ONLY valid JSON: {"topic":"","hub":{"title":"","slug":"","target_keyword":"","word_count":2800,"h2_structure":[],"meta_description":"","ai_overview_angle":"","image":{"filename":"","alt":"","schema_name":""}},"spokes":[{"title":"","slug":"","target_keyword":"","funnel":"tofu|mofu|bofu","word_count":1400,"h2_structure":[],"meta_description":"","search_intent":"","voice_search_phrase":"","image":{"filename":"","alt":"","schema_name":""}}],"interlink_map":[{"from":"","to":"","anchor_text":"","placement":""}],"build_order":[],"estimated_total_words":0,"gsc_opportunity":""}. Build 5-7 spokes. Make titles, slugs, and H2s real and specific.';
 
-    var r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': claudeKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        messages: [{role:'user',content:prompt}],
-        tools: [{type:'web_search_20250305',name:'web_search'}]
-      })
+    // Call backend proxy — Claude key stays on server (ANTHROPIC_API_KEY env var)
+    var d = await api('/api/ai/cluster', 'POST', {
+      topic: topic,
+      domain: domain,
+      niche: niche
     });
-    if (!r.ok) throw new Error('Claude ' + r.status);
-    var d = await r.json();
-    var text = parseRecs(d.content).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
-    var jm = text.match(/\{[\s\S]*\}/);
-    if (!jm) throw new Error('No JSON in response');
-    var cluster = JSON.parse(jm[0]);
+    if (!d || !d.success) throw new Error(d?.error || 'Cluster build failed');
+    var cluster = d.cluster;
+    if (!cluster) throw new Error('No cluster data in response');
     window._lastCluster = cluster;
     window._lastClusterArticles = {};
     progRemove(pid);
@@ -3431,29 +3473,22 @@ document.addEventListener('click', function(e) {
 
 // ── Auto-restore credentials and reconnect on page load ──────────
 (function() {
-  var savedToken  = '';
-  var savedClaude = '';
+  var savedToken = '';
   try {
-    savedToken  = localStorage.getItem('nexus_engine_token') || '';
-    savedClaude = localStorage.getItem('nexus_claude_key')   || '';
+    savedToken = localStorage.getItem('nexus_engine_token') || '';
   } catch(e) {}
 
   if (!savedToken) return;
 
-  var tokenEl  = document.getElementById('engineToken');
-  var claudeEl = document.getElementById('claudeKey');
-  if (tokenEl)  tokenEl.value  = savedToken;
-  if (claudeEl && savedClaude) claudeEl.value = savedClaude;
+  var tokenEl = document.getElementById('engineToken');
+  if (tokenEl) tokenEl.value = savedToken;
 
   setTimeout(function() {
     var btn = document.getElementById('connectBtn');
     if (btn) {
       btn.textContent = 'Reconnecting…';
       connect().catch(function() {
-        try {
-          localStorage.removeItem('nexus_engine_token');
-          localStorage.removeItem('nexus_claude_key');
-        } catch(e) {}
+        try { localStorage.removeItem('nexus_engine_token'); } catch(e) {}
         if (btn) { btn.textContent = 'Connect →'; btn.disabled = false; }
       });
     }
