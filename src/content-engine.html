@@ -4386,7 +4386,9 @@ async function deletePageByUrl(url) {
 
 // ── Edit GSC Data ───────────────────────────────────────────
 function toggleGscEdit(url) {
-  var el = document.getElementById('gsc-edit-' + encodeURIComponent(url).replace(/%/g, ''));
+  // URL is already encoded from the button — just strip % for the ID
+  var idSuffix = url.replace(/%/g, '');
+  var el = document.getElementById('gsc-edit-' + idSuffix);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
@@ -4394,12 +4396,15 @@ function editGscData(url) {
   toggleGscEdit(url);
 }
 
-async function saveGscData(url) {
+async function saveGscData(encodedUrl) {
+  // Decode to find the actual page by URL
+  var url = decodeURIComponent(encodedUrl);
   var page = _pagesOverviewData.find(function(p) { return p.url === url; });
   if (!page) { toast('Page not found', 2000, 'warn'); return; }
   if (!page.tracker_id) { toast('No tracker entry for this page', 2000, 'warn'); return; }
   
-  var suffix = encodeURIComponent(url).replace(/%/g, '');
+  // Use encoded URL (strip %) for input element IDs
+  var suffix = encodedUrl.replace(/%/g, '');
   var imp = parseInt(document.getElementById('gsc-imp-' + suffix).value) || 0;
   var clk = parseInt(document.getElementById('gsc-clk-' + suffix).value) || 0;
   var pos = parseFloat(document.getElementById('gsc-pos-' + suffix).value) || 0;
