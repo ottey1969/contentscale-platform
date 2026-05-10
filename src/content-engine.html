@@ -672,45 +672,6 @@ async function fetchSitemapFromUrl() {
   btn.disabled = false; btn.textContent = 'Fetch';
 }
 
-// ── Sitemap fetch triggered from the Tracker view ────────────────
-async function fetchSitemapFromTracker() {
-  if (!_profile || !_profile.id) {
-    toast('Select a profile first', 4000, 'warn');
-    return;
-  }
-  var inp = document.getElementById('trSitemapInput');
-  var rawUrl = (inp && inp.value.trim()) || (_profile.domain ? 'https://' + _profile.domain.replace(/^https?:\/\//,'') : '');
-  if (!rawUrl) { toast('Enter a sitemap URL or set a domain on the profile', 'warn'); return; }
-  if (!rawUrl.startsWith('http')) rawUrl = 'https://' + rawUrl;
-  var fetchUrl = rawUrl;
-  var tryPaths = [];
-  if (!rawUrl.match(/\.xml($|\?)/) && !rawUrl.match(/sitemap/i)) {
-    var base = rawUrl.replace(/\/+$/, '');
-    tryPaths = [base + '/page-sitemap.xml', base + '/sitemap.xml', base + '/sitemap_index.xml', base + '/sitemap-index.xml'];
-    fetchUrl = tryPaths[0];
-  }
-  var btn = document.querySelector('#view-tracker button[onclick=\"fetchSitemapFromTracker()\"]');
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  try {
-    var d = await api('/api/fetch-sitemap?url=' + encodeURIComponent(fetchUrl) + (tryPaths.length ? '&try_paths=' + encodeURIComponent(tryPaths.join(',')) : ''));
-    if (!d || !d.success) throw new Error(d?.error || 'Failed');
-    var urls = d.urls || [];
-    if (!urls.length) { toast('No URLs found in sitemap', 'warn'); return; }
-    _sitemapUrls = urls;
-    // Sync to sidebar status display too
-    var statusEl = document.getElementById('sitemapStatus');
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      statusEl.innerHTML = '<b>' + urls.length + '</b> URLs found <button onclick="previewSitemapUrls()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Preview & Add</button>';
-    }
-    previewSitemapUrls(); // open preview modal immediately
-    toast('✓ Sitemap: ' + urls.length + ' URLs', 3000, 'ok');
-  } catch(e) {
-    toast('Sitemap failed: ' + e.message, 4000, 'err');
-  }
-  if (btn) { btn.disabled = false; btn.textContent = 'Fetch'; }
-}
-
 var _sitemapUrls = []; // URLs from last sitemap upload
 var _activeModal = null; // Track active generic modal
 
@@ -913,8 +874,40 @@ function updateGscStatus() {
     status.innerHTML = '✓ GSC loaded<br>' +
       (_gscPages.length ? _gscPages.length + ' pages · ' : '') +
       (_gscQueries.length ? _gscQueries.length + ' queries' : '') +
+      '<div style="margin-top:8px;">' +
+      '<button onclick="pushSidebarGscToServer()" style="width:100%;padding:5px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#0f766e,#0284c7);color:#fff;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.05em;">→ Save to Pages &amp; Server</button>' +
+      '</div>' +
       (topOpp ? '<div class="ctx-opportunity" style="margin-top:8px;"><div class="ctx-opp-title">Top Opportunity</div><div class="ctx-opp-url">'+topOpp.url.replace(/^https?:\/\//,'').substring(0,40)+'</div><div class="ctx-opp-stats">Pos ' + Number(topOpp.position).toFixed(1) + ' · ' + topOpp.impressions.toLocaleString() + ' impr · CTR ' + Number(topOpp.ctr).toFixed(1) + '%</div></div>' : '');
   }
+}
+
+// Convert in-memory _gscPages/_gscQueries to CSV blobs → upload → preview → confirm
+async function pushSidebarGscToServer() {
+  if (!_context.profileId) { toast('Select a profile first', 3000, 'warn'); return; }
+  if (!_gscPages.length) { toast('No GSC pages loaded', 2000, 'warn'); return; }
+
+  // Build Pages CSV blob from _gscPages
+  var pagesCsv = 'Top pages,Clicks,Impressions,CTR,Position\n' +
+    _gscPages.map(function(r) {
+      return [r.url, r.clicks, r.impressions, (r.ctr||0).toFixed(2)+'%', (r.position||0).toFixed(1)].join(',');
+    }).join('\n');
+  var pagesBlob = new Blob([pagesCsv], { type: 'text/csv' });
+  var pagesFile = new File([pagesBlob], 'gsc-pages.csv', { type: 'text/csv' });
+
+  var queriesFile = null;
+  if (_gscQueries.length) {
+    var queriesCsv = 'Top queries,Clicks,Impressions,CTR,Position\n' +
+      _gscQueries.map(function(r) {
+        return [r.query, r.clicks, r.impressions, (r.ctr||0).toFixed(2)+'%', (r.position||0).toFixed(1)].join(',');
+      }).join('\n');
+    var queriesBlob = new Blob([queriesCsv], { type: 'text/csv' });
+    queriesFile = new File([queriesBlob], 'gsc-queries.csv', { type: 'text/csv' });
+  }
+
+  toast('⏳ Uploading to server…', 2000, 'ok');
+  // Close import modal if open, then use existing upload→preview→confirm flow
+  document.getElementById('pagesImportModal').style.display = 'none';
+  uploadGscFiles(pagesFile, queriesFile);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2905,7 +2898,7 @@ function renderTrackerList() {
     return true;
   });
   if (!trData.length) {
-    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Import a GSC CSV (button above) or add URLs manually to start tracking</div></div>';
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Add published URLs to start tracking</div></div>';
     return;
   }
   el.innerHTML = '<div style="padding:0 16px;">' + trData.map(function(p) {
@@ -3639,15 +3632,6 @@ function useProfileFromList(profileId) {
       if (sel) sel.value = String(p.id);
       // Re-render profile selector if needed
       updateContext();
-      // Reset GSC zone — each profile has its own data
-      _gscPages = []; _gscQueries = [];
-      var zone = document.getElementById('gscUploadZone');
-      var stat = document.getElementById('gscStatus');
-      if (zone) zone.style.display = 'block';
-      if (stat) stat.style.display = 'none';
-      // Load Pages + Tracker for this profile
-      loadPagesOverview();
-      loadTrackerPages();
     }
   }
   switchView('agent');
@@ -4634,6 +4618,8 @@ async function loadPagesOverview(forceRefresh) {
       }
     });
   _pagesOverviewData = Object.values(urlMap);
+  // Re-merge sidebar GSC data lost during server fetch (handles profile-switch wipe)
+  syncGscToPagesOverview();
   renderPagesOverview();
   if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
 }
@@ -4680,16 +4666,15 @@ function renderPagesOverview() {
   var search = (document.getElementById('pagesSearch') || {}).value || '';
   var sort = (document.getElementById('pagesSort') || {}).value || 'opportunity';
 
+  // Always reset stale Merge Dups button before any early return
+  (function(){ var mb = document.getElementById('pagesMergeBtn'); if (mb && !_pagesOverviewData.length) mb.style.display = 'none'; })();
+
   // NO profile = NO pages shown. Must select a profile first.
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   if (!activeProfileId) {
     grid.innerHTML = ''; kpis.innerHTML = '';
     empty.style.display = 'block';
     if (profileLabel) profileLabel.textContent = 'Select a profile to see pages';
-    var ti = document.getElementById('pagesEmptyTitle'), tx = document.getElementById('pagesEmptyText'), ic = document.getElementById('pagesEmptyIcon');
-    if (ti) ti.textContent = 'Select a profile first';
-    if (tx) tx.textContent = 'Choose a profile from the sidebar to see pages and tracker data for that site.';
-    if (ic) ic.textContent = '🗂️';
     return;
   }
 
@@ -4697,10 +4682,6 @@ function renderPagesOverview() {
     grid.innerHTML = ''; kpis.innerHTML = '';
     empty.style.display = 'block';
     if (profileLabel && _profile) profileLabel.textContent = 'Profile: ' + _profile.name + ' — 0 pages';
-    var ti = document.getElementById('pagesEmptyTitle'), tx = document.getElementById('pagesEmptyText'), ic = document.getElementById('pagesEmptyIcon');
-    if (ti) ti.textContent = 'No pages yet for this profile';
-    if (tx) tx.textContent = 'Import a GSC CSV above or use the sitemap fetcher in the sidebar to add pages.';
-    if (ic) ic.textContent = '📭';
     return;
   }
   empty.style.display = 'none';
@@ -5564,9 +5545,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Empty state -->
   <div id="pagesEmpty" style="display:none;text-align:center;padding:60px 20px;color:var(--muted);">
-    <div style="font-size:40px;margin-bottom:12px;" id="pagesEmptyIcon">🗂️</div>
-    <div style="font-size:15px;font-weight:600;margin-bottom:6px;" id="pagesEmptyTitle">Select a profile first</div>
-    <div style="font-size:12px;margin-bottom:16px;" id="pagesEmptyText">Choose a profile from the sidebar to see pages and tracker data for that site.</div>
+    <div style="font-size:40px;margin-bottom:12px;">🗂️</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Select a profile first</div>
+    <div style="font-size:12px;margin-bottom:16px;">Choose a profile from the sidebar to see pages and tracker data for that site.</div>
   </div>
 </div>
 
@@ -5781,15 +5762,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <div><div style="font-size:16px;font-weight:800;">📡 Content Lifecycle Tracker</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">Google position · AI citations · Content changes</div></div>
     <div style="display:flex;gap:6px;">
       <button onclick="loadTrackerPages()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
-      <button onclick="openPagesImportModal()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#0f766e,#0284c7);color:#fff;">📊 Import GSC</button>
       <button onclick="openAddTrackerModal()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">+ Add URL</button>
     </div>
-  </div>
-  <!-- Sitemap quick-fetch row -->
-  <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;">
-    <span style="font-size:10px;color:#6b7280;white-space:nowrap;">🗺 Sitemap:</span>
-    <input type="text" id="trSitemapInput" placeholder="https://site.com/sitemap.xml — or leave blank to auto-detect" style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:5px 10px;font-size:11px;color:#e2e8f0;font-family:'DM Mono',monospace;outline:none;" onkeydown="if(event.key==='Enter')fetchSitemapFromTracker()">
-    <button onclick="fetchSitemapFromTracker()" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#f56d00;color:#fff;">Fetch</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:18px;">
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;"><div style="font-size:22px;font-weight:900;color:#e2e8f0;" id="trKpiPages">0</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:3px;">Tracked</div></div>
