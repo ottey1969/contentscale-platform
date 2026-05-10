@@ -479,13 +479,27 @@ async function connect() {
     var pr = await api('/api/content/profiles');
     if (pr.profiles && pr.profiles.length) {
       _allProfiles = pr.profiles;
-      // No auto-select — user must explicitly choose
-      _profile = null;
-      _context.profileId = null;
       renderProfileSelector(pr.profiles, true); // true = show placeholder
       document.getElementById('profileSection').style.display = 'block';
       document.getElementById('aiKeysSection').style.display = 'block';
       loadAiKeyStatus();
+
+      // Restore previously selected profile
+      var savedProfileId = '';
+      try { savedProfileId = localStorage.getItem('nexus_selected_profile_id') || ''; } catch(e) {}
+      if (savedProfileId) {
+        var savedProfile = _allProfiles.find(function(p) { return String(p.id) === savedProfileId; });
+        if (savedProfile) {
+          document.getElementById('profileSelect').value = savedProfileId;
+          onProfileSwitch();
+        } else {
+          // Saved profile no longer exists — clear it
+          _profile = null; _context.profileId = null;
+          try { localStorage.removeItem('nexus_selected_profile_id'); } catch(e) {}
+        }
+      } else {
+        _profile = null; _context.profileId = null;
+      }
     }
 
     // Trigger agent welcome (will prompt for profile selection)
@@ -650,19 +664,14 @@ async function fetchSitemapFromUrl() {
     if (!d || !d.success) throw new Error(d?.error || 'Failed to fetch sitemap');
     var urls = d.urls || [];
     if (!urls.length) { toast('No URLs found in sitemap. Try entering the full sitemap URL (e.g. https://example.com/page-sitemap.xml)', 'warn'); return; }
-    // Filter to current profile domain
-    var profileDomain = (_profile && _profile.domain) || '';
-    var matched = urls;
-    if (profileDomain) {
-      matched = urls.filter(function(u) { try { return normalizeDomain(new URL(u).hostname) === normalizeDomain(profileDomain); } catch(e){ return false; } });
-    }
-    _sitemapUrls = matched;
+    // Show ALL sitemap URLs — user selects which to add via preview
+    _sitemapUrls = urls;
     var statusEl = document.getElementById('sitemapStatus');
     if (statusEl) {
       statusEl.style.display = 'block';
-      statusEl.innerHTML = matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' found' + (profileDomain ? ' for ' + normalizeDomain(profileDomain) : '') + ' <button onclick="addSitemapUrlsToTracker()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Add all</button>';
+      statusEl.innerHTML = '<b>' + urls.length + '</b> URL' + (urls.length !== 1 ? 's' : '') + ' found from ' + (d.fetched_from || fetchUrl) + ' <button onclick="previewSitemapUrls()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Preview & Add</button>';
     }
-    toast('✓ Sitemap: ' + matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' fetched from ' + (d.fetched_from || fetchUrl), 3000, 'ok');
+    toast('✓ Sitemap: ' + urls.length + ' URL' + (urls.length !== 1 ? 's' : '') + ' fetched', 3000, 'ok');
   } catch(e) {
     toast('Sitemap fetch failed: ' + e.message, 4000, 'err');
   }
@@ -671,19 +680,51 @@ async function fetchSitemapFromUrl() {
 
 var _sitemapUrls = []; // URLs from last sitemap upload
 
-function addSitemapUrlsToTracker() {
+// Preview sitemap URLs with checkboxes before adding
+function previewSitemapUrls() {
   if (!_sitemapUrls.length) return;
+  var existingUrls = _pagesOverviewData.map(function(p){ return p.url; });
+  var html = '<div style="max-height:400px;overflow-y:auto;margin:12px 0;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+    '<label style="font-size:11px;cursor:pointer;"><input type="checkbox" id="sitemapSelectAll" checked onchange="toggleAllSitemap(this)"> <b>Select all</b></label>' +
+    '<span style="font-size:10px;color:var(--muted);">' + _sitemapUrls.length + ' URLs</span></div>';
+  _sitemapUrls.forEach(function(url, i) {
+    var isExisting = existingUrls.indexOf(url) >= 0;
+    var slug = '';
+    try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
+    html += '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;cursor:pointer;' + (isExisting ? 'opacity:0.5;' : '') + '">' +
+      '<input type="checkbox" class="sitemap-url-check" value="' + i + '" ' + (isExisting ? '' : 'checked') + ' ' + (isExisting ? 'disabled' : '') + '>' +
+      '<span>' + escHtml(slug) + (isExisting ? ' <span style="color:var(--muted);">(already added)</span>' : '') + '</span></label>';
+  });
+  html += '</div><div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button onclick="closeModal()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:11px;cursor:pointer;">Cancel</button>' +
+    '<button onclick="addSelectedSitemapUrls()" style="padding:6px 12px;border-radius:6px;border:none;background:#f56d00;color:#fff;font-size:11px;cursor:pointer;font-weight:600;">Add Selected</button></div>';
+  showModal('🗺 Sitemap URLs', html);
+}
+function toggleAllSitemap(cb) {
+  document.querySelectorAll('.sitemap-url-check:not([disabled])').forEach(function(c){ c.checked = cb.checked; });
+}
+function addSelectedSitemapUrls() {
+  var selected = [];
+  document.querySelectorAll('.sitemap-url-check:checked').forEach(function(c){ selected.push(_sitemapUrls[parseInt(c.value)]); });
+  if (!selected.length) { toast('No URLs selected', 2000, 'warn'); return; }
   var added = 0, skipped = 0;
   var existingUrls = _pagesOverviewData.map(function(p){ return p.url; });
-  _sitemapUrls.forEach(function(url) {
+  selected.forEach(function(url) {
     if (existingUrls.indexOf(url) >= 0) { skipped++; return; }
     var slug = '';
     try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
     _pagesOverviewData.push({ url: url, slug: slug, keyword: '', position: 0, impressions: 0, clicks: 0, ctr: 0, score: '', scoreStatus: '', added: new Date().toISOString(), tracker_id: null, profile_id: _context.profileId || (_profile && _profile.id) || null, opportunity: 0 });
     added++;
   });
+  closeModal();
   renderPagesOverview();
-  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + ' from sitemap' + (skipped ? ' (' + skipped + ' already existed)' : ''), 3000, 'ok');
+  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ' (' + skipped + ' already existed)' : ''), 3000, 'ok');
+}
+
+function addSitemapUrlsToTracker() {
+  // Legacy — now redirects to preview
+  previewSitemapUrls();
 }
 
 function parseCSV(text) {
@@ -742,6 +783,9 @@ function onProfileSwitch() {
 
   _context.profileId = _profile.id;
   _context.url = null; _context.keyword = null; _context.score = null;
+
+  // Persist selected profile
+  try { localStorage.setItem('nexus_selected_profile_id', String(_profile.id)); } catch(e) {}
 
   // Clear GSC — each profile has its own data
   _gscPages = []; _gscQueries = [];
