@@ -24128,15 +24128,25 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
 // Update GSC data for a tracker page (manual override)
 app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, async (req, res) => {
   try {
-    const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr } = req.body;
+    const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, keyword } = req.body;
     const eu = req.engineUser;
     if (!eu.isAdmin) {
       const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
+    const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
+    const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
+    if (keyword !== undefined) {
+      fields.push('gsc_keyword=$' + (fields.length + 1));
+      vals.push(keyword || null);
+      // Also update the primary keyword column if gsc_keyword is set
+      fields.push('keyword=$' + (fields.length + 1));
+      vals.push(keyword || null);
+    }
+    vals.push(req.params.id);
     await pool.query(
-      'UPDATE tracker_pages SET gsc_impressions=$1, gsc_clicks=$2, gsc_position=$3, gsc_ctr=$4, updated_at=NOW() WHERE id=$5',
-      [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null, req.params.id]
+      'UPDATE tracker_pages SET ' + fields.join(', ') + ', updated_at=NOW() WHERE id=$' + vals.length,
+      vals
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }

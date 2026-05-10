@@ -4225,7 +4225,12 @@ function renderPagesOverview() {
         '<button onclick="editGscData(\'' + encodeURIComponent(p.url) + '\')" style="padding:6px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.08);color:#fbbf24;font-family:DM Mono,monospace;" title="Edit GSC data">✏️ GSC</button>' +
       '</div>' +
       '<div id="gsc-edit-' + encodeURIComponent(p.url).replace(/%/g, '') + '" style="display:none;background:rgba(251,191,36,.03);border:1px solid rgba(251,191,36,.1);border-radius:8px;padding:10px;margin-top:8px;">' +
-        '<div style="font-size:10px;font-weight:700;color:#fbbf24;margin-bottom:8px;">✏️ Edit GSC Data</div>' +
+        '<div style="font-size:10px;font-weight:700;color:#fbbf24;margin-bottom:8px;">✏️ Edit GSC Data & Strategy</div>' +
+        '<div style="margin-bottom:8px;">' +
+          '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">🎯 Strategy Keyword <span style="color:#fbbf24;">(the keyword YOU want to rank for)</span></div>' +
+          '<input type="text" id="gsc-kw-' + encodeURIComponent(p.url).replace(/%/g, '') + '" value="' + escHtml(p.keyword || '') + '" placeholder="24 hours emergency drain nj" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:5px 8px;color:var(--text);font-size:11px;">' +
+          '<div style="font-size:8px;color:#6b7280;margin-top:2px;">Overrides GSC keyword. Used for intelligence, rewrite, and meta.</div>' +
+        '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
           '<div><label style="font-size:9px;color:var(--muted);">Impressions</label><input type="number" id="gsc-imp-' + encodeURIComponent(p.url).replace(/%/g, '') + '" value="' + (p.impressions || 0) + '" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:5px 8px;color:var(--text);font-size:11px;"></div>' +
           '<div><label style="font-size:9px;color:var(--muted);">Clicks</label><input type="number" id="gsc-clk-' + encodeURIComponent(p.url).replace(/%/g, '') + '" value="' + (p.clicks || 0) + '" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:5px 8px;color:var(--text);font-size:11px;"></div>' +
@@ -4409,19 +4414,22 @@ async function saveGscData(encodedUrl) {
   var clk = parseInt(document.getElementById('gsc-clk-' + suffix).value) || 0;
   var pos = parseFloat(document.getElementById('gsc-pos-' + suffix).value) || 0;
   var ctr = parseFloat(document.getElementById('gsc-ctr-' + suffix).value) || 0;
+  var kw = document.getElementById('gsc-kw-' + suffix).value.trim();
   
   try {
     await api('/api/tracker/pages/' + page.tracker_id + '/gsc', 'PUT', {
       gsc_impressions: imp,
       gsc_clicks: clk,
       gsc_position: pos,
-      gsc_ctr: ctr
+      gsc_ctr: ctr,
+      keyword: kw || null
     });
     // Update local data
     page.impressions = imp;
     page.clicks = clk;
     page.position = pos;
     page.ctr = ctr;
+    if (kw) page.keyword = kw;
     page.opportunity = _calcOpportunity(imp, clk, pos, page.score || 0);
     toggleGscEdit(url);
     renderPagesOverview();
