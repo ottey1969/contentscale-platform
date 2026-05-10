@@ -726,24 +726,53 @@ function previewSitemapUrls() {
 function toggleAllSitemap(cb) {
   document.querySelectorAll('.sitemap-url-check:not([disabled])').forEach(function(c){ c.checked = cb.checked; });
 }
-function addSelectedSitemapUrls() {
+async function addSelectedSitemapUrls() {
   var selected = [];
   document.querySelectorAll('.sitemap-url-check:checked').forEach(function(c){ selected.push(_sitemapUrls[parseInt(c.value)]); });
   if (!selected.length) { toast('No URLs selected', 2000, 'warn'); return; }
-  var added = 0, skipped = 0;
-  var existingUrls = _pagesOverviewData.map(function(p){ return p.url; });
-  selected.forEach(function(url) {
-    if (existingUrls.indexOf(url) >= 0) { skipped++; return; }
-    var slug = '';
-    try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
-    _pagesOverviewData.push({ url: url, slug: slug, keyword: '', position: 0, impressions: 0, clicks: 0, ctr: 0, score: '', scoreStatus: '', added: new Date().toISOString(), tracker_id: null, profile_id: _context.profileId || (_profile && _profile.id) || null, opportunity: 0 });
-    added++;
-  });
+  var profileId = _context.profileId || (_profile && _profile.id) || null;
+  if (!profileId) { toast('Select a profile first', 3000, 'warn'); return; }
+
   closeModal();
+  var prog = addProgress('Saving ' + selected.length + ' URLs to tracker…', 10);
+  var added = 0, failed = 0, skipped = 0;
+  var existingUrls = _pagesOverviewData.map(function(p){ return p.url; });
+
+  for (var i = 0; i < selected.length; i++) {
+    var url = selected[i];
+    if (existingUrls.indexOf(url) >= 0) { skipped++; continue; }
+    try {
+      var slug = '';
+      try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
+      // Save to backend database
+      var d = await api('/api/tracker/pages', 'POST', {
+        profile_id: profileId,
+        url: url,
+        slug: slug,
+        check_frequency: '3days'
+      });
+      if (d && d.success) {
+        _pagesOverviewData.push({
+          url: url, slug: slug, keyword: '', position: 0, impressions: 0, clicks: 0, ctr: 0,
+          score: '', scoreStatus: '', added: new Date().toISOString(),
+          tracker_id: d.page ? d.page.id : null, profile_id: profileId, opportunity: 0
+        });
+        added++;
+      } else {
+        failed++;
+      }
+    } catch(e) {
+      console.error('[sitemap-add] failed:', url, e.message);
+      failed++;
+    }
+    setProgress(prog, Math.round(10 + ((i + 1) / selected.length) * 80));
+  }
+
+  removeProgress(prog);
   renderPagesOverview();
-  // Auto-switch to Pages view so user sees what was added
+  loadTrackerPages(); // Refresh tracker too
   switchView('pages');
-  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ' (' + skipped + ' already existed)' : ''), 3000, 'ok');
+  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ', ' + skipped + ' skipped' : '') + (failed ? ', ' + failed + ' failed' : ''), 4000, added ? 'ok' : 'warn');
 }
 
 function addSitemapUrlsToTracker() {
