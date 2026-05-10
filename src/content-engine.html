@@ -1973,9 +1973,9 @@ function addScanResult(d) {
     '<div class="msg-body"><div class="msg-name">GRAAF Scan Results</div><div class="bubble">' +
     '<div class="score-row">' +
     '<div class="score-pill"><div class="score-num" style="color:' + scoreColor + ';">' + d.score + '</div><div class="score-label">ContentScore</div></div>' +
-    '<div class="score-pill"><div class="score-num" style="color:#a78bfa;">' + (d.graaf_score || '—') + '</div><div class="score-label">GRAAF /50</div></div>' +
-    '<div class="score-pill"><div class="score-num" style="color:#38bdf8;">' + (d.craft_score || '—') + '</div><div class="score-label">CRAFT /30</div></div>' +
-    '<div class="score-pill"><div class="score-num" style="color:#fbbf24;">' + (d.technical_score || '—') + '</div><div class="score-label">Technical /20</div></div>' +
+    '<div class="score-pill"><div class="score-num" style="color:#a78bfa;">' + (d.metrics?.graaf ?? d.graaf_score ?? '—') + '</div><div class="score-label">GRAAF /50</div></div>' +
+    '<div class="score-pill"><div class="score-num" style="color:#38bdf8;">' + (d.metrics?.craft ?? d.craft_score ?? '—') + '</div><div class="score-label">CRAFT /30</div></div>' +
+    '<div class="score-pill"><div class="score-num" style="color:#fbbf24;">' + (d.metrics?.technical ?? d.technical_score ?? '—') + '</div><div class="score-label">Technical /20</div></div>' +
     '</div>' +
     '<div style="font-size:12px;color:' + scoreColor + ';font-weight:700;margin:10px 0 6px;">Tier: ' + tier + '</div>' +
     (recsHtml ? '<div class="rec-list">' + recsHtml + '</div>' : '') +
