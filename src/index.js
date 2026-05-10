@@ -8570,48 +8570,72 @@ app.get('/api/fetch-sitemap', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'url required' });
   try {
-    // Normalize: ensure https, handle www
     let fetchUrl = url;
     if (fetchUrl.startsWith('http://')) fetchUrl = fetchUrl.replace('http://', 'https://');
-    const resp = await axios.get(fetchUrl, { 
-      timeout: 10000, 
-      headers: { 'User-Agent': 'ContentScaleBot/1.0' }, 
-      responseType: 'text',
-      maxRedirects: 5
-    }).catch(async (e) => {
-      // Try www variant if non-www fails (or vice versa)
-      const alt = fetchUrl.includes('://www.') 
-        ? fetchUrl.replace('://www.', '://') 
+    console.log(`[sitemap] fetching: ${fetchUrl}`);
+
+    // Try axios first, fallback to native fetch
+    let xmlText = '';
+    try {
+      const resp = await axios.get(fetchUrl, {
+        timeout: 15000,
+        headers: { 'User-Agent': 'ContentScaleBot/1.0' },
+        responseType: 'text',
+        maxRedirects: 5
+      });
+      xmlText = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+      console.log(`[sitemap] axios success, ${xmlText.length} chars`);
+    } catch (axiosErr) {
+      console.log(`[sitemap] axios failed: ${axiosErr.message}, trying www variant`);
+      const alt = fetchUrl.includes('://www.')
+        ? fetchUrl.replace('://www.', '://')
         : fetchUrl.replace('://', '://www.');
-      return axios.get(alt, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text', maxRedirects: 5 });
-    });
-    const xml = resp.data;
+      try {
+        const resp2 = await axios.get(alt, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text', maxRedirects: 5 });
+        xmlText = typeof resp2.data === 'string' ? resp2.data : JSON.stringify(resp2.data);
+        console.log(`[sitemap] axios www variant success, ${xmlText.length} chars`);
+      } catch (axiosErr2) {
+        console.log(`[sitemap] axios www variant failed: ${axiosErr2.message}, trying native fetch`);
+        const fetchResp = await fetch(fetchUrl, { headers: { 'User-Agent': 'ContentScaleBot/1.0' } });
+        xmlText = await fetchResp.text();
+        console.log(`[sitemap] native fetch success, ${xmlText.length} chars`);
+      }
+    }
+
+    if (!xmlText || xmlText.length < 10) {
+      return res.status(500).json({ success: false, error: 'Empty response from sitemap URL' });
+    }
+
+    // Parse URLs from XML
     const locRegex = /<loc>(.*?)<\/loc>/gi;
     const urls = [], subSitemaps = [];
     let match;
-    while ((match = locRegex.exec(xml)) !== null) {
+    while ((match = locRegex.exec(xmlText)) !== null) {
       const u = match[1].trim();
       if (!u) continue;
-      if (u.endsWith('.xml')) subSitemaps.push(u); // sitemap index
+      if (u.endsWith('.xml')) subSitemaps.push(u);
       else urls.push(u);
     }
-    console.log(`[sitemap] ${url} => ${urls.length} URLs, ${subSitemaps.length} sub-sitemaps`);
+    console.log(`[sitemap] parsed: ${urls.length} page URLs, ${subSitemaps.length} sub-sitemaps`);
+
     // If sitemap index with no direct URLs, auto-fetch best sub-sitemap
     if (urls.length === 0 && subSitemaps.length > 0) {
-      // Prefer page-sitemap over post/category sitemaps
       const preferred = subSitemaps.find(u => u.includes('page')) || subSitemaps[0];
-      const sub = await axios.get(preferred, { timeout: 10000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
-      const subXml = sub.data;
+      console.log(`[sitemap] sitemap index detected, fetching sub: ${preferred}`);
+      const sub = await axios.get(preferred, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+      const subXml = typeof sub.data === 'string' ? sub.data : '';
       const subRegex = /<loc>(.*?)<\/loc>/gi;
       let sm;
       while ((sm = subRegex.exec(subXml)) !== null) {
         const u = sm[1].trim();
         if (u && !u.endsWith('.xml')) urls.push(u);
       }
-      console.log(`[sitemap] auto-fetched sub-sitemap ${subSitemaps[0]} => ${urls.length} URLs`);
+      console.log(`[sitemap] sub-sitemap fetched: ${urls.length} URLs`);
     }
+
     res.json({ success: true, urls, subSitemaps, count: urls.length });
   } catch(e) {
+    console.error(`[sitemap] fatal error: ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
