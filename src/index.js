@@ -14777,13 +14777,11 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       violationHistory.push(validationResult.violations);
     }
 
-    // Safety: if loop exited without setting html (shouldn't happen, but guard)
-    if (!html && validationResult) {
-      html = candidate || '';
-      bestScore = validationResult.score;
-      bestViolations = validationResult.violations;
+    // Always accept — never hard-fail. If loop ran, html is set to best candidate.
+    if (!html) {
+      console.warn('[execute-rewrite] No valid html produced — returning empty with error');
+      return res.status(422).json({ success: false, error: 'Rewrite produced no output. The AI model may be unavailable. Wait 30 seconds and retry.' });
     }
-    // Always accept — never hard-fail. Return best with warnings if needed.
     console.log(`[execute-rewrite] Final: accepting score=${bestScore} after ${attemptsUsed} attempt(s)`);
 
     // ═══ GRAAF scan the rewritten output — apply remaining high-priority recs ═══

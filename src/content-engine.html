@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="4.2.5-2026-05-10">
+<meta name="app-version" content="4.2.6-2026-05-10">
 <title>PULSE + NEXUS · by ContentScale</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -138,9 +138,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .task-bar{height:4px;background:var(--border2);border-radius:99px;overflow:hidden;}
 .task-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--green));border-radius:99px;transition:width .6s ease;background-size:200% 100%;animation:barShimmer 1.5s linear infinite;}
 @keyframes barShimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
-.task-progress-label{font-size:11px;color:var(--muted);margin-bottom:8px;font-family:'DM Mono',monospace;}
-.task-bar{height:3px;background:var(--border2);border-radius:99px;overflow:hidden;}
-.task-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .4s ease;}
+/* Working step indicator */
+.working-steps{display:flex;flex-direction:column;gap:4px;margin-top:10px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.working-step{display:flex;align-items:center;gap:6px;opacity:.4;transition:opacity .3s;}
+.working-step.active{opacity:1;color:var(--accent2);}
+.working-step.done{opacity:.7;color:var(--green);}
+.working-step-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:all .3s;}
+.working-step.active .working-step-dot{background:var(--accent);animation:stepPulse 1s ease-in-out infinite;box-shadow:0 0 6px rgba(124,58,237,.5);}
+.working-step.done .working-step-dot{background:var(--green);}
+@keyframes stepPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);}}
 
 /* ── INPUT AREA ── */
 .input-area{padding:16px 24px 20px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:10px;align-items:flex-end;}
@@ -1849,6 +1855,12 @@ function addProgress(label, pct) {
     '<div class="bubble" style="border-color:rgba(124,58,237,.3);"><div class="task-progress">' +
     '<div class="task-progress-label" id="' + id + '-lbl">' + label + '</div>' +
     '<div class="task-bar"><div class="task-bar-fill" id="' + id + '-bar" style="width:' + pct + '%"></div></div>' +
+    '<div class="working-steps" id="steps-' + id + '">' +
+      '<div class="working-step active" id="step-' + id + '-1"><span class="working-step-dot"></span><span>Initializing analysis…</span></div>' +
+      '<div class="working-step" id="step-' + id + '-2"><span class="working-step-dot"></span><span>Scanning content & competitors…</span></div>' +
+      '<div class="working-step" id="step-' + id + '-3"><span class="working-step-dot"></span><span>Writing optimized content…</span></div>' +
+      '<div class="working-step" id="step-' + id + '-4"><span class="working-step-dot"></span><span>Quality check & final scoring…</span></div>' +
+    '</div>' +
     '<div style="font-size:10px;color:var(--muted);margin-top:8px;font-family:DM Mono,monospace;">This may take 30-90 seconds. The page will update automatically.</div>' +
     '</div></div></div>';
   msgs.appendChild(div);
@@ -1860,6 +1872,15 @@ function setProgress(id, pct, label) {
   var bar = document.getElementById(id + '-bar');
   if (bar) bar.style.width = pct + '%';
   if (label) { var lbl = document.getElementById(id + '-lbl'); if (lbl) lbl.textContent = label; }
+  // Update working step indicators
+  var stepNum = pct < 15 ? 1 : pct < 40 ? 2 : pct < 75 ? 3 : 4;
+  for (var i = 1; i <= 4; i++) {
+    var step = document.getElementById('step-' + id + '-' + i);
+    if (!step) continue;
+    if (i < stepNum) { step.className = 'working-step done'; }
+    else if (i === stepNum) { step.className = 'working-step active'; }
+    else { step.className = 'working-step'; }
+  }
 }
 
 function removeProgress(id) {
