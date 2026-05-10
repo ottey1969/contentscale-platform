@@ -2241,7 +2241,14 @@ async function api(endpoint, method, body) {
   if (body) opts.body = JSON.stringify(body);
   var r = await fetch(endpoint, opts);
   var text = await r.text();
-  try { return JSON.parse(text); } catch(e) { return { success: false, error: 'Parse error' }; }
+  var data;
+  try { data = JSON.parse(text); } catch(e) { data = { success: false, error: 'Server returned non-JSON (HTTP ' + r.status + '): ' + text.slice(0,200) }; }
+  if (!r.ok) {
+    var errMsg = (data && data.error) ? data.error : 'HTTP ' + r.status;
+    console.error('[API ERROR]', endpoint, r.status, errMsg);
+    throw new Error(errMsg);
+  }
+  return data;
 }
 
 

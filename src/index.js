@@ -52,13 +52,24 @@ if (AbortSignal && !AbortSignal.timeout) {
   };
 }
 
-// ── Global crash protection ──────────────────────────────────────────────────
+// ── Global crash protection — KEEP PROCESS ALIVE ─────────────────────────────
 process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught Exception:', err.message, err.stack?.split('\n')[0]);
+  console.error('[FATAL] Uncaught Exception:', err.message, err.stack?.split('\n').slice(0,3).join(' | '));
+  // DO NOT exit — Railway will restart and lose active requests. Log and stay alive.
 });
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('[FATAL] Unhandled Rejection reason:', reason?.message || reason);
+  // DO NOT exit — stay alive to serve other requests
 });
+// Express async error wrapper — prevents crash from bubbled async errors
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch((err) => {
+    console.error('[EXPRESS-ERROR]', err.message, err.stack?.split('\n')[0]);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: 'Server error: ' + (err.message || 'unknown') });
+    }
+  });
+};
 
 const fs = require('fs');
 const express = require('express');
@@ -77,6 +88,42 @@ const http   = require('http');
 const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
 const app = express();
+
+// ══ GLOBAL MIDDLEWARE ═══════════════════════════════════════════════════════
+// Request timeout — prevents connections hanging forever
+app.use((req, res, next) => {
+  req.setTimeout(120000);
+  res.setTimeout(120000);
+  next();
+});
+// Body size limits — prevent huge payloads from crashing the server
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// ══ SAFE JSONB PARSE UTILITY ════════════════════════════════════════════════
+// PostgreSQL JSONB can return strings, objects, or null — handle all cases
+function safeJsonParse(val, fallback) {
+  if (val == null) return fallback !== undefined ? fallback : {};
+  if (typeof val === 'object' && !Array.isArray(val)) return val;
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch (e) {
+      console.warn('[safeJsonParse] Failed to parse JSON string:', String(val).slice(0, 120));
+      return fallback !== undefined ? fallback : {};
+    }
+  }
+  return fallback !== undefined ? fallback : {};
+}
+// Array-safe version — handles JSONB that should be an array
+function safeJsonArray(val) {
+  if (val == null) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; }
+    catch (e) { return []; }
+  }
+  return [];
+}
 
 // ── Google Search Console API ──────────────────────────────────────────────
 let _gscServiceAccount = null;
@@ -2051,6 +2098,34 @@ app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 try { const r = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
 catch (e) { res.json({ success: true, pending: [] }); }
 });
+// ── Database health diagnostic ──
+app.get('/api/admin/db-health', verifyAdmin, asyncHandler(async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const tables = await client.query(`
+      SELECT table_name, column_name, data_type
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name IN ('tracker_pages', 'content_rewrites', 'tracker_snapshots', 'content_profiles', 'engine_access_codes')
+      ORDER BY table_name, column_name
+    `);
+    const poolStats = { total: pool.totalCount || 0, idle: pool.idleCount || 0, waiting: pool.waitingCount || 0 };
+    const trackerCount = await client.query('SELECT COUNT(*) FROM tracker_pages').catch(() => ({ rows: [{ count: 0 }] }));
+    const rewriteCount = await client.query('SELECT COUNT(*) FROM content_rewrites').catch(() => ({ rows: [{ count: 0 }] }));
+    res.json({
+      success: true,
+      pool: poolStats,
+      counts: { tracker_pages: parseInt(trackerCount.rows[0].count), content_rewrites: parseInt(rewriteCount.rows[0].count) },
+      schema: tables.rows,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      timestamp: new Date().toISOString()
+    });
+  } finally {
+    client.release();
+  }
+}));
+
 app.post('/api/admin/leaderboard/:id/approve', verifyAdmin, async (req, res) => {
 try {
 const { final_country, city, niche } = req.body;
@@ -14342,7 +14417,7 @@ Return ONLY valid JSON:
   }
 });
 
-app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireCredits('execute-rewrite'), async (req, res) => {
+app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireCredits('execute-rewrite'), asyncHandler(async (req, res) => {
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
     if (typeof v !== 'string') return v;
@@ -14983,7 +15058,7 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
     res.status(500).json({ success: false, error: msg, where: 'execute-rewrite' });
   }
-});
+}));
 
 // ═══════════════════════════════════════════════════════════════════════
 // TARGETED FIX — apply specific improvements only (NOT full rewrite)
@@ -24157,48 +24232,43 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
 });
 
 // Update GSC data for a tracker page (manual override)
-app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, async (req, res) => {
-  try {
-    const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, keyword } = req.body;
-    const eu = req.engineUser;
-    const pageId = parseInt(req.params.id);
-    if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-
-    // Check which columns actually exist (defensive — migration may have failed)
-    let hasGscKeyword = true;
-    try {
-      await pool.query('SELECT gsc_keyword FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
-    } catch(colErr) {
-      if (colErr.message && colErr.message.includes('gsc_keyword')) hasGscKeyword = false;
-    }
-
-    const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
-    const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
-    if (keyword !== undefined && hasGscKeyword) {
-      fields.push('gsc_keyword=$' + (fields.length + 1));
-      vals.push(keyword || null);
-    }
-    if (keyword !== undefined) {
-      // Always update the primary keyword column
-      fields.push('keyword=$' + (fields.length + 1));
-      vals.push(keyword || null);
-    }
-    vals.push(pageId);
-    console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' keyword=' + (keyword || '(none)'));
-    await pool.query(
-      'UPDATE tracker_pages SET ' + fields.join(', ') + ', updated_at=NOW() WHERE id=$' + vals.length,
-      vals
-    );
-    res.json({ success: true, keyword_updated: keyword || null });
-  } catch(e) {
-    console.error('[GSC-save] ERROR:', e.message, e.code || '');
-    res.status(500).json({ success: false, error: e.message, code: e.code || null });
+app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, keyword } = req.body;
+  const eu = req.engineUser;
+  if (!eu) return res.status(401).json({ success: false, error: 'Not authenticated' });
+  const pageId = parseInt(req.params.id);
+  if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
+  if (!eu.isAdmin) {
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
   }
-});
+
+  // Check which columns actually exist (defensive — migration may have failed)
+  let hasGscKeyword = true;
+  try {
+    await pool.query('SELECT gsc_keyword FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
+  } catch(colErr) {
+    if (colErr.message && colErr.message.includes('gsc_keyword')) hasGscKeyword = false;
+  }
+
+  const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
+  const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
+  if (keyword !== undefined && hasGscKeyword) {
+    fields.push('gsc_keyword=$' + (fields.length + 1));
+    vals.push(keyword || null);
+  }
+  if (keyword !== undefined) {
+    fields.push('keyword=$' + (fields.length + 1));
+    vals.push(keyword || null);
+  }
+  vals.push(pageId);
+  console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' keyword=' + (keyword || '(none)'));
+  await pool.query(
+    'UPDATE tracker_pages SET ' + fields.join(', ') + ', updated_at=NOW() WHERE id=$' + vals.length,
+    vals
+  );
+  res.json({ success: true, keyword_updated: keyword || null });
+}));
 
 app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   try {
