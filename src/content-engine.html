@@ -2901,7 +2901,7 @@ async function writeAndExportCluster(c) {
       if (!wR.success) throw new Error(wR.error||'Write failed');
       var wjId = wR.write_job_id;
       var articleHtml = null;
-      for (var w=0;w<90;w++) { await sleep(2000); var wp=await api('/api/content/write-job/'+wjId); if(wp.status==='completed'){var aR=await api('/api/content/articles/'+_profile.id);var art=(aR.articles||[]).find(function(a){return a.id===wp.article_id;});if(art){articleHtml=art.html_content;}break;} if(wp.status==='error')throw new Error(wp.error); }
+      for (var w=0;w<90;w++) { await sleep(2000); var wp=await api('/api/content/write-job/'+wjId); if(wp.status==='completed'){var aR=await api('/api/content/articles/'+_profile.id);var art=parseRecs(aR.articles).find(function(a){return a.id===wp.article_id;});if(art){articleHtml=art.html_content;}break;} if(wp.status==='error')throw new Error(wp.error); }
       if (!articleHtml) throw new Error('No HTML returned');
       var finalHtml = injectClusterSchemas(articleHtml, p, c, entry, i+1);
       downloadHtmlBlob(finalHtml, String(entry.order).padStart(2,'0')+'-'+(entry.label==='HUB'?'HUB':'SPOKE')+'-'+(p.slug||'page')+'.html');
@@ -3177,7 +3177,7 @@ function clearProfileForm() {
 async function loadProfileIntoForm(profileId) {
   try {
     var d = await api('/api/content/profiles');
-    var p = (d.profiles||[]).find(function(x){ return String(x.id) === String(profileId); });
+    var p = parseRecs(d.profiles).find(function(x){ return String(x.id) === String(profileId); });
     if (!p) { toast('Profile not found','err'); return; }
 
     function set(id, val) { var el=document.getElementById(id); if(el) el.value = val||''; }
@@ -3301,7 +3301,7 @@ async function saveProfile() {
     // Preserve existing business_info fields
     try {
       var d0 = await api('/api/content/profiles');
-      var ex = (d0.profiles||[]).find(function(x){return String(x.id)===String(_editingProfileId);});
+      var ex = parseRecs(d0.profiles).find(function(x){return String(x.id)===String(_editingProfileId);});
       if (ex && ex.business_info) biBase = typeof ex.business_info==='string'?JSON.parse(ex.business_info):ex.business_info;
     } catch(e) {}
   }
@@ -4597,7 +4597,7 @@ function scanPageScore(url) {
         var p = _pagesOverviewData.find(function(pg) { return pg.url === url; });
         if (p) p.score = d.score;
         // Also update server tracker so all tabs see the new score
-        var trackerP = (_trPages || []).find(function(tp) { return tp.url === url; });
+        var trackerP = parseRecs(_trPages).find(function(tp) { return tp.url === url; });
         if (trackerP && trackerP.id) {
           api('/api/tracker/pages/' + trackerP.id + '/snapshot', 'POST', {
             score: d.score, metrics: d.metrics, graaf_score: d.graaf_score,
