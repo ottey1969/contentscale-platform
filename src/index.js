@@ -739,7 +739,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      last_checked_at TIMESTAMPTZ,
      is_active BOOLEAN DEFAULT TRUE,
      gsc_connected BOOLEAN DEFAULT FALSE,
-     created_at TIMESTAMPTZ DEFAULT NOW()
+     created_at TIMESTAMPTZ DEFAULT NOW(),
+     updated_at TIMESTAMPTZ DEFAULT NOW()
    )`).catch(()=>{});
    // Migration: add engine_code_id to existing tracker_pages if missing
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
@@ -755,6 +756,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_pages JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_keyword VARCHAR(500)`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_page_hash VARCHAR(64)`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_graaf_score INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS fetch_reliable BOOLEAN DEFAULT TRUE`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
@@ -24244,11 +24246,13 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (re
   }
 
   // Check which columns actually exist (defensive — migration may have failed)
-  let hasGscKeyword = true;
+  let hasGscKeyword = true, hasUpdatedAt = true;
   try {
-    await pool.query('SELECT gsc_keyword FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
+    await pool.query('SELECT gsc_keyword, updated_at FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
   } catch(colErr) {
-    if (colErr.message && colErr.message.includes('gsc_keyword')) hasGscKeyword = false;
+    const msg = colErr.message || '';
+    if (msg.includes('gsc_keyword')) hasGscKeyword = false;
+    if (msg.includes('updated_at')) hasUpdatedAt = false;
   }
 
   const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
@@ -24262,9 +24266,10 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (re
     vals.push(keyword || null);
   }
   vals.push(pageId);
-  console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' keyword=' + (keyword || '(none)'));
+  const setClause = fields.join(', ') + (hasUpdatedAt ? ', updated_at=NOW()' : '');
+  console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' hasUpdatedAt=' + hasUpdatedAt + ' keyword=' + (keyword || '(none)'));
   await pool.query(
-    'UPDATE tracker_pages SET ' + fields.join(', ') + ', updated_at=NOW() WHERE id=$' + vals.length,
+    'UPDATE tracker_pages SET ' + setClause + ' WHERE id=$' + vals.length,
     vals
   );
   res.json({ success: true, keyword_updated: keyword || null });
