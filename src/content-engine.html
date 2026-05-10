@@ -269,11 +269,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
         <div class="drop-zone-text">GSC Pages + Queries CSV</div>
       </div>
       <div id="gscStatus" style="display:none;font-size:10px;color:#34d399;margin-bottom:10px;"></div>
-      <!-- Sitemap Upload -->
-      <div id="sitemapUploadZone" class="drop-zone">
-        <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
-        <div class="drop-zone-icon">🗺️</div>
-        <div class="drop-zone-text">Sitemap XML or URL list</div>
+      <!-- Sitemap: URL input + file upload -->
+      <div id="sitemapSection" style="margin-bottom:10px;">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:4px;">🗺 Sitemap URL</label>
+        <div style="display:flex;gap:4px;">
+          <input type="text" id="sitemapUrlInput" placeholder="https://example.com/sitemap.xml" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:10px;font-family:'DM Mono',monospace;outline:none;" onkeydown="if(event.key==='Enter')fetchSitemapFromUrl()">
+          <button onclick="fetchSitemapFromUrl()" style="padding:6px 10px;border-radius:6px;border:none;background:#f56d00;color:#fff;font-size:10px;cursor:pointer;font-weight:700;">Fetch</button>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-top:3px;">Or drop XML/TXT file:</div>
+        <div id="sitemapUploadZone" class="drop-zone" style="margin-top:4px;padding:8px;">
+          <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
+          <div class="drop-zone-text" style="font-size:10px;">Drop sitemap file here</div>
+        </div>
       </div>
       <div id="sitemapStatus" style="display:none;font-size:10px;color:#34d399;margin-top:6px;"></div>
     </div>
@@ -520,12 +527,58 @@ function handleGscUpload(input) {
         toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 'ok');
       }
       updateGscStatus();
+      // Auto-sync GSC pages into Pages Overview
+      syncGscToPagesOverview();
     };
     reader.readAsText(file);
   });
 }
 
-// ── Sitemap XML/TXT upload: extract URLs for internal link discovery ──────────
+// Sync loaded GSC pages into Pages Overview grid
+function syncGscToPagesOverview() {
+  if (!_gscPages.length) return;
+  var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
+  var profileDomain = (_profile && _profile.domain) || '';
+  var added = 0, merged = 0;
+  var existingUrls = _pagesOverviewData.map(function(p) { return p.url; });
+
+  _gscPages.forEach(function(g) {
+    if (!g.url) return;
+    // Only sync pages matching current profile domain
+    if (profileDomain) {
+      try {
+        var pageDomain = new URL(g.url).hostname.replace('www.', '');
+        if (pageDomain !== profileDomain.replace('www.', '')) return;
+      } catch(e) { return; }
+    }
+    var idx = existingUrls.indexOf(g.url);
+    if (idx >= 0) {
+      // Merge GSC data into existing page
+      _pagesOverviewData[idx].clicks = g.clicks || _pagesOverviewData[idx].clicks || 0;
+      _pagesOverviewData[idx].impressions = g.impressions || _pagesOverviewData[idx].impressions || 0;
+      _pagesOverviewData[idx].ctr = g.ctr || _pagesOverviewData[idx].ctr || 0;
+      _pagesOverviewData[idx].position = g.position || _pagesOverviewData[idx].position || 0;
+      _pagesOverviewData[idx].keyword = g.keyword || _pagesOverviewData[idx].keyword || '';
+      if (activeProfileId) _pagesOverviewData[idx].profile_id = activeProfileId;
+      merged++;
+    } else {
+      // Add new page from GSC
+      var slug = '';
+      try { slug = new URL(g.url).pathname || '/'; } catch(e) { slug = g.url; }
+      _pagesOverviewData.push({
+        url: g.url, slug: slug, keyword: g.keyword || '',
+        position: g.position || 0, impressions: g.impressions || 0,
+        clicks: g.clicks || 0, ctr: g.ctr || 0,
+        score: '', scoreStatus: '', added: new Date().toISOString(),
+        tracker_id: null, profile_id: activeProfileId, opportunity: 0
+      });
+      added++;
+    }
+  });
+  if (added || merged) renderPagesOverview();
+}
+
+// ── Sitemap: URL input + file upload ────────────────────────────────────────
 function handleSitemapUpload(input) {
   var file = input.files[0];
   if (!file) return;
@@ -557,6 +610,37 @@ function handleSitemapUpload(input) {
     toast('✓ Sitemap: ' + matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' for this profile', 3000, 'ok');
   };
   reader.readAsText(file);
+}
+
+// Fetch sitemap from URL via backend proxy (avoids CORS)
+async function fetchSitemapFromUrl() {
+  var url = document.getElementById('sitemapUrlInput').value.trim();
+  if (!url) { toast('Enter a sitemap URL', 'warn'); return; }
+  if (!url.startsWith('http')) { toast('URL must start with http:// or https://', 'warn'); return; }
+  var btn = document.querySelector('#sitemapSection button');
+  btn.disabled = true; btn.textContent = 'Fetching…';
+  try {
+    var d = await api('/api/fetch-sitemap?url=' + encodeURIComponent(url));
+    if (!d || !d.success) throw new Error(d?.error || 'Failed to fetch sitemap');
+    var urls = d.urls || [];
+    if (!urls.length) { toast('No URLs found in sitemap', 'warn'); return; }
+    // Filter to current profile domain
+    var profileDomain = (_profile && _profile.domain) || '';
+    var matched = urls;
+    if (profileDomain) {
+      matched = urls.filter(function(u) { try { return new URL(u).hostname.replace('www.','') === profileDomain.replace('www.',''); } catch(e){ return false; } });
+    }
+    _sitemapUrls = matched;
+    var statusEl = document.getElementById('sitemapStatus');
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' found' + (profileDomain ? ' for ' + profileDomain : '') + ' <button onclick="addSitemapUrlsToTracker()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Add all</button>';
+    }
+    toast('✓ Sitemap: ' + matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' fetched', 3000, 'ok');
+  } catch(e) {
+    toast('Sitemap fetch failed: ' + e.message, 4000, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Fetch';
 }
 
 var _sitemapUrls = []; // URLs from last sitemap upload
