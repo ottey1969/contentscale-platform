@@ -1445,41 +1445,6 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    res.json({ success: true });
    } catch (e) { res.json({ success: false, error: e.message }); }
    });
-   // ── Client AI Key Management (BYOK) ──
-   app.get('/api/engine/keys', verifyEngineAccess, asyncHandler(async (req, res) => {
-     const eu = req.engineUser;
-     const code = eu.code || {};
-     // Return masked key indicators — never the full keys
-     res.json({
-       success: true,
-       claude: { has_key: !!code.claude_key, masked: code.claude_key ? code.claude_key.slice(0,8) + '…' + code.claude_key.slice(-4) : null },
-       gemini: { has_key: !!code.gemini_key, masked: code.gemini_key ? code.gemini_key.slice(0,4) + '…' + code.gemini_key.slice(-4) : null },
-       mode: code.api_key_mode || 'platform', // 'byok' = bring your own, 'platform' = use server keys
-       platform_available: { claude: !!process.env.ANTHROPIC_API_KEY, gemini: !!process.env.GEMINI_API_KEY }
-     });
-   }));
-
-   app.put('/api/engine/keys', verifyEngineAccess, asyncHandler(async (req, res) => {
-     const { claude_key, gemini_key, mode } = req.body;
-     const eu = req.engineUser;
-     const codeId = eu.codeId;
-     if (!codeId) return res.status(400).json({ success: false, error: 'No engine code' });
-
-     const fields = [];
-     const vals = [];
-     if (claude_key !== undefined) { fields.push('claude_key=$' + (fields.length+1)); vals.push(claude_key || null); }
-     if (gemini_key !== undefined) { fields.push('gemini_key=$' + (fields.length+1)); vals.push(gemini_key || null); }
-     if (mode !== undefined) { fields.push('api_key_mode=$' + (fields.length+1)); vals.push(mode); }
-     if (fields.length === 0) return res.status(400).json({ success: false, error: 'Nothing to update' });
-
-     vals.push(codeId);
-     await pool.query(
-       'UPDATE engine_access_codes SET ' + fields.join(', ') + ' WHERE id=$' + vals.length,
-       vals
-     );
-     res.json({ success: true, updated: fields.map(f => f.split('=')[0]) });
-   }));
-
    app.get('/api/user/templates', async (req, res) => {
    const userId = req.headers['x-user-id'];
    if (!userId) return res.json({ success: false, error: 'No ID' });
@@ -11542,6 +11507,40 @@ app.get('/api/engine/verify', verifyEngineAccess, async (req, res) => {
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// ── Client AI Key Management (BYOK) ──
+app.get('/api/engine/keys', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const eu = req.engineUser;
+  const code = eu.code || {};
+  res.json({
+    success: true,
+    claude: { has_key: !!code.claude_key, masked: code.claude_key ? code.claude_key.slice(0,8) + '…' + code.claude_key.slice(-4) : null },
+    gemini: { has_key: !!code.gemini_key, masked: code.gemini_key ? code.gemini_key.slice(0,4) + '…' + code.gemini_key.slice(-4) : null },
+    mode: code.api_key_mode || 'platform',
+    platform_available: { claude: !!process.env.ANTHROPIC_API_KEY, gemini: !!process.env.GEMINI_API_KEY }
+  });
+}));
+
+app.put('/api/engine/keys', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const { claude_key, gemini_key, mode } = req.body;
+  const eu = req.engineUser;
+  const codeId = eu.codeId;
+  if (!codeId) return res.status(400).json({ success: false, error: 'No engine code' });
+
+  const fields = [];
+  const vals = [];
+  if (claude_key !== undefined) { fields.push('claude_key=$' + (fields.length+1)); vals.push(claude_key || null); }
+  if (gemini_key !== undefined) { fields.push('gemini_key=$' + (fields.length+1)); vals.push(gemini_key || null); }
+  if (mode !== undefined) { fields.push('api_key_mode=$' + (fields.length+1)); vals.push(mode); }
+  if (fields.length === 0) return res.status(400).json({ success: false, error: 'Nothing to update' });
+
+  vals.push(codeId);
+  await pool.query(
+    'UPDATE engine_access_codes SET ' + fields.join(', ') + ' WHERE id=$' + vals.length,
+    vals
+  );
+  res.json({ success: true, updated: fields.map(f => f.split('=')[0]) });
+}));
 
 // ── Profiles ─────────────────────────────────────────────────
 app.get('/api/content/profiles', async (req, res, next) => {
