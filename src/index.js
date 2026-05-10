@@ -14729,7 +14729,7 @@ ${imageNote}
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
 
-    // ═══ REGENERATION LOOP — HARD FAIL on final attempt ═══
+    // ═══ REGENERATION LOOP — with Claude → Gemini fallback ═══
     let html = '';
     let validationResult = null;
     let wasTruncated = false;
@@ -14740,28 +14740,59 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     let bestViolations = [];
     let bestWordCount = 0;
 
+    // Determine which AI to use: Claude primary, Gemini fallback
+    const claudeRwKey = resolveClaudeKey(req);
+    const useGemini = !claudeRwKey;
+    if (useGemini && !geminiKey) {
+      return res.status(500).json({ success: false, error: 'No AI API key available. Add ANTHROPIC_API_KEY (Claude) or GEMINI_API_KEY to your server environment.' });
+    }
+
     for (let attempt = 0; attempt <= max_regen; attempt++) {
       attemptsUsed = attempt + 1;
       const promptThisAttempt = attempt === 0
         ? writePromptRW
         : `${writePromptRW}\n\n═══ VORIGE POGING AFGEWEZEN ═══\nDe vorige poging had deze problemen — los ze op:\n${violationHistory[violationHistory.length-1].map(v => `- ${v.code}: ${v.hint}`).join('\n')}\n\nSCHRIJF NU OPNIEUW — los elk probleem op.`;
 
-      const claudeRwKey = resolveClaudeKey(req);
-      if (!claudeRwKey) return res.status(500).json({ success: false, error: 'Claude API key required' });
       let rawHtml;
       try {
-        const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
-        rawHtml = await callClaudeForWrite(sys, promptThisAttempt, 8000, claudeRwKey);
+        if (!useGemini) {
+          // Claude path (primary)
+          const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
+          rawHtml = await callClaudeForWrite(sys, promptThisAttempt, 8000, claudeRwKey);
+          modelUsed = 'claude-sonnet-4-20250514';
+        } else {
+          // Gemini fallback path
+          const gemSys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
+          const gemResult = await callGeminiWithFallback(geminiKey, {
+            systemInstruction: { parts: [{ text: gemSys }] },
+            contents: [{ role: 'user', parts: [{ text: promptThisAttempt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 65536 }
+          });
+          if (!gemResult.ok) throw new Error('Gemini: ' + (gemResult.errorMessage || gemResult.status));
+          rawHtml = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          modelUsed = gemResult.modelUsed || 'gemini-2.5-flash';
+        }
         rawHtml = rawHtml.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
-      } catch(e) { return res.status(502).json({ success: false, error: 'Claude rewrite failed: ' + e.message }); }
-      if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty rewrite' });
-      wasTruncated = false; modelUsed = 'claude-sonnet-4-20250514';
+      } catch(e) {
+        console.error('[execute-rewrite] AI call failed (attempt ' + attemptsUsed + '):', e.message);
+        if (attempt === max_regen) {
+          return res.status(502).json({ success: false, error: (useGemini ? 'Gemini' : 'Claude') + ' rewrite failed after ' + (max_regen+1) + ' attempts: ' + e.message });
+        }
+        violationHistory.push([{ code: 'AI_ERROR', hint: e.message }]);
+        continue;
+      }
+      if (!rawHtml) {
+        if (attempt === max_regen) return res.status(502).json({ success: false, error: (useGemini ? 'Gemini' : 'Claude') + ' returned empty rewrite' });
+        violationHistory.push([{ code: 'EMPTY_OUTPUT', hint: 'AI returned empty response' }]);
+        continue;
+      }
+      wasTruncated = false;
 
       const scrubbed = stripAiPlaceholders(rawHtml);
       let candidate = rewriterHelpers.stripForbiddenPatterns(splitLongParagraphs(scrubbed.html));
       validationResult = rewriterHelpers.validateBofuQuality(candidate);
 
-      console.log(`[execute-rewrite] Attempt ${attemptsUsed}: score=${validationResult.score} violations=${validationResult.violations.length}`);
+      console.log(`[execute-rewrite] Attempt ${attemptsUsed} (${modelUsed}): score=${validationResult.score} violations=${validationResult.violations.length}`);
 
       // Track best candidate across all attempts
       if (validationResult.score > bestScore) {
@@ -24130,26 +24161,43 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, async (req, res) => {
   try {
     const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, keyword } = req.body;
     const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
+
+    // Check which columns actually exist (defensive — migration may have failed)
+    let hasGscKeyword = true;
+    try {
+      await pool.query('SELECT gsc_keyword FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
+    } catch(colErr) {
+      if (colErr.message && colErr.message.includes('gsc_keyword')) hasGscKeyword = false;
+    }
+
     const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
     const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
-    if (keyword !== undefined) {
+    if (keyword !== undefined && hasGscKeyword) {
       fields.push('gsc_keyword=$' + (fields.length + 1));
       vals.push(keyword || null);
-      // Also update the primary keyword column if gsc_keyword is set
+    }
+    if (keyword !== undefined) {
+      // Always update the primary keyword column
       fields.push('keyword=$' + (fields.length + 1));
       vals.push(keyword || null);
     }
-    vals.push(req.params.id);
+    vals.push(pageId);
+    console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' keyword=' + (keyword || '(none)'));
     await pool.query(
       'UPDATE tracker_pages SET ' + fields.join(', ') + ', updated_at=NOW() WHERE id=$' + vals.length,
       vals
     );
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+    res.json({ success: true, keyword_updated: keyword || null });
+  } catch(e) {
+    console.error('[GSC-save] ERROR:', e.message, e.code || '');
+    res.status(500).json({ success: false, error: e.message, code: e.code || null });
+  }
 });
 
 app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
