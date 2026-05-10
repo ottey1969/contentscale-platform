@@ -283,8 +283,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="sidebar-label">Tools</div>
       <button class="sidebar-btn" onclick="openPipelineModal()" title="Write a complete article from research to publish-ready HTML" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;">🚀 Content Pipeline</button>
       <button class="sidebar-btn" onclick="openRewriteModal()" title="Rewrite existing page HTML with AI optimization" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:6px;">✍ Rewrite Page</button>
-      <button class="sidebar-btn" onclick="runDirectSurgicalFixes()" title="Apply 6 targeted surgical fixes to the last rewrite" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:6px;">🔧 Surgical Fixes</button>
-      <button class="sidebar-btn" onclick="runDirectFullRewrite()" title="Run a full AI rewrite of the last analysis" style="border-color:rgba(251,191,36,.3);color:#fbbf24;margin-top:6px;">♻ Full Rewrite</button>
+      <button class="sidebar-btn" onclick="openRewriteModalWithMode('surgical')" title="Apply 6 targeted surgical fixes to the last rewrite" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:6px;">🔧 Surgical Fixes</button>
     </div>
 
     <!-- AI Keys (BYOK) -->
@@ -1168,7 +1167,61 @@ async function runDirectSurgicalFixes() {
     addActions([
       { label: '📋 Copy HTML', fn: function(){ copyRewriteHtml(); } },
       { label: '🔍 Scan result', fn: function(){ userSend('Scan the rewritten page'); } },
-      { label: '✍ Full rewrite instead', fn: function(){ runDirectFullRewrite(); } }
+      { label: '🔄 Full rewrite instead', fn: function(){ openRewriteModalWithMode('complete'); } }
+    ]);
+  } catch(e) {
+    removeProgress(prog);
+    addAgentMessage('❌ Surgical fix failed: ' + e.message);
+  }
+}
+
+// Surgical from modal: analyse first, then targeted-fix (has keyword/url/html from form)
+async function runSurgicalFromModal(keyword, url, html) {
+  if (!_context.profileId) {
+    addAgentMessage('❌ <b>Profile Required</b> — Select a profile first.');
+    return;
+  }
+  var prog = addProgress('🔧 Surgical Fixes — analyzing…', 10);
+  try {
+    // Step 1: Scan
+    setProgress(prog, 30);
+    var scan = await api('/api/scan/paste', 'POST', { html: html, url: url || 'https://example.com', keyword: keyword, profile_id: _context.profileId });
+    if (!scan || !scan.success) throw new Error(scan?.error || 'Scan failed');
+    _context.score = scan.score;
+    _context.recs = parseRecs(scan.recommendations);
+    _context.url = url || '';
+    _context.keyword = keyword;
+    updateContext();
+
+    // Step 2: Analyse
+    setProgress(prog, 55);
+    var slug = '';
+    try { slug = new URL(url || 'https://example.com').pathname.split('/').filter(Boolean).pop() || '/'; } catch(e) { slug = '/'; }
+    var analyse = await api('/api/content/analyse-rewrite', 'POST', {
+      profile_id: _context.profileId, original_url: url || '', original_slug: slug,
+      original_title: scan.meta_title || '', original_html: html, gsc_keyword: keyword,
+      rewrite_modes: ['surgical']
+    });
+    if (!analyse || !analyse.success) throw new Error(analyse?.error || 'Analysis failed');
+    var rewriteId = analyse.rewrite_id;
+    if (!rewriteId) throw new Error('No rewrite ID');
+
+    // Step 3: Targeted fix (surgical)
+    setProgress(prog, 75);
+    var fixes = ['direct_answer','title_meta','cta_strengthen','schema_add','paa_improve','voice_optimize'];
+    var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', { fixes: fixes, profile_id: _context.profileId });
+    if (!d || !d.success) throw new Error(d?.error || 'Surgical fix failed');
+
+    setProgress(prog, 100);
+    removeProgress(prog);
+    _context.currentRewriteId = rewriteId;
+    _context.lastRewriteHtml = d.html_content || d.html_full;
+    addAgentMessage('🔧 <b>Surgical fixes applied</b> to rewrite #' + rewriteId + '. 6 targeted improvements: Direct Answer, Meta, CTAs, Schema, PAA, Voice Search. Your page structure is preserved.');
+    addRewriteResult(d);
+    addActions([
+      { label: '📋 Copy HTML', fn: function(){ copyRewriteHtml(); } },
+      { label: '🔄 Complete Rewrite instead', fn: function(){ openRewriteModalWithMode('complete'); } },
+      { label: '🔍 Scan result', fn: function(){ userSend('Scan the rewritten page'); } }
     ]);
   } catch(e) {
     removeProgress(prog);
@@ -1938,7 +1991,7 @@ async function cmdAnalyse(url, keyword) {
     addAgentMessage(interp);
     addActions([
       { label: '🔧 Apply surgical fixes', fn: function(){ runDirectSurgicalFixes(); } },
-      { label: '✍ Full rewrite', fn: function(){ runDirectFullRewrite(); } },
+      { label: '🔄 Full rewrite', fn: function(){ openRewriteModalWithMode('complete'); } },
       { label: '💡 Explain more first', fn: function(){ userSend('Explain what the analysis found before we do anything'); } }
     ]);
 
@@ -3884,6 +3937,10 @@ function autoSelectModes() {
 }
 
 function openRewriteModal() {
+  openRewriteModalWithMode(null);
+}
+
+function openRewriteModalWithMode(preselectMode) {
   var modal = document.getElementById('rewriteModal');
   if (!modal) return;
   // Pre-fill with context
@@ -3908,7 +3965,7 @@ function openRewriteModal() {
     // Risk warning
     if (pos >= 1 && pos <= 10) {
       riskBanner.style.display = 'block';
-      riskText.innerHTML = 'You are at <b>position ' + pos + '</b>. A complete rewrite carries ranking risk. Consider using "Beat Competitors" + "Answer PAA" instead of a full rewrite. Your current page is already ranking — targeted improvements are safer.';
+      riskText.innerHTML = 'You are at <b>position ' + pos + '</b>. A complete rewrite carries ranking risk. Consider using "Surgical Fixes" or "Beat Competitors" + "Answer PAA" instead of a full rewrite. Your current page is already ranking — targeted improvements are safer.';
     } else {
       riskBanner.style.display = 'none';
     }
@@ -3943,8 +4000,12 @@ function openRewriteModal() {
     }
   }
 
-  // Default selection
-  setSelectedModes(['complete']);
+  // Selection: preselect mode if provided, otherwise default to complete
+  if (preselectMode === 'surgical') {
+    setSelectedModes(['surgical']);
+  } else {
+    setSelectedModes(['complete']);
+  }
   modal.style.display = 'flex';
 }
 function closeRewriteModal() {
@@ -3962,10 +4023,16 @@ async function runRewriteFromModal() {
   if (!keyword) { toast('Enter a target keyword', 'warn'); return; }
   if (!html) { toast('Paste your page HTML', 'warn'); return; }
   var modes = getSelectedModes();
-  var modeLabels = { complete: 'Complete Rewrite', sections: 'Add Sections', meta: 'Better Meta', compete: 'Beat Competitors', voice: 'Voice Search', paa: 'Answer PAA' };
+  var modeLabels = { complete: 'Complete Rewrite', sections: 'Add Sections', meta: 'Better Meta', compete: 'Beat Competitors', voice: 'Voice Search', paa: 'Answer PAA', surgical: 'Surgical Fixes' };
   var modeNames = modes.map(function(m) { return modeLabels[m] || m; }).join(' + ');
+
+  // SPECIAL CASE: Surgical-only mode → run targeted-fix flow (faster, preserves structure)
+  if (modes.length === 1 && modes[0] === 'surgical') {
+    closeRewriteModal();
+    runSurgicalFromModal(keyword, url, html);
+    return;
+  }
   closeRewriteModal();
-  // Run the rewrite via agent
   addAgentMessage('✍ Starting <b>' + modeNames + '</b> for "' + escHtml(keyword) + '"…');
   var prog = addProgress(modeNames + ' — analyzing…', 0);
   try {
@@ -5284,6 +5351,10 @@ document.addEventListener('DOMContentLoaded', function() {
           <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(168,85,247,.2);background:rgba(168,85,247,.05);cursor:pointer;transition:all .2s;">
             <input type="checkbox" name="rewriteMode" value="paa" style="margin-top:2px;accent-color:#a855f7;">
             <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">❓ Answer PAA</div><div style="font-size:9px;color:#6b7280;">People Also Ask questions</div></div>
+          </label>
+          <label class="rewrite-check" style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.05);cursor:pointer;transition:all .2s;">
+            <input type="checkbox" name="rewriteMode" value="surgical" style="margin-top:2px;accent-color:#34d399;">
+            <div><div style="font-size:11px;font-weight:600;color:#e2e8f0;">🔧 Surgical Fixes</div><div style="font-size:9px;color:#6b7280;">6 targeted fixes, preserve structure</div></div>
           </label>
         </div>
       </div>
