@@ -818,6 +818,7 @@ function buildSystemPrompt() {
   if (_context.url) contextStr += '\nCurrent URL being worked on: ' + _context.url;
   if (_context.keyword) contextStr += '\nTarget keyword: ' + _context.keyword;
   if (_context.score !== null) contextStr += '\nContentScore: ' + _context.score + '/100';
+  if (_context.currentRewriteId) contextStr += '\nCurrent rewrite ID: ' + _context.currentRewriteId + ' (use this exact number for [REWRITE] commands, never make up an ID)';
   if (_context.recs && _context.recs.length) {
     contextStr += '\nTop recommendations from GRAAF scan:\n' + parseRecs(_context.recs).slice(0,5).map(function(r){ return '- ['+r.priority+'] ' + (r.title||r.description||''); }).join('\n');
   }
@@ -830,7 +831,7 @@ YOUR CAPABILITIES (you can trigger these with commands):
 - [INTELLIGENCE keyword url] — deep competitor content analysis + beat-them brief
 - [META keyword "current title"] — meta title + description research with CTR-optimized alternatives
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
-- [REWRITE 123 fixes] — apply targeted fixes to rewrite ID 123 (fixes = comma-separated keys). The ID is a NUMBER from a previous ANALYSE result, never the word "rewriteId".
+- [REWRITE id fixes] — apply targeted fixes. Use the EXACT rewrite ID number from the ANALYSE result above. NEVER use "123", "1234", or any placeholder — only the real ID the system gave you.
 - [SHOW_OPPORTUNITIES] — show GSC page opportunities
 
 YOUR BEHAVIOUR:
@@ -1017,8 +1018,21 @@ async function cmdRewrite(rewriteId, fixes) {
     addAgentMessage('❌ Invalid rewrite ID: "' + rewriteId + '". The rewrite ID must be a number (e.g., 42). Use the ID shown in the rewrite result card above, or run a new analysis with [ANALYSE url keyword].');
     return;
   }
+  // Validate the rewrite ID exists in context — prevent fake example IDs like "1234"
+  var numericId = parseInt(rewriteId);
+  var contextId = _context.currentRewriteId;
+  if (contextId && numericId !== contextId) {
+    // The agent used a fake/example ID — use the real one from context
+    console.log('[cmdRewrite] Agent used ID ' + numericId + ' but context has ' + contextId + ' — using context ID');
+    numericId = contextId;
+    rewriteId = String(contextId);
+  }
+  if (!contextId) {
+    addAgentMessage('❌ No rewrite ID available. Run [ANALYSE url keyword] first to create a rewrite entry, then apply fixes.');
+    return;
+  }
 
-  var prog = addProgress('Applying targeted fixes and generating HTML…', 10);
+  var prog = addProgress('Applying targeted fixes to rewrite #' + rewriteId + '…', 10);
   setProgress(prog, 20);
 
   try {
