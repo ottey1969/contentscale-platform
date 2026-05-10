@@ -515,8 +515,8 @@ function handleGscUpload(input) {
       var rows = parseCSV(e.target.result);
       if (!rows.length) return;
       var headers = Object.keys(rows[0]).map(function(h){ return h.toLowerCase(); });
-      var isPages   = headers.includes('page') || headers.includes('top pages') || headers.includes('url');
-      var isQueries = headers.includes('query') || headers.includes('top queries') || headers.includes('search query');
+      var isPages   = headers.some(function(h) { return /^(top\s*)?pages?$/i.test(h) || /url/i.test(h); });
+      var isQueries = headers.some(function(h) { return /^(top\s*)?(quer(y|ies)|search\s*quer(y|ies)|keyword)$/i.test(h); });
       if (isPages) {
         _gscPages = rows.map(function(r) {
           var keys = Object.keys(r);
@@ -831,11 +831,31 @@ function addSitemapUrlsToTracker() {
 }
 
 function parseCSV(text) {
-  var lines = text.trim().split(/\r?\n/);
+  // Strip BOM if present
+  if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+  var lines = text.trim().split(/\r?\n/).filter(function(l){ return l.trim(); });
   if (lines.length < 2) return [];
-  var headers = lines[0].split(',').map(function(h){ return h.replace(/^"|"$/g,'').trim(); });
+  // Robust CSV line parser — handles quoted fields with commas
+  function parseLine(line) {
+    var vals = [], val = '', inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var c = line[i];
+      if (c === '"') {
+        if (inQuotes && line[i+1] === '"') { val += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (c === ',' && !inQuotes) {
+        vals.push(val.trim());
+        val = '';
+      } else {
+        val += c;
+      }
+    }
+    vals.push(val.trim());
+    return vals.map(function(v){ return v.replace(/^"|"$/g,'').trim(); });
+  }
+  var headers = parseLine(lines[0]);
   return lines.slice(1).map(function(line) {
-    var vals = line.split(',').map(function(v){ return v.replace(/^"|"$/g,'').trim(); });
+    var vals = parseLine(line);
     var obj = {};
     headers.forEach(function(h, i){ obj[h] = vals[i] || ''; });
     return obj;
@@ -3967,9 +3987,14 @@ function processPagesGscFiles(files) {
       var headers = rows.length ? Object.keys(rows[0]).map(function(h) { return h.toLowerCase(); }) : [];
       var isPages = headers.some(function(h) { return /page|url/i.test(h); });
       var isQueries = headers.some(function(h) { return /query|keyword/i.test(h); });
-      if (isPages && !isQueries) pagesFile = file;
-      if (isQueries && !isPages) queriesFile = file;
-      if (isPages && isQueries) pagesFile = file; // mixed, treat as pages
+      var isTopQueries = headers.some(function(h) { return /top\s*quer(ies|y)/i.test(h); });
+      var isTopPages = headers.some(function(h) { return /top\s*pages?/i.test(h); });
+      // GSC exports use "Top queries" and "Top pages" — prioritize these exact headers
+      if (isTopQueries) queriesFile = file;
+      else if (isTopPages) pagesFile = file;
+      else if (isQueries && !isPages) queriesFile = file;
+      else if (isPages && !isQueries) pagesFile = file;
+      else if (isPages && isQueries) queriesFile = file; // has both: modern GSC query export has URL col → queries
       checkPending--;
       if (checkPending === 0) uploadGscFiles(pagesFile, queriesFile);
     };
@@ -3999,6 +4024,7 @@ function uploadGscFiles(pagesFile, queriesFile) {
           var keys = Object.keys(r);
           return { query: r[keys.find(function(k){ return /query|keyword/i.test(k); })] || '', clicks: parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0), impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0), ctr: parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')), position: parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0) };
         }).filter(function(r){ return r.query; });
+        toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', _gscQueries.length ? 'ok' : 'warn');
         updateGscStatus();
       };
       qReader.readAsText(queriesFile);
@@ -4039,21 +4065,32 @@ function showGscPreview() {
   api('/api/gsc/preview?profile_id=' + _context.profileId).then(function(d) {
     if (!d.success) { list.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(d.error) + '</div>'; return; }
     if (!d.urls || !d.urls.length) {
-      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">✅ All GSC URLs are already imported.<br><br>No new URLs to add.</div>';
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">No GSC data found for this profile.<br><br>Upload a GSC Pages CSV first.</div>';
       countEl.textContent = '0 selected';
       return;
     }
-    _gscPreviewUrls = d.urls;
-    renderGscPreviewList();
+    // Show header with counts
+    var headerHtml = '';
+    if (d.existing_count > 0) {
+      headerHtml = '<div style="padding:8px 12px;background:rgba(124,58,237,.1);border-bottom:1px solid var(--border);font-size:11px;color:#a78bfa;">' +
+        '✓ ' + d.existing_count + ' already in tracker — re-import to sync profile' +
+        (d.new_count > 0 ? ' · ' + d.new_count + ' new' : '') + '</div>';
+    }
+    _gscPreviewUrls = d.urls.map(function(u) {
+      u._selected = u._selected !== false; // default select all
+      return u;
+    });
+    renderGscPreviewList(headerHtml);
   }).catch(function(e) {
     list.innerHTML = '<div style="color:#f87171;padding:20px;">Failed to load preview: ' + escHtml(e.message) + '</div>';
   });
 }
 
-function renderGscPreviewList() {
+function renderGscPreviewList(headerHtml) {
   var list = document.getElementById('gscPreviewList');
   var countEl = document.getElementById('gscPreviewCount');
-  var html = '<div style="display:flex;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);font-weight:700;">' +
+  var html = (headerHtml || '') +
+    '<div style="display:flex;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);font-weight:700;">' +
     '<input type="checkbox" id="gscPreviewHeader" onchange="gscPreviewSelectAll(this.checked)" style="margin-right:8px;" checked>' +
     '<span style="flex:1;">URL</span><span style="width:55px;text-align:right;">Clicks</span><span style="width:65px;text-align:right;margin-left:8px;">Impressions</span><span style="width:45px;text-align:right;margin-left:8px;">Pos</span></div>';
   var selectedCount = 0;
@@ -4061,16 +4098,18 @@ function renderGscPreviewList() {
     var checked = u._selected !== false ? 'checked' : '';
     if (u._selected !== false) selectedCount++;
     var urlShort = u.url.replace(/^https?:\/\/[^\/]+/, '');
+    var trackerBadge = u.in_tracker ? '<span style="margin-left:6px;padding:1px 4px;background:rgba(124,58,237,.2);color:#a78bfa;font-size:9px;border-radius:3px;">in tracker</span>' : '<span style="margin-left:6px;padding:1px 4px;background:rgba(52,211,153,.15);color:#34d399;font-size:9px;border-radius:3px;">new</span>';
     html += '<div style="display:flex;align-items:center;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;" onmouseenter="this.style.background=\'rgba(124,58,237,.05)\'" onmouseleave="this.style.background=\'\'">' +
       '<input type="checkbox" data-gsc-idx="' + idx + '" onchange="gscPreviewToggle(' + idx + ')" style="margin-right:8px;flex-shrink:0;" ' + checked + '>' +
-      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e2e8f0;" title="' + escHtml(u.url) + '">' + escHtml(urlShort || u.url) + '</span>' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e2e8f0;" title="' + escHtml(u.url) + '">' + escHtml(urlShort || u.url) + '</span>' + trackerBadge +
       '<span style="width:55px;text-align:right;color:#34d399;font-family:DM Mono,monospace;font-size:10px;">' + (parseInt(u.clicks)||0).toLocaleString() + '</span>' +
       '<span style="width:65px;text-align:right;color:#a78bfa;font-family:DM Mono,monospace;font-size:10px;margin-left:8px;">' + (parseInt(u.impressions)||0).toLocaleString() + '</span>' +
       '<span style="width:45px;text-align:right;color:#fbbf24;font-family:DM Mono,monospace;font-size:10px;margin-left:8px;">' + (parseFloat(u.position)||'—') + '</span></div>';
   });
   list.innerHTML = html;
   countEl.textContent = selectedCount + ' / ' + _gscPreviewUrls.length + ' selected';
-  document.getElementById('gscPreviewHeader').checked = selectedCount === _gscPreviewUrls.length;
+  var headerCb = document.getElementById('gscPreviewHeader');
+  if (headerCb) headerCb.checked = selectedCount === _gscPreviewUrls.length;
 }
 
 function gscPreviewToggle(idx) {
@@ -4098,6 +4137,7 @@ function confirmGscImport() {
       if (d.success) {
         var msg = '✅ Imported ' + d.imported + ' pages';
         if (d.updated) msg += ', updated ' + d.updated;
+        if (d.synced) msg += ', synced ' + d.synced;
         if (d.skipped) msg += ' (' + d.skipped + ' skipped)';
         toast(msg, 'ok');
         closeGscPreview();

@@ -10027,34 +10027,31 @@ app.get('/api/gsc/preview', verifyEngineAccess, async (req, res) => {
     if (!profileId) return res.status(400).json({ success: false, error: 'profile_id required' });
     const eu = req.engineUser;
     const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
-    // Get GSC pages for this profile that aren't in tracker_pages for THIS ENGINE yet.
-    // Must check across engine_code_id (not just profile_id) because tracker_pages
-    // has a unique constraint on (engine_code_id, url).
+
+    // Return ALL GSC pages for this profile, with an in_tracker flag.
+    // This lets the user see AND re-import (sync profile_id) existing URLs.
     const gscR = await pool.query(
-      `SELECT g.url, g.clicks, g.impressions, g.ctr, g.position, g.uploaded_at
+      `SELECT g.url, g.clicks, g.impressions, g.ctr, g.position, g.uploaded_at,
+         EXISTS (
+           SELECT 1 FROM tracker_pages t
+           WHERE (t.engine_code_id = $2 OR (t.engine_code_id IS NULL AND $2 IS NULL))
+             AND t.url = g.url
+         ) as in_tracker
        FROM gsc_pages g
        WHERE g.profile_id = $1
-       AND NOT EXISTS (
-         SELECT 1 FROM tracker_pages t
-         WHERE (t.engine_code_id = $2 OR (t.engine_code_id IS NULL AND $2 IS NULL))
-           AND t.url = g.url
-       )
        ORDER BY g.clicks DESC, g.impressions DESC
        LIMIT 200`,
       [profileId, codeId]
     );
-    // Count how many GSC pages already exist in tracker for this engine
-    const existingR = await pool.query(
-      `SELECT COUNT(*) as cnt FROM gsc_pages g
-       JOIN tracker_pages t ON t.url = g.url
-       WHERE g.profile_id = $1
-         AND (t.engine_code_id = $2 OR (t.engine_code_id IS NULL AND $2 IS NULL))`,
-      [profileId, codeId]
-    );
+
+    const newCount = gscR.rows.filter(r => !r.in_tracker).length;
+    const existingCount = gscR.rows.filter(r => r.in_tracker).length;
+
     res.json({
       success: true,
       urls: gscR.rows,
-      already_imported_count: parseInt(existingR.rows[0]?.cnt || 0),
+      new_count: newCount,
+      existing_count: existingCount,
       total_available: gscR.rows.length
     });
   } catch(e) {
@@ -10154,7 +10151,35 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
         results.push({ url, status: 'error', error: e.message });
       }
     }
-    res.json({ success: true, imported, updated, skipped, batch_id: batchId, results });
+    // After the import loop: batch-update profile_id for ALL existing tracker_pages
+    // that match GSC URLs for this profile. This catches URLs that weren't in the
+    // user's import selection but still need their profile_id synced.
+    let synced = 0;
+    try {
+      const syncR = await pool.query(
+        `UPDATE tracker_pages t
+         SET profile_id = $1,
+             gsc_impressions = COALESCE(t.gsc_impressions, gsc.impressions::int),
+             gsc_clicks = COALESCE(t.gsc_clicks, gsc.clicks::int),
+             gsc_position = COALESCE(t.gsc_position, gsc.position::numeric),
+             gsc_ctr = COALESCE(t.gsc_ctr, gsc.ctr::numeric),
+             updated_at = NOW()
+         FROM (
+           SELECT url, clicks, impressions, position, ctr
+           FROM gsc_pages WHERE profile_id = $1
+         ) gsc
+         WHERE (t.engine_code_id = $2 OR ($2 IS NULL AND t.engine_code_id IS NULL))
+           AND t.url = gsc.url
+           AND (t.profile_id IS DISTINCT FROM $1)
+         RETURNING t.id`,
+        [profile_id, codeId]
+      );
+      synced = syncR.rows.length;
+    } catch(syncErr) {
+      console.warn('[gsc-confirm-import] profile sync warning:', syncErr.message);
+    }
+
+    res.json({ success: true, imported, updated, skipped, synced, batch_id: batchId, results });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }
