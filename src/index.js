@@ -10025,31 +10025,36 @@ app.get('/api/gsc/preview', verifyEngineAccess, async (req, res) => {
   try {
     const profileId = req.query.profile_id;
     if (!profileId) return res.status(400).json({ success: false, error: 'profile_id required' });
-    // Get latest GSC pages for this profile that aren't in tracker_pages yet
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    // Get GSC pages for this profile that aren't in tracker_pages for THIS ENGINE yet.
+    // Must check across engine_code_id (not just profile_id) because tracker_pages
+    // has a unique constraint on (engine_code_id, url).
     const gscR = await pool.query(
       `SELECT g.url, g.clicks, g.impressions, g.ctr, g.position, g.uploaded_at
        FROM gsc_pages g
        WHERE g.profile_id = $1
        AND NOT EXISTS (
          SELECT 1 FROM tracker_pages t
-         WHERE t.profile_id = $1 AND t.url = g.url
+         WHERE (t.engine_code_id = $2 OR (t.engine_code_id IS NULL AND $2 IS NULL))
+           AND t.url = g.url
        )
        ORDER BY g.clicks DESC, g.impressions DESC
        LIMIT 200`,
-      [profileId]
+      [profileId, codeId]
     );
-    // Also get recently uploaded ones that ARE already in tracker (for dedup info)
+    // Count how many GSC pages already exist in tracker for this engine
     const existingR = await pool.query(
-      `SELECT g.url FROM gsc_pages g
-       JOIN tracker_pages t ON t.profile_id = g.profile_id AND t.url = g.url
+      `SELECT COUNT(*) as cnt FROM gsc_pages g
+       JOIN tracker_pages t ON t.url = g.url
        WHERE g.profile_id = $1
-       LIMIT 1`,
-      [profileId]
+         AND (t.engine_code_id = $2 OR (t.engine_code_id IS NULL AND $2 IS NULL))`,
+      [profileId, codeId]
     );
     res.json({
       success: true,
       urls: gscR.rows,
-      already_imported_count: existingR.rows.length,
+      already_imported_count: parseInt(existingR.rows[0]?.cnt || 0),
       total_available: gscR.rows.length
     });
   } catch(e) {
@@ -10058,6 +10063,9 @@ app.get('/api/gsc/preview', verifyEngineAccess, async (req, res) => {
 });
 
 // ── GSC CONFIRM IMPORT: import selected URLs into tracker_pages ─────────────
+// If a URL already exists for this engine, UPDATE its profile_id and GSC data
+// instead of silently skipping. This fixes the "0 pages after GSC import" bug
+// where URLs existed under a different profile_id.
 app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
   try {
     const { profile_id, urls, batch_label } = req.body;
@@ -10067,6 +10075,7 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
     const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
     const batchId = batch_label || ('gsc_' + Date.now());
     let imported = 0;
+    let updated = 0;
     let skipped = 0;
     const results = [];
     for (const url of urls) {
@@ -10079,21 +10088,63 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
         const gsc = gscR.rows[0] || {};
         const urlObj = new URL(url);
         const slug = urlObj.pathname.split('/').filter(Boolean).pop() || '/';
-        const r = await pool.query(
-          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, import_batch, is_active)
-           VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7,$8,$9,$10,$11,TRUE)
-           ON CONFLICT DO NOTHING
-           RETURNING id`,
-          [codeId, profile_id, url, slug, null, '3days',
-           parseInt(gsc.impressions) || null,
-           parseInt(gsc.clicks) || null,
-           parseFloat(gsc.position) || null,
-           parseFloat(gsc.ctr) || null,
-           batchId]
-        );
+
+        // Step 1: Try INSERT. If URL already exists for this engine, catch the conflict
+        // and UPDATE the existing row with new profile_id + GSC data instead of skipping.
+        let r, isUpdate = false;
+        try {
+          r = await pool.query(
+            `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, import_batch, is_active)
+             VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7,$8,$9,$10,$11,TRUE)
+             RETURNING id`,
+            [codeId, profile_id, url, slug, null, '3days',
+             parseInt(gsc.impressions) || null,
+             parseInt(gsc.clicks) || null,
+             parseFloat(gsc.position) || null,
+             parseFloat(gsc.ctr) || null,
+             batchId]
+          );
+        } catch(insertErr) {
+          // Unique constraint violation — URL already exists for this engine.
+          // Update the existing row with new profile_id and GSC data.
+          if (insertErr.code === '23505' || /unique|duplicate/i.test(insertErr.message)) {
+            isUpdate = true;
+            r = await pool.query(
+              `UPDATE tracker_pages SET
+                 profile_id = $1,
+                 gsc_impressions = $2,
+                 gsc_clicks = $3,
+                 gsc_position = $4,
+                 gsc_ctr = $5,
+                 import_batch = $6,
+                 slug = $7,
+                 updated_at = NOW()
+               WHERE (engine_code_id = $8 OR ($8 IS NULL AND engine_code_id IS NULL))
+                 AND url = $9
+               RETURNING id`,
+              [profile_id,
+               parseInt(gsc.impressions) || null,
+               parseInt(gsc.clicks) || null,
+               parseFloat(gsc.position) || null,
+               parseFloat(gsc.ctr) || null,
+               batchId,
+               slug,
+               codeId,
+               url]
+            );
+          } else {
+            throw insertErr;
+          }
+        }
+
         if (r.rows.length) {
-          imported++;
-          results.push({ url, id: r.rows[0].id, status: 'imported' });
+          if (isUpdate) {
+            updated++;
+            results.push({ url, id: r.rows[0].id, status: 'updated' });
+          } else {
+            imported++;
+            results.push({ url, id: r.rows[0].id, status: 'imported' });
+          }
         } else {
           skipped++;
           results.push({ url, status: 'already_exists' });
@@ -10103,7 +10154,7 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
         results.push({ url, status: 'error', error: e.message });
       }
     }
-    res.json({ success: true, imported, skipped, batch_id: batchId, results });
+    res.json({ success: true, imported, updated, skipped, batch_id: batchId, results });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -24355,16 +24406,54 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
     const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
     const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
-    const r = await pool.query(
-      `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
-       parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
-       gsc_queries ? JSON.stringify(gsc_queries) : null,
-       gsc_pages ? JSON.stringify(gsc_pages) : null,
-       gsc_keyword || null]
-    );
-    res.json({ success: true, page: r.rows[0] });
+
+    let r, isUpdate = false;
+    try {
+      // Try INSERT first
+      r = await pool.query(
+        `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+        [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
+         parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
+         gsc_queries ? JSON.stringify(gsc_queries) : null,
+         gsc_pages ? JSON.stringify(gsc_pages) : null,
+         gsc_keyword || null]
+      );
+    } catch(insertErr) {
+      // Unique constraint — URL already exists for this engine. Update instead.
+      if (insertErr.code === '23505' || /unique|duplicate/i.test(insertErr.message)) {
+        isUpdate = true;
+        r = await pool.query(
+          `UPDATE tracker_pages SET
+             profile_id = COALESCE($1, profile_id),
+             slug = COALESCE($2, slug),
+             title = COALESCE($3, title),
+             keyword = COALESCE($4, keyword),
+             html_content = COALESCE($5, html_content),
+             check_frequency = COALESCE($6, check_frequency),
+             gsc_impressions = COALESCE($7, gsc_impressions),
+             gsc_clicks = COALESCE($8, gsc_clicks),
+             gsc_position = COALESCE($9, gsc_position),
+             gsc_ctr = COALESCE($10, gsc_ctr),
+             gsc_queries = COALESCE($11, gsc_queries),
+             gsc_pages = COALESCE($12, gsc_pages),
+             gsc_keyword = COALESCE($13, gsc_keyword),
+             updated_at = NOW()
+           WHERE (engine_code_id = $14 OR ($14 IS NULL AND engine_code_id IS NULL))
+             AND url = $15
+           RETURNING *`,
+          [profile_id||null, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
+           parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
+           gsc_queries ? JSON.stringify(gsc_queries) : null,
+           gsc_pages ? JSON.stringify(gsc_pages) : null,
+           gsc_keyword || null,
+           codeId, cleanUrl]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
+    res.json({ success: true, page: r.rows[0], action: isUpdate ? 'updated' : 'created' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

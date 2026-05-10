@@ -729,7 +729,7 @@ async function addSelectedSitemapUrls() {
 
   closeModal();
   var prog = addProgress('Checking ' + selected.length + ' URLs against tracker…', 5);
-  var added = 0, failed = 0, skipped = 0;
+  var added = 0, updated = 0, failed = 0, skipped = 0;
 
   // STEP 1: Fetch ALL existing tracker pages for this engine (unfiltered)
   // The DB has a unique constraint on (engine_id, url) — we MUST check server-side
@@ -772,12 +772,23 @@ async function addSelectedSitemapUrls() {
         check_frequency: '3days'
       });
       if (d && d.success) {
-        _pagesOverviewData.push({
-          url: url, slug: slug, keyword: '', position: 0, impressions: 0, clicks: 0, ctr: 0,
-          score: '', scoreStatus: '', added: new Date().toISOString(),
-          tracker_id: d.page ? d.page.id : null, profile_id: profileId, opportunity: 0
-        });
-        added++;
+        // Check if URL already exists in local data (update case)
+        var existingIdx = _pagesOverviewData.findIndex(function(p) { return p.url === url; });
+        if (existingIdx >= 0) {
+          // Update existing entry
+          _pagesOverviewData[existingIdx].slug = slug;
+          _pagesOverviewData[existingIdx].profile_id = profileId;
+          _pagesOverviewData[existingIdx].tracker_id = d.page ? d.page.id : _pagesOverviewData[existingIdx].tracker_id;
+          if (d.action === 'updated') updated++;
+          else added++;
+        } else {
+          _pagesOverviewData.push({
+            url: url, slug: slug, keyword: '', position: 0, impressions: 0, clicks: 0, ctr: 0,
+            score: '', scoreStatus: '', added: new Date().toISOString(),
+            tracker_id: d.page ? d.page.id : null, profile_id: profileId, opportunity: 0
+          });
+          added++;
+        }
       } else {
         // Backend returned error — check if it's a duplicate
         var errMsg = (d && d.error) || '';
@@ -805,7 +816,13 @@ async function addSelectedSitemapUrls() {
   loadPagesOverview(true);
   loadTrackerPages();
   switchView('pages');
-  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ', ' + skipped + ' skipped (already exist)' : '') + (failed ? ', ' + failed + ' failed' : ''), 4000, added ? 'ok' : (skipped ? 'ok' : 'warn'));
+  var parts = [];
+  if (added) parts.push('added ' + added);
+  if (updated) parts.push('updated ' + updated);
+  if (skipped) parts.push(skipped + ' skipped');
+  if (failed) parts.push(failed + ' failed');
+  var msg = '✓ ' + (parts.length ? parts.join(', ') : 'Nothing to do');
+  toast(msg, 4000, (added || updated) ? 'ok' : (skipped ? 'ok' : 'warn'));
 }
 
 function addSitemapUrlsToTracker() {
@@ -4079,7 +4096,10 @@ function confirmGscImport() {
   api('/api/gsc/confirm-import', 'POST', { profile_id: _context.profileId, urls: selected })
     .then(function(d) {
       if (d.success) {
-        toast('✅ Imported ' + d.imported + ' pages' + (d.skipped ? ' (' + d.skipped + ' already exist)' : ''), 'ok');
+        var msg = '✅ Imported ' + d.imported + ' pages';
+        if (d.updated) msg += ', updated ' + d.updated;
+        if (d.skipped) msg += ' (' + d.skipped + ' skipped)';
+        toast(msg, 'ok');
         closeGscPreview();
         loadPagesOverview(true);
         loadTrackerPages(); // Also refresh tracker view with new GSC data
