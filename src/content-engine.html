@@ -728,17 +728,43 @@ async function addSelectedSitemapUrls() {
   if (!profileId) { toast('Select a profile first', 3000, 'warn'); return; }
 
   closeModal();
-  var prog = addProgress('Saving ' + selected.length + ' URLs to tracker…', 10);
+  var prog = addProgress('Checking ' + selected.length + ' URLs against tracker…', 5);
   var added = 0, failed = 0, skipped = 0;
-  var existingUrls = _pagesOverviewData.map(function(p){ return p.url; });
+
+  // STEP 1: Fetch ALL existing tracker pages for this engine (unfiltered)
+  // The DB has a unique constraint on (engine_id, url) — we MUST check server-side
+  var existingTrackerUrls = [];
+  try {
+    var existingData = await api('/api/tracker/pages'); // no profile filter = all pages for this engine
+    var allPages = existingData.pages || [];
+    existingTrackerUrls = allPages.map(function(p){ return p.url; });
+    // Also seed _pagesOverviewData with existing pages so we don't lose them
+    _pagesOverviewData = allPages.map(function(tp) {
+      var slug = '';
+      try { slug = new URL(tp.url).pathname || '/'; } catch(e) { slug = tp.url; }
+      var snap = tp.latest_snapshot || {};
+      return {
+        url: tp.url, slug: slug, keyword: tp.keyword || '',
+        position: tp.gsc_position || 0, impressions: tp.gsc_impressions || 0,
+        clicks: tp.gsc_clicks || 0, ctr: tp.gsc_ctr || 0,
+        score: snap.score || '', scoreStatus: tp.status || '',
+        added: tp.created_at || new Date().toISOString(),
+        tracker_id: tp.id, profile_id: tp.profile_id, opportunity: 0
+      };
+    });
+  } catch(e) {
+    console.warn('[sitemap-add] Could not fetch existing pages:', e.message);
+  }
+
+  setProgress(prog, 10);
 
   for (var i = 0; i < selected.length; i++) {
     var url = selected[i];
-    if (existingUrls.indexOf(url) >= 0) { skipped++; continue; }
+    // Skip if already in tracker (DB unique constraint on engine_id+url)
+    if (existingTrackerUrls.indexOf(url) >= 0) { skipped++; continue; }
     try {
       var slug = '';
       try { slug = new URL(url).pathname || '/'; } catch(e) { slug = url; }
-      // Save to backend database
       var d = await api('/api/tracker/pages', 'POST', {
         profile_id: profileId,
         url: url,
@@ -753,20 +779,33 @@ async function addSelectedSitemapUrls() {
         });
         added++;
       } else {
-        failed++;
+        // Backend returned error — check if it's a duplicate
+        var errMsg = (d && d.error) || '';
+        if (/duplicate|already exists|unique constraint/i.test(errMsg)) {
+          skipped++;
+        } else {
+          failed++;
+        }
       }
     } catch(e) {
-      console.error('[sitemap-add] failed:', url, e.message);
-      failed++;
+      // API threw — check if it's a duplicate error
+      var errMsg = e.message || '';
+      if (/duplicate|already exists|unique constraint|500/i.test(errMsg)) {
+        skipped++;
+      } else {
+        console.error('[sitemap-add] failed:', url, errMsg);
+        failed++;
+      }
     }
     setProgress(prog, Math.round(10 + ((i + 1) / selected.length) * 80));
   }
 
   removeProgress(prog);
-  renderPagesOverview();
-  loadTrackerPages(); // Refresh tracker too
+  // Force fresh load from server to get complete picture
+  loadPagesOverview(true);
+  loadTrackerPages();
   switchView('pages');
-  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ', ' + skipped + ' skipped' : '') + (failed ? ', ' + failed + ' failed' : ''), 4000, added ? 'ok' : 'warn');
+  toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ', ' + skipped + ' skipped (already exist)' : '') + (failed ? ', ' + failed + ' failed' : ''), 4000, added ? 'ok' : (skipped ? 'ok' : 'warn'));
 }
 
 function addSitemapUrlsToTracker() {
@@ -2698,9 +2737,28 @@ var _trPages = [];
 
 async function loadTrackerPages() {
   try {
-    var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
+    var profileId = _context.profileId || (_profile && _profile.id) || null;
+    var profileFilter = profileId ? '?profile_id=' + profileId : '';
     var d = await api('/api/tracker/pages' + profileFilter);
     _trPages = d.pages || [];
+
+    // Fallback: if profile-filtered query returns empty but we have a domain,
+    // try fetching all pages for this engine and filter client-side.
+    // This catches pages from previous profiles for the same domain.
+    var profileDomain = (_profile && _profile.domain) || '';
+    if (!_trPages.length && profileId && profileDomain) {
+      try {
+        var d2 = await api('/api/tracker/pages'); // no profile filter
+        var allPages = d2.pages || [];
+        _trPages = allPages.filter(function(p) {
+          if (!p.url) return false;
+          try {
+            return normalizeDomain(new URL(p.url).hostname) === normalizeDomain(profileDomain);
+          } catch(e) { return false; }
+        });
+      } catch(e2) { /* ignore fallback error */ }
+    }
+
     renderTrackerKpis();
     renderTrackerList();
   } catch(e) {
@@ -2712,10 +2770,8 @@ async function loadTrackerPages() {
 function renderTrackerKpis() {
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   var profileDomain = (_profile && _profile.domain) || '';
+  // Trust the API — it already filtered by profile_id. Only apply domain sanity check.
   var p = activeProfileId ? _trPages.filter(function(x) {
-    // Check profile_id
-    if (x.profile_id && String(x.profile_id) !== String(activeProfileId)) return false;
-    // Always check domain
     if (profileDomain && x.url) {
       try {
         if (normalizeDomain(new URL(x.url).hostname) !== normalizeDomain(profileDomain)) return false;
@@ -2762,10 +2818,9 @@ function renderTrackerList() {
     el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">👤</div><div style="font-weight:600;margin-bottom:4px;">Select a profile first</div><div style="font-size:12px;">Choose a profile from the sidebar to see tracker data</div></div>';
     return;
   }
-  // Filter tracker pages by profile + domain
+  // Trust the API — it already filtered by profile_id. Only apply domain sanity check.
   var profileDomain = (_profile && _profile.domain) || '';
   var trData = _trPages.filter(function(p) {
-    if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
     if (profileDomain && p.url) {
       try {
         if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
@@ -4378,11 +4433,32 @@ function autoAssignPageKeywords() {
   if (assigned) toast('🔑 ' + assigned + ' keywords auto-assigned', 2000, 'ok');
 }
 
-function loadPagesOverview(forceRefresh) {
-  var profileFilter = _context.profileId ? '?profile_id=' + _context.profileId : '';
-  api('/api/tracker/pages' + profileFilter).then(function(d) {
-    var pages = d.pages || [];
-    // Normalize URL helper — strips trailing slashes for comparison
+async function loadPagesOverview(forceRefresh) {
+  var profileId = _context.profileId || null;
+  var profileFilter = profileId ? '?profile_id=' + profileId : '';
+  var pages = [];
+  try {
+    var d = await api('/api/tracker/pages' + profileFilter);
+    pages = d.pages || [];
+  } catch(e) { /* primary fetch failed, try fallback */ }
+
+  // Fallback: if profile-filtered query returns empty but we have a domain,
+  // try fetching all pages for this engine and filter client-side.
+  var profileDomain = (_profile && _profile.domain) || '';
+  if (!pages.length && profileId && profileDomain) {
+    try {
+      var d2 = await api('/api/tracker/pages'); // no profile filter
+      var allPages = d2.pages || [];
+      pages = allPages.filter(function(p) {
+        if (!p.url) return false;
+        try {
+          return normalizeDomain(new URL(p.url).hostname) === normalizeDomain(profileDomain);
+        } catch(e) { return false; }
+      });
+    } catch(e2) { /* ignore fallback error */ }
+  }
+
+  // Normalize URL helper — strips trailing slashes for comparison
     function normalizeUrl(u) {
       try {
         var parsed = new URL(u);
@@ -4449,15 +4525,9 @@ function loadPagesOverview(forceRefresh) {
         // Preserve duplicate flag (already set from first entry)
       }
     });
-    _pagesOverviewData = Object.values(urlMap);
-    renderPagesOverview();
-    if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
-  }).catch(function(e) {
-    try {
-      var saved = localStorage.getItem('cs_pages_overview_cache');
-      if (saved) { _pagesOverviewData = JSON.parse(saved); renderPagesOverview(); }
-    } catch(e2) {}
-  });
+  _pagesOverviewData = Object.values(urlMap);
+  renderPagesOverview();
+  if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
 }
 
 // ── Reset: delete all pages for the current profile ───────────
@@ -4498,43 +4568,38 @@ function renderPagesOverview() {
   var grid = document.getElementById('pagesGrid');
   var kpis = document.getElementById('pagesKpis');
   var empty = document.getElementById('pagesEmpty');
+  var profileLabel = document.getElementById('pagesProfileLabel');
   var search = (document.getElementById('pagesSearch') || {}).value || '';
   var sort = (document.getElementById('pagesSort') || {}).value || 'opportunity';
-  if (!_pagesOverviewData.length) {
-    grid.innerHTML = ''; kpis.innerHTML = '';
-    empty.style.display = 'block'; return;
-  }
-  empty.style.display = 'none';
 
   // NO profile = NO pages shown. Must select a profile first.
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   if (!activeProfileId) {
-    grid.innerHTML = '';
-    kpis.innerHTML = '';
+    grid.innerHTML = ''; kpis.innerHTML = '';
     empty.style.display = 'block';
     if (profileLabel) profileLabel.textContent = 'Select a profile to see pages';
     return;
   }
 
-  // Client-side profile filter: show pages matching current profile
+  if (!_pagesOverviewData.length) {
+    grid.innerHTML = ''; kpis.innerHTML = '';
+    empty.style.display = 'block';
+    if (profileLabel && _profile) profileLabel.textContent = 'Profile: ' + _profile.name + ' — 0 pages';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Trust the API — it already filtered by profile_id on the backend.
+  // Only apply domain filter (sanity check) and search text filter here.
   var profileDomain = (_profile && _profile.domain) || '';
   var data = _pagesOverviewData.filter(function(p) {
-    // If page has profile_id, it must match (unless we're showing all)
-    if (p.profile_id && activeProfileId && String(p.profile_id) !== String(activeProfileId)) {
-      // Mismatch — but still show if URL domain matches profile (orphaned data)
-      if (profileDomain && p.url) {
-        try {
-          if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
-        } catch(e) { return false; }
-      } else { return false; }
-    }
-    // Domain filter: if profile domain is set, URL must match it
+    // Domain sanity filter: if profile has a domain, only show matching URLs
     if (profileDomain && p.url) {
       try {
         if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
       } catch(e) { /* relative URL, allow through */ }
     }
-    // Search filter
+    // Search text filter
     if (!search) return true;
     var s = search.toLowerCase();
     return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
@@ -4542,7 +4607,6 @@ function renderPagesOverview() {
   _filteredPageCount = data.length;
 
   // Show active profile name + REAL page count
-  var profileLabel = document.getElementById('pagesProfileLabel');
   if (profileLabel && _profile) {
     profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') + ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '');
   }
