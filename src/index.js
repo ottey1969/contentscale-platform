@@ -8567,77 +8567,88 @@ const _FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32
 // Fetches a sitemap.xml and returns all page URLs
 // ══════════════════════════════════════════════════════════════════════
 app.get('/api/fetch-sitemap', async (req, res) => {
-  const { url } = req.query;
+  const { url, try_paths } = req.query;
   if (!url) return res.status(400).json({ error: 'url required' });
-  try {
-    let fetchUrl = url;
-    if (fetchUrl.startsWith('http://')) fetchUrl = fetchUrl.replace('http://', 'https://');
-    console.log(`[sitemap] fetching: ${fetchUrl}`);
 
-    // Try axios first, fallback to native fetch
-    let xmlText = '';
-    try {
-      const resp = await axios.get(fetchUrl, {
-        timeout: 15000,
-        headers: { 'User-Agent': 'ContentScaleBot/1.0' },
-        responseType: 'text',
-        maxRedirects: 5
-      });
-      xmlText = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
-      console.log(`[sitemap] axios success, ${xmlText.length} chars`);
-    } catch (axiosErr) {
-      console.log(`[sitemap] axios failed: ${axiosErr.message}, trying www variant`);
-      const alt = fetchUrl.includes('://www.')
-        ? fetchUrl.replace('://www.', '://')
-        : fetchUrl.replace('://', '://www.');
-      try {
-        const resp2 = await axios.get(alt, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text', maxRedirects: 5 });
-        xmlText = typeof resp2.data === 'string' ? resp2.data : JSON.stringify(resp2.data);
-        console.log(`[sitemap] axios www variant success, ${xmlText.length} chars`);
-      } catch (axiosErr2) {
-        console.log(`[sitemap] axios www variant failed: ${axiosErr2.message}, trying native fetch`);
-        const fetchResp = await fetch(fetchUrl, { headers: { 'User-Agent': 'ContentScaleBot/1.0' } });
-        xmlText = await fetchResp.text();
-        console.log(`[sitemap] native fetch success, ${xmlText.length} chars`);
-      }
-    }
-
-    if (!xmlText || xmlText.length < 10) {
-      return res.status(500).json({ success: false, error: 'Empty response from sitemap URL' });
-    }
-
-    // Parse URLs from XML
-    const locRegex = /<loc>(.*?)<\/loc>/gi;
-    const urls = [], subSitemaps = [];
-    let match;
-    while ((match = locRegex.exec(xmlText)) !== null) {
-      const u = match[1].trim();
-      if (!u) continue;
-      if (u.endsWith('.xml')) subSitemaps.push(u);
-      else urls.push(u);
-    }
-    console.log(`[sitemap] parsed: ${urls.length} page URLs, ${subSitemaps.length} sub-sitemaps`);
-
-    // If sitemap index with no direct URLs, auto-fetch best sub-sitemap
-    if (urls.length === 0 && subSitemaps.length > 0) {
-      const preferred = subSitemaps.find(u => u.includes('page')) || subSitemaps[0];
-      console.log(`[sitemap] sitemap index detected, fetching sub: ${preferred}`);
-      const sub = await axios.get(preferred, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
-      const subXml = typeof sub.data === 'string' ? sub.data : '';
-      const subRegex = /<loc>(.*?)<\/loc>/gi;
-      let sm;
-      while ((sm = subRegex.exec(subXml)) !== null) {
-        const u = sm[1].trim();
-        if (u && !u.endsWith('.xml')) urls.push(u);
-      }
-      console.log(`[sitemap] sub-sitemap fetched: ${urls.length} URLs`);
-    }
-
-    res.json({ success: true, urls, subSitemaps, count: urls.length });
-  } catch(e) {
-    console.error(`[sitemap] fatal error: ${e.message}`);
-    res.status(500).json({ success: false, error: e.message });
+  // Build list of URLs to try
+  const urlsToTry = [url];
+  if (try_paths) {
+    const extra = try_paths.split(',').map(p => p.trim()).filter(Boolean);
+    for (const u of extra) { if (!urlsToTry.includes(u)) urlsToTry.push(u); }
   }
+
+  let lastError = '';
+  for (const fetchUrl of urlsToTry) {
+    try {
+      console.log(`[sitemap] trying: ${fetchUrl}`);
+      let xmlText = '';
+
+      // Try axios
+      try {
+        const resp = await axios.get(fetchUrl, {
+          timeout: 15000,
+          headers: { 'User-Agent': 'ContentScaleBot/1.0' },
+          responseType: 'text',
+          maxRedirects: 5
+        });
+        xmlText = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+      } catch (axiosErr) {
+        // Try www variant
+        const alt = fetchUrl.includes('://www.')
+          ? fetchUrl.replace('://www.', '://')
+          : fetchUrl.replace('://', '://www.');
+        try {
+          const resp2 = await axios.get(alt, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text', maxRedirects: 5 });
+          xmlText = typeof resp2.data === 'string' ? resp2.data : JSON.stringify(resp2.data);
+        } catch (e2) {
+          lastError = axiosErr.message;
+          continue; // Try next path
+        }
+      }
+
+      if (!xmlText || xmlText.length < 10) { lastError = 'Empty response'; continue; }
+
+      // Parse URLs
+      const locRegex = /<loc>(.*?)<\/loc>/gi;
+      const urls = [], subSitemaps = [];
+      let match;
+      while ((match = locRegex.exec(xmlText)) !== null) {
+        const u = match[1].trim();
+        if (!u) continue;
+        if (u.endsWith('.xml')) subSitemaps.push(u);
+        else urls.push(u);
+      }
+      console.log(`[sitemap] ${fetchUrl} => ${urls.length} page URLs, ${subSitemaps.length} sub-sitemaps`);
+
+      // If sitemap index, auto-fetch sub-sitemap
+      if (urls.length === 0 && subSitemaps.length > 0) {
+        const preferred = subSitemaps.find(u => u.includes('page')) || subSitemaps[0];
+        try {
+          const sub = await axios.get(preferred, { timeout: 15000, headers: { 'User-Agent': 'ContentScaleBot/1.0' }, responseType: 'text' });
+          const subXml = typeof sub.data === 'string' ? sub.data : '';
+          const subRegex = /<loc>(.*?)<\/loc>/gi;
+          let sm;
+          while ((sm = subRegex.exec(subXml)) !== null) {
+            const u = sm[1].trim();
+            if (u && !u.endsWith('.xml')) urls.push(u);
+          }
+        } catch(e) { /* sub-sitemap fetch failed */ }
+      }
+
+      // Return if we found URLs
+      if (urls.length > 0) {
+        return res.json({ success: true, urls, subSitemaps, count: urls.length, fetched_from: fetchUrl });
+      }
+
+      lastError = 'No URLs found in XML';
+    } catch(e) {
+      lastError = e.message;
+    }
+  }
+
+  // All paths failed
+  console.error(`[sitemap] all paths failed. Last error: ${lastError}`);
+  res.status(500).json({ success: false, error: `Tried ${urlsToTry.length} path(s). Last error: ${lastError}` });
 });
 
 // GSC AUTO-FILL — /api/gsc/auto-fill

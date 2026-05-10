@@ -623,16 +623,33 @@ function handleSitemapUpload(input) {
 
 // Fetch sitemap from URL via backend proxy (avoids CORS)
 async function fetchSitemapFromUrl() {
+  // GUARD: profile must be selected
+  if (!_profile || !_profile.id) {
+    toast('Select a profile first — sitemap URLs are matched to your profile domain', 4000, 'warn');
+    document.getElementById('profileSelect').focus();
+    return;
+  }
   var url = document.getElementById('sitemapUrlInput').value.trim();
   if (!url) { toast('Enter a sitemap URL', 'warn'); return; }
   if (!url.startsWith('http')) { toast('URL must start with http:// or https://', 'warn'); return; }
+
+  // Auto-detect sitemap path if user enters just a domain
+  var fetchUrl = url;
+  var tryPaths = [];
+  if (!url.match(/\.xml($|\?)/) && !url.match(/sitemap/i)) {
+    // Looks like just a domain — try common sitemap paths
+    var base = url.replace(/\/+$/, '');
+    tryPaths = [base + '/page-sitemap.xml', base + '/sitemap.xml', base + '/sitemap_index.xml', base + '/sitemap-index.xml'];
+    fetchUrl = tryPaths[0]; // start with page-sitemap.xml (most common for WordPress)
+  }
+
   var btn = document.querySelector('#sitemapSection button');
   btn.disabled = true; btn.textContent = 'Fetching…';
   try {
-    var d = await api('/api/fetch-sitemap?url=' + encodeURIComponent(url));
+    var d = await api('/api/fetch-sitemap?url=' + encodeURIComponent(fetchUrl) + (tryPaths.length ? '&try_paths=' + encodeURIComponent(tryPaths.join(',')) : ''));
     if (!d || !d.success) throw new Error(d?.error || 'Failed to fetch sitemap');
     var urls = d.urls || [];
-    if (!urls.length) { toast('No URLs found in sitemap', 'warn'); return; }
+    if (!urls.length) { toast('No URLs found in sitemap. Try entering the full sitemap URL (e.g. https://example.com/page-sitemap.xml)', 'warn'); return; }
     // Filter to current profile domain
     var profileDomain = (_profile && _profile.domain) || '';
     var matched = urls;
@@ -643,9 +660,9 @@ async function fetchSitemapFromUrl() {
     var statusEl = document.getElementById('sitemapStatus');
     if (statusEl) {
       statusEl.style.display = 'block';
-      statusEl.innerHTML = matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' found' + (profileDomain ? ' for ' + profileDomain : '') + ' <button onclick="addSitemapUrlsToTracker()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Add all</button>';
+      statusEl.innerHTML = matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' found' + (profileDomain ? ' for ' + normalizeDomain(profileDomain) : '') + ' <button onclick="addSitemapUrlsToTracker()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Add all</button>';
     }
-    toast('✓ Sitemap: ' + matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' fetched', 3000, 'ok');
+    toast('✓ Sitemap: ' + matched.length + ' URL' + (matched.length !== 1 ? 's' : '') + ' fetched from ' + (d.fetched_from || fetchUrl), 3000, 'ok');
   } catch(e) {
     toast('Sitemap fetch failed: ' + e.message, 4000, 'err');
   }
