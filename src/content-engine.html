@@ -373,6 +373,16 @@ var _context     = {
 var _history     = []; // conversation for Claude
 var _busy        = false;
 
+// Normalize domain for comparison — strips protocol, www, trailing slashes
+function normalizeDomain(d) {
+  if (!d) return '';
+  var s = d.trim().toLowerCase();
+  s = s.replace(/^https?:\/\//, '');
+  s = s.replace(/^www\./, '');
+  s = s.replace(/\/+$/, '');
+  return s;
+}
+
 // ══════════════════════════════════════════════════════════════
 // AUTH / CONNECT
 // ══════════════════════════════════════════════════════════════
@@ -547,8 +557,7 @@ function syncGscToPagesOverview() {
     // Only sync pages matching current profile domain
     if (profileDomain) {
       try {
-        var pageDomain = new URL(g.url).hostname.replace('www.', '');
-        if (pageDomain !== profileDomain.replace('www.', '')) return;
+        if (normalizeDomain(new URL(g.url).hostname) !== normalizeDomain(profileDomain)) return;
       } catch(e) { return; }
     }
     var idx = existingUrls.indexOf(g.url);
@@ -599,7 +608,7 @@ function handleSitemapUpload(input) {
     var profileDomain = (_profile && _profile.domain) || '';
     var matched = urls;
     if (profileDomain) {
-      matched = urls.filter(function(u){ try { return new URL(u).hostname.replace('www.','') === profileDomain.replace('www.',''); } catch(e){ return false; } });
+      matched = urls.filter(function(u){ try { return normalizeDomain(new URL(u).hostname) === normalizeDomain(profileDomain); } catch(e){ return false; } });
     }
     _sitemapUrls = matched;
     var statusEl = document.getElementById('sitemapStatus');
@@ -628,7 +637,7 @@ async function fetchSitemapFromUrl() {
     var profileDomain = (_profile && _profile.domain) || '';
     var matched = urls;
     if (profileDomain) {
-      matched = urls.filter(function(u) { try { return new URL(u).hostname.replace('www.','') === profileDomain.replace('www.',''); } catch(e){ return false; } });
+      matched = urls.filter(function(u) { try { return normalizeDomain(new URL(u).hostname) === normalizeDomain(profileDomain); } catch(e){ return false; } });
     }
     _sitemapUrls = matched;
     var statusEl = document.getElementById('sitemapStatus');
@@ -2601,8 +2610,7 @@ function renderTrackerKpis() {
     // Always check domain
     if (profileDomain && x.url) {
       try {
-        var d = new URL(x.url).hostname.replace('www.', '');
-        if (d !== profileDomain.replace('www.', '')) return false;
+        if (normalizeDomain(new URL(x.url).hostname) !== normalizeDomain(profileDomain)) return false;
       } catch(e) {}
     }
     return true;
@@ -2652,8 +2660,7 @@ function renderTrackerList() {
     if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
     if (profileDomain && p.url) {
       try {
-        var d = new URL(p.url).hostname.replace('www.', '');
-        if (d !== profileDomain.replace('www.', '')) return false;
+        if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
       } catch(e) {}
     }
     return true;
@@ -4408,8 +4415,7 @@ function renderPagesOverview() {
     // Always check URL domain matches current profile — catches wrong-profile uploads
     if (profileDomain && p.url) {
       try {
-        var pageDomain = new URL(p.url).hostname.replace('www.', '');
-        if (pageDomain !== profileDomain.replace('www.', '')) return false;
+        if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
       } catch(e) { /* relative URL, allow through if profile_id matches */ }
     }
     if (!search) return true;
