@@ -435,11 +435,13 @@ async function saveClientKeys() {
 function forgetLogin() {
   try {
     localStorage.removeItem('nexus_engine_token');
+    localStorage.removeItem('nexus_selected_profile_id');
   } catch(e) {}
   document.getElementById('engineToken').value = '';
   document.getElementById('aiKeysSection').style.display = 'none';
   document.getElementById('aiKeysPanel').style.display = 'none';
   document.getElementById('forgetLink').style.display = 'none';
+  document.getElementById('profileSection').style.display = 'none';
   var btn = document.getElementById('connectBtn');
   btn.textContent = 'Connect →';
   btn.style.background = '';
@@ -447,6 +449,10 @@ function forgetLogin() {
   btn.style.border = '';
   btn.disabled = false;
   _connected = false;
+  _profile = null;
+  _context.profileId = null;
+  _allProfiles = [];
+  renderProfileSelector([], true);
   setStatus('off', 'not connected');
   toast('Login cleared', 'ok');
 }
@@ -484,22 +490,10 @@ async function connect() {
       document.getElementById('aiKeysSection').style.display = 'block';
       loadAiKeyStatus();
 
-      // Restore previously selected profile
-      var savedProfileId = '';
-      try { savedProfileId = localStorage.getItem('nexus_selected_profile_id') || ''; } catch(e) {}
-      if (savedProfileId) {
-        var savedProfile = _allProfiles.find(function(p) { return String(p.id) === savedProfileId; });
-        if (savedProfile) {
-          document.getElementById('profileSelect').value = savedProfileId;
-          onProfileSwitch();
-        } else {
-          // Saved profile no longer exists — clear it
-          _profile = null; _context.profileId = null;
-          try { localStorage.removeItem('nexus_selected_profile_id'); } catch(e) {}
-        }
-      } else {
-        _profile = null; _context.profileId = null;
-      }
+      // Don't auto-restore previously selected profile — user must explicitly select one
+      _profile = null;
+      _context.profileId = null;
+      document.getElementById('profileSelect').value = '';
     }
 
     // Trigger agent welcome (will prompt for profile selection)
@@ -2677,7 +2671,7 @@ function switchView(view) {
     document.getElementById('view-stats').style.display = 'block';
   } else if (view === 'pages') {
     if (viewPages) viewPages.style.display = 'block';
-    renderPagesOverview();
+    loadPagesOverview(true); // fetch fresh data from server, then render
   }
   // Update nav button styles
   ['agent','pages','tracker','stats'].forEach(function(v) {
@@ -4033,6 +4027,7 @@ function confirmGscImport() {
         toast('✅ Imported ' + d.imported + ' pages' + (d.skipped ? ' (' + d.skipped + ' already exist)' : ''), 'ok');
         closeGscPreview();
         loadPagesOverview(true);
+        loadTrackerPages(); // Also refresh tracker view with new GSC data
       } else {
         toast('Error: ' + (d.error || 'Import failed'), 'err');
       }
