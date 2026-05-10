@@ -44,7 +44,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 #statusText{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
 
 /* ── SIDEBAR ── */
-.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;max-height:100vh;}
 .sidebar-section{padding:16px;border-bottom:1px solid var(--border);}
 .sidebar-label{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600;margin-bottom:10px;font-family:'DM Mono',monospace;}
 .token-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;outline:none;transition:border .2s;}
@@ -719,6 +719,8 @@ function addSelectedSitemapUrls() {
   });
   closeModal();
   renderPagesOverview();
+  // Auto-switch to Pages view so user sees what was added
+  switchView('pages');
   toast('✓ Added ' + added + ' URL' + (added !== 1 ? 's' : '') + (skipped ? ' (' + skipped + ' already existed)' : ''), 3000, 'ok');
 }
 
@@ -4468,17 +4470,25 @@ function renderPagesOverview() {
     return;
   }
 
-  // Client-side profile filter: ONLY pages matching current profile domain
+  // Client-side profile filter: show pages matching current profile
   var profileDomain = (_profile && _profile.domain) || '';
   var data = _pagesOverviewData.filter(function(p) {
-    // Always check profile_id first
-    if (p.profile_id && String(p.profile_id) !== String(activeProfileId)) return false;
-    // Always check URL domain matches current profile — catches wrong-profile uploads
+    // If page has profile_id, it must match (unless we're showing all)
+    if (p.profile_id && activeProfileId && String(p.profile_id) !== String(activeProfileId)) {
+      // Mismatch — but still show if URL domain matches profile (orphaned data)
+      if (profileDomain && p.url) {
+        try {
+          if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
+        } catch(e) { return false; }
+      } else { return false; }
+    }
+    // Domain filter: if profile domain is set, URL must match it
     if (profileDomain && p.url) {
       try {
         if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
-      } catch(e) { /* relative URL, allow through if profile_id matches */ }
+      } catch(e) { /* relative URL, allow through */ }
     }
+    // Search filter
     if (!search) return true;
     var s = search.toLowerCase();
     return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
