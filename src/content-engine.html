@@ -287,6 +287,31 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <button class="sidebar-btn" onclick="runDirectFullRewrite()" title="Run a full AI rewrite of the last analysis" style="border-color:rgba(251,191,36,.3);color:#fbbf24;margin-top:6px;">♻ Full Rewrite</button>
     </div>
 
+    <!-- AI Keys (BYOK) -->
+    <div class="sidebar-section" id="aiKeysSection" style="display:none;">
+      <div class="sidebar-label">⚙️ AI Keys</div>
+      <div id="aiKeyStatus" style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.4;">
+        Loading key status…
+      </div>
+      <button class="sidebar-btn" onclick="toggleAiKeysPanel()" style="font-size:10px;padding:5px;margin-top:0;">🔑 Manage Keys</button>
+      <div id="aiKeysPanel" style="display:none;margin-top:8px;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">
+          Your keys are stored encrypted on our server. They are never exposed in the browser.
+        </div>
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px;">Claude (Anthropic) Key</label>
+        <input class="token-input" id="clientClaudeKey" placeholder="sk-ant-…" type="password" style="font-size:10px;padding:5px;margin-bottom:6px;">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px;">Gemini Key (optional)</label>
+        <input class="token-input" id="clientGeminiKey" placeholder="AIza…" type="password" style="font-size:10px;padding:5px;margin-bottom:8px;">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Key Mode</label>
+        <select id="clientKeyMode" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-size:10px;font-family:'DM Mono',monospace;margin-bottom:8px;">
+          <option value="byok">Use my own keys (BYOK)</option>
+          <option value="platform">Use platform keys (if available)</option>
+        </select>
+        <button class="sidebar-btn primary" onclick="saveClientKeys()" style="font-size:10px;padding:5px;">💾 Save Keys</button>
+        <div id="aiKeySaveMsg" style="font-size:10px;margin-top:4px;min-height:16px;"></div>
+      </div>
+    </div>
+
     <!-- Context -->
     <div class="context-panel" id="contextPanel">
       <div class="sidebar-label">Session Context</div>
@@ -345,11 +370,59 @@ var _busy        = false;
 // ══════════════════════════════════════════════════════════════
 // AUTH / CONNECT
 // ══════════════════════════════════════════════════════════════
+async function loadAiKeyStatus() {
+  try {
+    var d = await api('/api/engine/keys');
+    if (!d || !d.success) return;
+    var el = document.getElementById('aiKeyStatus');
+    var modeLabel = d.mode === 'byok' ? 'Your keys' : 'Platform keys';
+    var claudeStatus = d.claude.has_key ? '✓ Claude set' : (d.platform_available.claude ? '○ Platform Claude' : '✗ No Claude');
+    var geminiStatus = d.gemini.has_key ? '✓ Gemini set' : (d.platform_available.gemini ? '○ Platform Gemini' : '✗ No Gemini');
+    el.innerHTML = '<span style="color:#a78bfa;">' + modeLabel + '</span><br>' + claudeStatus + ' · ' + geminiStatus;
+    document.getElementById('clientKeyMode').value = d.mode;
+  } catch(e) { console.error('[aiKeys]', e.message); }
+}
+
+function toggleAiKeysPanel() {
+  var p = document.getElementById('aiKeysPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveClientKeys() {
+  var btn = document.querySelector('#aiKeysPanel .sidebar-btn.primary');
+  var msg = document.getElementById('aiKeySaveMsg');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  msg.textContent = ''; msg.style.color = '';
+  try {
+    var payload = { mode: document.getElementById('clientKeyMode').value };
+    var claudeVal = document.getElementById('clientClaudeKey').value.trim();
+    var geminiVal = document.getElementById('clientGeminiKey').value.trim();
+    if (claudeVal) payload.claude_key = claudeVal;
+    if (geminiVal) payload.gemini_key = geminiVal;
+    var d = await api('/api/engine/keys', 'PUT', payload);
+    if (d && d.success) {
+      msg.textContent = '✓ Keys saved';
+      msg.style.color = 'var(--green)';
+      document.getElementById('clientClaudeKey').value = '';
+      document.getElementById('clientGeminiKey').value = '';
+      loadAiKeyStatus();
+    } else {
+      throw new Error(d?.error || 'Save failed');
+    }
+  } catch(e) {
+    msg.textContent = '✗ ' + e.message;
+    msg.style.color = '#f87171';
+  }
+  btn.disabled = false; btn.textContent = '💾 Save Keys';
+}
+
 function forgetLogin() {
   try {
     localStorage.removeItem('nexus_engine_token');
   } catch(e) {}
   document.getElementById('engineToken').value = '';
+  document.getElementById('aiKeysSection').style.display = 'none';
+  document.getElementById('aiKeysPanel').style.display = 'none';
   document.getElementById('forgetLink').style.display = 'none';
   var btn = document.getElementById('connectBtn');
   btn.textContent = 'Connect →';
@@ -395,6 +468,8 @@ async function connect() {
       _context.profileId = null;
       renderProfileSelector(pr.profiles, true); // true = show placeholder
       document.getElementById('profileSection').style.display = 'block';
+      document.getElementById('aiKeysSection').style.display = 'block';
+      loadAiKeyStatus();
     }
 
     // Trigger agent welcome (will prompt for profile selection)

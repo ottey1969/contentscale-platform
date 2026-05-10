@@ -1445,6 +1445,41 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    res.json({ success: true });
    } catch (e) { res.json({ success: false, error: e.message }); }
    });
+   // ── Client AI Key Management (BYOK) ──
+   app.get('/api/engine/keys', verifyEngineAccess, asyncHandler(async (req, res) => {
+     const eu = req.engineUser;
+     const code = eu.code || {};
+     // Return masked key indicators — never the full keys
+     res.json({
+       success: true,
+       claude: { has_key: !!code.claude_key, masked: code.claude_key ? code.claude_key.slice(0,8) + '…' + code.claude_key.slice(-4) : null },
+       gemini: { has_key: !!code.gemini_key, masked: code.gemini_key ? code.gemini_key.slice(0,4) + '…' + code.gemini_key.slice(-4) : null },
+       mode: code.api_key_mode || 'platform', // 'byok' = bring your own, 'platform' = use server keys
+       platform_available: { claude: !!process.env.ANTHROPIC_API_KEY, gemini: !!process.env.GEMINI_API_KEY }
+     });
+   }));
+
+   app.put('/api/engine/keys', verifyEngineAccess, asyncHandler(async (req, res) => {
+     const { claude_key, gemini_key, mode } = req.body;
+     const eu = req.engineUser;
+     const codeId = eu.codeId;
+     if (!codeId) return res.status(400).json({ success: false, error: 'No engine code' });
+
+     const fields = [];
+     const vals = [];
+     if (claude_key !== undefined) { fields.push('claude_key=$' + (fields.length+1)); vals.push(claude_key || null); }
+     if (gemini_key !== undefined) { fields.push('gemini_key=$' + (fields.length+1)); vals.push(gemini_key || null); }
+     if (mode !== undefined) { fields.push('api_key_mode=$' + (fields.length+1)); vals.push(mode); }
+     if (fields.length === 0) return res.status(400).json({ success: false, error: 'Nothing to update' });
+
+     vals.push(codeId);
+     await pool.query(
+       'UPDATE engine_access_codes SET ' + fields.join(', ') + ' WHERE id=$' + vals.length,
+       vals
+     );
+     res.json({ success: true, updated: fields.map(f => f.split('=')[0]) });
+   }));
+
    app.get('/api/user/templates', async (req, res) => {
    const userId = req.headers['x-user-id'];
    if (!userId) return res.json({ success: false, error: 'No ID' });
@@ -10877,7 +10912,16 @@ REQUIREMENTS:
 });
 
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
-const resolveClaudeKey = (req) => req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
+const resolveClaudeKey = (req) => {
+  // Priority: per-code key (client BYOK) > platform env > null
+  // NOTE: x-claude-key header removed — keys must be stored server-side per code
+  const codeKey = req.engineUser && req.engineUser.code ? req.engineUser.code.claude_key : null;
+  const envKey  = process.env.ANTHROPIC_API_KEY;
+  if (codeKey) { console.log('[keys] Claude: using per-code key for code', req.engineUser.codeId); return codeKey; }
+  if (envKey)  { console.log('[keys] Claude: using platform env key'); return envKey; }
+  console.log('[keys] Claude: NO KEY FOUND');
+  return null;
+};
 const resolveSerpapiKey = (req) => {
   // Priority: header > per-code key (from engineUser) > platform env
   const headerKey = req.headers['x-serpapi-key'];
