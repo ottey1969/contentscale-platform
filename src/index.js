@@ -407,18 +407,25 @@ async function tryDbReconnect() {
     clearInterval(_dbReconnectInterval);
     _dbReconnectInterval = null;
     _dbReconnectAttempts = 0;
-    console.log('✅ DB auto-reconnect: Connection restored!');
+    console.log('✅✅✅ DB auto-reconnect: CONNECTION RESTORED! All features now active.');
     setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
     return true;
   } catch (e) {
     if (client) try { client.release(); } catch(_) {}
-    // Quota error = keep the pool, just retry later
-    // Connection error = kill pool so we recreate it
     const isQuotaError = /quota|exceeded|transfer/i.test(e.message);
-    if (!isQuotaError && pool) {
-      console.log('🔄 DB pool connection error, recreating pool...');
+    const isAuthError = /password|auth|certificate/i.test(e.message);
+    if (isQuotaError) {
+      // Neon quota — keep pool, just wait for propagation
+      // Nothing to do, will retry
+    } else if (isAuthError && pool) {
+      // Auth changed — kill pool to force reconnect with new creds
+      console.log('🔄 DB auth error, recreating pool...');
       try { pool.end(); } catch(_) {}
       pool = null;
+    } else if (!pool) {
+      // Can't create pool at all
+    } else {
+      // Other transient error — keep pool
     }
     return false;
   }
@@ -538,10 +545,12 @@ async function waitForDatabase(retries = 5, delay = 3000) {
 if (!pool) return false;
 console.log('🔄 Verbinden met database...');
 for (let i = 0; i < retries; i++) {
+let client = null;
 try {
-const client = await pool.connect();
+client = await pool.connect();
 await client.query('SELECT NOW()');
 client.release();
+client = null;
 console.log('✅ Database verbonden!');
 // Stop any running reconnect timer since we're connected
 if (_dbReconnectInterval) {
@@ -553,7 +562,10 @@ setTimeout(() => checkIsNeon().catch(err => console.error('🔍 Neon check error
 setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
 return true;
 } catch (err) {
-console.error(`❌ DB Attempt ${i + 1}/${retries} failed`);
+// ALWAYS release client on failure — prevents pool exhaustion
+if (client) { try { client.release(); } catch(_) {} client = null; }
+const isQuota = /quota|exceeded|transfer/i.test(err.message);
+console.error(`❌ DB Attempt ${i + 1}/${retries} failed${isQuota ? ' (quota exceeded — upgrade Neon or wait for propagation)' : ''}`);
 if (i === retries - 1) return false;
 await new Promise(resolve => setTimeout(resolve, delay));
 }
