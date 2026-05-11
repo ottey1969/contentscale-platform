@@ -387,52 +387,59 @@ pool = null;
 
 // ══ DATABASE AUTO-RECONNECT ════════════════════════════════════════════════
 // If DB connection fails at startup or drops later, retry every 30 seconds.
-// This handles transient failures (quota limits, network issues, restarts).
+// Handles: Neon quota exceeded, network issues, restarts, proxy failures.
+// The pool may connect at TCP level but queries fail — we test with SELECT 1.
 let _dbReconnectInterval = null;
 let _dbReconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 100; // ~50 minutes of retries
+const MAX_RECONNECT_ATTEMPTS = 1000; // ~8 hours of retries (for quota reset)
+
+async function tryDbReconnect() {
+  // Try to get a working client from existing pool or create new pool
+  let client = null;
+  try {
+    if (!pool) {
+      pool = initDatabaseConfig();
+    }
+    client = await pool.connect();
+    await client.query('SELECT 1');
+    // Query succeeded — DB is back!
+    client.release();
+    clearInterval(_dbReconnectInterval);
+    _dbReconnectInterval = null;
+    _dbReconnectAttempts = 0;
+    console.log('✅ DB auto-reconnect: Connection restored!');
+    setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
+    return true;
+  } catch (e) {
+    if (client) try { client.release(); } catch(_) {}
+    // Quota error = keep the pool, just retry later
+    // Connection error = kill pool so we recreate it
+    const isQuotaError = /quota|exceeded|transfer/i.test(e.message);
+    if (!isQuotaError && pool) {
+      console.log('🔄 DB pool connection error, recreating pool...');
+      try { pool.end(); } catch(_) {}
+      pool = null;
+    }
+    return false;
+  }
+}
 
 function startDbReconnect() {
   if (_dbReconnectInterval) return; // already running
-  console.log('🔄 Starting DB auto-reconnect (every 30s)...');
+  console.log('🔄 Starting DB auto-reconnect (every 30s, max 1000 attempts)...');
+  // Try immediately first
+  tryDbReconnect().catch(() => {});
   _dbReconnectInterval = setInterval(async () => {
-    if (pool) {
-      // Pool exists but may be dead — test it
-      try {
-        const client = await pool.connect();
-        await client.query('SELECT NOW()');
-        client.release();
-        // DB is alive — stop reconnecting
-        clearInterval(_dbReconnectInterval);
-        _dbReconnectInterval = null;
-        _dbReconnectAttempts = 0;
-        console.log('✅ DB auto-reconnect: Connection restored!');
-        // Re-run table creation in case we missed it
-        setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
-        return;
-      } catch(e) {
-        // Pool exists but is dead — recreate it
-        console.log('🔄 DB pool is dead, recreating...');
-        try { pool.end(); } catch(_) {}
-        pool = null;
-      }
+    _dbReconnectAttempts++;
+    if (_dbReconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+      console.log('❌ Max reconnect attempts reached. Giving up.');
+      clearInterval(_dbReconnectInterval);
+      _dbReconnectInterval = null;
+      return;
     }
-    if (!pool && _dbReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-      _dbReconnectAttempts++;
-      console.log(`🔄 DB reconnect attempt ${_dbReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`);
-      try {
-        pool = initDatabaseConfig();
-        const client = await pool.connect();
-        await client.query('SELECT NOW()');
-        client.release();
-        clearInterval(_dbReconnectInterval);
-        _dbReconnectInterval = null;
-        _dbReconnectAttempts = 0;
-        console.log('✅ DB auto-reconnect: Connection established!');
-        setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
-      } catch(e) {
-        console.log(`❌ DB reconnect attempt ${_dbReconnectAttempts} failed:`, e.message);
-      }
+    const ok = await tryDbReconnect();
+    if (!ok) {
+      console.log(`🔄 DB reconnect attempt ${_dbReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} — still down`);
     }
   }, 30000);
 }
