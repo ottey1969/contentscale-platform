@@ -5191,88 +5191,82 @@ res.setHeader('Pragma', 'no-cache');
 res.setHeader('Expires', '0');
 res.setHeader('Access-Control-Allow-Origin', '*');
 res.send(`(function() {
-function initBadges() {
-  var badges = document.querySelectorAll('[data-cs-badge]');
-  if (!badges.length) return;
-  var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-  var CACHE_KEY = 'cs_badge_' + pageUrl;
-  var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  function getTier(s) {
-    if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
-    if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
-    if (s >= 70) return { label:'QUALIFIED',   color:'#84cc16', bg:'#365314', text:'#bef264', bars:2 };
-    if (s >= 50) return { label:'OPPORTUNITY', color:'#f59e0b', bg:'#78350f', text:'#fcd34d', bars:1 };
-    return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca5a5', bars:1 };
-  }
-  function bar(on, color) {
-    return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
-  }
-  function render(data) {
-    if (!data.success || !data.score) {
-      badges.forEach(function(el) {
-        el.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;font-family:system-ui,sans-serif;">'
-          + '<span style="font-size:11px;color:#6b7280;">Not scanned yet &mdash;</span>'
-          + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none;">Scan now</a>'
-          + '</div>';
-      });
-      return;
-    }
-    var score = data.score;
-    var t = getTier(score);
-    var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
-      + '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
-      + '<div style="display:flex;flex-direction:column;gap:1px;">'
-      + '<span style="font-size:11px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.06em;">ContentScore</span>'
-      + '<span style="font-size:9px;color:#9ca3af;">This page</span>'
-      + '<div style="display:flex;align-items:baseline;gap:3px;">'
-      + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
-      + '<span style="font-size:11px;color:#6b7280;">/100</span>'
-      + '</div>'
-      + '</div>'
-      + '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
-      + '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
-      + '<div style="display:flex;gap:2px;">'
-      + bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
-      + '</div>'
-      + '</div>'
-      + '</div>'
-      + '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
-      + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;">'
-      + '<span style="font-size:12px;line-height:1;">&#x21bb;</span><span>Rescan</span>'
-      + '</a>'
+var badges = document.querySelectorAll('[data-cs-badge]');
+if (!badges.length) return;
+var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
+var CACHE_KEY = 'cs_badge_' + pageUrl;
+var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+function getTier(s) {
+if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
+if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
+if (s >= 70) return { label:'QUALIFIED',   color:'#84cc16', bg:'#365314', text:'#bef264', bars:2 };
+if (s >= 50) return { label:'OPPORTUNITY', color:'#f59e0b', bg:'#78350f', text:'#fcd34d', bars:1 };
+return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca5a5', bars:1 };
+}
+function bar(on, color) {
+return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
+}
+function renderNotScanned() {
+  badges.forEach(function(el) {
+    el.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;font-family:system-ui,sans-serif;">'
+      + '<span style="font-size:11px;color:#6b7280;">Not scanned yet &mdash;</span>'
+      + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none;">Scan now</a>'
       + '</div>';
-    badges.forEach(function(el) { el.innerHTML = html; });
-  }
-  // Check localStorage cache first
-  var cached = null;
-  try {
-    var raw = localStorage.getItem(CACHE_KEY);
-    if (raw) cached = JSON.parse(raw);
-  } catch(e) {}
-  if (cached && cached.ts && (Date.now() - cached.ts) < CACHE_TTL) {
-    render(cached.data);
-    return;
-  }
-  // No cache or expired — fetch from API
-  var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
-  fetch(apiUrl)
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    // Cache successful response
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
-    render(data);
-  })
-  .catch(function() {
-    // On error, try to render from stale cache (any age)
-    if (cached && cached.data) render(cached.data);
   });
 }
-// Run when DOM is ready — handles <head>, async, defer, and inline placements
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initBadges);
-} else {
-  initBadges();
+function render(data) {
+  if (!data || !data.success || !data.score) {
+    renderNotScanned();
+    return;
+  }
+  var score = data.score;
+  var t = getTier(score);
+  var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
+    + '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
+    + '<div style="display:flex;flex-direction:column;gap:1px;">'
+    + '<span style="font-size:11px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.06em;">ContentScore</span>'
+    + '<span style="font-size:9px;color:#9ca3af;">This page</span>'
+    + '<div style="display:flex;align-items:baseline;gap:3px;">'
+    + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
+    + '<span style="font-size:11px;color:#6b7280;">/100</span>'
+    + '</div>'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
+    + '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
+    + '<div style="display:flex;gap:2px;">'
+    + bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
+    + '</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
+    + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;">'
+    + '<span style="font-size:12px;line-height:1;">&#x21bb;</span><span>Rescan</span>'
+    + '</a>'
+    + '</div>';
+  badges.forEach(function(el) { el.innerHTML = html; });
 }
+// Check localStorage cache first
+var cached = null;
+try {
+  var raw = localStorage.getItem(CACHE_KEY);
+  if (raw) cached = JSON.parse(raw);
+} catch(e) {}
+if (cached && cached.ts && (Date.now() - cached.ts) < CACHE_TTL) {
+  render(cached.data);
+  return;
+}
+// No cache or expired — fetch from API
+var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
+fetch(apiUrl)
+.then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+.then(function(data) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+  render(data);
+})
+.catch(function() {
+  if (cached && cached.data) { render(cached.data); }
+  else { renderNotScanned(); }
+});
 })();`);
 });
 
