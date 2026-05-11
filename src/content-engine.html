@@ -2783,10 +2783,6 @@ function switchView(view) {
 var _trPages = [];
 
 async function loadTrackerPages() {
-  // Guard: no token → skip API call
-  var _tok = (document.getElementById('engineToken') || {}).value || '';
-  try { if (!_tok) _tok = localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
-  if (!_tok) { renderTrackerList(); return; }
   try {
     var profileId = _context.profileId || (_profile && _profile.id) || null;
     var profileFilter = profileId ? '?profile_id=' + profileId : '';
@@ -2905,7 +2901,7 @@ function renderTrackerList() {
       var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
       var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'Recommendation');
       var rAction = escHtml(topRec.action||topRec.fix||topRec.recommendation||'');
-      var rFull = rTitle + (rAction ? ' — ' + rAction.substring(0,120) + (rAction.length>120?'...':'') : '');
+      var rFull = rTitle + (rAction ? ' — ' + rAction : '');
       recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;white-space:normal;word-break:break-word;line-height:1.4;">'+rFull+'</div>';
     }
 
@@ -4508,11 +4504,6 @@ function autoAssignPageKeywords() {
 }
 
 async function loadPagesOverview(forceRefresh) {
-  // Guard: don't hit the API if there's no token — avoids 401 during page init
-  var _tok = (document.getElementById('engineToken') || {}).value || '';
-  try { if (!_tok) _tok = localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
-  if (!_tok) { renderPagesOverview(); return; }
-
   var profileId = _context.profileId || null;
   var profileFilter = profileId ? '?profile_id=' + profileId : '';
   var pages = [];
