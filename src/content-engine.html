@@ -2901,7 +2901,7 @@ function renderTrackerList() {
       var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
       var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'Recommendation');
       var rAction = escHtml(topRec.action||topRec.fix||topRec.recommendation||'');
-      var rFull = rTitle + (rAction ? ' — ' + rAction : '');
+      var rFull = rTitle + (rAction ? ' — ' + rAction.substring(0,120) + (rAction.length>120?'...':'') : '');
       recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;white-space:normal;word-break:break-word;line-height:1.4;">'+rFull+'</div>';
     }
 
@@ -2927,6 +2927,7 @@ function renderTrackerList() {
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="openTrackerDetail('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#9ca3af;cursor:pointer;">Details</button>' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
+        '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>' +
         '<button onclick="trPushToAgent('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;cursor:pointer;">→ Agent</button>' +
         '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.25);background:rgba(248,113,113,.06);color:#f87171;cursor:pointer;">✕</button>' +
       '</div>' +
@@ -5238,6 +5239,273 @@ document.addEventListener('DOMContentLoaded', function() {
   loadPagesOverview();
 });
 
+// ── SERP SPY ─────────────────────────────────────────────────────────────────
+var _serpSpyPageId = null;
+
+function openSerpSpy(pageId) {
+  _serpSpyPageId = pageId;
+  var page = (_trPages || []).find(function(p){ return p.id === pageId; });
+  var kw   = (page && page.keyword) || '';
+  var url  = (page && page.url) || '';
+
+  var modal = document.getElementById('serpSpyModal');
+  document.getElementById('serpSpyKeyword').value = kw;
+  document.getElementById('serpSpyUrl').value = url;
+  document.getElementById('serpSpyResult').innerHTML = '';
+  document.getElementById('serpSpyStatus').textContent = '';
+  modal.style.display = 'flex';
+}
+
+function closeSerpSpy() {
+  document.getElementById('serpSpyModal').style.display = 'none';
+}
+
+async function runSerpSpy() {
+  var kw  = document.getElementById('serpSpyKeyword').value.trim();
+  var url = document.getElementById('serpSpyUrl').value.trim();
+  if (!kw) { toast('Enter a keyword to spy on', 3000, 'warn'); return; }
+
+  var btn = document.getElementById('serpSpyRunBtn');
+  var stat = document.getElementById('serpSpyStatus');
+  var result = document.getElementById('serpSpyResult');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyzing…';
+  stat.textContent = 'Step 1: Cataloging SERP results…';
+  result.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">🔍 Running 4-Step SERP analysis — Claude is searching, scraping body content, and building your intelligence report. This takes 30–60 seconds.</div>';
+
+  // Animate status messages
+  var steps = [
+    'Step 1: Cataloging SERP results…',
+    'Step 2: Finding the pattern (top vs bottom)…',
+    'Step 3: Identifying the outlier…',
+    'Step 4: Finding what's missing…',
+    'Comparing against your page content…',
+    'Building action plan…'
+  ];
+  var si = 0;
+  var stepTimer = setInterval(function() {
+    si = (si + 1) % steps.length;
+    stat.textContent = steps[si];
+  }, 8000);
+
+  try {
+    var d = await api('/api/tracker/serp-spy', 'POST', {
+      keyword: kw,
+      profile_url: url,
+      page_id: _serpSpyPageId
+    });
+    clearInterval(stepTimer);
+    stat.textContent = '✓ Analysis complete';
+    btn.disabled = false;
+    btn.textContent = '🔍 Run Spy';
+
+    if (!d.success || (!d.spy && !d.raw)) {
+      result.innerHTML = '<div style="color:#f87171;padding:20px;">Analysis failed — try again</div>';
+      return;
+    }
+
+    if (d.spy) {
+      result.innerHTML = renderSerpSpyReport(d.spy);
+    } else {
+      result.innerHTML = '<pre style="white-space:pre-wrap;font-size:11px;color:#9ca3af;">' + escHtml(d.raw) + '</pre>';
+    }
+  } catch(e) {
+    clearInterval(stepTimer);
+    btn.disabled = false;
+    btn.textContent = '🔍 Run Spy';
+    stat.textContent = '';
+    result.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+function renderSerpSpyReport(s) {
+  var priorityColor = { high: '#ef4444', medium: '#f59e0b', low: '#6b7280' };
+  var effortColor   = { low: '#34d399', medium: '#f59e0b', high: '#f87171' };
+  var catIcon = { rank_fast:'⚡', ai_overview:'🤖', paa:'❓', voice:'🎙', content_gap:'📝', technical:'🔧', schema:'🗂' };
+  var gapImpact = { high:'#ef4444', medium:'#f59e0b', low:'#6b7280' };
+
+  var html = '<div style="font-family:'DM Mono',monospace;font-size:11px;color:#e2e8f0;">';
+
+  // ── HEADER ──
+  html += '<div style="background:linear-gradient(135deg,#1e1b4b,#0f1923);border-radius:10px;padding:16px 20px;margin-bottom:12px;">' +
+    '<div style="font-size:16px;font-weight:900;letter-spacing:-.5px;">🔍 SERP Spy: ' + escHtml(s.keyword || '') + '</div>' +
+    '<div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;">' +
+    '<span style="background:rgba(124,58,237,.3);color:#c4b5fd;padding:3px 8px;border-radius:4px;font-size:10px;">Intent: ' + escHtml(s.search_intent||'—') + '</span>' +
+    (s.ai_overview_present ? '<span style="background:rgba(16,185,129,.2);color:#34d399;padding:3px 8px;border-radius:4px;font-size:10px;">✓ AI Overview</span>' : '<span style="background:rgba(107,114,128,.15);color:#6b7280;padding:3px 8px;border-radius:4px;font-size:10px;">No AI Overview</span>') +
+    '<span style="background:rgba(59,130,246,.15);color:#93c5fd;padding:3px 8px;border-radius:4px;font-size:10px;">⏱ ' + escHtml(s.estimated_time_to_rank||'—') + '</span>' +
+    '<span style="background:rgba(245,158,11,.1);color:#fbbf24;padding:3px 8px;border-radius:4px;font-size:10px;">Confidence: ' + escHtml(s.confidence||'—') + '</span>' +
+    '</div>' +
+    '<div style="margin-top:8px;color:#9ca3af;font-size:10px;">' + escHtml(s.intent_explanation||'') + '</div>' +
+    '</div>';
+
+  // ── STEP 1: CATALOG ──
+  html += '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+    '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#7c3aed;">STEP 1 · CATALOG <span style="font-weight:400;color:#6b7280;font-size:10px;">Every URL, content type & SERP feature</span></div>';
+  (s.step1_catalog || s.competitors || []).forEach(function(e) {
+    html += '<div style="border-bottom:1px solid rgba(255,255,255,.04);padding:8px 0;display:flex;gap:10px;align-items:flex-start;">' +
+      '<div style="min-width:22px;height:22px;border-radius:50%;background:' + (e.rank <= 3 ? '#7c3aed' : 'rgba(255,255,255,.08)') + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">' + (e.rank||'?') + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="color:#93c5fd;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(e.domain||e.url||'') + '</div>' +
+      '<div style="color:#e2e8f0;font-size:10px;margin-top:2px;">' + escHtml((e.title||'').substring(0,80)) + '</div>' +
+      '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">' +
+      '<span style="background:rgba(59,130,246,.1);color:#93c5fd;padding:2px 5px;border-radius:3px;font-size:9px;">' + escHtml(e.content_type||'—') + '</span>' +
+      '<span style="background:rgba(255,255,255,.05);color:#6b7280;padding:2px 5px;border-radius:3px;font-size:9px;">~' + (e.estimated_word_count||'?') + ' words</span>' +
+      '<span style="background:rgba(255,255,255,.05);color:#6b7280;padding:2px 5px;border-radius:3px;font-size:9px;">' + escHtml(e.freshness||'—') + '</span>' +
+      (e.serp_features && e.serp_features.length ? e.serp_features.map(function(f){ return '<span style="background:rgba(16,185,129,.1);color:#34d399;padding:2px 5px;border-radius:3px;font-size:9px;">' + escHtml(f) + '</span>'; }).join('') : '') +
+      (e.schema_types && e.schema_types.length ? e.schema_types.map(function(sc){ return '<span style="background:rgba(245,158,11,.1);color:#fbbf24;padding:2px 5px;border-radius:3px;font-size:9px;">🗂 '+escHtml(sc)+'</span>'; }).join('') : '') +
+      (e.ai_overview_eligible ? '<span style="background:rgba(16,185,129,.15);color:#34d399;padding:2px 5px;border-radius:3px;font-size:9px;">🤖 AI eligible</span>' : '') +
+      '</div>' +
+      (e.snippet_text ? '<div style="margin-top:4px;color:#6b7280;font-size:9px;font-style:italic;">"' + escHtml(e.snippet_text.substring(0,120)) + '…"</div>' : '') +
+      '</div></div>';
+  });
+  html += '</div>';
+
+  // ── STEP 2: PATTERN ──
+  if (s.step2_pattern) {
+    var p2 = s.step2_pattern;
+    html += '<div style="background:#0d1117;border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#a78bfa;">STEP 2 · PATTERN <span style="font-weight:400;color:#6b7280;font-size:10px;">What top results have that bottom ones don't</span></div>' +
+      '<div style="background:rgba(124,58,237,.08);border-left:3px solid #7c3aed;padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:10px;">' +
+      '<div style="font-size:10px;color:#c4b5fd;font-weight:700;margin-bottom:4px;">THE RANKING FORMULA</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(p2.the_ranking_formula||'—') + '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+      '<div><div style="font-size:9px;color:#34d399;font-weight:700;margin-bottom:6px;">✓ TOP 3 SHARE</div>' +
+      (p2.top3_shared_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
+      '<div><div style="font-size:9px;color:#f87171;font-weight:700;margin-bottom:6px;">✗ BOTTOM 7 MISSING</div>' +
+      (p2.bottom7_missing_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Format: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_content_format||'—') + '</span></div>' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Schema: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_schema||'—') + '</span></div>' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Words: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_word_count_range||'—') + '</span></div>' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Freshness: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.freshness_pattern||'—') + '</span></div>' +
+      '</div></div>';
+  }
+
+  // ── STEP 3: OUTLIER ──
+  if (s.step3_outlier) {
+    var o = s.step3_outlier;
+    var isOpp = o.signal_type === 'opportunity';
+    html += '<div style="background:#0d1117;border:1px solid '+(isOpp?'rgba(16,185,129,.25)':'rgba(248,113,113,.2)')+';border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:'+(isOpp?'#34d399':'#f87171')+';">STEP 3 · OUTLIER <span style="font-weight:400;color:#6b7280;font-size:10px;">'+(isOpp?'🟢 Opportunity':'🔴 Warning')+' — rank #'+(o.rank||'?')+'</span></div>' +
+      '<div style="color:#93c5fd;font-size:10px;margin-bottom:4px;">' + escHtml(o.domain||o.url||'') + '</div>' +
+      '<div style="color:#9ca3af;font-size:10px;margin-bottom:8px;">' + escHtml(o.why_it_breaks_pattern||'') + '</div>' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:10px;font-size:10px;">' +
+      '<div style="color:#fbbf24;font-weight:700;margin-bottom:4px;">Why it ranks anyway</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(o.why_it_ranks_anyway||'') + '</div>' +
+      '</div>' +
+      '<div style="margin-top:8px;background:'+(isOpp?'rgba(16,185,129,.08)':'rgba(248,113,113,.08)')+';border-radius:6px;padding:10px;font-size:10px;">' +
+      '<div style="color:'+(isOpp?'#34d399':'#f87171')+';font-weight:700;margin-bottom:4px;">What to learn</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(o.what_to_learn||'') + '</div>' +
+      '</div></div>';
+  }
+
+  // ── STEP 4: MISSING ──
+  if (s.step4_missing && s.step4_missing.length) {
+    html += '<div style="background:#0d1117;border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#fbbf24;">STEP 4 · MISSING <span style="font-weight:400;color:#6b7280;font-size:10px;">Gaps = warnings or opportunities</span></div>';
+    s.step4_missing.forEach(function(g) {
+      var isOpp = g.gap_type === 'opportunity';
+      html += '<div style="border:1px solid '+(isOpp?'rgba(16,185,129,.2)':'rgba(248,113,113,.15)')+';border-radius:8px;padding:10px;margin-bottom:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">' +
+        '<div style="color:#e2e8f0;font-weight:700;font-size:10px;">' + escHtml(g.gap||'') + '</div>' +
+        '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:'+(isOpp?'rgba(16,185,129,.15)':'rgba(248,113,113,.1)')+';color:'+(isOpp?'#34d399':'#f87171')+';white-space:nowrap;margin-left:8px;">'+(isOpp?'OPPORTUNITY':'WARNING')+'</span>' +
+        '</div>' +
+        '<div style="color:#9ca3af;font-size:10px;margin-bottom:4px;">' + escHtml(g.why||'') + '</div>' +
+        (g.how_to_exploit ? '<div style="color:'+(isOpp?'#34d399':'#fbbf24')+';font-size:10px;">→ ' + escHtml(g.how_to_exploit) + '</div>' : '') +
+        '</div>';
+    });
+    html += '</div>';
+  }
+
+  // ── AI OVERVIEW BLUEPRINT ──
+  if (s.ai_overview_blueprint) {
+    html += '<div style="background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(59,130,246,.05));border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#34d399;">🤖 AI OVERVIEW BLUEPRINT</div>' +
+      (s.ai_overview_source_domain ? '<div style="color:#6b7280;font-size:10px;margin-bottom:6px;">Source in AI Overview: <span style="color:#93c5fd;">' + escHtml(s.ai_overview_source_domain) + '</span></div>' : '') +
+      (s.ai_overview_why ? '<div style="color:#9ca3af;font-size:10px;margin-bottom:8px;">' + escHtml(s.ai_overview_why) + '</div>' : '') +
+      '<div style="background:rgba(16,185,129,.08);border-radius:6px;padding:10px;font-size:10px;color:#e2e8f0;">' + escHtml(s.ai_overview_blueprint) + '</div>' +
+      '</div>';
+  }
+
+  // ── MY PAGE GAPS ──
+  if (s.my_page_gaps && s.my_page_gaps.length) {
+    html += '<div style="background:#0d1117;border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#f87171;">⚠ YOUR PAGE GAPS vs TOP RESULTS</div>';
+    s.my_page_gaps.forEach(function(g) {
+      html += '<div style="border-bottom:1px solid rgba(255,255,255,.04);padding:8px 0;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+        '<div style="color:#e2e8f0;font-size:10px;font-weight:700;">' + escHtml(g.gap||'') + '</div>' +
+        '<span style="font-size:9px;padding:2px 5px;border-radius:3px;background:rgba('+(g.impact==='high'?'239,68,68':g.impact==='medium'?'245,158,11':'107,114,128')+',.15);color:#'+(g.impact==='high'?'f87171':g.impact==='medium'?'fbbf24':'6b7280')+';">' + (g.impact||'').toUpperCase() + '</span>' +
+        '</div>' +
+        (g.present_in_top_pages ? '<div style="color:#6b7280;font-size:9px;">Found in: ' + escHtml(g.present_in_top_pages) + '</div>' : '') +
+        (g.fix ? '<div style="color:#34d399;font-size:10px;margin-top:3px;">→ ' + escHtml(g.fix) + '</div>' : '') +
+        '</div>';
+    });
+    html += '</div>';
+  }
+
+  // ── PAA + VOICE ──
+  if ((s.paa_questions && s.paa_questions.length) || s.voice_search_angle) {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+    if (s.paa_questions && s.paa_questions.length) {
+      html += '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">' +
+        '<div style="font-size:11px;font-weight:800;margin-bottom:8px;color:#93c5fd;">❓ PAA QUESTIONS</div>' +
+        s.paa_questions.map(function(q){ return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);color:#9ca3af;font-size:10px;">• ' + escHtml(q) + '</div>'; }).join('') +
+        '</div>';
+    }
+    if (s.voice_search_angle) {
+      html += '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">' +
+        '<div style="font-size:11px;font-weight:800;margin-bottom:8px;color:#c084fc;">🎙 VOICE SEARCH</div>' +
+        '<div style="color:#9ca3af;font-size:10px;">' + escHtml(s.voice_search_angle) + '</div>' +
+        '</div>';
+    }
+    html += '</div>';
+  }
+
+  // ── QUICK WINS ──
+  if (s.quick_wins && s.quick_wins.length) {
+    html += '<div style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px;margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:800;margin-bottom:8px;color:#34d399;">⚡ QUICK WINS — Do Today</div>' +
+      s.quick_wins.map(function(w) {
+        var win = typeof w === 'object' ? (w.win||'') : String(w);
+        var reason = typeof w === 'object' ? (w.reason||'') : '';
+        return '<div style="padding:6px 0;border-bottom:1px solid rgba(16,185,129,.08);font-size:10px;color:#e2e8f0;">✓ ' + escHtml(win) + (reason ? ' <span style="color:#6b7280;">— ' + escHtml(reason) + '</span>' : '') + '</div>';
+      }).join('') +
+      '</div>';
+  }
+
+  // ── ACTION PLAN ──
+  if (s.action_plan && s.action_plan.length) {
+    html += '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#e2e8f0;">📋 ACTION PLAN</div>';
+    s.action_plan.forEach(function(a, i) {
+      var pc = priorityColor[a.priority] || '#6b7280';
+      var ec = effortColor[a.effort] || '#6b7280';
+      var ic = catIcon[a.category] || '•';
+      html += '<div style="border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<span style="font-size:14px;">' + ic + '</span>' +
+        '<span style="color:#e2e8f0;font-weight:700;font-size:11px;">' + (a.step||i+1) + '. ' + escHtml(a.action||'') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:4px;">' +
+        '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,.05);color:'+pc+';">' + (a.priority||'').toUpperCase() + '</span>' +
+        '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,.05);color:'+ec+';">effort: '+(a.effort||'?')+'</span>' +
+        '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,.05);color:#9ca3af;">'+(a.time_to_impact||'')+'</span>' +
+        '</div></div>' +
+        '<div style="color:#9ca3af;font-size:10px;">' + escHtml(a.reason||'') + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 </script>
 
 <!-- PROFILES VIEW -->
@@ -5798,6 +6066,36 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="padding:20px;" id="trDetailBody">Loading…</div>
   </div>
 </div>
+
+<!-- ── SERP SPY MODAL ─────────────────────────────────────────────────────── -->
+<div id="serpSpyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:30000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#0f1923;border:1px solid rgba(124,58,237,.3);border-radius:14px;width:100%;max-width:760px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;">
+    <!-- Header -->
+    <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div style="font-size:15px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">🔍 SERP Spy</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">4-Step Competitive Intelligence · Catalog → Pattern → Outlier → Missing</div>
+      </div>
+      <button onclick="closeSerpSpy()" style="background:rgba(255,255,255,.05);border:none;color:#9ca3af;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">✕ Close</button>
+    </div>
+    <!-- Inputs -->
+    <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;font-weight:700;letter-spacing:.05em;">TARGET KEYWORD</div>
+        <input id="serpSpyKeyword" type="text" placeholder="e.g. roofing company nj" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;font-weight:700;letter-spacing:.05em;">YOUR PAGE URL <span style="color:#4b5563;font-weight:400;">(for gap analysis)</span></div>
+        <input id="serpSpyUrl" type="text" placeholder="https://yoursite.com/page" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;">
+      </div>
+      <button id="serpSpyRunBtn" onclick="runSerpSpy()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🔍 Run Spy</button>
+    </div>
+    <div style="padding:6px 20px;flex-shrink:0;font-size:10px;color:#34d399;min-height:18px;" id="serpSpyStatus"></div>
+    <!-- Result scrollable -->
+    <div id="serpSpyResult" style="flex:1;overflow-y:auto;padding:0 20px 20px;"></div>
+  </div>
+</div>
+
 
 </body>
 </html>

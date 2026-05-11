@@ -25821,6 +25821,279 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
 });
 
 
+// ═══════════════════════════════════════════════════════════════════════
+// SERP SPY — Competitor Intelligence Engine
+// POST /api/tracker/serp-spy
+// Analyzes top 5 SERP results for a keyword using Claude + web_search.
+// Returns structured competitor breakdown: why they rank, AI Overview
+// eligibility signals, content gaps vs profile URL, and a ranked action plan.
+// ═══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// SERP SPY — 4-Step Competitive Intelligence Engine
+// Implements Google's 4-Step SERP Analysis Method:
+//   Step 1: CATALOG   — every URL, content type, SERP feature
+//   Step 2: PATTERN   — what top results have that bottom ones don't
+//   Step 3: OUTLIER   — the result that doesn't fit and why
+//   Step 4: MISSING   — the gap (warning or opportunity)
+// Uses Claude web_search + node-fetch content scraping (body text only)
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Content scraper: fetches a URL, strips nav/header/footer, returns body text ──
+async function scrapeBodyText(url, maxChars = 4000) {
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10000);
+    const r = await fetch(url.startsWith('http') ? url : 'https://' + url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/1.0)' },
+      signal: controller.signal
+    });
+    if (!r.ok) return '';
+    const html = await r.text();
+    // Strip script, style, nav, header, footer, aside, form, noscript blocks entirely
+    let clean = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+      .replace(/<header[\s\S]*?<\/header>/gi, '')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+      .replace(/<aside[\s\S]*?<\/aside>/gi, '')
+      .replace(/<form[\s\S]*?<\/form>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<[^>]+>/g, ' ')           // strip remaining tags
+      .replace(/\s{2,}/g, ' ')            // collapse whitespace
+      .trim();
+    return clean.slice(0, maxChars);
+  } catch(e) { return ''; }
+}
+
+app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
+  const { keyword, profile_url, page_id } = req.body;
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
+
+  const myUrl   = profile_url || '';
+  const myDomain = myUrl ? (() => { try { return new URL(myUrl.startsWith('http') ? myUrl : 'https://'+myUrl).hostname.replace(/^www\./,''); } catch(e) { return myUrl; } })() : '';
+
+  // Scrape client page body text for gap comparison
+  const myBodyText = myUrl ? await scrapeBodyText(myUrl, 3000) : '';
+
+  const prompt = `You are an elite SEO competitive intelligence analyst using Google's proven 4-Step SERP Analysis Method.
+
+KEYWORD TO ANALYZE: "${keyword}"
+${myDomain ? `CLIENT SITE: ${myDomain}
+CLIENT URL: ${myUrl}
+CLIENT PAGE BODY TEXT (stripped of nav/header/footer — actual content only):
+"""
+${myBodyText || '(could not fetch — analyze from search results)'}
+"""` : 'No client URL provided.'}
+
+YOUR MISSION — EXECUTE THE 4-STEP METHOD:
+
+━━ STEP 1: CATALOG ━━
+Search Google for: ${keyword}
+Also search: "${keyword}" intitle:"" to find exact title patterns
+Also search: ${keyword} site:reddit.com OR site:quora.com
+For EVERY top 10 result, catalog:
+- URL, domain, full page title
+- Content type (listicle / how-to / guide / landing page / comparison / tool / forum)
+- SERP features present: featured snippet / PAA box / AI Overview / video carousel / image pack / local pack / sitelinks / review stars
+- Schema markup visible (FAQ, HowTo, Article, Review, etc.)
+- Freshness signal (date in title or SERP snippet)
+- Estimated word count from snippet length
+
+━━ STEP 2: FIND THE PATTERN ━━
+Compare top 3 vs positions 4-10:
+- What structure do the top 3 share that the bottom 7 don't?
+- Is there a content format pattern? (e.g. all top 3 are listicles with 10+ items)
+- Is there a schema pattern? (e.g. all top 3 have FAQPage schema)
+- Is there an authority pattern? (e.g. all top 3 have 1000+ referring domains)
+- Is there a freshness pattern? (all updated within 6 months?)
+- Is there a content depth pattern? (all 2000+ words with subtopics X, Y, Z?)
+- What is the single repeating pattern that predicts ranking?
+
+━━ STEP 3: IDENTIFY THE OUTLIER ━━
+Find the result that breaks the pattern. A smaller domain, different format, or unexpected content type that still ranks top 5.
+- Why is it there? (fresh content? hyper-specific angle? unique data? viral links?)
+- Is it a warning (Google diversifying) or an opportunity (format gap)?
+- What can be learned from it?
+
+━━ STEP 4: ASK WHAT'S MISSING ━━
+Based on the catalog and pattern, identify what NONE of the top results cover well:
+- Subtopics or angles completely absent from the top 10
+- User questions (from Reddit/Quora/PAA) that nobody answers directly
+- Content formats not represented (e.g. no comparison table, no calculator, no case study)
+- Geographic angles missing
+- Each gap is either a WARNING (Google may not want this) or an OPPORTUNITY (first mover wins)
+${myBodyText ? `
+━━ CLIENT GAP ANALYSIS ━━
+Compare the client's actual page content (provided above) against the top ranking pages.
+Identify word-for-word what is in top pages that the client is missing.
+Be specific — not "add more content" but "page lacks a definition of ${keyword} in the first 100 words, which all top 3 have."` : ''}
+
+Return ONLY valid JSON — no markdown fences, no explanation, just the JSON object:
+{
+  "keyword": "${keyword}",
+  "serp_date": "approximate date of analysis",
+  "search_intent": "informational|commercial|transactional|navigational",
+  "intent_explanation": "exactly why — what stage of the funnel is the searcher at",
+  "ai_overview_present": true,
+  "ai_overview_source_url": "url or null",
+  "ai_overview_source_domain": "domain or null",
+  "ai_overview_why": "exactly what signals triggered AI Overview inclusion — direct answer placement, schema type, domain authority, content format",
+  "ai_overview_blueprint": "step-by-step what to add to a page to become AI Overview eligible for this keyword",
+  "step1_catalog": [
+    {
+      "rank": 1,
+      "url": "full url",
+      "domain": "domain.com",
+      "title": "exact page title from SERP",
+      "content_type": "listicle|how-to|guide|landing-page|comparison|tool|forum|news",
+      "serp_features": ["featured snippet", "PAA box", "AI Overview", "etc"],
+      "schema_types": ["FAQPage", "HowTo", "etc"],
+      "estimated_word_count": 2400,
+      "freshness": "2025-Q1|2024-Q4|unknown",
+      "has_direct_answer_in_snippet": true,
+      "snippet_text": "the actual Google snippet text if visible"
+    }
+  ],
+  "step2_pattern": {
+    "top3_shared_traits": ["all use numbered listicle format", "all have FAQPage schema", "etc"],
+    "bottom7_missing_traits": ["no schema", "shorter than 1000 words", "etc"],
+    "dominant_content_format": "listicle|guide|tool|etc",
+    "dominant_schema": "FAQPage|HowTo|none|etc",
+    "dominant_word_count_range": "1800-2400",
+    "freshness_pattern": "all updated within 6 months|mixed|not a factor",
+    "the_ranking_formula": "1 sentence: the pattern that predicts ranking for this keyword"
+  },
+  "step3_outlier": {
+    "rank": 4,
+    "url": "url of the outlier",
+    "domain": "domain.com",
+    "why_it_breaks_pattern": "smaller domain / different format / unique angle",
+    "why_it_ranks_anyway": "exactly why Google keeps it there",
+    "signal_type": "warning|opportunity",
+    "what_to_learn": "actionable insight from this outlier"
+  },
+  "step4_missing": [
+    {
+      "gap": "specific missing topic, angle, or format",
+      "gap_type": "warning|opportunity",
+      "why": "why this gap exists and whether to fill it",
+      "how_to_exploit": "exact content move to take advantage"
+    }
+  ],
+  "competitors": [
+    {
+      "rank": 1,
+      "url": "full url",
+      "domain": "domain.com",
+      "title": "page title",
+      "top_strength": "single biggest reason this page outranks everyone else",
+      "weakness": "the one specific thing it does poorly — exploitable gap",
+      "ai_overview_eligible": true,
+      "ai_overview_signals": ["has direct answer in first paragraph", "FAQPage schema", "etc"],
+      "graaf_scores": {
+        "genuinely_credible": 8,
+        "relevant": 9,
+        "actionable": 7,
+        "accurate": 8,
+        "fresh": 6
+      },
+      "what_to_copy": "the 1 specific thing to borrow from this page",
+      "what_to_beat": "the 1 specific thing to do better than this page"
+    }
+  ],
+  "my_page_gaps": ${myBodyText ? `[
+    {
+      "gap": "specific thing top pages have that client page is missing",
+      "present_in_top_pages": "which ranked pages have this",
+      "fix": "exact wording or content block to add",
+      "impact": "high|medium|low"
+    }
+  ]` : 'null'},
+  "paa_questions": ["exact question 1 from PAA box", "etc — 5 real questions"],
+  "voice_search_angle": "exact phrase structure and content format for voice search eligibility",
+  "action_plan": [
+    {
+      "step": 1,
+      "priority": "high|medium|low",
+      "category": "rank_fast|ai_overview|paa|voice|content_gap|technical|schema",
+      "action": "specific actionable instruction — not vague",
+      "reason": "which pattern from Step 2 or gap from Step 4 this addresses",
+      "effort": "low|medium|high",
+      "time_to_impact": "days|weeks|months"
+    }
+  ],
+  "quick_wins": [
+    { "win": "do this today", "reason": "why it moves the needle immediately" }
+  ],
+  "estimated_time_to_rank": "X weeks|months",
+  "confidence": "high|medium|low",
+  "confidence_reason": "why"
+}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error?.message || 'Claude ' + r.status);
+
+    // Collect all text blocks (web_search returns multiple content blocks)
+    const allText = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text || '')
+      .join('');
+
+    let spy = null;
+    try {
+      const jsonMatch = allText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) spy = JSON.parse(jsonMatch[0]);
+    } catch(e) { /* malformed — return raw so client can display */ }
+
+    // Persist to tracker_pages if page_id provided
+    if (page_id && spy) {
+      try {
+        await pool.query(
+          `UPDATE tracker_pages SET serp_spy=$1, serp_spy_at=NOW() WHERE id=$2`,
+          [JSON.stringify(spy), page_id]
+        );
+      } catch(e) { /* column may not exist — migration below handles it */ }
+    }
+
+    res.json({ success: true, spy, raw: spy ? null : allText });
+  } catch(e) {
+    clearTimeout(timer);
+    console.error('[serp-spy]', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+});
+
+// DB migration: add serp_spy columns to tracker_pages if not present
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
+
+
 // ── Server-side GRAAF HTML analyser (no Puppeteer) ──────────────────────────
 // Extracts the same signals as the browser evaluate() but via regex on raw HTML
 function graafAnalyzeHtml(html, pageUrl) {
@@ -26626,7 +26899,7 @@ Zero generic advice. Skip anything our content already clearly has.`;
           _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated');
         } catch(e) {
           // Gemini returned non-JSON — store as a single text recommendation
-          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs, expected_impact: 'See full text above' }];
+          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,800), expected_impact: 'See full text above' }];
           _trSetStep(pageId, 'recommendations', 'done', '1 recommendation (text)');
         }
       } else {
