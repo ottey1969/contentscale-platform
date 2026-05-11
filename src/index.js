@@ -26626,7 +26626,7 @@ Zero generic advice. Skip anything our content already clearly has.`;
           _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated');
         } catch(e) {
           // Gemini returned non-JSON — store as a single text recommendation
-          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,800), expected_impact: 'See full text above' }];
+          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs, expected_impact: 'See full text above' }];
           _trSetStep(pageId, 'recommendations', 'done', '1 recommendation (text)');
         }
       } else {
