@@ -2718,6 +2718,9 @@ function toast(msg, type) {
 
 async function api(endpoint, method, body) {
   var token = document.getElementById('engineToken').value.trim();
+  if (!token) {
+    try { token = localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+  }
   var opts = {
     method: method || 'GET',
     headers: { 'Content-Type':'application/json', 'x-engine-token': token }
@@ -5224,8 +5227,14 @@ function scanPageScore(url) {
     });
 }
 
-// Init: load pages overview on first open
+// Init: load pages overview on first open + restore engine token
 document.addEventListener('DOMContentLoaded', function() {
+  try {
+    var savedToken = localStorage.getItem('nexus_engine_token');
+    if (savedToken) {
+      document.getElementById('engineToken').value = savedToken;
+    }
+  } catch(e) {}
   loadPagesOverview();
 });
 

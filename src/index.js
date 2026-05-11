@@ -23422,9 +23422,24 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             populateCountryDropdown();
             checkDbStatus(); // Check if DB tables are ready
             if (currentAdminId) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-dashboard').classList.remove('hidden');
-                loadAllData();
+                // Validate token before showing dashboard
+                fetch('/api/admin/leaderboard?limit=1', {headers:{'x-admin-key':currentAdminId}})
+                    .then(function(r) {
+                        if (r.status === 401) {
+                            localStorage.removeItem('admin_id');
+                            currentAdminId = null;
+                            return;
+                        }
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('main-dashboard').classList.remove('hidden');
+                        loadAllData();
+                    })
+                    .catch(function() {
+                        // Network error, still show dashboard (will fail gracefully on load)
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('main-dashboard').classList.remove('hidden');
+                        loadAllData();
+                    });
             }
         };
 
@@ -23459,6 +23474,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const options = {method, headers};
             if (body) options.body = JSON.stringify(body);
             const res = await fetch(endpoint, options);
+            if (res.status === 401) {
+                localStorage.removeItem('admin_id');
+                location.reload();
+                return;
+            }
             if (!res.ok) {
                 const text = await res.text();
                 if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) throw new Error('Server returned HTML (Status ' + res.status + '). Session may be expired.');
