@@ -808,13 +808,20 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
-   // Try with is_active filter first (normal case)
-   let result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]).catch(() => ({ rows: [] }));
-   // If is_active column doesn't exist, fall back to query without it
-   if (result.rows.length === 0) {
-     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]).catch(() => ({ rows: [] }));
+   let result;
+   // Query 1: try with is_active (normal case)
+   try {
+     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
+   } catch(q1err) {
+     // Column missing or other error — try without is_active
+     try {
+       result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]);
+     } catch(q2err) {
+       // Table probably missing too
+       return res.status(500).json({ success: false, error: 'Database initializing — please retry in 30 seconds' });
+     }
    }
-   if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+   if (!result || result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
    req.admin = result.rows[0];
    next();
    } catch (error) {
@@ -1998,7 +2005,13 @@ app.post('/api/setup/verify-admin', async (req, res) => {
 const { username, password } = req.body;
 if (!pool) return res.status(503).json({ success: false, error: 'DB down' });
 try {
-const result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+let result;
+try {
+  result = await pool.query('SELECT * FROM super_admins WHERE username = $1 AND is_active = TRUE', [username]);
+} catch(e) {
+  try { result = await pool.query('SELECT * FROM super_admins WHERE username = $1', [username]); }
+  catch(e2) { return res.status(500).json({ success: false, error: 'Database initializing — please retry in 30 seconds' }); }
+}
 if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid' });
 const valid = await bcrypt.compare(password, result.rows[0].password_hash);
 if (!valid) return res.status(401).json({ success: false, error: 'Invalid' });
@@ -10082,9 +10095,12 @@ const verifyEngineAccess = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey) {
     // Try with is_active first, fall back without it for backward compat
-    let isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]).catch(()=>({rows:[]}));
-    if (!isAdmin.rows.length) {
-      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]).catch(()=>({rows:[]}));
+    let isAdmin;
+    try {
+      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]);
+    } catch(e) {
+      try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]); }
+      catch(e2) { isAdmin = { rows: [] }; }
     }
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
@@ -10100,18 +10116,22 @@ const verifyEngineAccess = async (req, res, next) => {
 
   try {
     // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
-    let codeResult = await pool.query(
-      'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
-      [lookupCode.trim().toUpperCase()]
-    ).catch(() => ({ rows: [] }));
-    // Fallback: if is_active column missing, try without it
-    if (codeResult.rows.length === 0) {
+    let codeResult;
+    try {
       codeResult = await pool.query(
-        'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
+        'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
         [lookupCode.trim().toUpperCase()]
       );
+    } catch(q1err) {
+      // is_active column may be missing — try without it
+      try {
+        codeResult = await pool.query(
+          'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
+          [lookupCode.trim().toUpperCase()]
+        );
+      } catch(q2err) { codeResult = { rows: [] }; }
     }
-    if (codeResult.rows.length === 0) {
+    if (!codeResult || codeResult.rows.length === 0) {
       return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
     }
     const code = codeResult.rows[0];
@@ -11895,7 +11915,10 @@ app.post('/api/engine/login', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ success: false, error: 'Code required' });
   try {
-    const r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
+    let r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]).catch(() => ({ rows: [] }));
+    if (!r.rows.length) {
+      r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
+    }
     if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
     const ec = r.rows[0];
     // verifyEngineAccess uses the raw ENG-XXXX code as the token (x-engine-token header),
