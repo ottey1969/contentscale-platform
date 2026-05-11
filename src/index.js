@@ -2410,6 +2410,31 @@ totalSent: parseInt(totalSent.rows[0].count)
 });
 } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
+app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
+  // Admin view: ALL entries, no public filters — score can be null, opted-out visible
+  try {
+    const r = await pool.query(`
+      SELECT id, ROW_NUMBER() OVER (ORDER BY COALESCE(score,0) DESC) as rank,
+             company_name, url, score, country, niche, business_type, page_count,
+             is_verified as is_claimed, admin_verified, is_opted_out, scan_source,
+             submission_ip, created_at
+      FROM leaderboard
+      ORDER BY COALESCE(score,0) DESC, created_at DESC
+      LIMIT 500
+    `);
+    const entries = r.rows;
+    const total = entries.length;
+    const avg = total > 0 ? Math.round(entries.reduce((s,e) => s + (e.score||0), 0) / total) : 0;
+    const countries = [...new Set(entries.map(e => e.country).filter(Boolean))].length;
+    const verified = entries.filter(e => e.admin_verified).length;
+    res.json({ success: true, entries, total, averageScore: avg,
+      stats: { totalAgencies: total, avgScore: avg, countriesCount: countries, verifiedCount: verified } });
+  } catch(e) {
+    console.error('[admin/leaderboard]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
 try { const r = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
 catch (e) { res.json({ success: true, pending: [] }); }
@@ -23423,10 +23448,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             checkDbStatus(); // Check if DB tables are ready
             if (currentAdminId) {
                 // Validate token before showing dashboard
-                fetch('/api/admin/db-health', {headers:{'x-admin-key':currentAdminId}})
+                fetch('/api/admin/leaderboard?limit=1', {headers:{'x-admin-key':currentAdminId}})
                     .then(function(r) {
-                        if (!r.ok) {
-                            // Any non-200 (401, 403, 404) = session invalid → force re-login
+                        if (r.status === 401) {
                             localStorage.removeItem('admin_id');
                             currentAdminId = null;
                             return;
@@ -23436,8 +23460,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         loadAllData();
                     })
                     .catch(function() {
-                        // Network error — don't show dashboard, stay on login
-                        console.warn('[admin] session validation failed — network error');
+                        // Network error, still show dashboard (will fail gracefully on load)
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('main-dashboard').classList.remove('hidden');
+                        loadAllData();
                     });
             }
         };
@@ -23475,12 +23501,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const res = await fetch(endpoint, options);
             if (res.status === 401) {
                 localStorage.removeItem('admin_id');
-                currentAdminId = null;
-                // Show login screen without a hard reload (avoids reload loop on expired sessions)
-                var ls = document.getElementById('login-screen');
-                var md = document.getElementById('main-dashboard');
-                if (ls) ls.classList.remove('hidden');
-                if (md) md.classList.add('hidden');
+                location.reload();
                 return;
             }
             if (!res.ok) {
@@ -23527,7 +23548,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         async function loadLeaderboard() {
             try {
-                const data = await apiCall('/api/leaderboard');
+                const data = await apiCall('/api/admin/leaderboard');
                 window.allLeaderboard = data.entries || [];
                 document.getElementById('stat-total-agencies').textContent = data.stats.totalAgencies;
                 document.getElementById('stat-avg-score').textContent = data.averageScore;
@@ -23536,10 +23557,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById('stat-countries').textContent = uniqueCountries.length;
                 document.getElementById('top3-container').innerHTML = window.allLeaderboard.slice(0,3).map((e,i) =>
                     '<div style="border-radius:1rem;padding:1.5rem;text-align:center;background:linear-gradient(135deg,'+(i===0?'#fbbf24,#d97706':i===1?'#e5e7eb,#6b7280':'#f97316,#c2410c')+');">' +
+                    (e.is_opted_out?'<div style="font-size:9px;background:#ef4444;color:#fff;border-radius:4px;padding:2px 6px;display:inline-block;margin-bottom:4px;">OPTED OUT</div>':(!e.score?'<div style="font-size:9px;background:#6b7280;color:#fff;border-radius:4px;padding:2px 6px;display:inline-block;margin-bottom:4px;">NO SCORE</div>':'')) +
                     '<div style="font-size:3rem;">'+(i===0?'🥇':i===1?'🥈':'🥉')+'</div>' +
                     '<h3 style="font-weight:700;font-size:1.1rem;margin:8px 0;">'+(e.company_name||extractDomain(e.url))+'</h3>' +
-                    '<div style="font-size:2.5rem;font-weight:900;">'+e.score+'/100</div>' +
-                    '<div style="margin:8px 0;">'+getFlag(e.country)+' '+e.country+'</div>' +
+                    '<div style="font-size:2.5rem;font-weight:900;">'+(e.score||'—')+'/100</div>' +
+                    '<div style="margin:8px 0;">'+getFlag(e.country)+' '+(e.country||'—')+'</div>' +
                     '<button onclick="editLeaderboard('+e.id+')" style="width:100%;background:#2563eb;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;margin-bottom:6px;"><i class="fas fa-edit"></i> Edit</button>' +
                     '<button onclick="deleteItem(&apos;leaderboard&apos;,'+e.id+')" style="width:100%;background:#dc2626;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button></div>').join('');
                 document.getElementById('rankings4to15Grid').innerHTML = window.allLeaderboard.slice(3,15).map((e,i) =>
