@@ -384,6 +384,149 @@ pool = initDatabaseConfig();
 console.error('❌ Fout bij initialiseren database pool:', e.message);
 pool = null;
 }
+
+// ══ DATABASE AUTO-RECONNECT ════════════════════════════════════════════════
+// If DB connection fails at startup or drops later, retry every 30 seconds.
+// This handles transient failures (quota limits, network issues, restarts).
+let _dbReconnectInterval = null;
+let _dbReconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 100; // ~50 minutes of retries
+
+function startDbReconnect() {
+  if (_dbReconnectInterval) return; // already running
+  console.log('🔄 Starting DB auto-reconnect (every 30s)...');
+  _dbReconnectInterval = setInterval(async () => {
+    if (pool) {
+      // Pool exists but may be dead — test it
+      try {
+        const client = await pool.connect();
+        await client.query('SELECT NOW()');
+        client.release();
+        // DB is alive — stop reconnecting
+        clearInterval(_dbReconnectInterval);
+        _dbReconnectInterval = null;
+        _dbReconnectAttempts = 0;
+        console.log('✅ DB auto-reconnect: Connection restored!');
+        // Re-run table creation in case we missed it
+        setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
+        return;
+      } catch(e) {
+        // Pool exists but is dead — recreate it
+        console.log('🔄 DB pool is dead, recreating...');
+        try { pool.end(); } catch(_) {}
+        pool = null;
+      }
+    }
+    if (!pool && _dbReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      _dbReconnectAttempts++;
+      console.log(`🔄 DB reconnect attempt ${_dbReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`);
+      try {
+        pool = initDatabaseConfig();
+        const client = await pool.connect();
+        await client.query('SELECT NOW()');
+        client.release();
+        clearInterval(_dbReconnectInterval);
+        _dbReconnectInterval = null;
+        _dbReconnectAttempts = 0;
+        console.log('✅ DB auto-reconnect: Connection established!');
+        setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
+      } catch(e) {
+        console.log(`❌ DB reconnect attempt ${_dbReconnectAttempts} failed:`, e.message);
+      }
+    }
+  }, 30000);
+}
+
+// ══ NEON DATABASE DETECTOR ══════════════════════════════════════════════════
+// Logs detailed info about which PostgreSQL provider you're connected to.
+// Call checkIsNeon() after DB connects to see the results.
+async function checkIsNeon() {
+  if (!pool) { console.log('🔍 NEON CHECK: No pool available'); return; }
+  console.log('\n' + '═'.repeat(60));
+  console.log('🔍  NEON DATABASE DETECTION REPORT');
+  console.log('═'.repeat(60));
+
+  // 1. Check DATABASE_URL hostname
+  const dbUrl = process.env.DATABASE_URL || '';
+  const isNeonHost = dbUrl.includes('.neon.tech') || dbUrl.includes('.neon.');
+  console.log('1️⃣  Host check (.neon.tech):', isNeonHost ? '✅ YES — Neon hostname detected' : '❌ No');
+
+  try {
+    const client = await pool.connect();
+
+    // 2. Check PostgreSQL version string
+    const ver = await client.query('SELECT version()');
+    const versionStr = ver.rows[0].version;
+    console.log('2️⃣  Server version:', versionStr);
+    const isNeonVersion = versionStr.toLowerCase().includes('neon');
+    console.log('   → Contains "neon":', isNeonVersion ? '✅ YES' : '❌ No');
+
+    // 3. Check for Neon-specific extensions
+    const ext = await client.query(`SELECT * FROM pg_available_extensions WHERE name LIKE '%neon%'`);
+    if (ext.rows.length) {
+      console.log('3️⃣  Neon extensions found:');
+      ext.rows.forEach(r => console.log('   •', r.name, r.version || ''));
+    } else {
+      console.log('3️⃣  Neon extensions: ❌ None found');
+    }
+
+    // 4. Check all installed extensions
+    const installed = await client.query(`SELECT extname FROM pg_extension`);
+    const neonExts = installed.rows.filter(r => r.extname.toLowerCase().includes('neon'));
+    if (neonExts.length) {
+      console.log('4️⃣  Installed Neon extensions:');
+      neonExts.forEach(r => console.log('   •', r.extname));
+    } else {
+      console.log('4️⃣  Installed Neon extensions: ❌ None');
+    }
+    console.log('   All installed extensions:');
+    installed.rows.forEach(r => console.log('   •', r.extname));
+
+    // 5. Try to read Neon-specific settings (may fail on non-Neon)
+    const neonSettings = ['neon.project_id', 'neon.branch_id', 'neon.compute_id'];
+    for (const setting of neonSettings) {
+      try {
+        const s = await client.query(`SELECT current_setting($1, true) as val`, [setting]);
+        if (s.rows[0].val) console.log(`5️⃣  ${setting}: ✅`, s.rows[0].val);
+      } catch(e) { /* ignore */ }
+    }
+
+    // 6. Check pg_stat_statements (common on Neon)
+    try {
+      await client.query('SELECT 1 FROM pg_stat_statements LIMIT 1');
+      console.log('6️⃣  pg_stat_statements: ✅ Available');
+    } catch(e) {
+      console.log('6️⃣  pg_stat_statements: ❌ Not available');
+    }
+
+    // 7. Check connection info
+    const conn = await client.query(`SELECT inet_server_addr() as ip, inet_server_port() as port`);
+    console.log('7️⃣  Server IP/Port:', conn.rows[0].ip, ':', conn.rows[0].port);
+
+    // 8. Check current database and user
+    const db = await client.query(`SELECT current_database() as db, current_user as "user"`);
+    console.log('8️⃣  Database:', db.rows[0].db, '| User:', db.rows[0].user);
+
+    // 9. Check server_type in pg_settings
+    const serverType = await client.query(`SELECT name, setting FROM pg_settings WHERE name = 'server_version' OR name = 'server_version_num'`);
+    serverType.rows.forEach(r => console.log(`9️⃣  ${r.name}:`, r.setting));
+
+    client.release();
+
+    // FINAL VERDICT
+    console.log('\n' + '─'.repeat(60));
+    if (isNeonHost || isNeonVersion || ext.rows.length > 0) {
+      console.log('🟢  VERDICT: ✅ NEON DATABASE detected');
+    } else {
+      console.log('🔴  VERDICT: ❌ NOT Neon — likely self-hosted, Railway, or other provider');
+    }
+    console.log('─'.repeat(60) + '\n');
+
+  } catch(err) {
+    console.error('🔍 NEON CHECK ERROR:', err.message);
+  }
+}
+
 async function waitForDatabase(retries = 5, delay = 3000) {
 if (!pool) return false;
 console.log('🔄 Verbinden met database...');
@@ -393,6 +536,13 @@ const client = await pool.connect();
 await client.query('SELECT NOW()');
 client.release();
 console.log('✅ Database verbonden!');
+// Stop any running reconnect timer since we're connected
+if (_dbReconnectInterval) {
+  clearInterval(_dbReconnectInterval);
+  _dbReconnectInterval = null;
+  _dbReconnectAttempts = 0;
+}
+setTimeout(() => checkIsNeon().catch(err => console.error('🔍 Neon check error:', err.message)), 500);
 setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
 return true;
 } catch (err) {
@@ -3968,18 +4118,26 @@ console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
 const dbConnected = await waitForDatabase();
+  if (!dbConnected) {
+    console.log('⚠️  Database NOT connected at startup — starting auto-reconnect timer');
+    startDbReconnect();
+  }
   // Auto-detect best Gemini model at startup
   await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
   // Recover any jobs stuck in 'researching' from previous server session
-  try {
-    const stuckR = await pool.query(`UPDATE content_jobs SET status='error', error_message='Server restarted during research — please try again' WHERE status='researching' RETURNING id, seed_keyword`);
-    if (stuckR.rows.length) {
-      console.log(`🔄 Recovered ${stuckR.rows.length} stuck research jobs:`, stuckR.rows.map(r => r.seed_keyword).join(', '));
-    }
-  } catch(e) { console.warn('Stuck job recovery failed:', e.message); }
+  if (pool && dbConnected) {
+    try {
+      const stuckR = await pool.query(`UPDATE content_jobs SET status='error', error_message='Server restarted during research — please try again' WHERE status='researching' RETURNING id, seed_keyword`);
+      if (stuckR.rows.length) {
+        console.log(`🔄 Recovered ${stuckR.rows.length} stuck research jobs:`, stuckR.rows.map(r => r.seed_keyword).join(', '));
+      }
+    } catch(e) { console.warn('Stuck job recovery failed:', e.message); }
+  } else {
+    console.log('⚠️  Skipping stuck job recovery — DB not connected');
+  }
 httpServer.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
-console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected'}`);
+console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected — auto-reconnect active'}`);
 console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
 console.log(`🔍 Web Search: ${process.env.SERPAPI_KEY ? '✅ SerpAPI (real Google results)' : '⚠️ DuckDuckGo fallback (set SERPAPI_KEY for better results)'}`);
 console.log('\n✅ Elite scanner ready\n');
@@ -4726,9 +4884,10 @@ res.json({ success: true });
 // ── ContentScore Badge API ────────────────────────────────────────────────────
 app.get('/api/score', async (req, res) => {
 res.setHeader('Access-Control-Allow-Origin', '*');
-res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-res.setHeader('Pragma', 'no-cache');
-res.setHeader('Expires', '0');
+// Allow CDN/proxy caching for 5 minutes — scores don't change frequently.
+// The badge-loader.js has its own 5-minute client-side cache as backup.
+res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600');
+res.setHeader('Vary', 'Accept-Encoding');
 const { url } = req.query;
 if (!url) return res.json({ success: false, error: 'url required' });
 if (!pool) return res.json({ success: false, error: 'DB unavailable' });
@@ -4840,8 +4999,8 @@ res.send(`(function() {
 var badges = document.querySelectorAll('[data-cs-badge]');
 if (!badges.length) return;
 var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
-// Cache-busting: every page load gets a fresh API call — no stale scores
-var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl) + '&_cb=' + Date.now();
+var CACHE_KEY = 'cs_badge_' + pageUrl;
+var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 function getTier(s) {
 if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
 if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
@@ -4852,45 +5011,65 @@ return         { label:'CRITICAL',     color:'#dc2626', bg:'#7f1d1d', text:'#fca
 function bar(on, color) {
 return '<div style="width:20px;height:4px;background:' + (on ? color : '#374151') + ';border-radius:2px;"></div>';
 }
-fetch(apiUrl, { cache: 'no-store' })
+function render(data) {
+  if (!data.success || !data.score) {
+    badges.forEach(function(el) {
+      el.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;font-family:system-ui,sans-serif;">'
+        + '<span style="font-size:11px;color:#6b7280;">Not scanned yet &mdash;</span>'
+        + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none;">Scan now</a>'
+        + '</div>';
+    });
+    return;
+  }
+  var score = data.score;
+  var t = getTier(score);
+  var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
+    + '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
+    + '<div style="display:flex;flex-direction:column;gap:1px;">'
+    + '<span style="font-size:11px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.06em;">ContentScore</span>'
+    + '<span style="font-size:9px;color:#9ca3af;">This page</span>'
+    + '<div style="display:flex;align-items:baseline;gap:3px;">'
+    + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
+    + '<span style="font-size:11px;color:#6b7280;">/100</span>'
+    + '</div>'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
+    + '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
+    + '<div style="display:flex;gap:2px;">'
+    + bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
+    + '</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
+    + '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;">'
+    + '<span style="font-size:12px;line-height:1;">&#x21bb;</span><span>Rescan</span>'
+    + '</a>'
+    + '</div>';
+  badges.forEach(function(el) { el.innerHTML = html; });
+}
+// Check localStorage cache first
+var cached = null;
+try {
+  var raw = localStorage.getItem(CACHE_KEY);
+  if (raw) cached = JSON.parse(raw);
+} catch(e) {}
+if (cached && cached.ts && (Date.now() - cached.ts) < CACHE_TTL) {
+  render(cached.data);
+  return;
+}
+// No cache or expired — fetch from API
+var apiUrl = 'https://app.contentscale.site/api/score?url=' + encodeURIComponent(pageUrl);
+fetch(apiUrl)
 .then(function(r) { return r.json(); })
 .then(function(data) {
-if (!data.success || !data.score) {
-badges.forEach(function(el) {
-el.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;background:#111827;border:1px solid #374151;border-radius:10px;padding:10px 16px;font-family:system-ui,sans-serif;">'
-+ '<span style="font-size:11px;color:#6b7280;">Not scanned yet &mdash;</span>'
-+ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;font-weight:700;text-decoration:none;">Scan now</a>'
-+ '</div>';
-});
-return;
-}
-var score = data.score;
-var t = getTier(score);
-var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
-+ '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
-+ '<div style="display:flex;flex-direction:column;gap:1px;">'
-+ '<span style="font-size:11px;font-weight:700;background:linear-gradient(135deg,#a855f7,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;letter-spacing:.06em;">ContentScore</span>'
-+ '<span style="font-size:9px;color:#9ca3af;">This page</span>'
-+ '<div style="display:flex;align-items:baseline;gap:3px;">'
-+ '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
-+ '<span style="font-size:11px;color:#6b7280;">/100</span>'
-+ '</div>'
-+ '</div>'
-+ '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
-+ '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
-+ '<div style="display:flex;gap:2px;">'
-+ bar(t.bars >= 1, t.color) + bar(t.bars >= 2, t.color) + bar(t.bars >= 3, t.color)
-+ '</div>'
-+ '</div>'
-+ '</div>'
-+ '<div style="width:1px;background:#374151;align-self:stretch;"></div>'
-+ '<a href="https://app.contentscale.site" target="_blank" rel="noopener" style="padding:10px 16px;color:#e5e7eb;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;text-decoration:none;">'
-+ '<span style="font-size:12px;line-height:1;">&#x21bb;</span><span>Rescan</span>'
-+ '</a>'
-+ '</div>';
-badges.forEach(function(el) { el.innerHTML = html; });
+  // Cache successful response
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+  render(data);
 })
-.catch(function() {});
+.catch(function() {
+  // On error, try to render from stale cache (any age)
+  if (cached && cached.data) render(cached.data);
+});
 })();`);
 });
 

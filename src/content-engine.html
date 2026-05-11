@@ -874,40 +874,8 @@ function updateGscStatus() {
     status.innerHTML = '✓ GSC loaded<br>' +
       (_gscPages.length ? _gscPages.length + ' pages · ' : '') +
       (_gscQueries.length ? _gscQueries.length + ' queries' : '') +
-      '<div style="margin-top:8px;">' +
-      '<button onclick="pushSidebarGscToServer()" style="width:100%;padding:5px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#0f766e,#0284c7);color:#fff;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.05em;">→ Save to Pages &amp; Server</button>' +
-      '</div>' +
       (topOpp ? '<div class="ctx-opportunity" style="margin-top:8px;"><div class="ctx-opp-title">Top Opportunity</div><div class="ctx-opp-url">'+topOpp.url.replace(/^https?:\/\//,'').substring(0,40)+'</div><div class="ctx-opp-stats">Pos ' + Number(topOpp.position).toFixed(1) + ' · ' + topOpp.impressions.toLocaleString() + ' impr · CTR ' + Number(topOpp.ctr).toFixed(1) + '%</div></div>' : '');
   }
-}
-
-// Convert in-memory _gscPages/_gscQueries to CSV blobs → upload → preview → confirm
-async function pushSidebarGscToServer() {
-  if (!_context.profileId) { toast('Select a profile first', 3000, 'warn'); return; }
-  if (!_gscPages.length) { toast('No GSC pages loaded', 2000, 'warn'); return; }
-
-  // Build Pages CSV blob from _gscPages
-  var pagesCsv = 'Top pages,Clicks,Impressions,CTR,Position\n' +
-    _gscPages.map(function(r) {
-      return [r.url, r.clicks, r.impressions, (r.ctr||0).toFixed(2)+'%', (r.position||0).toFixed(1)].join(',');
-    }).join('\n');
-  var pagesBlob = new Blob([pagesCsv], { type: 'text/csv' });
-  var pagesFile = new File([pagesBlob], 'gsc-pages.csv', { type: 'text/csv' });
-
-  var queriesFile = null;
-  if (_gscQueries.length) {
-    var queriesCsv = 'Top queries,Clicks,Impressions,CTR,Position\n' +
-      _gscQueries.map(function(r) {
-        return [r.query, r.clicks, r.impressions, (r.ctr||0).toFixed(2)+'%', (r.position||0).toFixed(1)].join(',');
-      }).join('\n');
-    var queriesBlob = new Blob([queriesCsv], { type: 'text/csv' });
-    queriesFile = new File([queriesBlob], 'gsc-queries.csv', { type: 'text/csv' });
-  }
-
-  toast('⏳ Uploading to server…', 2000, 'ok');
-  // Close import modal if open, then use existing upload→preview→confirm flow
-  document.getElementById('pagesImportModal').style.display = 'none';
-  uploadGscFiles(pagesFile, queriesFile);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4618,8 +4586,6 @@ async function loadPagesOverview(forceRefresh) {
       }
     });
   _pagesOverviewData = Object.values(urlMap);
-  // Re-merge sidebar GSC data lost during server fetch (handles profile-switch wipe)
-  syncGscToPagesOverview();
   renderPagesOverview();
   if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
 }
@@ -4665,9 +4631,6 @@ function renderPagesOverview() {
   var profileLabel = document.getElementById('pagesProfileLabel');
   var search = (document.getElementById('pagesSearch') || {}).value || '';
   var sort = (document.getElementById('pagesSort') || {}).value || 'opportunity';
-
-  // Always reset stale Merge Dups button before any early return
-  (function(){ var mb = document.getElementById('pagesMergeBtn'); if (mb && !_pagesOverviewData.length) mb.style.display = 'none'; })();
 
   // NO profile = NO pages shown. Must select a profile first.
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
