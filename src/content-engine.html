@@ -499,8 +499,15 @@ async function connect() {
     // Trigger agent welcome (will prompt for profile selection)
     agentGreet();
   } catch(e) {
-    toast('Connection failed: ' + e.message, 'err');
-    btn.textContent = 'Connect'; btn.disabled = false;
+    var msg = e.message || '';
+    // If code is invalid (archive wiped the DB), clear stored token
+    if (/invalid|expired|403|engine access code/i.test(msg)) {
+      try { localStorage.removeItem('nexus_engine_token'); } catch(err) {}
+      document.getElementById('engineToken').value = '';
+      msg = 'Engine code not found — database was reset. Please get a new code from Admin → Engine Access.';
+    }
+    toast('Connection failed: ' + msg, 'err');
+    btn.textContent = 'Connect →'; btn.disabled = false;
   }
 }
 

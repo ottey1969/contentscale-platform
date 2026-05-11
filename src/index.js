@@ -808,7 +808,12 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
-   const result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
+   // Try with is_active filter first (normal case)
+   let result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]).catch(() => ({ rows: [] }));
+   // If is_active column doesn't exist, fall back to query without it
+   if (result.rows.length === 0) {
+     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]).catch(() => ({ rows: [] }));
+   }
    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
    req.admin = result.rows[0];
    next();
@@ -878,9 +883,12 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      try {
      client = await pool.connect();
      console.log(`[tables] Attempt ${attempt}/${retries}...`);
+     let createdCount = 0, skippedCount = 0;
+     const logTable = (name, ok) => { if(ok) createdCount++; else skippedCount++; };
    // 1. Super Admins
-   await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP, session_token TEXT)`);
-   await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS session_token TEXT`);
+   await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP, session_token TEXT)`).catch(() => {});
+   await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+   await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS session_token TEXT`).catch(() => {});
    const adminCheck = await client.query('SELECT COUNT(*) FROM super_admins WHERE username = $1', ['ot']);
    if (parseInt(adminCheck.rows[0].count) === 0) {
    const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -908,7 +916,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      expires_at TIMESTAMP,
      notes TEXT,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    // content_profiles: parent of tracker_pages, content_jobs, etc.
    await client.query(`CREATE TABLE IF NOT EXISTS content_profiles (
      id SERIAL PRIMARY KEY,
@@ -956,7 +964,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      gsc_connected BOOLEAN DEFAULT FALSE,
      created_at TIMESTAMPTZ DEFAULT NOW(),
      updated_at TIMESTAMPTZ DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    // Migration: add engine_code_id to existing tracker_pages if missing
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_engine_url_idx ON tracker_pages(engine_code_id, url) WHERE engine_code_id IS NOT NULL`).catch(()=>{});
@@ -1052,12 +1060,12 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      triggered_rewrite_at TIMESTAMPTZ
    )`).catch(()=>{});
 
-   await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`);
+   await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS user_email_templates (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, template_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, template_type))`);
    await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`).catch(err => console.log('[tables] admin_messages skipped:', err.message));
-   await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`).catch(() => {});
    // 3. Leaderboard (WITH MIGRATION FIX)
-   await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`).catch(() => {});
    // 🛠️ MIGRATION: Ensure country column is wide enough (Fixes "value too long" error)
    try {
    await client.query(`ALTER TABLE leaderboard ALTER COLUMN country TYPE VARCHAR(100)`);
@@ -1073,9 +1081,9 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS page_scores JSONB DEFAULT '[]'`);
    await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS scan_source VARCHAR(50) DEFAULT 'manual'`);
    // 4. Freelancers
-   await client.query(`CREATE TABLE IF NOT EXISTS freelancers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, title VARCHAR(255), location VARCHAR(255), country VARCHAR(100), bio TEXT, linkedin_url TEXT, hourly_rate VARCHAR(50), availability VARCHAR(100), is_approved BOOLEAN DEFAULT FALSE, is_verified BOOLEAN DEFAULT FALSE, is_featured BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS freelancers (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, title VARCHAR(255), location VARCHAR(255), country VARCHAR(100), bio TEXT, linkedin_url TEXT, hourly_rate VARCHAR(50), availability VARCHAR(100), is_approved BOOLEAN DEFAULT FALSE, is_verified BOOLEAN DEFAULT FALSE, is_featured BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`).catch(() => {});
    // 5. Email Queue
-   await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW(), business_url TEXT, business_name VARCHAR(255), score INTEGER, template_type VARCHAR(50))`);
+   await client.query(`CREATE TABLE IF NOT EXISTS email_queue (id SERIAL PRIMARY KEY, user_id VARCHAR(255), to_email VARCHAR(255) NOT NULL, to_name VARCHAR(255), subject TEXT NOT NULL, body TEXT NOT NULL, status VARCHAR(50) DEFAULT 'pending', sent_at TIMESTAMP, error_message TEXT, created_at TIMESTAMP DEFAULT NOW(), business_url TEXT, business_name VARCHAR(255), score INTEGER, template_type VARCHAR(50))`).catch(() => {});
    // 6. Scan Log — ✅ FIX: source column added to track bulk/single/discover origin
    await client.query(`CREATE TABLE IF NOT EXISTS scan_log (
    id SERIAL PRIMARY KEY,
@@ -1091,15 +1099,15 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    source VARCHAR(50) DEFAULT 'single',
    recommendations TEXT,
    created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    // Migrations for existing deployments
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
    // 7. Email suppression list
-   await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`);
+   await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`).catch(() => {});
    // 8. Warmup config
-   await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS warmup_config (id SERIAL PRIMARY KEY, user_id VARCHAR(255) UNIQUE NOT NULL, warmup_start_date DATE NOT NULL DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())`).catch(() => {});
    // Scan reports
    await client.query(`CREATE TABLE IF NOT EXISTS scan_reports (
    id VARCHAR(64) PRIMARY KEY,
@@ -1113,7 +1121,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    email_found VARCHAR(255),
    recommendations TEXT,
    created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    // Batch jobs
    await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
    id VARCHAR(64) PRIMARY KEY,
@@ -1163,7 +1171,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      notes TEXT,
      created_at TIMESTAMP DEFAULT NOW(),
      last_login TIMESTAMP
-   )`);
+   )`).catch(() => {});
    // Ensure new campaigns table has correct schema (migrate if needed)
    await client.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS client_id INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS account_type VARCHAR(50) DEFAULT 'client'`).catch(()=>{});
@@ -1199,7 +1207,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      calls_made INTEGER DEFAULT 0,
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS campaign_leads (
      id SERIAL PRIMARY KEY,
      campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -1218,7 +1226,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      called_at TIMESTAMP,
      created_at TIMESTAMP DEFAULT NOW(),
      UNIQUE(campaign_id, phone)
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS campaign_call_log (
      id SERIAL PRIMARY KEY,
      client_id INTEGER REFERENCES campaign_clients(id) ON DELETE CASCADE,
@@ -1231,7 +1239,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      ended_reason VARCHAR(100),
      summary TEXT,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
 
    // ── OPT-OUT LIST — global, permanent, across all systems ─────────────────
    await client.query(`ALTER TABLE campaign_leads ADD COLUMN IF NOT EXISTS line_type VARCHAR(50)`).catch(()=>{});
@@ -1244,7 +1252,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      reason VARCHAR(255) DEFAULT 'opt-out',
      source VARCHAR(100) DEFAULT 'manual',
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
@@ -1264,6 +1272,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      notes TEXT,
      created_at TIMESTAMP DEFAULT NOW()
    )`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS gemini_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS claude_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS use_platform_keys BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -1350,7 +1360,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW(),
      completed_at TIMESTAMP
-   )`);
+   )`).catch(() => {});
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP`).catch(()=>{});
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS created_by INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS error_message TEXT`).catch(()=>{});
@@ -1366,7 +1376,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      error_message TEXT,
      created_at TIMESTAMP DEFAULT NOW(),
      completed_at TIMESTAMP
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_articles (
      id SERIAL PRIMARY KEY,
      job_id INTEGER REFERENCES content_jobs(id) ON DELETE CASCADE,
@@ -1383,7 +1393,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      published_at TIMESTAMP,
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_locations (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -1392,7 +1402,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      external_links BOOLEAN DEFAULT TRUE,
      sort_order INTEGER DEFAULT 0,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
 
    // ═══════════════════════════════════════════════════════════════
    // NEEDED PAGES — pages recommended by AI that don't exist yet
@@ -1412,7 +1422,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      created_at TIMESTAMP DEFAULT NOW(),
      resolved_at TIMESTAMP,
      UNIQUE(profile_id, suggested_url)
-   )`);
+   )`).catch(() => {});
    await client.query(`ALTER TABLE content_needed_pages ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'brief'`).catch(()=>{});
 
    // Phase 2 tables
@@ -1426,7 +1436,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      is_active BOOLEAN DEFAULT TRUE,
      sort_order INTEGER DEFAULT 0,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_image_library (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -1436,7 +1446,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      caption TEXT,
      tags VARCHAR(500),
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_news_feeds (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -1451,7 +1461,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      last_fetched TIMESTAMP,
      is_active BOOLEAN DEFAULT TRUE,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_news_articles (
      id SERIAL PRIMARY KEY,
      feed_id INTEGER REFERENCES content_news_feeds(id) ON DELETE CASCADE,
@@ -1469,7 +1479,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      wp_url VARCHAR(1000),
      published_at TIMESTAMP,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_rewrites (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -1508,12 +1518,12 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      article_id INTEGER REFERENCES content_articles(id) ON DELETE SET NULL,
      created_at TIMESTAMP DEFAULT NOW(),
      updated_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
    await client.query(`CREATE TABLE IF NOT EXISTS content_engine_drafts (
      profile_id INTEGER PRIMARY KEY REFERENCES content_profiles(id) ON DELETE CASCADE,
      draft JSONB DEFAULT '{}',
      updated_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(() => {});
 
    // ═══ BULK AUTOPILOT TABLES ═══
    await client.query(`CREATE TABLE IF NOT EXISTS content_bulk_jobs (
@@ -4260,7 +4270,13 @@ const dbConnected = await waitForDatabase();
       if (stuckR.rows.length) {
         console.log(`🔄 Recovered ${stuckR.rows.length} stuck research jobs:`, stuckR.rows.map(r => r.seed_keyword).join(', '));
       }
-    } catch(e) { console.warn('Stuck job recovery failed:', e.message); }
+    } catch(e) {
+      if (/relation.*does not exist/i.test(e.message)) {
+        console.log('⚠️  Skipping stuck job recovery — tables not created yet');
+      } else {
+        console.warn('Stuck job recovery failed:', e.message);
+      }
+    }
   } else {
     console.log('⚠️  Skipping stuck job recovery — DB not connected');
   }
@@ -10065,7 +10081,11 @@ function doLogin(){
 const verifyEngineAccess = async (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey) {
-    const isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]).catch(()=>({rows:[]}));
+    // Try with is_active first, fall back without it for backward compat
+    let isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]).catch(()=>({rows:[]}));
+    if (!isAdmin.rows.length) {
+      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]).catch(()=>({rows:[]}));
+    }
     if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
   }
 
@@ -10080,12 +10100,19 @@ const verifyEngineAccess = async (req, res, next) => {
 
   try {
     // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
-    const codeResult = await pool.query(
+    let codeResult = await pool.query(
       'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
       [lookupCode.trim().toUpperCase()]
-    );
+    ).catch(() => ({ rows: [] }));
+    // Fallback: if is_active column missing, try without it
     if (codeResult.rows.length === 0) {
-      return res.status(403).json({ success: false, error: 'Invalid or expired engine access code' });
+      codeResult = await pool.query(
+        'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
+        [lookupCode.trim().toUpperCase()]
+      );
+    }
+    if (codeResult.rows.length === 0) {
+      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
     }
     const code = codeResult.rows[0];
     req.engineUser = { isAdmin: false, codeId: code.id, code: code };
