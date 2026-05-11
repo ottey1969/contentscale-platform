@@ -6519,6 +6519,7 @@ pool.query(`CREATE TABLE IF NOT EXISTS otto_sessions (
 
 // ── MIGRATION: Ensure audio columns exist for older deployments ─────────────
 async function cleanupExpiredSessions() {
+  if (!pool || _dbReconnectInterval) return; // DB is down — skip silently
   try {
     const r = await pool.query(
       "DELETE FROM otto_sessions WHERE expires_at < NOW() RETURNING session_id"
@@ -6527,6 +6528,7 @@ async function cleanupExpiredSessions() {
   } catch(e) { console.warn('[otto] cleanup error:', e.message); }
 }
 (async () => {
+  if (!pool) { console.log('[otto] Skipping session migrations — DB down'); return; }
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days')`).catch(()=>{});
@@ -16272,6 +16274,11 @@ Return ONLY the complete updated HTML. No markdown.`;
 
 async function bulkWorkerTick() {
   if (_bulkWorkerRunning) return;
+  // Skip if DB is down — prevents log spam during quota exceeded
+  if (!pool || _dbReconnectInterval) {
+    console.log('[bulk] Worker: DB is down — skipping tick');
+    return;
+  }
   _bulkWorkerRunning = true;
   try {
     // ── A. ANALYSE PHASE: find queued items in analysing jobs ──
