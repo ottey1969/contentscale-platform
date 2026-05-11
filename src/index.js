@@ -1285,6 +1285,18 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS claude_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS use_platform_keys BOOLEAN DEFAULT FALSE`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS platform_credits INTEGER DEFAULT NULL`).catch(()=>{});
+   // ══ is_active column migrations for ALL tables that need it ══════════════
+   // Tables recovered from Neon archive may be missing these columns
+   await client.query(`ALTER TABLE warmup_config ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE content_money_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE campaign_clients ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE content_profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE content_jobs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE content_articles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE freelancers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS deal_type VARCHAR(50) DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS deal_purchased_at TIMESTAMPTZ DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS deal_label VARCHAR(255) DEFAULT NULL`).catch(()=>{});
