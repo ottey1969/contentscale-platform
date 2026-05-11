@@ -1054,7 +1054,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
 
    await client.query(`CREATE TABLE IF NOT EXISTS user_api_keys (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, service_name VARCHAR(50) NOT NULL, api_key TEXT NOT NULL, daily_limit INTEGER DEFAULT 100, used_today INTEGER DEFAULT 0, last_reset DATE DEFAULT CURRENT_DATE, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, service_name))`);
    await client.query(`CREATE TABLE IF NOT EXISTS user_email_templates (id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, template_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, template_type))`);
-   await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS admin_messages (id SERIAL PRIMARY KEY, sent_by INTEGER REFERENCES super_admins(id), recipient_type VARCHAR(50), subject TEXT NOT NULL, body TEXT NOT NULL, is_bulk BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())`).catch(err => console.log('[tables] admin_messages skipped:', err.message));
    await client.query(`CREATE TABLE IF NOT EXISTS scans (id SERIAL PRIMARY KEY, url TEXT NOT NULL, score INTEGER, quality VARCHAR(50), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, breakdown JSONB, recommendations JSONB DEFAULT '[]', scan_type VARCHAR(50) DEFAULT 'manual', created_at TIMESTAMP DEFAULT NOW())`);
    // 3. Leaderboard (WITH MIGRATION FIX)
    await client.query(`CREATE TABLE IF NOT EXISTS leaderboard (id SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE, company_name VARCHAR(255), score INTEGER NOT NULL, country VARCHAR(100) DEFAULT 'NL', city VARCHAR(255), type VARCHAR(100) DEFAULT 'seo_agency', location VARCHAR(255), is_verified BOOLEAN DEFAULT FALSE, is_opted_out BOOLEAN DEFAULT FALSE, submission_ip VARCHAR(50), admin_verified BOOLEAN DEFAULT TRUE, auto_detected_country VARCHAR(100), graaf_score INTEGER, craft_score INTEGER, technical_score INTEGER, niche VARCHAR(100), created_at TIMESTAMP DEFAULT NOW())`);
@@ -1248,7 +1248,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
-   await client.query(`CREATE TABLE IF NOT EXISTS access_sessions (id SERIAL PRIMARY KEY, token VARCHAR(255), session_token VARCHAR(255), code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, ip_address VARCHAR(100), user_agent TEXT, created_at TIMESTAMP DEFAULT NOW(), expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days')`);
+   await client.query(`CREATE TABLE IF NOT EXISTS access_sessions (id SERIAL PRIMARY KEY, token VARCHAR(255), session_token VARCHAR(255), code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, ip_address VARCHAR(100), user_agent TEXT, created_at TIMESTAMP DEFAULT NOW(), expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days')`).catch(err => console.log('[tables] access_sessions skipped:', err.message));
    await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS session_token VARCHAR(255)`).catch(()=>{});
    await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS ip_address VARCHAR(100)`).catch(()=>{});
    await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(()=>{});
@@ -1295,7 +1295,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      await client.query(`UPDATE engine_access_codes SET api_key_mode='platform' WHERE use_platform_keys=TRUE AND api_key_mode IS NULL`);
    } catch(e) {}
    // Client progress tracking
-   await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
+   await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`).catch(err => console.log('[tables] client_progress skipped:', err.message));
    // Content Engine tables — already created earlier, safe to skip
    await client.query(`CREATE TABLE IF NOT EXISTS content_profiles (
      id SERIAL PRIMARY KEY,
@@ -1592,6 +1592,31 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
       uploaded_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(profile_id, query, url)
     )`).catch(()=>{});
+
+   // ══ FK REPAIR PASS: add missing foreign keys after all tables exist ══════
+   // Tables created with .catch() may be missing FKs. This pass adds them.
+   const fkRepairs = [
+     { sql: `ALTER TABLE admin_messages ADD CONSTRAINT IF NOT EXISTS admin_messages_sent_by_fkey FOREIGN KEY (sent_by) REFERENCES super_admins(id)`, name: 'admin_messages.sent_by' },
+     { sql: `ALTER TABLE access_sessions ADD CONSTRAINT IF NOT EXISTS access_sessions_code_id_fkey FOREIGN KEY (code_id) REFERENCES access_codes(id) ON DELETE CASCADE`, name: 'access_sessions.code_id' },
+     { sql: `ALTER TABLE client_progress ADD CONSTRAINT IF NOT EXISTS client_progress_code_id_fkey FOREIGN KEY (code_id) REFERENCES access_codes(id) ON DELETE CASCADE`, name: 'client_progress.code_id' },
+     { sql: `ALTER TABLE tracker_pages ADD CONSTRAINT IF NOT EXISTS tracker_pages_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES content_profiles(id) ON DELETE CASCADE`, name: 'tracker_pages.profile_id' },
+     { sql: `ALTER TABLE tracker_pages ADD CONSTRAINT IF NOT EXISTS tracker_pages_engine_code_id_fkey FOREIGN KEY (engine_code_id) REFERENCES engine_access_codes(id) ON DELETE SET NULL`, name: 'tracker_pages.engine_code_id' },
+     { sql: `ALTER TABLE tracker_snapshots ADD CONSTRAINT IF NOT EXISTS tracker_snapshots_page_id_fkey FOREIGN KEY (page_id) REFERENCES tracker_pages(id) ON DELETE CASCADE`, name: 'tracker_snapshots.page_id' },
+     { sql: `ALTER TABLE tracker_changes ADD CONSTRAINT IF NOT EXISTS tracker_changes_page_id_fkey FOREIGN KEY (page_id) REFERENCES tracker_pages(id) ON DELETE CASCADE`, name: 'tracker_changes.page_id' },
+     { sql: `ALTER TABLE tracker_classifications ADD CONSTRAINT IF NOT EXISTS tracker_classifications_page_id_fkey FOREIGN KEY (page_id) REFERENCES tracker_pages(id) ON DELETE CASCADE`, name: 'tracker_classifications.page_id' },
+     { sql: `ALTER TABLE content_jobs ADD CONSTRAINT IF NOT EXISTS content_jobs_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES content_profiles(id) ON DELETE CASCADE`, name: 'content_jobs.profile_id' },
+     { sql: `ALTER TABLE content_write_jobs ADD CONSTRAINT IF NOT EXISTS content_write_jobs_content_job_id_fkey FOREIGN KEY (content_job_id) REFERENCES content_jobs(id) ON DELETE CASCADE`, name: 'content_write_jobs.content_job_id' },
+     { sql: `ALTER TABLE content_articles ADD CONSTRAINT IF NOT EXISTS content_articles_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES content_profiles(id) ON DELETE CASCADE`, name: 'content_articles.profile_id' },
+     { sql: `ALTER TABLE content_needed_pages ADD CONSTRAINT IF NOT EXISTS content_needed_pages_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES content_profiles(id) ON DELETE CASCADE`, name: 'content_needed_pages.profile_id' },
+     { sql: `ALTER TABLE content_money_pages ADD CONSTRAINT IF NOT EXISTS content_money_pages_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES content_profiles(id) ON DELETE CASCADE`, name: 'content_money_pages.profile_id' },
+     { sql: `ALTER TABLE content_rewrites ADD CONSTRAINT IF NOT EXISTS content_rewrites_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES content_profiles(id) ON DELETE CASCADE`, name: 'content_rewrites.profile_id' },
+     { sql: `ALTER TABLE content_bulk_items ADD CONSTRAINT IF NOT EXISTS content_bulk_items_bulk_job_id_fkey FOREIGN KEY (bulk_job_id) REFERENCES content_bulk_jobs(id) ON DELETE CASCADE`, name: 'content_bulk_items.bulk_job_id' },
+   ];
+   let fkFixed = 0;
+   for (const fk of fkRepairs) {
+     try { await client.query(fk.sql); fkFixed++; } catch(e) { /* already exists or table missing */ }
+   }
+   if (fkFixed > 0) console.log(`[tables] FK repair: ${fkFixed} foreign keys added/verified`);
 
    console.log('✅ All tables ready & migrated');
    if (client) client.release();
