@@ -870,11 +870,14 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    process.exit(0);
    });
    // Database Tables & Migration
-   async function createAllTables() {
-   if (!pool) return;
-   let client;
-   try {
-   client = await pool.connect();
+   async function createAllTables(retries = 3) {
+   if (!pool) { console.log('[tables] No pool, skipping'); return; }
+   console.log('[tables] Starting table creation...');
+   for (let attempt = 1; attempt <= retries; attempt++) {
+     let client;
+     try {
+     client = await pool.connect();
+     console.log(`[tables] Attempt ${attempt}/${retries}...`);
    // 1. Super Admins
    await client.query(`CREATE TABLE IF NOT EXISTS super_admins (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password_hash TEXT NOT NULL, full_name VARCHAR(255), email VARCHAR(255), role VARCHAR(50) DEFAULT 'admin', is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW(), last_login TIMESTAMP, session_token TEXT)`);
    await client.query(`ALTER TABLE super_admins ADD COLUMN IF NOT EXISTS session_token TEXT`);
@@ -891,9 +894,52 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100)`).catch(()=>{});
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country_code VARCHAR(10)`).catch(()=>{});
-   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
+
+   // ── PARENT TABLES (must exist before child tables) ─────────────────────────
+   // engine_access_codes: parent of tracker_pages, credit_log, api_cost_log
+   await client.query(`CREATE TABLE IF NOT EXISTS engine_access_codes (
+     id SERIAL PRIMARY KEY,
+     code VARCHAR(50) UNIQUE NOT NULL,
+     client_name VARCHAR(255) NOT NULL,
+     gemini_key TEXT,
+     claude_key TEXT,
+     is_active BOOLEAN DEFAULT TRUE,
+     expires_at TIMESTAMP,
+     notes TEXT,
+     created_at TIMESTAMP DEFAULT NOW()
+   )`);
+   // content_profiles: parent of tracker_pages, content_jobs, etc.
+   await client.query(`CREATE TABLE IF NOT EXISTS content_profiles (
+     id SERIAL PRIMARY KEY,
+     name VARCHAR(255) NOT NULL,
+     domain VARCHAR(500),
+     sitemap_url VARCHAR(500),
+     niche VARCHAR(255),
+     target_audience TEXT,
+     geo_focus VARCHAR(255),
+     primary_goal VARCHAR(100) DEFAULT 'leads',
+     html_template TEXT,
+     wp_url VARCHAR(500),
+     wp_user VARCHAR(255),
+     wp_app_password TEXT,
+     years_experience VARCHAR(50),
+     team_size VARCHAR(50),
+     pricing_model VARCHAR(255),
+     free_consultation BOOLEAN DEFAULT FALSE,
+     guarantee TEXT,
+     certifications JSONB DEFAULT '[]',
+     unique_selling_points JSONB DEFAULT '[]',
+     service_areas JSONB DEFAULT '[]',
+     faq JSONB DEFAULT '[]',
+     business_info JSONB DEFAULT '{}',
+     is_active BOOLEAN DEFAULT TRUE,
+     created_at TIMESTAMP DEFAULT NOW(),
+     updated_at TIMESTAMP DEFAULT NOW()
+   )`);
 
    // ── CONTENT LIFECYCLE TRACKER ──────────────────────────────────────────────
+   // CRITICAL: parent tables (engine_access_codes, content_profiles) must exist first
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_pages (
      id SERIAL PRIMARY KEY,
      profile_id INTEGER REFERENCES content_profiles(id) ON DELETE CASCADE,
@@ -910,7 +956,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      gsc_connected BOOLEAN DEFAULT FALSE,
      created_at TIMESTAMPTZ DEFAULT NOW(),
      updated_at TIMESTAMPTZ DEFAULT NOW()
-   )`).catch(()=>{});
+   )`);
    // Migration: add engine_code_id to existing tracker_pages if missing
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_engine_url_idx ON tracker_pages(engine_code_id, url) WHERE engine_code_id IS NOT NULL`).catch(()=>{});
@@ -1206,6 +1252,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS session_token VARCHAR(255)`).catch(()=>{});
    await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS ip_address VARCHAR(100)`).catch(()=>{});
    await client.query(`ALTER TABLE access_sessions ADD COLUMN IF NOT EXISTS user_agent TEXT`).catch(()=>{});
+   // Already created earlier in function — safe to skip if exists
    await client.query(`CREATE TABLE IF NOT EXISTS engine_access_codes (
      id SERIAL PRIMARY KEY,
      code VARCHAR(50) UNIQUE NOT NULL,
@@ -1216,7 +1263,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
      expires_at TIMESTAMP,
      notes TEXT,
      created_at TIMESTAMP DEFAULT NOW()
-   )`);
+   )`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS gemini_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS claude_key TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS use_platform_keys BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -1249,7 +1296,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    } catch(e) {}
    // Client progress tracking
    await client.query(`CREATE TABLE IF NOT EXISTS client_progress (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES access_codes(id) ON DELETE CASCADE, page_url TEXT NOT NULL, page_label VARCHAR(500), status VARCHAR(20) DEFAULT 'planned', note TEXT, sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
-   // Content Engine tables
+   // Content Engine tables — already created earlier, safe to skip
    await client.query(`CREATE TABLE IF NOT EXISTS content_profiles (
      id SERIAL PRIMARY KEY,
      name VARCHAR(255) NOT NULL,
@@ -1547,15 +1594,53 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
     )`).catch(()=>{});
 
    console.log('✅ All tables ready & migrated');
-   } catch (error) {
-   console.error('❌ DB Setup error:', error.message);
-   } finally {
    if (client) client.release();
+   return; // Success — exit retry loop
+   } catch (error) {
+   console.error(`❌ DB Setup error (attempt ${attempt}/${retries}):`, error.message);
+   if (client) try { client.release(); } catch(_) {}
+   if (attempt === retries) {
+     console.error('❌ All table creation attempts failed. Tables may be missing!');
+     return;
+   }
+   console.log(`[tables] Retrying in 3 seconds...`);
+   await new Promise(r => setTimeout(r, 3000));
+   }
    }
    }
    // ============================================
    // API ENDPOINTS
    // ============================================
+
+   // ── DB INIT: manual table creation trigger ──────────────────────────────
+   app.post('/api/init', async (req, res) => {
+     if (!pool) return res.status(503).json({ success: false, error: 'Database not connected' });
+     try {
+       await createAllTables();
+       res.json({ success: true, message: 'Table creation triggered' });
+     } catch(e) {
+       res.status(500).json({ success: false, error: e.message });
+     }
+   });
+   // GET /api/init — check which tables exist
+   app.get('/api/init', async (req, res) => {
+     if (!pool) return res.status(503).json({ success: false, error: 'Database not connected', tables: [] });
+     try {
+       const client = await pool.connect();
+       const result = await client.query(`
+         SELECT table_name FROM information_schema.tables
+         WHERE table_schema = 'public' ORDER BY table_name
+       `);
+       client.release();
+       const tables = result.rows.map(r => r.table_name);
+       const critical = ['engine_access_codes', 'content_profiles', 'tracker_pages', 'users', 'super_admins'];
+       const missing = critical.filter(t => !tables.includes(t));
+       res.json({ success: true, tables, table_count: tables.length, missing, needs_init: missing.length > 0 });
+     } catch(e) {
+       res.status(500).json({ success: false, error: e.message });
+     }
+   });
+
    app.post('/api/user/register', async (req, res) => {
    try {
    const userId = crypto.randomUUID();
@@ -11789,6 +11874,20 @@ app.get('/api/engine/verify', verifyEngineAccess, async (req, res) => {
   try {
     if (req.engineUser.isAdmin) {
       return res.json({ success: true, isAdmin: true });
+    }
+
+    // Guard: check if critical tables exist
+    try {
+      await pool.query(`SELECT 1 FROM content_profiles LIMIT 0`);
+    } catch(tableErr) {
+      if (/relation.*does not exist/i.test(tableErr.message)) {
+        return res.status(503).json({
+          success: false,
+          error: 'Database initializing — tables not ready yet. Please wait 30 seconds and refresh.',
+          code: 'DB_INIT'
+        });
+      }
+      throw tableErr;
     }
 
     // Get profiles for this code
@@ -22436,7 +22535,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <h1 class="text-3xl font-bold ml-3">Admin</h1>
             </div>
             <p class="text-center mb-8" style="color:#9ca3af;">ContentScale Platform Control</p>
-            <div class="space-y-6">
+            <!-- DB Status Banner -->
+            <div id="db-status" class="hidden mb-4 p-3 rounded-lg text-center text-sm" style="background:#1e3a5f;color:#60a5fa;border:1px solid #1d4ed8;">
+                <i class="fas fa-spinner fa-spin mr-2"></i> Database initializing...
+            </div>
+            <div id="login-form" class="space-y-6">
                 <div><label class="block text-sm font-medium mb-2">Username</label><input type="text" id="login-username" value="ot" class="w-full px-4 py-3 rounded-lg"></div>
                 <div><label class="block text-sm font-medium mb-2">Password</label><input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 rounded-lg"></div>
                 <button onclick="login()" class="w-full py-4 btn btn-primary text-lg"><i class="fas fa-lock mr-2"></i> Login</button>
@@ -23207,8 +23310,30 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         ];
         const FLAGS = {NL:'🇳🇱',BE:'🇧🇪',US:'🇺🇸',UK:'🇬🇧',DE:'🇩🇪',FR:'🇫🇷',ES:'🇪🇸',IT:'🇮🇹',AU:'🇦🇺',CA:'🇨🇦',IE:'🇮🇪',SE:'🇸🇪',NO:'🇳🇴',DK:'🇩🇰',FI:'🇫🇮',CH:'🇨🇭',AT:'🇦🇹',PT:'🇵🇹',PL:'🇵🇱',IN:'🇮🇳',SG:'🇸🇬',JP:'🇯🇵',BR:'🇧🇷',MX:'🇲🇽',AE:'🇦🇪',ZA:'🇿🇦'};
 
+        // Check DB status on page load — show warning if tables not ready
+        async function checkDbStatus() {
+            try {
+                const res = await fetch('/api/init');
+                const data = await res.json();
+                if (data.needs_init) {
+                    const el = document.getElementById('db-status');
+                    const form = document.getElementById('login-form');
+                    if (el) { el.classList.remove('hidden'); el.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Database initializing — ' + data.missing.length + ' tables missing. Please wait 30 seconds...'; }
+                    if (form) form.style.opacity = '0.5';
+                    // Retry every 10 seconds
+                    setTimeout(() => { checkDbStatus(); }, 10000);
+                } else {
+                    const el = document.getElementById('db-status');
+                    const form = document.getElementById('login-form');
+                    if (el) el.classList.add('hidden');
+                    if (form) form.style.opacity = '1';
+                }
+            } catch(e) { /* ignore network errors */ }
+        }
+
         window.onload = function() {
             populateCountryDropdown();
+            checkDbStatus(); // Check if DB tables are ready
             if (currentAdminId) {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
@@ -24602,6 +24727,19 @@ app.get('/api/tracker/load', async (req, res) => {
 
 app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   try {
+    // Guard: check if tracker_pages table exists
+    try {
+      await pool.query(`SELECT 1 FROM tracker_pages LIMIT 0`);
+    } catch(tableErr) {
+      if (/relation.*does not exist/i.test(tableErr.message)) {
+        return res.status(503).json({
+          success: false, pages: [],
+          error: 'Database tables initializing. Please wait 30 seconds and refresh.',
+          code: 'DB_INIT'
+        });
+      }
+      throw tableErr;
+    }
     const profileId = req.query.profile_id;
     const eu = req.engineUser;
     const isAdmin = eu && eu.isAdmin;
