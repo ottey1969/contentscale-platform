@@ -2783,6 +2783,10 @@ function switchView(view) {
 var _trPages = [];
 
 async function loadTrackerPages() {
+  // Guard: no token → skip API call
+  var _tok = (document.getElementById('engineToken') || {}).value || '';
+  try { if (!_tok) _tok = localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+  if (!_tok) { renderTrackerList(); return; }
   try {
     var profileId = _context.profileId || (_profile && _profile.id) || null;
     var profileFilter = profileId ? '?profile_id=' + profileId : '';
@@ -4504,6 +4508,11 @@ function autoAssignPageKeywords() {
 }
 
 async function loadPagesOverview(forceRefresh) {
+  // Guard: don't hit the API if there's no token — avoids 401 during page init
+  var _tok = (document.getElementById('engineToken') || {}).value || '';
+  try { if (!_tok) _tok = localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+  if (!_tok) { renderPagesOverview(); return; }
+
   var profileId = _context.profileId || null;
   var profileFilter = profileId ? '?profile_id=' + profileId : '';
   var pages = [];

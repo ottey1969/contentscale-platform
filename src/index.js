@@ -10154,6 +10154,35 @@ const verifyEngineAccess = async (req, res, next) => {
   }
 };
 
+// ── Soft engine auth: passes through unauthenticated requests with req.engineUser=null
+//    Used for read-only GET endpoints that should return empty data (not 401) when called
+//    before the user has logged in (e.g. during page init).
+const softVerifyEngineAccess = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (adminKey) {
+    let isAdmin;
+    try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]); }
+    catch(e) { try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]); } catch(e2) { isAdmin = { rows: [] }; } }
+    if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
+  }
+  const engineToken = req.headers['x-engine-token'];
+  const engineCode  = req.headers['x-engine-code'] || req.query.code;
+  const lookupCode  = engineToken || engineCode;
+  if (!lookupCode) { req.engineUser = null; return next(); }  // no token → empty result, not 401
+  try {
+    let codeResult;
+    try {
+      codeResult = await pool.query('SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())', [lookupCode.trim().toUpperCase()]);
+    } catch(e) {
+      try { codeResult = await pool.query('SELECT * FROM engine_access_codes WHERE code=$1 AND (expires_at IS NULL OR expires_at > NOW())', [lookupCode.trim().toUpperCase()]); }
+      catch(e2) { codeResult = { rows: [] }; }
+    }
+    if (!codeResult || !codeResult.rows.length) { req.engineUser = null; return next(); } // invalid code → empty, not 403
+    req.engineUser = { isAdmin: false, codeId: codeResult.rows[0].id, code: codeResult.rows[0] };
+    next();
+  } catch(err) { req.engineUser = null; return next(); }
+};
+
 // ── GSC Auto-Stat Matching ──
 app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
   try {
@@ -12102,8 +12131,9 @@ app.delete('/api/content/profiles/:id', verifyEngineAccess, async (req, res) => 
 // ═══════════════════════════════════════════════════════════════
 
 // List all needed pages for a profile
-app.get('/api/content/profiles/:id/needed-pages', verifyEngineAccess, async (req, res) => {
+app.get('/api/content/profiles/:id/needed-pages', softVerifyEngineAccess, async (req, res) => {
   try {
+    if (!req.engineUser) return res.json({ success: true, pages: [] });
     const r = await pool.query(
       `SELECT * FROM content_needed_pages WHERE profile_id=$1 ORDER BY CASE seo_priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, created_at DESC`,
       [req.params.id]
@@ -24832,8 +24862,10 @@ app.get('/api/tracker/load', async (req, res) => {
 
 // ── CRUD: tracker pages ──────────────────────────────────────────────────────
 
-app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+app.get('/api/tracker/pages', softVerifyEngineAccess, async (req, res) => {
   try {
+    // No auth → return empty gracefully (prevents 401 during page init before login)
+    if (!req.engineUser) return res.json({ success: true, pages: [] });
     // Guard: check if tracker_pages table exists
     try {
       await pool.query(`SELECT 1 FROM tracker_pages LIMIT 0`);
