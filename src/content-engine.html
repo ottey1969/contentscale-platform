@@ -652,7 +652,8 @@ async function autoSaveGscToServer() {
   try {
     await Promise.all(uploads);
     // After upload, auto-confirm import for all URLs (silent — no preview modal)
-    var allUrls = _gscPages.map(function(g){ return g.url; }).filter(Boolean);
+    var _skipMedia = /\.(jpg|jpeg|png|gif|webp|svg|pdf|ico|woff|mp4|mp3)$/i;
+    var allUrls = _gscPages.map(function(g){ return g.url; }).filter(function(u){ return u && !_skipMedia.test(u) && u.indexOf('wp-content/uploads') === -1; });
     if (allUrls.length && profileId) {
       await fetch('/api/gsc/confirm-import', {
         method: 'POST',
@@ -673,33 +674,28 @@ async function autoSaveGscToServer() {
 function syncGscToPagesOverview() {
   if (!_gscPages.length) return;
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
-  var profileDomain = (_profile && _profile.domain) || '';
-  var added = 0, merged = 0;
+  // NO domain filter — user dropped their own GSC CSV, it's always their data.
+  // Domain filtering caused silent data loss when www. variants didn't match exactly.
   var existingUrls = _pagesOverviewData.map(function(p) { return p.url; });
+
+  // Skip non-page URLs: images, PHP files, sitemaps, feeds, admin
+  var _skipRx = [/\.(jpg|jpeg|png|gif|webp|svg|pdf|ico|woff|woff2|ttf|mp4|mp3)$/i,
+    /wp-.*\.php/i, /\/feed\//i, /\/wp-json\//i, /\/wp-admin\//i,
+    /sitemap.*\.xml/i, /xmlrpc/i, /\?/];
 
   _gscPages.forEach(function(g) {
     if (!g.url) return;
-    // Only filter by domain if profile has one set — otherwise show all GSC pages
-    if (profileDomain) {
-      try {
-        var gscDomain = normalizeDomain(new URL(g.url.startsWith('http') ? g.url : 'https://' + g.url).hostname);
-        var profDomain = normalizeDomain(profileDomain);
-        // Allow www. variant and subdomain flexibility
-        if (gscDomain !== profDomain && !gscDomain.endsWith('.' + profDomain) && !profDomain.endsWith('.' + gscDomain)) return;
-      } catch(e) { /* malformed URL — include it anyway */ }
-    }
+    // Skip media and system URLs — they're not content pages
+    if (_skipRx.some(function(r){ return r.test(g.url); })) return;
     var idx = existingUrls.indexOf(g.url);
     if (idx >= 0) {
-      // Merge GSC data into existing page
-      _pagesOverviewData[idx].clicks = g.clicks || _pagesOverviewData[idx].clicks || 0;
+      _pagesOverviewData[idx].clicks      = g.clicks      || _pagesOverviewData[idx].clicks      || 0;
       _pagesOverviewData[idx].impressions = g.impressions || _pagesOverviewData[idx].impressions || 0;
-      _pagesOverviewData[idx].ctr = g.ctr || _pagesOverviewData[idx].ctr || 0;
-      _pagesOverviewData[idx].position = g.position || _pagesOverviewData[idx].position || 0;
-      _pagesOverviewData[idx].keyword = g.keyword || _pagesOverviewData[idx].keyword || '';
+      _pagesOverviewData[idx].ctr         = g.ctr         || _pagesOverviewData[idx].ctr         || 0;
+      _pagesOverviewData[idx].position    = g.position    || _pagesOverviewData[idx].position    || 0;
+      _pagesOverviewData[idx].keyword     = g.keyword     || _pagesOverviewData[idx].keyword     || '';
       if (activeProfileId) _pagesOverviewData[idx].profile_id = activeProfileId;
-      merged++;
     } else {
-      // Add new page from GSC
       var slug = '';
       try { slug = new URL(g.url).pathname || '/'; } catch(e) { slug = g.url; }
       _pagesOverviewData.push({
@@ -709,10 +705,11 @@ function syncGscToPagesOverview() {
         score: '', scoreStatus: '', added: new Date().toISOString(),
         tracker_id: null, profile_id: activeProfileId, opportunity: 0
       });
-      added++;
+      existingUrls.push(g.url); // prevent duplicates within same call
     }
   });
-  if (added || merged) renderPagesOverview();
+  // Always re-render — data changed regardless of add/merge count
+  renderPagesOverview();
 }
 
 // ── Sitemap: URL input + file upload ────────────────────────────────────────
@@ -4815,10 +4812,14 @@ async function loadPagesOverview(forceRefresh) {
       }
     });
   _pagesOverviewData = Object.values(urlMap);
-  // Re-merge in-memory GSC sidebar data — server may have empty tracker_pages
-  // but user already loaded GSC CSV in sidebar. Show it immediately.
-  syncGscToPagesOverview();
-  renderPagesOverview();
+  // Always merge in-memory GSC sidebar data after server fetch.
+  // This ensures Pages tab shows data even when tracker_pages DB is empty.
+  // syncGscToPagesOverview calls renderPagesOverview itself when data changes.
+  if (_gscPages.length) {
+    syncGscToPagesOverview(); // renders inside
+  } else {
+    renderPagesOverview();
+  }
   if (forceRefresh && _filteredPageCount) toast('✅ ' + _filteredPageCount + ' pages loaded', 2000, 'ok');
 }
 
@@ -5378,9 +5379,11 @@ function renderAuditAdvisor() {
   var nextDiv = document.getElementById('auditAdvisorNext');
   if (!advisorPanel || !_pagesOverviewData.length) return;
 
-  // Generate tasks for all visible pages
+  // Generate tasks for all visible pages (skip image/media URLs)
   var allTasks = [];
+  var _skipMediaRx = /\.(jpg|jpeg|png|gif|webp|svg|pdf|ico|woff|mp4)$/i;
   _pagesOverviewData.forEach(function(page) {
+    if (!page.url || _skipMediaRx.test(page.url) || page.url.indexOf('wp-content/uploads') > -1) return;
     if (!_auditTasks[page.url]) {
       _auditTasks[page.url] = generateAuditTasks(page);
     }
