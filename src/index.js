@@ -11199,17 +11199,57 @@ app.post('/api/content/pipeline', verifyEngineAccess, async (req, res) => {
 
   try {
     // ═══ STAGE 1: RESEARCH ═══════════════════════════════════════════════════
+    // Uses SERP Spy v2 (Claude web_search + live scraping + GRAAF scoring)
+    // Falls back to SerpAPI if Anthropic key unavailable
     console.log(`[pipeline] Stage 1/5: RESEARCH — "${keyword}"`);
-    const serpParams = new URLSearchParams({ engine: 'google', q: keyword, api_key: serpKey, num: '10', hl: 'en', gl: 'us' });
-    const serpCtrl = new AbortController();
-    setTimeout(() => serpCtrl.abort(), 12000);
-    const serpR = await fetch(`https://serpapi.com/search?${serpParams}`, { signal: serpCtrl.signal });
-    const serpData = await serpR.json();
+    let organic = [], paa = [], related = [], aiOverview = null;
+    const anthropicKeyPipe = process.env.ANTHROPIC_API_KEY;
 
-    const organic = (serpData.organic_results || []).slice(0, 10);
-    const paa = (serpData.related_questions || []).slice(0, 8).map(q => ({ question: q.question || '', snippet: q.snippet || '' }));
-    const related = (serpData.related_searches || []).slice(0, 10).map(s => s.query || '').filter(Boolean);
-    const aiOverview = serpData.answer_box ? { type: serpData.answer_box.type || 'overview', answer: serpData.answer_box.answer || serpData.answer_box.snippet || '' } : null;
+    if (anthropicKeyPipe) {
+      // PRIMARY: Use our own intelligence system (no SerpAPI cost)
+      console.log('[pipeline] Using Claude web_search for SERP data');
+      try {
+        const ctrl0 = new AbortController();
+        setTimeout(() => ctrl0.abort(), 60000);
+        const r0 = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKeyPipe, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514', max_tokens: 3000,
+            messages: [{ role: 'user', content: `Search Google for: "${keyword}"
+Also search: ${keyword} site:reddit.com OR site:quora.com
+
+Return ONLY JSON:
+{"organic":[{"rank":1,"url":"...","domain":"...","title":"...","snippet":"..."}],"paa":["question 1","question 2","question 3","question 4","question 5"],"related_searches":["query 1","query 2"],"ai_overview_present":true,"ai_overview_snippet":"...or null"}` }],
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+          }), signal: ctrl0.signal
+        });
+        const d0 = await r0.json().catch(() => ({}));
+        const raw0 = (d0.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+        const m0 = raw0.match(/\{[\s\S]*\}/);
+        if (m0) {
+          const parsed0 = JSON.parse(m0[0]);
+          organic = (parsed0.organic || []).slice(0, 10);
+          paa = (parsed0.paa || []).map(q => ({ question: typeof q === 'string' ? q : q.question || '', snippet: '' }));
+          related = parsed0.related_searches || [];
+          aiOverview = parsed0.ai_overview_present ? { type: 'ai_overview', answer: parsed0.ai_overview_snippet || '' } : null;
+        }
+      } catch(e) { console.warn('[pipeline] Claude SERP failed:', e.message); }
+    }
+
+    // FALLBACK: SerpAPI if Claude search failed or key missing
+    if (!organic.length && serpKey) {
+      console.log('[pipeline] Falling back to SerpAPI');
+      const serpParams = new URLSearchParams({ engine: 'google', q: keyword, api_key: serpKey, num: '10', hl: 'en', gl: 'us' });
+      const serpCtrl = new AbortController();
+      setTimeout(() => serpCtrl.abort(), 12000);
+      const serpR = await fetch(`https://serpapi.com/search?${serpParams}`, { signal: serpCtrl.signal });
+      const serpData = await serpR.json();
+      organic = (serpData.organic_results || []).slice(0, 10);
+      paa = (serpData.related_questions || []).slice(0, 8).map(q => ({ question: q.question || '', snippet: q.snippet || '' }));
+      related = (serpData.related_searches || []).slice(0, 10).map(s => s.query || '').filter(Boolean);
+      aiOverview = serpData.answer_box ? { type: serpData.answer_box.type || 'overview', answer: serpData.answer_box.answer || serpData.answer_box.snippet || '' } : null;
+    }
 
     // Quick competitor analysis
     const competitorPromises = organic.slice(0, 5).map(async (result) => {
@@ -15059,6 +15099,28 @@ GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in head
 ${gscQueriesRW.join(', ') || '—'}
 ` : '';
 
+    // ── INTELLIGENCE CONTEXT: inject SERP Spy + AI Citation data ──────────────
+    const intel = analysis.intelligence_context || null;
+    const intelBlock = intel ? `
+═══════════════════════════════════════
+COMPETITIVE INTELLIGENCE — USE THIS TO BEAT RANK 1
+═══════════════════════════════════════
+RANKING FORMULA (why rank 1 beats everyone else):
+${intel.ranking_formula || '—'}
+
+TOP ENTITY GAPS (topics your page is missing vs competitors — MUST ADD):
+${(intel.entity_gaps || []).slice(0, 10).map(e => `• "${e.entity}" — found in ${e.in_competitor_pages} competitor pages`).join('\n') || '—'}
+
+AI CITATION SCORE: ${intel.ai_citation ? intel.ai_citation.score + '/100 (' + intel.ai_citation.eligibility + ' eligibility)' : 'not scored'}
+${intel.ai_citation && intel.ai_citation.gaps ? 'AI CITATION GAPS TO FIX:\n' + intel.ai_citation.gaps.slice(0, 4).map(g => `• ${g.signal}: ${g.fix}`).join('\n') : ''}
+
+CONTENT BRIEF FROM COMPETITOR ANALYSIS:
+${intel.content_brief ? `Format: ${intel.content_brief.recommended_format} | Target: ${intel.content_brief.recommended_word_count} words
+Required H2 sections: ${(intel.content_brief.must_have_h2s || []).join(' | ')}
+Must-cover entities: ${(intel.content_brief.must_cover_entities || []).join(', ')}
+FAQ questions to include: ${(intel.content_brief.faq_questions || []).slice(0, 5).join(' | ')}` : '—'}
+═══════════════════════════════════════` : '';
+
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
     const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
 
@@ -15205,6 +15267,7 @@ DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
 ${gscBlockRW}
+${intelBlock}
 ${competitorBeatBlock}
 ${modeBlockRW}
 REWRITE STRATEGIE:
@@ -15287,6 +15350,7 @@ Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
+${intelBlock}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -15325,6 +15389,7 @@ BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} |
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
 ${gscBlockRW}
+${intelBlock}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -25822,44 +25887,29 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SERP SPY v2 — 4-Step Competitive Intelligence + Live GRAAF Scoring
-// ══════════════════════════════════════════════════════════════════════════════
+// UNIFIED INTELLIGENCE SYSTEM
+// Everything connected: GSC → SERP Spy → Rewrite → Write → Internal Links → Tracker
 //
-// What makes this better than Semrush / Ahrefs / Surfer:
-//   1. Scrapes LIVE body text from each competitor page (not stale crawl data)
-//   2. Runs your own GRAAF rubric against every competitor (no tool does this)
-//   3. Extracts semantic entities from each page for a gap map
-//   4. Uses Google's 4-Step method: Catalog → Pattern → Outlier → Missing
-//   5. Returns a ready-to-use content brief — one click from spy to rewrite
-//
-// Flow:
-//   Step A: Claude web_search → find top 10 SERP URLs for keyword
-//   Step B: scrapeBodyText() → fetch live body text for client + top 5 competitors
-//   Step C: graafAnalyzeHtml() → score each page with your 34-signal rubric
-//   Step D: extractEntities() → build entity gap map (what top pages cover, client misses)
-//   Step E: Claude analysis → 4-Step intelligence report + brief
-//   Step F: Persist to tracker_pages.serp_spy JSONB
-//
+// Architecture:
+//   GET  /api/intelligence/context         → aggregate all signals for a URL
+//   POST /api/tracker/serp-spy             → SERP Spy v2 (live scrape + GRAAF)
+//   POST /api/intelligence/internal-links  → sitemap-based link recommender
+//   POST /api/intelligence/ai-citation     → pre-publish AI Overview eligibility score
+//   GET  /api/intelligence/rewrite-brief   → GSC + spy + sitemap → rewrite brief
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── Helper: fetch live page body text (strips nav/header/footer/scripts) ──────
+// ── scrapeBodyText: strips nav/header/footer, returns body text + raw HTML ────
 async function scrapeBodyText(url, maxChars) {
   maxChars = maxChars || 6000;
   try {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 12000);
     const r = await fetch(url.startsWith('http') ? url : 'https://' + url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/2.0; +https://contentscale.site)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9'
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/2.0)', 'Accept': 'text/html' },
       signal: ctrl.signal
     });
     if (!r.ok) return { text: '', status: r.status, error: 'HTTP ' + r.status };
     const html = await r.text();
-
-    // Strip everything that is NOT readable body content
     const stripped = html
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -25872,94 +25922,357 @@ async function scrapeBodyText(url, maxChars) {
       .replace(/<svg[\s\S]*?<\/svg>/gi, '')
       .replace(/<!--[\s\S]*?-->/g, '')
       .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
-
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/\s{2,}/g, ' ').trim();
     return { text: stripped.slice(0, maxChars), status: r.status, wordCount: stripped.split(/\s+/).length, fullHtml: html };
-  } catch(e) {
-    return { text: '', status: 0, error: e.message };
-  }
+  } catch(e) { return { text: '', status: 0, error: e.message }; }
 }
 
-// ── Helper: extract semantic entities from body text ─────────────────────────
-// Returns top topics/concepts the page covers — used for the entity gap map.
-// Lightweight regex approach — no NLP library needed.
-function extractEntities(text, topN) {
+// ── TF-IDF entity extractor: real semantic gap map, not word counts ───────────
+function extractEntitiesTFIDF(docs, targetDocIdx, topN) {
   topN = topN || 30;
-  if (!text) return [];
-
-  // Strip common stop words
-  const stops = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with',
-    'is','are','was','were','be','been','being','have','has','had','do','does','did',
-    'will','would','could','should','may','might','this','that','these','those','it',
-    'its','we','you','he','she','they','i','my','your','our','their','how','what',
-    'when','where','why','who','which','by','from','into','through','about','as','if',
-    'so','not','no','more','also','can','all','been','than','up','out','get','just',
-    'now','then','here','there','after','before','over','other','use','used','using']);
-
-  // Extract noun phrases: sequences of 1-3 capitalized or meaningful words
-  const words = text.replace(/[^a-zA-Z0-9\s'-]/g, ' ').split(/\s+/);
-  const freq = {};
-
-  // Single meaningful words (4+ chars, not stop words)
-  words.forEach(w => {
-    const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (clean.length >= 4 && !stops.has(clean) && isNaN(clean)) {
-      freq[clean] = (freq[clean] || 0) + 1;
-    }
+  if (!docs || !docs.length) return [];
+  const stops = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','is','are','was','were','be','been','have','has','had','do','does','did','will','would','could','should','may','might','this','that','these','those','it','its','we','you','he','she','they','i','my','your','our','their','how','what','when','where','why','who','which','by','from','into','through','about','as','if','so','not','no','more','also','can','all','than','up','out','get','just','now','then','here','there','after','before','over','other','use','used','using','their','they','them','its','our','been','being','each','both','few','more','most','other','some','such','own','same','than','too','very','just','but','nor','so','yet','both','either','neither','also','well','back','even','still','way','since','once','while','where','when','which','why','how','there','here','down','only','new','make','first','last','long','great','little','own','right','big','high','different','small','large','next','early','young','important','public','private','real','best','free','good','bad']);
+  const tokenize = (text) => text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !stops.has(w) && isNaN(w));
+  const docTokens = docs.map(d => tokenize(d || ''));
+  // TF for target doc
+  const targetTokens = docTokens[targetDocIdx] || [];
+  const tf = {};
+  targetTokens.forEach(t => { tf[t] = (tf[t] || 0) + 1; });
+  const totalTarget = targetTokens.length || 1;
+  // IDF across all docs
+  const idf = {};
+  const N = docs.length;
+  Object.keys(tf).forEach(term => {
+    const docsWithTerm = docTokens.filter(d => d.includes(term)).length;
+    idf[term] = Math.log((N + 1) / (docsWithTerm + 1)) + 1;
   });
-
-  // 2-word phrases
-  for (let i = 0; i < words.length - 1; i++) {
-    const a = words[i].toLowerCase().replace(/[^a-z]/g, '');
-    const b = words[i+1].toLowerCase().replace(/[^a-z]/g, '');
-    if (a.length >= 3 && b.length >= 3 && !stops.has(a) && !stops.has(b)) {
-      const phrase = a + ' ' + b;
-      freq[phrase] = (freq[phrase] || 0) + 1;
+  // TF-IDF scores
+  const scores = Object.keys(tf).map(term => ({
+    term,
+    tfidf: (tf[term] / totalTarget) * idf[term],
+    freq: tf[term],
+    inDocs: docTokens.filter(d => d.includes(term)).length
+  }));
+  // 2-gram bonus: find frequent 2-word phrases
+  const bigrams = {};
+  for (let i = 0; i < targetTokens.length - 1; i++) {
+    const bg = targetTokens[i] + ' ' + targetTokens[i+1];
+    if (!stops.has(targetTokens[i]) && !stops.has(targetTokens[i+1])) {
+      bigrams[bg] = (bigrams[bg] || 0) + 1;
     }
   }
-
-  return Object.entries(freq)
-    .filter(([w, c]) => c >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, topN)
-    .map(([word, count]) => ({ word, count }));
+  const bigramEntries = Object.entries(bigrams).filter(([,c]) => c >= 2).map(([term, freq]) => ({
+    term, tfidf: (freq / totalTarget) * 1.5, freq, inDocs: docTokens.filter(d => d.join(' ').includes(term)).length
+  }));
+  return [...scores, ...bigramEntries].sort((a, b) => b.tfidf - a.tfidf).slice(0, topN);
 }
 
-// ── SERP Spy route ────────────────────────────────────────────────────────────
-app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
-  const { keyword, profile_url, page_id } = req.body;
-  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+// ── Schema extractor: reads ld+json from HTML ──────────────────────────────────
+function extractSchemaTypes(html) {
+  if (!html) return [];
+  const types = [];
+  const matches = [...(html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi))];
+  matches.forEach(m => {
+    try {
+      const data = JSON.parse(m[1]);
+      const walk = (obj) => {
+        if (!obj) return;
+        if (Array.isArray(obj)) { obj.forEach(walk); return; }
+        if (obj['@type']) { const t = Array.isArray(obj['@type']) ? obj['@type'] : [obj['@type']]; t.forEach(tp => { if (!types.includes(tp)) types.push(tp); }); }
+        if (obj['@graph']) walk(obj['@graph']);
+      };
+      walk(data);
+    } catch(e) {}
+  });
+  return types;
+}
 
+// ── AI Citation eligibility scorer ────────────────────────────────────────────
+// Scores a page 0-100 for likelihood of being cited in Google AI Overviews
+function scoreAICitation(html, bodyText, keyword) {
+  if (!html && !bodyText) return { score: 0, signals: [], gaps: [] };
+  const text = bodyText || html.replace(/<[^>]+>/g, ' ');
+  const kw = (keyword || '').toLowerCase();
+  const signals = [];
+  const gaps = [];
+  let score = 0;
+
+  // 1. Direct answer in first 120 words (25 pts)
+  const first120 = text.split(/\s+/).slice(0, 120).join(' ').toLowerCase();
+  const hasDirectAnswer = kw && first120.includes(kw.split(' ')[0]) && first120.length > 80;
+  if (hasDirectAnswer) { score += 25; signals.push({ signal: 'Direct answer in first 120 words', pts: 25, status: 'pass' }); }
+  else { gaps.push({ signal: 'Direct answer in first 120 words', pts: 25, fix: 'Write a 40-80 word paragraph immediately after the H1 that directly answers the main question. Include the keyword in the first sentence.' }); }
+
+  // 2. FAQ schema (15 pts)
+  const hasFAQSchema = html && /<script[^>]*ld\+json[^>]*>[\s\S]*?FAQPage[\s\S]*?<\/script>/i.test(html);
+  if (hasFAQSchema) { score += 15; signals.push({ signal: 'FAQPage schema markup', pts: 15, status: 'pass' }); }
+  else { gaps.push({ signal: 'FAQPage schema markup', pts: 15, fix: 'Add FAQPage JSON-LD schema with 5+ Q&A pairs. This is the #1 schema type for AI Overview inclusion.' }); }
+
+  // 3. Speakable schema (10 pts)
+  const hasSpeakable = html && /speakable/i.test(html);
+  if (hasSpeakable) { score += 10; signals.push({ signal: 'Speakable schema', pts: 10, status: 'pass' }); }
+  else { gaps.push({ signal: 'Speakable schema', pts: 10, fix: 'Add Speakable schema pointing to your intro and FAQ sections. Used by Google Assistant and AI systems to identify citable content.' }); }
+
+  // 4. TL;DR / Key takeaways section (10 pts)
+  const hasTLDR = /tl;dr|key takeaways|quick summary|in this article|what you.ll learn/i.test(text);
+  if (hasTLDR) { score += 10; signals.push({ signal: 'TL;DR / Key Takeaways section', pts: 10, status: 'pass' }); }
+  else { gaps.push({ signal: 'TL;DR / Key Takeaways section', pts: 10, fix: 'Add a bullet-point summary near the top. AI systems extract and cite structured summary sections more than prose.' }); }
+
+  // 5. Definition / "X is" statement (10 pts)
+  const kwWord = kw.split(' ')[0];
+  const hasDef = kwWord && new RegExp(kwWord + '\\s+(is|are|refers to|means|defined as)', 'i').test(text);
+  if (hasDef) { score += 10; signals.push({ signal: 'Clear definition statement', pts: 10, status: 'pass' }); }
+  else { gaps.push({ signal: 'Clear definition statement', pts: 10, fix: `Add a sentence like "${keyword} is [concise definition]" within the first 200 words. AI systems look for definitional statements to use as citations.` }); }
+
+  // 6. Author + expertise signal (10 pts)
+  const hasAuthor = /author|written by|by [A-Z][a-z]+ [A-Z][a-z]+|expert|certified|licensed/i.test(html || text);
+  if (hasAuthor) { score += 10; signals.push({ signal: 'Author / expertise signal', pts: 10, status: 'pass' }); }
+  else { gaps.push({ signal: 'Author / expertise signal', pts: 10, fix: 'Add an author bio with credentials. E-E-A-T signals directly influence AI citation selection.' }); }
+
+  // 7. Statistics with source attribution (10 pts)
+  const hasStats = /\d+%|\d+\s+(?:million|billion|thousand)|\d{4}\s+(?:study|report|survey|research)/i.test(text);
+  if (hasStats) { score += 10; signals.push({ signal: 'Statistics with data', pts: 10, status: 'pass' }); }
+  else { gaps.push({ signal: 'Statistics with data', pts: 10, fix: 'Add 3+ statistics with year and source. AI systems prefer content with verifiable data points.' }); }
+
+  // 8. Structured H2/H3 hierarchy (10 pts)
+  const h2count = (html || '').match(/<h2/gi) || [];
+  if (h2count.length >= 3) { score += 10; signals.push({ signal: `${h2count.length} H2 sections (structured content)`, pts: 10, status: 'pass' }); }
+  else { gaps.push({ signal: 'Structured H2/H3 hierarchy (3+ sections)', pts: 10, fix: 'Add at least 3 H2 sections. AI systems use heading structure to understand and extract content sections.' }); }
+
+  const eligibility = score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+  return { score, max: 100, eligibility, signals, gaps };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE: GET /api/intelligence/context
+// Aggregates ALL signals for a URL: GSC data, SERP Spy, tracker, sitemap
+// Called by: analyse-rewrite, pipeline, and the frontend before any write/rewrite
+// ══════════════════════════════════════════════════════════════════════════════
+app.get('/api/intelligence/context', verifyEngineAccess, async (req, res) => {
+  const { url, profile_id, keyword } = req.query;
+  if (!url && !profile_id) return res.status(400).json({ success: false, error: 'url or profile_id required' });
+
+  try {
+    const eu = req.engineUser;
+    const codeId = eu && !eu.isAdmin ? eu.codeId : null;
+    const normalizeUrl = (u) => { try { const parsed = new URL(u.startsWith('http') ? u : 'https://' + u); return parsed.hostname.replace(/^www\./, '') + parsed.pathname.replace(/\/$/, ''); } catch(e) { return u; } };
+    const normUrl = url ? normalizeUrl(url) : null;
+
+    // 1. GSC data for this URL from gsc_pages
+    let gscData = null;
+    if (url && profile_id) {
+      try {
+        const gscR = await pool.query(
+          `SELECT url, clicks, impressions, ctr, position, keyword FROM gsc_pages WHERE profile_id=$1 AND (url ILIKE $2 OR url ILIKE $3) ORDER BY impressions DESC LIMIT 1`,
+          [profile_id, '%' + normUrl + '%', '%' + (url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')) + '%']
+        );
+        if (gscR.rows.length) {
+          gscData = gscR.rows[0];
+        }
+      } catch(e) { console.warn('[intelligence/context] GSC lookup failed:', e.message); }
+    }
+
+    // 2. Top GSC queries for this profile (for keyword targeting)
+    let topGscQueries = [];
+    if (profile_id) {
+      try {
+        const qR = await pool.query(
+          `SELECT query, clicks, impressions, ctr, position FROM gsc_queries WHERE profile_id=$1 ORDER BY impressions DESC LIMIT 20`,
+          [profile_id]
+        );
+        topGscQueries = qR.rows;
+      } catch(e) {}
+    }
+
+    // 3. SERP Spy data from tracker_pages
+    let serpSpy = null;
+    if (url) {
+      try {
+        const spyR = await pool.query(
+          `SELECT serp_spy, serp_spy_at, keyword, gsc_position, gsc_impressions, gsc_clicks FROM tracker_pages WHERE (url ILIKE $1 OR url ILIKE $2) ${codeId ? 'AND engine_code_id=$3' : ''} ORDER BY serp_spy_at DESC NULLS LAST LIMIT 1`,
+          codeId ? ['%' + normUrl + '%', '%' + url + '%', codeId] : ['%' + normUrl + '%', '%' + url + '%']
+        );
+        if (spyR.rows.length && spyR.rows[0].serp_spy) {
+          serpSpy = { ...spyR.rows[0].serp_spy, _ran_at: spyR.rows[0].serp_spy_at, _tracker_keyword: spyR.rows[0].keyword };
+        }
+      } catch(e) { console.warn('[intelligence/context] tracker lookup failed:', e.message); }
+    }
+
+    // 4. Sitemap pages for internal link recommendations
+    let sitemapPages = [];
+    if (profile_id) {
+      try {
+        const profileR = await pool.query(`SELECT sitemap_url, domain FROM content_profiles WHERE id=$1`, [profile_id]);
+        if (profileR.rows.length && profileR.rows[0].sitemap_url) {
+          // Return cached sitemap from tracker_pages urls for this profile
+          const sitemapR = await pool.query(
+            `SELECT url, keyword, gsc_position, gsc_impressions FROM tracker_pages WHERE ${codeId ? 'engine_code_id=$1' : 'profile_id=$1'} ORDER BY gsc_impressions DESC NULLS LAST LIMIT 50`,
+            [codeId || profile_id]
+          );
+          sitemapPages = sitemapR.rows;
+        }
+      } catch(e) {}
+    }
+
+    // 5. Resolve best keyword: spy > tracker > gsc > provided
+    const resolvedKeyword = keyword || (serpSpy && serpSpy.keyword) || (gscData && gscData.keyword) || (topGscQueries[0] && topGscQueries[0].query) || '';
+
+    // 6. AI Citation eligibility (pre-fetch the page)
+    let aiCitation = null;
+    if (url) {
+      try {
+        const scrape = await scrapeBodyText(url, 4000);
+        if (scrape.text) aiCitation = scoreAICitation(scrape.fullHtml, scrape.text, resolvedKeyword);
+      } catch(e) {}
+    }
+
+    // 7. Best GSC keyword targets: position 8-20 with 100+ impressions = fastest wins
+    const fastWinKeywords = topGscQueries.filter(q => q.position >= 8 && q.position <= 20 && q.impressions >= 100)
+      .sort((a, b) => b.impressions - a.impressions).slice(0, 10);
+
+    // 8. Entity gaps from SERP Spy
+    const entityGaps = (serpSpy && serpSpy._entity_gaps) || [];
+    const topEntityGaps = entityGaps.filter(e => e.in_competitor_pages >= 3).slice(0, 15);
+
+    res.json({
+      success: true,
+      url: url || null,
+      profile_id: profile_id || null,
+      resolved_keyword: resolvedKeyword,
+      gsc: gscData,
+      top_gsc_queries: topGscQueries.slice(0, 10),
+      fast_win_keywords: fastWinKeywords,
+      serp_spy: serpSpy ? {
+        ran_at: serpSpy._ran_at,
+        keyword: serpSpy.keyword,
+        ranking_formula: serpSpy.step2_pattern && serpSpy.step2_pattern.the_ranking_formula,
+        top_entity_gaps: topEntityGaps,
+        content_brief: serpSpy.content_brief || null,
+        ai_overview_blueprint: serpSpy.ai_overview_blueprint || null,
+        action_plan: (serpSpy.action_plan || []).filter(a => a.priority === 'high').slice(0, 5),
+        competitor_graaf: (serpSpy._live_graaf || []).slice(0, 3)
+      } : null,
+      sitemap_pages: sitemapPages.slice(0, 30),
+      ai_citation: aiCitation,
+      has_spy_data: !!serpSpy,
+      spy_age_days: serpSpy && serpSpy._ran_at ? Math.round((Date.now() - new Date(serpSpy._ran_at).getTime()) / 86400000) : null
+    });
+  } catch(e) {
+    console.error('[intelligence/context]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE: POST /api/intelligence/internal-links
+// Recommends internal links from sitemap pages to a target page
+// Logic: extract entities from target page, find sitemap pages covering same entities
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/intelligence/internal-links', verifyEngineAccess, async (req, res) => {
+  const { url, profile_id, keyword, max_recommendations } = req.body;
+  if (!url || !profile_id) return res.status(400).json({ success: false, error: 'url and profile_id required' });
+  const eu = req.engineUser;
+  const codeId = eu && !eu.isAdmin ? eu.codeId : null;
+
+  try {
+    // Get all tracked pages for this profile
+    const pagesR = await pool.query(
+      `SELECT url, keyword, gsc_position, gsc_impressions, gsc_clicks FROM tracker_pages WHERE ${codeId ? 'engine_code_id=$1' : 'profile_id=$1'} AND url != $2 ORDER BY gsc_impressions DESC NULLS LAST LIMIT 100`,
+      [codeId || profile_id, url]
+    );
+    const sitemapPages = pagesR.rows;
+    if (!sitemapPages.length) return res.json({ success: true, recommendations: [], reason: 'No other pages tracked — add pages to tracker first' });
+
+    // Scrape target page body text
+    const targetScrape = await scrapeBodyText(url, 5000);
+    const targetText = targetScrape.text || '';
+    if (!targetText) return res.json({ success: true, recommendations: [], reason: 'Could not fetch target page content' });
+
+    // Get target page entities using TF-IDF across the corpus
+    const allTexts = [targetText];
+    const pageTextsMap = [];
+    // Scrape a sample of sitemap pages (max 10 to avoid timeout)
+    const samplePages = sitemapPages.slice(0, 10);
+    for (const page of samplePages) {
+      const s = await scrapeBodyText(page.url, 2000);
+      allTexts.push(s.text || '');
+      pageTextsMap.push({ ...page, bodyText: s.text || '' });
+    }
+
+    const targetEntities = extractEntitiesTFIDF(allTexts, 0, 20).map(e => e.term);
+    const kw = (keyword || '').toLowerCase();
+
+    // Score each page by entity overlap with target
+    const recommendations = pageTextsMap.map(page => {
+      const pageTokens = (page.bodyText || '').toLowerCase().split(/\s+/);
+      const overlap = targetEntities.filter(e => page.bodyText && page.bodyText.toLowerCase().includes(e));
+      const hasKw = kw && page.bodyText && page.bodyText.toLowerCase().includes(kw);
+      const score = overlap.length * 2 + (hasKw ? 3 : 0) + (page.gsc_impressions ? Math.min(5, Math.round(page.gsc_impressions / 100)) : 0);
+      return {
+        url: page.url,
+        keyword: page.keyword || '',
+        gsc_position: page.gsc_position,
+        gsc_impressions: page.gsc_impressions,
+        shared_entities: overlap.slice(0, 5),
+        relevance_score: score,
+        suggested_anchor: page.keyword || overlap[0] || page.url.split('/').filter(Boolean).pop() || 'learn more',
+        suggested_placement: overlap.length >= 4 ? 'intro paragraph' : 'related section'
+      };
+    }).filter(r => r.relevance_score > 0).sort((a, b) => b.relevance_score - a.relevance_score).slice(0, max_recommendations || 8);
+
+    res.json({ success: true, target_url: url, target_entities: targetEntities.slice(0, 10), recommendations });
+  } catch(e) {
+    console.error('[intelligence/internal-links]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE: POST /api/intelligence/ai-citation
+// Scores a page for AI Overview eligibility before publishing
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/intelligence/ai-citation', verifyEngineAccess, async (req, res) => {
+  const { url, html, keyword } = req.body;
+  if (!url && !html) return res.status(400).json({ success: false, error: 'url or html required' });
+  try {
+    let bodyText = '', fullHtml = html || '';
+    if (url && !html) {
+      const scrape = await scrapeBodyText(url, 8000);
+      bodyText = scrape.text || '';
+      fullHtml = scrape.fullHtml || '';
+    } else if (html) {
+      bodyText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    const result = scoreAICitation(fullHtml, bodyText, keyword || '');
+    res.json({ success: true, url: url || null, keyword: keyword || null, ...result });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE: POST /api/tracker/serp-spy (v2 — full live competitor intelligence)
+// Step A: Claude web_search finds real SERP URLs right now
+// Step B: scrapeBodyText() runs on top 5 + client page in parallel
+// Step C: graafAnalyzeHtml() + computeScore() scores every competitor with GRAAF
+// Step D: TF-IDF entity gap map (what top pages cover, client misses)
+// Step E: Claude analysis with all live data → 4-Step report + content brief
+// Step F: Persists to tracker_pages.serp_spy + injects intelligence_context
+//         into any pending analyse-rewrite for this URL
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
+  const { keyword, profile_url, page_id, profile_id } = req.body;
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
 
   const myUrl = (profile_url || '').trim();
-  const myDomain = myUrl ? (() => {
-    try { return new URL(myUrl.startsWith('http') ? myUrl : 'https://' + myUrl).hostname.replace(/^www\./, ''); }
-    catch(e) { return myUrl; }
-  })() : '';
-
+  const myDomain = myUrl ? (() => { try { return new URL(myUrl.startsWith('http') ? myUrl : 'https://' + myUrl).hostname.replace(/^www\./, ''); } catch(e) { return myUrl; } })() : '';
   console.log(`[serp-spy] keyword="${keyword}" client="${myDomain}"`);
 
-  // ── STEP A: Ask Claude to find the top SERP URLs via web_search ──────────
-  const urlDiscoveryPrompt = `Search Google for the keyword: "${keyword}"
-
-Return ONLY a JSON array of the top 10 organic results. No markdown, no explanation — just the array:
-[
-  { "rank": 1, "url": "https://...", "domain": "example.com", "title": "Page Title", "snippet": "Google snippet text" },
-  ...
-]
-
-Include only real organic results — skip ads, shopping, maps, and YouTube. Rank 1 = highest position.`;
-
+  // STEP A: Claude web_search → find real SERP URLs
   let serpUrls = [];
-  let urlDiscoveryRaw = '';
-
   try {
     const ctrl1 = new AbortController();
     setTimeout(() => ctrl1.abort(), 60000);
@@ -25967,51 +26280,37 @@ Include only real organic results — skip ads, shopping, maps, and YouTube. Ran
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        messages: [{ role: 'user', content: urlDiscoveryPrompt }],
+        model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+        messages: [{ role: 'user', content: `Search Google for: "${keyword}"\n\nReturn ONLY a JSON array of top 10 organic results. No ads, no maps. Just:\n[{"rank":1,"url":"https://...","domain":"example.com","title":"Page Title","snippet":"Google snippet text"},...]` }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
-      }),
-      signal: ctrl1.signal
+      }), signal: ctrl1.signal
     });
     const d1 = await r1.json().catch(() => ({}));
-    urlDiscoveryRaw = (d1.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    const match = urlDiscoveryRaw.match(/\[[\s\S]*?\]/);
-    if (match) serpUrls = JSON.parse(match[0]);
-  } catch(e) {
-    console.warn('[serp-spy] URL discovery failed:', e.message);
-  }
+    const raw1 = (d1.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const m = raw1.match(/\[[\s\S]*?\]/);
+    if (m) serpUrls = JSON.parse(m[0]);
+  } catch(e) { console.warn('[serp-spy] URL discovery failed:', e.message); }
 
-  if (!serpUrls.length) {
-    return res.status(502).json({ success: false, error: 'Could not fetch SERP results — Claude web_search unavailable' });
-  }
+  if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results' });
 
-  // ── STEP B: Scrape body text from top 5 competitors + client page ─────────
-  console.log(`[serp-spy] Scraping ${Math.min(5, serpUrls.length)} competitor pages + client page...`);
-
+  // STEP B: Parallel scrape — client page + top 5 competitors
   const top5 = serpUrls.slice(0, 5);
-  const [clientScrape, ...competitorScrapes] = await Promise.all([
-    myUrl ? scrapeBodyText(myUrl, 8000) : Promise.resolve({ text: '', status: 0 }),
+  const [clientScrape, ...compScrapes] = await Promise.all([
+    myUrl ? scrapeBodyText(myUrl, 8000) : Promise.resolve({ text: '', status: 0, fullHtml: '' }),
     ...top5.map(e => scrapeBodyText(e.url, 6000))
   ]);
 
-  // ── STEP C: Run GRAAF analysis on each scraped page ───────────────────────
-  console.log('[serp-spy] Running GRAAF analysis on all pages...');
-
+  // STEP C: GRAAF-score each competitor using your own rubric
   const graafResults = top5.map((entry, i) => {
-    const scrape = competitorScrapes[i];
-    if (!scrape || !scrape.fullHtml) return { rank: entry.rank, url: entry.url, domain: entry.domain, graaf: null, scraped: false };
+    const sc = compScrapes[i];
+    if (!sc || !sc.fullHtml) return { rank: entry.rank, url: entry.url, domain: entry.domain, scraped: false, graaf: null };
     try {
-      const analysis = graafAnalyzeHtml(scrape.fullHtml, entry.url);
+      const analysis = graafAnalyzeHtml(sc.fullHtml, entry.url);
       const scored = computeScore(entry.url, analysis, []);
       return {
-        rank: entry.rank,
-        url: entry.url,
-        domain: entry.domain,
-        title: entry.title,
-        snippet: entry.snippet,
-        scraped: true,
-        wordCount: analysis.wordCount || 0,
+        rank: entry.rank, url: entry.url, domain: entry.domain, title: entry.title, snippet: entry.snippet,
+        scraped: true, wordCount: analysis.wordCount || 0,
+        schemaTypes: extractSchemaTypes(sc.fullHtml),
         graaf: {
           total: scored.score,
           graaf: scored.metrics && scored.metrics.graaf,
@@ -26019,180 +26318,110 @@ Include only real organic results — skip ads, shopping, maps, and YouTube. Ran
           technical: scored.metrics && scored.metrics.technical,
           quality: scored.quality,
           signals: {
-            hasDirectAnswer: analysis.hasDirectAnswer,
-            hasFAQ: analysis.hasFAQContent,
-            hasFAQSchema: analysis.hasFAQPageSchema,
-            hasAuthorBio: analysis.hasAuthorBio,
-            hasArticleSchema: analysis.hasArticleSchema,
-            hasTOC: analysis.hasTOC,
-            hasTLDR: analysis.hasTLDR,
-            hasOpenGraph: analysis.hasOpenGraph,
-            h2Count: analysis.h2Count,
-            statsFound: analysis.statsFound,
-            expertQuoteCount: analysis.expertQuoteCount,
-            caseStudyCount: analysis.caseStudyCount,
-            listItemCount: analysis.listItemCount,
-            metaTitleLength: analysis.metaTitleLength,
-            imagesWithAlt: analysis.imagesWithAlt
+            hasDirectAnswer: analysis.hasDirectAnswer, hasFAQ: analysis.hasFAQContent,
+            hasFAQSchema: analysis.hasFAQPageSchema, hasAuthorBio: analysis.hasAuthorBio,
+            hasArticleSchema: analysis.hasArticleSchema, hasTOC: analysis.hasTOC,
+            hasTLDR: analysis.hasTLDR, hasOpenGraph: analysis.hasOpenGraph,
+            h2Count: analysis.h2Count, statsFound: analysis.statsFound,
+            expertQuoteCount: analysis.expertQuoteCount, caseStudyCount: analysis.caseStudyCount,
+            listItemCount: analysis.listItemCount, internalLinks: analysis.internalLinks
           }
         }
       };
-    } catch(e) {
-      return { rank: entry.rank, url: entry.url, domain: entry.domain, scraped: true, graaf: null, error: e.message };
-    }
+    } catch(e) { return { rank: entry.rank, url: entry.url, domain: entry.domain, scraped: true, graaf: null, error: e.message }; }
   });
 
-  // ── STEP D: Build entity gap map ──────────────────────────────────────────
-  console.log('[serp-spy] Building entity gap map...');
-
-  const clientEntities = new Set(extractEntities(clientScrape.text, 50).map(e => e.word));
-  const competitorEntityMaps = competitorScrapes.map((s, i) => ({
-    domain: top5[i] ? top5[i].domain : 'unknown',
-    entities: extractEntities(s.text, 60)
-  }));
-
-  // Entities that appear in 2+ competitor pages but NOT in client page
+  // STEP D: TF-IDF entity gap map
+  const allDocs = [clientScrape.text, ...compScrapes.map(s => s.text)];
+  // Client gaps: entities that rank in competitor docs (TF-IDF) but absent from client
+  const competitorEntities = top5.map((_, i) =>
+    extractEntitiesTFIDF(allDocs, i + 1, 40).map(e => e.term)
+  );
   const entityFreq = {};
-  competitorEntityMaps.forEach(({ entities }) => {
-    const seen = new Set();
-    entities.forEach(({ word }) => {
-      if (!seen.has(word)) { entityFreq[word] = (entityFreq[word] || 0) + 1; seen.add(word); }
-    });
-  });
-
+  competitorEntities.forEach(list => { const seen = new Set(); list.forEach(t => { if (!seen.has(t)) { entityFreq[t] = (entityFreq[t] || 0) + 1; seen.add(t); } }); });
+  const clientEntityTerms = new Set(extractEntitiesTFIDF(allDocs, 0, 50).map(e => e.term));
   const entityGaps = Object.entries(entityFreq)
-    .filter(([word, count]) => count >= 2 && !clientEntities.has(word))
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 25)
-    .map(([word, count]) => ({ entity: word, in_competitor_pages: count, in_client_page: false }));
+    .filter(([term, count]) => count >= 2 && !clientEntityTerms.has(term))
+    .sort((a, b) => b[1] - a[1]).slice(0, 25)
+    .map(([entity, in_competitor_pages]) => ({ entity, in_competitor_pages, in_client_page: false }));
 
-  const clientEntityList = [...clientEntities].slice(0, 30);
+  // Client AI citation score
+  const clientAICitation = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
 
-  // ── STEP E: Claude 4-step analysis with all live data ─────────────────────
-  console.log('[serp-spy] Running 4-step intelligence analysis...');
-
-  // Build compact competitor summary for Claude prompt
-  const competitorSummary = graafResults.map(c => {
+  // STEP E: Claude 4-Step analysis with ALL live data
+  const compSummary = graafResults.map(c => {
     const g = c.graaf;
-    return `RANK ${c.rank}: ${c.domain}
-  Title: ${(c.title || '').substring(0, 80)}
-  GRAAF Score: ${g ? g.total + '/100 (GRAAF:' + g.graaf + ' CRAFT:' + g.craft + ' Technical:' + g.technical + ')' : 'could not scrape'}
-  Word count: ${c.wordCount || 'unknown'}
-  Key signals: ${g ? Object.entries(g.signals).filter(([k,v]) => v === true || (typeof v === 'number' && v > 0)).map(([k,v]) => k + (typeof v === 'number' ? '=' + v : '')).join(', ') : 'n/a'}
-  Snippet: "${(c.snippet || '').substring(0, 150)}"
-  Body text preview: "${(competitorScrapes[c.rank-1] ? competitorScrapes[c.rank-1].text : '').substring(0, 600)}"`;
+    const sig = g ? Object.entries(g.signals).filter(([, v]) => v === true || (typeof v === 'number' && v > 0)).map(([k, v]) => k + (typeof v === 'number' && v > 1 ? '=' + v : '')).join(', ') : 'n/a';
+    return `RANK ${c.rank}: ${c.domain}\n  GRAAF: ${g ? g.total + '/100 (G:' + g.graaf + ' C:' + g.craft + ' T:' + g.technical + ')' : 'not scraped'}\n  Schema: ${c.schemaTypes ? c.schemaTypes.join(', ') || 'none' : 'unknown'}\n  Words: ~${c.wordCount || '?'}\n  Signals: ${sig}\n  Snippet: "${(c.snippet || '').substring(0, 120)}"`;
   }).join('\n\n');
 
-  const clientSummary = myUrl ? `
-CLIENT PAGE: ${myUrl}
-Client body text (first 2000 chars): """
-${clientScrape.text.substring(0, 2000)}
-"""
-GRAAF pre-check: ${(() => {
-    try {
-      if (!clientScrape.fullHtml) return 'could not fetch page';
-      const a = graafAnalyzeHtml(clientScrape.fullHtml, myUrl);
-      const s = computeScore(myUrl, a, []);
-      return `${s.score}/100 (GRAAF:${s.metrics&&s.metrics.graaf} CRAFT:${s.metrics&&s.metrics.craft} Technical:${s.metrics&&s.metrics.technical})`;
-    } catch(e) { return 'scoring error: ' + e.message; }
-  })()}
-` : 'No client URL provided.';
+  const clientAIStr = clientAICitation ? `Client AI Citation Score: ${clientAICitation.score}/100 (${clientAICitation.eligibility} eligibility)\nClient gaps for AI Overview: ${clientAICitation.gaps.slice(0, 3).map(g => g.signal).join(', ')}` : '';
 
-  const analysisPrompt = `You are an elite SEO competitive intelligence analyst using the proven 4-Step SERP Analysis Method. You have been given LIVE data — real scraped body text and GRAAF scores — for the top 5 competitors and the client page.
+  const prompt = `You are a senior SEO competitive analyst. You have LIVE scraped data and GRAAF scores for the top 5 competitors.
 
 KEYWORD: "${keyword}"
-${clientSummary}
+${myDomain ? `CLIENT: ${myDomain} | ${myUrl}
+Client body text (first 1500 chars): """
+${(clientScrape.text || '').substring(0, 1500)}
+"""
+${clientAIStr}` : 'No client URL provided.'}
 
-LIVE COMPETITOR DATA (scraped from actual pages, scored with GRAAF rubric):
-${competitorSummary}
+LIVE COMPETITOR DATA (scraped now, scored with GRAAF rubric):
+${compSummary}
 
-ENTITY GAP MAP (topics in 2+ competitor pages, ABSENT from client page):
-${entityGaps.map(e => `- "${e.entity}" (found in ${e.in_competitor_pages} competitor pages)`).join('\n') || 'No significant gaps detected'}
+TF-IDF ENTITY GAPS (statistically significant terms in 2+ competitor pages, missing from client):
+${entityGaps.map(e => `"${e.entity}" (in ${e.in_competitor_pages} competitor pages)`).join(', ') || 'none detected'}
 
-CLIENT ENTITY COVERAGE:
-${clientEntityList.join(', ') || 'none'}
+EXECUTE THE 4-STEP SERP METHOD. Be specific to this live data — no generic advice.
 
-YOUR TASK — EXECUTE THE 4-STEP METHOD using this live data:
-
-STEP 1: CATALOG — Based on the live data, describe each competitor: content type, format, what SERP features they likely hold, schema, freshness signal.
-
-STEP 2: PATTERN — What do the top 3 share (by GRAAF scores + content signals) that positions 4-5 don't? What is the one repeating pattern that predicts ranking for this keyword?
-
-STEP 3: OUTLIER — Which competitor breaks the pattern and why does Google keep it there? Is that a warning or opportunity?
-
-STEP 4: MISSING — Based on the entity gap map and your analysis, what specific topics/formats/angles does NOBODY cover well? Each gap = warning or opportunity.
-
-IMPORTANT: Be SPECIFIC to this keyword and this live data. Do not give generic SEO advice. Reference actual GRAAF scores, actual entity gaps, actual content signals you can see in the data above.
-
-Return ONLY valid JSON — no markdown, no backticks, no explanation:
+Return ONLY valid JSON:
 {
   "keyword": "${keyword}",
   "search_intent": "informational|commercial|transactional|navigational",
-  "intent_explanation": "specific reason based on the SERP you see",
+  "intent_explanation": "specific reason",
   "ai_overview_present": true,
   "ai_overview_source_domain": "domain or null",
-  "ai_overview_why": "exact signals: direct answer placement, schema, authority — be specific",
-  "ai_overview_blueprint": "exact steps to make the client page AI Overview eligible",
+  "ai_overview_why": "exact signals present in the source page",
+  "ai_overview_blueprint": "step-by-step to make client page AI Overview eligible",
   "step2_pattern": {
-    "top3_shared_traits": ["specific trait with GRAAF evidence", "etc"],
-    "bottom2_missing_traits": ["what rank 4-5 lack vs top 3"],
+    "top3_shared_traits": ["specific trait with GRAAF evidence"],
+    "bottom2_missing_traits": ["what rank 4-5 lack"],
     "dominant_content_format": "listicle|guide|landing-page|etc",
     "dominant_schema": "FAQPage|HowTo|Article|none",
-    "dominant_word_count_range": "e.g. 2000-3000",
-    "freshness_pattern": "all updated recently|mixed|not a factor",
-    "the_ranking_formula": "ONE sentence: what predicts rank 1 vs rank 5 for this keyword"
+    "dominant_word_count_range": "e.g. 2000-2800",
+    "the_ranking_formula": "ONE sentence: what predicts rank 1 vs rank 5"
   },
   "step3_outlier": {
-    "domain": "which domain",
-    "rank": 4,
-    "why_it_breaks_pattern": "specific reason",
-    "why_it_ranks_anyway": "specific reason",
+    "domain": "domain", "rank": 4,
+    "why_breaks_pattern": "specific",
+    "why_ranks_anyway": "specific",
     "signal_type": "warning|opportunity",
-    "what_to_learn": "specific actionable insight"
+    "what_to_learn": "actionable insight"
   },
   "step4_missing": [
-    {
-      "gap": "specific missing topic/format from entity gap map or your analysis",
-      "gap_type": "warning|opportunity",
-      "why": "specific reason why none of the top 5 cover this",
-      "how_to_exploit": "exact content move to take first-mover advantage"
-    }
-  ],
-  "graaf_leaderboard": [
-    { "rank": 1, "domain": "domain.com", "graaf_total": 78, "top_strength": "what makes them best", "biggest_weakness": "what they do worst" }
+    { "gap": "specific topic/format", "gap_type": "warning|opportunity", "why": "reason", "how_to_exploit": "exact move" }
   ],
   "entity_gaps_priority": [
-    { "entity": "word or phrase", "priority": "high|medium|low", "why_matters": "why this entity improves ranking", "where_to_add": "H2 heading|intro paragraph|FAQ|etc" }
+    { "entity": "term", "priority": "high|medium|low", "why_matters": "ranking reason", "where_to_add": "H2|intro|FAQ|conclusion" }
   ],
-  "client_vs_best": "${myUrl ? 'honest gap analysis: what does rank 1 have that the client page is missing? Be specific from the live body text.' : 'no client URL'}",
+  "client_vs_best": "${myUrl ? 'specific diff: what does rank 1 have that client is missing from actual body text' : 'no client URL'}",
   "content_brief": {
-    "recommended_format": "listicle|guide|how-to|comparison|etc",
+    "recommended_format": "format",
     "recommended_word_count": 2200,
-    "recommended_schema": ["FAQPage", "HowTo"],
-    "must_have_sections": ["section heading 1", "section heading 2", "etc — 5-8 must-have H2s"],
-    "must_cover_entities": ["entity 1", "entity 2", "etc — from the gap map"],
-    "opening_paragraph_formula": "exact formula for the opening paragraph to beat rank 1",
-    "faq_questions": ["question 1", "question 2", "question 3", "question 4", "question 5"]
+    "recommended_schema": ["FAQPage"],
+    "must_have_h2s": ["H2 heading 1", "H2 heading 2", "H2 heading 3", "H2 heading 4", "H2 heading 5"],
+    "must_cover_entities": ["entity from gap map 1", "entity 2", "entity 3"],
+    "opening_paragraph_formula": "exact structure for the first paragraph",
+    "faq_questions": ["Q1", "Q2", "Q3", "Q4", "Q5"]
   },
-  "paa_questions": ["People Also Ask question 1", "etc — 5 real ones"],
-  "voice_search_angle": "exact format and phrasing for voice search eligibility",
+  "paa_questions": ["PAA question 1", "PAA question 2", "PAA question 3", "PAA question 4", "PAA question 5"],
+  "voice_search_angle": "exact format for voice eligibility",
   "action_plan": [
-    {
-      "step": 1,
-      "priority": "high|medium|low",
-      "category": "rank_fast|ai_overview|entity_gap|schema|content_depth|paa|voice|technical",
-      "action": "specific, actionable — references actual data from SERP",
-      "reason": "which step/signal from the analysis this addresses",
-      "effort": "low|medium|high",
-      "time_to_impact": "days|weeks|months"
-    }
+    { "step": 1, "priority": "high|medium|low", "category": "rank_fast|ai_overview|entity_gap|schema|content_depth|paa|technical", "action": "specific action", "reason": "which signal this fixes", "effort": "low|medium|high", "time_to_impact": "days|weeks|months" }
   ],
-  "quick_wins": [
-    { "win": "do this today", "reason": "why it moves needle immediately", "effort_minutes": 30 }
-  ],
-  "estimated_time_to_rank": "honest estimate with reason",
-  "confidence": "high|medium|low",
-  "confidence_reason": "why"
+  "quick_wins": [{ "win": "specific action", "reason": "why it moves needle", "effort_minutes": 20 }],
+  "estimated_time_to_rank": "honest estimate",
+  "confidence": "high|medium|low"
 }`;
 
   try {
@@ -26201,50 +26430,49 @@ Return ONLY valid JSON — no markdown, no backticks, no explanation:
     const r2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
-        messages: [{ role: 'user', content: analysisPrompt }]
-      }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
       signal: ctrl2.signal
     });
     const d2 = await r2.json().catch(() => ({}));
     if (!r2.ok) throw new Error((d2.error && d2.error.message) || 'Claude ' + r2.status);
-
     const rawText = (d2.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     let spy = null;
-    try {
-      const match = rawText.match(/\{[\s\S]*\}/);
-      if (match) spy = JSON.parse(match[0]);
-    } catch(e) { /* return raw */ }
+    try { const m2 = rawText.match(/\{[\s\S]*\}/); if (m2) spy = JSON.parse(m2[0]); } catch(e) {}
 
-    // Attach live GRAAF data to the result
+    // Attach live data
     if (spy) {
-      spy._live_graaf = graafResults.map(c => ({ rank: c.rank, domain: c.domain, url: c.url, wordCount: c.wordCount, graaf: c.graaf, scraped: c.scraped }));
+      spy._live_graaf = graafResults.map(c => ({ rank: c.rank, domain: c.domain, url: c.url, wordCount: c.wordCount, schemaTypes: c.schemaTypes, graaf: c.graaf, scraped: c.scraped }));
       spy._entity_gaps = entityGaps;
-      spy._client_entities = clientEntityList;
+      spy._client_entities = [...clientEntityTerms].slice(0, 30);
+      spy._client_ai_citation = clientAICitation;
       spy._serp_urls = serpUrls;
+      spy.keyword = keyword;
     }
 
-    // ── STEP F: Persist to tracker_pages ─────────────────────────────────────
-    if (page_id && spy) {
-      try {
-        await pool.query(
-          `UPDATE tracker_pages SET serp_spy=$1, serp_spy_at=NOW() WHERE id=$2`,
-          [JSON.stringify(spy), page_id]
-        );
-      } catch(e) { console.warn('[serp-spy] persist failed:', e.message); }
+    // STEP F: Persist + back-inject into any pending rewrite for this URL
+    if (spy) {
+      if (page_id) {
+        try { await pool.query(`UPDATE tracker_pages SET serp_spy=$1, serp_spy_at=NOW() WHERE id=$2`, [JSON.stringify(spy), page_id]); } catch(e) {}
+      }
+      if (myUrl && profile_id) {
+        try {
+          await pool.query(
+            `UPDATE content_rewrites SET analysis_data = analysis_data || $1::jsonb WHERE profile_id=$2 AND original_url ILIKE $3 AND status='analysed'`,
+            [JSON.stringify({ intelligence_context: { spy_keyword: keyword, entity_gaps: entityGaps.slice(0, 10), ranking_formula: spy.step2_pattern && spy.step2_pattern.the_ranking_formula, content_brief: spy.content_brief, ai_citation: clientAICitation } }), profile_id, '%' + myUrl.replace(/^https?:\/\/(www\.)?/, '') + '%']
+          );
+        } catch(e) {}
+      }
     }
 
-    console.log(`[serp-spy] Done. GRAAF-scored ${graafResults.filter(r => r.scraped).length}/5 competitors.`);
-    res.json({ success: true, spy, competitors_scraped: graafResults.filter(r => r.scraped).length });
+    console.log(`[serp-spy] Done. GRAAF-scored ${graafResults.filter(r => r.scraped).length}/5. Entity gaps: ${entityGaps.length}`);
+    res.json({ success: true, spy, competitors_scraped: graafResults.filter(r => r.scraped).length, entity_gaps_found: entityGaps.length });
   } catch(e) {
-    console.error('[serp-spy] analysis failed:', e.message);
+    console.error('[serp-spy]', e.message);
     res.status(502).json({ success: false, error: e.message });
   }
 });
 
-// DB: ensure serp_spy columns exist
+// DB migrations
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(() => {});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(() => {});
 
