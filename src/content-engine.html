@@ -370,6 +370,12 @@ var _context     = {
   profileId: null, currentRewriteId: null,
   mode: null // 'new' | 'rewrite' | 'audit'
 };
+
+// ── Safe profile ID getter — always returns the active profile ID or null ──
+function getActiveProfileId() {
+  return _context.profileId || (_profile && _profile.id) || null;
+}
+
 var _history     = []; // conversation for Claude
 var _busy        = false;
 
@@ -1393,7 +1399,7 @@ async function cmdRewrite(rewriteId, fixes) {
   try {
     var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', {
       fixes: fixes ? fixes.split(',') : [],
-      profile_id: _context.profileId
+      profile_id: _context.profileId || (_profile && _profile.id) || null
     });
 
     setProgress(prog, 80);
@@ -1438,7 +1444,7 @@ async function runDirectSurgicalFixes() {
     setProgress(prog, 40);
     var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', {
       fixes: fixes,
-      profile_id: _context.profileId
+      profile_id: _context.profileId || (_profile && _profile.id) || null
     });
     setProgress(prog, 80);
     if (!d || !d.success) throw new Error(d?.error || 'Surgical fix failed');
@@ -1469,7 +1475,7 @@ async function runSurgicalFromModal(keyword, url, html) {
   try {
     // Step 1: Scan
     setProgress(prog, 30);
-    var scan = await api('/api/scan/paste', 'POST', { html: html, url: url || 'https://example.com', keyword: keyword, profile_id: _context.profileId });
+    var scan = await api('/api/scan/paste', 'POST', { html: html, url: url || 'https://example.com', keyword: keyword, profile_id: _context.profileId || (_profile && _profile.id) || null });
     if (!scan || !scan.success) throw new Error(scan?.error || 'Scan failed');
     _context.score = scan.score;
     _context.recs = parseRecs(scan.recommendations);
@@ -1482,7 +1488,7 @@ async function runSurgicalFromModal(keyword, url, html) {
     var slug = '';
     try { slug = new URL(url || 'https://example.com').pathname.split('/').filter(Boolean).pop() || '/'; } catch(e) { slug = '/'; }
     var analyse = await api('/api/content/analyse-rewrite', 'POST', {
-      profile_id: _context.profileId, original_url: url || '', original_slug: slug,
+      profile_id: _context.profileId || (_profile && _profile.id) || null, original_url: url || '', original_slug: slug,
       original_title: scan.meta_title || '', original_html: html, gsc_keyword: keyword,
       rewrite_modes: ['surgical']
     });
@@ -1493,7 +1499,7 @@ async function runSurgicalFromModal(keyword, url, html) {
     // Step 3: Targeted fix (surgical)
     setProgress(prog, 75);
     var fixes = ['direct_answer','title_meta','cta_strengthen','schema_add','paa_improve','voice_optimize'];
-    var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', { fixes: fixes, profile_id: _context.profileId });
+    var d = await api('/api/content/targeted-fix/' + rewriteId, 'POST', { fixes: fixes, profile_id: _context.profileId || (_profile && _profile.id) || null });
     if (!d || !d.success) throw new Error(d?.error || 'Surgical fix failed');
 
     setProgress(prog, 100);
@@ -2249,7 +2255,7 @@ async function cmdAnalyse(url, keyword) {
     setProgress(prog, 30);
     var body = {
       url: url, keyword: keyword || '',
-      profile_id: _context.profileId,
+      profile_id: _context.profileId || (_profile && _profile.id) || null,
       gsc_impressions: _context.impressions,
       gsc_clicks: _context.clicks,
       gsc_position: _context.position,
@@ -2946,6 +2952,7 @@ async function submitTrackerAdd() {
   try {
     var d = await api('/api/tracker/pages', 'POST', {
       url: url,
+      profile_id: _context.profileId || (_profile && _profile.id) || null,
       keyword: document.getElementById('trAddKeyword').value.trim() || null,
       title: document.getElementById('trAddTitle').value.trim() || null,
       check_frequency: document.getElementById('trAddFreq').value
@@ -3611,6 +3618,13 @@ function useProfileFromList(profileId) {
       if (sel) sel.value = String(p.id);
       // Re-render profile selector if needed
       updateContext();
+      // Reset GSC zone and reload data for new profile
+      _gscPages = []; _gscQueries = [];
+      var _gz = document.getElementById('gscUploadZone'), _gs = document.getElementById('gscStatus');
+      if (_gz) _gz.style.display = 'block';
+      if (_gs) _gs.style.display = 'none';
+      loadPagesOverview();
+      loadTrackerPages();
     }
   }
   switchView('agent');
@@ -4050,9 +4064,11 @@ function uploadGscFiles(pagesFile, queriesFile) {
 function uploadGscFile(file, type) {
   return new Promise(function(resolve, reject) {
     var token = document.getElementById('engineToken').value.trim() || localStorage.getItem('nexus_engine_token') || '';
+    var profileId = _context.profileId || (_profile && _profile.id) || null;
+    if (!profileId) { reject(new Error('No profile selected — choose a profile first')); return; }
     var formData = new FormData();
     formData.append('file', file);
-    formData.append('profile_id', _context.profileId);
+    formData.append('profile_id', profileId);
     formData.append('type', type);
     fetch('/api/gsc/upload-csv', { method: 'POST', headers: { 'x-engine-token': token }, body: formData })
       .then(function(r) { return r.json(); })
@@ -4063,7 +4079,10 @@ function uploadGscFile(file, type) {
 
 // ── GSC Preview: show unimported URLs with checkboxes ─────────
 function showGscPreview() {
-  if (!_context.profileId) { toast('Select a profile first', 'err'); return; }
+  var _previewPid = _context.profileId || (_profile && _profile.id) || null;
+  if (!_previewPid) { toast('Select a profile first', 'err'); return; }
+  // Sync context so downstream calls also have it
+  if (!_context.profileId && _previewPid) _context.profileId = _previewPid;
   var modal = document.getElementById('pagesImportModal');
   if (modal) modal.style.display = 'none';
   var previewModal = document.getElementById('gscPreviewModal');
@@ -4073,7 +4092,7 @@ function showGscPreview() {
   previewModal.style.display = 'flex';
   _gscPreviewUrls = []; // global for confirm
 
-  api('/api/gsc/preview?profile_id=' + _context.profileId).then(function(d) {
+  api('/api/gsc/preview?profile_id=' + _previewPid).then(function(d) {
     if (!d.success) { list.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(d.error) + '</div>'; return; }
     if (!d.urls || !d.urls.length) {
       list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">No GSC data found for this profile.<br><br>Upload a GSC Pages CSV first.</div>';
@@ -4143,7 +4162,9 @@ function confirmGscImport() {
   if (!selected.length) { toast('Select at least one URL', 'warn'); return; }
   var btn = document.getElementById('gscConfirmBtn');
   btn.disabled = true; btn.textContent = 'Importing ' + selected.length + '…';
-  api('/api/gsc/confirm-import', 'POST', { profile_id: _context.profileId, urls: selected })
+  var _pid = _context.profileId || (_profile && _profile.id) || null;
+  if (!_pid) { toast('No profile selected — choose a profile first', 3000, 'warn'); return; }
+  api('/api/gsc/confirm-import', 'POST', { profile_id: _pid, urls: selected })
     .then(function(d) {
       if (d.success) {
         var msg = '✅ Imported ' + d.imported + ' pages';
@@ -4609,7 +4630,7 @@ async function clearAllPages() {
   var btn = document.getElementById('pagesClearBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
   try {
-    var d = await api('/api/tracker/pages', 'DELETE', { profile_id: _context.profileId, confirm: 'DELETE_ALL' });
+    var d = await api('/api/tracker/pages', 'DELETE', { profile_id: _context.profileId || (_profile && _profile.id) || null, confirm: 'DELETE_ALL' });
     if (d.success) {
       toast('✅ Deleted ' + (d.deleted || 0) + ' pages', 'ok');
       _pagesOverviewData = [];
@@ -4798,6 +4819,7 @@ function pushPageToTracker(url) {
   if (page.tracker_id) { toast('Already in Tracker', 2000, 'ok'); return; }
   api('/api/tracker/pages', 'POST', {
     url: page.url,
+    profile_id: _context.profileId || (_profile && _profile.id) || null,
     keyword: page.keyword || null,
     gsc_position: page.position || null,
     gsc_impressions: page.impressions || null,
@@ -4903,7 +4925,7 @@ async function deletePageByUrl(url) {
   if (!confirm('🗑 Delete "' + (page.slug || page.url) + '"' + (page.keyword ? ' (' + page.keyword + ')' : '') + '?\n\nThis removes it from Pages. The data in Tracker is not affected.')) return;
   // Find all tracker entries for this URL and delete the duplicate (no GSC data, no keyword)
   try {
-    var d = await api('/api/tracker/pages?profile_id=' + (_context.profileId || ''));
+    var d = await api('/api/tracker/pages?profile_id=' + (_context.profileId || (_profile && _profile.id) || ''));
     var allPages = d.pages || [];
     var dups = allPages.filter(function(tp) { return tp.url === url; });
     if (dups.length > 1) {
@@ -5048,7 +5070,7 @@ async function confirmMerge() {
   if (btn) { btn.disabled = true; btn.textContent = 'Merging…'; }
   try {
     // Fetch all tracker pages for this profile to find the real DB IDs
-    var d = await api('/api/tracker/pages?profile_id=' + (_context.profileId || ''));
+    var d = await api('/api/tracker/pages?profile_id=' + (_context.profileId || (_profile && _profile.id) || ''));
     var allPages = d.pages || [];
     var merged = 0, deleted = 0;
     for (var gi = 0; gi < _mergePairs.length; gi++) {
