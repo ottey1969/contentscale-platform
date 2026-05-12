@@ -1467,6 +1467,7 @@ async function runDirectSurgicalFixes() {
 
 // Surgical from modal: analyse first, then targeted-fix (has keyword/url/html from form)
 async function runSurgicalFromModal(keyword, url, html) {
+  if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
   if (!_context.profileId) {
     addAgentMessage('❌ <b>Profile Required</b> — Select a profile first.');
     return;
@@ -2947,20 +2948,30 @@ function closeAddTrackerModal() { document.getElementById('addTrackerModal').sty
 async function submitTrackerAdd() {
   var url = document.getElementById('trAddUrl').value.trim();
   if (!url) { toast('URL is required', 'err'); return; }
+  var profileId = _context.profileId || (_profile && _profile.id) || null;
+  if (!profileId) {
+    toast('⚠ Select a profile first — choose Perfect Roofing Team from the dropdown', 4000, 'warn');
+    var sel = document.getElementById('profileSelect');
+    if (sel) { sel.focus(); sel.style.borderColor = '#f59e0b'; setTimeout(function(){ sel.style.borderColor = ''; }, 2500); }
+    return;
+  }
   var btn = document.getElementById('trAddBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
     var d = await api('/api/tracker/pages', 'POST', {
       url: url,
-      profile_id: _context.profileId || (_profile && _profile.id) || null,
+      profile_id: profileId,
       keyword: document.getElementById('trAddKeyword').value.trim() || null,
       title: document.getElementById('trAddTitle').value.trim() || null,
       check_frequency: document.getElementById('trAddFreq').value
     });
     if (!d.success) throw new Error(d.error || 'Failed');
     closeAddTrackerModal();
-    toast('✅ Added — running first check…', 'ok');
+    toast('✅ URL added — running first check…', 3000, 'ok');
+    // Run first check then reload tracker
     await api('/api/tracker/pages/' + d.page.id + '/check', 'POST').catch(function(){});
+    // Switch to tracker view so user sees the result
+    switchView('tracker');
     await loadTrackerPages();
   } catch(e) { toast('Error: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = 'Add & Start Tracking'; }
@@ -3862,14 +3873,31 @@ async function saveProfile() {
     await reloadAllProfiles();
     loadProfilesList();
 
+    // Always ensure profileSection is visible after any profile save
+    document.getElementById('profileSection').style.display = 'block';
+    document.getElementById('aiKeysSection').style.display = 'block';
+
     // If new profile, switch to it automatically
     if (!_editingProfileId && d.profile) {
       _profile = d.profile;
       _context.profileId = d.profile.id;
       var sel = document.getElementById('profileSelect');
-      if (sel) sel.value = String(d.profile.id);
-      updateContext();
-      toast('Switched to ' + d.profile.name, 'ok');
+      if (sel) { sel.value = String(d.profile.id); }
+      // Fire onProfileSwitch to handle GSC reset + pages load + agent greet
+      onProfileSwitch();
+      toast('✓ Profile "' + d.profile.name + '" created and selected', 3000, 'ok');
+    } else if (_editingProfileId && d.profile) {
+      // Update the in-memory profile if it is the active one
+      _allProfiles = _allProfiles.map(function(p) {
+        return String(p.id) === String(_editingProfileId) ? Object.assign({}, p, d.profile) : p;
+      });
+      if (_profile && String(_profile.id) === String(_editingProfileId)) {
+        _profile = Object.assign({}, _profile, d.profile);
+        _context.profileId = _profile.id;
+        updateContext();
+        loadPagesOverview();
+        loadTrackerPages();
+      }
     }
   } catch(e) {
     toast('Error: ' + e.message, 'err');
@@ -3905,6 +3933,13 @@ async function reloadAllProfiles() {
     var d = await api('/api/content/profiles');
     _allProfiles = d.profiles || [];
     renderProfileSelector(_allProfiles);
+    // Show the profile section whenever we have at least one profile
+    if (_allProfiles.length) {
+      var ps = document.getElementById('profileSection');
+      var ks = document.getElementById('aiKeysSection');
+      if (ps) ps.style.display = 'block';
+      if (ks) ks.style.display = 'block';
+    }
   } catch(e) {}
 }
 
@@ -3998,7 +4033,8 @@ function handlePagesGscFile(input) {
 
 // Process both Pages + Queries CSV — upload to server, then show preview
 function processPagesGscFiles(files) {
-  if (!_context.profileId) { toast('Select a profile first', 'err'); return; }
+  if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
+  if (!_context.profileId) { toast('Select a profile first — choose Perfect Roofing Team from the dropdown', 'warn'); return; }
   var statusEl = document.getElementById('pagesImportStatus');
   if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '⏳ Uploading CSV to server…'; statusEl.style.color = '#fbbf24'; }
 
@@ -4171,10 +4207,15 @@ function confirmGscImport() {
         if (d.updated) msg += ', updated ' + d.updated;
         if (d.synced) msg += ', synced ' + d.synced;
         if (d.skipped) msg += ' (' + d.skipped + ' skipped)';
-        toast(msg, 'ok');
+        toast(msg, 3000, 'ok');
         closeGscPreview();
+        // Close import modal too
+        var importModal = document.getElementById('pagesImportModal');
+        if (importModal) importModal.style.display = 'none';
+        // Switch to Pages view so user sees the imported data
+        switchView('pages');
         loadPagesOverview(true);
-        loadTrackerPages(); // Also refresh tracker view with new GSC data
+        loadTrackerPages();
       } else {
         toast('Error: ' + (d.error || 'Import failed'), 'err');
       }
@@ -4198,6 +4239,7 @@ function closePipelineModal() {
   document.getElementById('pipelineModal').style.display = 'none';
 }
 function runPipelineFromModal() {
+  if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
   if (!_context.profileId) {
     addAgentMessage('❌ <b>Profile Required</b> — Select a profile in the sidebar first before running the Content Pipeline.');
     return;
@@ -4332,7 +4374,10 @@ function openRewriteModalWithMode(preselectMode) {
   var profileBanner = document.getElementById('rewriteProfileBanner');
   var runBtn = document.getElementById('rewriteRunBtn');
   if (profileBanner && runBtn) {
-    if (!_context.profileId) {
+    var _activeProfileId = _context.profileId || (_profile && _profile.id) || null;
+    // Sync to context so runRewriteFromModal also sees it
+    if (_activeProfileId && !_context.profileId) _context.profileId = _activeProfileId;
+    if (!_activeProfileId) {
       profileBanner.style.display = 'block';
       runBtn.disabled = true;
       runBtn.style.opacity = '0.5';
@@ -4360,6 +4405,7 @@ function closeRewriteModal() {
 }
 async function runRewriteFromModal() {
   // GUARD: profile must be selected BEFORE any work starts
+  if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
   if (!_context.profileId) {
     addAgentMessage('❌ <b>Profile Required</b> — Select a profile in the sidebar first (Engine Code → Pick Profile). The rewrite needs your business info, niche, target audience, and USPs to write accurate content.');
     return;
@@ -4624,6 +4670,7 @@ async function loadPagesOverview(forceRefresh) {
 
 // ── Reset: delete all pages for the current profile ───────────
 async function clearAllPages() {
+  if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
   if (!_context.profileId) { toast('Select a profile first', 'err'); return; }
   var profileName = (_profile && _profile.name) || 'this profile';
   if (!confirm('🗑️ RESET ALL PAGES for "' + profileName + '"?\n\nThis will delete ALL ' + (_filteredPageCount || 0) + ' pages from the Pages tab.\nThis cannot be undone.\n\nClick OK to confirm.')) return;
