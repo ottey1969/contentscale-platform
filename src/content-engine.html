@@ -263,10 +263,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="sidebar-section">
       <div class="sidebar-label">Data Sources (optional)</div>
       <!-- GSC Upload -->
-      <div id="gscUploadZone" class="drop-zone" style="margin-bottom:8px;">
+      <!-- GSC Pages CSV -->
+      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">PAGES CSV (from GSC → Pages tab)</div>
+      <div id="gscUploadZone" class="drop-zone" style="margin-bottom:6px;">
         <input type="file" accept=".csv" multiple onchange="handleGscUpload(this)">
-        <div class="drop-zone-icon">📊</div>
-        <div class="drop-zone-text">GSC Pages + Queries CSV</div>
+        <div class="drop-zone-icon" style="font-size:16px;">📄</div>
+        <div class="drop-zone-text" style="font-size:10px;">Drop Pages CSV here</div>
+      </div>
+      <!-- GSC Queries CSV — separate Google export -->
+      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">QUERIES CSV (from GSC → Queries tab)</div>
+      <div id="gscQueriesUploadZone" class="drop-zone" style="margin-bottom:8px;">
+        <input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)">
+        <div class="drop-zone-icon" style="font-size:16px;">🔍</div>
+        <div class="drop-zone-text" style="font-size:10px;">Drop Queries CSV here</div>
       </div>
       <div id="gscStatus" style="display:none;font-size:10px;color:#34d399;margin-bottom:10px;"></div>
       <!-- Sitemap: URL input + file upload -->
@@ -565,6 +574,37 @@ function handleGscUpload(input) {
   });
 }
 
+// Dedicated handler for Queries CSV — separate Google export
+function handleGscQueriesUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseCSV(e.target.result);
+    if (!rows.length) { toast('Empty CSV — check the file', 'warn'); return; }
+    var headers = Object.keys(rows[0]).map(function(h){ return h.toLowerCase(); });
+    var isQueries = headers.some(function(h){ return /query|queries|keyword|search/i.test(h); });
+    if (!isQueries) {
+      // Try treating first column as query anyway (some GSC exports label it differently)
+      isQueries = true;
+    }
+    _gscQueries = rows.map(function(r) {
+      var keys = Object.keys(r);
+      var qKey = keys.find(function(k){ return /query|keyword|search/i.test(k); }) || keys[0];
+      return {
+        query:       r[qKey] || '',
+        clicks:      parseInt(r[keys.find(function(k){ return /click/i.test(k); })] || 0),
+        impressions: parseInt(r[keys.find(function(k){ return /impr/i.test(k); })] || 0),
+        ctr:         parseFloat((r[keys.find(function(k){ return /ctr/i.test(k); })] || '0').replace('%','')),
+        position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0)
+      };
+    }).filter(function(r){ return r.query && r.query.trim(); });
+    toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 2500, 'ok');
+    updateGscStatus();
+  };
+  reader.readAsText(file);
+}
+
 // Sync loaded GSC pages into Pages Overview grid
 function syncGscToPagesOverview() {
   if (!_gscPages.length) return;
@@ -575,11 +615,14 @@ function syncGscToPagesOverview() {
 
   _gscPages.forEach(function(g) {
     if (!g.url) return;
-    // Only sync pages matching current profile domain
+    // Only filter by domain if profile has one set — otherwise show all GSC pages
     if (profileDomain) {
       try {
-        if (normalizeDomain(new URL(g.url).hostname) !== normalizeDomain(profileDomain)) return;
-      } catch(e) { return; }
+        var gscDomain = normalizeDomain(new URL(g.url.startsWith('http') ? g.url : 'https://' + g.url).hostname);
+        var profDomain = normalizeDomain(profileDomain);
+        // Allow www. variant and subdomain flexibility
+        if (gscDomain !== profDomain && !gscDomain.endsWith('.' + profDomain) && !profDomain.endsWith('.' + gscDomain)) return;
+      } catch(e) { /* malformed URL — include it anyway */ }
     }
     var idx = existingUrls.indexOf(g.url);
     if (idx >= 0) {
@@ -877,16 +920,22 @@ function parseCSV(text) {
 
 function updateGscStatus() {
   var zone = document.getElementById('gscUploadZone');
+  var qZone = document.getElementById('gscQueriesUploadZone');
   var status = document.getElementById('gscStatus');
+  // Show/hide each upload zone based on what's loaded
+  if (zone) zone.style.display = _gscPages.length ? 'none' : 'block';
+  if (qZone) qZone.style.display = _gscQueries.length ? 'none' : 'block';
   if (_gscPages.length || _gscQueries.length) {
-    zone.style.display = 'none';
     status.style.display = 'block';
     // Find top opportunity
     var topOpp = _gscPages.filter(function(p){ return p.position >= 4 && p.position <= 20; })
       .sort(function(a,b){ return b.impressions - a.impressions; })[0];
+    var queriesNote = _gscQueries.length
+      ? _gscQueries.length + ' queries'
+      : '<span style="color:#f59e0b;">⚠ No queries — drop Queries CSV above</span>';
     status.innerHTML = '✓ GSC loaded<br>' +
-      (_gscPages.length ? _gscPages.length + ' pages · ' : '') +
-      (_gscQueries.length ? _gscQueries.length + ' queries' : '') +
+      (_gscPages.length ? '<b>' + _gscPages.length + '</b> pages · ' : '') +
+      queriesNote +
       (topOpp ? '<div class="ctx-opportunity" style="margin-top:8px;"><div class="ctx-opp-title">Top Opportunity</div><div class="ctx-opp-url">'+topOpp.url.replace(/^https?:\/\//,'').substring(0,40)+'</div><div class="ctx-opp-stats">Pos ' + Number(topOpp.position).toFixed(1) + ' · ' + topOpp.impressions.toLocaleString() + ' impr · CTR ' + Number(topOpp.ctr).toFixed(1) + '%</div></div>' : '');
   }
 }
@@ -2764,7 +2813,9 @@ function switchView(view) {
     document.getElementById('view-stats').style.display = 'block';
   } else if (view === 'pages') {
     if (viewPages) viewPages.style.display = 'block';
-    loadPagesOverview(true); // fetch fresh data from server, then render
+    // Sync GSC sidebar data immediately before server fetch so pages appear instantly
+    if (_gscPages.length) syncGscToPagesOverview();
+    loadPagesOverview(true); // also fetch fresh data from server
   }
   // Update nav button styles
   ['agent','pages','tracker','stats'].forEach(function(v) {
@@ -4664,8 +4715,11 @@ async function loadPagesOverview(forceRefresh) {
       }
     });
   _pagesOverviewData = Object.values(urlMap);
+  // Re-merge in-memory GSC sidebar data — server may have empty tracker_pages
+  // but user already loaded GSC CSV in sidebar. Show it immediately.
+  syncGscToPagesOverview();
   renderPagesOverview();
-  if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages for this profile', 2000, 'ok');
+  if (forceRefresh && _filteredPageCount) toast('✅ ' + _filteredPageCount + ' pages loaded', 2000, 'ok');
 }
 
 // ── Reset: delete all pages for the current profile ───────────
