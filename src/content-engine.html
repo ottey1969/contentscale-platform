@@ -567,8 +567,10 @@ function handleGscUpload(input) {
         toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 'ok');
       }
       updateGscStatus();
-      // Auto-sync GSC pages into Pages Overview
+      // Auto-sync into Pages Overview grid immediately (no import click needed)
       syncGscToPagesOverview();
+      // Auto-save to server silently so Pages tab reads from DB correctly
+      autoSaveGscToServer();
     };
     reader.readAsText(file);
   });
@@ -601,8 +603,70 @@ function handleGscQueriesUpload(input) {
     }).filter(function(r){ return r.query && r.query.trim(); });
     toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 2500, 'ok');
     updateGscStatus();
+    // Auto-save queries to server too
+    autoSaveGscToServer();
   };
   reader.readAsText(file);
+}
+
+// ── Auto-save GSC data to server silently after sidebar CSV drop ────────────
+// This makes Pages tab, Tracker, and all server-side features see the same data
+// as the Agent — no "Import" click required. Runs in background, no modal.
+async function autoSaveGscToServer() {
+  var profileId = _context.profileId || (_profile && _profile.id) || null;
+  if (!profileId) return; // no profile yet — will retry when profile is selected
+  if (!_gscPages.length && !_gscQueries.length) return;
+
+  var token = '';
+  try { token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+  if (!token) return;
+
+  var uploads = [];
+
+  // Upload pages CSV
+  if (_gscPages.length) {
+    var pagesCsv = 'Top pages,Clicks,Impressions,CTR,Position\n' +
+      _gscPages.map(function(r){ return [r.url, r.clicks||0, r.impressions||0, ((r.ctr||0).toFixed ? (r.ctr||0).toFixed(2) : r.ctr||0)+'%', ((r.position||0).toFixed ? (r.position||0).toFixed(1) : r.position||0)].join(','); }).join('\n');
+    var pBlob = new Blob([pagesCsv], { type: 'text/csv' });
+    var pFile = new File([pBlob], 'gsc-pages.csv', { type: 'text/csv' });
+    var pForm = new FormData();
+    pForm.append('file', pFile);
+    pForm.append('profile_id', profileId);
+    pForm.append('type', 'pages');
+    uploads.push(fetch('/api/gsc/upload-csv', { method:'POST', headers:{'x-engine-token': token}, body: pForm }).catch(function(){}));
+  }
+
+  // Upload queries CSV
+  if (_gscQueries.length) {
+    var queriesCsv = 'Top queries,Clicks,Impressions,CTR,Position\n' +
+      _gscQueries.map(function(r){ return [r.query, r.clicks||0, r.impressions||0, ((r.ctr||0).toFixed ? (r.ctr||0).toFixed(2) : r.ctr||0)+'%', ((r.position||0).toFixed ? (r.position||0).toFixed(1) : r.position||0)].join(','); }).join('\n');
+    var qBlob = new Blob([queriesCsv], { type: 'text/csv' });
+    var qFile = new File([qBlob], 'gsc-queries.csv', { type: 'text/csv' });
+    var qForm = new FormData();
+    qForm.append('file', qFile);
+    qForm.append('profile_id', profileId);
+    qForm.append('type', 'queries');
+    uploads.push(fetch('/api/gsc/upload-csv', { method:'POST', headers:{'x-engine-token': token}, body: qForm }).catch(function(){}));
+  }
+
+  try {
+    await Promise.all(uploads);
+    // After upload, auto-confirm import for all URLs (silent — no preview modal)
+    var allUrls = _gscPages.map(function(g){ return g.url; }).filter(Boolean);
+    if (allUrls.length && profileId) {
+      await fetch('/api/gsc/confirm-import', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-engine-token': token },
+        body: JSON.stringify({ profile_id: profileId, urls: allUrls, batch_label: 'auto_sidebar_' + Date.now() })
+      }).catch(function(){});
+    }
+    // Reload Pages tab from server so it reflects the new data
+    if (_pagesOverviewData !== undefined) loadPagesOverview();
+    console.log('[gsc-autosave] ' + _gscPages.length + ' pages + ' + _gscQueries.length + ' queries saved to server for profile ' + profileId);
+  } catch(e) {
+    // Silent fail — user already sees data in memory, server sync is best-effort
+    console.warn('[gsc-autosave] failed silently:', e.message);
+  }
 }
 
 // Sync loaded GSC pages into Pages Overview grid
@@ -981,6 +1045,9 @@ function onProfileSwitch() {
 
   // Show confirmation toast
   toast('✅ Profile selected: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : ''), 2500, 'ok');
+
+  // If GSC was already loaded in sidebar before profile was selected, save it now
+  if (_gscPages.length || _gscQueries.length) autoSaveGscToServer();
 
   // Reload pages for this profile (Pages + Tracker tabs)
   loadPagesOverview();
@@ -4175,31 +4242,49 @@ function showGscPreview() {
   var previewModal = document.getElementById('gscPreviewModal');
   var list = document.getElementById('gscPreviewList');
   var countEl = document.getElementById('gscPreviewCount');
-  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Loading preview…</div>';
   previewModal.style.display = 'flex';
-  _gscPreviewUrls = []; // global for confirm
+  _gscPreviewUrls = [];
 
+  // PRIMARY: use in-memory _gscPages if available (sidebar upload already parsed them)
+  if (_gscPages && _gscPages.length) {
+    var profileDomain = (_profile && _profile.domain) ? normalizeDomain(_profile.domain) : '';
+    var memUrls = _gscPages.filter(function(g) {
+      if (!g.url) return false;
+      if (!profileDomain) return true;
+      try { return normalizeDomain(new URL(g.url.startsWith('http') ? g.url : 'https://' + g.url).hostname) === profileDomain; }
+      catch(e) { return true; }
+    });
+    if (!memUrls.length) memUrls = _gscPages; // domain filter too strict — show all
+    _gscPreviewUrls = memUrls.map(function(g) {
+      return { url: g.url, clicks: g.clicks, impressions: g.impressions, ctr: g.ctr, position: g.position, _selected: true };
+    });
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Loading from memory…</div>';
+    var headerHtml = '<div style="padding:8px 12px;background:rgba(16,185,129,.08);border-bottom:1px solid var(--border);font-size:11px;color:#34d399;">' +
+      '✓ ' + _gscPreviewUrls.length + ' pages from your GSC upload — select which to import</div>';
+    renderGscPreviewList(headerHtml);
+    return;
+  }
+
+  // FALLBACK: fetch from DB (for pages already imported in a previous session)
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Loading from server…</div>';
   api('/api/gsc/preview?profile_id=' + _previewPid).then(function(d) {
     if (!d.success) { list.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(d.error) + '</div>'; return; }
     if (!d.urls || !d.urls.length) {
-      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">No GSC data found for this profile.<br><br>Upload a GSC Pages CSV first.</div>';
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">No GSC data found.<br><br>' +
+        '<b style="color:#f56d00;">Upload your GSC Pages CSV</b> using the drop zone on the left sidebar first.</div>';
       countEl.textContent = '0 selected';
       return;
     }
-    // Show header with counts
     var headerHtml = '';
     if (d.existing_count > 0) {
       headerHtml = '<div style="padding:8px 12px;background:rgba(124,58,237,.1);border-bottom:1px solid var(--border);font-size:11px;color:#a78bfa;">' +
         '✓ ' + d.existing_count + ' already in tracker — re-import to sync profile' +
         (d.new_count > 0 ? ' · ' + d.new_count + ' new' : '') + '</div>';
     }
-    _gscPreviewUrls = d.urls.map(function(u) {
-      u._selected = u._selected !== false; // default select all
-      return u;
-    });
+    _gscPreviewUrls = d.urls.map(function(u) { u._selected = true; return u; });
     renderGscPreviewList(headerHtml);
   }).catch(function(e) {
-    list.innerHTML = '<div style="color:#f87171;padding:20px;">Failed to load preview: ' + escHtml(e.message) + '</div>';
+    list.innerHTML = '<div style="color:#f87171;padding:20px;">Failed: ' + escHtml(e.message) + '</div>';
   });
 }
 
@@ -4251,8 +4336,23 @@ function confirmGscImport() {
   btn.disabled = true; btn.textContent = 'Importing ' + selected.length + '…';
   var _pid = _context.profileId || (_profile && _profile.id) || null;
   if (!_pid) { toast('No profile selected — choose a profile first', 3000, 'warn'); return; }
-  api('/api/gsc/confirm-import', 'POST', { profile_id: _pid, urls: selected })
-    .then(function(d) {
+
+  // If using in-memory data, upload CSV to server first so DB is populated
+  var uploadPromise = (_gscPages && _gscPages.length) ? (function() {
+    var csv = 'Top pages,Clicks,Impressions,CTR,Position\n' +
+      _gscPages.map(function(r){ return [r.url, r.clicks, r.impressions, (r.ctr||0).toFixed(2)+'%', (r.position||0).toFixed(1)].join(','); }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var file = new File([blob], 'gsc-pages.csv', { type: 'text/csv' });
+    var fd = new FormData();
+    fd.append('file', file); fd.append('profile_id', _pid); fd.append('type', 'pages');
+    var tok = (document.getElementById('engineToken')||{}).value || '';
+    try { tok = tok || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+    return fetch('/api/gsc/upload-csv', { method:'POST', headers:{'x-engine-token': tok}, body: fd }).then(function(){ return; }).catch(function(){ return; });
+  })() : Promise.resolve();
+
+  uploadPromise.then(function() {
+    return api('/api/gsc/confirm-import', 'POST', { profile_id: _pid, urls: selected });
+  }).then(function(d) {
       if (d.success) {
         var msg = '✅ Imported ' + d.imported + ' pages';
         if (d.updated) msg += ', updated ' + d.updated;
