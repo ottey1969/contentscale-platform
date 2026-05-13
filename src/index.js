@@ -1308,6 +1308,14 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE content_articles ADD COLUMN IF NOT EXISTS graaf_scan_url TEXT DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_scan_result JSONB DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_scan_url TEXT DEFAULT NULL`).catch(()=>{});
+   // Missing columns used in targeted-fix, execute-rewrite routes
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS rewritten_content TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS rewritten_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS rewrite_cost JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS rewrite_model TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS graaf_recs JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS intelligence_context JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE content_rewrites ADD COLUMN IF NOT EXISTS stats_context TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS credits_used INTEGER DEFAULT 0`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS serpapi_key TEXT DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS you_api_key TEXT DEFAULT NULL`).catch(()=>{});
@@ -15812,7 +15820,7 @@ INSTRUCTIONS:
     // Save
     const appliedFixesStr = validFixes.join(',');
     await pool.query(
-      `UPDATE content_rewrites SET rewritten_content=$1, rewritten_at=NOW(), rewrite_cost=$2, rewrite_model=$3, status='targeted_fix_applied', graaf_recs=$4 WHERE id=$5`,
+      `UPDATE content_rewrites SET rewritten_content=$1, rewritten_html=$1, rewritten_at=NOW(), rewrite_cost=$2, rewrite_model=$3, status='targeted_fix_applied', graaf_recs=$4 WHERE id=$5`,
       [htmlContent, JSON.stringify({ model: modelUsed }), modelUsed, `[Targeted Fixes Applied: ${appliedFixesStr}]`, req.params.rewriteId]
     );
 
