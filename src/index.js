@@ -15059,6 +15059,14 @@ GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in head
 ${gscQueriesRW.join(', ') || '—'}
 ` : '';
 
+// Stats context — from Stats Research tab, if user ran a study before rewriting
+const statsCtxRW = analysis.stats_context ? `
+═══════════════════════════════════════
+STATISTICS TO CITE — USE THESE EXACT NUMBERS WITH ATTRIBUTION:
+${analysis.stats_context}
+Work these statistics naturally into the article. Always include the source name.
+═══════════════════════════════════════` : '';
+
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
     const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
 
@@ -15205,6 +15213,7 @@ DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
 ${gscBlockRW}
+${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 REWRITE STRATEGIE:
@@ -15287,6 +15296,7 @@ Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
+${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -15325,6 +15335,7 @@ BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} |
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
 ${gscBlockRW}
+${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -16719,10 +16730,35 @@ Return ONLY valid JSON:
     let studyData = {};
     try {
       let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleaned = rawText.replace(/```json\s*/i,'').replace(/```\s*$/i,'').trim();
+      // Aggressive JSON extraction — handles markdown fences, leading/trailing text
+      let cleaned = rawText
+        .replace(/```json\s*/gi, '').replace(/```\s*/gi, '')
+        .replace(/^[^{]*/s, '').replace(/[^}]*$/s, '')
+        .trim();
+      // Find outermost { } if still messy
+      const first = cleaned.indexOf('{'), last = cleaned.lastIndexOf('}');
+      if (first !== -1 && last !== -1) cleaned = cleaned.slice(first, last + 1);
       studyData = JSON.parse(cleaned);
     } catch(parseErr) {
-      return res.status(502).json({ success: false, error: 'Gemini returned invalid JSON for study data' });
+      console.warn('[stats-study] JSON parse failed, building minimal fallback from raw text');
+      // Fallback: return whatever key stats we can extract via regex
+      let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const numMatches = [...rawText.matchAll(/(\d+[%$]?(?:\.\d+)?[%$]?)\s+(?:of|percent|million|billion)?\s*([^.\n]{10,80})/gi)];
+      const fallbackStats = numMatches.slice(0, 8).map(m => ({
+        stat: m[1], context: m[2].trim(), source: 'Research compilation', source_url: '', year: new Date().getFullYear(), color: 'purple', category: topic
+      }));
+      studyData = {
+        title: `${topic} Statistics ${new Date().getFullYear()}`,
+        slug: topic.toLowerCase().replace(/[^a-z0-9]+/g,'-'),
+        hero_stat: fallbackStats[0] ? { number: fallbackStats[0].stat, label: fallbackStats[0].context, source: 'Research compilation', source_url: '' } : { number: '—', label: 'Statistics collected from live sources', source: '', source_url: '' },
+        key_stats: fallbackStats,
+        key_findings: [],
+        sources: sources.slice(0,5).map(s => ({ name: s.title, url: s.url, year: new Date().getFullYear() })),
+        methodology: 'Statistics compiled from live web research.'
+      };
+      if (!fallbackStats.length) {
+        return res.status(502).json({ success: false, error: 'Could not extract statistics — try a more specific topic or keyword' });
+      }
     }
 
     // ── 3. WRITE — visually stunning, link-worthy HTML (Claude) ──────────────
