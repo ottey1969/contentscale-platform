@@ -989,6 +989,9 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_graaf_score INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS fetch_reliable BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
@@ -25014,7 +25017,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
 });
 
 app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
-  const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected,
+  const { url, title, keyword, html_content, check_frequency, is_active, is_done, gsc_connected,
           gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
   try {
     // Ownership check for non-admins
@@ -25038,6 +25041,7 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     if(gsc_queries!==undefined){fields.push(`gsc_queries=$${i++}`);vals.push(gsc_queries?JSON.stringify(gsc_queries):null);}
     if(gsc_pages!==undefined){fields.push(`gsc_pages=$${i++}`);vals.push(gsc_pages?JSON.stringify(gsc_pages):null);}
     if(gsc_keyword!==undefined){fields.push(`gsc_keyword=$${i++}`);vals.push(gsc_keyword);}
+    if(is_done!==undefined){fields.push(`is_done=$${i++}`);vals.push(!!is_done);}
     if(!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${i}`, vals);
