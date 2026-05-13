@@ -989,9 +989,6 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_graaf_score INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS fetch_reliable BOOLEAN DEFAULT TRUE`).catch(()=>{});
-   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
-   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
-   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
@@ -15062,14 +15059,6 @@ GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in head
 ${gscQueriesRW.join(', ') || '—'}
 ` : '';
 
-// Stats context — from Stats Research tab, if user ran a study before rewriting
-const statsCtxRW = analysis.stats_context ? `
-═══════════════════════════════════════
-STATISTICS TO CITE — USE THESE EXACT NUMBERS WITH ATTRIBUTION:
-${analysis.stats_context}
-Work these statistics naturally into the article. Always include the source name.
-═══════════════════════════════════════` : '';
-
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
     const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
 
@@ -15216,7 +15205,6 @@ DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
 ${gscBlockRW}
-${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 REWRITE STRATEGIE:
@@ -15299,7 +15287,6 @@ Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
-${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -15338,7 +15325,6 @@ BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} |
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
 ${gscBlockRW}
-${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -16733,35 +16719,10 @@ Return ONLY valid JSON:
     let studyData = {};
     try {
       let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      // Aggressive JSON extraction — handles markdown fences, leading/trailing text
-      let cleaned = rawText
-        .replace(/```json\s*/gi, '').replace(/```\s*/gi, '')
-        .replace(/^[^{]*/s, '').replace(/[^}]*$/s, '')
-        .trim();
-      // Find outermost { } if still messy
-      const first = cleaned.indexOf('{'), last = cleaned.lastIndexOf('}');
-      if (first !== -1 && last !== -1) cleaned = cleaned.slice(first, last + 1);
+      const cleaned = rawText.replace(/```json\s*/i,'').replace(/```\s*$/i,'').trim();
       studyData = JSON.parse(cleaned);
     } catch(parseErr) {
-      console.warn('[stats-study] JSON parse failed, building minimal fallback from raw text');
-      // Fallback: return whatever key stats we can extract via regex
-      let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const numMatches = [...rawText.matchAll(/(\d+[%$]?(?:\.\d+)?[%$]?)\s+(?:of|percent|million|billion)?\s*([^.\n]{10,80})/gi)];
-      const fallbackStats = numMatches.slice(0, 8).map(m => ({
-        stat: m[1], context: m[2].trim(), source: 'Research compilation', source_url: '', year: new Date().getFullYear(), color: 'purple', category: topic
-      }));
-      studyData = {
-        title: `${topic} Statistics ${new Date().getFullYear()}`,
-        slug: topic.toLowerCase().replace(/[^a-z0-9]+/g,'-'),
-        hero_stat: fallbackStats[0] ? { number: fallbackStats[0].stat, label: fallbackStats[0].context, source: 'Research compilation', source_url: '' } : { number: '—', label: 'Statistics collected from live sources', source: '', source_url: '' },
-        key_stats: fallbackStats,
-        key_findings: [],
-        sources: sources.slice(0,5).map(s => ({ name: s.title, url: s.url, year: new Date().getFullYear() })),
-        methodology: 'Statistics compiled from live web research.'
-      };
-      if (!fallbackStats.length) {
-        return res.status(502).json({ success: false, error: 'Could not extract statistics — try a more specific topic or keyword' });
-      }
+      return res.status(502).json({ success: false, error: 'Gemini returned invalid JSON for study data' });
     }
 
     // ── 3. WRITE — visually stunning, link-worthy HTML (Claude) ──────────────
@@ -25017,7 +24978,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
 });
 
 app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
-  const { url, title, keyword, html_content, check_frequency, is_active, is_done, gsc_connected,
+  const { url, title, keyword, html_content, check_frequency, is_active, gsc_connected,
           gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
   try {
     // Ownership check for non-admins
@@ -25041,7 +25002,6 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     if(gsc_queries!==undefined){fields.push(`gsc_queries=$${i++}`);vals.push(gsc_queries?JSON.stringify(gsc_queries):null);}
     if(gsc_pages!==undefined){fields.push(`gsc_pages=$${i++}`);vals.push(gsc_pages?JSON.stringify(gsc_pages):null);}
     if(gsc_keyword!==undefined){fields.push(`gsc_keyword=$${i++}`);vals.push(gsc_keyword);}
-    if(is_done!==undefined){fields.push(`is_done=$${i++}`);vals.push(!!is_done);}
     if(!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -25876,6 +25836,238 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UNIFIED INTELLIGENCE SYSTEM — SERP Spy + Internal Links + AI Citation
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── scrapeBodyText ─────────────────────────────────────────────────────────
+async function scrapeBodyText(url, maxChars) {
+  maxChars = maxChars || 6000;
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(url.startsWith('http') ? url : 'https://' + url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/2.0)', 'Accept': 'text/html' },
+      signal: ctrl.signal
+    });
+    if (!r.ok) return { text: '', status: r.status, error: 'HTTP ' + r.status };
+    const html = await r.text();
+    const stripped = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, '').replace(/<header[\s\S]*?<\/header>/gi, '')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, '').replace(/<aside[\s\S]*?<\/aside>/gi, '')
+      .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    return { text: stripped.slice(0, maxChars), status: r.status, wordCount: stripped.split(/\s+/).length, fullHtml: html };
+  } catch(e) { return { text: '', status: 0, error: e.message }; }
+}
+
+// ── extractSchemaTypes ─────────────────────────────────────────────────────
+function extractSchemaTypes(html) {
+  if (!html) return [];
+  const types = [];
+  const matches = [...(html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi))];
+  matches.forEach(m => {
+    try {
+      const data = JSON.parse(m[1]);
+      const walk = (obj) => {
+        if (!obj) return;
+        if (Array.isArray(obj)) { obj.forEach(walk); return; }
+        if (obj['@type']) { const t = Array.isArray(obj['@type']) ? obj['@type'] : [obj['@type']]; t.forEach(tp => { if (!types.includes(tp)) types.push(tp); }); }
+        if (obj['@graph']) walk(obj['@graph']);
+      };
+      walk(data);
+    } catch(e) {}
+  });
+  return types;
+}
+
+// ── scoreAICitation ────────────────────────────────────────────────────────
+function scoreAICitation(html, bodyText, keyword) {
+  if (!html && !bodyText) return { score: 0, signals: [], gaps: [] };
+  const text = bodyText || html.replace(/<[^>]+>/g, ' ');
+  const kw = (keyword || '').toLowerCase();
+  const signals = [], gaps = [];
+  let score = 0;
+  const first120 = text.split(/\s+/).slice(0, 120).join(' ').toLowerCase();
+  if (kw && first120.includes(kw.split(' ')[0]) && first120.length > 80) { score += 25; signals.push({ signal: 'Direct answer in first 120 words', pts: 25, status: 'pass' }); }
+  else gaps.push({ signal: 'Direct answer in first 120 words', pts: 25, fix: 'Add a direct answer paragraph immediately after the H1 that includes the keyword.' });
+  if (html && /<script[^>]*ld\+json[^>]*>[\s\S]*?FAQPage[\s\S]*?<\/script>/i.test(html)) { score += 15; signals.push({ signal: 'FAQPage schema', pts: 15, status: 'pass' }); }
+  else gaps.push({ signal: 'FAQPage schema', pts: 15, fix: 'Add FAQPage JSON-LD schema with 5+ Q&A pairs.' });
+  if (/tl;dr|key takeaways|quick summary/i.test(text)) { score += 10; signals.push({ signal: 'TL;DR / Key Takeaways', pts: 10, status: 'pass' }); }
+  else gaps.push({ signal: 'TL;DR / Key Takeaways', pts: 10, fix: 'Add a bullet-point summary near the top.' });
+  if (/author|written by|expert|certified|licensed/i.test(html || text)) { score += 10; signals.push({ signal: 'Author / expertise signal', pts: 10, status: 'pass' }); }
+  else gaps.push({ signal: 'Author / expertise signal', pts: 10, fix: 'Add an author bio with credentials.' });
+  if (/\d+%|\d+\s+(?:million|billion|thousand)/i.test(text)) { score += 10; signals.push({ signal: 'Statistics with data', pts: 10, status: 'pass' }); }
+  else gaps.push({ signal: 'Statistics with data', pts: 10, fix: 'Add 3+ statistics with year and source.' });
+  const h2count = (html || '').match(/<h2/gi) || [];
+  if (h2count.length >= 3) { score += 10; signals.push({ signal: h2count.length + ' H2 sections', pts: 10, status: 'pass' }); }
+  else gaps.push({ signal: 'Structured H2/H3 hierarchy (3+ sections)', pts: 10, fix: 'Add at least 3 H2 sections.' });
+  const eligibility = score >= 60 ? 'high' : score >= 35 ? 'medium' : 'low';
+  return { score, max: 80, eligibility, signals, gaps };
+}
+
+// ── ROUTE: POST /api/tracker/serp-spy ─────────────────────────────────────
+app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
+  const { keyword, profile_url, page_id } = req.body;
+  if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
+  const myUrl = (profile_url || '').trim();
+
+  // Step A: Claude web_search → find SERP URLs
+  let serpUrls = [];
+  try {
+    const ctrl1 = new AbortController();
+    setTimeout(() => ctrl1.abort(), 60000);
+    const r1 = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+        messages: [{ role: 'user', content: `Search Google for: "${keyword}"\nReturn ONLY a JSON array of top 10 organic results:\n[{"rank":1,"url":"https://...","domain":"example.com","title":"...","snippet":"..."}]` }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+      }), signal: ctrl1.signal
+    });
+    const d1 = await r1.json().catch(() => ({}));
+    const raw1 = (d1.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const m = raw1.match(/\[[\s\S]*?\]/);
+    if (m) serpUrls = JSON.parse(m[0]);
+  } catch(e) { console.warn('[serp-spy] URL discovery failed:', e.message); }
+
+  if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results — Claude web_search unavailable' });
+
+  // Step B: Parallel scrape top 5 + client
+  const top5 = serpUrls.slice(0, 5);
+  const [clientScrape, ...compScrapes] = await Promise.all([
+    myUrl ? scrapeBodyText(myUrl, 8000) : Promise.resolve({ text: '', status: 0, fullHtml: '' }),
+    ...top5.map(e => scrapeBodyText(e.url, 6000))
+  ]);
+
+  // Step C: GRAAF-score each competitor
+  const graafResults = top5.map((entry, i) => {
+    const sc = compScrapes[i];
+    if (!sc || !sc.fullHtml) return { rank: entry.rank, url: entry.url, domain: entry.domain, scraped: false, graaf: null };
+    try {
+      const analysis = graafAnalyzeHtml(sc.fullHtml, entry.url);
+      const scored = computeScore(entry.url, analysis, []);
+      return {
+        rank: entry.rank, url: entry.url, domain: entry.domain, title: entry.title, snippet: entry.snippet,
+        scraped: true, wordCount: analysis.wordCount || 0,
+        schemaTypes: extractSchemaTypes(sc.fullHtml),
+        graaf: { total: scored.score, graaf: scored.metrics && scored.metrics.graaf, craft: scored.metrics && scored.metrics.craft, technical: scored.metrics && scored.metrics.technical, quality: scored.quality }
+      };
+    } catch(e) { return { rank: entry.rank, url: entry.url, domain: entry.domain, scraped: true, graaf: null }; }
+  });
+
+  // Step D: Simple entity frequency gap map
+  const stops = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','was','were','this','that','it','its','we','you','they','not','can','all','more','from','but','by','as','if','so','be','do','how','what','when','where','who','which']);
+  const clientWords = new Set((clientScrape.text || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w => w.length >= 4 && !stops.has(w)));
+  const entityFreq = {};
+  compScrapes.forEach(sc => {
+    const seen = new Set();
+    (sc.text || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w => w.length >= 4 && !stops.has(w)).forEach(w => {
+      if (!seen.has(w)) { entityFreq[w] = (entityFreq[w] || 0) + 1; seen.add(w); }
+    });
+  });
+  const entityGaps = Object.entries(entityFreq)
+    .filter(([w, c]) => c >= 2 && !clientWords.has(w))
+    .sort((a, b) => b[1] - a[1]).slice(0, 20)
+    .map(([entity, n]) => ({ entity, in_competitor_pages: n }));
+
+  // Client AI citation score
+  const clientAI = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
+
+  // Step E: Claude 4-Step analysis
+  const compSummary = graafResults.map(c => {
+    const g = c.graaf;
+    return `RANK ${c.rank}: ${c.domain}\n  GRAAF: ${g ? g.total+'/100' : 'not scraped'} | Schema: ${(c.schemaTypes||[]).join(', ')||'none'} | Words: ~${c.wordCount||'?'}\n  Snippet: "${(c.snippet||'').substring(0,120)}"`;
+  }).join('\n\n');
+
+  const prompt = `You are an elite SEO analyst. Live data for keyword: "${keyword}"
+${myUrl ? `CLIENT: ${myUrl}\nClient AI Citation Score: ${clientAI ? clientAI.score+'/100 ('+clientAI.eligibility+')' : 'not scored'}` : ''}
+COMPETITORS (live scraped + GRAAF scored):\n${compSummary}
+ENTITY GAPS (missing from client, in 2+ competitor pages): ${entityGaps.slice(0,10).map(e => '"'+e.entity+'"').join(', ')}
+
+Return ONLY valid JSON:
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"exact steps to make client page AI Overview eligible","step2_pattern":{"the_ranking_formula":"ONE sentence: what predicts rank 1 vs rank 5","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range"},"step3_outlier":{"domain":"domain","why_ranks_anyway":"reason"},"step4_missing":[{"gap":"topic","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2 1","h2 2","h2 3"],"must_cover_entities":["entity 1"],"faq_questions":["Q1","Q2","Q3"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"specific action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl ? 'specific gap analysis' : 'no client URL'}","confidence":"high|medium|low"}`;
+
+  try {
+    const ctrl2 = new AbortController();
+    setTimeout(() => ctrl2.abort(), 120000);
+    const r2 = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl2.signal
+    });
+    const d2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) throw new Error((d2.error && d2.error.message) || 'Claude ' + r2.status);
+    const rawText = (d2.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    let spy = null;
+    try { const m2 = rawText.match(/\{[\s\S]*\}/); if (m2) spy = JSON.parse(m2[0]); } catch(e) {}
+    if (spy) {
+      spy._live_graaf = graafResults.map(c => ({ rank: c.rank, domain: c.domain, url: c.url, wordCount: c.wordCount, schemaTypes: c.schemaTypes, graaf: c.graaf, scraped: c.scraped }));
+      spy._entity_gaps = entityGaps;
+      spy._client_ai_citation = clientAI;
+      spy._serp_urls = serpUrls;
+      spy.keyword = keyword;
+    }
+    if (page_id && spy) {
+      try { await pool.query(`UPDATE tracker_pages SET serp_spy=$1, serp_spy_at=NOW() WHERE id=$2`, [JSON.stringify(spy), page_id]); } catch(e) {}
+    }
+    res.json({ success: true, spy, competitors_scraped: graafResults.filter(r => r.scraped).length });
+  } catch(e) {
+    console.error('[serp-spy]', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+});
+
+// ── ROUTE: GET /api/intelligence/context ─────────────────────────────────
+app.get('/api/intelligence/context', verifyEngineAccess, async (req, res) => {
+  const { url, profile_id, keyword } = req.query;
+  try {
+    const eu = req.engineUser;
+    const codeId = eu && !eu.isAdmin ? eu.codeId : null;
+    let gscData = null, serpSpy = null, fastWinKeywords = [];
+    if (url && profile_id) {
+      try {
+        const gR = await pool.query(`SELECT url,clicks,impressions,ctr,position,keyword FROM gsc_pages WHERE profile_id=$1 AND url ILIKE $2 ORDER BY impressions DESC LIMIT 1`, [profile_id, '%' + url.replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'') + '%']);
+        if (gR.rows.length) gscData = gR.rows[0];
+      } catch(e) {}
+      try {
+        const sR = await pool.query(`SELECT serp_spy, serp_spy_at, keyword FROM tracker_pages WHERE (url ILIKE $1) ${codeId?'AND engine_code_id=$2':''} ORDER BY serp_spy_at DESC NULLS LAST LIMIT 1`, codeId ? ['%'+url.replace(/^https?:\/\/(www\.)?/,'')+'%', codeId] : ['%'+url.replace(/^https?:\/\/(www\.)?/,'')+'%']);
+        if (sR.rows.length && sR.rows[0].serp_spy) serpSpy = { ...sR.rows[0].serp_spy, _ran_at: sR.rows[0].serp_spy_at };
+      } catch(e) {}
+    }
+    if (profile_id) {
+      try {
+        const qR = await pool.query(`SELECT query,clicks,impressions,ctr,position FROM gsc_queries WHERE profile_id=$1 ORDER BY impressions DESC LIMIT 30`, [profile_id]);
+        fastWinKeywords = qR.rows.filter(q => q.position >= 8 && q.position <= 20 && q.impressions >= 50).slice(0,10);
+      } catch(e) {}
+    }
+    res.json({ success: true, url, gsc: gscData, fast_win_keywords: fastWinKeywords, serp_spy: serpSpy ? { ran_at: serpSpy._ran_at, keyword: serpSpy.keyword, ranking_formula: serpSpy.step2_pattern && serpSpy.step2_pattern.the_ranking_formula, top_entity_gaps: (serpSpy._entity_gaps||[]).slice(0,10), content_brief: serpSpy.content_brief, action_plan: (serpSpy.action_plan||[]).filter(a=>a.priority==='high').slice(0,5) } : null, has_spy_data: !!serpSpy });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── ROUTE: POST /api/intelligence/ai-citation ─────────────────────────────
+app.post('/api/intelligence/ai-citation', verifyEngineAccess, async (req, res) => {
+  const { url, html, keyword } = req.body;
+  if (!url && !html) return res.status(400).json({ success: false, error: 'url or html required' });
+  try {
+    let bodyText = '', fullHtml = html || '';
+    if (url && !html) { const sc = await scrapeBodyText(url, 8000); bodyText = sc.text || ''; fullHtml = sc.fullHtml || ''; }
+    else if (html) bodyText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const result = scoreAICitation(fullHtml, bodyText, keyword || '');
+    res.json({ success: true, url: url || null, keyword: keyword || null, ...result });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// DB migrations
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(() => {});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(() => {});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE`).catch(() => {});
+
 
 
 // ── Server-side GRAAF HTML analyser (no Puppeteer) ──────────────────────────
