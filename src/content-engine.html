@@ -1442,6 +1442,13 @@ YOUR CAPABILITIES (you can trigger these with commands):
 - [REWRITE id fixes] — apply targeted fixes. Use the EXACT rewrite ID number from the ANALYSE result above. NEVER use "123", "1234", or any placeholder — only the real ID the system gave you.
 - [SHOW_OPPORTUNITIES] — show GSC page opportunities
 
+WHEN YOU RECEIVE A [SPY BRIEF]:
+- You already have competitive intelligence. Do NOT repeat all findings.
+- Lead with ONE sentence: "The #1 thing that will move this page is [specific action]."
+- Answer both questions directly: what moves the needle + whether to add new sections or improve existing.
+- Ask ONE question — the single most important strategic decision before writing.
+- Keep your entire response under 120 words. After user confirms → [ANALYSE url keyword].
+
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
 2. When you have enough info, ACT IMMEDIATELY — output the [COMMAND] and execute it. Never ask "would you like me to scan?" — just scan and show results.
@@ -5955,27 +5962,74 @@ function spyPushToAgent() {
   var kw = window._lastSpyKeyword || '';
   var url = window._lastSpyUrl || '';
   if (!spy) { toast('No spy data', 'warn'); return; }
+
   var brief = spy.content_brief || {};
-  var gaps = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,6).map(function(e){ return '"' + (e.entity||e) + '"'; }).join(', ');
-  var formula = spy.step2_pattern && spy.step2_pattern.the_ranking_formula || '';
-  var h2s = (brief.must_have_h2s || []).slice(0,5).join(' | ');
-  var faqs = (brief.faq_questions || []).slice(0,3).join(' / ');
-  var lines2 = ['SERP Spy results for keyword: "' + kw + '"'];
-  if (url) lines2.push('Client URL: ' + url);
-  if (formula) lines2.push('Ranking formula: ' + formula);
-  if (gaps) lines2.push('Entity gaps to add: ' + gaps);
-  if (h2s) lines2.push('Required H2 sections: ' + h2s);
-  if (brief.recommended_word_count) lines2.push('Target word count: ' + brief.recommended_word_count);
-  if (faqs) lines2.push('FAQ questions: ' + faqs);
-  if (spy.ai_overview_blueprint) lines2.push('AI Overview: ' + spy.ai_overview_blueprint);
-  lines2.push('Based on this SERP spy brief, please help me rewrite the page to beat rank 1.');
-  var msg = lines2.join('\n');
+  var pattern = spy.step2_pattern || {};
+  var outlier = spy.step3_outlier || {};
+  var missing = (spy.step4_missing || []).slice(0,2);
+  var formula = pattern.the_ranking_formula || '';
+  var format = pattern.dominant_content_format || '';
+  var schema = pattern.dominant_schema || '';
+  var wordCount = brief.recommended_word_count || pattern.dominant_word_count_range || '';
+  var topGaps = (spy.entity_gaps_priority || spy._entity_gaps || [])
+    .filter(function(e){ return (e.priority === 'high' || e.in_competitor_pages >= 3); })
+    .slice(0,4).map(function(e){ return '"' + (e.entity || e) + '"'; }).join(', ');
+  var quickWins = (spy.quick_wins || []).slice(0,2).map(function(w){ return '• ' + (w.win||w); }).join('\n');
+  var aiBlueprint = spy.ai_overview_blueprint || '';
+  var clientGap = spy.client_vs_best || '';
+  var aiCit = spy._client_ai_citation;
+  var gscFastWin = _context && _context.fast_win_keyword ? _context.fast_win_keyword : '';
+
+  // Build a smart briefing — agent reads this as context, then asks ONE question
+  var msg = '[SPY BRIEF] Keyword: "' + kw + '"' + (url ? ' | Page: ' + url : '');
+
+  // The single most important insight from the spy
+  if (formula) msg += '\n\nWHY RANK 1 WINS:\n' + formula;
+
+  // What the client page is missing vs rank 1
+  if (clientGap && clientGap !== 'no client URL') {
+    msg += '\n\nCLIENT GAP vs RANK 1:\n' + clientGap;
+  }
+
+  // Top missing entities
+  if (topGaps) msg += '\n\nMISSING ENTITIES (in competitors, absent from client):\n' + topGaps;
+
+  // What nobody covers — opportunity
+  if (missing.length) {
+    msg += '\n\nGAPS NOBODY COVERS (first-mover opportunity):\n' +
+      missing.map(function(m){ return '• ' + (m.gap||'') + ' → ' + (m.how_to_exploit||''); }).join('\n');
+  }
+
+  // Quick wins
+  if (quickWins) msg += '\n\nQUICK WINS:\n' + quickWins;
+
+  // AI citation gaps
+  if (aiCit && aiCit.eligibility !== 'high') {
+    msg += '\n\nAI OVERVIEW SCORE: ' + aiCit.score + '/100 (' + aiCit.eligibility + ')';
+    if (aiBlueprint) msg += '\nTo get cited: ' + aiBlueprint;
+  }
+
+  // Content brief summary
+  msg += '\n\nCONTENT BRIEF:\n' +
+    '• Format: ' + (format || '—') + ' | Schema: ' + (schema || '—') + ' | Target: ~' + wordCount + ' words' +
+    (gscFastWin ? '\n• GSC fast-win keyword: "' + gscFastWin + '"' : '');
+
+  // The ONE question — agent should answer this and propose a plan before writing
+  msg += '\n\n---\nI have the spy data above. Before you rewrite, tell me:\n' +
+    '1. What is the #1 thing that will move this page from where it is to position 1?\n' +
+    '2. Should I add new sections or replace existing content?\n' +
+    'Then ask me ONE question to confirm strategy before you start writing.';
+
   closeSerpSpy();
   switchView('agent');
   setTimeout(function() {
     var inp = document.getElementById('chatInput');
-    if (inp) { inp.value = msg; inp.focus(); }
-  }, 200);
+    if (inp) {
+      inp.value = msg;
+      // Auto-send — agent reads the brief and responds strategically
+      sendMessage();
+    }
+  }, 300);
 }
 
 // ── Spy → Rewrite: pre-fills rewrite modal with spy brief ────────────────────
