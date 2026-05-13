@@ -15054,9 +15054,9 @@ GEEN GRAAF SCAN BESCHIKBAAR — schrijf content alsof de huidige score 0/100 is.
     const gscPagesRW = Array.isArray(analysis.gsc_pages) ? analysis.gsc_pages : [];
     const gscQueriesRW = Array.isArray(analysis.gsc_queries) ? analysis.gsc_queries : [];
 const gscBlockRW = (gscPagesRW.length || gscQueriesRW.length) ? `
-GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${gscPagesRW.join(', ') || '—'}
+GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${(Array.isArray(gscPagesRW)?gscPagesRW:[]).join(', ') || '—'}
 GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in headings en body:
-${gscQueriesRW.slice(0,15).join(', ') || '—'}
+${(Array.isArray(gscQueriesRW)?gscQueriesRW:[]).slice(0,15).join(', ') || '—'}
 ` : '';
 
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
@@ -15087,7 +15087,7 @@ ${gscQueriesRW.slice(0,15).join(', ') || '—'}
       biRW.address       ? `- Adres: ${biRW.address}${biRW.city?', '+biRW.city:''}` : null,
       biRW.review_score  ? `- Reviews: ${biRW.review_score} (${biRW.review_count||''} op ${biRW.review_platform||''})` : null,
       biRW.opening_hours ? `- Openingstijden: ${biRW.opening_hours}` : null,
-      (biRW.unique_selling_points||[]).length ? `- USPs: ${biRW.unique_selling_points.slice(0,4).join(' | ')}` : null,
+      (Array.isArray(biRW.unique_selling_points)&&biRW.unique_selling_points.length) ? `- USPs: ${biRW.unique_selling_points.slice(0,4).join(' | ')}` : null,
     ].filter(Boolean).join('\n');
     const antiFacts = verifiedFactsRW
       ? `Gebruik ALLEEN deze gegevens. Verzin NOOIT contactgegevens die niet hierboven staan.`
@@ -15214,22 +15214,22 @@ ${analysis.rewrite_strategy || ''}
 
 AANBEVOLEN TITEL: ${analysis.recommended_title || rw.original_title}
 DOELWOORDTELLING: ${analysis.target_word_count || 2500}+
-STRUCTUUR: ${(analysis.recommended_h2s||[]).join(' | ')}
-SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
-RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
+STRUCTUUR: ${(Array.isArray(analysis.recommended_h2s)?analysis.recommended_h2s:[]).join(' | ')}
+SECONDARY KEYWORDS: ${(Array.isArray(analysis.secondary_keywords)?analysis.secondary_keywords:[]).join(', ')}
+RELATED KEYWORDS: ${(Array.isArray(analysis.related_keywords)?analysis.related_keywords:[]).join(', ')}
 PEOPLE ALSO ASK (ECHTE VRAGEN VAN GOOGLE — VERWERK IN FAQ):
-${(analysis.paa_questions||[]).slice(0,5).map((q,i) => `${i+1}. "${q.question}" → ${(q.answer||'').slice(0,80)}`).join('\n')}
+${(Array.isArray(analysis.paa_questions)?analysis.paa_questions:[]).slice(0,5).map((q,i) => `${i+1}. "${typeof q==='object'?q.question:q}" → ${(typeof q==='object'?(q.answer||''):'').slice(0,80)}`).join('\n')}
 
 AI OVERVIEW KANSEN — STRATEGIE OM GECITEERD TE WORDEN:
-${(analysis.ai_overview_opportunities||[]).slice(0,3).join(' | ')}
+${(Array.isArray(analysis.ai_overview_opportunities)?analysis.ai_overview_opportunities:[]).slice(0,3).join(' | ')}
 ${analysis.ai_overview_detected ? `\nAI OVERVIEW GEDETECTEerd op de SERP. Google geeft al een antwoord. Jouw content moet SPECIFIEKER, MEER GECITEERD, en UITGEBREIDER zijn dan het AI Overview.` : ''}
 
 VOICE SEARCH — OPTIMALISATIE:
-${(analysis.voice_search_opportunities||[]).slice(0,2).join(' | ')}
+${(Array.isArray(analysis.voice_search_opportunities)?analysis.voice_search_opportunities:[]).slice(0,2).join(' | ')}
 MANDATORY: Gebruik <div id="direct-answer"> bovenaan met 40-60 woorden direct antwoord.
 Voeg Speakable schema toe met cssSelector: ["#direct-answer", "#voice-1", "#voice-2"]
-SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
-RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
+SECONDARY KEYWORDS: ${(Array.isArray(analysis.secondary_keywords)?analysis.secondary_keywords:[]).join(', ')}
+RELATED KEYWORDS: ${(Array.isArray(analysis.related_keywords)?analysis.related_keywords:[]).join(', ')}
 
 MONEY PAGES (link hier naartoe):
 ${moneyPages || 'Geen money pages geconfigureerd.'}
@@ -15296,16 +15296,16 @@ SLUG BEWAREN: ${rw.original_slug}
 DOELWOORDTELLING: ${analysis.target_word_count || 2500}+ (dezelfde layout, betere tekst)
 
 REWRITE STRATEGIE: ${analysis.rewrite_strategy || ''}
-SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
-AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).slice(0,3).join(' | ')}
-VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(analysis.voice_search_opportunities||[]).slice(0,2).join(' | ')}
+SECONDARY: ${(Array.isArray(analysis.secondary_keywords)?analysis.secondary_keywords:[]).join(', ')} | RELATED: ${(Array.isArray(analysis.related_keywords)?analysis.related_keywords:[]).join(', ')}
+AI OVERVIEW KANSEN: ${(Array.isArray(analysis.ai_overview_opportunities)?analysis.ai_overview_opportunities:[]).slice(0,3).join(' | ')}
+VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(Array.isArray(analysis.voice_search_opportunities)?analysis.voice_search_opportunities:[]).slice(0,2).join(' | ')}
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
 ${imageNote}
 
 BESTAANDE JSON-LD SCHEMA'S (behoud exact — update ALLEEN dateModified naar "${schemaDateModified}", datePublished NOOIT aanpassen):
-${(layoutSkeleton.schemaBlocks||[]).slice(0,2).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,250)}`).join('\n\n')}
+${(Array.isArray(layoutSkeleton&&layoutSkeleton.schemaBlocks)?layoutSkeleton.schemaBlocks:[]).slice(0,2).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,250)}`).join('\n\n')}
 
 ═══════════════════════════════════════
 ORIGINELE PAGINA — HERSCHRIJF DE TEKST, BEHOUD DE LAYOUT
@@ -15365,9 +15365,9 @@ JSON-LD verplicht:
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${schemaDatePublished}","dateModified":"${schemaDateModified}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
 
-AI OVERVIEW: ${(analysis.ai_overview_opportunities||[]).slice(0,3).join(' | ')}
+AI OVERVIEW: ${(Array.isArray(analysis.ai_overview_opportunities)?analysis.ai_overview_opportunities:[]).slice(0,3).join(' | ')}
 VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
-SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
+SECONDARY: ${(Array.isArray(analysis.secondary_keywords)?analysis.secondary_keywords:[]).join(', ')} | RELATED: ${(Array.isArray(analysis.related_keywords)?analysis.related_keywords:[]).join(', ')}
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
