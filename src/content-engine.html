@@ -210,9 +210,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="topbar-sep"></div>
     <div class="topbar-title"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · Intelligence Agent</div>
     <div style="display:flex;gap:4px;margin-left:8px;">
-      <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
-      <button id="navPages" onclick="switchView('pages')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">🗂️ Pages</button>
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
+      <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
       <button id="navStats" onclick="switchView('stats')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📊 Stats</button>
       <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
     </div>
@@ -259,47 +258,33 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <button class="sidebar-btn" onclick="askAgentToUseTemplate()" style="margin-top:8px;font-size:10px;padding:5px;" id="useTemplateBtn" style="display:none;">📋 Write on Profile Template</button>
     </div>
 
-    <!-- Data Uploads -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Data Sources (optional)</div>
-      <!-- GSC Upload -->
-      <!-- GSC Pages CSV -->
-      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">PAGES CSV (from GSC → Pages tab)</div>
-      <div id="gscUploadZone" class="drop-zone" style="margin-bottom:6px;">
-        <input type="file" accept=".csv" multiple onchange="handleGscUpload(this)">
-        <div class="drop-zone-icon" style="font-size:16px;">📄</div>
-        <div class="drop-zone-text" style="font-size:10px;">Drop Pages CSV here</div>
-      </div>
-      <!-- GSC Queries CSV — separate Google export -->
-      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">QUERIES CSV (from GSC → Queries tab)</div>
-      <div id="gscQueriesUploadZone" class="drop-zone" style="margin-bottom:8px;">
-        <input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)">
-        <div class="drop-zone-icon" style="font-size:16px;">🔍</div>
-        <div class="drop-zone-text" style="font-size:10px;">Drop Queries CSV here</div>
-      </div>
-      <div id="gscStatus" style="display:none;font-size:10px;color:#34d399;margin-bottom:10px;"></div>
-      <!-- Sitemap: URL input + file upload -->
-      <div id="sitemapSection" style="margin-bottom:10px;">
-        <label style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:4px;">🗺 Sitemap URL</label>
-        <div style="display:flex;gap:4px;">
-          <input type="text" id="sitemapUrlInput" placeholder="https://example.com/sitemap.xml" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:10px;font-family:'DM Mono',monospace;outline:none;" onkeydown="if(event.key==='Enter')fetchSitemapFromUrl()">
-          <button onclick="fetchSitemapFromUrl()" style="padding:6px 10px;border-radius:6px;border:none;background:#f56d00;color:#fff;font-size:10px;cursor:pointer;font-weight:700;">Fetch</button>
-        </div>
-        <div style="font-size:9px;color:var(--muted);margin-top:3px;">Or drop XML/TXT file:</div>
-        <div id="sitemapUploadZone" class="drop-zone" style="margin-top:4px;padding:8px;">
-          <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
-          <div class="drop-zone-text" style="font-size:10px;">Drop sitemap file here</div>
-        </div>
-      </div>
-      <div id="sitemapStatus" style="display:none;font-size:10px;color:#34d399;margin-top:6px;"></div>
+    <!-- GSC/Sitemap elements hidden — moved to Tracker tab -->
+    <div style="display:none;">
+      <div id="gscUploadZone"><input type="file" accept=".csv" multiple onchange="handleGscUpload(this)"></div>
+      <div id="gscQueriesUploadZone"><input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)"></div>
+      <div id="gscStatus"></div>
+      <div id="sitemapSection"><input type="text" id="sitemapUrlInput"><div id="sitemapUploadZone"><input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)"></div></div>
+      <div id="sitemapStatus"></div>
     </div>
 
     <!-- Tools -->
     <div class="sidebar-section">
       <div class="sidebar-label">Tools</div>
-      <button class="sidebar-btn" onclick="openPipelineModal()" title="Write a complete article from research to publish-ready HTML" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;">🚀 Content Pipeline</button>
-      <button class="sidebar-btn" onclick="openRewriteModal()" title="Rewrite existing page HTML with AI optimization" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:6px;">✍ Rewrite Page</button>
-      <button class="sidebar-btn" onclick="openRewriteModalWithMode('surgical')" title="Apply 6 targeted surgical fixes to the last rewrite" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:6px;">🔧 Surgical Fixes</button>
+
+      <div style="margin-bottom:8px;">
+        <button class="sidebar-btn" onclick="openPipelineModal()" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;margin-bottom:3px;">🚀 Content Pipeline</button>
+        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Write a new article from scratch — keyword to publish-ready HTML.</div>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <button class="sidebar-btn" onclick="openRewriteModal()" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:0;margin-bottom:3px;">✍ Rewrite Page</button>
+        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Paste existing HTML → AI rewrites it to rank higher.</div>
+      </div>
+
+      <div>
+        <button class="sidebar-btn" onclick="openRewriteModalWithMode('surgical')" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:0;margin-bottom:3px;">🔧 Surgical Fixes</button>
+        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Small targeted fixes only — title, meta, schema, FAQs. No full rewrite.</div>
+      </div>
     </div>
 
     <!-- AI Keys (BYOK) -->
@@ -327,10 +312,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       </div>
     </div>
 
-    <!-- Context -->
+    <!-- Workflow guide + context -->
     <div class="context-panel" id="contextPanel">
-      <div class="sidebar-label">Session Context</div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.6;">Connect and start chatting — context appears here as the agent learns about your site.</div>
+      <div class="sidebar-label">How it works</div>
+      <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.7;margin-bottom:8px;">
+        <div id="wfStep1" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">① Enter engine code → Connect</div>
+        <div id="wfStep2" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">② Tracker → select profile → Import GSC or Sitemap</div>
+        <div id="wfStep3" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">③ Click 🔍 Spy on a page → see what competitors do</div>
+        <div id="wfStep4" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">④ Rewrite Page → paste HTML → AI beats rank 1</div>
+        <div id="wfStep5" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;">⑤ Publish → Tracker monitors position daily</div>
+      </div>
+      <div id="contextDisplay" style="font-size:10px;color:var(--muted);line-height:1.6;display:none;"></div>
     </div>
   </aside>
 
@@ -380,6 +372,34 @@ var _context     = {
   profileId: null, currentRewriteId: null,
   mode: null // 'new' | 'rewrite' | 'audit'
 };
+
+// ── Workflow step highlighter ─────────────────────────────────────────────
+function updateWorkflowStep(step) {
+  // step: 1=connected, 2=profile+pages, 3=spy, 4=rewrite, 5=published
+  var steps = [1,2,3,4,5];
+  steps.forEach(function(n) {
+    var el = document.getElementById('wfStep' + n);
+    if (!el) return;
+    if (n < step) {
+      // Done
+      el.style.borderLeftColor = '#34d399';
+      el.style.color = '#4b5563';
+      el.style.textDecoration = 'line-through';
+    } else if (n === step) {
+      // Active
+      el.style.borderLeftColor = '#f56d00';
+      el.style.color = '#f56d00';
+      el.style.fontWeight = '700';
+      el.style.textDecoration = 'none';
+    } else {
+      // Future
+      el.style.borderLeftColor = '#374151';
+      el.style.color = 'var(--sub)';
+      el.style.fontWeight = 'normal';
+      el.style.textDecoration = 'none';
+    }
+  });
+}
 
 // ── Safe profile ID getter — always returns the active profile ID or null ──
 function getActiveProfileId() {
@@ -512,8 +532,11 @@ async function connect() {
       document.getElementById('profileSelect').value = '';
     }
 
-    // Trigger agent welcome (will prompt for profile selection)
-    agentGreet();
+    // Open Tracker first — it's the workflow starting point
+    switchView('tracker');
+    updateWorkflowStep(1);
+    // Agent greets in background
+    setTimeout(agentGreet, 300);
   } catch(e) {
     var msg = e.message || '';
     // If code is invalid (archive wiped the DB), clear stored token
@@ -552,7 +575,6 @@ function handleGscUpload(input) {
             keyword:     r[keys.find(function(k){ return /keyword|query/i.test(k); })] || ''
           };
         }).filter(function(r){ return r.url; });
-        _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
         toast('✓ Pages CSV: ' + _gscPages.length + ' URLs loaded', 'ok');
       }
       if (isQueries) {
@@ -605,9 +627,9 @@ function handleGscQueriesUpload(input) {
         position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0)
       };
     }).filter(function(r){ return r.query && r.query.trim(); });
-    _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
     toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 2500, 'ok');
     updateGscStatus();
+    // Auto-save queries to server too
     autoSaveGscToServer();
   };
   reader.readAsText(file);
@@ -618,10 +640,8 @@ function handleGscQueriesUpload(input) {
 // as the Agent — no "Import" click required. Runs in background, no modal.
 async function autoSaveGscToServer() {
   var profileId = _context.profileId || (_profile && _profile.id) || null;
-  if (!profileId) return;
+  if (!profileId) return; // no profile yet — will retry when profile is selected
   if (!_gscPages.length && !_gscQueries.length) return;
-  // Tag ownership so profile isolation check works
-  _gscOwnerProfileId = profileId;
 
   var token = '';
   try { token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
@@ -937,7 +957,7 @@ async function addSelectedSitemapUrls() {
   // Force fresh load from server to get complete picture
   loadPagesOverview(true);
   loadTrackerPages();
-  switchView('pages');
+  switchView('tracker');
   var parts = [];
   if (added) parts.push('added ' + added);
   if (updated) parts.push('updated ' + updated);
@@ -985,6 +1005,8 @@ function parseCSV(text) {
 }
 
 function updateGscStatus() {
+  // Also update the tracker panel status if open
+  updateTrackerGscStatus();
   var zone = document.getElementById('gscUploadZone');
   var qZone = document.getElementById('gscQueriesUploadZone');
   var status = document.getElementById('gscStatus');
@@ -1038,15 +1060,11 @@ function onProfileSwitch() {
   // Persist selected profile
   try { localStorage.setItem('nexus_selected_profile_id', String(_profile.id)); } catch(e) {}
 
-  // Save GSC if it belongs to this profile BEFORE clearing
-  if ((_gscPages.length || _gscQueries.length) && _gscOwnerProfileId && String(_gscOwnerProfileId) === String(_profile && _profile.id)) {
-    autoSaveGscToServer();
-  }
   // Clear ALL profile-specific state — strict isolation
   _gscPages = []; _gscQueries = []; _gscOwnerProfileId = null;
-  _pagesOverviewData = [];
-  _trPages = [];
-  _auditTasks = {};
+  _pagesOverviewData = [];        // clear immediately — don't show old profile's pages
+  _trPages = [];                  // clear tracker too
+  _auditTasks = {};               // clear audit task cache — belongs to old profile
   _context.intelligence_context = null;
   var zone = document.getElementById('gscUploadZone');
   var qzone = document.getElementById('gscQueriesUploadZone');
@@ -1054,11 +1072,16 @@ function onProfileSwitch() {
   if (zone) zone.style.display = 'block';
   if (qzone) qzone.style.display = 'block';
   if (stat) { stat.style.display = 'none'; stat.innerHTML = ''; }
+  // Immediately show empty state for pages + tracker
   renderPagesOverview();
   renderTrackerList();
 
+  // Update tracker profile label
+  var tpl = document.getElementById('trackerProfileLabel');
+  if (tpl) tpl.textContent = _profile.name + (_profile.domain ? ' · ' + _profile.domain : '');
+  updateWorkflowStep(2);
   // Show confirmation toast
-  toast('✅ Profile selected: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : ''), 2500, 'ok');
+  toast('✅ Profile selected: ' + _profile.name, 2000, 'ok');
 
   // If GSC was already loaded in sidebar before profile was selected, save it now
   if (_gscPages.length || _gscQueries.length) autoSaveGscToServer();
@@ -2884,9 +2907,14 @@ function switchView(view) {
   if (viewPages) viewPages.style.display = 'none';
   // Agent view: show chat area, hide others
   var chatArea = document.querySelector('.chat-area');
-  if (chatArea) chatArea.style.visibility = (view === 'agent' || view === 'pages') ? 'visible' : 'hidden';
+  if (chatArea) chatArea.style.visibility = (view === 'agent') ? 'visible' : 'hidden';
   if (view === 'tracker') {
     document.getElementById('view-tracker').style.display = 'block';
+    // Update tracker profile label
+    var tpl = document.getElementById('trackerProfileLabel');
+    if (tpl && _profile) tpl.textContent = _profile.name + (_profile.domain ? ' · ' + _profile.domain : '');
+    // Sync GSC into tracker opportunity view if loaded
+    if (_gscPages && _gscPages.length) syncGscToPagesOverview();
     loadTrackerPages();
   } else if (view === 'profiles') {
     document.querySelectorAll('[id^="view-"]').forEach(function(v){ v.style.display='none'; });
@@ -2896,10 +2924,9 @@ function switchView(view) {
   } else if (view === 'stats') {
     document.getElementById('view-stats').style.display = 'block';
   } else if (view === 'pages') {
-    if (viewPages) viewPages.style.display = 'block';
-    // Sync GSC sidebar data immediately before server fetch so pages appear instantly
-    if (_gscPages.length) syncGscToPagesOverview();
-    loadPagesOverview(true); // also fetch fresh data from server
+    // Pages merged into Tracker — redirect
+    view = 'tracker';
+    if (viewPages) viewPages.style.display = 'none';
   }
   // Update nav button styles
   ['agent','pages','tracker','stats'].forEach(function(v) {
@@ -4399,7 +4426,7 @@ function confirmGscImport() {
         var importModal = document.getElementById('pagesImportModal');
         if (importModal) importModal.style.display = 'none';
         // Switch to Pages view so user sees the imported data
-        switchView('pages');
+        switchView('tracker');
         loadPagesOverview(true);
         loadTrackerPages();
       } else {
@@ -4516,6 +4543,7 @@ function openRewriteModal() {
 }
 
 function openRewriteModalWithMode(preselectMode) {
+  updateWorkflowStep(4);
   var modal = document.getElementById('rewriteModal');
   if (!modal) return;
   // Pre-fill with context
@@ -4939,22 +4967,12 @@ function renderPagesOverview() {
   });
   _filteredPageCount = data.length;
 
-  // Show active profile name + page count
+  // Show active profile name + REAL page count
   if (profileLabel && _profile) {
-    var _gscNote = _gscPages.length ? ' · ' + _gscPages.length + ' GSC pages in memory' : '';
+    var _gscNote = _gscPages.length ? ' · GSC: ' + _gscPages.length + ' pages in memory' : '';
+    var _dbNote  = _pagesOverviewData.length !== data.length ? ' (' + _pagesOverviewData.length + ' in DB)' : '';
     profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') +
-      ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '') + _gscNote;
-  }
-
-  // If filter killed all data, show helpful empty state instead of blank grid
-  if (!data.length && _pagesOverviewData.length) {
-    grid.innerHTML = '';
-    empty.style.display = 'block';
-    var ti = document.getElementById('pagesEmptyTitle'), tx = document.getElementById('pagesEmptyText'), ic = document.getElementById('pagesEmptyIcon');
-    if (ti) ti.textContent = 'No pages match the current filter';
-    if (tx) tx.textContent = 'Try clearing the search box or refreshing.';
-    if (ic) ic.textContent = '🔍';
-    updateMergeButton(); renderAuditAdvisor(); return;
+      ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '') + _dbNote + _gscNote;
   }
 
   // Sort
@@ -5517,10 +5535,81 @@ document.addEventListener('DOMContentLoaded', function() {
   loadPagesOverview();
 });
 
+// ── TRACKER PANEL CONTROLS ──────────────────────────────────────────────────
+function openTrackerGscImport() {
+  document.getElementById('trackerGscPanel').style.display = 'block';
+  document.getElementById('trackerSitemapPanel').style.display = 'none';
+  // Sync updateGscStatus to the tracker panel status element
+  updateTrackerGscStatus();
+}
+function closeTrackerGscImport() {
+  document.getElementById('trackerGscPanel').style.display = 'none';
+}
+function openTrackerSitemapPanel() {
+  document.getElementById('trackerSitemapPanel').style.display = 'block';
+  document.getElementById('trackerGscPanel').style.display = 'none';
+  // Pre-fill with profile domain if set
+  var inp = document.getElementById('trackerSitemapUrl');
+  if (inp && !inp.value && _profile && _profile.domain) {
+    var d = _profile.domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    inp.value = 'https://' + d + '/sitemap.xml';
+  }
+}
+function closeTrackerSitemapPanel() {
+  document.getElementById('trackerSitemapPanel').style.display = 'none';
+}
+function updateTrackerGscStatus() {
+  var el = document.getElementById('trackerGscStatus');
+  if (!el) return;
+  if (_gscPages.length || _gscQueries.length) {
+    el.textContent = '✓ ' + _gscPages.length + ' pages' + (_gscQueries.length ? ' · ' + _gscQueries.length + ' queries' : '') + ' loaded';
+    el.style.color = '#34d399';
+  } else {
+    el.textContent = '';
+  }
+}
+function fetchTrackerSitemap() {
+  var inp = document.getElementById('trackerSitemapUrl');
+  var url = inp && inp.value.trim();
+  if (!url) { toast('Enter a sitemap URL', 'warn'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  var btn = document.querySelector('#trackerSitemapPanel button[onclick="fetchTrackerSitemap()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  var stat = document.getElementById('trackerSitemapStatus');
+  if (stat) stat.textContent = 'Fetching…';
+  api('/api/fetch-sitemap?url=' + encodeURIComponent(url)).then(function(d) {
+    if (!d || !d.success) throw new Error(d && d.error || 'Failed');
+    var urls = d.urls || [];
+    if (!urls.length) { if (stat) stat.textContent = 'No URLs found'; return; }
+    _sitemapUrls = urls;
+    if (stat) stat.innerHTML = '<b>' + urls.length + '</b> URLs found · <button onclick="previewSitemapUrls()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Preview & Add</button>';
+    previewSitemapUrls();
+  }).catch(function(e) {
+    if (stat) stat.textContent = 'Error: ' + e.message;
+  }).finally(function() {
+    if (btn) { btn.disabled = false; btn.textContent = 'Fetch'; }
+  });
+}
+// Sync _gscPages into tracker pages list for opportunity display
+function syncGscToTracker() {
+  if (!_gscPages.length || !_trPages.length) return;
+  _trPages.forEach(function(tp) {
+    var gsc = _gscPages.find(function(g) { return g.url === tp.url; });
+    if (gsc) {
+      tp.gsc_position = tp.gsc_position || gsc.position;
+      tp.gsc_impressions = tp.gsc_impressions || gsc.impressions;
+      tp.gsc_clicks = tp.gsc_clicks || gsc.clicks;
+      tp.keyword = tp.keyword || gsc.keyword;
+    }
+  });
+  renderTrackerList();
+}
+
 // ── SERP SPY ─────────────────────────────────────────────────────────────────
 var _serpSpyPageId = null;
 
 function openSerpSpy(pageId) {
+  updateWorkflowStep(3);
   _serpSpyPageId = pageId;
   var page = (_trPages || []).find(function(p){ return p.id === pageId; });
   var kw   = (page && page.keyword) || '';
@@ -6283,12 +6372,65 @@ function renderSerpSpyReport(s) {
 
 <!-- TRACKER VIEW -->
 <div id="view-tracker" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:20px 24px;background:#07090e;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <div><div style="font-size:16px;font-weight:800;">📡 Content Lifecycle Tracker</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">Google position · AI citations · Content changes</div></div>
-    <div style="display:flex;gap:6px;">
-      <button onclick="loadTrackerPages()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
-      <button onclick="openAddTrackerModal()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">+ Add URL</button>
+
+  <!-- ── UNIFIED TRACKER HEADER ── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div>
+      <div style="font-size:16px;font-weight:800;">📡 Tracker</div>
+      <div id="trackerProfileLabel" style="font-size:11px;color:#6b7280;margin-top:2px;">Select a profile to start tracking</div>
     </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <button onclick="loadTrackerPages()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
+      <button onclick="openAddTrackerModal()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3);">+ Add URL</button>
+      <button onclick="openTrackerGscImport()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC</button>
+      <button onclick="openTrackerSitemapPanel()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">🗺 Sitemap</button>
+    </div>
+  </div>
+
+  <!-- ── GSC IMPORT PANEL (inline, collapsible) ── -->
+  <div id="trackerGscPanel" style="display:none;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:#a78bfa;">📊 Import GSC Data</div>
+      <button onclick="closeTrackerGscImport()" style="background:none;border:none;color:#6b7280;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Pages CSV (GSC → Pages tab)</div>
+        <div class="drop-zone" style="padding:10px;min-height:60px;">
+          <input type="file" accept=".csv" multiple onchange="handleGscUpload(this)">
+          <div class="drop-zone-icon" style="font-size:20px;">📄</div>
+          <div class="drop-zone-text" style="font-size:10px;">Drop Pages CSV</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Queries CSV (GSC → Queries tab)</div>
+        <div class="drop-zone" style="padding:10px;min-height:60px;">
+          <input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)">
+          <div class="drop-zone-icon" style="font-size:20px;">🔍</div>
+          <div class="drop-zone-text" style="font-size:10px;">Drop Queries CSV</div>
+        </div>
+      </div>
+    </div>
+    <div id="trackerGscStatus" style="font-size:11px;color:#34d399;min-height:16px;"></div>
+    <button onclick="showGscPreview()" style="margin-top:8px;padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Preview & Import →</button>
+  </div>
+
+  <!-- ── SITEMAP PANEL (inline, collapsible) ── -->
+  <div id="trackerSitemapPanel" style="display:none;background:rgba(245,109,0,.05);border:1px solid rgba(245,109,0,.2);border-radius:10px;padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:#f56d00;">🗺 Add from Sitemap</div>
+      <button onclick="closeTrackerSitemapPanel()" style="background:none;border:none;color:#6b7280;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input type="text" id="trackerSitemapUrl" placeholder="https://perfectroofingteam.com/sitemap.xml" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;font-size:12px;color:#e2e8f0;outline:none;">
+      <button onclick="fetchTrackerSitemap()" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#f56d00;color:#fff;">Fetch</button>
+    </div>
+    <div style="font-size:10px;color:#6b7280;margin-bottom:8px;">Or drop a sitemap XML / TXT file:</div>
+    <div class="drop-zone" style="padding:10px 14px;min-height:50px;margin-bottom:8px;">
+      <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
+      <div style="font-size:11px;color:#6b7280;">Drop sitemap file here</div>
+    </div>
+    <div id="trackerSitemapStatus" style="font-size:11px;color:#34d399;min-height:16px;"></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:18px;">
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;"><div style="font-size:22px;font-weight:900;color:#e2e8f0;" id="trKpiPages">0</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:3px;">Tracked</div></div>
