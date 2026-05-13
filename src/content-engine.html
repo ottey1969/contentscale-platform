@@ -373,6 +373,7 @@ var _allProfiles = [];
 var _profile     = null;
 var _gscPages    = [];
 var _gscQueries  = [];
+var _gscOwnerProfileId = null; // which profile loaded the current _gscPages
 var _context     = {
   url: null, keyword: null, score: null, recs: [],
   impressions: 0, clicks: 0, ctr: 0, position: 0,
@@ -566,6 +567,8 @@ function handleGscUpload(input) {
         }).filter(function(r){ return r.query; });
         toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 'ok');
       }
+      // Tag this GSC data with the current profile — prevents cross-profile leakage
+      _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
       updateGscStatus();
       // Auto-sync into Pages Overview grid immediately (no import click needed)
       syncGscToPagesOverview();
@@ -1032,12 +1035,21 @@ function onProfileSwitch() {
   // Persist selected profile
   try { localStorage.setItem('nexus_selected_profile_id', String(_profile.id)); } catch(e) {}
 
-  // Clear GSC — each profile has its own data
-  _gscPages = []; _gscQueries = [];
+  // Clear ALL profile-specific state — strict isolation
+  _gscPages = []; _gscQueries = []; _gscOwnerProfileId = null;
+  _pagesOverviewData = [];        // clear immediately — don't show old profile's pages
+  _trPages = [];                  // clear tracker too
+  _auditTasks = {};               // clear audit task cache — belongs to old profile
+  _context.intelligence_context = null;
   var zone = document.getElementById('gscUploadZone');
+  var qzone = document.getElementById('gscQueriesUploadZone');
   var stat = document.getElementById('gscStatus');
   if (zone) zone.style.display = 'block';
-  if (stat) stat.style.display = 'none';
+  if (qzone) qzone.style.display = 'block';
+  if (stat) { stat.style.display = 'none'; stat.innerHTML = ''; }
+  // Immediately show empty state for pages + tracker
+  renderPagesOverview();
+  renderTrackerList();
 
   // Show confirmation toast
   toast('✅ Profile selected: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : ''), 2500, 'ok');
@@ -4251,7 +4263,12 @@ function showGscPreview() {
   _gscPreviewUrls = [];
 
   // PRIMARY: use in-memory _gscPages if available (sidebar upload already parsed them)
-  if (_gscPages && _gscPages.length) {
+  // ISOLATION CHECK: reject memory data if it belongs to a different profile
+  var _currentPid = _context.profileId || (_profile && _profile.id) || null;
+  var _memOwner = _gscOwnerProfileId;
+  var _memIsOwnedByThisProfile = !_memOwner || !_currentPid || String(_memOwner) === String(_currentPid);
+
+  if (_gscPages && _gscPages.length && _memIsOwnedByThisProfile) {
     var profileDomain = (_profile && _profile.domain) ? normalizeDomain(_profile.domain) : '';
     var memUrls = _gscPages.filter(function(g) {
       if (!g.url) return false;
@@ -4259,7 +4276,13 @@ function showGscPreview() {
       try { return normalizeDomain(new URL(g.url.startsWith('http') ? g.url : 'https://' + g.url).hostname) === profileDomain; }
       catch(e) { return true; }
     });
-    if (!memUrls.length) memUrls = _gscPages; // domain filter too strict — show all
+    if (!memUrls.length && profileDomain) {
+      // No domain match — data belongs to different domain, clear it
+      _gscPages = []; _gscQueries = []; _gscOwnerProfileId = null;
+      var z = document.getElementById('gscUploadZone'); if (z) z.style.display = 'block';
+      // Fall through to server
+    } else {
+    if (!memUrls.length) memUrls = _gscPages;
     _gscPreviewUrls = memUrls.map(function(g) {
       return { url: g.url, clicks: g.clicks, impressions: g.impressions, ctr: g.ctr, position: g.position, _selected: true };
     });
@@ -4268,6 +4291,7 @@ function showGscPreview() {
       '✓ ' + _gscPreviewUrls.length + ' pages from your GSC upload — select which to import</div>';
     renderGscPreviewList(headerHtml);
     return;
+    } // end if memUrls.length
   }
 
   // FALLBACK: fetch from DB (for pages already imported in a previous session)
@@ -4731,7 +4755,8 @@ async function loadPagesOverview(forceRefresh) {
   var _tok4 = '';
   try { _tok4 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
   if (!_tok4) { syncGscToPagesOverview(); renderPagesOverview(); return; }
-  var profileId = _context.profileId || null;
+  var profileId = _context.profileId || (_profile && _profile.id) || null;
+  if (profileId && !_context.profileId) _context.profileId = profileId; // sync
   var profileFilter = profileId ? '?profile_id=' + profileId : '';
   var pages = [];
   try {
@@ -4749,8 +4774,8 @@ async function loadPagesOverview(forceRefresh) {
       pages = allPages.filter(function(p) {
         if (!p.url) return false;
         try {
-          return normalizeDomain(new URL(p.url).hostname) === normalizeDomain(profileDomain);
-        } catch(e) { return false; }
+          return normalizeDomain(new URL(p.url.startsWith('http') ? p.url : 'https://'+profileDomain+p.url).hostname) === normalizeDomain(profileDomain);
+        } catch(e) { return true; } // relative URL = belongs to this domain
       });
     } catch(e2) { /* ignore fallback error */ }
   }
@@ -4827,7 +4852,12 @@ async function loadPagesOverview(forceRefresh) {
   if (_gscPages.length) syncGscToPagesOverview();
   // Always render regardless — shows either merged data or empty state
   renderPagesOverview();
-  if (forceRefresh && _filteredPageCount) toast('✅ ' + _filteredPageCount + ' pages loaded', 2000, 'ok');
+  // Always notify with page count so user knows what loaded
+  if (_filteredPageCount > 0) {
+    if (forceRefresh) toast('✅ ' + _filteredPageCount + ' pages loaded', 2000, 'ok');
+  } else if (forceRefresh) {
+    toast('⚠ 0 pages — drop your GSC CSV in the sidebar to populate Pages', 4000, 'warn');
+  }
 }
 
 // ── Reset: delete all pages for the current profile ───────────
@@ -4905,7 +4935,10 @@ function renderPagesOverview() {
 
   // Show active profile name + REAL page count
   if (profileLabel && _profile) {
-    profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') + ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '');
+    var _gscNote = _gscPages.length ? ' · GSC: ' + _gscPages.length + ' pages in memory' : '';
+    var _dbNote  = _pagesOverviewData.length !== data.length ? ' (' + _pagesOverviewData.length + ' in DB)' : '';
+    profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') +
+      ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '') + _dbNote + _gscNote;
   }
 
   // Sort
