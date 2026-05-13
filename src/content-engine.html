@@ -5925,6 +5925,18 @@ async function runSerpSpy() {
 
     if (d.spy) {
       result.innerHTML = renderSerpSpyReport(d.spy);
+      // Action buttons below report
+      var actDiv = document.createElement('div');
+      actDiv.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);';
+      actDiv.innerHTML =
+        '<button onclick="spyPushToAgent()" style="padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🧠 Push to Agent</button>' +
+        '<button onclick="spyOpenRewrite()" style="padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✍ Rewrite with Brief</button>' +
+        '<button onclick="closeSerpSpy()" style="padding:8px 16px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;">✕ Close</button>';
+      result.appendChild(actDiv);
+      // Store spy data for button handlers
+      window._lastSpyData = d.spy;
+      window._lastSpyKeyword = kw;
+      window._lastSpyUrl = url;
     } else {
       result.innerHTML = '<pre style="white-space:pre-wrap;font-size:11px;color:#9ca3af;">' + escHtml(d.raw) + '</pre>';
     }
@@ -5935,6 +5947,59 @@ async function runSerpSpy() {
     stat.textContent = '';
     result.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(e.message) + '</div>';
   }
+}
+
+// ── Spy → Agent: sends full brief to agent with context ──────────────────────
+function spyPushToAgent() {
+  var spy = window._lastSpyData;
+  var kw = window._lastSpyKeyword || '';
+  var url = window._lastSpyUrl || '';
+  if (!spy) { toast('No spy data', 'warn'); return; }
+  var brief = spy.content_brief || {};
+  var gaps = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,6).map(function(e){ return '"' + (e.entity||e) + '"'; }).join(', ');
+  var formula = spy.step2_pattern && spy.step2_pattern.the_ranking_formula || '';
+  var h2s = (brief.must_have_h2s || []).slice(0,5).join(' | ');
+  var faqs = (brief.faq_questions || []).slice(0,3).join(' / ');
+  var lines2 = ['SERP Spy results for keyword: "' + kw + '"'];
+  if (url) lines2.push('Client URL: ' + url);
+  if (formula) lines2.push('Ranking formula: ' + formula);
+  if (gaps) lines2.push('Entity gaps to add: ' + gaps);
+  if (h2s) lines2.push('Required H2 sections: ' + h2s);
+  if (brief.recommended_word_count) lines2.push('Target word count: ' + brief.recommended_word_count);
+  if (faqs) lines2.push('FAQ questions: ' + faqs);
+  if (spy.ai_overview_blueprint) lines2.push('AI Overview: ' + spy.ai_overview_blueprint);
+  lines2.push('Based on this SERP spy brief, please help me rewrite the page to beat rank 1.');
+  var msg = lines2.join('\n');
+  closeSerpSpy();
+  switchView('agent');
+  setTimeout(function() {
+    var inp = document.getElementById('chatInput');
+    if (inp) { inp.value = msg; inp.focus(); }
+  }, 200);
+}
+
+// ── Spy → Rewrite: pre-fills rewrite modal with spy brief ────────────────────
+function spyOpenRewrite() {
+  var spy = window._lastSpyData;
+  if (!spy) { toast('No spy data', 'warn'); return; }
+  // Store spy context so execute-rewrite uses it
+  _context.stats_context = null; // clear stats context
+  _context.intelligence_context = {
+    ranking_formula: spy.step2_pattern && spy.step2_pattern.the_ranking_formula,
+    entity_gaps: spy._entity_gaps || spy.entity_gaps_priority,
+    content_brief: spy.content_brief,
+    ai_citation: spy._client_ai_citation,
+    spy_keyword: window._lastSpyKeyword
+  };
+  closeSerpSpy();
+  openRewriteModal();
+  // Pre-fill keyword if empty
+  setTimeout(function() {
+    var kwInp = document.getElementById('rewriteKeyword');
+    if (kwInp && !kwInp.value && window._lastSpyKeyword) kwInp.value = window._lastSpyKeyword;
+    var urlInp = document.getElementById('rewriteUrl');
+    if (urlInp && !urlInp.value && window._lastSpyUrl) urlInp.value = window._lastSpyUrl;
+  }, 200);
 }
 
 function renderSerpSpyReport(s) {

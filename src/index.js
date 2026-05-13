@@ -15178,6 +15178,8 @@ VERSLAANSTRATEGIE: ${(analysis.competitor_analysis||[])[i]?.beat_strategy || 'Me
     // ═══ BUILD PROMPT — THREE MODES ═══
     const hasTemplate = rw.html_template && rw.html_template.trim().length > 50;
     const hasOriginalLayout = layoutSkeleton && rw.original_html && rw.original_html.length > 500;
+    // Log so we can debug layout mode selection
+    console.log(`[execute-rewrite] hasTemplate=${!!hasTemplate} hasOriginalLayout=${hasOriginalLayout} html_len=${(rw.original_html||'').length} skeleton=${!!layoutSkeleton}`);
 
     let writePromptRW;
 
@@ -15269,8 +15271,9 @@ ABSOLUTE LAYOUT-REGELS
 3. Behoud ALLE <img> tags met src/alt/positioning
 4. Behoud ALLE bestaande JSON-LD schema's — update ALLEEN "dateModified" naar "${schemaDateModified}" — verander "datePublished" NOOIT
 5. Behoud auteur-blok zoals aanwezig — vervang NIET
-6. Behoud nav/header/footer volledig — raak alleen body content aan
+6. Behoud nav/header/footer VOLLEDIG — raak NOOIT navigation, header, footer, sidebar aan
 7. Vervang ALLEEN tekst-inhoud van <p>, <li>, <h2>, <h3>, <h4> binnen content zones
+8. Het eindresultaat moet DEZELFDE template hebben als het origineel — alleen de content is verbeterd
 
 BRAND SIGNATUUR (behoud):
 - Kleuren: ${(layoutSkeleton.brandColors||[]).slice(0,8).join(', ')}
