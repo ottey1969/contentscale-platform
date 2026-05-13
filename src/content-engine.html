@@ -433,8 +433,9 @@ var _busy        = false;
 function normalizeDomain(d) {
   if (!d) return '';
   var s = d.trim().toLowerCase();
-  s = s.replace(/^https?:\/\//, '');
-  s = s.replace(/^www\./, '');
+  s = s.replace(/^https?:\/\//, '');  // strip protocol
+  s = s.replace(/^www\./, '');          // strip www. prefix (replace, not lstrip)
+  s = s.split('/')[0];                   // strip path — keep hostname only
   s = s.replace(/\/+$/, '');
   return s;
 }
@@ -3089,14 +3090,7 @@ function renderTrackerKpis() {
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   var profileDomain = (_profile && _profile.domain) || '';
   // Trust the API — it already filtered by profile_id. Only apply domain sanity check.
-  var p = activeProfileId ? _trPages.filter(function(x) {
-    if (profileDomain && x.url) {
-      try {
-        if (normalizeDomain(new URL(x.url).hostname) !== normalizeDomain(profileDomain)) return false;
-      } catch(e) {}
-    }
-    return true;
-  }) : [];
+  var p = activeProfileId ? _trPages : [];
 
   function set(id, val, color) { var el=document.getElementById(id); if(el){el.textContent=val;if(color)el.style.color=color;} }
 
@@ -3136,16 +3130,8 @@ function renderTrackerList() {
     el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">👤</div><div style="font-weight:600;margin-bottom:4px;">Select a profile first</div><div style="font-size:12px;">Choose a profile from the sidebar to see tracker data</div></div>';
     return;
   }
-  // Trust the API — it already filtered by profile_id. Only apply domain sanity check.
-  var profileDomain = (_profile && _profile.domain) || '';
-  var trData = _trPages.filter(function(p) {
-    if (profileDomain && p.url) {
-      try {
-        if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
-      } catch(e) {}
-    }
-    return true;
-  });
+  // Server already filtered by profile_id — use pages directly
+  var trData = _trPages;
   if (!trData.length) {
     el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Add published URLs to start tracking</div></div>';
     return;
