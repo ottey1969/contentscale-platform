@@ -274,7 +274,7 @@ async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, cl
   const anthropicKey = claudeKey || process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) throw new Error('Claude API key required — add ANTHROPIC_API_KEY to Railway or provide x-claude-key header');
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 150000); // 2.5 minutes
+  const timer = setTimeout(() => controller.abort(), 55000); // 55s — under Railway's 60s limit
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -655,7 +655,9 @@ const _serveOttoJs = (req, res) => {
 };
 ['gemini-live-client.js','gemini-live-client-v5.js','gemini-live-client-v6.js',
  'gemini-live-client-v7.js','otto-ai.js'].forEach(name => {
-  app.get('/' + name, _serveOttoJs);
+  res.sendFile(path.join(__dirname, 'otto-ai.js'), err => {
+    if (err) res.status(404).send('Not found');
+  });
 });
 
 // ── Gemini Live ephemeral token ─────────────────────────────
@@ -14987,6 +14989,9 @@ Return ONLY valid JSON:
 });
 
 app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireCredits('execute-rewrite'), asyncHandler(async (req, res) => {
+  // Keep-alive: prevent Railway/nginx from closing the connection during long AI calls
+  req.socket && req.socket.setKeepAlive && req.socket.setKeepAlive(true);
+  res.setHeader('X-Accel-Buffering', 'no');
   const safeParse = (v, fallback) => {
     if (v == null) return fallback;
     if (typeof v !== 'string') return v;
@@ -15058,6 +15063,11 @@ GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${(Array.isArray(gscPagesRW)?gscPa
 GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in headings en body:
 ${(Array.isArray(gscQueriesRW)?gscQueriesRW:[]).slice(0,15).join(', ') || '—'}
 ` : '';
+
+// Stats context — injected when user ran Stats Research before rewriting
+const statsCtxRW = analysis.stats_context ? `
+STATISTICS TO CITE (cite with source attribution):
+${String(analysis.stats_context).slice(0,600)}` : '';
 
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
     const moneyPages = mpR.rows.slice(0,5).map(p => `${p.title || p.url}: ${p.url}`).join('\n');
@@ -15207,6 +15217,7 @@ DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
 ${gscBlockRW}
+${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 REWRITE STRATEGIE:
@@ -15290,6 +15301,7 @@ Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
 ${gscBlockRW}
+${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -15328,6 +15340,7 @@ BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} |
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
 ${antiFacts}
 ${gscBlockRW}
+${statsCtxRW}
 ${competitorBeatBlock}
 ${modeBlockRW}
 SLUG BEWAREN: ${rw.original_slug}
@@ -15403,9 +15416,10 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       let rawHtml;
       try {
         if (!useGemini) {
-          // Claude path (primary)
+          // Claude path (primary) — hard cap prompt at 150k chars (~37k tokens) to stay under limits
           const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
-          rawHtml = await callClaudeForWrite(sys, promptThisAttempt, 8000, claudeRwKey);
+          const promptCapped = promptThisAttempt.length > 150000 ? promptThisAttempt.slice(0, 150000) + '\n\n[Content truncated for length — complete the rewrite with what you have]' : promptThisAttempt;
+          rawHtml = await callClaudeForWrite(sys, promptCapped, 10000, claudeRwKey);
           modelUsed = 'claude-sonnet-4-20250514';
         } else {
           // Gemini fallback path
@@ -16722,10 +16736,22 @@ Return ONLY valid JSON:
     let studyData = {};
     try {
       let rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleaned = rawText.replace(/```json\s*/i,'').replace(/```\s*$/i,'').trim();
+      let cleaned = rawText.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+      const first = cleaned.indexOf('{'), last = cleaned.lastIndexOf('}');
+      if (first !== -1 && last !== -1) cleaned = cleaned.slice(first, last+1);
       studyData = JSON.parse(cleaned);
     } catch(parseErr) {
-      return res.status(502).json({ success: false, error: 'Gemini returned invalid JSON for study data' });
+      console.warn('[stats-study] JSON parse failed, building fallback');
+      const rawText = studyResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const numMatches = [...rawText.matchAll(/(\d+[%$]?(?:\.\d+)?[%$]?)\s+([^.\n]{10,80})/gi)];
+      const fallbackStats = numMatches.slice(0,8).map(m => ({ stat: m[1], context: m[2].trim(), source: 'Research', source_url: '', year: new Date().getFullYear(), color: 'purple', category: topic }));
+      studyData = {
+        title: topic + ' Statistics ' + new Date().getFullYear(),
+        slug: topic.toLowerCase().replace(/[^a-z0-9]+/g,'-'),
+        hero_stat: fallbackStats[0] ? { number: fallbackStats[0].stat, label: fallbackStats[0].context, source: 'Research', source_url: '' } : { number: '—', label: 'Statistics from live sources', source: '', source_url: '' },
+        key_stats: fallbackStats, key_findings: [], sources: [], methodology: 'Compiled from live research.'
+      };
+      if (!fallbackStats.length) return res.status(502).json({ success: false, error: 'Could not extract statistics — try a more specific topic' });
     }
 
     // ── 3. WRITE — visually stunning, link-worthy HTML (Claude) ──────────────
