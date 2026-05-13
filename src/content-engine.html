@@ -622,6 +622,79 @@ function handleGscUpload(input) {
   });
 }
 
+// ── Single zone handler — detects pages vs queries automatically ─────────────
+function handleBothGscFiles(input) {
+  var files = Array.from(input.files || []);
+  if (!files.length) return;
+  var processed = 0;
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var rows = parseCSV(text);
+      if (!rows.length) { processed++; return; }
+      var headers = Object.keys(rows[0]).map(function(h){ return h.toLowerCase(); });
+      // Detect type by headers
+      var isQueries = headers.some(function(h){ return /^(top queries|query|queries|keyword|search term)/i.test(h); });
+      var isPages   = headers.some(function(h){ return /^(top pages|page|landing page|url)/i.test(h); });
+      // Fallback: if neither clear, check first column value — URLs = pages, text = queries
+      if (!isQueries && !isPages) {
+        var firstVal = String(Object.values(rows[0])[0] || '');
+        isPages = firstVal.startsWith('http') || firstVal.startsWith('/');
+        isQueries = !isPages;
+      }
+      var keys = Object.keys(rows[0]);
+      if (isPages) {
+        _gscPages = rows.map(function(r) {
+          var qKey  = keys.find(function(k){ return /query|keyword/i.test(k); }) || '';
+          var uKey  = keys.find(function(k){ return /page|url|landing/i.test(k); }) || keys[0];
+          var cKey  = keys.find(function(k){ return /click/i.test(k); });
+          var iKey  = keys.find(function(k){ return /impr/i.test(k); });
+          var tKey  = keys.find(function(k){ return /ctr/i.test(k); });
+          var pKey  = keys.find(function(k){ return /pos/i.test(k); });
+          return {
+            url:         r[uKey] || '',
+            keyword:     qKey ? r[qKey] : '',
+            clicks:      parseInt(cKey ? r[cKey] : 0) || 0,
+            impressions: parseInt(iKey ? r[iKey] : 0) || 0,
+            ctr:         parseFloat(String(tKey ? r[tKey] : '0').replace('%','')) || 0,
+            position:    parseFloat(pKey ? r[pKey] : 0) || 0
+          };
+        }).filter(function(r){ return r.url && r.url.trim(); });
+        _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
+      } else {
+        _gscQueries = rows.map(function(r) {
+          var qKey = keys.find(function(k){ return /query|keyword|search/i.test(k); }) || keys[0];
+          var cKey = keys.find(function(k){ return /click/i.test(k); });
+          var iKey = keys.find(function(k){ return /impr/i.test(k); });
+          var tKey = keys.find(function(k){ return /ctr/i.test(k); });
+          var pKey = keys.find(function(k){ return /pos/i.test(k); });
+          return {
+            query:       r[qKey] || '',
+            clicks:      parseInt(cKey ? r[cKey] : 0) || 0,
+            impressions: parseInt(iKey ? r[iKey] : 0) || 0,
+            ctr:         parseFloat(String(tKey ? r[tKey] : '0').replace('%','')) || 0,
+            position:    parseFloat(pKey ? r[pKey] : 0) || 0
+          };
+        }).filter(function(r){ return r.query && r.query.trim(); });
+        _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
+      }
+      processed++;
+      if (processed === files.length) {
+        updateGscStatus();
+        updateTrackerGscStatus();
+        syncGscToPagesOverview();
+        autoSaveGscToServer();
+        var status = [];
+        if (_gscPages.length) status.push(_gscPages.length + ' pages');
+        if (_gscQueries.length) status.push(_gscQueries.length + ' queries');
+        toast('✓ GSC loaded — ' + status.join(' · '), 3000, 'ok');
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
 // Dedicated handler for Queries CSV — separate Google export
 function handleGscQueriesUpload(input) {
   var file = input.files[0];
@@ -6496,22 +6569,13 @@ function renderSerpSpyReport(s) {
       <div style="font-size:12px;font-weight:700;color:#a78bfa;">📊 Import GSC Data</div>
       <button onclick="closeTrackerGscImport()" style="background:none;border:none;color:#6b7280;font-size:16px;cursor:pointer;line-height:1;">✕</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div>
-        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Pages CSV (GSC → Pages tab)</div>
-        <div class="drop-zone" style="padding:10px;min-height:60px;">
-          <input type="file" accept=".csv" multiple onchange="handleGscUpload(this)">
-          <div class="drop-zone-icon" style="font-size:20px;">📄</div>
-          <div class="drop-zone-text" style="font-size:10px;">Drop Pages CSV</div>
-        </div>
-      </div>
-      <div>
-        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Queries CSV (GSC → Queries tab)</div>
-        <div class="drop-zone" style="padding:10px;min-height:60px;">
-          <input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)">
-          <div class="drop-zone-icon" style="font-size:20px;">🔍</div>
-          <div class="drop-zone-text" style="font-size:10px;">Drop Queries CSV</div>
-        </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Drop both CSVs here — Pages + Queries (from GSC → Performance → Export)</div>
+      <div class="drop-zone" style="padding:14px;min-height:70px;">
+        <input type="file" accept=".csv" multiple onchange="handleBothGscFiles(this)">
+        <div class="drop-zone-icon" style="font-size:22px;">📊</div>
+        <div class="drop-zone-text" style="font-size:11px;">Drop Pages CSV + Queries CSV together</div>
+        <div style="font-size:9px;color:#4b5563;margin-top:4px;">Select both files at once or drop one by one</div>
       </div>
     </div>
     <div id="trackerGscStatus" style="font-size:11px;color:#34d399;min-height:16px;"></div>
