@@ -15014,7 +15014,7 @@ app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireC
 ═══════════════════════════════════════
 GRAAF CONTENT SCORE ORIGINAL: ${origGraafScore || '?'}/100 (Craft: ${analysis.original_craft_score||'?'}/100 | Technical: ${analysis.original_technical_score||'?'}/100)
 VERPLICHT OP TE LOSSEN IN DIT HERSCHRIJVEN — zelfs als score 95-100 is, geef ALTIJD 3-5 specifieke verbeterpunten:
-${origGraafRecs.filter(r => r.priority === 'high' || r.priority === 'medium').slice(0, 8).map(r =>
+${origGraafRecs.filter(r => r.priority === 'high').slice(0, 5).map(r =>
   `• [${(r.priority||'').toUpperCase()}] ${r.title}: ${r.action || r.description || ''}`
 ).join('\n')}
 ═══════════════════════════════════════` : `
@@ -15056,11 +15056,11 @@ GEEN GRAAF SCAN BESCHIKBAAR — schrijf content alsof de huidige score 0/100 is.
 const gscBlockRW = (gscPagesRW.length || gscQueriesRW.length) ? `
 GSC RANKENDE PAGINA'S (${gscPagesRW.length}): ${gscPagesRW.join(', ') || '—'}
 GSC ECHTE ZOEKOPDRACHTEN (${gscQueriesRW.length}) — verwerk letterlijk in headings en body:
-${gscQueriesRW.join(', ') || '—'}
+${gscQueriesRW.slice(0,15).join(', ') || '—'}
 ` : '';
 
     const mpR = await pool.query(`SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 10`, [rw.profile_id]);
-    const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
+    const moneyPages = mpR.rows.slice(0,5).map(p => `${p.title || p.url}: ${p.url}`).join('\n');
 
     const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
 
@@ -15087,7 +15087,7 @@ ${gscQueriesRW.join(', ') || '—'}
       biRW.address       ? `- Adres: ${biRW.address}${biRW.city?', '+biRW.city:''}` : null,
       biRW.review_score  ? `- Reviews: ${biRW.review_score} (${biRW.review_count||''} op ${biRW.review_platform||''})` : null,
       biRW.opening_hours ? `- Openingstijden: ${biRW.opening_hours}` : null,
-      (biRW.unique_selling_points||[]).length ? `- USPs: ${biRW.unique_selling_points.join(' | ')}` : null,
+      (biRW.unique_selling_points||[]).length ? `- USPs: ${biRW.unique_selling_points.slice(0,4).join(' | ')}` : null,
     ].filter(Boolean).join('\n');
     const antiFacts = verifiedFactsRW
       ? `Gebruik ALLEEN deze gegevens. Verzin NOOIT contactgegevens die niet hierboven staan.`
@@ -15218,14 +15218,14 @@ STRUCTUUR: ${(analysis.recommended_h2s||[]).join(' | ')}
 SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
 RELATED KEYWORDS: ${(analysis.related_keywords||[]).join(', ')}
 PEOPLE ALSO ASK (ECHTE VRAGEN VAN GOOGLE — VERWERK IN FAQ):
-${(analysis.paa_questions||[]).map((q,i) => `${i+1}. "${q.question}" → Beantwoord beter dan: "${(q.answer||'').slice(0,100)}..."`).join('\n')}
+${(analysis.paa_questions||[]).slice(0,5).map((q,i) => `${i+1}. "${q.question}" → ${(q.answer||'').slice(0,80)}`).join('\n')}
 
 AI OVERVIEW KANSEN — STRATEGIE OM GECITEERD TE WORDEN:
-${(analysis.ai_overview_opportunities||[]).join(' | ')}
+${(analysis.ai_overview_opportunities||[]).slice(0,3).join(' | ')}
 ${analysis.ai_overview_detected ? `\nAI OVERVIEW GEDETECTEerd op de SERP. Google geeft al een antwoord. Jouw content moet SPECIFIEKER, MEER GECITEERD, en UITGEBREIDER zijn dan het AI Overview.` : ''}
 
 VOICE SEARCH — OPTIMALISATIE:
-${(analysis.voice_search_opportunities||[]).join(' | ')}
+${(analysis.voice_search_opportunities||[]).slice(0,2).join(' | ')}
 MANDATORY: Gebruik <div id="direct-answer"> bovenaan met 40-60 woorden direct antwoord.
 Voeg Speakable schema toe met cssSelector: ["#direct-answer", "#voice-1", "#voice-2"]
 SECONDARY KEYWORDS: ${(analysis.secondary_keywords||[]).join(', ')}
@@ -15297,20 +15297,20 @@ DOELWOORDTELLING: ${analysis.target_word_count || 2500}+ (dezelfde layout, beter
 
 REWRITE STRATEGIE: ${analysis.rewrite_strategy || ''}
 SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
-AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
-VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(analysis.voice_search_opportunities||[]).join(' | ')}
+AI OVERVIEW KANSEN: ${(analysis.ai_overview_opportunities||[]).slice(0,3).join(' | ')}
+VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(analysis.voice_search_opportunities||[]).slice(0,2).join(' | ')}
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
 ${imageNote}
 
 BESTAANDE JSON-LD SCHEMA'S (behoud exact — update ALLEEN dateModified naar "${schemaDateModified}", datePublished NOOIT aanpassen):
-${(layoutSkeleton.schemaBlocks||[]).slice(0,3).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,400)}`).join('\n\n')}
+${(layoutSkeleton.schemaBlocks||[]).slice(0,2).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,250)}`).join('\n\n')}
 
 ═══════════════════════════════════════
 ORIGINELE PAGINA — HERSCHRIJF DE TEKST, BEHOUD DE LAYOUT
 ═══════════════════════════════════════
-${rw.original_html.slice(0, 50000)}
+${(rw.original_html||'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<!--[\s\S]*?-->/g,'').slice(0, 30000)}
 
 Geef ALLEEN de herschreven HTML terug. Geen markdown, geen uitleg. Eindig met <!-- word_count: X -->.`;
 
@@ -15365,7 +15365,7 @@ JSON-LD verplicht:
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${schemaDatePublished}","dateModified":"${schemaDateModified}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
 
-AI OVERVIEW: ${(analysis.ai_overview_opportunities||[]).join(' | ')}
+AI OVERVIEW: ${(analysis.ai_overview_opportunities||[]).slice(0,3).join(' | ')}
 VOICE SEARCH: ${(analysis.voice_search_opportunities||[]).join(', ')}
 SECONDARY: ${(analysis.secondary_keywords||[]).join(', ')} | RELATED: ${(analysis.related_keywords||[]).join(', ')}
 
