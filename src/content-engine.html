@@ -662,7 +662,7 @@ async function autoSaveGscToServer() {
       }).catch(function(){});
     }
     // Reload Pages tab from server so it reflects the new data
-    if (_pagesOverviewData !== undefined) loadPagesOverview();
+    loadPagesOverview();
     console.log('[gsc-autosave] ' + _gscPages.length + ' pages + ' + _gscQueries.length + ' queries saved to server for profile ' + profileId);
   } catch(e) {
     // Silent fail — user already sees data in memory, server sync is best-effort
@@ -708,8 +708,7 @@ function syncGscToPagesOverview() {
       existingUrls.push(g.url); // prevent duplicates within same call
     }
   });
-  // Always re-render — data changed regardless of add/merge count
-  renderPagesOverview();
+  // Caller handles renderPagesOverview — avoids double render
 }
 
 // ── Sitemap: URL input + file upload ────────────────────────────────────────
@@ -2797,9 +2796,7 @@ function formatMessage(text) {
     .replace(/\n/g, '<br>');
 }
 
-function escHtml(t) {
-  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+// escHtml defined below with full quote escaping — do not duplicate here
 
 function setStatus(type, text) {
   var dot = document.getElementById('statusDot');
@@ -2824,7 +2821,7 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 140) + 'px';
 }
 
-function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+// sleep() defined below
 
 function toast(msg, type) {
   var wrap = document.getElementById('toastWrap');
@@ -2873,6 +2870,11 @@ function switchView(view) {
   if (view === 'tracker') {
     document.getElementById('view-tracker').style.display = 'block';
     loadTrackerPages();
+  } else if (view === 'profiles') {
+    document.querySelectorAll('[id^="view-"]').forEach(function(v){ v.style.display='none'; });
+    var vp = document.getElementById('view-profiles');
+    if (vp) vp.style.display = 'block';
+    loadProfilesList();
   } else if (view === 'stats') {
     document.getElementById('view-stats').style.display = 'block';
   } else if (view === 'pages') {
@@ -2905,6 +2907,9 @@ function switchView(view) {
 var _trPages = [];
 
 async function loadTrackerPages() {
+  var _tok3 = '';
+  try { _tok3 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+  if (!_tok3) { renderTrackerList(); return; }
   try {
     var profileId = _context.profileId || (_profile && _profile.id) || null;
     var profileFilter = profileId ? '?profile_id=' + profileId : '';
@@ -3134,12 +3139,14 @@ function startTrackerPoll(pageId) {
 
 async function deleteTrackerPage(pageId) {
   if (!confirm('Remove this page from tracking?')) return;
-  var d = await api('/api/tracker/pages/' + pageId, 'DELETE');
-  if (!d.success) { toast('Error: ' + (d.error||'Failed'), 'err'); return; }
-  toast('Removed', 'ok');
-  await loadTrackerPages();
+  if (!confirm('Remove this page from tracking?')) return;
+  try {
+    var d = await api('/api/tracker/pages/' + pageId, 'DELETE');
+    if (!d.success) { toast('Error: ' + (d.error||'Failed'), 'err'); return; }
+    toast('Removed', 'ok');
+    await loadTrackerPages();
+  } catch(e) { toast('Delete failed: ' + e.message, 'err'); }
 }
-
 function trPushToAgent(pageId) {
   var page = _trPages.find(function(p){ return p.id === pageId; });
   if (!page) return;
@@ -3382,14 +3389,15 @@ function downloadStudyHtml() {
 
 async function loadPastStudies() {
   if (!_profile) { toast('Select a profile first', 'err'); return; }
-  var d = await api('/api/content/stats-studies/' + _profile.id);
-  var el = document.getElementById('studiesList');
-  if (!(d.studies && d.studies.length)) { el.innerHTML = '<div style="font-size:12px;color:#6b7280;">No studies yet.</div>'; return; }
+  try {
+    var d = await api('/api/content/stats-studies/' + _profile.id);
+    var d = await api('/api/content/stats-studies/' + _profile.id);
+    var el = document.getElementById('studiesList');
   el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);"><th style="padding:6px 10px;text-align:left;font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Title</th><th style="padding:6px 10px;text-align:right;font-size:9px;color:#6b7280;">Words</th><th style="padding:6px 10px;text-align:right;font-size:9px;color:#6b7280;">Date</th></tr></thead><tbody>' +
     d.studies.map(function(s){ return '<tr style="border-bottom:1px solid rgba(255,255,255,.04);"><td style="padding:7px 10px;color:#e2e8f0;">'+escHtml((s.title||s.topic||'').substring(0,50))+'</td><td style="padding:7px 10px;text-align:right;color:#6b7280;">'+(s.word_count||0)+'</td><td style="padding:7px 10px;text-align:right;color:#6b7280;">'+new Date(s.created_at).toLocaleDateString()+'</td></tr>'; }).join('') +
-  '</tbody></table>';
+    '</tbody></table>';
+  } catch(e) { console.error('[loadPastStudies]', e.message); }
 }
-
 // ════════════════════════════════════════════════════════════════
 // CLUSTER BUILDER
 // ════════════════════════════════════════════════════════════════
@@ -4720,6 +4728,9 @@ function autoAssignPageKeywords() {
 }
 
 async function loadPagesOverview(forceRefresh) {
+  var _tok4 = '';
+  try { _tok4 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+  if (!_tok4) { syncGscToPagesOverview(); renderPagesOverview(); return; }
   var profileId = _context.profileId || null;
   var profileFilter = profileId ? '?profile_id=' + profileId : '';
   var pages = [];
@@ -4812,14 +4823,10 @@ async function loadPagesOverview(forceRefresh) {
       }
     });
   _pagesOverviewData = Object.values(urlMap);
-  // Always merge in-memory GSC sidebar data after server fetch.
-  // This ensures Pages tab shows data even when tracker_pages DB is empty.
-  // syncGscToPagesOverview calls renderPagesOverview itself when data changes.
-  if (_gscPages.length) {
-    syncGscToPagesOverview(); // renders inside
-  } else {
-    renderPagesOverview();
-  }
+  // Always merge in-memory GSC sidebar data — user already dropped their CSV
+  if (_gscPages.length) syncGscToPagesOverview();
+  // Always render regardless — shows either merged data or empty state
+  renderPagesOverview();
   if (forceRefresh && _filteredPageCount) toast('✅ ' + _filteredPageCount + ' pages loaded', 2000, 'ok');
 }
 
@@ -4887,16 +4894,12 @@ function renderPagesOverview() {
   // Only apply domain filter (sanity check) and search text filter here.
   var profileDomain = (_profile && _profile.domain) || '';
   var data = _pagesOverviewData.filter(function(p) {
-    // Domain sanity filter: if profile has a domain, only show matching URLs
-    if (profileDomain && p.url) {
-      try {
-        if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
-      } catch(e) { /* relative URL, allow through */ }
-    }
-    // Search text filter
+    // Search text filter only — domain filter removed (it silently drops valid pages)
     if (!search) return true;
     var s = search.toLowerCase();
-    return (p.url || '').toLowerCase().includes(s) || (p.keyword || '').toLowerCase().includes(s);
+    return (p.url || '').toLowerCase().includes(s) ||
+           (p.slug || '').toLowerCase().includes(s) ||
+           (p.keyword || '').toLowerCase().includes(s);
   });
   _filteredPageCount = data.length;
 
