@@ -552,6 +552,7 @@ function handleGscUpload(input) {
             keyword:     r[keys.find(function(k){ return /keyword|query/i.test(k); })] || ''
           };
         }).filter(function(r){ return r.url; });
+        _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
         toast('✓ Pages CSV: ' + _gscPages.length + ' URLs loaded', 'ok');
       }
       if (isQueries) {
@@ -604,9 +605,9 @@ function handleGscQueriesUpload(input) {
         position:    parseFloat(r[keys.find(function(k){ return /pos/i.test(k); })] || 0)
       };
     }).filter(function(r){ return r.query && r.query.trim(); });
+    _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
     toast('✓ Queries CSV: ' + _gscQueries.length + ' queries loaded', 2500, 'ok');
     updateGscStatus();
-    // Auto-save queries to server too
     autoSaveGscToServer();
   };
   reader.readAsText(file);
@@ -617,8 +618,10 @@ function handleGscQueriesUpload(input) {
 // as the Agent — no "Import" click required. Runs in background, no modal.
 async function autoSaveGscToServer() {
   var profileId = _context.profileId || (_profile && _profile.id) || null;
-  if (!profileId) return; // no profile yet — will retry when profile is selected
+  if (!profileId) return;
   if (!_gscPages.length && !_gscQueries.length) return;
+  // Tag ownership so profile isolation check works
+  _gscOwnerProfileId = profileId;
 
   var token = '';
   try { token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
@@ -1035,11 +1038,15 @@ function onProfileSwitch() {
   // Persist selected profile
   try { localStorage.setItem('nexus_selected_profile_id', String(_profile.id)); } catch(e) {}
 
+  // Save GSC if it belongs to this profile BEFORE clearing
+  if ((_gscPages.length || _gscQueries.length) && _gscOwnerProfileId && String(_gscOwnerProfileId) === String(_profile && _profile.id)) {
+    autoSaveGscToServer();
+  }
   // Clear ALL profile-specific state — strict isolation
   _gscPages = []; _gscQueries = []; _gscOwnerProfileId = null;
-  _pagesOverviewData = [];        // clear immediately — don't show old profile's pages
-  _trPages = [];                  // clear tracker too
-  _auditTasks = {};               // clear audit task cache — belongs to old profile
+  _pagesOverviewData = [];
+  _trPages = [];
+  _auditTasks = {};
   _context.intelligence_context = null;
   var zone = document.getElementById('gscUploadZone');
   var qzone = document.getElementById('gscQueriesUploadZone');
@@ -1047,7 +1054,6 @@ function onProfileSwitch() {
   if (zone) zone.style.display = 'block';
   if (qzone) qzone.style.display = 'block';
   if (stat) { stat.style.display = 'none'; stat.innerHTML = ''; }
-  // Immediately show empty state for pages + tracker
   renderPagesOverview();
   renderTrackerList();
 
@@ -4933,12 +4939,22 @@ function renderPagesOverview() {
   });
   _filteredPageCount = data.length;
 
-  // Show active profile name + REAL page count
+  // Show active profile name + page count
   if (profileLabel && _profile) {
-    var _gscNote = _gscPages.length ? ' · GSC: ' + _gscPages.length + ' pages in memory' : '';
-    var _dbNote  = _pagesOverviewData.length !== data.length ? ' (' + _pagesOverviewData.length + ' in DB)' : '';
+    var _gscNote = _gscPages.length ? ' · ' + _gscPages.length + ' GSC pages in memory' : '';
     profileLabel.textContent = 'Profile: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : '') +
-      ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '') + _dbNote + _gscNote;
+      ' — ' + data.length + ' page' + (data.length !== 1 ? 's' : '') + _gscNote;
+  }
+
+  // If filter killed all data, show helpful empty state instead of blank grid
+  if (!data.length && _pagesOverviewData.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    var ti = document.getElementById('pagesEmptyTitle'), tx = document.getElementById('pagesEmptyText'), ic = document.getElementById('pagesEmptyIcon');
+    if (ti) ti.textContent = 'No pages match the current filter';
+    if (tx) tx.textContent = 'Try clearing the search box or refreshing.';
+    if (ic) ic.textContent = '🔍';
+    updateMergeButton(); renderAuditAdvisor(); return;
   }
 
   // Sort
