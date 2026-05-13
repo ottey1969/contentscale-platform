@@ -208,7 +208,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <header class="topbar">
     <div style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
     <div class="topbar-sep"></div>
-    <div class="topbar-title"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · Intelligence Agent</div>
+    <div class="topbar-title" id="topbarTitle"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · <span id="topbarContext">Intelligence Agent</span></div>
     <div style="display:flex;gap:4px;margin-left:8px;">
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
       <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
@@ -267,9 +267,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div id="sitemapStatus"></div>
     </div>
 
+    <!-- How it works — between profile and tools -->
+    <div class="sidebar-section" style="padding-bottom:4px;">
+      <div class="sidebar-label">How it works</div>
+      <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.5;">
+        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
+        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
+        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ Rewrite → AI beats rank 1</div>
+        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker monitors</div>
+      </div>
+    </div>
+
     <!-- Tools -->
     <div class="sidebar-section">
       <div class="sidebar-label">Tools</div>
+
+      <div style="margin-bottom:8px;">
+        <button class="sidebar-btn" onclick="switchView('stats')" style="border-color:rgba(56,189,248,.3);color:#38bdf8;margin-top:0;margin-bottom:3px;">📊 Stats Research</button>
+        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Find real cited statistics before you write — boosts E-E-A-T.</div>
+      </div>
 
       <div style="margin-bottom:8px;">
         <button class="sidebar-btn" onclick="openPipelineModal()" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;margin-bottom:3px;">🚀 Content Pipeline</button>
@@ -312,17 +329,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       </div>
     </div>
 
-    <!-- Workflow guide + context -->
+    <!-- Context only -->
     <div class="context-panel" id="contextPanel">
-      <div class="sidebar-label">How it works</div>
-      <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.7;margin-bottom:8px;">
-        <div id="wfStep1" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">① Enter engine code → Connect</div>
-        <div id="wfStep2" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">② Tracker → select profile → Import GSC or Sitemap</div>
-        <div id="wfStep3" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">③ Click 🔍 Spy on a page → see what competitors do</div>
-        <div id="wfStep4" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;margin-bottom:4px;">④ Rewrite Page → paste HTML → AI beats rank 1</div>
-        <div id="wfStep5" style="padding:3px 0;border-left:2px solid #374151;padding-left:8px;">⑤ Publish → Tracker monitors position daily</div>
-      </div>
-      <div id="contextDisplay" style="font-size:10px;color:var(--muted);line-height:1.6;display:none;"></div>
+      <div class="sidebar-label">Session Context</div>
+      <div id="contextDisplay" style="font-size:10px;color:var(--muted);line-height:1.6;"></div>
     </div>
   </aside>
 
@@ -333,7 +343,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="welcome" id="welcomeScreen">
         <div class="welcome-icon">🧠</div>
         <div class="welcome-title"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div>
-        <div class="welcome-sub">PULSE researches your GSC data and competitors. NEXUS reverse-engineers what Google and AI Overviews reward. Together they write content that ranks — and gets cited.</div>
+        <div style="display:flex;gap:18px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="text-align:center;max-width:180px;">
+            <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">PULSE</div>
+            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, and competitors in real time.</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;max-width:180px;">
+            <div style="font-size:11px;font-weight:800;color:#f56d00;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">NEXUS</div>
+            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward and writes to beat it.</div>
+          </div>
+        </div>
         <div class="welcome-starters">
           <button class="starter-btn" onclick="sendStarter(this)">I want to rank higher for a keyword</button>
           <button class="starter-btn" onclick="sendStarter(this)">Rewrite an existing page</button>
@@ -2248,7 +2268,7 @@ async function cmdPipeline(keyword, url) {
   try {
     // Call pipeline API
     _updateStage(pipelineId, 'research', 'active', 'Fetching competitor data, PAA, AI Overview...');
-    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null, profile_id: _context.profileId || null });
+    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null, profile_id: _context.profileId || null, stats_context: _context.stats_context || null });
 
     if (!data.success || !data.pipeline) {
       _updateStage(pipelineId, 'research', 'failed', 'Pipeline failed: ' + (data.error || 'Unknown error'));
@@ -2901,6 +2921,12 @@ async function api(endpoint, method, body) {
 // VIEW SWITCHER
 // ════════════════════════════════════════════════════════════════
 function switchView(view) {
+  // Update topbar context label
+  var _ctx = document.getElementById('topbarContext');
+  if (_ctx) {
+    var _labels = { agent:'Intelligence Agent', tracker:'Tracker & SERP Spy', stats:'Stats Research', profiles:'Profiles' };
+    _ctx.textContent = _labels[view] || 'Intelligence Agent';
+  }
   document.getElementById('view-tracker').style.display = 'none';
   document.getElementById('view-stats').style.display = 'none';
   var viewPages = document.getElementById('view-pages');
@@ -3391,19 +3417,62 @@ async function createStatsStudy() {
   if (!topic) { toast('Enter a topic', 'err'); return; }
   if (!_profile) { toast('Select a profile first', 'err'); return; }
   var btn = document.getElementById('btnStudy');
-  btn.disabled = true; btn.textContent = '🔬 Researching with live search…';
+  btn.disabled = true;
+  // Animated research progress
+  var resultEl = document.getElementById('studyResult');
+  var contentEl = document.getElementById('studyContent');
+  resultEl.style.display = 'block';
+  var _phases = [
+    '🔍 Searching live web for statistics…',
+    '📊 Finding cited data sources…',
+    '🧠 Extracting key numbers…',
+    '✍ Writing your statistics study…',
+    '📈 Building charts and tables…'
+  ];
+  var _phaseIdx = 0;
+  contentEl.innerHTML = '<div style="text-align:center;padding:40px 20px;">' +
+    '<div style="font-size:32px;margin-bottom:16px;animation:spin 2s linear infinite;display:inline-block;">🔬</div>' +
+    '<div id="statsPhaseText" style="font-size:14px;font-weight:600;color:#a78bfa;margin-bottom:8px;">' + _phases[0] + '</div>' +
+    '<div style="background:rgba(255,255,255,.06);border-radius:999px;height:4px;margin:12px auto;max-width:280px;overflow:hidden;">' +
+    '<div id="statsProgressBar" style="background:linear-gradient(90deg,#7c3aed,#f56d00);height:4px;border-radius:999px;width:5%;transition:width .8s ease;"></div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#4b5563;margin-top:6px;">Claude is searching live — no fabricated numbers.</div>' +
+    '</div>';
+  // Inject spin keyframe if not present
+  if (!document.getElementById('statsSpinStyle')) {
+    var st = document.createElement('style');
+    st.id = 'statsSpinStyle';
+    st.textContent = '@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+  }
+  var _phaseTimer = setInterval(function() {
+    _phaseIdx = (_phaseIdx + 1) % _phases.length;
+    var pt = document.getElementById('statsPhaseText');
+    var pb = document.getElementById('statsProgressBar');
+    if (pt) pt.textContent = _phases[_phaseIdx];
+    if (pb) pb.style.width = (20 + _phaseIdx * 16) + '%';
+  }, 4000);
   try {
     var d = await api('/api/content/stats-study', 'POST', {
       profile_id: _profile.id, topic: topic,
       seed_keyword: document.getElementById('statsKeyword').value.trim()
     });
+    clearInterval(_phaseTimer);
     if (!d.success) throw new Error(d.error);
     _studyHtml = d.study.html_content;
     _studyTitle = d.study.title;
-    renderStatsStudy(d.study, d.study_data);
-    document.getElementById('studyResult').style.display = 'block';
-    toast('Study created: ' + d.study.word_count + ' words!', 'ok');
-  } catch(e) { toast('Study failed: ' + e.message, 'err'); }
+    window._lastStudyData = d.study_data; // stored for "Use in Pipeline/Rewrite" 
+    var pb2 = document.getElementById('statsProgressBar');
+    if (pb2) pb2.style.width = '100%';
+    setTimeout(function() {
+      renderStatsStudy(d.study, d.study_data);
+    }, 400);
+    toast('✅ Study created: ' + d.study.word_count + ' words!', 3000, 'ok');
+  } catch(e) {
+    clearInterval(_phaseTimer);
+    contentEl.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171;">❌ ' + escHtml(e.message) + '</div>';
+    toast('Study failed: ' + e.message, 'err');
+  }
   finally { btn.disabled = false; btn.textContent = '🔬 Build Study with Live Research'; }
 }
 
@@ -3414,14 +3483,47 @@ function renderStatsStudy(study, data) {
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">' +
     '<div><div style="font-size:15px;font-weight:700;color:#fbbf24;">' + escHtml(study.title) + '</div>' +
     '<div style="font-size:12px;color:#6b7280;margin-top:3px;">' + study.word_count + ' words · ' + (data.sources||[]).length + ' sources · ' + stats.length + ' stats</div></div>' +
-    '<div style="display:flex;gap:6px;">' +
-    '<button onclick="navigator.clipboard.writeText(_studyHtml).then(function(){toast(\'Copied!\',\'ok\')})" style="padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">📋 Copy HTML</button>' +
-    '<button onclick="downloadStudyHtml()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.3);">⬇ Download</button>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    '<button onclick="useStatsInPipeline()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;">🚀 Use in Pipeline</button>' +
+    '<button onclick="useStatsInRewrite()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">✍ Use in Rewrite</button>' +
+    '<button onclick="downloadStudyHtml()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;">⬇ Download</button>' +
     '</div></div>' +
     (stats.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px;">' +
     stats.map(function(s){return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:12px;"><div style="font-size:13px;font-weight:700;color:#f56d00;margin-bottom:3px;">'+escHtml(s.stat.substring(0,35))+'</div><div style="font-size:10px;color:#6b7280;">'+escHtml(s.source||'')+' '+(s.year||'')+'</div></div>';}).join('') + '</div>' : '') +
     (data.key_findings&&data.key_findings.length ? '<div style="margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Key Findings</div>' + data.key_findings.map(function(f){return '<div style="font-size:13px;color:#e2e8f0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">→ '+escHtml(f)+'</div>';}).join('') + '</div>' : '') +
     (data.sources&&data.sources.length ? '<div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Sources ('+data.sources.length+')</div>' + data.sources.map(function(s){return '<div style="font-size:12px;padding:2px 0;"><a href="'+escHtml(s.url||'')+'" target="_blank" style="color:#38bdf8;">'+escHtml(s.name)+'</a> '+(s.year||'')+'</div>';}).join('') + '</div>' : '');
+}
+
+// ── Use Stats in Pipeline / Rewrite ─────────────────────────────────────────
+// Stores current study stats as context, then opens the relevant tool.
+// The stats are injected into the prompt as "supporting data with citations."
+function useStatsInPipeline() {
+  if (!window._lastStudyData) { toast('No study data — run a study first', 'warn'); return; }
+  // Store stats in context for Pipeline to use
+  _context.stats_context = buildStatsContext(window._lastStudyData);
+  // Switch to Agent with pre-filled message, or open Pipeline directly
+  openPipelineModal();
+  toast('📊 Stats loaded into Pipeline — they will be cited in the article', 3000, 'ok');
+}
+function useStatsInRewrite() {
+  if (!window._lastStudyData) { toast('No study data — run a study first', 'warn'); return; }
+  _context.stats_context = buildStatsContext(window._lastStudyData);
+  openRewriteModal();
+  toast('📊 Stats loaded into Rewrite — AI will cite them in the content', 3000, 'ok');
+}
+function buildStatsContext(data) {
+  if (!data) return '';
+  var lines = ['STATISTICS TO CITE (use these exact numbers with attribution):'];
+  (data.key_stats || []).slice(0, 8).forEach(function(s) {
+    if (s.stat && s.context) {
+      lines.push('• ' + s.stat + ' — ' + s.context + (s.source ? ' (Source: ' + s.source + (s.year ? ', ' + s.year : '') + ')' : ''));
+    }
+  });
+  if (data.key_findings && data.key_findings.length) {
+    lines.push('\nKEY FINDINGS:');
+    data.key_findings.slice(0, 4).forEach(function(f) { lines.push('• ' + f); });
+  }
+  return lines.join('\n');
 }
 
 function downloadStudyHtml() {
@@ -3435,7 +3537,6 @@ function downloadStudyHtml() {
 async function loadPastStudies() {
   if (!_profile) { toast('Select a profile first', 'err'); return; }
   try {
-    var d = await api('/api/content/stats-studies/' + _profile.id);
     var d = await api('/api/content/stats-studies/' + _profile.id);
     var el = document.getElementById('studiesList');
   el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);"><th style="padding:6px 10px;text-align:left;font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Title</th><th style="padding:6px 10px;text-align:right;font-size:9px;color:#6b7280;">Words</th><th style="padding:6px 10px;text-align:right;font-size:9px;color:#6b7280;">Date</th></tr></thead><tbody>' +
@@ -4690,7 +4791,8 @@ async function runRewriteFromModal() {
       rewrite_modes: modes,
       rewrite_mode: modes[0],  // backward compat
       intelligence_context: intelContext ? JSON.stringify({ competitors: intelContext.competitors, paa: intelContext.people_also_ask, brief: intelContext.intelligence_brief }) : null,
-      manual_competitor_intel: document.getElementById('rewriteCompIntel').value.trim() || null
+      manual_competitor_intel: document.getElementById('rewriteCompIntel').value.trim() || null,
+      stats_context: _context.stats_context || null
     });
     if (!analyseResult || !analyseResult.success) throw new Error((analyseResult && analyseResult.error) || 'Analysis failed');
     var rewriteId = analyseResult.rewrite_id;
@@ -6376,8 +6478,9 @@ function renderSerpSpyReport(s) {
   <!-- ── UNIFIED TRACKER HEADER ── -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
     <div>
-      <div style="font-size:16px;font-weight:800;">📡 Tracker</div>
-      <div id="trackerProfileLabel" style="font-size:11px;color:#6b7280;margin-top:2px;">Select a profile to start tracking</div>
+      <div style="font-size:16px;font-weight:800;">📡 Tracker & SERP Spy</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:2px;font-style:italic;">Know before Google tells you — positions, AI citations &amp; content changes, automatic.</div>
+      <div id="trackerProfileLabel" style="font-size:11px;color:#6b7280;margin-top:3px;"></div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
       <button onclick="loadTrackerPages()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
@@ -6447,7 +6550,11 @@ function renderSerpSpyReport(s) {
 
 <!-- STATS VIEW -->
 <div id="view-stats" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:20px 24px;background:#07090e;">
-  <div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:800;">📊 Stats Study Builder</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">Real statistics from live web research. Claude searches — no fabricated numbers.</div></div>
+  <div style="margin-bottom:18px;">
+    <div style="font-size:16px;font-weight:800;">📊 Stats</div>
+    <div style="font-size:12px;color:#9ca3af;margin-top:2px;font-style:italic;">Find real statistics with sources — before you write, not after.</div>
+    <div style="font-size:11px;color:#4b5563;margin-top:4px;">Claude searches live. Every number is cited. Use before Pipeline or Rewrite to add credible data that boosts E-E-A-T.</div>
+  </div>
   <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px;margin-bottom:14px;">
     <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Study Topic</label><input id="statsTopic" placeholder="e.g. Roofing costs Netherlands 2025" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
     <div style="margin-bottom:12px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Seed Keyword (optional)</label><input id="statsKeyword" placeholder="roofing costs statistics" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
