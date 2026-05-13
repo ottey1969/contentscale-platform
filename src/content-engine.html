@@ -6111,13 +6111,13 @@ function renderSerpSpyReport(s) {
       '<div><div style="font-size:9px;color:#34d399;font-weight:700;margin-bottom:6px;">✓ TOP 3 SHARE</div>' +
       (p2.top3_shared_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
       '<div><div style="font-size:9px;color:#f87171;font-weight:700;margin-bottom:6px;">✗ BOTTOM 7 MISSING</div>' +
-      (p2.bottom7_missing_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
+      (p2.bottom_missing_traits||p2.bottom7_missing_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
       '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Format: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_content_format||'—') + '</span></div>' +
       '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Schema: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_schema||'—') + '</span></div>' +
       '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Words: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_word_count_range||'—') + '</span></div>' +
-      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Freshness: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.freshness_pattern||'—') + '</span></div>' +
+      (p2.freshness_pattern && p2.freshness_pattern !== '—' && p2.freshness_pattern !== 'not a factor' ? '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Freshness: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.freshness_pattern) + '</span></div>' : '') +
       '</div></div>';
   }
 
@@ -6129,13 +6129,14 @@ function renderSerpSpyReport(s) {
       '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:'+(isOpp?'#34d399':'#f87171')+';">STEP 3 · OUTLIER <span style="font-weight:400;color:#6b7280;font-size:10px;">'+(isOpp?'🟢 Opportunity':'🔴 Warning')+' — rank #'+(o.rank||'?')+'</span></div>' +
       '<div style="color:#93c5fd;font-size:10px;margin-bottom:4px;">' + escHtml(o.domain||o.url||'') + '</div>' +
       '<div style="color:#9ca3af;font-size:10px;margin-bottom:8px;">' + escHtml(o.why_it_breaks_pattern||'') + '</div>' +
-      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:10px;font-size:10px;">' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:10px;font-size:10px;margin-bottom:6px;">' +
       '<div style="color:#fbbf24;font-weight:700;margin-bottom:4px;">Why it ranks anyway</div>' +
-      '<div style="color:#e2e8f0;">' + escHtml(o.why_it_ranks_anyway||'') + '</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(o.why_it_ranks_anyway || o.why_ranks_anyway || '—') + '</div>' +
       '</div>' +
-      '<div style="margin-top:8px;background:'+(isOpp?'rgba(16,185,129,.08)':'rgba(248,113,113,.08)')+';border-radius:6px;padding:10px;font-size:10px;">' +
+      (o.why_breaks_pattern ? '<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;font-size:10px;color:#9ca3af;margin-bottom:6px;"><b style="color:#6b7280;">Breaks pattern:</b> ' + escHtml(o.why_breaks_pattern) + '</div>' : '') +
+      '<div style="margin-top:4px;background:'+(isOpp?'rgba(16,185,129,.08)':'rgba(248,113,113,.08)')+';border-radius:6px;padding:10px;font-size:10px;">' +
       '<div style="color:'+(isOpp?'#34d399':'#f87171')+';font-weight:700;margin-bottom:4px;">What to learn</div>' +
-      '<div style="color:#e2e8f0;">' + escHtml(o.what_to_learn||'') + '</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(o.what_to_learn || '—') + '</div>' +
       '</div></div>';
   }
 
