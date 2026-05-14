@@ -6077,9 +6077,34 @@ function renderSerpSpyReport(s) {
     '</div>';
 
   // ── STEP 1: CATALOG ──
+  // Build catalog from best available source: step1_catalog > _live_graaf > _serp_urls
+  var catalogData = [];
+  if (s.step1_catalog && s.step1_catalog.length) {
+    catalogData = s.step1_catalog;
+  } else if (s._live_graaf && s._live_graaf.length) {
+    // Build from GRAAF data + serp URLs
+    catalogData = s._live_graaf.map(function(g) {
+      var spyUrl = (s._serp_urls || []).find(function(u){ return u.rank === g.rank; }) || {};
+      return {
+        rank: g.rank, domain: g.domain, url: g.url, title: spyUrl.title || g.domain,
+        content_type: 'service page', estimated_word_count: g.wordCount || '?',
+        schema_types: g.schemaTypes || [],
+        serp_features: [],
+        freshness: '—', ai_overview_eligible: false,
+        snippet_text: spyUrl.snippet || ''
+      };
+    });
+  } else if (s._serp_urls && s._serp_urls.length) {
+    catalogData = s._serp_urls.slice(0, 10).map(function(u) {
+      return { rank: u.rank, domain: u.domain, url: u.url, title: u.title || u.domain, content_type: '—', estimated_word_count: '?', schema_types: [], serp_features: [], freshness: '—', ai_overview_eligible: false, snippet_text: u.snippet || '' };
+    });
+  }
   html += '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px;margin-bottom:10px;">' +
     '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#7c3aed;">STEP 1 · CATALOG <span style="font-weight:400;color:#6b7280;font-size:10px;">Every URL, content type & SERP feature</span></div>';
-  (s.step1_catalog || s.competitors || []).forEach(function(e) {
+  if (!catalogData.length) {
+    html += '<div style="color:#6b7280;font-size:11px;">No catalog data — re-run Spy to populate</div>';
+  }
+  catalogData.forEach(function(e) {
     html += '<div style="border-bottom:1px solid rgba(255,255,255,.04);padding:8px 0;display:flex;gap:10px;align-items:flex-start;">' +
       '<div style="min-width:22px;height:22px;border-radius:50%;background:' + (e.rank <= 3 ? '#7c3aed' : 'rgba(255,255,255,.08)') + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">' + (e.rank||'?') + '</div>' +
       '<div style="flex:1;min-width:0;">' +
@@ -6093,7 +6118,7 @@ function renderSerpSpyReport(s) {
       (e.schema_types && e.schema_types.length ? e.schema_types.map(function(sc){ return '<span style="background:rgba(245,158,11,.1);color:#fbbf24;padding:2px 5px;border-radius:3px;font-size:9px;">🗂 '+escHtml(sc)+'</span>'; }).join('') : '') +
       (e.ai_overview_eligible ? '<span style="background:rgba(16,185,129,.15);color:#34d399;padding:2px 5px;border-radius:3px;font-size:9px;">🤖 AI eligible</span>' : '') +
       '</div>' +
-      (e.snippet_text ? '<div style="margin-top:4px;color:#6b7280;font-size:9px;font-style:italic;">"' + escHtml(e.snippet_text.substring(0,120)) + '…"</div>' : '') +
+      (e.snippet_text ? '<div style="margin-top:4px;color:#6b7280;font-size:10px;font-style:italic;line-height:1.5;">"' + escHtml(e.snippet_text) + '"</div>' : '') +
       '</div></div>';
   });
   html += '</div>';

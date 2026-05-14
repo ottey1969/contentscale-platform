@@ -25956,7 +25956,7 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   const entityFreq = {};
   compScrapes.forEach(sc=>{const seen=new Set();(sc.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!stops.has(w)).forEach(w=>{if(!seen.has(w)){entityFreq[w]=(entityFreq[w]||0)+1;seen.add(w);}});});
   const entityGaps = Object.entries(entityFreq).filter(([w,n])=>n>=2&&!clientWords.has(w)).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([entity,n])=>({entity,in_competitor_pages:n}));
-  const compSummary = top5.map((e,i)=>`RANK ${e.rank}: ${e.domain}\n  Snippet: "${(e.snippet||'').substring(0,120)}"`).join('\n\n');
+  const compSummary = top5.map((e,i)=>`RANK ${e.rank}: ${e.domain}\n  Snippet: "${(e.snippet||'')}"`).join('\n\n');
   const prompt = `You are an elite SEO analyst. Live SERP data for: "${keyword}"
 ${myUrl?`CLIENT: ${myUrl}\nAI Citation Score: ${clientAI?clientAI.score+'/100 ('+clientAI.eligibility+')':'not scored'}`:''}
 COMPETITORS:\n${compSummary}
