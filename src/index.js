@@ -10828,14 +10828,30 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
     // 4. Generate intelligence brief via Gemini
     let brief = null;
     if (geminiKey && competitorAnalysis.length) {
+      // Slim competitor payload to avoid token overflow truncation
+      const slimCompetitors = competitorAnalysis.map(c => ({
+        position: c.position,
+        url: c.url,
+        title: c.title,
+        snippet: c.snippet,
+        word_count: c.word_count,
+        h1: c.h1,
+        h2s: (c.h2s || []).slice(0, 6),
+        has_schema: c.has_schema,
+        schema_types: c.schema_types,
+        has_faq: c.has_faq,
+        has_author: c.has_author,
+        avg_paragraph_length: c.avg_paragraph_length
+      }));
+
       const prompt = `You are an elite SEO content strategist. Analyze this competitor data and generate a "beat them" content brief.
 
 KEYWORD: "${keyword}"
 ${yourUrl ? 'YOUR PAGE: ' + yourUrl : ''}
 ${yourAnalysis && !yourAnalysis.error ? 'YOUR STATS: ' + JSON.stringify(yourAnalysis) : ''}
 
-COMPETITORS (${competitorAnalysis.length} analyzed):
-${JSON.stringify(competitorAnalysis, null, 2)}
+COMPETITORS (${slimCompetitors.length} analyzed):
+${JSON.stringify(slimCompetitors, null, 2)}
 
 PEOPLE ALSO ASK:
 ${paa.map(q => '- ' + q.question).join('\n')}
@@ -10865,14 +10881,15 @@ Generate a JSON response with this exact structure:
       try {
         const gemResult = await callGeminiWithFallback(geminiKey, {
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+          generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' }
         });
         if (gemResult.ok) {
           const rawText = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           brief = extractJsonFromText(rawText);
           if (!brief) {
-            console.warn('[extractJsonFromText] null result — Pipeline brief: AI returned truncated or invalid JSON — try again.');
-            return res.status(502).json({ success: false, error: 'Pipeline brief: AI returned truncated or invalid JSON — try again.' });
+            console.warn('[extractJsonFromText] null result — Pipeline brief truncated; returning partial data without brief.');
+            // Don't 502 — competitor data + PAA + related searches were successfully fetched,
+            // return them so the UI can still render the competitor table
           }
         }
       } catch(e) { console.warn('[intelligence] Gemini brief failed:', e.message); }
