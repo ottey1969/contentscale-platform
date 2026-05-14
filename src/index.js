@@ -14851,7 +14851,7 @@ Return ONLY valid JSON:
   "related_searches": ["related search 1","related search 2"],
   "gsc_insight": "what the GSC data tells us",
   "rewrite_strategy": "detailed plan for rewriting this page better",
-  "recommended_title": "MUST use exact keyword: \"${gscData.keyword || original_slug.replace(/-/g,' ')}\" — 50-60 chars, no placeholders like [City] or [Service], use real location from URL, brand at end with pipe. Emergency keywords must include 24/7 or urgent. EXAMPLE FOR THIS PAGE: \"24/7 Emergency Roof Repair NJ | Fast 1.8-Hour Response | Perfect Roofing Team\"",
+  "recommended_title": "MUST use exact keyword: \"${gscData.keyword || (original_slug||'').replace(/-/g,' ')}\" — 50-60 chars, no placeholders like [City] or [Service], use real location from URL, brand at end with pipe. Emergency keywords must include 24/7 or urgent. EXAMPLE FOR THIS PAGE: \"24/7 Emergency Roof Repair NJ | Fast 1.8-Hour Response | Perfect Roofing Team\"",
   "recommended_meta_description": "improved description — 140-160 chars, keyword + stat + CTA, compelling not just descriptive",
   "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4"],
   "target_word_count": 2000,
@@ -15289,7 +15289,7 @@ Voorbeelden:
 - [AI: schrijf intro hier] → echte intro alinea
 - [INSERT STAT] → echte statistiek
 
-${rw.html_template}
+${rw.html_template || ''}
 
 Geef ALLEEN de ingevulde template terug. Geen uitleg, geen markdown. Eindig met <!-- word_count: X -->.`;
 
@@ -15346,7 +15346,7 @@ ${(layoutSkeleton.schemaBlocks||[]).slice(0,3).map((s,i)=>`--- Schema ${i+1} ---
 ═══════════════════════════════════════
 ORIGINELE PAGINA — HERSCHRIJF DE TEKST, BEHOUD DE LAYOUT
 ═══════════════════════════════════════
-${(rw.original_html||'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<!--[\s\S]*?-->/g,'').slice(0, 30000)}
+${(typeof rw.original_html === 'string' ? rw.original_html : '').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<!--[\s\S]*?-->/g,'').slice(0, 30000)}
 
 Geef ALLEEN de herschreven HTML terug. Geen markdown, geen uitleg. Eindig met <!-- word_count: X -->.`;
 
