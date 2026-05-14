@@ -376,7 +376,7 @@ async function loadAiKeyStatus() {
   try {
     var d = await api('/api/engine/keys');
     if (!d || !d.success) return;
-    var el = document.getElementById('aiKeyStatus');
+    var el = document.getElementById('aiKeyStatus'); if (!el) return;
     var modeLabel = d.mode === 'byok' ? 'Your keys' : 'Platform keys';
     var claudeStatus = d.claude.has_key ? '✓ Claude set' : (d.platform_available.claude ? '○ Platform Claude' : '✗ No Claude');
     var geminiStatus = d.gemini.has_key ? '✓ Gemini set' : (d.platform_available.gemini ? '○ Platform Gemini' : '✗ No Gemini');
