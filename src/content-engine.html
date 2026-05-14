@@ -3293,15 +3293,23 @@ function renderTrackerList() {
     while (recs && typeof recs === 'string' && rDepth < 3) { try { recs = JSON.parse(recs); rDepth++; } catch(e) { break; } }
     // Handle { all: [...], count: N } shape from GRAAF
     if (recs && recs.all && Array.isArray(recs.all)) recs = recs.all;
+    // If recs is still a string after parsing, it's corrupt — ignore it
+    if (typeof recs === 'string') recs = null;
     var topRec = Array.isArray(recs) && recs.length && typeof recs[0] === 'object' ? recs[0] : null;
+    // Also try snap.recommendation (singular) as plain-text fallback
+    if (!topRec && snap.recommendation && typeof snap.recommendation === 'string' && snap.recommendation.length > 5 && !snap.recommendation.startsWith('[') && !snap.recommendation.startsWith('{')) {
+      topRec = { title: snap.recommendation, priority: 'medium', action: '' };
+    }
     // Build recommendation HTML — show title + truncated action
     var recHtml = '';
-    if (topRec) {
+    if (topRec && typeof topRec === 'object' && (topRec.title || topRec.description || topRec.name)) {
       var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
-      var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'Recommendation');
-      var rAction = escHtml(topRec.action||topRec.fix||topRec.recommendation||'');
-      var rFull = rTitle + (rAction ? ' — ' + rAction.substring(0,120) + (rAction.length>120?'...':'') : '');
-      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;white-space:normal;word-break:break-word;line-height:1.4;">'+rFull+'</div>';
+      var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'');
+      var rAction = escHtml(topRec.action||topRec.fix||topRec.how_to_fix||topRec.recommendation||'');
+      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
+        '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
+        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction.substring(0,140) + (rAction.length>140?'…':'') + '</div>' : '') +
+        '</div>';
     }
 
     // ContentScore badge (NOT GRAAF — this is the live scan content score)
