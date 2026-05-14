@@ -15844,7 +15844,7 @@ INSTRUCTIONS:
     const appliedFixesStr = validFixes.join(',');
     await pool.query(
       `UPDATE content_rewrites SET rewritten_content=$1, rewritten_html=$1, rewritten_at=NOW(), rewrite_cost=$2, rewrite_model=$3, status='targeted_fix_applied', graaf_recs=$4 WHERE id=$5`,
-      [htmlContent, JSON.stringify({ model: modelUsed }), modelUsed, `[Targeted Fixes Applied: ${appliedFixesStr}]`, req.params.rewriteId]
+      [htmlContent, JSON.stringify({ model: modelUsed }), modelUsed, JSON.stringify({ fixes_applied: appliedFixesStr, type: 'targeted_fix' }), req.params.rewriteId]
     );
 
     // Create snapshot
