@@ -25938,16 +25938,39 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
   const myUrl = (profile_url||'').trim();
+  const serperKey = process.env.SERPAPI_KEY; // Serper.dev key (same one used by tracker check)
   let serpUrls = [];
-  try {
-    const ctrl1 = new AbortController(); setTimeout(()=>ctrl1.abort(),60000);
-    const r1 = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:`Search Google for: "${keyword}"\nReturn ONLY a JSON array of top 10 organic results:\n[{"rank":1,"url":"https://...","domain":"example.com","title":"...","snippet":"..."}]`}],tools:[{type:'web_search_20250305',name:'web_search'}]}),signal:ctrl1.signal});
-    const d1 = await r1.json().catch(()=>({}));
-    const raw1 = (d1.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-    const m = raw1.match(/\[[\s\S]*?\]/);
-    if(m) serpUrls = JSON.parse(m[0]);
-  } catch(e) { console.warn('[serp-spy] discovery failed:', e.message); }
-  if(!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results'});
+
+  // Use Serper.dev directly — same API the tracker check uses successfully
+  if (serperKey) {
+    try {
+      const ctrl1 = new AbortController(); setTimeout(()=>ctrl1.abort(),15000);
+      const r1 = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
+        signal: ctrl1.signal
+      });
+      if (r1.ok) {
+        const d1 = await r1.json();
+        const organic = d1.organic || [];
+        serpUrls = organic.map((r, i) => ({
+          rank: r.position || (i + 1),
+          url: r.link || '',
+          domain: (r.link || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
+          title: r.title || '',
+          snippet: r.snippet || ''
+        })).filter(r => r.url);
+        console.log('[serp-spy] Serper.dev returned', serpUrls.length, 'results for:', keyword);
+      } else {
+        const err = await r1.text().catch(()=>'');
+        console.warn('[serp-spy] Serper.dev error:', r1.status, err.substring(0,200));
+      }
+    } catch(e) { console.warn('[serp-spy] Serper.dev failed:', e.message); }
+  } else {
+    console.warn('[serp-spy] SERPAPI_KEY not set — cannot fetch SERP results');
+  }
+  if (!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment'});
   const top5 = serpUrls.slice(0,5);
   const [clientScrape,...compScrapes] = await Promise.all([myUrl?scrapeBodyText(myUrl,8000):Promise.resolve({text:'',status:0,fullHtml:''}), ...top5.map(e=>scrapeBodyText(e.url,6000))]);
   const clientAI = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
