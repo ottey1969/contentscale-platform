@@ -211,9 +211,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="topbar-title"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · Intelligence Agent</div>
     <div style="display:flex;gap:4px;margin-left:8px;">
       <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
-      <button id="navPages" onclick="switchView('pages')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">🗂️ Pages</button>
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
-      <button id="navStats" onclick="switchView('stats')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📊 Stats</button>
       <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
     </div>
     <div class="topbar-status">
@@ -319,6 +317,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
+          <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
         </div>
       </div>
     </div>
@@ -3050,8 +3049,10 @@ function renderTrackerList() {
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
        '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">' +
+         '<button onclick="openTrackerDetail('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#9ca3af;cursor:pointer;">Details</button>' +
          '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;font-weight:600;">▶ Check</button>' +
          '<button onclick="openSerpSpy('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">🔍 Spy</button>' +
+         '<button onclick="trPushToAgent('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;cursor:pointer;font-weight:600;">→ Agent</button>' +
          '<button onclick="togglePageDone('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(52,211,153,.25);background:rgba(52,211,153,.06);color:#34d399;cursor:pointer;">✓ Done</button>' +
          '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
        '</div>' +
@@ -5483,6 +5484,8 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('engineToken').value = savedToken;
     }
   } catch(e) {}
+  // Start on Agent tab — welcome screen shows with PULSE+NEXUS and starter buttons
+  switchView('agent');
   loadPagesOverview();
 });
 
