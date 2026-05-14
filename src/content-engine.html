@@ -2019,7 +2019,7 @@ async function cmdResearch(keyword, profileId) {
     });
     if (!startResp.success) throw new Error(startResp.error || 'Research failed to start');
 
-    var jobId = startResp.job_id;
+    var jobId = startResp.job_id || (startResp.job && startResp.job.id);
     setProgress(prog, 20);
 
     // Poll
@@ -3345,7 +3345,7 @@ function renderTrackerList() {
     // Build recommendation HTML — show title + truncated action
     var recHtml = '';
     var _genericTitles = ['ai recommendation','recommendation','fix','issue','improvement','seo','optimization','no recommendation','unknown'];
-    var _recTitleRaw = (topRec ? (topRec.title||topRec.description||topRec.name||'') : '').toLowerCase().trim();
+    var _recTitleRaw = (topRec && (topRec.title||topRec.description||topRec.name||'')).toLowerCase().trim();
     if (topRec && _genericTitles.indexOf(_recTitleRaw) > -1) topRec = null; // reject generic
     if (topRec && typeof topRec === 'object' && (topRec.title || topRec.description || topRec.name)) {
       var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
