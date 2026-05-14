@@ -3300,14 +3300,16 @@ function renderTrackerList() {
     var pri = p._priority;
     var activeNum = idx + 1;
     // Number badge — START HERE on #1, number on rest
-    var startHere = (idx === 0 && pri.score > 100) ?
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-        '<span style="font-size:11px;font-weight:900;background:' + pri.color + ';color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</span>' +
-        '<span style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:' + pri.color + ';">▶ START HERE</span>' +
+    // Number sits to the LEFT of the card — clear vertical counter
+    var numBadge = (idx === 0 && pri.score > 100) ?
+      '<div style="width:36px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:2px;gap:3px;">' +
+        '<span style="font-size:13px;font-weight:900;color:' + pri.color + ';line-height:1;">1</span>' +
+        '<span style="font-size:7px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:' + pri.color + ';writing-mode:vertical-lr;transform:rotate(180deg);">START</span>' +
       '</div>' :
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-        '<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,.08);color:#9ca3af;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + activeNum + '</span>' +
+      '<div style="width:36px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">' +
+        '<span style="font-size:13px;font-weight:700;color:#4b5563;line-height:1;">' + activeNum + '</span>' +
       '</div>';
+    var startHere = ''; // no longer used inside card
     var snap = p.latest_snapshot || {};
     var pos = snap.google_position ? '#'+snap.google_position : '—';
     var aiG = snap.ai_google_overview_cited ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;margin-right:4px;">✅ AI Overview</span>' :
@@ -3342,6 +3344,9 @@ function renderTrackerList() {
     }
     // Build recommendation HTML — show title + truncated action
     var recHtml = '';
+    var _genericTitles = ['ai recommendation','recommendation','fix','issue','improvement','seo','optimization','no recommendation','unknown'];
+    var _recTitleRaw = (topRec && (topRec.title||topRec.description||topRec.name||'')).toLowerCase().trim();
+    if (topRec && _genericTitles.indexOf(_recTitleRaw) > -1) topRec = null; // reject generic
     if (topRec && typeof topRec === 'object' && (topRec.title || topRec.description || topRec.name)) {
       var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
       var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'');
@@ -3371,23 +3376,20 @@ function renderTrackerList() {
       '<span style="font-size:10px;color:#9ca3af;"><b style="color:#e2e8f0;">' + Number(p.gsc_impressions).toLocaleString() + '</b> impr</span>' : '';
 
     var doneStyle = p.is_done ? 'opacity:0.45;' : '';
-    return '<div style="' + doneStyle + 'padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:12px;margin-bottom:4px;">' +
-    '<div style="display:flex;gap:12px;align-items:flex-start;">' +
-      '<div style="flex:1;min-width:0;">' +
-        startHere +
+    return '<div style="' + doneStyle + 'padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;">' +
+    '<div style="display:flex;gap:0;align-items:flex-start;">' +
+      numBadge +
+      '<div style="flex:1;min-width:0;border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:10px;">' +
         '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + (imprLabel||'') + '</div>' +
         '<div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
         '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + lastCh + '</div>' +
         gscLine +
         '<div style="margin-top:5px;">' + aiG + aiP + '</div>' +
-        (pri.insight ? '<div style="margin-top:6px;background:rgba(255,255,255,.03);border-left:2px solid '+pri.border+';padding:5px 8px;border-radius:0 4px 4px 0;font-size:10px;color:#9ca3af;line-height:1.5;">💡 ' + escHtml(pri.insight) + '</div>' : '') +
-        (pri.recommended ? '<div style="margin-top:3px;font-size:10px;font-weight:700;color:'+pri.color+';">→ ' + escHtml(pri.recommended) + '</div>' : '') +
+        (pri.recommended ? '<div style="margin-top:5px;font-size:10px;font-weight:700;color:'+pri.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(pri.recommended)+'">→ ' + escHtml(pri.recommended.split('.')[0]) + '</div>' : '') +
         recHtml +
         '<div class="tr-status-' + p.id + '"></div>' +
       '</div>' +
-      '<div style="text-align:right;flex-shrink:0;">' +
-        '<div style="font-size:16px;font-weight:900;color:#a78bfa;">' + pos + '</div>' +
-        '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Google</div>' +
+      '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
