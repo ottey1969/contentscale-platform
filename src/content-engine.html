@@ -208,10 +208,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <header class="topbar">
     <div style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
     <div class="topbar-sep"></div>
-    <div class="topbar-title"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · Intelligence Agent</div>
+    <div class="topbar-title" id="topbarTitle"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · <span id="topbarContext">Intelligence Agent</span></div>
     <div style="display:flex;gap:4px;margin-left:8px;">
-            <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
+      <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
+
       <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
     </div>
     <div class="topbar-status">
@@ -257,38 +258,28 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <button class="sidebar-btn" onclick="askAgentToUseTemplate()" style="margin-top:8px;font-size:10px;padding:5px;" id="useTemplateBtn" style="display:none;">📋 Write on Profile Template</button>
     </div>
 
-    <!-- Data Uploads -->
-      <!-- GSC Queries CSV — separate Google export -->
-      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">QUERIES CSV (from GSC → Queries tab)</div>
-      <div id="gscQueriesUploadZone" class="drop-zone" style="margin-bottom:8px;">
-        <input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)">
-        <div class="drop-zone-icon" style="font-size:16px;">🔍</div>
-        <div class="drop-zone-text" style="font-size:10px;">Drop Queries CSV here</div>
-      </div>
-      <div id="gscStatus" style="display:none;font-size:10px;color:#34d399;margin-bottom:10px;"></div>
-      <!-- Sitemap: URL input + file upload -->
-      <div id="sitemapSection" style="margin-bottom:10px;">
-        <label style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:4px;">🗺 Sitemap URL</label>
-        <div style="display:flex;gap:4px;">
-          <input type="text" id="sitemapUrlInput" placeholder="https://example.com/sitemap.xml" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:10px;font-family:'DM Mono',monospace;outline:none;" onkeydown="if(event.key==='Enter')fetchSitemapFromUrl()">
-          <button onclick="fetchSitemapFromUrl()" style="padding:6px 10px;border-radius:6px;border:none;background:#f56d00;color:#fff;font-size:10px;cursor:pointer;font-weight:700;">Fetch</button>
-        </div>
-        <div style="font-size:9px;color:var(--muted);margin-top:3px;">Or drop XML/TXT file:</div>
-        <div id="sitemapUploadZone" class="drop-zone" style="margin-top:4px;padding:8px;">
-          <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
-          <div class="drop-zone-text" style="font-size:10px;">Drop sitemap file here</div>
-        </div>
-      </div>
-      <div id="sitemapStatus" style="display:none;font-size:10px;color:#34d399;margin-top:6px;"></div>
+    <!-- GSC/Sitemap elements hidden — moved to Tracker tab -->
+    <div style="display:none;">
+      <div id="gscUploadZone"><input type="file" accept=".csv" multiple onchange="handleGscUpload(this)"></div>
+      <div id="gscQueriesUploadZone"><input type="file" accept=".csv" onchange="handleGscQueriesUpload(this)"></div>
+      <div id="gscStatus"></div>
+      <div id="sitemapSection"><input type="text" id="sitemapUrlInput"><div id="sitemapUploadZone"><input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)"></div></div>
+      <div id="sitemapStatus"></div>
     </div>
 
-    <!-- Tools -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Tools</div>
-      <button class="sidebar-btn" onclick="openPipelineModal()" title="Write a complete article from research to publish-ready HTML" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;">🚀 Content Pipeline</button>
-      <button class="sidebar-btn" onclick="openRewriteModal()" title="Rewrite existing page HTML with AI optimization" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:6px;">✍ Rewrite Page</button>
-      <button class="sidebar-btn" onclick="openRewriteModalWithMode('surgical')" title="Apply 6 targeted surgical fixes to the last rewrite" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:6px;">🔧 Surgical Fixes</button>
+    <!-- How it works — between profile and tools -->
+    <div class="sidebar-section" style="padding-bottom:4px;">
+      <div class="sidebar-label">How it works</div>
+      <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.5;">
+        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
+        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
+        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ Rewrite → AI beats rank 1</div>
+        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker monitors</div>
+      </div>
     </div>
+
+    <!-- Tools removed — everything lives in Tracker now -->
 
     <!-- AI Keys (BYOK) -->
     <div class="sidebar-section" id="aiKeysSection" style="display:none;">
@@ -315,10 +306,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       </div>
     </div>
 
-    <!-- Context -->
+    <!-- Context only -->
     <div class="context-panel" id="contextPanel">
       <div class="sidebar-label">Session Context</div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.6;">Connect and start chatting — context appears here as the agent learns about your site.</div>
+      <div id="contextDisplay" style="font-size:10px;color:var(--muted);line-height:1.6;"></div>
     </div>
   </aside>
 
@@ -329,13 +320,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="welcome" id="welcomeScreen">
         <div class="welcome-icon">🧠</div>
         <div class="welcome-title"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div>
-        <div class="welcome-sub">PULSE researches your GSC data and competitors. NEXUS reverse-engineers what Google and AI Overviews reward. Together they write content that ranks — and gets cited.</div>
+        <div style="display:flex;gap:18px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="text-align:center;max-width:180px;">
+            <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">PULSE</div>
+            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, and competitors in real time.</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;max-width:180px;">
+            <div style="font-size:11px;font-weight:800;color:#f56d00;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">NEXUS</div>
+            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward and writes to beat it.</div>
+          </div>
+        </div>
         <div class="welcome-starters">
           <button class="starter-btn" onclick="sendStarter(this)">I want to rank higher for a keyword</button>
           <button class="starter-btn" onclick="sendStarter(this)">Rewrite an existing page</button>
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
+          <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
         </div>
       </div>
     </div>
@@ -369,6 +371,34 @@ var _context     = {
   mode: null // 'new' | 'rewrite' | 'audit'
 };
 
+// ── Workflow step highlighter ─────────────────────────────────────────────
+function updateWorkflowStep(step) {
+  // step: 1=connected, 2=profile+pages, 3=spy, 4=rewrite, 5=published
+  var steps = [1,2,3,4,5];
+  steps.forEach(function(n) {
+    var el = document.getElementById('wfStep' + n);
+    if (!el) return;
+    if (n < step) {
+      // Done
+      el.style.borderLeftColor = '#34d399';
+      el.style.color = '#4b5563';
+      el.style.textDecoration = 'line-through';
+    } else if (n === step) {
+      // Active
+      el.style.borderLeftColor = '#f56d00';
+      el.style.color = '#f56d00';
+      el.style.fontWeight = '700';
+      el.style.textDecoration = 'none';
+    } else {
+      // Future
+      el.style.borderLeftColor = '#374151';
+      el.style.color = 'var(--sub)';
+      el.style.fontWeight = 'normal';
+      el.style.textDecoration = 'none';
+    }
+  });
+}
+
 // ── Safe profile ID getter — always returns the active profile ID or null ──
 function getActiveProfileId() {
   return _context.profileId || (_profile && _profile.id) || null;
@@ -381,8 +411,9 @@ var _busy        = false;
 function normalizeDomain(d) {
   if (!d) return '';
   var s = d.trim().toLowerCase();
-  s = s.replace(/^https?:\/\//, '');
-  s = s.replace(/^www\./, '');
+  s = s.replace(/^https?:\/\//, '');  // strip protocol
+  s = s.replace(/^www\./, '');          // strip www. prefix (replace, not lstrip)
+  s = s.split('/')[0];                   // strip path — keep hostname only
   s = s.replace(/\/+$/, '');
   return s;
 }
@@ -394,7 +425,7 @@ async function loadAiKeyStatus() {
   try {
     var d = await api('/api/engine/keys');
     if (!d || !d.success) return;
-    var el = document.getElementById('aiKeyStatus'); if (!el) return;
+    var el = document.getElementById('aiKeyStatus');
     var modeLabel = d.mode === 'byok' ? 'Your keys' : 'Platform keys';
     var claudeStatus = d.claude.has_key ? '✓ Claude set' : (d.platform_available.claude ? '○ Platform Claude' : '✗ No Claude');
     var geminiStatus = d.gemini.has_key ? '✓ Gemini set' : (d.platform_available.gemini ? '○ Platform Gemini' : '✗ No Gemini');
@@ -442,10 +473,10 @@ function forgetLogin() {
     localStorage.removeItem('nexus_selected_profile_id');
   } catch(e) {}
   document.getElementById('engineToken').value = '';
-  var _aks=document.getElementById('aiKeysSection'); if(_aks)_aks.style.display='none';
-  var _akp=document.getElementById('aiKeysPanel'); if(_akp)_akp.style.display='none';
+  document.getElementById('aiKeysSection').style.display = 'none';
+  document.getElementById('aiKeysPanel').style.display = 'none';
   document.getElementById('forgetLink').style.display = 'none';
-  var _ps=document.getElementById('profileSection'); if(_ps)_ps.style.display='none';
+  document.getElementById('profileSection').style.display = 'none';
   var btn = document.getElementById('connectBtn');
   btn.textContent = 'Connect →';
   btn.style.background = '';
@@ -474,7 +505,7 @@ async function connect() {
     if (!d.success) throw new Error(d.error || 'Invalid code');
     _connected = true;
     setStatus('live', 'connected');
-    var _sb=document.getElementById('sendBtn'); if(_sb)_sb.disabled=false;
+    document.getElementById('sendBtn').disabled = false;
     btn.textContent = '✓ Connected'; btn.style.background = 'rgba(52,211,153,.15)';
     btn.style.color = 'var(--green)'; btn.style.border = '1px solid rgba(52,211,153,.3)';
     // Show forget link
@@ -490,8 +521,8 @@ async function connect() {
     if (pr.profiles && pr.profiles.length) {
       _allProfiles = pr.profiles;
       renderProfileSelector(pr.profiles, true); // true = show placeholder
-      var _ps2=document.getElementById('profileSection'); if(_ps2)_ps2.style.display='block';
-      var _aks2=document.getElementById('aiKeysSection'); if(_aks2)_aks2.style.display='block';
+      document.getElementById('profileSection').style.display = 'block';
+      document.getElementById('aiKeysSection').style.display = 'block';
       loadAiKeyStatus();
 
       // Don't auto-restore previously selected profile — user must explicitly select one
@@ -500,8 +531,11 @@ async function connect() {
       document.getElementById('profileSelect').value = '';
     }
 
-    // Trigger agent welcome (will prompt for profile selection)
-    agentGreet();
+    // Open Tracker first — it's the workflow starting point
+    switchView('tracker');
+    updateWorkflowStep(1);
+    // Agent greets in background
+    setTimeout(agentGreet, 300);
   } catch(e) {
     var msg = e.message || '';
     // If code is invalid (archive wiped the DB), clear stored token
@@ -562,6 +596,79 @@ function handleGscUpload(input) {
       syncGscToPagesOverview();
       // Auto-save to server silently so Pages tab reads from DB correctly
       autoSaveGscToServer();
+    };
+    reader.readAsText(file);
+  });
+}
+
+// ── Single zone handler — detects pages vs queries automatically ─────────────
+function handleBothGscFiles(input) {
+  var files = Array.from(input.files || []);
+  if (!files.length) return;
+  var processed = 0;
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var rows = parseCSV(text);
+      if (!rows.length) { processed++; return; }
+      var headers = Object.keys(rows[0]).map(function(h){ return h.toLowerCase(); });
+      // Detect type by headers
+      var isQueries = headers.some(function(h){ return /^(top queries|query|queries|keyword|search term)/i.test(h); });
+      var isPages   = headers.some(function(h){ return /^(top pages|page|landing page|url)/i.test(h); });
+      // Fallback: if neither clear, check first column value — URLs = pages, text = queries
+      if (!isQueries && !isPages) {
+        var firstVal = String(Object.values(rows[0])[0] || '');
+        isPages = firstVal.startsWith('http') || firstVal.startsWith('/');
+        isQueries = !isPages;
+      }
+      var keys = Object.keys(rows[0]);
+      if (isPages) {
+        _gscPages = rows.map(function(r) {
+          var qKey  = keys.find(function(k){ return /query|keyword/i.test(k); }) || '';
+          var uKey  = keys.find(function(k){ return /page|url|landing/i.test(k); }) || keys[0];
+          var cKey  = keys.find(function(k){ return /click/i.test(k); });
+          var iKey  = keys.find(function(k){ return /impr/i.test(k); });
+          var tKey  = keys.find(function(k){ return /ctr/i.test(k); });
+          var pKey  = keys.find(function(k){ return /pos/i.test(k); });
+          return {
+            url:         r[uKey] || '',
+            keyword:     qKey ? r[qKey] : '',
+            clicks:      parseInt(cKey ? r[cKey] : 0) || 0,
+            impressions: parseInt(iKey ? r[iKey] : 0) || 0,
+            ctr:         parseFloat(String(tKey ? r[tKey] : '0').replace('%','')) || 0,
+            position:    parseFloat(pKey ? r[pKey] : 0) || 0
+          };
+        }).filter(function(r){ return r.url && r.url.trim(); });
+        _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
+      } else {
+        _gscQueries = rows.map(function(r) {
+          var qKey = keys.find(function(k){ return /query|keyword|search/i.test(k); }) || keys[0];
+          var cKey = keys.find(function(k){ return /click/i.test(k); });
+          var iKey = keys.find(function(k){ return /impr/i.test(k); });
+          var tKey = keys.find(function(k){ return /ctr/i.test(k); });
+          var pKey = keys.find(function(k){ return /pos/i.test(k); });
+          return {
+            query:       r[qKey] || '',
+            clicks:      parseInt(cKey ? r[cKey] : 0) || 0,
+            impressions: parseInt(iKey ? r[iKey] : 0) || 0,
+            ctr:         parseFloat(String(tKey ? r[tKey] : '0').replace('%','')) || 0,
+            position:    parseFloat(pKey ? r[pKey] : 0) || 0
+          };
+        }).filter(function(r){ return r.query && r.query.trim(); });
+        _gscOwnerProfileId = _context.profileId || (_profile && _profile.id) || null;
+      }
+      processed++;
+      if (processed === files.length) {
+        updateGscStatus();
+        updateTrackerGscStatus();
+        syncGscToPagesOverview();
+        autoSaveGscToServer();
+        var status = [];
+        if (_gscPages.length) status.push(_gscPages.length + ' pages');
+        if (_gscQueries.length) status.push(_gscQueries.length + ' queries');
+        toast('✓ GSC loaded — ' + status.join(' · '), 3000, 'ok');
+      }
     };
     reader.readAsText(file);
   });
@@ -922,7 +1029,7 @@ async function addSelectedSitemapUrls() {
   // Force fresh load from server to get complete picture
   loadPagesOverview(true);
   loadTrackerPages();
-  switchView('pages');
+  switchView('tracker');
   var parts = [];
   if (added) parts.push('added ' + added);
   if (updated) parts.push('updated ' + updated);
@@ -970,6 +1077,8 @@ function parseCSV(text) {
 }
 
 function updateGscStatus() {
+  // Also update the tracker panel status if open
+  updateTrackerGscStatus();
   var zone = document.getElementById('gscUploadZone');
   var qZone = document.getElementById('gscQueriesUploadZone');
   var status = document.getElementById('gscStatus');
@@ -1039,8 +1148,12 @@ function onProfileSwitch() {
   renderPagesOverview();
   renderTrackerList();
 
+  // Update tracker profile label
+  var tpl = document.getElementById('trackerProfileLabel');
+  if (tpl) tpl.textContent = _profile.name + (_profile.domain ? ' · ' + _profile.domain : '');
+  updateWorkflowStep(2);
   // Show confirmation toast
-  toast('✅ Profile selected: ' + _profile.name + (_profile.domain ? ' (' + _profile.domain + ')' : ''), 2500, 'ok');
+  toast('✅ Profile selected: ' + _profile.name, 2000, 'ok');
 
   // If GSC was already loaded in sidebar before profile was selected, save it now
   if (_gscPages.length || _gscQueries.length) autoSaveGscToServer();
@@ -1176,7 +1289,50 @@ function handleKey(e) {
 function sendStarter(btn) {
   if (!_connected) { toast('Connect first', 'err'); return; }
   hideWelcome();
-  userSend(btn.textContent);
+  var label = btn.textContent.trim();
+  var profileName = (_profile && _profile.name) ? _profile.name : 'my site';
+  var domain = (_profile && _profile.domain) ? _profile.domain : '';
+  var msgs = {
+    'I want to rank higher for a keyword':
+      'I want to rank higher for a specific keyword. I have the GSC data loaded. ' +
+      (domain ? 'Domain: ' + domain + '. ' : '') +
+      'Look at my top opportunities and tell me which keyword to target first and exactly what to do.',
+
+    'Rewrite an existing page': null, // handled separately below
+
+    'What pages should I prioritise?':
+      'Show me which pages I should work on first. ' +
+      (domain ? 'Site: ' + domain + '. ' : '') +
+      'I want quick wins: pages already getting impressions but not enough clicks or low ranking. Rank them by opportunity and tell me what action to take on each.',
+
+    'Audit my site\'s content quality':
+      'Audit the content quality of ' + (domain || profileName) + '. ' +
+      'Focus on: which pages have the lowest ContentScore, which are missing schema, and which have the worst CTR for their position. Give me a prioritised fix list.',
+
+    'Help me get into AI Overviews':
+      'I want ' + (domain || profileName) + ' to be cited in Google AI Overviews. ' +
+      'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.'
+  };
+  // "Rewrite an existing page" — go to Tracker if GSC loaded, else explain
+  if (label === 'Rewrite an existing page') {
+    if (_gscPages && _gscPages.length) {
+      hideWelcome();
+      toast('Opening Tracker — your best rewrite opportunity is shown at the top', 3000, 'ok');
+      switchView('tracker');
+      return;
+    } else {
+      userSend('I want to rewrite an existing page to rank higher. I don\'t have GSC data loaded yet. What should I do first to find the best page to rewrite?');
+      return;
+    }
+  }
+
+  // "How does the Tracker work?"
+  if (label === 'How does the Tracker work?') {
+    userSend('Explain how the Tracker works and what I should do first to start ranking higher. I have' + (_gscPages && _gscPages.length ? ' ' + _gscPages.length + ' GSC pages loaded.' : ' no GSC data yet.'));
+    return;
+  }
+
+  userSend(msgs[label] || label);
 }
 
 function userSend(text) {
@@ -1265,7 +1421,7 @@ async function processUserInput(text) {
   }
 
   _busy = false;
-  var _sb=document.getElementById('sendBtn'); if(_sb)_sb.disabled=false;
+  document.getElementById('sendBtn').disabled = false;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1306,6 +1462,17 @@ YOUR CAPABILITIES (you can trigger these with commands):
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
 - [REWRITE id fixes] — apply targeted fixes. Use the EXACT rewrite ID number from the ANALYSE result above. NEVER use "123", "1234", or any placeholder — only the real ID the system gave you.
 - [SHOW_OPPORTUNITIES] — show GSC page opportunities
+
+WHEN YOU RECEIVE A [SPY BRIEF]:
+- You already have competitive intelligence. Do NOT repeat all findings.
+- Lead with ONE sentence: "The #1 thing that will move this page is [specific action]."
+- Answer both questions directly: what moves the needle + new sections vs replace.
+- Ask ONE question ONLY — give the user two clear options, e.g.:
+  "Should I (A) analyse the current page first to see exactly what's there, or (B) go straight to rewrite using this brief?"
+- STOP. Wait for their answer. Do NOT run [ANALYSE] or any command automatically.
+- Keep response under 100 words. No padding.
+- After user picks A → run [ANALYSE url keyword]
+- After user picks B → run [ANALYSE url keyword] anyway but tell them you're using spy brief as the strategy
 
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
@@ -1684,7 +1851,13 @@ function addRewriteResult(d) {
     '<div class="msg-body"><div class="msg-name">Rewrite Complete</div><div class="bubble" style="padding:16px;">' +
     '<div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:12px;margin-bottom:12px;">' +
     '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:4px;">✅ Fixes Applied</div>' +
-    '<div style="font-size:12px;color:var(--muted);">' + parseRecs(d.fixes_applied).join(', ') + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);line-height:1.8;">' +
+    (Array.isArray(d.fixes_applied) ? d.fixes_applied.map(function(f) {
+      if (typeof f === 'string') return '✓ ' + f;
+      return '✓ ' + (f.title || f.name || f.type || JSON.stringify(f));
+    }).join('<br>') :
+    typeof d.fixes_applied === 'string' ? d.fixes_applied.replace(/,/g,'<br>✓ ') : 'Fixes applied') +
+    '</div>' +
     '<div style="font-size:11px;color:var(--muted);margin-top:6px;">' + wordCount.toLocaleString() + ' words · Ready to publish</div>' +
     '</div>' +
     '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:10px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);max-height:120px;overflow-y:auto;">' +
@@ -2207,7 +2380,7 @@ async function cmdPipeline(keyword, url) {
   try {
     // Call pipeline API
     _updateStage(pipelineId, 'research', 'active', 'Fetching competitor data, PAA, AI Overview...');
-    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null, profile_id: _context.profileId || null });
+    var data = await api('/api/content/pipeline', 'POST', { keyword: keyword, url: url || null, profile_id: _context.profileId || null, stats_context: _context.stats_context || null });
 
     if (!data.success || !data.pipeline) {
       _updateStage(pipelineId, 'research', 'failed', 'Pipeline failed: ' + (data.error || 'Unknown error'));
@@ -2860,15 +3033,26 @@ async function api(endpoint, method, body) {
 // VIEW SWITCHER
 // ════════════════════════════════════════════════════════════════
 function switchView(view) {
+  // Update topbar context label
+  var _ctx = document.getElementById('topbarContext');
+  if (_ctx) {
+    var _labels = { agent:'Intelligence Agent', tracker:'Tracker & SERP Spy', stats:'Stats Research', profiles:'Profiles' };
+    _ctx.textContent = _labels[view] || 'Intelligence Agent';
+  }
   document.getElementById('view-tracker').style.display = 'none';
   document.getElementById('view-stats').style.display = 'none';
   var viewPages = document.getElementById('view-pages');
   if (viewPages) viewPages.style.display = 'none';
   // Agent view: show chat area, hide others
   var chatArea = document.querySelector('.chat-area');
-  if (chatArea) chatArea.style.visibility = (view === 'agent' || view === 'pages') ? 'visible' : 'hidden';
+  if (chatArea) chatArea.style.visibility = (view === 'agent') ? 'visible' : 'hidden';
   if (view === 'tracker') {
     document.getElementById('view-tracker').style.display = 'block';
+    // Update tracker profile label
+    var tpl = document.getElementById('trackerProfileLabel');
+    if (tpl && _profile) tpl.textContent = _profile.name + (_profile.domain ? ' · ' + _profile.domain : '');
+    // Sync GSC into tracker opportunity view if loaded
+    if (_gscPages && _gscPages.length) syncGscToPagesOverview();
     loadTrackerPages();
   } else if (view === 'profiles') {
     document.querySelectorAll('[id^="view-"]').forEach(function(v){ v.style.display='none'; });
@@ -2878,10 +3062,9 @@ function switchView(view) {
   } else if (view === 'stats') {
     document.getElementById('view-stats').style.display = 'block';
   } else if (view === 'pages') {
-    if (viewPages) viewPages.style.display = 'block';
-    // Sync GSC sidebar data immediately before server fetch so pages appear instantly
-    if (_gscPages.length) syncGscToPagesOverview();
-    loadPagesOverview(true); // also fetch fresh data from server
+    // Pages merged into Tracker — redirect
+    view = 'tracker';
+    if (viewPages) viewPages.style.display = 'none';
   }
   // Update nav button styles
   ['agent','pages','tracker','stats'].forEach(function(v) {
@@ -2945,14 +3128,7 @@ function renderTrackerKpis() {
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   var profileDomain = (_profile && _profile.domain) || '';
   // Trust the API — it already filtered by profile_id. Only apply domain sanity check.
-  var p = activeProfileId ? _trPages.filter(function(x) {
-    if (profileDomain && x.url) {
-      try {
-        if (normalizeDomain(new URL(x.url).hostname) !== normalizeDomain(profileDomain)) return false;
-      } catch(e) {}
-    }
-    return true;
-  }) : [];
+  var p = activeProfileId ? _trPages : [];
 
   function set(id, val, color) { var el=document.getElementById(id); if(el){el.textContent=val;if(color)el.style.color=color;} }
 
@@ -2985,6 +3161,93 @@ function renderTrackerKpis() {
   set('trKpiGraaf', withSnap.length ? withSnap.length+' checked' : '—', '#a78bfa');
 }
 
+// ── Priority scorer for tracker pages ────────────────────────────────────────
+// Returns { label, color, bg, score } — higher score = higher priority
+function getPagePriority(page) {
+  var snap = page.latest_snapshot || {};
+  var pos  = parseFloat(page.gsc_position || snap.google_position || 0);
+  var impr = parseInt(page.gsc_impressions || 0);
+  var ctr  = parseFloat(page.gsc_ctr || 0);
+  var clicks = parseInt(page.gsc_clicks || 0);
+  var cited = snap.ai_google_overview_cited;
+  var checked = !!page.last_checked_at;
+  var cs = parseInt(snap.score || 0);
+
+  // ── RULE 1: Top 3 — protect ranking, surgical only ──────────────────────
+  // Exception: low CTR = meta fix needed urgently
+  if (pos >= 1 && pos <= 3) {
+    if (ctr < 0.03 && impr >= 100) {
+      // Great rank, terrible CTR — meta title/description is the problem
+      return { label: '📝 Fix Meta', color: '#fbbf24', bg: 'rgba(251,191,36,.08)', border: 'rgba(251,191,36,.25)',
+               score: 950 + impr, action: 'surgical', risk: 'none',
+               insight: 'Position ' + pos.toFixed(1) + ' but only ' + (ctr*100).toFixed(1) + '% CTR — people see you but don\'t click. Fix your title & meta description.',
+               recommended: 'Write a compelling title and meta description. Do NOT rewrite the page.' };
+    }
+    if (!cited) {
+      return { label: '⚡ Get AI Cited', color: '#a78bfa', bg: 'rgba(124,58,237,.1)', border: 'rgba(124,58,237,.25)',
+               score: 900 + impr, action: 'surgical', risk: 'none',
+               insight: 'Ranking #' + Math.round(pos) + ' — surgical fixes only. Add AI citation signals: direct answer, FAQPage schema, TL;DR section.',
+               recommended: 'Add FAQPage schema + direct answer paragraph. Do NOT rewrite.' };
+    }
+    return { label: '✅ Winning', color: '#34d399', bg: 'rgba(52,211,153,.06)', border: 'rgba(52,211,153,.15)',
+             score: 100, action: 'none', risk: 'none',
+             insight: 'Position ' + pos.toFixed(1) + ' + AI cited. Monitor only.',
+             recommended: 'Nothing to do. Check monthly.' };
+  }
+
+  // ── RULE 2: Position 4-7 — never full rewrite, always surgical first ────
+  // Strategy: protect the ranking, improve with meta + entity gaps + schema
+  // Only rewrite if ContentScore < 40 AND position not improving
+  if (pos >= 4 && pos <= 7) {
+    // Priority 1: CTR is the problem — meta title/description fix first
+    if (ctr < 0.04 && impr >= 100) {
+      return { label: '📝 Fix Meta First', color: '#fbbf24', bg: 'rgba(251,191,36,.08)', border: 'rgba(251,191,36,.25)',
+               score: 900 + impr, action: 'surgical', risk: 'none',
+               insight: 'Position ' + pos.toFixed(1) + ' · ' + (ctr*100).toFixed(1) + '% CTR · ' + impr.toLocaleString() + ' impressions. Google already shows you — people just don\'t click. Fix the meta before anything else.',
+               recommended: '① Write a title with urgency + number + keyword ② Write a meta description with clear CTA ③ Add entity gaps from Spy ④ Wait 3 weeks ⑤ Only then consider rewrite if still not #1.' };
+    }
+    // Priority 2: Not AI cited — surgical signals
+    if (!cited) {
+      return { label: '⚡ Fix + Get AI Cited', color: '#a78bfa', bg: 'rgba(124,58,237,.1)', border: 'rgba(124,58,237,.25)',
+               score: 860 + impr, action: 'surgical', risk: 'none',
+               insight: 'Position ' + pos.toFixed(1) + ' and not in AI Overview. Surgical additions will push you to #1 and get you cited — no rewrite needed.',
+               recommended: '① Add entity gaps from Spy ② Add FAQPage schema ③ Add direct answer paragraph ④ Add TL;DR section. Do NOT rewrite.' };
+    }
+    // Priority 3: Low ContentScore — light rewrite only if truly thin
+    if (cs > 0 && cs < 40) {
+      return { label: '📉 Thin Content', color: '#f87171', bg: 'rgba(248,113,113,.08)', border: 'rgba(248,113,113,.2)',
+               score: 820 + impr, action: 'rewrite', risk: 'medium',
+               insight: 'ContentScore ' + cs + '/100 at position ' + pos.toFixed(1) + '. Content is too thin to hold top 3 long-term.',
+               recommended: 'Rewrite with spy brief — but keep existing URL and page structure. Position 4-7 gives you buffer.' };
+    }
+    // Default: on track, add gaps
+    return { label: '📈 Add Gaps → #1', color: '#fbbf24', bg: 'rgba(251,191,36,.07)', border: 'rgba(251,191,36,.2)',
+             score: 780 + impr, action: 'surgical', risk: 'none',
+             insight: 'Position ' + pos.toFixed(1) + ' · Good score. Missing entities and schema are the last gaps between you and #1.',
+             recommended: 'Run Spy → add the top 5 entity gaps → add missing schema → meta description with CTA. No rewrite needed.' };
+  }
+
+  // ── RULE 3: Position 8-20 — full rewrite sweet spot ─────────────────────
+  if (pos >= 8 && pos <= 20 && impr >= 50) {
+    var urgency = impr >= 1000 ? '🔥🔥' : '🔥';
+    return { label: urgency + ' Quick Win', color: '#f56d00', bg: 'rgba(245,109,0,.12)', border: 'rgba(245,109,0,.3)',
+             score: 1000 + impr, action: 'rewrite', risk: 'low',
+             insight: 'Position ' + pos.toFixed(1) + ' with ' + impr.toLocaleString() + ' impressions. One rewrite = page 1. Lowest risk, highest reward.',
+             recommended: 'Spy → full rewrite. This is your best opportunity.' };
+  }
+
+  // ── RULE 4: Position 21-50 — rewrite or new page ─────────────────────────
+  if (pos >= 21 && pos <= 50 && impr >= 20) {
+    return { label: '📉 Boost', color: '#fbbf24', bg: 'rgba(251,191,36,.07)', border: 'rgba(251,191,36,.2)',
+             score: 500 + impr, action: 'rewrite', risk: 'low',
+             insight: 'Position ' + pos.toFixed(1) + ' — likely the wrong keyword or thin content.',
+             recommended: 'Spy to find what rank 1 has. Rewrite or consider new page with better keyword.' };
+  }
+
+  if (checked) return { label: '📡 Checked', color: '#6b7280', bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.06)', score: 50, action: 'check', risk: 'none', insight: 'No GSC data yet.', recommended: 'Check position then decide.' };
+  return { label: '❓ Not Checked', color: '#4b5563', bg: 'rgba(255,255,255,.02)', border: 'rgba(255,255,255,.05)', score: 10, action: 'check', risk: 'none', insight: 'Run a check first.', recommended: 'Click Check to get current position.' };
+}
+
 function renderTrackerList() {
   var el = document.getElementById('trPagesList');
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
@@ -2992,21 +3255,61 @@ function renderTrackerList() {
     el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">👤</div><div style="font-weight:600;margin-bottom:4px;">Select a profile first</div><div style="font-size:12px;">Choose a profile from the sidebar to see tracker data</div></div>';
     return;
   }
-  // Trust the API — it already filtered by profile_id. Only apply domain sanity check.
-  var profileDomain = (_profile && _profile.domain) || '';
-  var trData = _trPages.filter(function(p) {
-    if (profileDomain && p.url) {
-      try {
-        if (normalizeDomain(new URL(p.url).hostname) !== normalizeDomain(profileDomain)) return false;
-      } catch(e) {}
-    }
-    return true;
+  // Server already filtered by profile_id — sort by priority
+  var trData = _trPages.map(function(p) {
+    return Object.assign({}, p, { _priority: getPagePriority(p) });
+  }).sort(function(a, b) {
+    // Done pages always last
+    if (a.is_done && !b.is_done) return 1;
+    if (!a.is_done && b.is_done) return -1;
+    return b._priority.score - a._priority.score;
   });
+
   if (!trData.length) {
-    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Add published URLs to start tracking</div></div>';
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Import GSC or add URLs to start tracking</div></div>';
     return;
   }
-  el.innerHTML = '<div style="padding:0 16px;">' + trData.map(function(p) {
+
+  // Priority summary bar
+  var qwCount = trData.filter(function(p){ return p._priority.label.includes('Quick Win'); }).length;
+  var aiCount = trData.filter(function(p){ return p._priority.label.includes('AI Cited'); }).length;
+  // Count pages due for check
+  var now = Date.now();
+  var dueCount = trData.filter(function(p) {
+    if (!p.last_checked_at) return true;
+    var next = p.next_check_at ? new Date(p.next_check_at).getTime() : (new Date(p.last_checked_at).getTime() + 3*86400000);
+    return next <= now;
+  }).length;
+
+  var summaryBar = '<div style="display:flex;gap:8px;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">' +
+    '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Priority:</span>' +
+    (qwCount ? '<span style="font-size:11px;font-weight:700;background:rgba(245,109,0,.12);border:1px solid rgba(245,109,0,.3);color:#f56d00;padding:3px 10px;border-radius:20px;">🔥 ' + qwCount + ' Quick Win' + (qwCount > 1 ? 's' : '') + '</span>' : '') +
+    (aiCount ? '<span style="font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:3px 10px;border-radius:20px;">⚡ ' + aiCount + ' AI Citation</span>' : '') +
+    (dueCount ? '<span id="checkAllDueBadge" style="font-size:11px;font-weight:700;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:3px 10px;border-radius:20px;">🔴 ' + dueCount + ' due</span>' : '<span style="font-size:11px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);color:#34d399;padding:3px 10px;border-radius:20px;">✅ All checked</span>') +
+    '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
+    (dueCount ? '<button onclick="checkAllDue()" id="checkAllDueBtn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;cursor:pointer;">▶ Check All Due (' + dueCount + ')</button>' : '') +
+    '<span style="font-size:10px;color:#4b5563;">Sorted highest opportunity first</span>' +
+    '</div>' +
+    '</div>';
+
+  // Split active vs done — active get numbered, done go to bottom with separate section
+  var activePages = trData.filter(function(p){ return !p.is_done; });
+  var donePages   = trData.filter(function(p){ return p.is_done; });
+
+  el.innerHTML = '<div style="padding:0 16px;">' + summaryBar + activePages.map(function(p, idx) {
+    var pri = p._priority;
+    var activeNum = idx + 1;
+    // Number badge — START HERE on #1, number on rest
+    // Number sits to the LEFT of the card — clear vertical counter
+    var numBadge = (idx === 0 && pri.score > 100) ?
+      '<div style="width:36px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:2px;gap:3px;">' +
+        '<span style="font-size:13px;font-weight:900;color:' + pri.color + ';line-height:1;">1</span>' +
+        '<span style="font-size:7px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:' + pri.color + ';writing-mode:vertical-lr;transform:rotate(180deg);">START</span>' +
+      '</div>' :
+      '<div style="width:36px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">' +
+        '<span style="font-size:13px;font-weight:700;color:#4b5563;line-height:1;">' + activeNum + '</span>' +
+      '</div>';
+    var startHere = ''; // no longer used inside card
     var snap = p.latest_snapshot || {};
     var pos = snap.google_position ? '#'+snap.google_position : '—';
     var aiG = snap.ai_google_overview_cited ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;margin-right:4px;">✅ AI Overview</span>' :
@@ -3014,22 +3317,48 @@ function renderTrackerList() {
               '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(75,85,99,.1);border:1px solid rgba(75,85,99,.2);color:#6b7280;margin-right:4px;">— AI Overview</span>';
     var aiP = snap.ai_perplexity_cited ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;">✅ Perplexity</span>' :
               '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(75,85,99,.1);border:1px solid rgba(75,85,99,.2);color:#6b7280;">— Perplexity</span>';
-    var lastCh = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never';
+    var lastCh = (function() {
+      if (!p.last_checked_at) return '<span style="color:#f87171;font-weight:700;">⚠ Never checked</span>';
+      var now = Date.now();
+      var last = new Date(p.last_checked_at).getTime();
+      var daysSince = Math.floor((now - last) / 86400000);
+      var nextCheck = p.next_check_at ? new Date(p.next_check_at).getTime() : (last + 3*86400000);
+      var daysUntil = Math.ceil((nextCheck - now) / 86400000);
+      if (daysUntil <= 0) return '<span style="color:#f87171;font-weight:700;">🔴 Check due</span>';
+      if (daysUntil === 1) return '<span style="color:#fbbf24;font-weight:700;">🟡 Check tomorrow</span>';
+      if (daysUntil <= 2) return '<span style="color:#fbbf24;">🟡 Check in ' + daysUntil + ' days</span>';
+      return '<span style="color:#4b5563;">🟢 Checked ' + daysSince + 'd ago</span>';
+    })();
     var recs = snap.recommendations;
     // Unwrap string layers
     var rDepth = 0;
     while (recs && typeof recs === 'string' && rDepth < 3) { try { recs = JSON.parse(recs); rDepth++; } catch(e) { break; } }
     // Handle { all: [...], count: N } shape from GRAAF
     if (recs && recs.all && Array.isArray(recs.all)) recs = recs.all;
+    // If recs is still a string after parsing, it's corrupt — ignore it
+    if (typeof recs === 'string') recs = null;
     var topRec = Array.isArray(recs) && recs.length && typeof recs[0] === 'object' ? recs[0] : null;
+    // Also try snap.recommendation (singular) as plain-text fallback
+    if (!topRec && snap.recommendation && typeof snap.recommendation === 'string' && snap.recommendation.length > 5 && !snap.recommendation.startsWith('[') && !snap.recommendation.startsWith('{')) {
+      topRec = { title: snap.recommendation, priority: 'medium', action: '' };
+    }
     // Build recommendation HTML — show title + truncated action
     var recHtml = '';
-    if (topRec) {
+    var _genericTitles = ['ai recommendation','recommendation','fix','issue','improvement','seo','optimization','no recommendation','unknown'];
+    var _recTitleRaw = (topRec && (topRec.title||topRec.description||topRec.name||'')).toLowerCase().trim();
+    if (topRec && _genericTitles.indexOf(_recTitleRaw) > -1) topRec = null; // reject generic
+    if (topRec && typeof topRec === 'object' && (topRec.title || topRec.description || topRec.name)) {
       var rPriority = topRec.priority==='high'?'#f87171':topRec.priority==='medium'?'#fbbf24':'#34d399';
-      var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'Recommendation');
-      var rAction = escHtml(topRec.action||topRec.fix||topRec.recommendation||'');
-      var rFull = rTitle + (rAction ? ' — ' + rAction.substring(0,120) + (rAction.length>120?'...':'') : '');
-      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;white-space:normal;word-break:break-word;line-height:1.4;">'+rFull+'</div>';
+      var rTitle = escHtml(topRec.title||topRec.description||topRec.name||'');
+      // Never use topRec.recommendation — it can contain a nested JSON array
+      var _rawAction = topRec.action||topRec.fix||topRec.how_to_fix||topRec.description_fix||topRec.what_to_do||'';
+      // Reject if it looks like JSON
+      if (typeof _rawAction === 'string' && (_rawAction.trim().startsWith('[') || _rawAction.trim().startsWith('{'))) _rawAction = '';
+      var rAction = escHtml(String(_rawAction));
+      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
+        '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
+        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction.substring(0,140) + (rAction.length>140?'…':'') + '</div>' : '') +
+        '</div>';
     }
 
     // ContentScore badge (NOT GRAAF — this is the live scan content score)
@@ -3038,29 +3367,85 @@ function renderTrackerList() {
     var hasGsc = p.gsc_impressions !== null && p.gsc_impressions !== undefined;
     var gscLine = hasGsc ? '<div style="font-size:10px;color:#34d399;margin-top:3px;">📊 GSC: ' + Number(p.gsc_impressions).toLocaleString() + ' impr · ' + Number(p.gsc_clicks).toLocaleString() + ' clicks · CTR ' + Number(p.gsc_ctr||0).toFixed(1) + '% · avg pos ' + (p.gsc_position||'—') + '</div>' : '';
 
-    return '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:12px;align-items:flex-start;">' +
-      '<div style="flex:1;min-width:0;">' +
+    // Priority badge
+    var priBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:' + pri.bg + ';border:1px solid ' + pri.border + ';color:' + pri.color + ';white-space:nowrap;">' + pri.label + '</span>';
+    // GSC quick stats inline
+    var posLabel = (p.gsc_position || (p.latest_snapshot && p.latest_snapshot.google_position)) ?
+      '<span style="font-size:10px;color:#9ca3af;">pos <b style="color:#e2e8f0;">' + parseFloat(p.gsc_position || p.latest_snapshot.google_position).toFixed(1) + '</b></span>' : '';
+    var imprLabel = p.gsc_impressions ?
+      '<span style="font-size:10px;color:#9ca3af;"><b style="color:#e2e8f0;">' + Number(p.gsc_impressions).toLocaleString() + '</b> impr</span>' : '';
+
+    var doneStyle = p.is_done ? 'opacity:0.45;' : '';
+    return '<div style="' + doneStyle + 'padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;">' +
+    '<div style="display:flex;gap:0;align-items:flex-start;">' +
+      numBadge +
+      '<div style="flex:1;min-width:0;border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:10px;">' +
+        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + (imprLabel||'') + '</div>' +
         '<div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
         '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + lastCh + '</div>' +
         gscLine +
         '<div style="margin-top:5px;">' + aiG + aiP + '</div>' +
+        (pri.recommended ? '<div style="margin-top:5px;font-size:10px;font-weight:700;color:'+pri.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(pri.recommended)+'">→ ' + escHtml(pri.recommended.split('.')[0]) + '</div>' : '') +
         recHtml +
         '<div class="tr-status-' + p.id + '"></div>' +
       '</div>' +
-      '<div style="text-align:right;flex-shrink:0;">' +
-        '<div style="font-size:16px;font-weight:900;color:#a78bfa;">' + pos + '</div>' +
-        '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Google</div>' +
+      '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
-        '<button onclick="openTrackerDetail('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#9ca3af;cursor:pointer;">Details</button>' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
-        '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>' +
-        '<button onclick="trPushToAgent('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;cursor:pointer;">→ Agent</button>' +
+        (pri.action === 'rewrite' ?
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:800;">🚀 Spy & Rewrite</button>'
+        : pri.action === 'surgical' ?
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;cursor:pointer;font-weight:800;">🔧 Spy & Fix</button>'
+        : pri.action === 'check' ?
+          '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:rgba(124,58,237,.2);color:#a78bfa;cursor:pointer;font-weight:700;">▶ Check Now</button>'
+        :
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>'
+        ) +
+        '<button onclick="togglePageDone('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid ' + (p.is_done ? 'rgba(52,211,153,.4)' : 'rgba(255,255,255,.1)') + ';background:' + (p.is_done ? 'rgba(52,211,153,.12)' : 'transparent') + ';color:' + (p.is_done ? '#34d399' : '#6b7280') + ';cursor:pointer;font-weight:700;" title="' + (p.is_done ? 'Mark as todo' : 'Mark as done') + '">' + (p.is_done ? '✓ Done' : '○ Done') + '</button>' +
         '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.25);background:rgba(248,113,113,.06);color:#f87171;cursor:pointer;">✕</button>' +
       '</div>' +
     '</div>';
-  }).join('') + '</div>';
+  }).join('') +
+
+  // ── DONE SECTION — always visible at bottom ─────────────────────────────
+  (donePages.length ?
+    '<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;">' +
+    '<div style="font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">' +
+      '<span style="display:inline-block;width:16px;height:1px;background:#374151;"></span>' +
+      '✓ Completed (' + donePages.length + ')' +
+      '<span style="display:inline-block;flex:1;height:1px;background:#374151;margin-left:6px;"></span>' +
+    '</div>' +
+    '<div>' +
+    donePages.map(function(p, dIdx) {
+      var pri = p._priority;
+      var snap = p.latest_snapshot || {};
+      var lastCh = p.last_checked_at ? (Math.floor((Date.now()-new Date(p.last_checked_at).getTime())/86400000) + 'd ago') : 'Never';
+      var startHere = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="font-size:10px;color:#374151;font-weight:600;">✓ Done</span></div>';
+      var priBadge = '';
+      var posLabel = '';
+      var imprLabel = '';
+      var aiG = '<span style="font-size:10px;color:#374151;">—</span>';
+      var aiP = '';
+      var gscLine = '';
+      var recHtml = '';
+      var csBadge = snap.score ? ' <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(75,85,99,.1);color:#6b7280;">CS:'+snap.score+'</span>' : '';
+      return '<div style="opacity:0.4;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);border-left:3px solid #374151;padding-left:10px;margin-bottom:3px;">' +
+        startHere +
+        '<div style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
+        '<div style="font-size:10px;color:#4b5563;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + ' · ' + lastCh + '</div>' +
+        '<div style="margin-top:6px;display:flex;gap:6px;">' +
+          '<button onclick="togglePageDone(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">↺ Reopen</button>' +
+          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+    '</div></div>'
+  : '') +
+
+  '</div>';
 }
+
 
 function openAddTrackerModal() { document.getElementById('addTrackerModal').style.display = 'flex'; }
 function closeAddTrackerModal() { document.getElementById('addTrackerModal').style.display = 'none'; }
@@ -3095,6 +3480,70 @@ async function submitTrackerAdd() {
     await loadTrackerPages();
   } catch(e) { toast('Error: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = 'Add & Start Tracking'; }
+}
+
+// ── Check All Due — runs all overdue/never-checked pages, then re-sorts ────────
+var _checkAllRunning = false;
+async function checkAllDue() {
+  if (_checkAllRunning) { toast('Already running — wait for it to finish', 'warn'); return; }
+
+  var now = Date.now();
+  var duePages = _trPages.filter(function(p) {
+    if (p.is_done) return false;
+    if (!p.last_checked_at) return true;
+    var next = p.next_check_at ? new Date(p.next_check_at).getTime() : (new Date(p.last_checked_at).getTime() + 3*86400000);
+    return next <= now;
+  });
+
+  if (!duePages.length) { toast('No pages due for check', 'info'); return; }
+
+  var btn = document.getElementById('checkAllDueBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting…'; }
+
+  _checkAllRunning = true;
+  var total = duePages.length;
+  var done = 0;
+  var failed = 0;
+
+  toast('Checking ' + total + ' pages — running in background', 3000, 'info');
+
+  for (var i = 0; i < duePages.length; i++) {
+    var p = duePages[i];
+    if (btn) btn.textContent = '⏳ ' + (done+1) + '/' + total + ' — ' + (p.url || '').replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+    try {
+      var r = await api('/api/tracker/pages/' + p.id + '/check', 'POST');
+      if (r.success) {
+        // Wait for this check to complete before starting next
+        await waitForCheck(p.id);
+        done++;
+        // Update the page in local array so due indicator refreshes
+        var idx = _trPages.findIndex(function(x){ return x.id === p.id; });
+        if (idx > -1) _trPages[idx].last_checked_at = new Date().toISOString();
+      }
+    } catch(e) {
+      failed++;
+      console.warn('[checkAllDue] failed for page', p.id, e.message);
+    }
+    // Small gap between checks to avoid rate limiting
+    await new Promise(function(res){ setTimeout(res, 800); });
+  }
+
+  _checkAllRunning = false;
+
+  // Reload all pages — triggers fresh priority sort and renumbering
+  await loadTrackerPages();
+  toast('✅ ' + done + ' pages checked' + (failed ? ' · ' + failed + ' failed' : '') + ' — list re-sorted', 4000, 'ok');
+}
+
+async function waitForCheck(pageId) {
+  var maxWait = 90; // max 90 × 2s = 3 minutes per page
+  for (var i = 0; i < maxWait; i++) {
+    await new Promise(function(res){ setTimeout(res, 2000); });
+    try {
+      var s = await api('/api/tracker/pages/' + pageId + '/check-status');
+      if (!s.running) return;
+    } catch(e) { return; }
+  }
 }
 
 async function runTrackerCheck(pageId, btn) {
@@ -3147,6 +3596,21 @@ async function deleteTrackerPage(pageId) {
     await loadTrackerPages();
   } catch(e) { toast('Delete failed: ' + e.message, 'err'); }
 }
+// ── Mark tracker page as Done / Todo ─────────────────────────────────────────
+async function togglePageDone(pageId) {
+  var page = _trPages.find(function(p){ return p.id === pageId; });
+  if (!page) return;
+  var newDone = !page.is_done;
+  try {
+    await api('/api/tracker/pages/' + pageId, 'PATCH', { is_done: newDone });
+    page.is_done = newDone;
+    toast(newDone ? '✓ Marked as done' : 'Moved back to todo', 1500, newDone ? 'ok' : 'info');
+    renderTrackerList();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
 function trPushToAgent(pageId) {
   var page = _trPages.find(function(p){ return p.id === pageId; });
   if (!page) return;
@@ -3346,19 +3810,62 @@ async function createStatsStudy() {
   if (!topic) { toast('Enter a topic', 'err'); return; }
   if (!_profile) { toast('Select a profile first', 'err'); return; }
   var btn = document.getElementById('btnStudy');
-  btn.disabled = true; btn.textContent = '🔬 Researching with live search…';
+  btn.disabled = true;
+  // Animated research progress
+  var resultEl = document.getElementById('studyResult');
+  var contentEl = document.getElementById('studyContent');
+  resultEl.style.display = 'block';
+  var _phases = [
+    '🔍 Searching live web for statistics…',
+    '📊 Finding cited data sources…',
+    '🧠 Extracting key numbers…',
+    '✍ Writing your statistics study…',
+    '📈 Building charts and tables…'
+  ];
+  var _phaseIdx = 0;
+  contentEl.innerHTML = '<div style="text-align:center;padding:40px 20px;">' +
+    '<div style="font-size:32px;margin-bottom:16px;animation:spin 2s linear infinite;display:inline-block;">🔬</div>' +
+    '<div id="statsPhaseText" style="font-size:14px;font-weight:600;color:#a78bfa;margin-bottom:8px;">' + _phases[0] + '</div>' +
+    '<div style="background:rgba(255,255,255,.06);border-radius:999px;height:4px;margin:12px auto;max-width:280px;overflow:hidden;">' +
+    '<div id="statsProgressBar" style="background:linear-gradient(90deg,#7c3aed,#f56d00);height:4px;border-radius:999px;width:5%;transition:width .8s ease;"></div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:#4b5563;margin-top:6px;">Claude is searching live — no fabricated numbers.</div>' +
+    '</div>';
+  // Inject spin keyframe if not present
+  if (!document.getElementById('statsSpinStyle')) {
+    var st = document.createElement('style');
+    st.id = 'statsSpinStyle';
+    st.textContent = '@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+  }
+  var _phaseTimer = setInterval(function() {
+    _phaseIdx = (_phaseIdx + 1) % _phases.length;
+    var pt = document.getElementById('statsPhaseText');
+    var pb = document.getElementById('statsProgressBar');
+    if (pt) pt.textContent = _phases[_phaseIdx];
+    if (pb) pb.style.width = (20 + _phaseIdx * 16) + '%';
+  }, 4000);
   try {
     var d = await api('/api/content/stats-study', 'POST', {
       profile_id: _profile.id, topic: topic,
       seed_keyword: document.getElementById('statsKeyword').value.trim()
     });
+    clearInterval(_phaseTimer);
     if (!d.success) throw new Error(d.error);
     _studyHtml = d.study.html_content;
     _studyTitle = d.study.title;
-    renderStatsStudy(d.study, d.study_data);
-    document.getElementById('studyResult').style.display = 'block';
-    toast('Study created: ' + d.study.word_count + ' words!', 'ok');
-  } catch(e) { toast('Study failed: ' + e.message, 'err'); }
+    window._lastStudyData = d.study_data; // stored for "Use in Pipeline/Rewrite" 
+    var pb2 = document.getElementById('statsProgressBar');
+    if (pb2) pb2.style.width = '100%';
+    setTimeout(function() {
+      renderStatsStudy(d.study, d.study_data);
+    }, 400);
+    toast('✅ Study created: ' + d.study.word_count + ' words!', 3000, 'ok');
+  } catch(e) {
+    clearInterval(_phaseTimer);
+    contentEl.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171;">❌ ' + escHtml(e.message) + '</div>';
+    toast('Study failed: ' + e.message, 'err');
+  }
   finally { btn.disabled = false; btn.textContent = '🔬 Build Study with Live Research'; }
 }
 
@@ -3369,14 +3876,47 @@ function renderStatsStudy(study, data) {
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">' +
     '<div><div style="font-size:15px;font-weight:700;color:#fbbf24;">' + escHtml(study.title) + '</div>' +
     '<div style="font-size:12px;color:#6b7280;margin-top:3px;">' + study.word_count + ' words · ' + (data.sources||[]).length + ' sources · ' + stats.length + ' stats</div></div>' +
-    '<div style="display:flex;gap:6px;">' +
-    '<button onclick="navigator.clipboard.writeText(_studyHtml).then(function(){toast(\'Copied!\',\'ok\')})" style="padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">📋 Copy HTML</button>' +
-    '<button onclick="downloadStudyHtml()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.3);">⬇ Download</button>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    '<button onclick="useStatsInPipeline()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;">🚀 Use in Pipeline</button>' +
+    '<button onclick="useStatsInRewrite()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">✍ Use in Rewrite</button>' +
+    '<button onclick="downloadStudyHtml()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;">⬇ Download</button>' +
     '</div></div>' +
     (stats.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px;">' +
     stats.map(function(s){return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:12px;"><div style="font-size:13px;font-weight:700;color:#f56d00;margin-bottom:3px;">'+escHtml(s.stat.substring(0,35))+'</div><div style="font-size:10px;color:#6b7280;">'+escHtml(s.source||'')+' '+(s.year||'')+'</div></div>';}).join('') + '</div>' : '') +
     (data.key_findings&&data.key_findings.length ? '<div style="margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Key Findings</div>' + data.key_findings.map(function(f){return '<div style="font-size:13px;color:#e2e8f0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">→ '+escHtml(f)+'</div>';}).join('') + '</div>' : '') +
     (data.sources&&data.sources.length ? '<div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Sources ('+data.sources.length+')</div>' + data.sources.map(function(s){return '<div style="font-size:12px;padding:2px 0;"><a href="'+escHtml(s.url||'')+'" target="_blank" style="color:#38bdf8;">'+escHtml(s.name)+'</a> '+(s.year||'')+'</div>';}).join('') + '</div>' : '');
+}
+
+// ── Use Stats in Pipeline / Rewrite ─────────────────────────────────────────
+// Stores current study stats as context, then opens the relevant tool.
+// The stats are injected into the prompt as "supporting data with citations."
+function useStatsInPipeline() {
+  if (!window._lastStudyData) { toast('No study data — run a study first', 'warn'); return; }
+  // Store stats in context for Pipeline to use
+  _context.stats_context = buildStatsContext(window._lastStudyData);
+  // Switch to Agent with pre-filled message, or open Pipeline directly
+  openPipelineModal();
+  toast('📊 Stats loaded into Pipeline — they will be cited in the article', 3000, 'ok');
+}
+function useStatsInRewrite() {
+  if (!window._lastStudyData) { toast('No study data — run a study first', 'warn'); return; }
+  _context.stats_context = buildStatsContext(window._lastStudyData);
+  openRewriteModal();
+  toast('📊 Stats loaded into Rewrite — AI will cite them in the content', 3000, 'ok');
+}
+function buildStatsContext(data) {
+  if (!data) return '';
+  var lines = ['STATISTICS TO CITE (use these exact numbers with attribution):'];
+  (data.key_stats || []).slice(0, 8).forEach(function(s) {
+    if (s.stat && s.context) {
+      lines.push('• ' + s.stat + ' — ' + s.context + (s.source ? ' (Source: ' + s.source + (s.year ? ', ' + s.year : '') + ')' : ''));
+    }
+  });
+  if (data.key_findings && data.key_findings.length) {
+    lines.push('\nKEY FINDINGS:');
+    data.key_findings.slice(0, 4).forEach(function(f) { lines.push('• ' + f); });
+  }
+  return lines.join('\n');
 }
 
 function downloadStudyHtml() {
@@ -3390,7 +3930,6 @@ function downloadStudyHtml() {
 async function loadPastStudies() {
   if (!_profile) { toast('Select a profile first', 'err'); return; }
   try {
-    var d = await api('/api/content/stats-studies/' + _profile.id);
     var d = await api('/api/content/stats-studies/' + _profile.id);
     var el = document.getElementById('studiesList');
   el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid rgba(255,255,255,.08);"><th style="padding:6px 10px;text-align:left;font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Title</th><th style="padding:6px 10px;text-align:right;font-size:9px;color:#6b7280;">Words</th><th style="padding:6px 10px;text-align:right;font-size:9px;color:#6b7280;">Date</th></tr></thead><tbody>' +
@@ -3997,8 +4536,8 @@ async function saveProfile() {
     loadProfilesList();
 
     // Always ensure profileSection is visible after any profile save
-    var _ps2=document.getElementById('profileSection'); if(_ps2)_ps2.style.display='block';
-    var _aks2=document.getElementById('aiKeysSection'); if(_aks2)_aks2.style.display='block';
+    document.getElementById('profileSection').style.display = 'block';
+    document.getElementById('aiKeysSection').style.display = 'block';
 
     // If new profile, switch to it automatically
     if (!_editingProfileId && d.profile) {
@@ -4381,7 +4920,7 @@ function confirmGscImport() {
         var importModal = document.getElementById('pagesImportModal');
         if (importModal) importModal.style.display = 'none';
         // Switch to Pages view so user sees the imported data
-        switchView('pages');
+        switchView('tracker');
         loadPagesOverview(true);
         loadTrackerPages();
       } else {
@@ -4498,7 +5037,9 @@ function openRewriteModal() {
 }
 
 function openRewriteModalWithMode(preselectMode) {
+  updateWorkflowStep(4);
   var modal = document.getElementById('rewriteModal');
+  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
   if (!modal) return;
   // Pre-fill with context
   document.getElementById('rewriteKeyword').value = _context.keyword || '';
@@ -4644,7 +5185,8 @@ async function runRewriteFromModal() {
       rewrite_modes: modes,
       rewrite_mode: modes[0],  // backward compat
       intelligence_context: intelContext ? JSON.stringify({ competitors: intelContext.competitors, paa: intelContext.people_also_ask, brief: intelContext.intelligence_brief }) : null,
-      manual_competitor_intel: document.getElementById('rewriteCompIntel').value.trim() || null
+      manual_competitor_intel: document.getElementById('rewriteCompIntel').value.trim() || null,
+      stats_context: _context.stats_context || null
     });
     if (!analyseResult || !analyseResult.success) throw new Error((analyseResult && analyseResult.error) || 'Analysis failed');
     var rewriteId = analyseResult.rewrite_id;
@@ -5480,7 +6022,6 @@ function scanPageScore(url) {
 
 // Init: load pages overview on first open + restore engine token
 document.addEventListener('DOMContentLoaded', function() {
-  switchView('agent');
   try {
     var savedToken = localStorage.getItem('nexus_engine_token');
     if (savedToken) {
@@ -5490,69 +6031,102 @@ document.addEventListener('DOMContentLoaded', function() {
   loadPagesOverview();
 });
 
+// ── TRACKER PANEL CONTROLS ──────────────────────────────────────────────────
+function openTrackerGscImport() {
+  document.getElementById('trackerGscPanel').style.display = 'block';
+  document.getElementById('trackerSitemapPanel').style.display = 'none';
+  // Sync updateGscStatus to the tracker panel status element
+  updateTrackerGscStatus();
+}
+function closeTrackerGscImport() {
+  document.getElementById('trackerGscPanel').style.display = 'none';
+}
+function openTrackerSitemapPanel() {
+  document.getElementById('trackerSitemapPanel').style.display = 'block';
+  document.getElementById('trackerGscPanel').style.display = 'none';
+  // Pre-fill with profile domain if set
+  var inp = document.getElementById('trackerSitemapUrl');
+  if (inp && !inp.value && _profile && _profile.domain) {
+    var d = _profile.domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    inp.value = 'https://' + d + '/sitemap.xml';
+  }
+}
+function closeTrackerSitemapPanel() {
+  document.getElementById('trackerSitemapPanel').style.display = 'none';
+}
+function updateTrackerGscStatus() {
+  var el = document.getElementById('trackerGscStatus');
+  if (!el) return;
+  if (_gscPages.length || _gscQueries.length) {
+    el.textContent = '✓ ' + _gscPages.length + ' pages' + (_gscQueries.length ? ' · ' + _gscQueries.length + ' queries' : '') + ' loaded';
+    el.style.color = '#34d399';
+  } else {
+    el.textContent = '';
+  }
+}
+function fetchTrackerSitemap() {
+  var inp = document.getElementById('trackerSitemapUrl');
+  var url = inp && inp.value.trim();
+  if (!url) { toast('Enter a sitemap URL', 'warn'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  var btn = document.querySelector('#trackerSitemapPanel button[onclick="fetchTrackerSitemap()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  var stat = document.getElementById('trackerSitemapStatus');
+  if (stat) stat.textContent = 'Fetching…';
+  api('/api/fetch-sitemap?url=' + encodeURIComponent(url)).then(function(d) {
+    if (!d || !d.success) throw new Error(d && d.error || 'Failed');
+    var urls = d.urls || [];
+    if (!urls.length) { if (stat) stat.textContent = 'No URLs found'; return; }
+    _sitemapUrls = urls;
+    if (stat) stat.innerHTML = '<b>' + urls.length + '</b> URLs found · <button onclick="previewSitemapUrls()" style="margin-left:6px;padding:2px 8px;border-radius:3px;border:none;background:#f56d00;color:#fff;font-size:9px;cursor:pointer;">Preview & Add</button>';
+    previewSitemapUrls();
+  }).catch(function(e) {
+    if (stat) stat.textContent = 'Error: ' + e.message;
+  }).finally(function() {
+    if (btn) { btn.disabled = false; btn.textContent = 'Fetch'; }
+  });
+}
+// Sync _gscPages into tracker pages list for opportunity display
+function syncGscToTracker() {
+  if (!_gscPages.length || !_trPages.length) return;
+  _trPages.forEach(function(tp) {
+    var gsc = _gscPages.find(function(g) { return g.url === tp.url; });
+    if (gsc) {
+      tp.gsc_position = tp.gsc_position || gsc.position;
+      tp.gsc_impressions = tp.gsc_impressions || gsc.impressions;
+      tp.gsc_clicks = tp.gsc_clicks || gsc.clicks;
+      tp.keyword = tp.keyword || gsc.keyword;
+    }
+  });
+  renderTrackerList();
+}
+
 // ── SERP SPY ─────────────────────────────────────────────────────────────────
 var _serpSpyPageId = null;
 
 function openSerpSpy(pageId) {
+  updateWorkflowStep(3);
   _serpSpyPageId = pageId;
   var page = (_trPages || []).find(function(p){ return p.id === pageId; });
   var kw   = (page && page.keyword) || '';
   var url  = (page && page.url) || '';
+  if (page) {
+    var _pri = getPagePriority(page);
+    window._serpSpyAction      = _pri.action || 'rewrite';
+    window._serpSpyInsight     = _pri.insight || '';
+    window._serpSpyRecommended = _pri.recommended || '';
+  }
 
+  // Move modal to document.body to escape any overflow:hidden parent
   var modal = document.getElementById('serpSpyModal');
-  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
+  if (modal && modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
   document.getElementById('serpSpyKeyword').value = kw;
   document.getElementById('serpSpyUrl').value = url;
   document.getElementById('serpSpyResult').innerHTML = '';
   document.getElementById('serpSpyStatus').textContent = '';
   modal.style.display = 'flex';
-}
-
-function buildSpyBriefText(spy, kw, url) {
-  if (!spy) return 'No spy data.';
-  var pat=spy.step2_pattern||{}, gaps=spy.step4_missing||[], wins=spy.quick_wins||[];
-  var plan=spy.action_plan||[], brief=spy.content_brief||{}, ents=spy.entity_gaps_priority||spy._entity_gaps||[];
-  var lines=[];
-  lines.push('# CONTENT BRIEF: '+(kw||'').toUpperCase());
-  if(url) lines.push('Page: '+url);
-  lines.push('');
-  lines.push('## WHY RANK 1 WINS');
-  lines.push(pat.the_ranking_formula||'—');
-  lines.push('');
-  if(pat.top3_shared_traits&&pat.top3_shared_traits.length){lines.push('## WHAT ALL TOP 3 HAVE');pat.top3_shared_traits.forEach(function(t){lines.push('✓ '+t);});lines.push('');}
-  if(ents.length){lines.push('## MISSING ENTITIES');ents.slice(0,10).forEach(function(e){lines.push('• "'+(e.entity||e)+'" → '+(e.where_to_add||'body')+' ['+(e.priority||'medium')+']');});lines.push('');}
-  if(wins.length){lines.push('## QUICK WINS');wins.forEach(function(w){lines.push('✓ '+(w.win||w));});lines.push('');}
-  if(gaps.length){lines.push('## GAPS NOBODY COVERS');gaps.forEach(function(g){lines.push('• '+(g.gap||'')+': '+(g.how_to_exploit||''));});lines.push('');}
-  if(brief.must_have_h2s&&brief.must_have_h2s.length){lines.push('## H2 STRUCTURE');brief.must_have_h2s.forEach(function(h,i){lines.push((i+1)+'. '+h);});lines.push('');}
-  if(spy.paa_questions&&spy.paa_questions.length){lines.push('## PEOPLE ALSO ASK');spy.paa_questions.forEach(function(q){lines.push('Q: '+q);});lines.push('');}
-  if(brief.recommended_schema&&brief.recommended_schema.length){lines.push('## SCHEMA TO ADD');brief.recommended_schema.forEach(function(s){lines.push('• '+s);});lines.push('');}
-  if(spy.ai_overview_blueprint){lines.push('## TO GET AI OVERVIEW CITATION');lines.push(spy.ai_overview_blueprint);lines.push('');}
-  if(plan.length){lines.push('## ACTION PLAN');plan.forEach(function(a){lines.push(a.step+'. ['+(a.priority||'').toUpperCase()+'] '+a.action);});}
-  lines.push('');
-  lines.push('--- Brief by ContentScale PULSE+NEXUS');
-  return lines.join('\n');
-}
-
-function spyCopyBrief() {
-  var spy=window._lastSpyData,kw=window._lastSpyKeyword||'',url=window._lastSpyUrl||'';
-  if(!spy){toast('Run Spy first','warn');return;}
-  var text=buildSpyBriefText(spy,kw,url);
-  navigator.clipboard.writeText(text).then(function(){toast('✅ Brief copied — paste into any AI',3000,'ok');}).catch(function(){
-    var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;';
-    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-    toast('✅ Brief copied',3000,'ok');
-  });
-}
-
-function spyWriteInAgent() {
-  var spy=window._lastSpyData,kw=window._lastSpyKeyword||'',url=window._lastSpyUrl||'';
-  if(!spy){toast('Run Spy first','warn');return;}
-  var brief=buildSpyBriefText(spy,kw,url);
-  var profileName=(_profile&&_profile.name)||'the business';
-  var msg='[WRITE REQUEST]\nWrite a complete publish-ready HTML page using this brief.\n\nBusiness: '+profileName+'\nKeyword: '+kw+'\nPage: '+(url||'new page')+'\n\nInstructions:\n1. Full semantic HTML body (h1,h2,h3,p,ul — no css/scripts)\n2. Add every missing entity naturally\n3. Answer every PAA question with h3+paragraph\n4. JSON-LD schema for each schema type in brief\n5. Meta title+description as HTML comments at top\n6. End with CTA section\n\n---\n'+brief;
-  closeSerpSpy();
-  switchView('agent');
-  setTimeout(function(){var inp=document.getElementById('chatInput');if(inp){inp.value=msg;sendMessage();}},300);
 }
 
 function closeSerpSpy() {
@@ -5605,21 +6179,26 @@ async function runSerpSpy() {
     }
 
     if (d.spy) {
-      window._lastSpyData    = d.spy;
-      window._lastSpyKeyword = kw;
-      window._lastSpyUrl     = url;
       result.innerHTML = renderSerpSpyReport(d.spy);
-      // Action buttons
-      var _actDiv = document.createElement('div');
-      _actDiv.style.cssText = 'padding:16px 0 8px;border-top:1px solid rgba(255,255,255,.06);margin-top:12px;';
-      _actDiv.innerHTML =
-        '<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Next step:</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
-          '<button onclick="spyWriteInAgent()" style="padding:11px 22px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">✍ Write in Agent</button>' +
-          '<button onclick="spyCopyBrief()" style="padding:11px 18px;border-radius:7px;border:1px solid rgba(52,211,153,.4);background:rgba(52,211,153,.08);color:#34d399;font-size:12px;font-weight:700;cursor:pointer;">📋 Copy Brief</button>' +
-          '<button onclick="closeSerpSpy()" style="padding:11px 14px;border-radius:7px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#6b7280;font-size:12px;cursor:pointer;">✕ Close</button>' +
-        '</div>';
-      result.appendChild(_actDiv);
+      // Action buttons below report
+      var actDiv = document.createElement('div');
+      actDiv.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);';
+      // Show the right action based on page priority
+      var _spyAct = window._serpSpyAction || 'rewrite';
+      var _spyRec = window._serpSpyRecommended || '';
+      actDiv.innerHTML =
+        (_spyAct === 'surgical' ?
+          '<button onclick="spyApplySurgical()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔧 Apply Surgical Fixes</button>' :
+          '<button onclick="spyOpenRewrite()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Rewrite to Beat Rank 1</button>'
+        ) +
+        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Analyse with Agent</button>' +
+        '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
+        (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
+      result.appendChild(actDiv);
+      // Store spy data for button handlers
+      window._lastSpyData = d.spy;
+      window._lastSpyKeyword = kw;
+      window._lastSpyUrl = url;
     } else {
       result.innerHTML = '<pre style="white-space:pre-wrap;font-size:11px;color:#9ca3af;">' + escHtml(d.raw) + '</pre>';
     }
@@ -5630,6 +6209,176 @@ async function runSerpSpy() {
     stat.textContent = '';
     result.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + escHtml(e.message) + '</div>';
   }
+}
+
+// ── Spy → Apply Surgical: opens rewrite modal in surgical mode with spy context ─
+function spyApplySurgical() {
+  var spy = window._lastSpyData;
+  if (!spy) { toast('No spy data — run Spy first', 'warn'); return; }
+  // Store spy context so surgical rewrite uses entity gaps as targets
+  _context.intelligence_context = {
+    ranking_formula: spy.step2_pattern && spy.step2_pattern.the_ranking_formula,
+    entity_gaps: spy._entity_gaps || spy.entity_gaps_priority,
+    content_brief: spy.content_brief,
+    quick_wins: spy.quick_wins,
+    action_plan: spy.action_plan,
+    ai_overview_blueprint: spy.ai_overview_blueprint,
+    spy_keyword: window._lastSpyKeyword
+  };
+  closeSerpSpy();
+  openRewriteModalWithMode('surgical');
+  toast('Spy brief loaded — surgical fixes will target competitor gaps', 3000, 'ok');
+}
+
+// ── Spy → Agent with HTML context: the intelligent gap analysis ───────────────
+// Sends spy brief + stored page HTML to agent so it can tell you exactly what to add
+function spySendToAgentWithHtml() {
+  var spy = window._lastSpyData;
+  var kw  = window._lastSpyKeyword || '';
+  var url = window._lastSpyUrl || '';
+  if (!spy) { toast('No spy data', 'warn'); return; }
+
+  // Get stored page HTML from tracker
+  var page = _trPages && _trPages.find(function(p){ return p.url === url; });
+  var hasHtml = page && page.latest_snapshot && page.latest_snapshot.html_snapshot;
+
+  var brief = spy.content_brief || {};
+  var gaps  = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,5)
+              .map(function(e){ return '"' + (e.entity||e) + '"'; }).join(', ');
+  var formula = spy.step2_pattern && spy.step2_pattern.the_ranking_formula || '';
+  var wins  = (spy.quick_wins || []).slice(0,3).map(function(w){ return '• ' + (w.win||w); }).join('\n');
+  var missing = (spy.step4_missing || []).slice(0,3).map(function(m){ return '• ' + (m.gap||'') + ': ' + (m.how_to_exploit||''); }).join('\n');
+
+  var parts = ['[SPY BRIEF + GAP ANALYSIS REQUEST] Keyword: "' + kw + '"'];
+  if (url) parts.push('Page: ' + url);
+  parts.push('\nRANKING FORMULA: ' + formula);
+  if (gaps) parts.push('MISSING ENTITIES: ' + gaps);
+  if (missing) parts.push('GAPS TO EXPLOIT:\n' + missing);
+  if (wins) parts.push('QUICK WINS:\n' + wins);
+  if (spy.ai_overview_blueprint) parts.push('AI OVERVIEW: ' + spy.ai_overview_blueprint);
+
+  parts.push('\n---');
+  parts.push('I need you to analyse the gap between my page and rank 1.');
+  if (hasHtml) {
+    parts.push('You have access to the current page HTML via [ANALYSE ' + url + ' "' + kw + '"].');
+    parts.push('Run [ANALYSE] then tell me: for each missing entity and gap above, write the EXACT text/HTML I need to add — specific sentences, not generic advice.');
+  } else {
+    parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] to see my current page, then for each missing entity and gap above, write the EXACT text/HTML I need to add.');
+  }
+  parts.push('Focus only on surgical additions — do NOT suggest a full rewrite.');
+
+  var msg = parts.join('\n');
+
+  closeSerpSpy();
+  switchView('agent');
+  setTimeout(function() {
+    var inp = document.getElementById('chatInput');
+    if (inp) {
+      inp.value = msg;
+      sendMessage();
+    }
+  }, 300);
+}
+
+// ── Spy → Agent: sends full brief to agent with context ──────────────────────
+function spyPushToAgent() {
+  var spy = window._lastSpyData;
+  var kw = window._lastSpyKeyword || '';
+  var url = window._lastSpyUrl || '';
+  if (!spy) { toast('No spy data', 'warn'); return; }
+
+  var brief = spy.content_brief || {};
+  var pattern = spy.step2_pattern || {};
+  var outlier = spy.step3_outlier || {};
+  var missing = (spy.step4_missing || []).slice(0,2);
+  var formula = pattern.the_ranking_formula || '';
+  var format = pattern.dominant_content_format || '';
+  var schema = pattern.dominant_schema || '';
+  var wordCount = brief.recommended_word_count || pattern.dominant_word_count_range || '';
+  var topGaps = (spy.entity_gaps_priority || spy._entity_gaps || [])
+    .filter(function(e){ return (e.priority === 'high' || e.in_competitor_pages >= 3); })
+    .slice(0,4).map(function(e){ return '"' + (e.entity || e) + '"'; }).join(', ');
+  var quickWins = (spy.quick_wins || []).slice(0,2).map(function(w){ return '• ' + (w.win||w); }).join('\n');
+  var aiBlueprint = spy.ai_overview_blueprint || '';
+  var clientGap = spy.client_vs_best || '';
+  var aiCit = spy._client_ai_citation;
+  var gscFastWin = _context && _context.fast_win_keyword ? _context.fast_win_keyword : '';
+
+  // Build a smart briefing — agent reads this as context, then asks ONE question
+  var msg = '[SPY BRIEF] Keyword: "' + kw + '"' + (url ? ' | Page: ' + url : '');
+
+  // The single most important insight from the spy
+  if (formula) msg += '\n\nWHY RANK 1 WINS:\n' + formula;
+
+  // What the client page is missing vs rank 1
+  if (clientGap && clientGap !== 'no client URL') {
+    msg += '\n\nCLIENT GAP vs RANK 1:\n' + clientGap;
+  }
+
+  // Top missing entities
+  if (topGaps) msg += '\n\nMISSING ENTITIES (in competitors, absent from client):\n' + topGaps;
+
+  // What nobody covers — opportunity
+  if (missing.length) {
+    msg += '\n\nGAPS NOBODY COVERS (first-mover opportunity):\n' +
+      missing.map(function(m){ return '• ' + (m.gap||'') + ' → ' + (m.how_to_exploit||''); }).join('\n');
+  }
+
+  // Quick wins
+  if (quickWins) msg += '\n\nQUICK WINS:\n' + quickWins;
+
+  // AI citation gaps
+  if (aiCit && aiCit.eligibility !== 'high') {
+    msg += '\n\nAI OVERVIEW SCORE: ' + aiCit.score + '/100 (' + aiCit.eligibility + ')';
+    if (aiBlueprint) msg += '\nTo get cited: ' + aiBlueprint;
+  }
+
+  // Content brief summary
+  msg += '\n\nCONTENT BRIEF:\n' +
+    '• Format: ' + (format || '—') + ' | Schema: ' + (schema || '—') + ' | Target: ~' + wordCount + ' words' +
+    (gscFastWin ? '\n• GSC fast-win keyword: "' + gscFastWin + '"' : '');
+
+  // The ONE question — agent must stop and wait, not run commands
+  msg += '\n\n---\n' +
+    '1. What is the #1 thing that will move this page to position 1?\n' +
+    '2. New sections or replace existing content?\n' +
+    'Then ask me ONE question with two options — A or B — before doing anything.\n' +
+    'IMPORTANT: Do NOT run [ANALYSE] or any command. Wait for my answer first.';
+
+  closeSerpSpy();
+  switchView('agent');
+  setTimeout(function() {
+    var inp = document.getElementById('chatInput');
+    if (inp) {
+      inp.value = msg;
+      // Auto-send — agent reads the brief and responds strategically
+      sendMessage();
+    }
+  }, 300);
+}
+
+// ── Spy → Rewrite: pre-fills rewrite modal with spy brief ────────────────────
+function spyOpenRewrite() {
+  var spy = window._lastSpyData;
+  if (!spy) { toast('No spy data', 'warn'); return; }
+  // Store spy context so execute-rewrite uses it
+  _context.stats_context = null; // clear stats context
+  _context.intelligence_context = {
+    ranking_formula: spy.step2_pattern && spy.step2_pattern.the_ranking_formula,
+    entity_gaps: spy._entity_gaps || spy.entity_gaps_priority,
+    content_brief: spy.content_brief,
+    ai_citation: spy._client_ai_citation,
+    spy_keyword: window._lastSpyKeyword
+  };
+  closeSerpSpy();
+  openRewriteModal();
+  // Pre-fill keyword if empty
+  setTimeout(function() {
+    var kwInp = document.getElementById('rewriteKeyword');
+    if (kwInp && !kwInp.value && window._lastSpyKeyword) kwInp.value = window._lastSpyKeyword;
+    var urlInp = document.getElementById('rewriteUrl');
+    if (urlInp && !urlInp.value && window._lastSpyUrl) urlInp.value = window._lastSpyUrl;
+  }, 200);
 }
 
 function renderSerpSpyReport(s) {
@@ -5653,9 +6402,34 @@ function renderSerpSpyReport(s) {
     '</div>';
 
   // ── STEP 1: CATALOG ──
+  // Build catalog from best available source: step1_catalog > _live_graaf > _serp_urls
+  var catalogData = [];
+  if (s.step1_catalog && s.step1_catalog.length) {
+    catalogData = s.step1_catalog;
+  } else if (s._live_graaf && s._live_graaf.length) {
+    // Build from GRAAF data + serp URLs
+    catalogData = s._live_graaf.map(function(g) {
+      var spyUrl = (s._serp_urls || []).find(function(u){ return u.rank === g.rank; }) || {};
+      return {
+        rank: g.rank, domain: g.domain, url: g.url, title: spyUrl.title || g.domain,
+        content_type: 'service page', estimated_word_count: g.wordCount || '?',
+        schema_types: g.schemaTypes || [],
+        serp_features: [],
+        freshness: '—', ai_overview_eligible: false,
+        snippet_text: spyUrl.snippet || ''
+      };
+    });
+  } else if (s._serp_urls && s._serp_urls.length) {
+    catalogData = s._serp_urls.slice(0, 10).map(function(u) {
+      return { rank: u.rank, domain: u.domain, url: u.url, title: u.title || u.domain, content_type: '—', estimated_word_count: '?', schema_types: [], serp_features: [], freshness: '—', ai_overview_eligible: false, snippet_text: u.snippet || '' };
+    });
+  }
   html += '<div style="background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px;margin-bottom:10px;">' +
     '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#7c3aed;">STEP 1 · CATALOG <span style="font-weight:400;color:#6b7280;font-size:10px;">Every URL, content type & SERP feature</span></div>';
-  (s.step1_catalog || s.competitors || []).forEach(function(e) {
+  if (!catalogData.length) {
+    html += '<div style="color:#6b7280;font-size:11px;">No catalog data — re-run Spy to populate</div>';
+  }
+  catalogData.forEach(function(e) {
     html += '<div style="border-bottom:1px solid rgba(255,255,255,.04);padding:8px 0;display:flex;gap:10px;align-items:flex-start;">' +
       '<div style="min-width:22px;height:22px;border-radius:50%;background:' + (e.rank <= 3 ? '#7c3aed' : 'rgba(255,255,255,.08)') + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">' + (e.rank||'?') + '</div>' +
       '<div style="flex:1;min-width:0;">' +
@@ -5669,7 +6443,7 @@ function renderSerpSpyReport(s) {
       (e.schema_types && e.schema_types.length ? e.schema_types.map(function(sc){ return '<span style="background:rgba(245,158,11,.1);color:#fbbf24;padding:2px 5px;border-radius:3px;font-size:9px;">🗂 '+escHtml(sc)+'</span>'; }).join('') : '') +
       (e.ai_overview_eligible ? '<span style="background:rgba(16,185,129,.15);color:#34d399;padding:2px 5px;border-radius:3px;font-size:9px;">🤖 AI eligible</span>' : '') +
       '</div>' +
-      (e.snippet_text ? '<div style="margin-top:4px;color:#6b7280;font-size:9px;font-style:italic;">"' + escHtml(e.snippet_text.substring(0,120)) + '…"</div>' : '') +
+      (e.snippet_text ? '<div style="margin-top:4px;color:#6b7280;font-size:10px;font-style:italic;line-height:1.5;">"' + escHtml(e.snippet_text) + '"</div>' : '') +
       '</div></div>';
   });
   html += '</div>';
@@ -5687,13 +6461,13 @@ function renderSerpSpyReport(s) {
       '<div><div style="font-size:9px;color:#34d399;font-weight:700;margin-bottom:6px;">✓ TOP 3 SHARE</div>' +
       (p2.top3_shared_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
       '<div><div style="font-size:9px;color:#f87171;font-weight:700;margin-bottom:6px;">✗ BOTTOM 7 MISSING</div>' +
-      (p2.bottom7_missing_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
+      (p2.bottom_missing_traits||p2.bottom7_missing_traits||[]).map(function(t){ return '<div style="color:#9ca3af;padding:3px 0;font-size:10px;">• ' + escHtml(t) + '</div>'; }).join('') + '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
       '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Format: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_content_format||'—') + '</span></div>' +
       '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Schema: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_schema||'—') + '</span></div>' +
       '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Words: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.dominant_word_count_range||'—') + '</span></div>' +
-      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Freshness: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.freshness_pattern||'—') + '</span></div>' +
+      (p2.freshness_pattern && p2.freshness_pattern !== '—' && p2.freshness_pattern !== 'not a factor' ? '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 12px;font-size:10px;"><span style="color:#6b7280;">Freshness: </span><span style="color:#e2e8f0;font-weight:700;">' + escHtml(p2.freshness_pattern) + '</span></div>' : '') +
       '</div></div>';
   }
 
@@ -5705,13 +6479,14 @@ function renderSerpSpyReport(s) {
       '<div style="font-size:12px;font-weight:800;margin-bottom:10px;color:'+(isOpp?'#34d399':'#f87171')+';">STEP 3 · OUTLIER <span style="font-weight:400;color:#6b7280;font-size:10px;">'+(isOpp?'🟢 Opportunity':'🔴 Warning')+' — rank #'+(o.rank||'?')+'</span></div>' +
       '<div style="color:#93c5fd;font-size:10px;margin-bottom:4px;">' + escHtml(o.domain||o.url||'') + '</div>' +
       '<div style="color:#9ca3af;font-size:10px;margin-bottom:8px;">' + escHtml(o.why_it_breaks_pattern||'') + '</div>' +
-      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:10px;font-size:10px;">' +
+      '<div style="background:rgba(255,255,255,.04);border-radius:6px;padding:10px;font-size:10px;margin-bottom:6px;">' +
       '<div style="color:#fbbf24;font-weight:700;margin-bottom:4px;">Why it ranks anyway</div>' +
-      '<div style="color:#e2e8f0;">' + escHtml(o.why_it_ranks_anyway||'') + '</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(o.why_it_ranks_anyway || o.why_ranks_anyway || '—') + '</div>' +
       '</div>' +
-      '<div style="margin-top:8px;background:'+(isOpp?'rgba(16,185,129,.08)':'rgba(248,113,113,.08)')+';border-radius:6px;padding:10px;font-size:10px;">' +
+      (o.why_breaks_pattern ? '<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;font-size:10px;color:#9ca3af;margin-bottom:6px;"><b style="color:#6b7280;">Breaks pattern:</b> ' + escHtml(o.why_breaks_pattern) + '</div>' : '') +
+      '<div style="margin-top:4px;background:'+(isOpp?'rgba(16,185,129,.08)':'rgba(248,113,113,.08)')+';border-radius:6px;padding:10px;font-size:10px;">' +
       '<div style="color:'+(isOpp?'#34d399':'#f87171')+';font-weight:700;margin-bottom:4px;">What to learn</div>' +
-      '<div style="color:#e2e8f0;">' + escHtml(o.what_to_learn||'') + '</div>' +
+      '<div style="color:#e2e8f0;">' + escHtml(o.what_to_learn || '—') + '</div>' +
       '</div></div>';
   }
 
@@ -6318,12 +7093,57 @@ function renderSerpSpyReport(s) {
 
 <!-- TRACKER VIEW -->
 <div id="view-tracker" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:20px 24px;background:#07090e;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <div><div style="font-size:16px;font-weight:800;">📡 Content Lifecycle Tracker</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">Google position · AI citations · Content changes</div></div>
-    <div style="display:flex;gap:6px;">
-      <button onclick="loadTrackerPages()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
-      <button onclick="openAddTrackerModal()" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">+ Add URL</button>
+
+  <!-- ── UNIFIED TRACKER HEADER ── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div>
+      <div style="font-size:16px;font-weight:800;">📡 Tracker & SERP Spy</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:2px;font-style:italic;">Know before Google tells you — positions, AI citations &amp; content changes, automatic.</div>
+      <div id="trackerProfileLabel" style="font-size:11px;color:#6b7280;margin-top:3px;"></div>
     </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <button onclick="loadTrackerPages()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
+      <button onclick="openAddTrackerModal()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3);">+ Add URL</button>
+      <button onclick="openTrackerGscImport()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC</button>
+      <button onclick="openTrackerSitemapPanel()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">🗺 Sitemap</button>
+    </div>
+  </div>
+
+  <!-- ── GSC IMPORT PANEL (inline, collapsible) ── -->
+  <div id="trackerGscPanel" style="display:none;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:#a78bfa;">📊 Import GSC Data</div>
+      <button onclick="closeTrackerGscImport()" style="background:none;border:none;color:#6b7280;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Drop both CSVs here — Pages + Queries (from GSC → Performance → Export)</div>
+      <div class="drop-zone" style="padding:14px;min-height:70px;">
+        <input type="file" accept=".csv" multiple onchange="handleBothGscFiles(this)">
+        <div class="drop-zone-icon" style="font-size:22px;">📊</div>
+        <div class="drop-zone-text" style="font-size:11px;">Drop Pages CSV + Queries CSV together</div>
+        <div style="font-size:9px;color:#4b5563;margin-top:4px;">Select both files at once or drop one by one</div>
+      </div>
+    </div>
+    <div id="trackerGscStatus" style="font-size:11px;color:#34d399;min-height:16px;"></div>
+    <button onclick="showGscPreview()" style="margin-top:8px;padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Preview & Import →</button>
+  </div>
+
+  <!-- ── SITEMAP PANEL (inline, collapsible) ── -->
+  <div id="trackerSitemapPanel" style="display:none;background:rgba(245,109,0,.05);border:1px solid rgba(245,109,0,.2);border-radius:10px;padding:14px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:#f56d00;">🗺 Add from Sitemap</div>
+      <button onclick="closeTrackerSitemapPanel()" style="background:none;border:none;color:#6b7280;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input type="text" id="trackerSitemapUrl" placeholder="https://perfectroofingteam.com/sitemap.xml" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;font-size:12px;color:#e2e8f0;outline:none;">
+      <button onclick="fetchTrackerSitemap()" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#f56d00;color:#fff;">Fetch</button>
+    </div>
+    <div style="font-size:10px;color:#6b7280;margin-bottom:8px;">Or drop a sitemap XML / TXT file:</div>
+    <div class="drop-zone" style="padding:10px 14px;min-height:50px;margin-bottom:8px;">
+      <input type="file" accept=".xml,.txt" onchange="handleSitemapUpload(this)">
+      <div style="font-size:11px;color:#6b7280;">Drop sitemap file here</div>
+    </div>
+    <div id="trackerSitemapStatus" style="font-size:11px;color:#34d399;min-height:16px;"></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:18px;">
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;"><div style="font-size:22px;font-weight:900;color:#e2e8f0;" id="trKpiPages">0</div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:3px;">Tracked</div></div>
@@ -6340,7 +7160,11 @@ function renderSerpSpyReport(s) {
 
 <!-- STATS VIEW -->
 <div id="view-stats" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:20px 24px;background:#07090e;">
-  <div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:800;">📊 Stats Study Builder</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">Real statistics from live web research. Claude searches — no fabricated numbers.</div></div>
+  <div style="margin-bottom:18px;">
+    <div style="font-size:16px;font-weight:800;">📊 Stats</div>
+    <div style="font-size:12px;color:#9ca3af;margin-top:2px;font-style:italic;">Find real statistics with sources — before you write, not after.</div>
+    <div style="font-size:11px;color:#4b5563;margin-top:4px;">Claude searches live. Every number is cited. Use before Pipeline or Rewrite to add credible data that boosts E-E-A-T.</div>
+  </div>
   <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px;margin-bottom:14px;">
     <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Study Topic</label><input id="statsTopic" placeholder="e.g. Roofing costs Netherlands 2025" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
     <div style="margin-bottom:12px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Seed Keyword (optional)</label><input id="statsKeyword" placeholder="roofing costs statistics" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
