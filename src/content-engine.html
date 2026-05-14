@@ -210,7 +210,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="topbar-sep"></div>
     <div class="topbar-title"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · Intelligence Agent</div>
     <div style="display:flex;gap:4px;margin-left:8px;">
-      <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
+            <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
       <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
     </div>
@@ -258,16 +258,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     </div>
 
     <!-- Data Uploads -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Data Sources (optional)</div>
-      <!-- GSC Upload -->
-      <!-- GSC Pages CSV -->
-      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">PAGES CSV (from GSC → Pages tab)</div>
-      <div id="gscUploadZone" class="drop-zone" style="margin-bottom:6px;">
-        <input type="file" accept=".csv" multiple onchange="handleGscUpload(this)">
-        <div class="drop-zone-icon" style="font-size:16px;">📄</div>
-        <div class="drop-zone-text" style="font-size:10px;">Drop Pages CSV here</div>
-      </div>
       <!-- GSC Queries CSV — separate Google export -->
       <div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:.05em;">QUERIES CSV (from GSC → Queries tab)</div>
       <div id="gscQueriesUploadZone" class="drop-zone" style="margin-bottom:8px;">
@@ -293,7 +283,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     </div>
 
     <!-- Tools -->
-    <!-- Tools removed — Agent and Tracker handle everything -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Tools</div>
+      <button class="sidebar-btn" onclick="openPipelineModal()" title="Write a complete article from research to publish-ready HTML" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;">🚀 Content Pipeline</button>
+      <button class="sidebar-btn" onclick="openRewriteModal()" title="Rewrite existing page HTML with AI optimization" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:6px;">✍ Rewrite Page</button>
+      <button class="sidebar-btn" onclick="openRewriteModalWithMode('surgical')" title="Apply 6 targeted surgical fixes to the last rewrite" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:6px;">🔧 Surgical Fixes</button>
+    </div>
+
+    <!-- AI Keys (BYOK) -->
+    <div class="sidebar-section" id="aiKeysSection" style="display:none;">
+      <div class="sidebar-label">⚙️ AI Keys</div>
+      <div id="aiKeyStatus" style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.4;">
+        Loading key status…
+      </div>
+      <button class="sidebar-btn" onclick="toggleAiKeysPanel()" style="font-size:10px;padding:5px;margin-top:0;">🔑 Manage Keys</button>
+      <div id="aiKeysPanel" style="display:none;margin-top:8px;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">
+          Your keys are stored encrypted on our server. They are never exposed in the browser.
+        </div>
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px;">Claude (Anthropic) Key</label>
+        <input class="token-input" id="clientClaudeKey" placeholder="sk-ant-…" type="password" style="font-size:10px;padding:5px;margin-bottom:6px;">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px;">Gemini Key (optional)</label>
+        <input class="token-input" id="clientGeminiKey" placeholder="AIza…" type="password" style="font-size:10px;padding:5px;margin-bottom:8px;">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Key Mode</label>
+        <select id="clientKeyMode" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-size:10px;font-family:'DM Mono',monospace;margin-bottom:8px;">
+          <option value="byok">Use my own keys (BYOK)</option>
+          <option value="platform">Use platform keys (if available)</option>
+        </select>
+        <button class="sidebar-btn primary" onclick="saveClientKeys()" style="font-size:10px;padding:5px;">💾 Save Keys</button>
+        <div id="aiKeySaveMsg" style="font-size:10px;margin-top:4px;min-height:16px;"></div>
+      </div>
     </div>
 
     <!-- Context -->
@@ -317,7 +336,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
-          <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
         </div>
       </div>
     </div>
@@ -1193,7 +1211,7 @@ async function sendMessage() {
 async function processUserInput(text) {
   if (_busy) return;
   _busy = true;
-  var _sb2=document.getElementById('sendBtn'); if(_sb2)_sb2.disabled=true;
+  document.getElementById('sendBtn').disabled = true;
   _history.push({ role: 'user', content: text });
 
   // Show typing
@@ -1288,20 +1306,6 @@ YOUR CAPABILITIES (you can trigger these with commands):
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
 - [REWRITE id fixes] — apply targeted fixes. Use the EXACT rewrite ID number from the ANALYSE result above. NEVER use "123", "1234", or any placeholder — only the real ID the system gave you.
 - [SHOW_OPPORTUNITIES] — show GSC page opportunities
-
-WHEN YOU RECEIVE A [WRITE REQUEST]:
-You have a full competitive brief. Write the complete page immediately. No questions, no preamble.
-Format:
-1. <!-- META TITLE: ... --> and <!-- META DESCRIPTION: ... --> as HTML comments at top
-2. Clean semantic HTML body: h1, h2, h3, p, ul, section — no CSS, no scripts, no DOCTYPE needed
-3. Work in EVERY missing entity from the brief naturally
-4. Answer EVERY PAA question with a proper h3 + paragraph
-5. Add JSON-LD schema blocks at the bottom for each schema type in the brief
-6. End with a clear CTA section
-After the HTML, write:
-- Word count: X words
-- Entities added: [list]
-- Schema added: [list]
 
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
@@ -3048,14 +3052,12 @@ function renderTrackerList() {
         '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Google</div>' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
-       '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">' +
-         '<button onclick="openTrackerDetail('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#9ca3af;cursor:pointer;">Details</button>' +
-         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;font-weight:600;">▶ Check</button>' +
-         '<button onclick="openSerpSpy('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">🔍 Spy</button>' +
-         '<button onclick="trPushToAgent('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;cursor:pointer;font-weight:600;">→ Agent</button>' +
-         '<button onclick="togglePageDone('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(52,211,153,.25);background:rgba(52,211,153,.06);color:#34d399;cursor:pointer;">✓ Done</button>' +
-         '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:11px;padding:6px 12px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
-       '</div>' +
+        '<button onclick="openTrackerDetail('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#9ca3af;cursor:pointer;">Details</button>' +
+        '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
+        '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>' +
+        '<button onclick="trPushToAgent('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;cursor:pointer;">→ Agent</button>' +
+        '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.25);background:rgba(248,113,113,.06);color:#f87171;cursor:pointer;">✕</button>' +
+      '</div>' +
     '</div>';
   }).join('') + '</div>';
 }
@@ -5478,14 +5480,13 @@ function scanPageScore(url) {
 
 // Init: load pages overview on first open + restore engine token
 document.addEventListener('DOMContentLoaded', function() {
+  switchView('agent');
   try {
     var savedToken = localStorage.getItem('nexus_engine_token');
     if (savedToken) {
       document.getElementById('engineToken').value = savedToken;
     }
   } catch(e) {}
-  // Start on Agent tab — welcome screen shows with PULSE+NEXUS and starter buttons
-  switchView('agent');
   loadPagesOverview();
 });
 
@@ -5499,6 +5500,7 @@ function openSerpSpy(pageId) {
   var url  = (page && page.url) || '';
 
   var modal = document.getElementById('serpSpyModal');
+  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
   document.getElementById('serpSpyKeyword').value = kw;
   document.getElementById('serpSpyUrl').value = url;
   document.getElementById('serpSpyResult').innerHTML = '';
@@ -5506,142 +5508,51 @@ function openSerpSpy(pageId) {
   modal.style.display = 'flex';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SPY → AGENT FUNCTIONS — the only writing path
-// ═══════════════════════════════════════════════════════════════════════════
-
 function buildSpyBriefText(spy, kw, url) {
   if (!spy) return 'No spy data.';
-  var pat   = spy.step2_pattern || {};
-  var gaps  = spy.step4_missing || [];
-  var wins  = spy.quick_wins || [];
-  var plan  = spy.action_plan || [];
-  var brief = spy.content_brief || {};
-  var ents  = spy.entity_gaps_priority || spy._entity_gaps || [];
-  var paa   = spy.paa_questions || [];
-  var lines = [];
-
-  lines.push('# CONTENT BRIEF: ' + (kw || '').toUpperCase());
-  if (url) lines.push('Page: ' + url);
-  lines.push('Date: ' + new Date().toLocaleDateString());
+  var pat=spy.step2_pattern||{}, gaps=spy.step4_missing||[], wins=spy.quick_wins||[];
+  var plan=spy.action_plan||[], brief=spy.content_brief||{}, ents=spy.entity_gaps_priority||spy._entity_gaps||[];
+  var lines=[];
+  lines.push('# CONTENT BRIEF: '+(kw||'').toUpperCase());
+  if(url) lines.push('Page: '+url);
   lines.push('');
   lines.push('## WHY RANK 1 WINS');
-  lines.push(pat.the_ranking_formula || '—');
+  lines.push(pat.the_ranking_formula||'—');
   lines.push('');
-  if (pat.top3_shared_traits && pat.top3_shared_traits.length) {
-    lines.push('## WHAT ALL TOP 3 HAVE (must have these)');
-    pat.top3_shared_traits.forEach(function(t) { lines.push('✓ ' + t); });
-    lines.push('');
-  }
-  if (ents.length) {
-    lines.push('## MISSING ENTITIES — ADD THESE EXACT TERMS');
-    ents.slice(0, 10).forEach(function(e) {
-      lines.push('• "' + (e.entity || e) + '" → add to: ' + (e.where_to_add || 'body text') + ' [' + (e.priority || 'medium') + ']');
-    });
-    lines.push('');
-  }
-  if (wins.length) {
-    lines.push('## QUICK WINS (do these first — under 30 min each)');
-    wins.forEach(function(w) { lines.push('✓ ' + (w.win || w)); });
-    lines.push('');
-  }
-  if (gaps.length) {
-    lines.push('## GAPS NOBODY COVERS (first-mover opportunity)');
-    gaps.forEach(function(g) { lines.push('• ' + (g.gap || '') + ': ' + (g.how_to_exploit || '')); });
-    lines.push('');
-  }
-  if (brief.must_have_h2s && brief.must_have_h2s.length) {
-    lines.push('## H2 STRUCTURE TO USE');
-    brief.must_have_h2s.forEach(function(h, i) { lines.push((i+1) + '. ' + h); });
-    lines.push('');
-  }
-  if (paa.length) {
-    lines.push('## PEOPLE ALSO ASK — answer all of these');
-    paa.forEach(function(q) { lines.push('Q: ' + q); });
-    lines.push('');
-  }
-  if (brief.recommended_schema && brief.recommended_schema.length) {
-    lines.push('## SCHEMA TO ADD');
-    brief.recommended_schema.forEach(function(s) { lines.push('• ' + s); });
-    lines.push('');
-  }
-  if (spy.ai_overview_blueprint) {
-    lines.push('## TO GET AI OVERVIEW CITATION');
-    lines.push(spy.ai_overview_blueprint);
-    lines.push('');
-  }
-  if (plan.length) {
-    lines.push('## ACTION PLAN');
-    plan.forEach(function(a) {
-      lines.push(a.step + '. [' + (a.priority || '').toUpperCase() + '] ' + a.action + ' — ' + (a.effort || '') + ' effort, ' + (a.time_to_impact || '') + ' impact');
-    });
-  }
+  if(pat.top3_shared_traits&&pat.top3_shared_traits.length){lines.push('## WHAT ALL TOP 3 HAVE');pat.top3_shared_traits.forEach(function(t){lines.push('✓ '+t);});lines.push('');}
+  if(ents.length){lines.push('## MISSING ENTITIES');ents.slice(0,10).forEach(function(e){lines.push('• "'+(e.entity||e)+'" → '+(e.where_to_add||'body')+' ['+(e.priority||'medium')+']');});lines.push('');}
+  if(wins.length){lines.push('## QUICK WINS');wins.forEach(function(w){lines.push('✓ '+(w.win||w));});lines.push('');}
+  if(gaps.length){lines.push('## GAPS NOBODY COVERS');gaps.forEach(function(g){lines.push('• '+(g.gap||'')+': '+(g.how_to_exploit||''));});lines.push('');}
+  if(brief.must_have_h2s&&brief.must_have_h2s.length){lines.push('## H2 STRUCTURE');brief.must_have_h2s.forEach(function(h,i){lines.push((i+1)+'. '+h);});lines.push('');}
+  if(spy.paa_questions&&spy.paa_questions.length){lines.push('## PEOPLE ALSO ASK');spy.paa_questions.forEach(function(q){lines.push('Q: '+q);});lines.push('');}
+  if(brief.recommended_schema&&brief.recommended_schema.length){lines.push('## SCHEMA TO ADD');brief.recommended_schema.forEach(function(s){lines.push('• '+s);});lines.push('');}
+  if(spy.ai_overview_blueprint){lines.push('## TO GET AI OVERVIEW CITATION');lines.push(spy.ai_overview_blueprint);lines.push('');}
+  if(plan.length){lines.push('## ACTION PLAN');plan.forEach(function(a){lines.push(a.step+'. ['+(a.priority||'').toUpperCase()+'] '+a.action);});}
   lines.push('');
-  lines.push('---');
-  lines.push('Brief by ContentScale PULSE+NEXUS');
+  lines.push('--- Brief by ContentScale PULSE+NEXUS');
   return lines.join('\n');
 }
 
-// Copy brief to clipboard — paste into any AI or share with writer
 function spyCopyBrief() {
-  var spy = window._lastSpyData;
-  var kw  = window._lastSpyKeyword || '';
-  var url = window._lastSpyUrl || '';
-  if (!spy) { toast('Run Spy first', 'warn'); return; }
-  var text = buildSpyBriefText(spy, kw, url);
-  navigator.clipboard.writeText(text).then(function() {
-    toast('✅ Brief copied — paste into any AI', 3000, 'ok');
-  }).catch(function() {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast('✅ Brief copied to clipboard', 3000, 'ok');
+  var spy=window._lastSpyData,kw=window._lastSpyKeyword||'',url=window._lastSpyUrl||'';
+  if(!spy){toast('Run Spy first','warn');return;}
+  var text=buildSpyBriefText(spy,kw,url);
+  navigator.clipboard.writeText(text).then(function(){toast('✅ Brief copied — paste into any AI',3000,'ok');}).catch(function(){
+    var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ Brief copied',3000,'ok');
   });
 }
 
-// Write in Agent — sends brief + instructs agent to write the full page
 function spyWriteInAgent() {
-  var spy = window._lastSpyData;
-  var kw  = window._lastSpyKeyword || '';
-  var url = window._lastSpyUrl || '';
-  if (!spy) { toast('Run Spy first', 'warn'); return; }
-
-  var brief = buildSpyBriefText(spy, kw, url);
-  var profileName = (_profile && _profile.name) ? _profile.name : 'the business';
-  var phone = (_profile && _profile.phone) ? _profile.phone : '';
-  var domain = (_profile && _profile.domain) ? _profile.domain : (url ? url.split('/')[2] : '');
-
-  var msg =
-    '[WRITE REQUEST]\n' +
-    'Using the brief below, write a complete, publish-ready HTML page.\n\n' +
-    '**Business:** ' + profileName + (domain ? ' · ' + domain : '') + '\n' +
-    (phone ? '**Phone:** ' + phone + '\n' : '') +
-    '**Target keyword:** ' + kw + '\n' +
-    '**Page to rewrite:** ' + (url || 'new page') + '\n\n' +
-    '**Instructions:**\n' +
-    '1. Write complete body HTML — sections, headings, paragraphs, CTAs\n' +
-    '2. Use the exact missing entities from the brief — add them naturally\n' +
-    '3. Answer every PAA question with a proper paragraph\n' +
-    '4. Include all schema types from the brief as JSON-LD\n' +
-    '5. Add a compelling meta title and meta description at the top as HTML comments\n' +
-    '6. Keep the brand voice professional and local (NJ-focused)\n' +
-    '7. End with a clear CTA section\n\n' +
-    '**After writing:** provide a "📋 Copy HTML" button and word count.\n\n' +
-    '---\n' + brief;
-
+  var spy=window._lastSpyData,kw=window._lastSpyKeyword||'',url=window._lastSpyUrl||'';
+  if(!spy){toast('Run Spy first','warn');return;}
+  var brief=buildSpyBriefText(spy,kw,url);
+  var profileName=(_profile&&_profile.name)||'the business';
+  var msg='[WRITE REQUEST]\nWrite a complete publish-ready HTML page using this brief.\n\nBusiness: '+profileName+'\nKeyword: '+kw+'\nPage: '+(url||'new page')+'\n\nInstructions:\n1. Full semantic HTML body (h1,h2,h3,p,ul — no css/scripts)\n2. Add every missing entity naturally\n3. Answer every PAA question with h3+paragraph\n4. JSON-LD schema for each schema type in brief\n5. Meta title+description as HTML comments at top\n6. End with CTA section\n\n---\n'+brief;
   closeSerpSpy();
   switchView('agent');
-  setTimeout(function() {
-    var inp = document.getElementById('chatInput');
-    if (inp) {
-      inp.value = msg;
-      sendMessage();
-    }
-  }, 300);
+  setTimeout(function(){var inp=document.getElementById('chatInput');if(inp){inp.value=msg;sendMessage();}},300);
 }
 
 function closeSerpSpy() {
@@ -5694,25 +5605,21 @@ async function runSerpSpy() {
     }
 
     if (d.spy) {
-      // Store spy data for buttons
       window._lastSpyData    = d.spy;
       window._lastSpyKeyword = kw;
       window._lastSpyUrl     = url;
-
       result.innerHTML = renderSerpSpyReport(d.spy);
-
-      // Add action buttons below report
-      var briefText = buildSpyBriefText(d.spy, kw, url);
-      var actDiv = document.createElement('div');
-      actDiv.style.cssText = 'padding:16px 0 8px;border-top:1px solid rgba(255,255,255,.06);margin-top:12px;';
-      actDiv.innerHTML =
+      // Action buttons
+      var _actDiv = document.createElement('div');
+      _actDiv.style.cssText = 'padding:16px 0 8px;border-top:1px solid rgba(255,255,255,.06);margin-top:12px;';
+      _actDiv.innerHTML =
         '<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Next step:</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
           '<button onclick="spyWriteInAgent()" style="padding:11px 22px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">✍ Write in Agent</button>' +
           '<button onclick="spyCopyBrief()" style="padding:11px 18px;border-radius:7px;border:1px solid rgba(52,211,153,.4);background:rgba(52,211,153,.08);color:#34d399;font-size:12px;font-weight:700;cursor:pointer;">📋 Copy Brief</button>' +
           '<button onclick="closeSerpSpy()" style="padding:11px 14px;border-radius:7px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#6b7280;font-size:12px;cursor:pointer;">✕ Close</button>' +
         '</div>';
-      result.appendChild(actDiv);
+      result.appendChild(_actDiv);
     } else {
       result.innerHTML = '<pre style="white-space:pre-wrap;font-size:11px;color:#9ca3af;">' + escHtml(d.raw) + '</pre>';
     }
