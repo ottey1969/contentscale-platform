@@ -279,30 +279,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       </div>
     </div>
 
-    <!-- Tools -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Tools</div>
-
-      <div style="margin-bottom:8px;">
-        <button class="sidebar-btn" onclick="switchView('stats')" style="border-color:rgba(56,189,248,.3);color:#38bdf8;margin-top:0;margin-bottom:3px;">📊 Stats Research</button>
-        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Find real cited statistics before you write — boosts E-E-A-T.</div>
-      </div>
-
-      <div style="margin-bottom:8px;">
-        <button class="sidebar-btn" onclick="openPipelineModal()" style="border-color:rgba(245,109,0,.3);color:#f56d00;margin-top:0;margin-bottom:3px;">🚀 Content Pipeline</button>
-        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Write a new article from scratch — keyword to publish-ready HTML.</div>
-      </div>
-
-      <div style="margin-bottom:8px;">
-        <button class="sidebar-btn" onclick="openRewriteModal()" style="border-color:rgba(124,58,237,.3);color:#a78bfa;margin-top:0;margin-bottom:3px;">✍ Rewrite Page</button>
-        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Paste existing HTML → AI rewrites it to rank higher.</div>
-      </div>
-
-      <div>
-        <button class="sidebar-btn" onclick="openRewriteModalWithMode('surgical')" style="border-color:rgba(52,211,153,.3);color:#34d399;margin-top:0;margin-bottom:3px;">🔧 Surgical Fixes</button>
-        <div style="font-size:10px;color:var(--sub);padding:0 2px;">Small targeted fixes only — title, meta, schema, FAQs. No full rewrite.</div>
-      </div>
-    </div>
+    <!-- Tools removed — everything lives in Tracker now -->
 
     <!-- AI Keys (BYOK) -->
     <div class="sidebar-section" id="aiKeysSection" style="display:none;">
@@ -360,6 +337,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
+          <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
         </div>
       </div>
     </div>
@@ -1311,7 +1289,50 @@ function handleKey(e) {
 function sendStarter(btn) {
   if (!_connected) { toast('Connect first', 'err'); return; }
   hideWelcome();
-  userSend(btn.textContent);
+  var label = btn.textContent.trim();
+  var profileName = (_profile && _profile.name) ? _profile.name : 'my site';
+  var domain = (_profile && _profile.domain) ? _profile.domain : '';
+  var msgs = {
+    'I want to rank higher for a keyword':
+      'I want to rank higher for a specific keyword. I have the GSC data loaded. ' +
+      (domain ? 'Domain: ' + domain + '. ' : '') +
+      'Look at my top opportunities and tell me which keyword to target first and exactly what to do.',
+
+    'Rewrite an existing page': null, // handled separately below
+
+    'What pages should I prioritise?':
+      'Show me which pages I should work on first. ' +
+      (domain ? 'Site: ' + domain + '. ' : '') +
+      'I want quick wins: pages already getting impressions but not enough clicks or low ranking. Rank them by opportunity and tell me what action to take on each.',
+
+    'Audit my site\'s content quality':
+      'Audit the content quality of ' + (domain || profileName) + '. ' +
+      'Focus on: which pages have the lowest ContentScore, which are missing schema, and which have the worst CTR for their position. Give me a prioritised fix list.',
+
+    'Help me get into AI Overviews':
+      'I want ' + (domain || profileName) + ' to be cited in Google AI Overviews. ' +
+      'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.'
+  };
+  // "Rewrite an existing page" — go to Tracker if GSC loaded, else explain
+  if (label === 'Rewrite an existing page') {
+    if (_gscPages && _gscPages.length) {
+      hideWelcome();
+      toast('Opening Tracker — your best rewrite opportunity is shown at the top', 3000, 'ok');
+      switchView('tracker');
+      return;
+    } else {
+      userSend('I want to rewrite an existing page to rank higher. I don\'t have GSC data loaded yet. What should I do first to find the best page to rewrite?');
+      return;
+    }
+  }
+
+  // "How does the Tracker work?"
+  if (label === 'How does the Tracker work?') {
+    userSend('Explain how the Tracker works and what I should do first to start ranking higher. I have' + (_gscPages && _gscPages.length ? ' ' + _gscPages.length + ' GSC pages loaded.' : ' no GSC data yet.'));
+    return;
+  }
+
+  userSend(msgs[label] || label);
 }
 
 function userSend(text) {
@@ -3138,39 +3159,87 @@ function renderTrackerKpis() {
 // Returns { label, color, bg, score } — higher score = higher priority
 function getPagePriority(page) {
   var snap = page.latest_snapshot || {};
-  var pos = parseFloat(page.gsc_position || snap.google_position || 0);
+  var pos  = parseFloat(page.gsc_position || snap.google_position || 0);
   var impr = parseInt(page.gsc_impressions || 0);
+  var ctr  = parseFloat(page.gsc_ctr || 0);
+  var clicks = parseInt(page.gsc_clicks || 0);
   var cited = snap.ai_google_overview_cited;
   var checked = !!page.last_checked_at;
   var cs = parseInt(snap.score || 0);
 
-  // Quick Win: position 8-20, meaningful impressions
+  // ── RULE 1: Top 3 — protect ranking, surgical only ──────────────────────
+  // Exception: low CTR = meta fix needed urgently
+  if (pos >= 1 && pos <= 3) {
+    if (ctr < 0.03 && impr >= 100) {
+      // Great rank, terrible CTR — meta title/description is the problem
+      return { label: '📝 Fix Meta', color: '#fbbf24', bg: 'rgba(251,191,36,.08)', border: 'rgba(251,191,36,.25)',
+               score: 950 + impr, action: 'surgical', risk: 'none',
+               insight: 'Position ' + pos.toFixed(1) + ' but only ' + (ctr*100).toFixed(1) + '% CTR — people see you but don\'t click. Fix your title & meta description.',
+               recommended: 'Write a compelling title and meta description. Do NOT rewrite the page.' };
+    }
+    if (!cited) {
+      return { label: '⚡ Get AI Cited', color: '#a78bfa', bg: 'rgba(124,58,237,.1)', border: 'rgba(124,58,237,.25)',
+               score: 900 + impr, action: 'surgical', risk: 'none',
+               insight: 'Ranking #' + Math.round(pos) + ' — surgical fixes only. Add AI citation signals: direct answer, FAQPage schema, TL;DR section.',
+               recommended: 'Add FAQPage schema + direct answer paragraph. Do NOT rewrite.' };
+    }
+    return { label: '✅ Winning', color: '#34d399', bg: 'rgba(52,211,153,.06)', border: 'rgba(52,211,153,.15)',
+             score: 100, action: 'none', risk: 'none',
+             insight: 'Position ' + pos.toFixed(1) + ' + AI cited. Monitor only.',
+             recommended: 'Nothing to do. Check monthly.' };
+  }
+
+  // ── RULE 2: Position 4-7 — never full rewrite, always surgical first ────
+  // Strategy: protect the ranking, improve with meta + entity gaps + schema
+  // Only rewrite if ContentScore < 40 AND position not improving
+  if (pos >= 4 && pos <= 7) {
+    // Priority 1: CTR is the problem — meta title/description fix first
+    if (ctr < 0.04 && impr >= 100) {
+      return { label: '📝 Fix Meta First', color: '#fbbf24', bg: 'rgba(251,191,36,.08)', border: 'rgba(251,191,36,.25)',
+               score: 900 + impr, action: 'surgical', risk: 'none',
+               insight: 'Position ' + pos.toFixed(1) + ' · ' + (ctr*100).toFixed(1) + '% CTR · ' + impr.toLocaleString() + ' impressions. Google already shows you — people just don\'t click. Fix the meta before anything else.',
+               recommended: '① Write a title with urgency + number + keyword ② Write a meta description with clear CTA ③ Add entity gaps from Spy ④ Wait 3 weeks ⑤ Only then consider rewrite if still not #1.' };
+    }
+    // Priority 2: Not AI cited — surgical signals
+    if (!cited) {
+      return { label: '⚡ Fix + Get AI Cited', color: '#a78bfa', bg: 'rgba(124,58,237,.1)', border: 'rgba(124,58,237,.25)',
+               score: 860 + impr, action: 'surgical', risk: 'none',
+               insight: 'Position ' + pos.toFixed(1) + ' and not in AI Overview. Surgical additions will push you to #1 and get you cited — no rewrite needed.',
+               recommended: '① Add entity gaps from Spy ② Add FAQPage schema ③ Add direct answer paragraph ④ Add TL;DR section. Do NOT rewrite.' };
+    }
+    // Priority 3: Low ContentScore — light rewrite only if truly thin
+    if (cs > 0 && cs < 40) {
+      return { label: '📉 Thin Content', color: '#f87171', bg: 'rgba(248,113,113,.08)', border: 'rgba(248,113,113,.2)',
+               score: 820 + impr, action: 'rewrite', risk: 'medium',
+               insight: 'ContentScore ' + cs + '/100 at position ' + pos.toFixed(1) + '. Content is too thin to hold top 3 long-term.',
+               recommended: 'Rewrite with spy brief — but keep existing URL and page structure. Position 4-7 gives you buffer.' };
+    }
+    // Default: on track, add gaps
+    return { label: '📈 Add Gaps → #1', color: '#fbbf24', bg: 'rgba(251,191,36,.07)', border: 'rgba(251,191,36,.2)',
+             score: 780 + impr, action: 'surgical', risk: 'none',
+             insight: 'Position ' + pos.toFixed(1) + ' · Good score. Missing entities and schema are the last gaps between you and #1.',
+             recommended: 'Run Spy → add the top 5 entity gaps → add missing schema → meta description with CTA. No rewrite needed.' };
+  }
+
+  // ── RULE 3: Position 8-20 — full rewrite sweet spot ─────────────────────
   if (pos >= 8 && pos <= 20 && impr >= 50) {
-    var urgency = impr >= 500 ? '🔥🔥' : '🔥';
-    return { label: urgency + ' Quick Win', color: '#f56d00', bg: 'rgba(245,109,0,.12)', border: 'rgba(245,109,0,.3)', score: 1000 + impr };
+    var urgency = impr >= 1000 ? '🔥🔥' : '🔥';
+    return { label: urgency + ' Quick Win', color: '#f56d00', bg: 'rgba(245,109,0,.12)', border: 'rgba(245,109,0,.3)',
+             score: 1000 + impr, action: 'rewrite', risk: 'low',
+             insight: 'Position ' + pos.toFixed(1) + ' with ' + impr.toLocaleString() + ' impressions. One rewrite = page 1. Lowest risk, highest reward.',
+             recommended: 'Spy → full rewrite. This is your best opportunity.' };
   }
-  // AI Citation opportunity: top 7 but not cited
-  if (pos >= 1 && pos <= 7 && !cited && checked) {
-    return { label: '⚡ Get AI Cited', color: '#a78bfa', bg: 'rgba(124,58,237,.1)', border: 'rgba(124,58,237,.25)', score: 800 + impr };
-  }
-  // Low score = content needs work
-  if (cs > 0 && cs < 50 && impr >= 50) {
-    return { label: '📉 Low Score', color: '#f87171', bg: 'rgba(248,113,113,.08)', border: 'rgba(248,113,113,.2)', score: 700 + impr };
-  }
-  // Ranking but not top 7 — needs boost
+
+  // ── RULE 4: Position 21-50 — rewrite or new page ─────────────────────────
   if (pos >= 21 && pos <= 50 && impr >= 20) {
-    return { label: '📈 Boost', color: '#fbbf24', bg: 'rgba(251,191,36,.07)', border: 'rgba(251,191,36,.2)', score: 500 + impr };
+    return { label: '📉 Boost', color: '#fbbf24', bg: 'rgba(251,191,36,.07)', border: 'rgba(251,191,36,.2)',
+             score: 500 + impr, action: 'rewrite', risk: 'low',
+             insight: 'Position ' + pos.toFixed(1) + ' — likely the wrong keyword or thin content.',
+             recommended: 'Spy to find what rank 1 has. Rewrite or consider new page with better keyword.' };
   }
-  // Already winning with AI citation
-  if (pos >= 1 && pos <= 7 && cited) {
-    return { label: '✅ Maintain', color: '#34d399', bg: 'rgba(52,211,153,.06)', border: 'rgba(52,211,153,.15)', score: 100 };
-  }
-  // Checked but no GSC data
-  if (checked) {
-    return { label: '📡 Checked', color: '#6b7280', bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.06)', score: 50 };
-  }
-  // Never checked
-  return { label: '❓ Not Checked', color: '#4b5563', bg: 'rgba(255,255,255,.02)', border: 'rgba(255,255,255,.05)', score: 10 };
+
+  if (checked) return { label: '📡 Checked', color: '#6b7280', bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.06)', score: 50, action: 'check', risk: 'none', insight: 'No GSC data yet.', recommended: 'Check position then decide.' };
+  return { label: '❓ Not Checked', color: '#4b5563', bg: 'rgba(255,255,255,.02)', border: 'rgba(255,255,255,.05)', score: 10, action: 'check', risk: 'none', insight: 'Run a check first.', recommended: 'Click Check to get current position.' };
 }
 
 function renderTrackerList() {
@@ -3259,6 +3328,8 @@ function renderTrackerList() {
         '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + lastCh + '</div>' +
         gscLine +
         '<div style="margin-top:5px;">' + aiG + aiP + '</div>' +
+        (pri.insight ? '<div style="margin-top:6px;background:rgba(255,255,255,.03);border-left:2px solid '+pri.border+';padding:5px 8px;border-radius:0 4px 4px 0;font-size:10px;color:#9ca3af;line-height:1.5;">💡 ' + escHtml(pri.insight) + '</div>' : '') +
+        (pri.recommended ? '<div style="margin-top:3px;font-size:10px;font-weight:700;color:'+pri.color+';">→ ' + escHtml(pri.recommended) + '</div>' : '') +
         recHtml +
         '<div class="tr-status-' + p.id + '"></div>' +
       '</div>' +
@@ -3267,10 +3338,16 @@ function renderTrackerList() {
         '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Google</div>' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
-        '<button onclick="openTrackerDetail('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#9ca3af;cursor:pointer;">Details</button>' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
-        '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>' +
-        '<button onclick="trPushToAgent('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;cursor:pointer;">→ Agent</button>' +
+        (pri.action === 'rewrite' ?
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:800;">🚀 Spy & Rewrite</button>'
+        : pri.action === 'surgical' ?
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;cursor:pointer;font-weight:800;">🔧 Spy & Fix</button>'
+        : pri.action === 'check' ?
+          '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:rgba(124,58,237,.2);color:#a78bfa;cursor:pointer;font-weight:700;">▶ Check Now</button>'
+        :
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>'
+        ) +
         '<button onclick="togglePageDone('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid ' + (p.is_done ? 'rgba(52,211,153,.4)' : 'rgba(255,255,255,.1)') + ';background:' + (p.is_done ? 'rgba(52,211,153,.12)' : 'transparent') + ';color:' + (p.is_done ? '#34d399' : '#6b7280') + ';cursor:pointer;font-weight:700;" title="' + (p.is_done ? 'Mark as todo' : 'Mark as done') + '">' + (p.is_done ? '✓ Done' : '○ Done') + '</button>' +
         '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.25);background:rgba(248,113,113,.06);color:#f87171;cursor:pointer;">✕</button>' +
       '</div>' +
@@ -5876,6 +5953,13 @@ function openSerpSpy(pageId) {
   var page = (_trPages || []).find(function(p){ return p.id === pageId; });
   var kw   = (page && page.keyword) || '';
   var url  = (page && page.url) || '';
+  // Store priority action so spy result shows the right button
+  if (page) {
+    var _pri = getPagePriority(page);
+    window._serpSpyAction      = _pri.action || 'rewrite';
+    window._serpSpyInsight     = _pri.insight || '';
+    window._serpSpyRecommended = _pri.recommended || '';
+  }
 
   var modal = document.getElementById('serpSpyModal');
   document.getElementById('serpSpyKeyword').value = kw;
@@ -5939,10 +6023,17 @@ async function runSerpSpy() {
       // Action buttons below report
       var actDiv = document.createElement('div');
       actDiv.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);';
+      // Show the right action based on page priority
+      var _spyAct = window._serpSpyAction || 'rewrite';
+      var _spyRec = window._serpSpyRecommended || '';
       actDiv.innerHTML =
-        '<button onclick="spyPushToAgent()" style="padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🧠 Push to Agent</button>' +
-        '<button onclick="spyOpenRewrite()" style="padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✍ Rewrite with Brief</button>' +
-        '<button onclick="closeSerpSpy()" style="padding:8px 16px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;">✕ Close</button>';
+        (_spyAct === 'surgical' ?
+          '<button onclick="spyOpenRewrite()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔧 Apply Surgical Fixes</button>' :
+          '<button onclick="spyOpenRewrite()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Rewrite to Beat Rank 1</button>'
+        ) +
+        '<button onclick="spyPushToAgent()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Ask Agent</button>' +
+        '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
+        (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
       // Store spy data for button handlers
       window._lastSpyData = d.spy;
