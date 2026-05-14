@@ -5039,6 +5039,7 @@ function openRewriteModal() {
 function openRewriteModalWithMode(preselectMode) {
   updateWorkflowStep(4);
   var modal = document.getElementById('rewriteModal');
+  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
   if (!modal) return;
   // Pre-fill with context
   document.getElementById('rewriteKeyword').value = _context.keyword || '';
@@ -6109,7 +6110,6 @@ function openSerpSpy(pageId) {
   var page = (_trPages || []).find(function(p){ return p.id === pageId; });
   var kw   = (page && page.keyword) || '';
   var url  = (page && page.url) || '';
-  // Store priority action so spy result shows the right button
   if (page) {
     var _pri = getPagePriority(page);
     window._serpSpyAction      = _pri.action || 'rewrite';
@@ -6117,7 +6117,11 @@ function openSerpSpy(pageId) {
     window._serpSpyRecommended = _pri.recommended || '';
   }
 
+  // Move modal to document.body to escape any overflow:hidden parent
   var modal = document.getElementById('serpSpyModal');
+  if (modal && modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
   document.getElementById('serpSpyKeyword').value = kw;
   document.getElementById('serpSpyUrl').value = url;
   document.getElementById('serpSpyResult').innerHTML = '';
