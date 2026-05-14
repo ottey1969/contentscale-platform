@@ -14851,7 +14851,7 @@ Return ONLY valid JSON:
   "related_searches": ["related search 1","related search 2"],
   "gsc_insight": "what the GSC data tells us",
   "rewrite_strategy": "detailed plan for rewriting this page better",
-  "recommended_title": "title targeting THE EXACT STRATEGIC KEYWORD from the intelligence above — 50-60 chars, keyword first, power word matching intent (emergency/24/7/fast/expert), brand | pipe — NOT a generic roofing title",
+  "recommended_title": "MUST use exact keyword: \"${gscData.keyword || original_slug.replace(/-/g,' ')}\" — 50-60 chars, no placeholders like [City] or [Service], use real location from URL, brand at end with pipe. Emergency keywords must include 24/7 or urgent. EXAMPLE FOR THIS PAGE: \"24/7 Emergency Roof Repair NJ | Fast 1.8-Hour Response | Perfect Roofing Team\"",
   "recommended_meta_description": "improved description — 140-160 chars, keyword + stat + CTA, compelling not just descriptive",
   "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4"],
   "target_word_count": 2000,
