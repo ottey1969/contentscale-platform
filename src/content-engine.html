@@ -3273,18 +3273,41 @@ function renderTrackerList() {
   // Priority summary bar
   var qwCount = trData.filter(function(p){ return p._priority.label.includes('Quick Win'); }).length;
   var aiCount = trData.filter(function(p){ return p._priority.label.includes('AI Cited'); }).length;
+  // Count pages due for check
+  var now = Date.now();
+  var dueCount = trData.filter(function(p) {
+    if (!p.last_checked_at) return true;
+    var next = p.next_check_at ? new Date(p.next_check_at).getTime() : (new Date(p.last_checked_at).getTime() + 3*86400000);
+    return next <= now;
+  }).length;
+
   var summaryBar = '<div style="display:flex;gap:8px;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">' +
     '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Priority:</span>' +
     (qwCount ? '<span style="font-size:11px;font-weight:700;background:rgba(245,109,0,.12);border:1px solid rgba(245,109,0,.3);color:#f56d00;padding:3px 10px;border-radius:20px;">🔥 ' + qwCount + ' Quick Win' + (qwCount > 1 ? 's' : '') + '</span>' : '') +
     (aiCount ? '<span style="font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:3px 10px;border-radius:20px;">⚡ ' + aiCount + ' AI Citation</span>' : '') +
-    '<span style="font-size:10px;color:#4b5563;margin-left:auto;">Sorted highest opportunity first</span>' +
+    (dueCount ? '<span id="checkAllDueBadge" style="font-size:11px;font-weight:700;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:3px 10px;border-radius:20px;">🔴 ' + dueCount + ' due</span>' : '<span style="font-size:11px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);color:#34d399;padding:3px 10px;border-radius:20px;">✅ All checked</span>') +
+    '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
+    (dueCount ? '<button onclick="checkAllDue()" id="checkAllDueBtn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;cursor:pointer;">▶ Check All Due (' + dueCount + ')</button>' : '') +
+    '<span style="font-size:10px;color:#4b5563;">Sorted highest opportunity first</span>' +
+    '</div>' +
     '</div>';
 
-  el.innerHTML = '<div style="padding:0 16px;">' + summaryBar + trData.map(function(p, idx) {
+  // Split active vs done — active get numbered, done go to bottom with separate section
+  var activePages = trData.filter(function(p){ return !p.is_done; });
+  var donePages   = trData.filter(function(p){ return p.is_done; });
+
+  el.innerHTML = '<div style="padding:0 16px;">' + summaryBar + activePages.map(function(p, idx) {
     var pri = p._priority;
-    // START HERE banner on #1 priority page
+    var activeNum = idx + 1;
+    // Number badge — START HERE on #1, number on rest
     var startHere = (idx === 0 && pri.score > 100) ?
-      '<div style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:' + pri.color + ';margin-bottom:6px;">▶ START HERE</div>' : '';
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<span style="font-size:11px;font-weight:900;background:' + pri.color + ';color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</span>' +
+        '<span style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:' + pri.color + ';">▶ START HERE</span>' +
+      '</div>' :
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,.08);color:#9ca3af;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + activeNum + '</span>' +
+      '</div>';
     var snap = p.latest_snapshot || {};
     var pos = snap.google_position ? '#'+snap.google_position : '—';
     var aiG = snap.ai_google_overview_cited ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;margin-right:4px;">✅ AI Overview</span>' :
@@ -3292,7 +3315,18 @@ function renderTrackerList() {
               '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(75,85,99,.1);border:1px solid rgba(75,85,99,.2);color:#6b7280;margin-right:4px;">— AI Overview</span>';
     var aiP = snap.ai_perplexity_cited ? '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;">✅ Perplexity</span>' :
               '<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(75,85,99,.1);border:1px solid rgba(75,85,99,.2);color:#6b7280;">— Perplexity</span>';
-    var lastCh = p.last_checked_at ? new Date(p.last_checked_at).toLocaleDateString() : 'Never';
+    var lastCh = (function() {
+      if (!p.last_checked_at) return '<span style="color:#f87171;font-weight:700;">⚠ Never checked</span>';
+      var now = Date.now();
+      var last = new Date(p.last_checked_at).getTime();
+      var daysSince = Math.floor((now - last) / 86400000);
+      var nextCheck = p.next_check_at ? new Date(p.next_check_at).getTime() : (last + 3*86400000);
+      var daysUntil = Math.ceil((nextCheck - now) / 86400000);
+      if (daysUntil <= 0) return '<span style="color:#f87171;font-weight:700;">🔴 Check due</span>';
+      if (daysUntil === 1) return '<span style="color:#fbbf24;font-weight:700;">🟡 Check tomorrow</span>';
+      if (daysUntil <= 2) return '<span style="color:#fbbf24;">🟡 Check in ' + daysUntil + ' days</span>';
+      return '<span style="color:#4b5563;">🟢 Checked ' + daysSince + 'd ago</span>';
+    })();
     var recs = snap.recommendations;
     // Unwrap string layers
     var rDepth = 0;
@@ -3370,8 +3404,46 @@ function renderTrackerList() {
         '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.25);background:rgba(248,113,113,.06);color:#f87171;cursor:pointer;">✕</button>' +
       '</div>' +
     '</div>';
-  }).join('') + '</div>';
+  }).join('') +
+
+  // ── DONE SECTION — always visible at bottom ─────────────────────────────
+  (donePages.length ?
+    '<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;">' +
+    '<div style="font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">' +
+      '<span style="display:inline-block;width:16px;height:1px;background:#374151;"></span>' +
+      '✓ Completed (' + donePages.length + ')' +
+      '<span style="display:inline-block;flex:1;height:1px;background:#374151;margin-left:6px;"></span>' +
+    '</div>' +
+    '<div>' +
+    donePages.map(function(p, dIdx) {
+      var pri = p._priority;
+      var snap = p.latest_snapshot || {};
+      var lastCh = p.last_checked_at ? (Math.floor((Date.now()-new Date(p.last_checked_at).getTime())/86400000) + 'd ago') : 'Never';
+      var startHere = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="font-size:10px;color:#374151;font-weight:600;">✓ Done</span></div>';
+      var priBadge = '';
+      var posLabel = '';
+      var imprLabel = '';
+      var aiG = '<span style="font-size:10px;color:#374151;">—</span>';
+      var aiP = '';
+      var gscLine = '';
+      var recHtml = '';
+      var csBadge = snap.score ? ' <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(75,85,99,.1);color:#6b7280;">CS:'+snap.score+'</span>' : '';
+      return '<div style="opacity:0.4;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);border-left:3px solid #374151;padding-left:10px;margin-bottom:3px;">' +
+        startHere +
+        '<div style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
+        '<div style="font-size:10px;color:#4b5563;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + ' · ' + lastCh + '</div>' +
+        '<div style="margin-top:6px;display:flex;gap:6px;">' +
+          '<button onclick="togglePageDone(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">↺ Reopen</button>' +
+          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+    '</div></div>'
+  : '') +
+
+  '</div>';
 }
+
 
 function openAddTrackerModal() { document.getElementById('addTrackerModal').style.display = 'flex'; }
 function closeAddTrackerModal() { document.getElementById('addTrackerModal').style.display = 'none'; }
@@ -3406,6 +3478,70 @@ async function submitTrackerAdd() {
     await loadTrackerPages();
   } catch(e) { toast('Error: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = 'Add & Start Tracking'; }
+}
+
+// ── Check All Due — runs all overdue/never-checked pages, then re-sorts ────────
+var _checkAllRunning = false;
+async function checkAllDue() {
+  if (_checkAllRunning) { toast('Already running — wait for it to finish', 'warn'); return; }
+
+  var now = Date.now();
+  var duePages = _trPages.filter(function(p) {
+    if (p.is_done) return false;
+    if (!p.last_checked_at) return true;
+    var next = p.next_check_at ? new Date(p.next_check_at).getTime() : (new Date(p.last_checked_at).getTime() + 3*86400000);
+    return next <= now;
+  });
+
+  if (!duePages.length) { toast('No pages due for check', 'info'); return; }
+
+  var btn = document.getElementById('checkAllDueBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting…'; }
+
+  _checkAllRunning = true;
+  var total = duePages.length;
+  var done = 0;
+  var failed = 0;
+
+  toast('Checking ' + total + ' pages — running in background', 3000, 'info');
+
+  for (var i = 0; i < duePages.length; i++) {
+    var p = duePages[i];
+    if (btn) btn.textContent = '⏳ ' + (done+1) + '/' + total + ' — ' + (p.url || '').replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+    try {
+      var r = await api('/api/tracker/pages/' + p.id + '/check', 'POST');
+      if (r.success) {
+        // Wait for this check to complete before starting next
+        await waitForCheck(p.id);
+        done++;
+        // Update the page in local array so due indicator refreshes
+        var idx = _trPages.findIndex(function(x){ return x.id === p.id; });
+        if (idx > -1) _trPages[idx].last_checked_at = new Date().toISOString();
+      }
+    } catch(e) {
+      failed++;
+      console.warn('[checkAllDue] failed for page', p.id, e.message);
+    }
+    // Small gap between checks to avoid rate limiting
+    await new Promise(function(res){ setTimeout(res, 800); });
+  }
+
+  _checkAllRunning = false;
+
+  // Reload all pages — triggers fresh priority sort and renumbering
+  await loadTrackerPages();
+  toast('✅ ' + done + ' pages checked' + (failed ? ' · ' + failed + ' failed' : '') + ' — list re-sorted', 4000, 'ok');
+}
+
+async function waitForCheck(pageId) {
+  var maxWait = 90; // max 90 × 2s = 3 minutes per page
+  for (var i = 0; i < maxWait; i++) {
+    await new Promise(function(res){ setTimeout(res, 2000); });
+    try {
+      var s = await api('/api/tracker/pages/' + pageId + '/check-status');
+      if (!s.running) return;
+    } catch(e) { return; }
+  }
 }
 
 async function runTrackerCheck(pageId, btn) {
