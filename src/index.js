@@ -12323,7 +12323,7 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
     const jobId = job.id;
     
     // Return job ID immediately — frontend will poll
-    res.json({ success: true, job_id: jobId, job: { id: jobId, status: 'researching', seed_keyword }, message: 'Research started — poll for results' });
+    res.json({ success: true, job: { id: jobId, status: 'researching', seed_keyword }, message: 'Research started — poll for results' });
     
     // ── Run research in background ──
     _runResearchJob(jobId, profile_id, seed_keyword).catch(err => {
@@ -12422,6 +12422,7 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
     // STEP 2: Gemini call WITH real web data
     _researchJobs.set(jobId, { status: 'researching', step: 'ai_analysis', message: `Analyzing ${webResults.length} sources with AI...` });
     const year = new Date().getFullYear();
+    const bi = (typeof profile.business_info === 'string' ? JSON.parse(profile.business_info || '{}') : profile.business_info) || {};
 
     const prompt = `You are an expert SEO researcher. Analyze these REAL web search results about "${seed_keyword}" for a ${profile.niche} business in ${locs}.
 
