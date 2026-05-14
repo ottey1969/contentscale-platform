@@ -425,10 +425,10 @@ function forgetLogin() {
     localStorage.removeItem('nexus_selected_profile_id');
   } catch(e) {}
   document.getElementById('engineToken').value = '';
-  document.getElementById('aiKeysSection').style.display = 'none';
-  document.getElementById('aiKeysPanel').style.display = 'none';
+  var _aks=document.getElementById('aiKeysSection'); if(_aks)_aks.style.display='none';
+  var _akp=document.getElementById('aiKeysPanel'); if(_akp)_akp.style.display='none';
   document.getElementById('forgetLink').style.display = 'none';
-  document.getElementById('profileSection').style.display = 'none';
+  var _ps=document.getElementById('profileSection'); if(_ps)_ps.style.display='none';
   var btn = document.getElementById('connectBtn');
   btn.textContent = 'Connect →';
   btn.style.background = '';
@@ -457,7 +457,7 @@ async function connect() {
     if (!d.success) throw new Error(d.error || 'Invalid code');
     _connected = true;
     setStatus('live', 'connected');
-    document.getElementById('sendBtn').disabled = false;
+    var _sb=document.getElementById('sendBtn'); if(_sb)_sb.disabled=false;
     btn.textContent = '✓ Connected'; btn.style.background = 'rgba(52,211,153,.15)';
     btn.style.color = 'var(--green)'; btn.style.border = '1px solid rgba(52,211,153,.3)';
     // Show forget link
@@ -473,8 +473,8 @@ async function connect() {
     if (pr.profiles && pr.profiles.length) {
       _allProfiles = pr.profiles;
       renderProfileSelector(pr.profiles, true); // true = show placeholder
-      document.getElementById('profileSection').style.display = 'block';
-      document.getElementById('aiKeysSection').style.display = 'block';
+      var _ps2=document.getElementById('profileSection'); if(_ps2)_ps2.style.display='block';
+      var _aks2=document.getElementById('aiKeysSection'); if(_aks2)_aks2.style.display='block';
       loadAiKeyStatus();
 
       // Don't auto-restore previously selected profile — user must explicitly select one
@@ -1194,7 +1194,7 @@ async function sendMessage() {
 async function processUserInput(text) {
   if (_busy) return;
   _busy = true;
-  document.getElementById('sendBtn').disabled = true;
+  var _sb2=document.getElementById('sendBtn'); if(_sb2)_sb2.disabled=true;
   _history.push({ role: 'user', content: text });
 
   // Show typing
@@ -1248,7 +1248,7 @@ async function processUserInput(text) {
   }
 
   _busy = false;
-  document.getElementById('sendBtn').disabled = false;
+  var _sb=document.getElementById('sendBtn'); if(_sb)_sb.disabled=false;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3994,8 +3994,8 @@ async function saveProfile() {
     loadProfilesList();
 
     // Always ensure profileSection is visible after any profile save
-    document.getElementById('profileSection').style.display = 'block';
-    document.getElementById('aiKeysSection').style.display = 'block';
+    var _ps2=document.getElementById('profileSection'); if(_ps2)_ps2.style.display='block';
+    var _aks2=document.getElementById('aiKeysSection'); if(_aks2)_aks2.style.display='block';
 
     // If new profile, switch to it automatically
     if (!_editingProfileId && d.profile) {
