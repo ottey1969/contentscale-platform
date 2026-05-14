@@ -6064,6 +6064,10 @@ Respond in valid JSON format:
     let analysis;
     try {
       analysis = extractJsonFromText(aiResponse);
+      if (!analysis) {
+        console.warn('[extractJsonFromText] null result — Competitor analysis: AI returned truncated or invalid JSON — try again or reduce competitor count.');
+        return res.status(502).json({ success: false, error: 'Competitor analysis: AI returned truncated or invalid JSON — try again or reduce competitor count.' });
+      }
     } catch (e) {
       console.error('❌ JSON parse error:', e.message);
       console.log('Raw AI response preview:', aiResponse.substring(0, 500));
@@ -10866,6 +10870,10 @@ Generate a JSON response with this exact structure:
         if (gemResult.ok) {
           const rawText = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           brief = extractJsonFromText(rawText);
+          if (!brief) {
+            console.warn('[extractJsonFromText] null result — Pipeline brief: AI returned truncated or invalid JSON — try again.');
+            return res.status(502).json({ success: false, error: 'Pipeline brief: AI returned truncated or invalid JSON — try again.' });
+          }
         }
       } catch(e) { console.warn('[intelligence] Gemini brief failed:', e.message); }
     }
@@ -11112,6 +11120,10 @@ Generate JSON:
         if (gemResult.ok) {
           var raw = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           alternatives = extractJsonFromText(raw);
+          if (!alternatives) {
+            console.warn('[extractJsonFromText] null result — Meta-research: AI returned truncated or invalid JSON — try again.');
+            return res.status(502).json({ success: false, error: 'Meta-research: AI returned truncated or invalid JSON — try again.' });
+          }
         }
       } catch(e) { console.warn('[meta-research] Gemini failed:', e.message); }
     }
@@ -11183,14 +11195,39 @@ function _scoreMetaDescription(desc, patterns) {
   return Math.min(100, Math.max(0, score));
 }
 
-// Extract JSON from text (handles markdown code blocks)
+// Extract JSON from text (handles markdown code blocks, truncated responses, extra text)
 function extractJsonFromText(text) {
-  if (!text) return null;
-  try { return JSON.parse(text); } catch(e) {}
-  var clean = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  try { return JSON.parse(clean); } catch(e) {}
-  var match = text.match(/\{[\s\S]*\}/);
-  if (match) try { return JSON.parse(match[0]); } catch(e) {}
+  if (!text || typeof text !== 'string') return null;
+
+  // Strip markdown fences
+  let cleaned = text
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/gi, '')
+    .trim();
+
+  // Try direct parse first
+  try { return JSON.parse(cleaned); } catch (_) {}
+
+  // Try brace-depth extraction (handles extra text before/after JSON)
+  let startIdx = cleaned.indexOf('{');
+  if (startIdx === -1) return null;
+
+  let depth = 0, endIdx = -1;
+  for (let i = startIdx; i < cleaned.length; i++) {
+    if (cleaned[i] === '{') depth++;
+    else if (cleaned[i] === '}') {
+      depth--;
+      if (depth === 0) { endIdx = i; break; }
+    }
+  }
+
+  if (endIdx === -1) {
+    // Truncated response — log warning instead of throwing
+    console.warn('[extractJsonFromText] Unclosed JSON object — AI response may have been truncated');
+    return null;
+  }
+
+  try { return JSON.parse(cleaned.slice(startIdx, endIdx + 1)); } catch (_) {}
   return null;
 }
 
@@ -11277,6 +11314,10 @@ Generate JSON:
         if (gemResult.ok) {
           const raw = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           brief = extractJsonFromText(raw);
+          if (!brief) {
+            console.warn('[extractJsonFromText] null result — Pipeline brief (stage 2): AI returned truncated or invalid JSON — try again.');
+            return res.status(502).json({ success: false, error: 'Pipeline brief (stage 2): AI returned truncated or invalid JSON — try again.' });
+          }
         }
       } catch(e) { console.warn('[pipeline] Brief generation failed:', e.message); }
     }
@@ -11458,31 +11499,7 @@ async function spendCredits(codeId, action) {
   }
 }
 
-// Helper: safely extract JSON from text that may have markdown fences or extra text
-function extractJsonFromText(text) {
-  if (!text || typeof text !== 'string') throw new Error('Empty or non-string response');
-  let cleaned = text
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/gi, '')
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch (_) {
-    let startIdx = cleaned.indexOf('{');
-    if (startIdx === -1) throw new Error('No JSON object found');
-    let depth = 0;
-    let endIdx = -1;
-    for (let i = startIdx; i < cleaned.length; i++) {
-      if (cleaned[i] === '{') depth++;
-      else if (cleaned[i] === '}') {
-        depth--;
-        if (depth === 0) { endIdx = i; break; }
-      }
-    }
-    if (endIdx === -1) throw new Error('Unclosed JSON object');
-    return JSON.parse(cleaned.slice(startIdx, endIdx + 1));
-  }
-}
+// extractJsonFromText defined above — duplicate removed
 
 // Helper: safely parse profile.locations from PostgreSQL json_agg (may be string or array)
 function safeProfileLocations(profile) {
@@ -12478,6 +12495,10 @@ Return ONLY this JSON (fill every field with real, sourced content):
     if (!rawText) throw new Error('Empty response');
 
     let keywordData = extractJsonFromText(rawText);
+    if (!keywordData) {
+      console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
+      return res.status(502).json({ success: false, error: 'Keyword research: AI returned truncated or invalid JSON — try again.' });
+    }
     console.log(`[research job ${jobId}] parsed: pk=${keywordData.primary_keyword||'N/A'}`);
 
     // Track cost
@@ -12870,6 +12891,10 @@ Rules:
         if (fillResult.ok) {
           const fillText = fillResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           const fillData = extractJsonFromText(fillText);
+          if (!fillData) {
+            console.warn('[extractJsonFromText] null result — Auto-fill: AI returned truncated or invalid JSON — try again.');
+            return res.status(502).json({ success: false, error: 'Auto-fill: AI returned truncated or invalid JSON — try again.' });
+          }
           
           // Merge fill data into brief
           if (fillData.recommended_title && fillData.recommended_title.length > 10 && !fillData.recommended_title.includes('H2')) {
@@ -14892,6 +14917,10 @@ Return ONLY valid JSON:
     let analysis;
     try {
       analysis = extractJsonFromText(rawText);
+      if (!analysis) {
+        console.warn('[extractJsonFromText] null result — Analyse: AI returned truncated or invalid JSON — try again or reduce input size.');
+        return res.status(502).json({ success: false, error: 'Analyse: AI returned truncated or invalid JSON — try again or reduce input size.' });
+      }
     } catch (parseErr) {
       console.error('Analyse JSON parse failed:', parseErr.message);
       console.error('Raw AI response (first 800 chars):', rawText.slice(0, 800));
