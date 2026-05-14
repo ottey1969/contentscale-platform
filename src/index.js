@@ -14479,8 +14479,9 @@ app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('ana
     const {
       profile_id, original_url, original_slug, original_title, original_html,
       gsc_impressions, gsc_clicks, gsc_position, gsc_keyword, gsc_pages, gsc_queries,
-      competitors  // NEW: [{ url, html? }, ...] up to 3
+      competitors, intelligence_context: intelCtxRaw, stats_context: statsCtxRaw
     } = req.body;
+    const intelCtx = typeof intelCtxRaw === 'string' ? (() => { try { return JSON.parse(intelCtxRaw); } catch(e) { return null; } })() : (intelCtxRaw || null);
 
     if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -14789,6 +14790,28 @@ Check the original HTML for these 11 critical SEO points. Report ONLY failures:
 
 Return audit findings as: {"audit_11": [{"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "what was found", "required": "what was required", "fix": "specific fix needed"}, ...]}
 
+${intelCtx ? `
+═══════════════════════════════════════
+STRATEGIC INTELLIGENCE — THIS OVERRIDES GENERIC SEO DEFAULTS
+The user has provided competitive intelligence. ALL recommendations MUST align with this strategy.
+
+RANKING FORMULA (why competitors win this keyword):
+${intelCtx.ranking_formula || '—'}
+
+ENTITY GAPS (topics missing from this page vs competitors):
+${(intelCtx.entity_gaps || []).slice(0, 6).map(e => '• "' + (e.entity||e) + '"').join('\n') || '—'}
+
+CONTENT BRIEF FROM COMPETITOR ANALYSIS:
+${intelCtx.content_brief ? JSON.stringify(intelCtx.content_brief).slice(0, 500) : '—'}
+
+AI OVERVIEW BLUEPRINT:
+${intelCtx.ai_overview_blueprint || '—'}
+
+CRITICAL: The recommended_title MUST reflect the strategic keyword and intent above.
+If the ranking formula mentions "emergency", "24/7", "fast", "urgent" — the title MUST include that.
+Do NOT generate a generic roofing title. Use the competitive intelligence to write a title that beats rank 1.
+═══════════════════════════════════════` : ''}
+
 CRITICAL RULES:
 - PAA QUESTIONS: If People Also Ask data is provided above, include ALL of them in paa_questions. If not provided, generate 8 relevant PAA questions based on the keyword.
 - AI OVERVIEW: If an AI Overview was detected above, set ai_overview_detected to true and create specific strategies to BEAT that overview with more cited stats and expert quotes.
@@ -14828,14 +14851,14 @@ Return ONLY valid JSON:
   "related_searches": ["related search 1","related search 2"],
   "gsc_insight": "what the GSC data tells us",
   "rewrite_strategy": "detailed plan for rewriting this page better",
-  "recommended_title": "improved title — 50-60 chars, keyword first, power word, brand | pipe",
+  "recommended_title": "title targeting THE EXACT STRATEGIC KEYWORD from the intelligence above — 50-60 chars, keyword first, power word matching intent (emergency/24/7/fast/expert), brand | pipe — NOT a generic roofing title",
   "recommended_meta_description": "improved description — 140-160 chars, keyword + stat + CTA, compelling not just descriptive",
   "recommended_h2s": ["H2 1","H2 2","H2 3","H2 4"],
   "target_word_count": 2000,
   "images_to_keep": ["note about keeping existing images"],
   "internal_links_needed": ["service page 1","money page 1"],
   "audit_11": [
-    {"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "current title length + keyword position", "required": "50-60 chars, keyword in first 3 words", "fix": "Rewrite title with keyword first + power word + number | brand"},
+    {"point": 1, "name": "Meta Title", "status": "PASS|FAIL", "found": "current title length + keyword position", "required": "50-60 chars, STRATEGIC keyword in first 3 words matching the ranking formula and user intent", "fix": "Rewrite title using the strategic keyword and intent — if emergency roofing, use emergency language; if ranking formula says 24/7, include 24/7"},
     {"point": 2, "name": "Meta Description", "status": "PASS|FAIL", "found": "current description", "required": "140-155 chars, CTA, stat, compelling", "fix": "Add stat + urgency CTA in 140-155 chars"},
     {"point": 3, "name": "Canonical Tag", "status": "PASS|FAIL", "found": "has or missing canonical", "required": "Canonical tag pointing to self", "fix": "Add <link rel=canonical> if missing"},
     {"point": 4, "name": "H1 Heading", "status": "PASS|FAIL", "found": "H1 content", "required": "One H1 with exact or variant keyword", "fix": "Ensure single H1 with primary keyword"},
