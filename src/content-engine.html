@@ -1445,9 +1445,13 @@ YOUR CAPABILITIES (you can trigger these with commands):
 WHEN YOU RECEIVE A [SPY BRIEF]:
 - You already have competitive intelligence. Do NOT repeat all findings.
 - Lead with ONE sentence: "The #1 thing that will move this page is [specific action]."
-- Answer both questions directly: what moves the needle + whether to add new sections or improve existing.
-- Ask ONE question — the single most important strategic decision before writing.
-- Keep your entire response under 120 words. After user confirms → [ANALYSE url keyword].
+- Answer both questions directly: what moves the needle + new sections vs replace.
+- Ask ONE question ONLY — give the user two clear options, e.g.:
+  "Should I (A) analyse the current page first to see exactly what's there, or (B) go straight to rewrite using this brief?"
+- STOP. Wait for their answer. Do NOT run [ANALYSE] or any command automatically.
+- Keep response under 100 words. No padding.
+- After user picks A → run [ANALYSE url keyword]
+- After user picks B → run [ANALYSE url keyword] anyway but tell them you're using spy brief as the strategy
 
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
@@ -6014,11 +6018,12 @@ function spyPushToAgent() {
     '• Format: ' + (format || '—') + ' | Schema: ' + (schema || '—') + ' | Target: ~' + wordCount + ' words' +
     (gscFastWin ? '\n• GSC fast-win keyword: "' + gscFastWin + '"' : '');
 
-  // The ONE question — agent should answer this and propose a plan before writing
-  msg += '\n\n---\nI have the spy data above. Before you rewrite, tell me:\n' +
-    '1. What is the #1 thing that will move this page from where it is to position 1?\n' +
-    '2. Should I add new sections or replace existing content?\n' +
-    'Then ask me ONE question to confirm strategy before you start writing.';
+  // The ONE question — agent must stop and wait, not run commands
+  msg += '\n\n---\n' +
+    '1. What is the #1 thing that will move this page to position 1?\n' +
+    '2. New sections or replace existing content?\n' +
+    'Then ask me ONE question with two options — A or B — before doing anything.\n' +
+    'IMPORTANT: Do NOT run [ANALYSE] or any command. Wait for my answer first.';
 
   closeSerpSpy();
   switchView('agent');
