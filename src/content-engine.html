@@ -1471,7 +1471,7 @@ async function processUserInput(text) {
     }
 
     // Execute any commands automatically + show clickable buttons for them
-    if (parsed.commands.length) {
+    if (parsed.commands.length && !window._newPageAutoMode) {
       var cmdButtons = parsed.commands.map(function(c) {
         var label = c.cmd;
         if (c.cmd === 'SCAN' && c.args[0]) label = '🔍 Scan ' + (c.args[0].length > 30 ? c.args[0].substring(0, 30) + '…' : c.args[0]);
@@ -2093,11 +2093,12 @@ async function cmdScanSimple(url) {
   }
 }
 
-// NEW PAGE - full creation flow (no existing URL)
+// NEW PAGE - fully automatic: Research + Intelligence + Spy + one button
 async function cmdNewPage(keyword) {
   if (!keyword) { addAgentMessage('I need a keyword. Example: [NEW_PAGE roof leak repair New Jersey]'); return; }
   _context.keyword = keyword;
   window._newPageMode = true;
+  window._newPageAutoMode = true;
   window._lastSpyKeyword = keyword;
   window._lastSpyUrl = '';
 
@@ -2124,24 +2125,48 @@ async function cmdNewPage(keyword) {
     setProgress(prog1, 100); removeProgress(prog1);
   } catch(e) { removeProgress(prog1); }
 
-  // Step 2: Intelligence on top competitor
-  var prog2 = addProgress('Analysing rank 1 for "' + keyword + '" - building beat-them brief...', 0);
+  // Step 2: Intelligence (silent — no agent call, no extra buttons)
+  var prog2 = addProgress('Step 2/3: Competitor intelligence for "' + keyword + '"...', 0);
   try {
-    await cmdIntelligence(keyword, '');
+    var intelData = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword));
     setProgress(prog2, 100); removeProgress(prog2);
+    if (intelData && intelData.success) {
+      window._lastIntelligence = intelData;
+      var _iDiv = document.createElement('div');
+      _iDiv.className = 'msg agent';
+      var _comps = (intelData.competitors||[]).slice(0,5).map(function(c,i){
+        return '<div style="font-size:11px;color:#9ca3af;padding:2px 0;">'+(i+1)+'. '+escHtml((c.title||'').substring(0,50))+'</div>';
+      }).join('');
+      _iDiv.innerHTML = '<div class="msg-avatar">\U0001F9E0</div><div class="msg-body"><div class="msg-name">Intelligence: "'+escHtml(keyword)+'"</div><div class="bubble" style="padding:12px;"><div style="font-size:10px;color:#6b7280;margin-bottom:6px;">\U0001F310 TOP '+((intelData.competitors||[]).length)+' COMPETITORS</div>'+_comps+(intelData.content_gaps&&intelData.content_gaps.length?'<div style="font-size:10px;color:#f87171;margin-top:6px;">\u26a0\ufe0f '+intelData.content_gaps.length+' content gaps</div>':'')+'</div></div>';
+      document.getElementById('messages').appendChild(_iDiv);
+      scrollBottom();
+    }
   } catch(e) { removeProgress(prog2); }
 
-  // Step 3: Action card
-  var actionDiv = document.createElement('div');
-  actionDiv.style.cssText = 'margin:10px 0 4px 44px;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;padding:14px 16px;';
-  actionDiv.innerHTML =
-    '<div style="font-size:11px;font-weight:800;color:#38bdf8;margin-bottom:4px;letter-spacing:.04em;">NEW PAGE - "' + escHtml(keyword) + '"</div>' +
-    '<div style="font-size:11px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">Research + intelligence complete. <strong style="color:#e2e8f0;">Now Spy rank 1</strong> — see exactly what rank 1 has and what your new page must include to beat it. Then Deep Dive → Feed to External AI.</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-    '<button onclick="openNewPageSpy()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔍 Spy Rank 1 → Deep Dive</button>' +
-    '</div>';
-  var msgs = document.getElementById('messages');
-  if (msgs) msgs.appendChild(actionDiv);
+  // Step 3: Spy rank 1 automatically
+  var prog3 = addProgress('Step 3/3: Spying on rank 1 for "' + keyword + '"...', 0);
+  try {
+    var spyResp = await api('/api/tracker/serp-spy', 'POST', { keyword: keyword, profile_url: '', page_id: null });
+    setProgress(prog3, 100); removeProgress(prog3);
+    if (spyResp && spyResp.success && spyResp.spy) {
+      window._lastSpyData = spyResp.spy;
+      var _sDiv = document.createElement('div');
+      _sDiv.className = 'msg agent';
+      _sDiv.innerHTML = '<div class="msg-avatar">\U0001F50D</div><div class="msg-body"><div class="msg-name">Spy Report</div><div class="bubble" style="padding:12px;overflow-x:auto;">' + renderSerpSpyReport(spyResp.spy) + '</div></div>';
+      document.getElementById('messages').appendChild(_sDiv);
+      scrollBottom();
+    }
+  } catch(e) { removeProgress(prog3); }
+
+  // All done — show single action button
+  window._newPageAutoMode = false;
+  var _doneDiv = document.createElement('div');
+  _doneDiv.style.cssText = 'margin:10px 0 4px 44px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:14px 16px;';
+  _doneDiv.innerHTML =
+    '<div style="font-size:11px;font-weight:800;color:#34d399;margin-bottom:6px;">\u2705 BRIEF COMPLETE \u2014 "' + escHtml(keyword) + '"</div>' +
+    '<div style="font-size:11px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">Research + competitor intelligence + SERP spy complete. Your brief is ready.</div>' +
+    '<button onclick="copyMasterBrief()" style="padding:8px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#34d399,#0ea5e9);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">\U0001F310 Copy Master Brief \u2192 External AI</button>';
+  document.getElementById('messages').appendChild(_doneDiv);
   scrollBottom();
   updateContext();
 }
@@ -2513,7 +2538,7 @@ async function cmdIntelligence(keyword, url) {
 
     // Store intelligence for Master Brief
     window._lastIntelligence = data;
-    if (kw) window._lastSpyKeyword = kw;
+    window._lastSpyKeyword = keyword;
     // Auto-chain: show follow-up action buttons
     var _isNewPage = window._newPageMode || !url || url.indexOf('google.com/search') > -1;
     var followUp = [
@@ -2965,13 +2990,14 @@ function addResearchResult(r) {
   var div = document.createElement('div');
   div.className = 'msg agent';
 
-  var aiTips = parseRecs(r.ai_overview_tips).slice(0,3).map(function(t){ return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('');
+  var _str=function(x){return typeof x==='string'?x:(x&&(x.tip||x.opportunity||x.recommendation||x.title||x.text||x.content||''))||'';};
+  var aiTips = parseRecs(r.ai_overview_tips).slice(0,3).map(function(t){var s=_str(t);return s?'<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ '+escHtml(s)+'</div>':''}).join('');
   var paa = parseRecs(r.paa_questions).slice(0,4).map(function(q, i) {
     var text = typeof q === 'string' ? q : (q.question || q);
     return '<div style="font-size:12px;color:var(--accent2);padding:3px 0;"><span style="color:var(--muted);margin-right:6px;">' + (i+1) + '.</span>' + text + '</div>';
   }).join('');
-  var voice = parseRecs(r.voice_search_queries).slice(0,3).map(function(q){ return '<div style="font-size:12px;color:#38bdf8;padding:2px 0;">🎙️ ' + q + '</div>'; }).join('');
-  var sk = parseRecs(r.secondary_keywords).slice(0,8).map(function(k){ return '<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:99px;padding:2px 8px;font-size:11px;margin:2px;display:inline-block;">' + k + '</span>'; }).join('');
+  var voice = parseRecs(r.voice_search_queries).slice(0,3).map(function(q){var s=_str(q);return s?'<div style="font-size:12px;color:#38bdf8;padding:2px 0;">🎙️ '+escHtml(s)+'</div>':''}).join('');
+  var sk = parseRecs(r.secondary_keywords).slice(0,8).map(function(k){var s=_str(k);return s?'<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:99px;padding:2px 8px;font-size:11px;margin:2px;display:inline-block;">'+escHtml(s)+'</span>':''}).join('');
   var title = r.recommended_title || '';
   var tl = title.length;
   var tc = tl >= 55 && tl <= 60 ? '#4ade80' : tl > 60 ? '#f87171' : '#fbbf24';
