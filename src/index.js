@@ -23874,7 +23874,7 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     let q, params = [];
     if (isAdmin) {
       // Admin sees all pages with client name, optionally filtered by profile
-      if (profileId) { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id WHERE p.profile_id=$1 OR p.profile_id IS NULL ORDER BY p.created_at DESC`; params = [profileId]; }
+      if (profileId) { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id WHERE p.profile_id=$1 ORDER BY p.created_at DESC`; params = [profileId]; }
       else { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id ORDER BY p.created_at DESC`; }
     } else {
       // Engine users see only their own pages
@@ -23890,10 +23890,10 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
           }
         } catch(e) {}
         if (profileDomain) {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.profile_id IS NULL OR p.url ILIKE $3 OR p.url ILIKE $4) ORDER BY p.created_at DESC`;
+          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.url ILIKE $3 OR p.url ILIKE $4) ORDER BY p.created_at DESC`;
           params = [codeId, profileId, '%' + profileDomain + '%', '%' + profileDomain.replace(/^www\./, '') + '%'];
         } else {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.profile_id IS NULL) ORDER BY p.created_at DESC`;
+          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`;
           params = [codeId, profileId];
         }
       } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
