@@ -12514,7 +12514,7 @@ Return ONLY this JSON (fill every field with real, sourced content):
     let keywordData = extractJsonFromText(rawText);
     if (!keywordData) {
       console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
-      return res.status(502).json({ success: false, error: 'Keyword research: AI returned truncated or invalid JSON — try again.' });
+      throw new Error('Keyword research: AI returned truncated or invalid JSON — try again.');
     }
     console.log(`[research job ${jobId}] parsed: pk=${keywordData.primary_keyword||'N/A'}`);
 
