@@ -23846,6 +23846,287 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 `;
 
 // ── Push to Rewrite (pre-fills Rewrite tab with current data) ────────────────
+app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+  try {
+    // Guard: check if tracker_pages table exists
+    try {
+      await pool.query(`SELECT 1 FROM tracker_pages LIMIT 0`);
+    } catch(tableErr) {
+      if (/relation.*does not exist/i.test(tableErr.message)) {
+        return res.status(503).json({
+          success: false, pages: [],
+          error: 'Database tables initializing. Please wait 30 seconds and refresh.',
+          code: 'DB_INIT'
+        });
+      }
+      throw tableErr;
+    }
+    const profileId = req.query.profile_id;
+    const eu = req.engineUser;
+    const isAdmin = eu && eu.isAdmin;
+    const codeId = eu && eu.codeId;
+    const COLS = `p.*,
+           (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
+           (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
+           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes,
+           (SELECT row_to_json(tc) FROM tracker_classifications tc WHERE tc.page_id=p.id ORDER BY tc.classified_at DESC LIMIT 1) AS latest_classification`;
+    const ADMIN_COLS = COLS + `, ec.client_name AS engine_client_name, ec.code AS engine_code`;
+    let q, params = [];
+    if (isAdmin) {
+      // Admin sees all pages with client name, optionally filtered by profile
+      if (profileId) { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id WHERE p.profile_id=$1 OR p.profile_id IS NULL ORDER BY p.created_at DESC`; params = [profileId]; }
+      else { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id ORDER BY p.created_at DESC`; }
+    } else {
+      // Engine users see only their own pages
+      // profile_id filter: match exact profile_id OR pages with no profile assigned (backward compat)
+      // Also match pages whose domain matches the profile domain (handles pages saved before profile was set)
+      if (profileId) {
+        // Get profile domain for fallback matching
+        let profileDomain = null;
+        try {
+          const pdR = await pool.query(`SELECT domain FROM content_profiles WHERE id=$1`, [profileId]);
+          if (pdR.rows.length && pdR.rows[0].domain) {
+            profileDomain = pdR.rows[0].domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+          }
+        } catch(e) {}
+        if (profileDomain) {
+          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.profile_id IS NULL OR p.url ILIKE $3 OR p.url ILIKE $4) ORDER BY p.created_at DESC`;
+          params = [codeId, profileId, '%' + profileDomain + '%', '%' + profileDomain.replace(/^www\./, '') + '%'];
+        } else {
+          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.profile_id IS NULL) ORDER BY p.created_at DESC`;
+          params = [codeId, profileId];
+        }
+      } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
+    }
+    const r = await pool.query(q, params);
+    res.json({ success: true, pages: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+  const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days',
+          gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
+  if (!url) return res.status(400).json({ success: false, error: 'url required' });
+  try {
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
+    const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
+
+    let r, isUpdate = false;
+    try {
+      // Try INSERT first
+      r = await pool.query(
+        `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+        [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
+         parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
+         gsc_queries ? JSON.stringify(gsc_queries) : null,
+         gsc_pages ? JSON.stringify(gsc_pages) : null,
+         gsc_keyword || null]
+      );
+    } catch(insertErr) {
+      // Unique constraint — URL already exists for this engine. Update instead.
+      if (insertErr.code === '23505' || /unique|duplicate/i.test(insertErr.message)) {
+        isUpdate = true;
+        r = await pool.query(
+          `UPDATE tracker_pages SET
+             profile_id = COALESCE($1, profile_id),
+             slug = COALESCE($2, slug),
+             title = COALESCE($3, title),
+             keyword = COALESCE($4, keyword),
+             html_content = COALESCE($5, html_content),
+             check_frequency = COALESCE($6, check_frequency),
+             gsc_impressions = COALESCE($7, gsc_impressions),
+             gsc_clicks = COALESCE($8, gsc_clicks),
+             gsc_position = COALESCE($9, gsc_position),
+             gsc_ctr = COALESCE($10, gsc_ctr),
+             gsc_queries = COALESCE($11, gsc_queries),
+             gsc_pages = COALESCE($12, gsc_pages),
+             gsc_keyword = COALESCE($13, gsc_keyword),
+             updated_at = NOW()
+           WHERE (engine_code_id = $14 OR ($14 IS NULL AND engine_code_id IS NULL))
+             AND url = $15
+           RETURNING *`,
+          [profile_id||null, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
+           parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
+           gsc_queries ? JSON.stringify(gsc_queries) : null,
+           gsc_pages ? JSON.stringify(gsc_pages) : null,
+           gsc_keyword || null,
+           codeId, cleanUrl]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
+    res.json({ success: true, page: r.rows[0], action: isUpdate ? 'updated' : 'created' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
+  const { url, title, keyword, html_content, check_frequency, is_active, is_done, gsc_connected,
+          gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
+  try {
+    // Ownership check for non-admins
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    const fields=[]; const vals=[]; let i=1;
+    if(url!==undefined){fields.push(`url=$${i++}`);vals.push(url);}
+    if(title!==undefined){fields.push(`title=$${i++}`);vals.push(title);}
+    if(keyword!==undefined){fields.push(`keyword=$${i++}`);vals.push(keyword);}
+    if(html_content!==undefined){fields.push(`html_content=$${i++}`);vals.push(html_content);}
+    if(check_frequency!==undefined){fields.push(`check_frequency=$${i++}`);vals.push(check_frequency);}
+    if(is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(!!is_active);}
+    if(gsc_connected!==undefined){fields.push(`gsc_connected=$${i++}`);vals.push(!!gsc_connected);}
+    if(gsc_impressions!==undefined){fields.push(`gsc_impressions=$${i++}`);vals.push(gsc_impressions===null?null:parseInt(gsc_impressions));}
+    if(gsc_clicks!==undefined){fields.push(`gsc_clicks=$${i++}`);vals.push(gsc_clicks===null?null:parseInt(gsc_clicks));}
+    if(gsc_position!==undefined){fields.push(`gsc_position=$${i++}`);vals.push(gsc_position===null?null:parseFloat(gsc_position));}
+    if(gsc_ctr!==undefined){fields.push(`gsc_ctr=$${i++}`);vals.push(gsc_ctr===null?null:parseFloat(gsc_ctr));}
+    if(gsc_queries!==undefined){fields.push(`gsc_queries=$${i++}`);vals.push(gsc_queries?JSON.stringify(gsc_queries):null);}
+    if(gsc_pages!==undefined){fields.push(`gsc_pages=$${i++}`);vals.push(gsc_pages?JSON.stringify(gsc_pages):null);}
+    if(gsc_keyword!==undefined){fields.push(`gsc_keyword=$${i++}`);vals.push(gsc_keyword);}
+    if(is_done!==undefined){fields.push(`is_done=$${i++}`);vals.push(!!is_done);}
+    if(!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Update GSC data for a tracker page (manual override)
+app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, keyword } = req.body;
+  const eu = req.engineUser;
+  if (!eu) return res.status(401).json({ success: false, error: 'Not authenticated' });
+  const pageId = parseInt(req.params.id);
+  if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
+  if (!eu.isAdmin) {
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+  }
+
+  // Check which columns actually exist (defensive — migration may have failed)
+  let hasGscKeyword = true, hasUpdatedAt = true;
+  try {
+    await pool.query('SELECT gsc_keyword, updated_at FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
+  } catch(colErr) {
+    const msg = colErr.message || '';
+    if (msg.includes('gsc_keyword')) hasGscKeyword = false;
+    if (msg.includes('updated_at')) hasUpdatedAt = false;
+  }
+
+  const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
+  const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
+  if (keyword !== undefined && hasGscKeyword) {
+    fields.push('gsc_keyword=$' + (fields.length + 1));
+    vals.push(keyword || null);
+  }
+  if (keyword !== undefined) {
+    fields.push('keyword=$' + (fields.length + 1));
+    vals.push(keyword || null);
+  }
+  vals.push(pageId);
+  const setClause = fields.join(', ') + (hasUpdatedAt ? ', updated_at=NOW()' : '');
+  console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' hasUpdatedAt=' + hasUpdatedAt + ' keyword=' + (keyword || '(none)'));
+  await pool.query(
+    'UPDATE tracker_pages SET ' + setClause + ' WHERE id=$' + vals.length,
+    vals
+  );
+  res.json({ success: true, keyword_updated: keyword || null });
+}));
+
+app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Bulk delete: clear ALL pages for a profile (with confirmation required)
+app.delete('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
+  try {
+    const { profile_id, confirm } = req.body;
+    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
+    if (confirm !== 'DELETE_ALL') return res.status(400).json({ success: false, error: 'confirm must be DELETE_ALL' });
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    // Count what will be deleted
+    const countR = codeId
+      ? await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId])
+      : await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE profile_id=$1', [profile_id]);
+    const count = parseInt(countR.rows[0].count) || 0;
+    if (count === 0) return res.json({ success: true, deleted: 0, message: 'No pages to delete' });
+    // Delete
+    if (codeId) {
+      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId]);
+    } else {
+      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1', [profile_id]);
+    }
+    res.json({ success: true, deleted: count });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Snapshots & change history for a page ───────────────────────────────────
+
+app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    const r = await pool.query(
+      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 50`,
+      [req.params.id]
+    );
+    res.json({ success: true, snapshots: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Push a scan result as a snapshot (from frontend scan → tracker) ─────────
+app.post('/api/tracker/pages/:id/snapshot', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    const { score, metrics, graaf_score, craft_score, technical_score } = req.body;
+    const breakdown = metrics || (graaf_score !== undefined ? { graaf: graaf_score, craft: craft_score || 0, technical: technical_score || 0 } : null);
+    const r = await pool.query(
+      `INSERT INTO tracker_snapshots (page_id, checked_at, score, graaf_breakdown)
+       VALUES ($1, NOW(), $2, $3) RETURNING *`,
+      [pageId, score || null, breakdown]
+    );
+    res.json({ success: true, snapshot: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    const r = await pool.query(
+      `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at DESC LIMIT 100`,
+      [req.params.id]
+    );
+    res.json({ success: true, changes: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+
 app.post('/api/tracker/pages/:id/push-to-rewrite', verifyEngineAccess, async (req, res) => {
   try {
     const eu = req.engineUser;
