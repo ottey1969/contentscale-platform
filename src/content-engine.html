@@ -274,8 +274,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
         <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
         <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
         <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ Rewrite → AI beats rank 1</div>
-        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker monitors</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ 📡 Deep Dive → Beat Rank 1</div>
+        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker auto-monitors</div>
       </div>
     </div>
 
@@ -328,12 +328,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           <div style="width:1px;background:rgba(255,255,255,.08);"></div>
           <div style="text-align:center;max-width:180px;">
             <div style="font-size:11px;font-weight:800;color:#f56d00;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">NEXUS</div>
-            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward and writes to beat it.</div>
+            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward, builds a Deep Dive brief, and feeds it to AI to beat rank 1.</div>
           </div>
         </div>
         <div class="welcome-starters">
           <button class="starter-btn" onclick="sendStarter(this)">I want to rank higher for a keyword</button>
-          <button class="starter-btn" onclick="sendStarter(this)">Rewrite an existing page</button>
+          <button class="starter-btn" onclick="sendStarter(this)">📡 Deep Dive an existing page</button>
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
@@ -1298,7 +1298,7 @@ function sendStarter(btn) {
       (domain ? 'Domain: ' + domain + '. ' : '') +
       'Look at my top opportunities and tell me which keyword to target first and exactly what to do.',
 
-    'Rewrite an existing page': null, // handled separately below
+    '📡 Deep Dive an existing page': null, // handled separately below
 
     'What pages should I prioritise?':
       'Show me which pages I should work on first. ' +
@@ -1314,14 +1314,14 @@ function sendStarter(btn) {
       'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.'
   };
   // "Rewrite an existing page" — go to Tracker if GSC loaded, else explain
-  if (label === 'Rewrite an existing page') {
+  if (label === '📡 Deep Dive an existing page') {
     if (_gscPages && _gscPages.length) {
       hideWelcome();
-      toast('Opening Tracker — your best rewrite opportunity is shown at the top', 3000, 'ok');
+      toast('Opening Tracker — run Spy + Deep Dive on your best opportunity', 3000, 'ok');
       switchView('tracker');
       return;
     } else {
-      userSend('I want to rewrite an existing page to rank higher. I don\'t have GSC data loaded yet. What should I do first to find the best page to rewrite?');
+      userSend('I want to do a deep dive on an existing page to beat rank 1. I don\'t have GSC data loaded yet. What should I do first?');
       return;
     }
   }
@@ -1387,7 +1387,22 @@ async function processUserInput(text) {
     _history.push({ role: 'assistant', content: agentResp });
 
     // Display the message
-    addAgentMessage(parsed.message);
+    var _agentMsgEl = addAgentMessage(parsed.message);
+
+    // After Deep Dive response — inject Beat Rank 1 action card
+    if (window._pendingDeepDive && window._lastSpyData) {
+      window._pendingDeepDive = false;
+      var _dd = document.createElement('div');
+      _dd.style.cssText = 'margin:8px 0 4px 44px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
+      _dd.innerHTML =
+        '<span style="font-size:10px;color:#6b7280;font-family:monospace;">Deep dive complete →</span>' +
+        '<button onclick="deepDiveThenBeatRank1()" style="padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Now Beat Rank 1</button>' +
+        '<button onclick="deepDiveSurgical()" style="padding:7px 12px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔧 Surgical Apply</button>' +
+        '<button onclick="copyAgentOutput(this)" style="padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">📋 Copy Brief</button>' +
+        '<button onclick="copyMasterBrief()" style="padding:7px 12px;border-radius:7px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07);color:#34d399;font-size:11px;font-weight:700;cursor:pointer;">🌐 Feed to External AI</button>';
+      document.getElementById('messages').appendChild(_dd);
+      scrollBottom();
+    }
 
     // Execute any commands automatically + show clickable buttons for them
     if (parsed.commands.length) {
@@ -2962,6 +2977,21 @@ function updateContext() {
 }
 
 function formatMessage(text) {
+  // Highlight agent questions and A/B choices so they scan instantly
+  var lines = text.split('\n');
+  lines = lines.map(function(line) {
+    var trimmed = line.trim();
+    // A/B choice lines
+    if (/^(→\s*)?(A\)|B\)|Option A|Option B)/i.test(trimmed)) {
+      return '<span style="display:block;background:rgba(251,191,36,.10);border-left:3px solid #fbbf24;padding:4px 10px;border-radius:0 5px 5px 0;margin:2px 0;font-weight:700;color:#fde68a;">' + escHtml(line) + '</span>';
+    }
+    // Direct questions (lines ending with ?)
+    if (trimmed.endsWith('?') && trimmed.length > 15 && trimmed.length < 200) {
+      return '<span style="display:block;background:rgba(56,189,248,.08);border-left:3px solid #38bdf8;padding:5px 10px;border-radius:0 5px 5px 0;margin:4px 0;font-weight:700;color:#bae6fd;">' + line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>') + '</span>';
+    }
+    return line;
+  });
+  text = lines.join('\n');
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-family:DM Mono,monospace;font-size:11px;">$1</code>')
@@ -3357,7 +3387,7 @@ function renderTrackerList() {
       var rAction = escHtml(String(_rawAction));
       recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
         '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
-        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction.substring(0,140) + (rAction.length>140?'…':'') + '</div>' : '') +
+        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction + '</div>' : '') +
         '</div>';
     }
 
@@ -3394,9 +3424,9 @@ function renderTrackerList() {
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
         (pri.action === 'rewrite' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:800;">🚀 Spy & Rewrite</button>'
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:800;">📡 Spy & Deep Dive</button>'
         : pri.action === 'surgical' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;cursor:pointer;font-weight:800;">🔧 Spy & Fix</button>'
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;cursor:pointer;font-weight:800;">📡 Spy & Fix</button>'
         : pri.action === 'check' ?
           '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:rgba(124,58,237,.2);color:#a78bfa;cursor:pointer;font-weight:700;">▶ Check Now</button>'
         :
@@ -3641,7 +3671,26 @@ function trPushToAgent(pageId) {
 
   var scoreText = snap.score ? ' (current ContentScore: ' + snap.score + '/100)' : '';
   var kwText = page.keyword ? ' targeting keyword: "' + page.keyword + '"' : '';
-  var text = 'The tracker flagged this page' + scoreText + ': ' + page.url + kwText + '.' + recText + '\n\nPlease fix these specific issues and rewrite the affected sections.';
+  // Build deep dive prompt — NOT a rewrite request
+  var allRecs = Array.isArray(recs) ? recs.map(function(r, i) {
+    var title  = r.title  || r.description || r.name || '';
+    var action = r.action || r.fix || r.recommendation || '';
+    var impact = r.expected_impact || '';
+    return (i+1) + '. [' + (r.priority||'?').toUpperCase() + '] ' + title + (action ? '\n   → ' + action : '') + (impact ? '\n   Impact: ' + impact : '');
+  }).join('\n') : '';
+  var text = '[DEEP DIVE REQUEST]\n' +
+    'Page: ' + page.url + kwText + scoreText + '\n' +
+    (page.title ? 'Title: ' + page.title + '\n' : '') +
+    '\n== TRACKER RECOMMENDATIONS ==\n' + (allRecs || '(none stored)') +
+    '\n\n== YOUR TASK ==\n' +
+    'Run [ANALYSE ' + page.url + ' "' + (page.keyword||'') + '"] to read the current page.\n' +
+    'Then do a deep dive:\n' +
+    '1. For each recommendation above: write the EXACT sentences/HTML to add — no generic advice\n' +
+    '2. Find PAA questions for this keyword → suggest which to add to FAQ section\n' +
+    '3. Voice search: rewrite 2-3 existing answers to natural spoken language (40 words max each)\n' +
+    '4. Citation signals: what specific data, stat, or unique claim should we add to get cited by AI Overviews?\n' +
+    '5. Supplemental content: what new section/angle would rank 1 NOT have — that we can own?\n' +
+    'DO NOT suggest a full rewrite. Surgical additions and enhancements only.';
 
   switchView('agent');
   setTimeout(function() {
@@ -3790,9 +3839,10 @@ async function openTrackerDetail(pageId) {
     }
 
     body.innerHTML = scoreHtml + chartHtml + timelineHtml + recsHtml +
-      '<div style="display:flex;gap:8px;">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button onclick="runTrackerCheck('+pageId+',this)" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">▶ Run Check</button>' +
-      '<button onclick="trPushToAgent('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">→ Push to Agent</button>' +
+      '<button onclick="trPushToAgent('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;border:none;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;">📡 Deep Dive → Agent</button>' +
+      '<button onclick="trCopyContext('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9ca3af;">📋 Copy</button>' +
       '<button onclick="document.getElementById(\'trDetailModal\').style.display=\'none\'" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Close</button>' +
       '</div>';
   } catch(e) {
@@ -6187,12 +6237,13 @@ async function runSerpSpy() {
       var _spyAct = window._serpSpyAction || 'rewrite';
       var _spyRec = window._serpSpyRecommended || '';
       actDiv.innerHTML =
+        '<button onclick="spyDeepDiveToAgent()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📡 Deep Dive → Agent</button>' +
         (_spyAct === 'surgical' ?
-          '<button onclick="spyApplySurgical()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔧 Apply Surgical Fixes</button>' :
-          '<button onclick="spyOpenRewrite()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Rewrite to Beat Rank 1</button>'
+          '<button onclick="spyApplySurgical()" style="padding:8px 14px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔧 Surgical Fixes</button>' :
+          '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Gap Analysis</button>'
         ) +
-        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Analyse with Agent</button>' +
-        '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
+        '<button onclick="copySpyReport()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">📋 Copy</button>' +
+        '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;font-size:11px;cursor:pointer;">✕ Close</button>' +
         (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
       // Store spy data for button handlers
@@ -6281,6 +6332,309 @@ function spySendToAgentWithHtml() {
 }
 
 // ── Spy → Agent: sends full brief to agent with context ──────────────────────
+// ── NEW: spyDeepDiveToAgent — full context deep dive, no rewrite ─────────────
+function spyDeepDiveToAgent() {
+  var spy = window._lastSpyData;
+  var kw  = window._lastSpyKeyword || '';
+  var url = window._lastSpyUrl || '';
+  if (!spy) { toast('No spy data \u2014 run Spy first', 'warn'); return; }
+
+  var formula   = (spy.step2_pattern && spy.step2_pattern.the_ranking_formula) || '';
+  var format    = (spy.step2_pattern && spy.step2_pattern.dominant_content_format) || '';
+  var schema    = (spy.step2_pattern && spy.step2_pattern.dominant_schema) || '';
+  var wordCount = (spy.content_brief && spy.content_brief.recommended_word_count) || (spy.step2_pattern && spy.step2_pattern.dominant_word_count_range) || '';
+  var aiBlueprint = spy.ai_overview_blueprint || '';
+  var clientGap = spy.client_vs_best || '';
+
+  var entityGaps = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,6).map(function(e, i) {
+    return (i+1) + '. "' + (e.entity||e) + '"' + (e.in_competitor_pages ? ' (in '+e.in_competitor_pages+' competitors)' : '');
+  }).join('\n');
+
+  var missing = (spy.step4_missing || []).slice(0,4).map(function(m) {
+    return '\u2022 ' + (m.gap||'') + ' \u2192 ' + (m.how_to_exploit||'');
+  }).join('\n');
+
+  var quickWins = (spy.quick_wins || []).slice(0,4).map(function(w) {
+    return '\u2022 ' + (w.win||w) + (w.effort ? ' [effort:'+w.effort+']' : '');
+  }).join('\n');
+
+  var paaQuestions = (spy.paa_questions || []).slice(0,5).map(function(q, i) {
+    return (i+1) + '. ' + (q.question||q);
+  }).join('\n');
+
+  var competitors = (spy.step1_serp || []).slice(0,3).map(function(c, i) {
+    return (i+1) + '. ' + (c.title||'') + ' \u2014 ' + (c.url||'');
+  }).join('\n');
+
+  var aiCit  = spy._client_ai_citation;
+  var aiScore = aiCit ? ' | AI Score: ' + aiCit.score + '/100 (' + aiCit.eligibility + ')' : '';
+
+  var msg = '[INTELLIGENT DEEP DIVE \u2014 NO REWRITE]\n' +
+    'Keyword: "' + kw + '" | Page: ' + url + aiScore + '\n' +
+    '\n=== WHY RANK 1 WINS ===\n' + (formula || '\u2014') +
+    '\n\n=== CLIENT GAP vs RANK 1 ===\n' + (clientGap && clientGap !== 'no client URL' ? clientGap : '(run ANALYSE to determine)') +
+    '\n\n=== MISSING ENTITIES (competitors have, we don\'t) ===\n' + (entityGaps || '\u2014') +
+    '\n\n=== NOBODY COVERS (first-mover opportunity) ===\n' + (missing || '\u2014') +
+    '\n\n=== QUICK WINS ===\n' + (quickWins || '\u2014') +
+    '\n\n=== PAA QUESTIONS IN SERP ===\n' + (paaQuestions || '\u2014') +
+    '\n\n=== AI OVERVIEW BLUEPRINT ===\n' + (aiBlueprint || '\u2014') +
+    '\n\n=== CONTENT BRIEF ===\nFormat: ' + (format||'\u2014') + ' | Schema: ' + (schema||'\u2014') + ' | Target: ~' + (wordCount||'?') + ' words' +
+    '\n\n=== TOP COMPETITORS ===\n' + (competitors || '\u2014') +
+    '\n\n=== YOUR DEEP DIVE TASKS ===\n' +
+    'Run [ANALYSE ' + url + ' "' + kw + '"] first to read the current page. Then:\n' +
+    '1. MISSING ENTITIES \u2014 for each entity gap above: write the exact sentence(s) to add and WHERE on the page\n' +
+    '2. PAA \u2192 FAQ \u2014 convert the PAA questions above into concise FAQ answers (50-80 words each, conversational/voice-ready)\n' +
+    '3. VOICE SEARCH \u2014 rewrite 2-3 key answers to natural spoken language (how Google Assistant would read them)\n' +
+    '4. AI OVERVIEW \u2014 what specific data point, statistic, or unique claim gets us cited? Write it.\n' +
+    '5. FIRST-MOVER SECTION \u2014 write a short outline for the angle nobody covers yet\n' +
+    '6. SCHEMA \u2014 recommend exact FAQPage/HowTo/Speakable schema additions with the markup\n' +
+    '\nDO NOT suggest a full rewrite. Surgical additions ONLY. Be specific \u2014 exact copy, not strategy.';
+
+  closeSerpSpy();
+  switchView('agent');
+  window._pendingDeepDive = true;
+  setTimeout(function() {
+    var inp = document.getElementById('chatInput');
+    if (inp) { inp.value = msg; sendMessage(); }
+  }, 300);
+}
+
+// ── NEW: deepDiveThenBeatRank1 — rewrite using enriched spy + agent brief ─────
+function deepDiveThenBeatRank1() {
+  if (!window._lastSpyData) { toast('No spy data — run Spy first', 'warn'); return; }
+  _context.intelligence_context = {
+    ranking_formula: window._lastSpyData.step2_pattern && window._lastSpyData.step2_pattern.the_ranking_formula,
+    entity_gaps: window._lastSpyData._entity_gaps || window._lastSpyData.entity_gaps_priority,
+    content_brief: window._lastSpyData.content_brief,
+    ai_citation: window._lastSpyData._client_ai_citation,
+    ai_overview_blueprint: window._lastSpyData.ai_overview_blueprint,
+    paa_questions: window._lastSpyData.paa_questions || [],
+    quick_wins: window._lastSpyData.quick_wins || [],
+    spy_keyword: window._lastSpyKeyword,
+    deep_dive_enriched: true // signal to rewrite modal: agent already did deep dive
+  };
+  openRewriteModal();
+  setTimeout(function() {
+    var kwInp = document.getElementById('rewriteKeyword');
+    if (kwInp && !kwInp.value && window._lastSpyKeyword) kwInp.value = window._lastSpyKeyword;
+    var urlInp = document.getElementById('rewriteUrl');
+    if (urlInp && !urlInp.value && window._lastSpyUrl) urlInp.value = window._lastSpyUrl;
+  }, 200);
+  toast('Deep dive brief loaded into rewrite — all signals included', 3000, 'ok');
+}
+
+// ── NEW: deepDiveSurgical — apply surgical fixes using enriched brief ─────────
+function deepDiveSurgical() {
+  if (!window._lastSpyData) { toast('No spy data', 'warn'); return; }
+  _context.intelligence_context = {
+    ranking_formula: window._lastSpyData.step2_pattern && window._lastSpyData.step2_pattern.the_ranking_formula,
+    entity_gaps: window._lastSpyData._entity_gaps || window._lastSpyData.entity_gaps_priority,
+    content_brief: window._lastSpyData.content_brief,
+    paa_questions: window._lastSpyData.paa_questions || [],
+    spy_keyword: window._lastSpyKeyword,
+    deep_dive_enriched: true
+  };
+  openRewriteModalWithMode('surgical');
+  toast('Spy brief loaded — surgical mode with enriched context', 3000, 'ok');
+}
+
+// ── NEW: copyAgentOutput — copies last agent response to clipboard ─────────────
+function copyAgentOutput() {
+  var msgs = document.getElementById('messages');
+  var bubbles = msgs.querySelectorAll('.msg.agent .bubble');
+  if (!bubbles.length) { toast('No agent output to copy', 'warn'); return; }
+  var last = bubbles[bubbles.length - 1];
+  var txt = last.innerText || last.textContent || '';
+  navigator.clipboard.writeText(txt).then(function() {
+    toast('Agent output copied', 2000, 'ok');
+  }).catch(function() { toast('Copy failed', 'warn'); });
+}
+
+// ── MASTER BRIEF — complete external AI feed (paste into Claude/ChatGPT) ──────
+function copyMasterBrief() {
+  var spy  = window._lastSpyData;
+  var kw   = window._lastSpyKeyword || '';
+  var url  = window._lastSpyUrl || '';
+  if (!spy) { toast('Run Spy + Deep Dive first', 'warn'); return; }
+
+  // Pull last agent output (the deep dive analysis)
+  var agentOutput = '';
+  var bubbles = document.getElementById('messages').querySelectorAll('.msg.agent .bubble');
+  if (bubbles.length) agentOutput = (bubbles[bubbles.length-1].innerText || '').trim();
+
+  // Spy data
+  var formula   = (spy.step2_pattern && spy.step2_pattern.the_ranking_formula) || '';
+  var format    = (spy.step2_pattern && spy.step2_pattern.dominant_content_format) || '';
+  var schema    = (spy.step2_pattern && spy.step2_pattern.dominant_schema) || '';
+  var wordCount = (spy.content_brief && spy.content_brief.recommended_word_count) || '';
+  var aiBlueprint = spy.ai_overview_blueprint || '';
+  var clientGap = spy.client_vs_best || '';
+  var aiCit     = spy._client_ai_citation;
+  var aiScore   = aiCit ? aiCit.score + '/100 (' + aiCit.eligibility + ')' : 'unknown';
+
+  var entityGaps = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,8)
+    .map(function(e,i){ return (i+1)+'. "'+( e.entity||e)+'"'+(e.in_competitor_pages?' ('+e.in_competitor_pages+' competitors)':''); }).join('\n');
+
+  var paa = (spy.paa_questions || []).slice(0,6)
+    .map(function(q,i){ return (i+1)+'. '+(q.question||q); }).join('\n');
+
+  var competitors = (spy.step1_serp || []).slice(0,5)
+    .map(function(c,i){ return (i+1)+'. '+( c.title||'')+' — '+(c.url||''); }).join('\n');
+
+  var missing = (spy.step4_missing || []).slice(0,4)
+    .map(function(m){ return '• '+(m.gap||'')+' → '+(m.how_to_exploit||''); }).join('\n');
+
+  var quickWins = (spy.quick_wins || []).slice(0,5)
+    .map(function(w){ return '• '+(w.win||w); }).join('\n');
+
+  var prompt = [
+'╔══════════════════════════════════════════════════════════════════╗',
+'  CONTENTSCALE MASTER BRIEF — PUBLISH-READY CONTENT REQUEST',
+'  Generated by ContentScale PULSE + NEXUS · GRAAF Framework',
+'╚══════════════════════════════════════════════════════════════════╝',
+'',
+'KEYWORD: "' + kw + '"',
+'PAGE TO IMPROVE: ' + url,
+'AI OVERVIEW ELIGIBILITY: ' + aiScore,
+'TARGET FORMAT: ' + (format||'—') + ' | Schema: ' + (schema||'—') + ' | ~' + (wordCount||'?') + ' words',
+'',
+'━━━ 1. SERP INTELLIGENCE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+'WHY RANK 1 WINS:',
+formula || '—',
+'',
+'CLIENT GAP vs RANK 1:',
+(clientGap && clientGap !== 'no client URL') ? clientGap : '(analyse current page)',
+'',
+'TOP COMPETITORS:',
+competitors || '—',
+'',
+'━━━ 2. ENTITY GAPS (competitors have — we don\'t) ━━━━━━━━━━━━━━━━',
+entityGaps || '—',
+'',
+'━━━ 3. PAA QUESTIONS TO EMBED IN FAQ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+paa || '—',
+'',
+'━━━ 4. FIRST-MOVER GAPS (nobody covers) ━━━━━━━━━━━━━━━━━━━━━━━━━',
+missing || '—',
+'',
+'━━━ 5. QUICK WINS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+quickWins || '—',
+'',
+'━━━ 6. AI OVERVIEW BLUEPRINT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+aiBlueprint || '—',
+'',
+(agentOutput ? '╋╋╋ 7. DEEP DIVE AGENT ANALYSIS ╋╋╋╋╋╋╋╋╋╋╋╋╋╋╋╋\n' + agentOutput + '\n' : ''),
+
+
+'━━━ SCORING FRAMEWORK (GRAAF + CRAFT + TECHNICAL) ━━━━━━━━━━━━━━━',
+'The output must score 85+/100 on this system:',
+'',
+'GRAAF (50 pts) — Genuinely Credible, Relevant, Actionable, Accurate, Fresh:',
+'• Genuinely Credible (12p): Author bio with credentials, first-person experience, verifiable claims',
+'• Relevant (12p): Keyword in H1/first 100 words, entity coverage, search intent match',
+'• Actionable (10p): Step-by-step guidance, clear CTAs, tools/resources linked',
+'• Accurate (10p): Stats with source + year, no vague claims, specific numbers',
+'• Fresh (6p): Current year references, recent data, "Updated [month year]" signal',
+'',
+'CRAFT (30 pts) — Content depth, Readability, Authority, Format, Trust:',
+'• Depth: covers subtopics competitors miss, addresses follow-up questions',
+'• Readability: sentences < 20 words avg, no jargon, Flesch > 60',
+'• Authority: cite 2+ authoritative sources, expert quotes if possible',
+'• Format: H2/H3 hierarchy, bullet lists, tables where useful',
+'• Trust: testimonials, case studies, specific results',
+'',
+'TECHNICAL SEO (20 pts):',
+'• Title tag: keyword first, < 60 chars, CTR-optimized',
+'• Meta description: keyword + benefit + CTA, < 155 chars',
+'• H1: exact match or close variant of keyword',
+'• URL: short, keyword slug',
+'• Internal links: 3-5 contextual links to related pages',
+'• Image alt text: descriptive + keyword where natural',
+'',
+'━━━ OUTPUT REQUIREMENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+'Produce a SINGLE publish-ready HTML file with:',
+'',
+'[1] DIRECT ANSWER — first paragraph (40-60 words), answers "' + kw + '" immediately.',
+'    This is what Google reads for AI Overview. Make it factual and specific.',
+'',
+'[2] BODY CONTENT — ' + (wordCount||'1500+') + ' words, H2/H3 structure, covers all entity gaps above.',
+'    Write every H2 section as if it\'s the definitive answer to a sub-question.',
+'',
+'[3] FAQ SECTION — answer ALL PAA questions listed above.',
+'    Each answer: 50-80 words, conversational, voice-search ready.',
+'    Format as <div class="faq-item"><h3>Q?</h3><p>A.</p></div>',
+'',
+'[4] VOICE SEARCH — mark 3-4 key answers with <div class="speakable">',
+'    These should be 30-40 words, start with the question keyword, use natural spoken language.',
+'',
+'[5] SCHEMA MARKUP — include in <script type="application/ld+json">:',
+'    • Article schema (with author, datePublished, dateModified)',
+'    • FAQPage schema (all FAQ questions above)',
+'    • Speakable schema (pointing to .speakable selectors)',
+'    • If how-to content: HowToStep schema',
+'',
+'[6] AI OVERVIEW SIGNAL — one clear, citable statistic or unique claim',
+'    that no competitor has. Place it in the first 150 words.',
+'    Format: <strong>[STAT/CLAIM]</strong> with source attribution inline.',
+'',
+'[7] E-E-A-T BLOCK — author byline at top:',
+'    <div class="author-bio">Written by [Name], [Credential]. [1-2 sentences experience].</div>',
+'',
+'[8] TITLE TAG + META:',
+'    <title>[keyword-first title, < 60 chars]</title>',
+'    <meta name="description" content="[benefit + CTA, < 155 chars]">',
+'',
+'OUTPUT FORMAT: Valid HTML only. No markdown. No explanations outside the HTML.',
+'Start with <!DOCTYPE html> and end with </html>.',
+'The content should beat rank 1 by covering what they miss, not by copying them.',
+].join('\n');
+
+  navigator.clipboard.writeText(prompt).then(function() {
+    toast('Master Brief copied — paste into Claude, ChatGPT, or Perplexity', 3500, 'ok');
+  }).catch(function() { toast('Copy failed — try again', 'warn'); });
+}
+
+// ── NEW: copySpyReport — copies spy brief to clipboard ───────────────────────
+function copySpyReport() {
+  var spy = window._lastSpyData;
+  var kw  = window._lastSpyKeyword || '';
+  if (!spy) { toast('No spy data', 'warn'); return; }
+  var txt = 'SERP SPY: "' + kw + '"\n\n' + JSON.stringify(spy, null, 2);
+  navigator.clipboard.writeText(txt).then(function() {
+    toast('Spy report copied to clipboard', 2000, 'ok');
+  }).catch(function() {
+    toast('Copy failed — use manual select', 'warn');
+  });
+}
+
+// ── NEW: trCopyContext — copies tracker page context to clipboard ─────────────
+async function trCopyContext(pageId) {
+  var page = (_trPages || []).find(function(p){ return p.id === pageId; });
+  if (!page) { toast('Page not found', 'warn'); return; }
+  try {
+    var data = await api('/api/tracker/page-detail/' + pageId, 'GET');
+    var snap = (data.snapshots && data.snapshots[0]) || {};
+    var recs = snap.recommendations || [];
+    var lines = [
+      'PAGE: ' + (page.url || ''),
+      'KEYWORD: ' + (page.keyword || '—'),
+      'SCORE: ' + (snap.score || '—') + '/100',
+      '',
+      'RECOMMENDATIONS:',
+    ].concat(recs.map(function(r, i) {
+      var t = r.title || r.description || r.name || '';
+      var a = r.action || r.fix || r.recommendation || '';
+      var im = r.expected_impact || '';
+      return (i+1) + '. [' + (r.priority||'?').toUpperCase() + '] ' + t +
+        (a ? '\n   \u2192 ' + a : '') + (im ? '\n   Impact: ' + im : '');
+    }));
+    var txt = lines.join('\n');
+    navigator.clipboard.writeText(txt).then(function() {
+      toast('Context copied to clipboard', 2000, 'ok');
+    }).catch(function() { toast('Copy failed', 'warn'); });
+  } catch(e) { toast('Error: ' + e.message, 'warn'); }
+}
+
 function spyPushToAgent() {
   var spy = window._lastSpyData;
   var kw = window._lastSpyKeyword || '';
