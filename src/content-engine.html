@@ -279,6 +279,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       </div>
     </div>
 
+    <!-- Quick Actions — hidden until welcome disappears -->
+    <div class="sidebar-section" id="quickActionsPanel" style="display:none;padding-bottom:8px;">
+      <div class="sidebar-label">Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <button class="sidebar-btn" onclick="sidebarStarter('I want to rank higher for a keyword')">📈 Rank higher for keyword</button>
+        <button class="sidebar-btn" onclick="sidebarStarter('🔍 Scan my existing content')">🔍 Scan my existing content</button>
+        <button class="sidebar-btn" onclick="sidebarStarter('📡 Deep Dive an existing page')">📡 Deep Dive existing page</button>
+        <button class="sidebar-btn" onclick="sidebarStarter('✍️ Write a new page that ranks')">✍️ Write a new page</button>
+        <button class="sidebar-btn" onclick="sidebarStarter('What pages should I prioritise?')">📋 Prioritise my pages</button>
+        <button class="sidebar-btn" onclick="sidebarStarter('Help me get into AI Overviews')">🤖 Get into AI Overviews</button>
+      </div>
+    </div>
+
     <!-- Tools removed — everything lives in Tracker now -->
 
     <!-- AI Keys (BYOK) -->
@@ -342,9 +355,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           <button class="starter-btn" onclick="sendStarter(this)">📡 Deep Dive an existing page</button>
           <button class="starter-btn" onclick="sendStarter(this)">✍️ Write a new page that ranks</button>
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
-          <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
-          <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
         </div>
       </div>
     </div>
@@ -538,10 +549,13 @@ async function connect() {
       document.getElementById('profileSelect').value = '';
     }
 
-    // Open Tracker first — it's the workflow starting point
-    switchView('tracker');
+    // Show Agent first — welcome screen + quick actions visible
+    switchView('agent');
     updateWorkflowStep(1);
-    // Agent greets in background
+    // Show quick actions immediately on connect
+    var _qa = document.getElementById('quickActionsPanel');
+    if (_qa) _qa.style.display = 'block';
+    // Agent greets
     setTimeout(agentGreet, 300);
   } catch(e) {
     var msg = e.message || '';
@@ -1291,6 +1305,12 @@ function agentGreet() {
 // ══════════════════════════════════════════════════════════════
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function sidebarStarter(label) {
+  if (!_connected) { toast('Connect first', 'err'); return; }
+  // Simulate sendStarter with a fake btn object
+  sendStarter({ textContent: label });
 }
 
 function sendStarter(btn) {
@@ -3147,7 +3167,16 @@ function setStatus(type, text) {
 
 function hideWelcome() {
   var w = document.getElementById('welcomeScreen');
-  if (w) { w.style.transition = 'opacity .3s'; w.style.opacity = '0'; setTimeout(function(){ w.remove(); }, 300); }
+  if (w) {
+    w.style.transition = 'opacity .3s';
+    w.style.opacity = '0';
+    setTimeout(function(){
+      w.remove();
+      // Welcome gone — show quick actions in sidebar
+      var qa = document.getElementById('quickActionsPanel');
+      if (qa) { qa.style.display = 'block'; qa.style.animation = 'fadeIn .3s ease'; }
+    }, 300);
+  }
 }
 
 function scrollBottom() {
