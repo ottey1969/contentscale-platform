@@ -274,7 +274,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
         <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
         <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
         <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ 📡 Deep Dive → Beat Rank 1</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ 📡 Deep Dive → Beat Rank 1 / New Page</div>
         <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker auto-monitors</div>
       </div>
     </div>
@@ -320,20 +320,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="welcome" id="welcomeScreen">
         <div class="welcome-icon">🧠</div>
         <div class="welcome-title"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div>
-        <div style="display:flex;gap:18px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
-          <div style="text-align:center;max-width:180px;">
+        <div style="display:flex;gap:14px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="text-align:center;max-width:160px;">
             <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">PULSE</div>
-            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, and competitors in real time.</div>
+            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, AI Overviews, AI systems and competitors in real time.</div>
           </div>
           <div style="width:1px;background:rgba(255,255,255,.08);"></div>
-          <div style="text-align:center;max-width:180px;">
+          <div style="text-align:center;max-width:160px;">
             <div style="font-size:11px;font-weight:800;color:#f56d00;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">NEXUS</div>
-            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward, builds a Deep Dive brief, and feeds it to AI to beat rank 1.</div>
+            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews reward, builds a Deep Dive brief and feeds it to AI to beat rank 1 or write new pages from scratch.</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;max-width:160px;">
+            <div style="font-size:11px;font-weight:800;color:#34d399;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">GRAAF ContentScore</div>
+            <div style="font-size:12px;color:#6b7280;">100-point scoring across GRAAF (50), CRAFT (30) and Technical (20) — scans every <strong>live</strong> page and tells you exactly what to fix.</div>
           </div>
         </div>
         <div class="welcome-starters">
           <button class="starter-btn" onclick="sendStarter(this)">I want to rank higher for a keyword</button>
+          <button class="starter-btn" onclick="sendStarter(this)">🔍 Scan my existing content</button>
           <button class="starter-btn" onclick="sendStarter(this)">📡 Deep Dive an existing page</button>
+          <button class="starter-btn" onclick="sendStarter(this)">✍️ Write a new page that ranks</button>
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
@@ -1311,7 +1318,10 @@ function sendStarter(btn) {
 
     'Help me get into AI Overviews':
       'I want ' + (domain || profileName) + ' to be cited in Google AI Overviews. ' +
-      'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.'
+      'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.',
+
+    '✍️ Write a new page that ranks': null, // handled separately below
+    '🔍 Scan my existing content': null  // handled separately below
   };
   // "Rewrite an existing page" — go to Tracker if GSC loaded, else explain
   if (label === '📡 Deep Dive an existing page') {
@@ -1324,6 +1334,29 @@ function sendStarter(btn) {
       userSend('I want to do a deep dive on an existing page to beat rank 1. I don\'t have GSC data loaded yet. What should I do first?');
       return;
     }
+  }
+
+  // "Scan my existing content" — simple scan, score + recs only, no follow-up
+  if (label === '🔍 Scan my existing content') {
+    window._simpleScanMode = true;
+    userSend('Which URL do you want to scan? Give me the full URL.');
+    return;
+  }
+
+  // "Write a new page" — find keyword gap, no existing URL needed
+  if (label === '✍️ Write a new page that ranks') {
+    var newPageMsg = 'I want to write a NEW page that ranks — no existing URL. ';
+    if (_gscPages && _gscPages.length) {
+      newPageMsg += 'I have ' + _gscPages.length + ' GSC pages loaded for ' + (domain || profileName) + '. ' +
+        'Look for keyword gaps: queries getting impressions but with NO matching page on my site. ' +
+        'Find the best opportunity for a new page, run [INTELLIGENCE] on that keyword, and build me a content brief. ' +
+        'This is NOT a rewrite — there is no existing page. The Deep Dive brief goes to an external AI to write from scratch.';
+    } else {
+      newPageMsg += 'I don\'t have GSC data yet. Ask me for a keyword I want to target, then run [RESEARCH] and [INTELLIGENCE] on it. ' +
+        'This is a NEW page — no existing URL to scan. Build me a complete content brief for an external AI to write.';
+    }
+    userSend(newPageMsg);
+    return;
   }
 
   // "How does the Tracker work?"
@@ -1358,6 +1391,15 @@ async function sendMessage() {
   input.value = '';
   autoResize(input);
   addUserMessage(text);
+  // Simple scan mode: user gave us a URL — scan it and stop
+  if (window._simpleScanMode) {
+    var _sUrl = text.match(/https?:\/\/[^\s]+/);
+    if (_sUrl) {
+      window._simpleScanMode = false;
+      cmdScanSimple(_sUrl[0]);
+      return;
+    }
+  }
   processUserInput(text);
 }
 
@@ -1391,7 +1433,7 @@ async function processUserInput(text) {
 
     // After Deep Dive response — inject Beat Rank 1 action card
     if (window._pendingDeepDive && window._lastSpyData) {
-      window._pendingDeepDive = false;
+    window._pendingDeepDive = false;
       var _dd = document.createElement('div');
       _dd.style.cssText = 'margin:8px 0 4px 44px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
       _dd.innerHTML =
@@ -1410,6 +1452,8 @@ async function processUserInput(text) {
         var label = c.cmd;
         if (c.cmd === 'SCAN' && c.args[0]) label = '🔍 Scan ' + (c.args[0].length > 30 ? c.args[0].substring(0, 30) + '…' : c.args[0]);
         if (c.cmd === 'META' && c.args[0]) label = '🏷 Meta: ' + c.args[0];
+        if (c.cmd === 'NEW_PAGE' && c.args[0]) label = '✍️ New Page: ' + c.args[0];
+        if (c.cmd === 'SCAN_SIMPLE' && c.args[0]) label = '🔍 Scan: ' + c.args[0];
         if (c.cmd === 'INTELLIGENCE' && c.args[0]) label = '🧠 Intel: ' + c.args[0];
         if (c.cmd === 'REWRITE' && c.args[0]) label = '✍ Rewrite ' + c.args[0];
         if (c.cmd === 'RESEARCH' && c.args[0]) label = '🔬 Research ' + c.args[0];
@@ -1471,8 +1515,10 @@ function buildSystemPrompt() {
 
 YOUR CAPABILITIES (you can trigger these with commands):
 - [SCAN url] — scan a page for GRAAF/CRAFT score + recommendations  
+- [SCAN_SIMPLE url] — simple scan: score + recommendations only, STOPS there. Use when _simpleScanMode is true. Fire immediately when user gives URL after clicking Scan my existing content.
 - [RESEARCH keyword profileId] — run keyword + competitor research
 - [INTELLIGENCE keyword url] — deep competitor content analysis + beat-them brief
+- [NEW_PAGE keyword] -- full new page: research + intelligence + action card (no existing URL, never use SCAN/ANALYSE)
 - [META keyword "current title"] — meta title + description research with CTR-optimized alternatives
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
 - [REWRITE id fixes] — apply targeted fixes. Use the EXACT rewrite ID number from the ANALYSE result above. NEVER use "123", "1234", or any placeholder — only the real ID the system gave you.
@@ -1488,6 +1534,17 @@ WHEN YOU RECEIVE A [SPY BRIEF]:
 - Keep response under 100 words. No padding.
 - After user picks A → run [ANALYSE url keyword]
 - After user picks B → run [ANALYSE url keyword] anyway but tell them you're using spy brief as the strategy
+
+NEW PAGE CREATION FLOW (no existing URL):
+- When the user wants to WRITE A NEW PAGE, there is NO existing URL to scan — [SCAN] and [ANALYSE] do NOT apply.
+- The correct flow is: [RESEARCH keyword profileId] → [INTELLIGENCE keyword targetUrl] → generate Master Brief → external AI writes the page from scratch.
+- When scanning GSC data for new page opportunities, look for KEYWORD GAPS: queries with impressions but no matching page on the site. These are the best new page candidates.
+- A keyword gap = impressions in GSC for a query, but no page on the domain targeting that exact query as primary keyword.
+- For new pages: run [INTELLIGENCE keyword] on the top competitor URL for that keyword — this tells you what the new page needs to beat rank 1.
+- Use [NEW_PAGE keyword] to trigger the full new page flow automatically
+- NEVER suggest [ANALYSE] or [SCAN] for a new page — those commands need an existing URL. Use [RESEARCH] and [INTELLIGENCE] instead.
+- After research is done, tell the user: 'Run Deep Dive to build the full brief, then use 🌐 Feed to External AI to create this page from scratch.'
+- The Deep Dive brief works for both EXISTING pages (supplement/improve) and NEW pages (create from scratch). Make clear which mode you're in.
 
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
@@ -1628,6 +1685,12 @@ async function executeCommand(cmd) {
       break;
     case 'META':
       await cmdMetaResearch(cmd.args[0], cmd.args[1]);
+      break;
+    case 'NEW_PAGE':
+      await cmdNewPage(cmd.args[0]);
+      break;
+    case 'SCAN_SIMPLE':
+      await cmdScanSimple(cmd.args[0]);
       break;
   }
 }
@@ -1933,17 +1996,7 @@ async function cmdScan(url) {
   var prog = addProgress('Scanning ' + url.replace(/^https?:\/\//,'') + '…', 0);
   try {
     setProgress(prog, 40);
-    var r = await fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url })
-    });
-    if (!r.ok) {
-      var errBody = await r.json().catch(function(){ return { error: 'Server error ' + r.status }; });
-      throw new Error(errBody.error || errBody.details || 'Scan failed (HTTP ' + r.status + ')');
-    }
-    var d = await r.json();
-
+    var d = await api('/api/scan', 'POST', { url: url }); // api() includes engine token
     setProgress(prog, 100);
     removeProgress(prog);
 
@@ -1953,10 +2006,8 @@ async function cmdScan(url) {
     _context.recs = parseRecs(d.recommendations);
     updateContext();
 
-    // Render scan results in chat
     addScanResult(d);
 
-    // Now ask agent to interpret — PASS THE ACTUAL SCAN DATA
     var scanReport = '[SYSTEM: Scan completed for ' + url + ']\n\n' +
       'SCORE: ' + d.score + '/100\n' +
       'QUALITY: ' + (d.quality || 'N/A') + '\n' +
@@ -1979,19 +2030,15 @@ async function cmdScan(url) {
     ]);
     addAgentMessage(interp);
 
-    // Auto-chain: if keyword is set, auto-run intelligence + show buttons
     var kw = _context.keyword || '';
     if (kw) {
       addAgentMessage('🔄 Auto-running intelligence for "' + kw + '"…');
-      setTimeout(function() {
-        executeCommand({cmd:'INTELLIGENCE', args:[kw, url]});
-      }, 500);
+      setTimeout(function() { executeCommand({cmd:'INTELLIGENCE', args:[kw, url]}); }, 500);
     }
-    // Always show follow-up buttons
     var followUp = [
-      { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run intelligence.'); } },
-      { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run meta research.'); } },
-      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } }
+      { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first, then run intelligence.'); } },
+      { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first, then run meta research.'); } },
+      { label: '✍ Deep Dive → Agent', fn: function(){ openRewriteModal(); } }
     ];
     addActions(followUp);
 
@@ -1999,6 +2046,96 @@ async function cmdScan(url) {
     removeProgress(prog);
     addAgentMessage('Scan failed: ' + e.message + '. Can you check the URL is accessible?');
   }
+}
+
+// Simple scan — score + recommendations only, no follow-up (used by "Scan my existing content" button)
+async function cmdScanSimple(url) {
+  if (!url || url.length < 5) { addAgentMessage('Please provide a valid URL to scan.'); return; }
+  _context.url = url;
+  var prog = addProgress('Scanning ' + url.replace(/^https?:\/\//,'') + '…', 0);
+  try {
+    setProgress(prog, 40);
+    var d = await api('/api/scan', 'POST', { url: url });
+    setProgress(prog, 100);
+    removeProgress(prog);
+    if (!d || !d.score) throw new Error('Scan returned no score');
+    _context.score = d.score;
+    _context.recs = parseRecs(d.recommendations);
+    updateContext();
+    addScanResult(d); // score + full recommendations — done
+  } catch(e) {
+    removeProgress(prog);
+    addAgentMessage('Scan failed: ' + e.message + '. Can you check the URL is accessible?');
+  }
+}
+
+// NEW PAGE - full creation flow (no existing URL)
+async function cmdNewPage(keyword) {
+  if (!keyword) { addAgentMessage('I need a keyword. Example: [NEW_PAGE roof leak repair New Jersey]'); return; }
+  _context.keyword = keyword;
+  window._newPageMode = true;
+  window._lastSpyKeyword = keyword;
+  window._lastSpyUrl = '';
+
+  // Step 1: Research
+  var prog1 = addProgress('New page research: "' + keyword + '" - scanning top 10, PAA, AI Overviews...', 0);
+  var pid = _context.profileId || (_profiles && _profiles.length && _profiles[0].id) || null;
+  var researchResult = null;
+  try {
+    if (pid) {
+      var startResp = await api('/api/content/research', 'POST', { profile_id: pid, seed_keyword: keyword });
+      if (startResp.success) {
+        var jobId = startResp.job_id || (startResp.job && startResp.job.id);
+        for (var i = 0; i < 45; i++) {
+          await sleep(2000);
+          setProgress(prog1, Math.min(10 + i * 2, 70));
+          var poll = await api('/api/content/research/' + jobId);
+          if (poll.status === 'completed') { researchResult = poll.research || poll.result; break; }
+          if (poll.status === 'error') break;
+        }
+      }
+    }
+    setProgress(prog1, 90);
+    if (researchResult) { addResearchResult(researchResult); _context.research = researchResult; }
+    setProgress(prog1, 100); removeProgress(prog1);
+  } catch(e) { removeProgress(prog1); }
+
+  // Step 2: Intelligence on top competitor
+  var prog2 = addProgress('Analysing rank 1 for "' + keyword + '" - building beat-them brief...', 0);
+  try {
+    await cmdIntelligence(keyword, '');
+    setProgress(prog2, 100); removeProgress(prog2);
+  } catch(e) { removeProgress(prog2); }
+
+  // Step 3: Action card
+  var actionDiv = document.createElement('div');
+  actionDiv.style.cssText = 'margin:10px 0 4px 44px;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;padding:14px 16px;';
+  actionDiv.innerHTML =
+    '<div style="font-size:11px;font-weight:800;color:#38bdf8;margin-bottom:4px;letter-spacing:.04em;">NEW PAGE - "' + escHtml(keyword) + '"</div>' +
+    '<div style="font-size:11px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">Research + competitor intelligence complete. Next: Spy rank 1 then Deep Dive then Feed to External AI to write from scratch.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    '<button onclick="openNewPageSpy()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">Spy Rank 1 - Deep Dive</button>' +
+    '<button onclick="copyMasterBrief()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07);color:#34d399;font-size:11px;font-weight:700;cursor:pointer;">Feed to External AI</button>' +
+    '</div>';
+  var msgs = document.getElementById('messages');
+  if (msgs) msgs.appendChild(actionDiv);
+  scrollBottom();
+  updateContext();
+}
+
+function openNewPageSpy() {
+  var kw = window._lastSpyKeyword || _context.keyword || '';
+  if (!kw) { toast('No keyword set - run New Page research first', 'warn'); return; }
+  var modal = document.getElementById('serpSpyModal');
+  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
+  document.getElementById('serpSpyKeyword').value = kw;
+  document.getElementById('serpSpyUrl').value = '';
+  document.getElementById('serpSpyResult').innerHTML =
+    '<div style="padding:12px 16px;background:rgba(14,165,233,.06);border-radius:8px;border-left:3px solid #38bdf8;font-size:11px;color:#93c5fd;margin-bottom:12px;"><strong>New Page Mode</strong> - No existing URL. Spy analyses rank 1 and builds a creation brief.</div>';
+  document.getElementById('serpSpyStatus').textContent = '';
+  window._serpSpyAction = 'rewrite';
+  window._newPageMode = true;
+  modal.style.display = 'flex';
 }
 
 async function cmdResearch(keyword, profileId) {
