@@ -2062,7 +2062,7 @@ async function cmdScan(url) {
     var followUp = [
       { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first, then run intelligence.'); } },
       { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first, then run meta research.'); } },
-      { label: '✍ Deep Dive → Agent', fn: function(){ openRewriteModal(); } }
+      { label: '📡 Deep Dive → Agent', fn: function(){ openSerpSpy(_serpSpyPageId || null); } }
     ];
     addActions(followUp);
 
@@ -2338,7 +2338,7 @@ async function cmdMetaResearch(keyword, currentTitle) {
     // Auto-chain: show follow-up action buttons
     var followUp = [
       { label: '🧠 Intelligence: ' + keyword, fn: function(){ executeCommand({cmd:'INTELLIGENCE',args:[keyword,'']}); } },
-      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } }
+      { label: '📡 Deep Dive → Agent', fn: function(){ trPushToAgent && window._lastSpyPageId ? trPushToAgent(window._lastSpyPageId) : userSend('Deep dive this page'); } }
     ];
     addActions(followUp);
 
@@ -2350,6 +2350,8 @@ async function cmdMetaResearch(keyword, currentTitle) {
 
 async function cmdIntelligence(keyword, url) {
   if (!keyword) { addAgentMessage('I need a keyword to run content intelligence. What keyword should I analyze?'); return; }
+  // Strip Google search URLs and other non-page URLs — pass nothing if no real client page exists
+  if (url && (url.indexOf('google.com/search') > -1 || url.indexOf('google.com/?') > -1 || url.trim() === '')) url = '';
 
   var prog = addProgress('Running content intelligence on "' + keyword + '" — analyzing top 10 competitors, content gaps, and generating beat-them brief…', 0);
   try {
@@ -2511,11 +2513,15 @@ async function cmdIntelligence(keyword, url) {
     addAgentMessage(summary);
 
     // Auto-chain: show follow-up action buttons
+    var _isNewPage = window._newPageMode || !url || url.indexOf('google.com/search') > -1;
     var followUp = [
       { label: '🏷 Meta Research: ' + keyword, fn: function(){ executeCommand({cmd:'META',args:[keyword,'']}); } },
-      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } },
-      { label: '📊 Scan: ' + (url || ''), fn: function(){ if(url) executeCommand({cmd:'SCAN',args:[url]}); } }
+      _isNewPage
+        ? { label: '🌐 Feed to External AI', fn: function(){ copyMasterBrief(); } }
+        : { label: '✍ Deep Dive This Page', fn: function(){ openRewriteModal(); } }
     ];
+    // Only add Scan button if real page URL exists
+    if (!_isNewPage && url) followUp.push({ label: '📊 Scan: ' + url.replace(/^https?:\/\//,'').split('/')[0], fn: function(){ executeCommand({cmd:'SCAN',args:[url]}); } });
     addActions(followUp);
 
   } catch(e) {
