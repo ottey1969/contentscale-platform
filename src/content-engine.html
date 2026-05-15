@@ -271,11 +271,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="sidebar-section" style="padding-bottom:4px;">
       <div class="sidebar-label">How it works</div>
       <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.5;">
-        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
-        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
-        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ 📡 Deep Dive → Beat Rank 1 / New Page</div>
-        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker auto-monitors</div>
+        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Connect → select profile</div>
+        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → Import GSC</div>
+        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy → 📡 Deep Dive (existing)</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ ✍️ Research → Spy → Brief (new)</div>
+        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ 🌐 Feed External AI → Publish</div>
       </div>
     </div>
 
@@ -1145,6 +1145,7 @@ function onProfileSwitch() {
   var id = sel && sel.value;
   if (!id) return;
   _profile = _allProfiles.find(function(p) { return String(p.id) === String(id); }) || null;
+  window._profile = _profile; // expose for copyMasterBrief
   if (!_profile) return;
 
   _context.profileId = _profile.id;
@@ -1281,9 +1282,25 @@ function agentGreet() {
       { label: 'Something else', fn: function(){ document.getElementById('chatInput').focus(); } }
     ]);
   } else if (profileLine) {
-    greeting = 'Connected — working with ' + profileLine + '.\n\n' +
-      'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks. ' +
-      'Or tell me what we\'re working on — a page to rewrite, a keyword to target, or a content cluster to build.\n\nWhat are we working on?';
+    // Build profile info block — critical for posts and schema
+    var _pInfo = [];
+    if (_profile.niche)            _pInfo.push('🏷 <strong>Niche:</strong> ' + escHtml(_profile.niche));
+    if (_profile.geo_focus)        _pInfo.push('📍 <strong>Geo:</strong> ' + escHtml(_profile.geo_focus));
+    if (_profile.target_audience)  _pInfo.push('👥 <strong>Audience:</strong> ' + escHtml(_profile.target_audience));
+    if (_profile.primary_goal)     _pInfo.push('🎯 <strong>Goal:</strong> ' + escHtml(_profile.primary_goal));
+    if (_profile.author_name)      _pInfo.push('✍️ <strong>Author:</strong> ' + escHtml(_profile.author_name) + (_profile.author_location ? ' · ' + escHtml(_profile.author_location) : ''));
+    if (_profile.unique_selling_points) _pInfo.push('⚡ <strong>USPs:</strong> ' + escHtml(String(_profile.unique_selling_points).substring(0,120)) + '…');
+    if (_profile.service_areas)    _pInfo.push('🌍 <strong>Service areas:</strong> ' + escHtml(String(_profile.service_areas).substring(0,100)));
+    if (_profile.guarantee)        _pInfo.push('🛡 <strong>Guarantee:</strong> ' + escHtml(String(_profile.guarantee).substring(0,100)));
+    if (_profile.schema_type)      _pInfo.push('🏗 <strong>Schema:</strong> ' + escHtml(_profile.schema_type));
+    if (_profile.years_experience) _pInfo.push('📅 <strong>Experience:</strong> ' + escHtml(String(_profile.years_experience)) + ' years');
+    if (_profile.certifications)   _pInfo.push('🎓 <strong>Certifications:</strong> ' + escHtml(String(_profile.certifications).substring(0,100)));
+    var _pBlock = _pInfo.length
+      ? '\n\n<div style="background:rgba(167,139,250,.07);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:10px 14px;margin:6px 0;font-size:11px;line-height:1.8;">' + _pInfo.join('<br>') + '</div>'
+      : '';
+    greeting = 'Connected — working with ' + profileLine + '.' + _pBlock + '\n\n' +
+      (hasGSC ? '' : 'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks.\n\n') +
+      'This profile context is used for all content, posts and schema. What are we working on?';
   } else {
     greeting = '👋 Welcome! I\'m your SEO content agent for ContentScale.\n\n'
       + '<strong>⚠️ Please select a profile from the dropdown above</strong> to load your business context, GSC data, and memory.\n\n'
@@ -1471,7 +1488,11 @@ async function processUserInput(text) {
     }
 
     // Execute any commands automatically + show clickable buttons for them
-    if (parsed.commands.length && !window._newPageAutoMode) {
+    // Also suppress if research/intelligence already running (_newPageAutoMode)
+    // or if the commands duplicate what cmdNewPage already ran
+    var _autoBlocked = window._newPageAutoMode || 
+      (window._newPageMode && parsed.commands.some(function(c){ return ['RESEARCH','INTELLIGENCE','NEW_PAGE'].indexOf(c.cmd) > -1; }));
+    if (parsed.commands.length && !_autoBlocked) {
       var cmdButtons = parsed.commands.map(function(c) {
         var label = c.cmd;
         if (c.cmd === 'SCAN' && c.args[0]) label = '🔍 Scan ' + (c.args[0].length > 30 ? c.args[0].substring(0, 30) + '…' : c.args[0]);
@@ -1609,12 +1630,20 @@ ${(function() {
   if (p.owner_name) out += ' | Owner: ' + p.owner_name;
   if (p.years_experience) out += ' | Experience: ' + p.years_experience;
   if (p.guarantee) out += '\nGuarantee: ' + p.guarantee;
-  if (p.review_score) out += ' | Reviews: ' + p.review_score + '★ (' + (p.review_count||0) + ')';
-  if (p.unique_selling_points) out += '\nUSPs: ' + p.unique_selling_points;
-  if (p.certifications) out += '\nCerts: ' + p.certifications;
-  if (p.service_areas) out += '\nService areas: ' + p.service_areas;
-  if (p.schema_type) out += ' | Schema: ' + p.schema_type;
+  if (p.review_score) out += ' | Reviews: ' + p.review_score + '\u2605 (' + (p.review_count||0) + ')';
+  if (p.geo_focus) out += '\nGeo focus: ' + p.geo_focus;
+  if (p.target_audience) out += '\nTarget audience: ' + p.target_audience;
+  if (p.primary_goal) out += '\nPrimary goal: ' + p.primary_goal;
+  if (p.unique_selling_points) out += '\nUSPs (use in content):\n' + p.unique_selling_points;
+  if (p.certifications) out += '\nCertifications (use in schema + E-E-A-T):\n' + p.certifications;
+  if (p.service_areas) out += '\nService areas (use in LocalBusiness schema + geo content):\n' + p.service_areas;
+  if (p.schema_type) out += '\nPrimary schema type: ' + p.schema_type;
+  if (p.author_name) out += '\nAuthor: ' + p.author_name + (p.author_location ? ' (' + p.author_location + ')' : '');
+  if (p.author_bio) out += '\nAuthor bio (use in Article schema + E-E-A-T block): ' + p.author_bio;
+  if (p.business_info) out += '\nBusiness info: ' + p.business_info;
+  if (p.faq) out += '\nFAQ data (include in FAQPage schema): ' + p.faq;
   if (p.html_template) out += '\nHTML template: YES (' + Math.round(p.html_template.length/1024) + 'kb) — use this template layout when asked to write on template';
+  out += '\n\nIMPORTANT: Use ALL profile fields above in content, schema markup, and E-E-A-T signals. Service areas go in LocalBusiness schema. USPs go in the intro and meta. Certifications go in author block and schema. Guarantee goes in trust signals and FAQ.';
   return out;
 })()}`;
 }
@@ -2156,10 +2185,11 @@ async function cmdNewPage(keyword) {
       document.getElementById('messages').appendChild(_sDiv);
       scrollBottom();
     }
-  } catch(e) { removeProgress(prog3); }
+  } catch(e) { removeProgress(prog3); console.warn('[new page spy failed]', e && e.message); }
 
-  // All done — show single action button
+  // All done — show done card, clear auto flags
   window._newPageAutoMode = false;
+  window._newPageMode = false; // prevent agent re-triggering research
   var _doneDiv = document.createElement('div');
   _doneDiv.style.cssText = 'margin:10px 0 4px 44px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:14px 16px;';
   _doneDiv.innerHTML =
@@ -4540,6 +4570,7 @@ function useProfileFromList(profileId) {
     var p = _allProfiles.find(function(x){ return String(x.id) === String(profileId); });
     if (p) {
       _profile = p;
+      window._profile = _profile;
       _context.profileId = p.id;
       var sel = document.getElementById('profileSelect');
       if (sel) sel.value = String(p.id);
@@ -4796,6 +4827,7 @@ async function saveProfile() {
     // If new profile, switch to it automatically
     if (!_editingProfileId && d.profile) {
       _profile = d.profile;
+      window._profile = _profile;
       _context.profileId = d.profile.id;
       var sel = document.getElementById('profileSelect');
       if (sel) { sel.value = String(d.profile.id); }
@@ -6706,7 +6738,31 @@ function copyMasterBrief() {
   var quickWins = (spy.quick_wins || []).slice(0,5)
     .map(function(w){ return '• '+(w.win||w); }).join('\n');
 
+  // Business profile block for schemas and content
+  var _p = window._profile || _profile || {};
+  var profileBlock = '';
+  if (_p && (_p.name || _p.domain)) {
+    profileBlock = [
+      '━━━ BUSINESS PROFILE (use in ALL schema & content) ━━━━━━━━━━━━',
+      _p.name             ? 'Business name: ' + _p.name : '',
+      _p.domain           ? 'Domain: ' + _p.domain : '',
+      _p.niche            ? 'Niche: ' + _p.niche : '',
+      _p.geo_focus        ? 'Target geo: ' + _p.geo_focus : '',
+      _p.schema_type      ? 'Schema type: ' + _p.schema_type : '',
+      _p.author_name      ? 'Author: ' + _p.author_name + (_p.author_location ? ', ' + _p.author_location : '') : '',
+      _p.years_experience ? 'Years in business: ' + _p.years_experience : '',
+      _p.certifications   ? 'Certifications: ' + _p.certifications : '',
+      _p.service_areas    ? 'Service areas: ' + _p.service_areas : '',
+      _p.guarantee        ? 'Guarantee: ' + _p.guarantee : '',
+      _p.unique_selling_points ? 'Unique selling points:\n' + _p.unique_selling_points : '',
+      _p.target_audience  ? 'Target audience: ' + _p.target_audience : '',
+      _p.primary_goal     ? 'Primary goal: ' + _p.primary_goal : '',
+      'INSTRUCTION: Replace [Your Company Name] with the business name above. Use geo in LocalBusiness schema.'
+    ].filter(Boolean).join('\n');
+  }
+
   var prompt = [
+    profileBlock ? profileBlock + '\n' : '',
 '╔══════════════════════════════════════════════════════════════════╗',
 '  CONTENTSCALE MASTER BRIEF — PUBLISH-READY CONTENT REQUEST',
 '  Generated by ContentScale PULSE + NEXUS · GRAAF Framework',
