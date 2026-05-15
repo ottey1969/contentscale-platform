@@ -6690,7 +6690,7 @@ function copyAgentOutput() {
 }
 
 // ── MASTER BRIEF — complete external AI feed (paste into Claude/ChatGPT) ──────
-function copyMasterBrief() {
+async function copyMasterBrief() {
   var spy  = window._lastSpyData;
   var kw   = window._lastSpyKeyword || _context.keyword || '';
   var url  = window._lastSpyUrl || _context.url || '';
@@ -6699,6 +6699,21 @@ function copyMasterBrief() {
   // Allow brief from intelligence data even without spy
   var hasIntel = _context.research || window._lastIntelligence;
   if (!spy && !hasIntel && !kw) { toast('Run Intelligence or Spy + Deep Dive first', 'warn'); return; }
+
+  // Auto-scan the URL if we have one and no scan data yet
+  var scanData = null;
+  if (url && (_context.score === null || _context.score === undefined)) {
+    try {
+      toast('Scanning page for ContentScore...', 2000);
+      scanData = await api('/api/scan', 'POST', { url: url });
+      if (scanData && scanData.score) {
+        _context.score = scanData.score;
+        _context.recs  = parseRecs(scanData.recommendations);
+      }
+    } catch(e) { console.warn('[copyMasterBrief] scan failed:', e.message); }
+  } else if (_context.score) {
+    scanData = { score: _context.score, recommendations: _context.recs };
+  }
 
   // Pull last agent output (the deep dive analysis)
   var agentOutput = '';
@@ -6743,6 +6758,34 @@ function copyMasterBrief() {
     .map(function(w){ return '• '+(w.win||w); }).join('\n');
 
   // Business profile block for schemas and content
+// GRAAF ContentScore audit section
+  var _scanSection = '';
+  if (scanData && scanData.score) {
+    var _recs = parseRecs(scanData.recommendations || _context.recs || []);
+    var _highRecs = _recs.filter(function(r){ return (r.priority||'').toLowerCase() === 'high'; }).slice(0,6);
+    var _medRecs  = _recs.filter(function(r){ return (r.priority||'').toLowerCase() === 'medium'; }).slice(0,4);
+    var _allRecs  = _highRecs.concat(_medRecs);
+    _scanSection = [
+      '━━━ CURRENT PAGE AUDIT (GRAAF ContentScore) ━━━━━━━━━━━━━━━━━━━━━',
+      'URL: ' + url,
+      'ContentScore: ' + scanData.score + '/100',
+      (scanData.metrics ? 'GRAAF: ' + (scanData.metrics.graaf||0) + '/50 | CRAFT: ' + (scanData.metrics.craft||0) + '/30 | Technical: ' + (scanData.metrics.technical||0) + '/20' : ''),
+      (scanData.content_stats ? 'Words: ' + (scanData.content_stats.total_words||0) + ' | H2s: ' + (scanData.content_stats.headings||0) + ' | Images: ' + (scanData.content_stats.images||0) : ''),
+      '',
+      'WHAT TO FIX (priority order):',
+      _allRecs.length ? _allRecs.map(function(r,i){
+        var t = r.title || r.description || r.name || '';
+        var a = r.action || r.fix || r.recommendation || '';
+        var im = r.expected_impact || '';
+        return (i+1) + '. [' + (r.priority||'?').toUpperCase() + '] ' + t + (a ? ' → ' + a : '') + (im ? ' (Impact: ' + im + ')' : '');
+      }).join('\n') : 'No recommendations available',
+      '',
+      'INSTRUCTION: The external AI MUST fix ALL issues listed above in the new content.',
+      'Do not just write new content — ensure every recommendation above is addressed.',
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+    ].filter(Boolean).join('\n');
+  }
+
   var _p = window._profile || _profile || {};
   var profileBlock = '';
   if (_p && (_p.name || _p.domain)) {
@@ -6816,7 +6859,7 @@ aiBlueprint || '—',
 (intelPriority ? '━━━ PRIORITY ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : ''),
 (intelPriority ? intelPriority : ''),
 '',
-'━━━ SCORING FRAMEWORK (GRAAF + CRAFT + TECHNICAL) ━━━━━━━━━━━━━━━',
+  '━━━ SCORING FRAMEWORK (GRAAF + CRAFT + TECHNICAL) ━━━━━━━━━━━━━━━',
 'The output must score 85+/100 on this system:',
 '',
 'GRAAF (50 pts) — Genuinely Credible, Relevant, Actionable, Accurate, Fresh:',
@@ -6877,6 +6920,7 @@ aiBlueprint || '—',
 'OUTPUT FORMAT: Valid HTML only. No markdown. No explanations outside the HTML.',
 'Start with <!DOCTYPE html> and end with </html>.',
 'The content should beat rank 1 by covering what they miss, not by copying them.',
+    _scanSection ? '\n' + _scanSection : ''
 ].join('\n');
 
   navigator.clipboard.writeText(prompt).then(function() {
