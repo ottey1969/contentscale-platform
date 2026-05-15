@@ -1588,7 +1588,8 @@ NEW PAGE CREATION FLOW (no existing URL):
 - For new pages: run [INTELLIGENCE keyword] on the top competitor URL for that keyword — this tells you what the new page needs to beat rank 1.
 - Use [NEW_PAGE keyword] to trigger the full new page flow automatically
 - NEVER suggest [ANALYSE] or [SCAN] for a new page — those commands need an existing URL. Use [RESEARCH] and [INTELLIGENCE] instead.
-- After research is done, tell the user: 'Run Deep Dive to build the full brief, then use 🌐 Feed to External AI to create this page from scratch.'
+- After [RESEARCH] and [INTELLIGENCE] complete, the brief IS DONE. Tell the user exactly this: 'Your brief is complete — click 🌐 Feed to External AI to copy it and paste into Claude.ai to write the full page.' Then STOP. Do NOT ask A or B. Do NOT suggest more steps. Do NOT offer to run [NEW_PAGE]. The intelligence output IS the brief.
+- NEVER ask A or B questions after intelligence completes for a new page. The user has everything they need.
 - The Deep Dive brief works for both EXISTING pages (supplement/improve) and NEW pages (create from scratch). Make clear which mode you're in.
 
 YOUR BEHAVIOUR:
@@ -2571,14 +2572,14 @@ async function cmdIntelligence(keyword, url) {
     window._lastSpyKeyword = keyword;
     // Auto-chain: show follow-up action buttons
     var _isNewPage = window._newPageMode || !url || url.indexOf('google.com/search') > -1;
-    var followUp = [
-      { label: '🏷 Meta Research: ' + keyword, fn: function(){ executeCommand({cmd:'META',args:[keyword,'']}); } },
-      _isNewPage
-        ? { label: '🌐 Feed to External AI', fn: function(){ copyMasterBrief(); } }
-        : { label: '✍ Deep Dive This Page', fn: function(){ openRewriteModal(); } }
-    ];
-    // Only add Scan button if real page URL exists
-    if (!_isNewPage && url) followUp.push({ label: '📊 Scan: ' + url.replace(/^https?:\/\//,'').split('/')[0], fn: function(){ executeCommand({cmd:'SCAN',args:[url]}); } });
+    var followUp = [];
+    if (_isNewPage) {
+      followUp.push({ label: '🌐 Copy Master Brief → External AI', fn: function(){ copyMasterBrief(); } });
+    } else {
+      followUp.push({ label: '🏷 Meta Research: ' + keyword, fn: function(){ executeCommand({cmd:'META',args:[keyword,'']}); } });
+      followUp.push({ label: '📡 Deep Dive This Page', fn: function(){ openRewriteModal(); } });
+      if (url) followUp.push({ label: '📊 Scan: ' + url.replace(/^https?:\/\//,'').split('/')[0], fn: function(){ executeCommand({cmd:'SCAN',args:[url]}); } });
+    }
     addActions(followUp);
 
   } catch(e) {
@@ -6712,7 +6713,8 @@ function copyMasterBrief() {
   var wordCount = (spy && spy.content_brief && spy.content_brief.recommended_word_count) || intelBrief.target_word_count || '';
   var aiBlueprint = (spy && spy.ai_overview_blueprint) || '';
   var clientGap = (spy && spy.client_vs_best) || '';
-  var aiCit     = spy && spy._client_ai_citation;
+  if (!clientGap || clientGap === 'no client URL') clientGap = '';
+  var aiCit     = spy ? spy._client_ai_citation : null;
   // Intelligence-only additions
   var intelH2s  = (intelBrief.recommended_h2s || []).join('\n');
   var intelTopics = (intelBrief.topics_to_cover || []).join('\n');
@@ -6732,10 +6734,10 @@ function copyMasterBrief() {
   var competitors = ((spy && spy.step1_serp) || (intel.competitors || []).map(function(c){ return {title:c.title,url:c.url}; })).slice(0,5)
     .map(function(c,i){ return (i+1)+'. '+( c.title||'')+' — '+(c.url||''); }).join('\n');
 
-  var missing = (spy.step4_missing || []).slice(0,4)
-    .map(function(m){ return '• '+(m.gap||'')+' → '+(m.how_to_exploit||''); }).join('\n');
+  var missing = ((spy && spy.step4_missing) || intel.content_gaps && intel.content_gaps.slice(0,4).map(function(g){return{gap:g,how_to_exploit:''};}) || []).slice(0,4)
+    .map(function(m){ return '• '+(m.gap||m||'')+((m.how_to_exploit)?' → '+m.how_to_exploit:''); }).join('\n');
 
-  var quickWins = (spy.quick_wins || []).slice(0,5)
+  var quickWins = ((spy && spy.quick_wins) || []).slice(0,5)
     .map(function(w){ return '• '+(w.win||w); }).join('\n');
 
   // Business profile block for schemas and content
