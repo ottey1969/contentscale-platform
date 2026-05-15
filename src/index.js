@@ -12503,7 +12503,7 @@ Return ONLY this JSON (fill every field with real, sourced content):
     console.log(`[research job ${jobId}] calling Gemini with ${webResults.length} web results...`);
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096 } }
+      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }
     );
     console.log(`[research job ${jobId}] Gemini: ok=${gemResult.ok} status=${gemResult.status}`);
     if (!gemResult.ok) throw new Error('Gemini failed: ' + (gemResult.errorMessage || gemResult.status));
@@ -12513,9 +12513,26 @@ Return ONLY this JSON (fill every field with real, sourced content):
 
     let keywordData = extractJsonFromText(rawText);
     if (!keywordData) {
-      console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
-      throw new Error('Keyword research: AI returned truncated or invalid JSON — try again.');
+      // Try to repair truncated JSON by finding last valid field and closing braces
+      try {
+        const startBrace = rawText.indexOf('{');
+        if (startBrace > -1) {
+          let partial = rawText.slice(startBrace);
+          // Count unclosed braces and arrays, close them
+          let braces = 0, brackets = 0;
+          for (const ch of partial) { if (ch==='{') braces++; else if (ch==='}') braces--; else if (ch==='[') brackets++; else if (ch===']') brackets--; }
+          partial = partial.trimEnd().replace(/,\s*$/, '');
+          while (brackets > 0) { partial += ']'; brackets--; }
+          while (braces > 0) { partial += '}'; braces--; }
+          keywordData = JSON.parse(partial);
+          console.log('[research job ' + jobId + '] Repaired truncated JSON OK');
+        }
+      } catch(repairErr) {
+        console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
+        throw new Error('Keyword research: AI returned truncated or invalid JSON — try again.');
+      }
     }
+    if (!keywordData) throw new Error('Keyword research: AI returned truncated or invalid JSON — try again.');
     console.log(`[research job ${jobId}] parsed: pk=${keywordData.primary_keyword||'N/A'}`);
 
     // Track cost
