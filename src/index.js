@@ -23815,7 +23815,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     let refreshBrief = null;
     if (gemResp.ok) {
       let text = gemResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      text = text.replace(/^```json\n?/i, '').replace(/```\s*$/, '').trim();
+      if(text.startsWith('\u0060\u0060\u0060')) { var nl=text.indexOf('\n'); text=nl>-1?text.slice(nl+1):text; }
+      if(text.endsWith('\u0060\u0060\u0060')) text=text.slice(0,text.lastIndexOf('\u0060\u0060\u0060')).trim();
+      text=text.trim();
       const match = text.match(/\{[\s\S]*\}/);
       if (match) {
         try { refreshBrief = JSON.parse(match[0]); } catch(e) { refreshBrief = { raw: text.substring(0, 1000) }; }
@@ -23824,7 +23826,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
     // Record the refresh request
     await pool.query(
-      `UPDATE tracker_classifications SET triggered_rewrite=TRUE, triggered_rewrite_at=NOW() WHERE page_id=$1 AND triggered_rewrite=FALSE`,
+      'UPDATE tracker_classifications SET triggered_rewrite=TRUE, triggered_rewrite_at=NOW() WHERE page_id=$1 AND triggered_rewrite=FALSE',
       [pageId]
     ).catch(()=>{});
 
@@ -23841,6 +23843,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     res.status(500).json({ success: false, error: e.message });
   }
 });
+`;
 
 // ── Push to Rewrite (pre-fills Rewrite tab with current data) ────────────────
 app.post('/api/tracker/pages/:id/push-to-rewrite', verifyEngineAccess, async (req, res) => {
