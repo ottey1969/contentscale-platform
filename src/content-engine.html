@@ -2158,7 +2158,9 @@ async function cmdNewPage(keyword) {
   // Step 2: Intelligence (silent — no agent call, no extra buttons)
   var prog2 = addProgress('Step 2/3: Competitor intelligence for "' + keyword + '"...', 0);
   try {
-    var intelData = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword));
+    var _geo2 = (_profile && _profile.geo_focus) || '';
+    var _geoQ2 = _geo2 ? '&location=' + encodeURIComponent(_geo2) : '';
+    var intelData = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + _geoQ2);
     setProgress(prog2, 100); removeProgress(prog2);
     if (intelData && intelData.success) {
       window._lastIntelligence = intelData;
@@ -2410,7 +2412,7 @@ async function cmdIntelligence(keyword, url) {
 
   var prog = addProgress('Running content intelligence on "' + keyword + '" — analyzing top 10 competitors, content gaps, and generating beat-them brief…', 0);
   try {
-    var data = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
+    var _geo = (_profile && _profile.geo_focus) || ''; var _geoQ = _geo ? '&location=' + encodeURIComponent(_geo) : ''; var data = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : '') + _geoQ);
     if (!data.success) throw new Error(data.error || 'Intelligence failed');
 
     setProgress(prog, 50);
@@ -5445,7 +5447,7 @@ async function runRewriteFromModal() {
       setProgress(prog, 55);
       addAgentMessage('🔬 Fetching competitive intelligence for ' + modeNames + '…');
       try {
-        var intel = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
+        var _geo = (_profile && _profile.geo_focus) || ''; var _geoQ = _geo ? '&location=' + encodeURIComponent(_geo) : ''; var intel = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : '') + _geoQ);
         if (intel && intel.success) {
           intelContext = intel;
           _context.intelBrief = intel.intelligence_brief;

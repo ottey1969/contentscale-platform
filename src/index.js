@@ -188,9 +188,9 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   const FALLBACK = fallbackModel || 'gemini-2.5-flash-lite';
   const primary = primaryModel || GEMINI_MODEL;
   const shouldRetry = (status, errMsg) => {
-    if (status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true;
+    if (status === 0 || status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true; // 0 = network/fetch error
     const m = (errMsg || '').toLowerCase();
-    return m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota') || m.includes('timeout') || m.includes('timed out');
+    return m.includes('fetch failed') || m.includes('network') || m.includes('econnreset') || m.includes('enotfound') || m.includes('socket') || m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota') || m.includes('timeout') || m.includes('timed out');
   };
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -290,7 +290,6 @@ async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, cl
     return text;
   } catch(e) { clearTimeout(timer); throw e; }
 }
-
 
 
 // Auto-split long paragraphs — enforces max 2 sentences per <p>
@@ -2786,22 +2785,22 @@ app.post('/api/scan/paste', async (req, res) => {
   if (!html || html.length < 100) {
     return res.status(400).json({ success: false, error: 'HTML too short or missing' });
   }
-  
+
   try {
     // Create a virtual DOM analysis using the same scoring logic
     // We simulate what the browser evaluate() returns
     const scanUrl = labelUrl || 'pasted-html';
-    
+
     // Parse HTML with cheerio-like regex (fast, no extra dependency)
     const rawHtml = html;
     const textMatch = rawHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     const bodyHtml = textMatch ? textMatch[1] : rawHtml;
-    
+
     // Strip tags to get text content
     const stripTags = (str) => str.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const cleanText = stripTags(bodyHtml);
     const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-    
+
     // Count headings
     const h1Matches = [...rawHtml.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
     const h1Count = h1Matches.length;
@@ -2810,32 +2809,32 @@ app.post('/api/scan/paste', async (req, res) => {
     const h1IsGeneric = h1Text.length > 0 && ['welcome','home','hello','untitled','page','index','main','default'].includes(h1Text.toLowerCase().trim());
     const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
     const h1IsTooLong = h1Text.length > 70;
-    
+
     const h2Count = ([...rawHtml.matchAll(/<h2/gi)]).length;
     const h3Count = ([...rawHtml.matchAll(/<h3/gi)]).length;
     const listItemCount = ([...rawHtml.matchAll(/<li/gi)]).length;
-    
+
     // Paragraph stats
     const pMatches = [...rawHtml.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
     const avgParagraphLength = pMatches.length > 0 
       ? pMatches.map(m => stripTags(m[1]).split(/\s+/).length).reduce((a,b) => a+b, 0) / pMatches.length 
       : 0;
-    
+
     // Meta
     const titleMatch = rawHtml.match(/<title>([^<]+)<\/title>/i);
     const metaTitle = titleMatch ? titleMatch[1] : '';
     const metaTitleLength = metaTitle.length;
-    
+
     const descMatch = rawHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) 
       || rawHtml.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
     const metaDescription = descMatch ? descMatch[1] : '';
     const metaDescriptionLength = metaDescription.length;
-    
+
     const hasCanonical = /<link[^>]*rel=["']canonical["']/i.test(rawHtml);
     const hasMetaViewport = /<meta[^>]*name=["']viewport["']/i.test(rawHtml);
     const hasOpenGraph = /<meta[^>]*property=["']og:/i.test(rawHtml);
     const hasTwitterCard = /<meta[^>]*name=["']twitter:/i.test(rawHtml);
-    
+
     // Schema
     const schemaScripts = [];
     const schemaMatches = [...rawHtml.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
@@ -2846,7 +2845,7 @@ app.post('/api/scan/paste', async (req, res) => {
     const hasArticleSchema = flatSchemas.some(s => ['Article','NewsArticle','BlogPosting','TechArticle'].includes(s?.['@type']));
     const hasFAQPageSchema = flatSchemas.some(s => s?.['@type'] === 'FAQPage');
     const hasOrganizationSchema = flatSchemas.some(s => ['Organization','LocalBusiness','Corporation'].includes(s?.['@type']));
-    
+
     // Content signals
     const bodyText = cleanText.toLowerCase();
     const hasFAQContent = /frequently asked|faq|common questions/i.test(rawHtml) 
@@ -2856,28 +2855,28 @@ app.post('/api/scan/paste', async (req, res) => {
     const hasAuthorBio = /written by|about the author|about the founder|meet the author/i.test(rawHtml);
     const hasDirectAnswer = cleanText.substring(0, 300).length > 150;
     const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|highlights/i.test(rawHtml);
-    
+
     // Images
     const imgMatches = [...rawHtml.matchAll(/<img[^>]*>/gi)];
     const images = imgMatches.length;
     const imagesWithAlt = imgMatches.filter(m => /alt=["'][^"']+["']/i.test(m[0]) && !/alt=["']?["']/i.test(m[0])).length;
-    
+
     // Links
     const allLinks = [...rawHtml.matchAll(/<a[^>]*href=["']([^"']+)["']/gi)].map(m => m[1]);
     const internalLinks = allLinks.filter(href => !href.startsWith('http') || href.includes(labelUrl || '')).length;
     const externalLinks = allLinks.filter(href => href.startsWith('http') && !href.includes(labelUrl || '')).length;
-    
+
     // Quotes & case studies
     const bqCount = ([...rawHtml.matchAll(/<blockquote/gi)]).length;
     const citeCount = ([...rawHtml.matchAll(/<cite[\s>]/gi)]).length;
     const expertQuoteCount = Math.max(bqCount, citeCount);
-    
+
     const caseStudyKeywords = ['case study','challenge','solution','results','roi','recovered'];
     const caseStudyCount = caseStudyKeywords.reduce((sum, kw) => sum + (bodyText.split(kw).length - 1), 0);
-    
+
     const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
     const statsFound = (cleanText.match(statsPattern) || []).length;
-    
+
     // Build analysis object matching the browser evaluate() output
     const analysis = {
       wordCount, h1Count, h1Text, h1Length, 
@@ -2893,7 +2892,7 @@ app.post('/api/scan/paste', async (req, res) => {
       expertQuoteCount, caseStudyCount, statsFound,
       hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
     };
-    
+
     const result = computeScore(scanUrl, analysis, []);
     console.log(`✅ scan/paste: ${scanUrl} → ${result.score}/100 (${wordCount} words)`);
     res.json(result);
@@ -3734,7 +3733,6 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                });
 
 
-
                // Routes (root served above with cache-control + badge injection)
 
 // ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
@@ -3786,18 +3784,18 @@ app.get('/lead-crawler', (req, res) => {
 app.post('/api/claude-proxy', async (req, res) => {
   const apiKey = req.headers['x-anthropic-key'];
   const userId = req.headers['x-user-id'] || 'anonymous';
-  
+
   if (!apiKey || apiKey.length < 20) {
     return res.status(401).json({ 
       error: 'ANTHROPIC_API_KEY required', 
       detail: 'Send your API key in the x-anthropic-key header' 
     });
   }
-  
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000);
-    
+
     // ✅ Clean URL - NO trailing spaces
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -3809,16 +3807,16 @@ app.post('/api/claude-proxy', async (req, res) => {
       body: JSON.stringify(req.body),
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeout);
-    
+
     const rawText = await upstream.text();
     let data;
     try { data = JSON.parse(rawText); } 
     catch { data = { raw: rawText.slice(0, 500) }; }
-    
+
     console.log(`[claude-proxy] ${userId} → ${upstream.status} (${rawText.length} bytes)`);
-    
+
     // Detect rate limit / overload errors and add clear message
     if (upstream.status === 529 || upstream.status === 503) {
       return res.status(upstream.status).json({ 
@@ -3826,7 +3824,7 @@ app.post('/api/claude-proxy', async (req, res) => {
         ...data 
       });
     }
-    
+
     res.status(upstream.status).json(data);
   } catch (err) {
     console.error('[claude-proxy] Error:', err.message);
@@ -4021,8 +4019,6 @@ app.post('/api/gemini-voicebot', async (req, res) => {
     res.status(502).json({ error: 'Proxy request failed', detail: err.message });
   }
 });
-
-
 
 
 // ============================================
@@ -4783,8 +4779,6 @@ return data;
 }
 
 
-
-
 // ── Main campaign runner ──────────────────────────────────────
 async function runCampaign(campaign) {
 campaign.status = 'running';
@@ -5282,7 +5276,6 @@ fetch(apiUrl)
 });
 
 
-
 // ══════════════════════════════════════════════════════════════════════
 // VAPI VOICEBOT ROUTES
 // ══════════════════════════════════════════════════════════════════════
@@ -5395,7 +5388,6 @@ app.post('/api/voicebot/webhook', (req, res) => {
   // Just acknowledge — frontend polls for status itself
   res.json({ received: true });
 });
-
 
 
 // ============================================
@@ -5825,7 +5817,7 @@ function servePublic(filename) {
 
 app.post('/api/audit/save-workflow-data', async (req, res) => {
   const { pageUrl, keyword, gscData, projectName, priority, notes } = req.body;
-  
+
   if (!pageUrl) {
     return res.status(400).json({ error: 'Page URL required' });
   }
@@ -5920,7 +5912,7 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY not configured');
   }
-  
+
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -5940,18 +5932,18 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
         })
       }
     );
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
       throw new Error('Invalid response from Gemini API');
     }
-    
+
     return data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('❌ Gemini API call failed:', error.message);
@@ -5970,22 +5962,22 @@ app.post('/api/audit/analyze-competitors', async (req, res) => {
     language = 'nl',
     competitors // Array of {url, html}
   } = req.body;
-  
+
   if (!keyword) {
     return res.status(400).json({ error: 'Keyword required' });
   }
-  
+
   if (!competitors || competitors.length === 0) {
     return res.status(400).json({ error: 'At least one competitor required' });
   }
-  
+
   if (!process.env.GEMINI_API_KEY) {
     return res.status(503).json({ error: 'AI service not configured. Add GEMINI_API_KEY to environment variables' });
   }
 
   try {
     console.log(`🤖 Analyzing ${competitors.length} competitors for: "${keyword}"`);
-    
+
     // Build AI prompt
     const prompt = `You are an expert SEO analyst. Analyze these competitor pages and provide surgical recommendations.
 
@@ -6059,7 +6051,7 @@ Respond in valid JSON format:
 
     // Call Gemini AI
     const aiResponse = await callGeminiAPI(prompt);
-    
+
     // Parse JSON response
     let analysis;
     try {
@@ -6077,9 +6069,9 @@ Respond in valid JSON format:
         message: 'AI returned invalid JSON format. This usually means the response was too complex. Try with fewer competitors or shorter HTML.'
       };
     }
-    
+
     console.log(`✅ Competitor analysis complete for "${keyword}"`);
-    
+
     res.json({
       success: true,
       keyword,
@@ -6110,20 +6102,20 @@ app.post('/api/audit/generate-recommendations', async (req, res) => {
     language = 'nl',
     competitorAnalysis 
   } = req.body;
-  
+
   if (!keyword) {
     return res.status(400).json({ error: 'Keyword required' });
   }
-  
+
   if (!process.env.GEMINI_API_KEY) {
     return res.status(503).json({ error: 'AI service not configured. Add GEMINI_API_KEY to environment variables' });
   }
 
   try {
     console.log(`✍️ Generating surgical recommendations for: "${keyword}"`);
-    
+
     const languageName = language === 'nl' ? 'Dutch' : language === 'en' ? 'English' : language;
-    
+
     const prompt = `You are an expert SEO content writer. Create EXACT, ready-to-use content recommendations in ${languageName}.
 
 KEYWORD: "${keyword}"
@@ -6167,7 +6159,7 @@ Respond in valid JSON format:
 
     // Call Gemini AI
     const aiResponse = await callGeminiAPI(prompt);
-    
+
     // Parse JSON response
     let recommendations;
     try {
@@ -6187,9 +6179,9 @@ Respond in valid JSON format:
         message: 'AI returned invalid JSON format. Try simplifying the request.'
       };
     }
-    
+
     console.log(`✅ Surgical recommendations generated for "${keyword}"`);
-    
+
     res.json({
       success: true,
       keyword,
@@ -6213,18 +6205,18 @@ Respond in valid JSON format:
 // ============================================
 app.post('/api/audit/analyze-html', async (req, res) => {
   const { html, url } = req.body;
-  
+
   if (!html) {
     return res.status(400).json({ error: 'HTML content required' });
   }
-  
+
   if (!process.env.GEMINI_API_KEY) {
     return res.status(503).json({ error: 'AI service not configured. Add GEMINI_API_KEY to environment variables' });
   }
 
   try {
     console.log(`🔍 Analyzing HTML from: ${url || 'manual input'} (${html.length} chars)`);
-    
+
     const prompt = `Analyze this HTML and extract SEO-relevant information:
 
 URL: ${url || 'Unknown'}
@@ -6268,7 +6260,7 @@ Respond in valid JSON format:
 
     // Call Gemini AI
     const aiResponse = await callGeminiAPI(prompt);
-    
+
     // Parse JSON response
     let analysis;
     try {
@@ -6286,9 +6278,9 @@ Respond in valid JSON format:
         rawResponse: aiResponse.substring(0, 1000)
       };
     }
-    
+
     console.log(`✅ HTML analysis complete for ${url || 'manual input'}`);
-    
+
     res.json({
       success: true,
       url: url || 'manual input',
@@ -6479,7 +6471,6 @@ function openInPulseNexus(url, keyword, pos, impr, ctr) {
 });
 
 
-
 // ══════════════════════════════════════════════════════════════════════
 // GEMINI LIVE — REST fallback + WebSocket proxy
 // Step 1: REST status check (/api/gemini-live-status)
@@ -6501,11 +6492,11 @@ app.get('/api/gemini-live-token', async (req, res) => {
     if (req.query.admin === 'ottmar2024') {
       console.log('[otto] admin bypass token request');
     }
-    
+
     // Rate limit check (2 requests per IP per day)
     const ip = req.ip || req.connection.remoteAddress;
     const today = new Date().toISOString().split('T')[0];
-    
+
     if (!_ottoIpMap.has(ip)) {
       _ottoIpMap.set(ip, { count: 1, date: today });
     } else {
@@ -6521,27 +6512,27 @@ app.get('/api/gemini-live-token', async (req, res) => {
         }
       }
     }
-    
+
     // Clean old entries periodically
     if (_ottoIpMap.size > 1000) {
       for (const [k, v] of _ottoIpMap.entries()) {
         if (v.date !== today) _ottoIpMap.delete(k);
       }
     }
-    
+
     // Build WebSocket URL for Gemini Live — USE v1alpha NOT v1beta
     const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error('[otto] No Gemini Live key — set GEMINI_KEY_LIVE in Railway Variables');
       return res.status(500).json({ error: 'Server configuration error' });
     }
-    
+
     const model = 'gemini-2.0-flash-live-001';
     // ✅ FIX: Use v1alpha endpoint — v1beta causes 1007 errors
     const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey)}`;
-    
+
     console.log(`[otto] token issued for ${ip} — model: ${model}`);
-    
+
     // Return BOTH wsUrl AND key for client compatibility
     res.json({ 
       wsUrl, 
@@ -6549,7 +6540,7 @@ app.get('/api/gemini-live-token', async (req, res) => {
       model,
       expires: Date.now() + 3600000 // 1 hour
     });
-    
+
   } catch (error) {
     console.error('[otto] token endpoint error:', error.message);
     res.status(500).json({ error: 'Failed to generate token', details: error.message });
@@ -7358,9 +7349,9 @@ img,table,iframe{max-width:100%;}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (function autoLoadFromRecommendations() {
   console.log('🔍 [PULSE+NEXUS] Checking for Recommendations data...');
-  
+
   let transferData = null;
-  
+
   // Method 1: Try localStorage first
   try {
     const stored = localStorage.getItem('cs_audit_transfer');
@@ -7371,7 +7362,7 @@ img,table,iframe{max-width:100%;}
   } catch (e) {
     console.warn('⚠️ [PULSE+NEXUS] localStorage read error:', e);
   }
-  
+
   // Method 2: Try sessionStorage as backup
   if (!transferData) {
     try {
@@ -7382,7 +7373,7 @@ img,table,iframe{max-width:100%;}
       }
     } catch (e) {}
   }
-  
+
   // Method 3: Check URL parameters
   if (!transferData) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -7394,17 +7385,17 @@ img,table,iframe{max-width:100%;}
       ctr: urlParams.get('ctr'),
       source: urlParams.get('source')
     };
-    
+
     if (urlData.pageUrl) {
       transferData = urlData;
       console.log('✅ [PULSE+NEXUS] Found data in URL params:', transferData);
     }
   }
-  
+
   // If we have data, auto-fill the form
   if (transferData && transferData.pageUrl) {
     console.log('📝 [PULSE+NEXUS] Auto-filling form with:', transferData);
-    
+
     const fillForm = () => {
       try {
         // Fill URL field
@@ -7413,14 +7404,14 @@ img,table,iframe{max-width:100%;}
           urlField.value = transferData.pageUrl;
           console.log('✅ URL filled:', transferData.pageUrl);
         }
-        
+
         // Fill Primary Keyword field
         const kwField = document.querySelector('input#dKw, input[name="keyword"]');
         if (kwField && transferData.keyword) {
           kwField.value = transferData.keyword;
           console.log('✅ Keyword filled:', transferData.keyword);
         }
-        
+
         // Fill GSC data fields
         if (transferData.position) {
           const posField = document.getElementById('dPos');
@@ -7429,7 +7420,7 @@ img,table,iframe{max-width:100%;}
             console.log('✅ Position filled:', transferData.position);
           }
         }
-        
+
         if (transferData.impressions) {
           const imprField = document.getElementById('dImpr');
           if (imprField) {
@@ -7437,7 +7428,7 @@ img,table,iframe{max-width:100%;}
             console.log('✅ Impressions filled:', transferData.impressions);
           }
         }
-        
+
         if (transferData.ctr) {
           const ctrField = document.getElementById('dCtr');
           if (ctrField) {
@@ -7445,23 +7436,23 @@ img,table,iframe{max-width:100%;}
             console.log('✅ CTR filled:', transferData.ctr);
           }
         }
-        
+
         // Switch to Deep Dive mode
         if (typeof setMode === 'function') {
           setMode('deep');
           console.log('✅ Switched to Deep Dive mode');
         }
-        
+
         // Store globally for later use
         window._recommendationsData = transferData;
-        
+
         // Show success notification
         const notif = document.createElement('div');
         const notifStyle = 'position:fixed;top:20px;right:20px;background:#4ade80;color:#000;padding:16px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:IBM Plex Mono,monospace;font-size:13px;';
         notif.style.cssText = notifStyle;
         notif.innerHTML = '✅ Workflow Data Loaded! 📊';
         document.body.appendChild(notif);
-        
+
         // AUTO-START DEEP DIVE
         if (transferData.source === 'recommendations' || transferData.source === 'recs') {
           console.log('🚀 Auto-starting Deep Dive from Recommendations...');
@@ -7476,19 +7467,19 @@ img,table,iframe{max-width:100%;}
             }
           }, 1500);
         }
-        
+
         setTimeout(() => {
           notif.style.transition = 'opacity 0.3s';
           notif.style.opacity = '0';
           setTimeout(() => notif.remove(), 300);
         }, 4000);
-        
+
         console.log('✅ [PULSE+NEXUS] Form filled successfully!');
       } catch (e) {
         console.error('❌ [PULSE+NEXUS] Error filling form:', e);
       }
     };
-    
+
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fillForm);
@@ -10350,7 +10341,7 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
 
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
     const getIdx = (name) => headers.findIndex(h => h.includes(name.toLowerCase()));
-    
+
     const urlIdx = getIdx('url') !== -1 ? getIdx('url') : getIdx('page');
     const clickIdx = getIdx('clicks');
     const impIdx = getIdx('impressions');
@@ -10363,7 +10354,7 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
       if (cols.length < 2) continue;
-      
+
       if (type === 'pages') {
         const url = cols[urlIdx] || '';
         if (!url || !url.startsWith('http')) continue;
@@ -10396,7 +10387,7 @@ app.post('/api/gsc/upload-csv', verifyEngineAccess, upload.single('file'), async
     let inserted = 0;
     const table = type === 'pages' ? 'gsc_pages' : 'gsc_queries';
     const uniqueCol = type === 'pages' ? 'url' : 'query';
-    
+
     for (const row of rows) {
       try {
         if (type === 'pages') {
@@ -10700,12 +10691,21 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
   const geminiKey = resolveGeminiKey(req);
   if (!serpKey) return res.status(503).json({ success: false, error: 'SerpAPI key not configured' });
 
+  // Resolve geo from request (profile geo_focus or explicit location param)
+  const geoParam = req.query.location || req.query.geo || '';
+  const glParam  = req.query.gl || 'us';
+  // Auto-detect NJ/US state from keyword or geo
+  const locationStr = geoParam || (keyword.match(/\b(nj|new jersey)\b/i) ? 'New Jersey, United States' :
+    keyword.match(/\b(ny|new york)\b/i) ? 'New York, United States' :
+    keyword.match(/\b(ca|california)\b/i) ? 'California, United States' :
+    keyword.match(/\b(fl|florida)\b/i) ? 'Florida, United States' :
+    keyword.match(/near me/i) ? 'United States' : '');
+
   try {
     // 1. Fetch top 10 Google results
-    const params = new URLSearchParams({
-      engine: 'google', q: keyword, api_key: serpKey,
-      num: '10', hl: 'en', gl: 'us'
-    });
+    const serpParams = { engine: 'google', q: keyword, api_key: serpKey, num: '10', hl: 'en', gl: glParam };
+    if (locationStr) serpParams.location = locationStr;
+    const params = new URLSearchParams(serpParams);
     let serpData;
     let usedFallback = false;
     try {
@@ -10728,7 +10728,7 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
         const serperR = await fetch('https://google.serper.dev/search', {
           method: 'POST',
           headers: { 'X-API-KEY': serpKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
+          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: glParam, ...(locationStr ? { location: locationStr } : {}) }),
           signal: serperCtrl.signal
         });
         clearTimeout(serperT);
@@ -11468,7 +11468,7 @@ const resolveSerpapiKey = (req) => {
   const headerKey = req.headers['x-serpapi-key'];
   const codeKey = req.engineUser && req.engineUser.code ? req.engineUser.code.serpapi_key : null;
   const envKey = process.env.SERPAPI_KEY;
-  
+
   if (headerKey) { console.log('[keys] SerpAPI: using header key'); return headerKey; }
   if (codeKey) { console.log('[keys] SerpAPI: using per-code key for code', req.engineUser.codeId); return codeKey; }
   if (envKey) { console.log('[keys] SerpAPI: using platform env key'); return envKey; }
@@ -11594,7 +11594,7 @@ app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
   const eu = req.engineUser;
   if (!eu || !eu.code) return res.status(500).json({ success: false, error: 'No access code' });
   const code = eu.code;
-  
+
   // Defensive: handle missing columns (migration not run yet)
   let monthlyUsed = 0;
   let monthlyLimit = 50;
@@ -11611,13 +11611,13 @@ app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
       monthlyUsed = 0;
     }
   } catch(e) { console.warn('[billing] cost columns may not exist yet:', e.message); }
-  
+
   let recentCosts = [];
   try {
     const logR = await pool.query(`SELECT action, model, input_tokens, output_tokens, estimated_cost, created_at FROM api_cost_log WHERE code_id=$1 AND created_at > NOW() - INTERVAL '30 days' ORDER BY created_at DESC LIMIT 50`, [eu.codeId]);
     recentCosts = logR.rows;
   } catch(e) { /* api_cost_log may not exist yet */ }
-  
+
   res.json({
     success: true,
     mode: mode,
@@ -11938,7 +11938,6 @@ app.patch('/api/content/profiles/:id/graaf-settings', verifyEngineAccess, async 
     res.json({ success: true, graaf_auto_scan: !!graaf_auto_scan });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-
 
 
 app.get('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
@@ -12333,7 +12332,7 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
   try {
     const { profile_id, seed_keyword } = req.body;
     if (!profile_id || !seed_keyword) return res.status(400).json({ success: false, error: 'profile_id and seed_keyword required' });
-    
+
     // Mark any old stuck 'researching' jobs for this profile+keyword as abandoned
     // This lets users retry without being blocked by previous stuck jobs
     const abandonedR = await pool.query(
@@ -12346,7 +12345,7 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
       console.log(`[research] abandoned ${abandonedR.rows.length} stuck job(s) for "${seed_keyword}"`);
       abandonedR.rows.forEach(r => _researchJobs.set(r.id, { status: 'error', error: 'Abandoned' }));
     }
-    
+
     // Create job immediately, return jobId for polling
     const jobR = await pool.query(
       `INSERT INTO content_jobs (profile_id, seed_keyword, status, keyword_data, brief, created_at, updated_at)
@@ -12355,10 +12354,10 @@ app.post('/api/content/research', verifyEngineAccess, requireCredits('research')
     );
     const job = jobR.rows[0];
     const jobId = job.id;
-    
+
     // Return job ID immediately — frontend will poll
     res.json({ success: true, job_id: jobId, job: { id: jobId, status: 'researching', seed_keyword }, message: 'Research started — poll for results' });
-    
+
     // ── Run research in background ──
     _runResearchJob(jobId, profile_id, seed_keyword).catch(err => {
       console.error(`[research job ${jobId}] crashed:`, err.message);
@@ -12375,7 +12374,7 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
     if (!jobR.rows.length) return res.status(404).json({ success: false, error: 'Job not found' });
     const job = jobR.rows[0];
     const inMemory = _researchJobs.get(parseInt(req.params.jobId));
-    
+
     // Safety check: if researching for more than 5 minutes, treat as error
     if (job.status === 'researching' && job.created_at) {
       const ageMs = Date.now() - new Date(job.created_at).getTime();
@@ -12384,7 +12383,7 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
         return res.json({ success: false, status: 'error', error: 'Research timed out after 5 minutes — please try again' });
       }
     }
-    
+
     if (job.status === 'completed') {
       return res.json({ success: true, status: 'completed', job: job, research: job.keyword_data });
     }
@@ -12503,7 +12502,7 @@ Return ONLY this JSON (fill every field with real, sourced content):
     console.log(`[research job ${jobId}] calling Gemini with ${webResults.length} web results...`);
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }
+      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096 } }
     );
     console.log(`[research job ${jobId}] Gemini: ok=${gemResult.ok} status=${gemResult.status}`);
     if (!gemResult.ok) throw new Error('Gemini failed: ' + (gemResult.errorMessage || gemResult.status));
@@ -12513,26 +12512,9 @@ Return ONLY this JSON (fill every field with real, sourced content):
 
     let keywordData = extractJsonFromText(rawText);
     if (!keywordData) {
-      // Try to repair truncated JSON by finding last valid field and closing braces
-      try {
-        const startBrace = rawText.indexOf('{');
-        if (startBrace > -1) {
-          let partial = rawText.slice(startBrace);
-          // Count unclosed braces and arrays, close them
-          let braces = 0, brackets = 0;
-          for (const ch of partial) { if (ch==='{') braces++; else if (ch==='}') braces--; else if (ch==='[') brackets++; else if (ch===']') brackets--; }
-          partial = partial.trimEnd().replace(/,\s*$/, '');
-          while (brackets > 0) { partial += ']'; brackets--; }
-          while (braces > 0) { partial += '}'; braces--; }
-          keywordData = JSON.parse(partial);
-          console.log('[research job ' + jobId + '] Repaired truncated JSON OK');
-        }
-      } catch(repairErr) {
-        console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
-        throw new Error('Keyword research: AI returned truncated or invalid JSON — try again.');
-      }
+      console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
+      return res.status(502).json({ success: false, error: 'Keyword research: AI returned truncated or invalid JSON — try again.' });
     }
-    if (!keywordData) throw new Error('Keyword research: AI returned truncated or invalid JSON — try again.');
     console.log(`[research job ${jobId}] parsed: pk=${keywordData.primary_keyword||'N/A'}`);
 
     // Track cost
@@ -12624,14 +12606,14 @@ function validateBrief(brief, seedKeyword) {
   if (!brief.bofu_ctas || !Array.isArray(brief.bofu_ctas) || brief.bofu_ctas.length === 0) errors.push('missing BOFU CTAs');
   if (!brief.ai_overview_tips || !Array.isArray(brief.ai_overview_tips) || brief.ai_overview_tips.length === 0) errors.push('missing AI Overview tips');
   if (!brief.voice_search_queries || !Array.isArray(brief.voice_search_queries) || brief.voice_search_queries.length === 0) errors.push('missing voice search queries');
-  
+
   // Check for placeholder text
   const placeholderPatterns = ['H2 1', 'H2 2', 'Hey Google', 'Alexa', 'Siri', 'PLACEHOLDER', 'example'];
   const allText = JSON.stringify(brief).toLowerCase();
   placeholderPatterns.forEach(p => {
     if (allText.includes(p.toLowerCase())) errors.push(`contains placeholder text: "${p}"`);
   });
-  
+
   return {
     isValid: errors.length === 0,
     errors: errors,
@@ -12884,7 +12866,7 @@ app.post('/api/content/brief/:jobId', verifyEngineAccess, requireCredits('brief'
     const validation = validateBrief(brief, job.seed_keyword);
     if (!validation.isValid) {
       console.warn(`[brief ${req.params.jobId}] Incomplete brief detected:`, validation.errors.join('; '));
-      
+
       // Try to fill missing fields with a targeted Gemini call
       const missingFields = validation.missingFields;
       const fillPrompt = `You are an expert SEO content strategist. Fill in the MISSING fields for this content brief.
@@ -12929,7 +12911,7 @@ Rules:
             console.warn('[extractJsonFromText] null result — Auto-fill: AI returned truncated or invalid JSON — try again.');
             return res.status(502).json({ success: false, error: 'Auto-fill: AI returned truncated or invalid JSON — try again.' });
           }
-          
+
           // Merge fill data into brief
           if (fillData.recommended_title && fillData.recommended_title.length > 10 && !fillData.recommended_title.includes('H2')) {
             brief.title = fillData.recommended_title;
@@ -12952,7 +12934,7 @@ Rules:
           if (fillData.voice_search_optimization && fillData.voice_search_optimization.length > 10) {
             brief.voice_search_optimization = fillData.voice_search_optimization;
           }
-          
+
           console.log(`[brief ${req.params.jobId}] Regenerated missing fields successfully`);
         }
       } catch(regenErr) {
@@ -13566,10 +13548,10 @@ app.post('/api/content/service-areas/generate', verifyEngineAccess, async (req, 
   if (!keyword || keyword.trim().length === 0) {
     return res.status(400).json({ error: 'keyword required (e.g. "drain cleaning")' });
   }
-  
+
   const profile = await getProfile(profileId, req);
   if (!profile) return res.status(404).json({ error: 'Profile not found' });
-  
+
   // Create a master research job
   const masterJob = await pool.query(`
     INSERT INTO content_jobs (profile_id, type, status, keyword, prompt, created_at)
@@ -13577,14 +13559,14 @@ app.post('/api/content/service-areas/generate', verifyEngineAccess, async (req, 
     RETURNING id
   `, [profileId, keyword, JSON.stringify({ cities, count: cities.length })]);
   const masterJobId = masterJob.rows[0].id;
-  
+
   res.json({ 
     success: true, 
     masterJobId, 
     message: `Starting ${cities.length} service area pages`,
     cities 
   });
-  
+
   // Run in background
   (async () => {
     try {
@@ -13596,21 +13578,21 @@ app.post('/api/content/service-areas/generate', verifyEngineAccess, async (req, 
         `${keyword} EPA government data statistics`,
         `${profile.niche} market size revenue 2024 2025`
       ]);
-      
+
       await pool.query(`UPDATE content_jobs SET status='writing' WHERE id=$1`, [masterJobId]);
-      
+
       // Step 2: Generate each city page
       for (let i = 0; i < cities.length; i++) {
         const city = cities[i];
         const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const slug = `${keyword.replace(/\s+/g, '-')}-${citySlug}/`;
-        
+
         // City-specific web search
         const cityWebResults = await doWebSearch([
           `${city} ${keyword} local statistics infrastructure`,
           `${city} ${profile.niche} neighborhoods service areas`
         ]);
-        
+
         // Build prompt
         const systemPrompt = `You are an elite local SEO content writer. Write a COMPLETELY UNIQUE service area page for ${city}.
 
@@ -13669,10 +13651,10 @@ ${templateHtml || 'Use standard service area structure.'}`;
           console.log(`[service area ${city}] Claude failed:`, claudeResult.error);
           continue;
         }
-        
+
         let html = cleanHtmlOutput(claudeResult.text);
         const wordCount = html.split(/\s+/).length;
-        
+
         await pool.query(`
           INSERT INTO content_articles 
           (profile_id, job_id, title, slug, html_content, word_count, keywords, status, created_at)
@@ -13683,17 +13665,17 @@ ${templateHtml || 'Use standard service area structure.'}`;
           slug, html, wordCount,
           JSON.stringify([keyword, city, profile.niche])
         ]);
-        
+
         console.log(`[service area ${city}] saved ${wordCount} words`);
-        
+
         await pool.query(`
           UPDATE content_jobs SET status=$1, progress=$2, updated_at=NOW() WHERE id=$3
         `, [`writing ${i+1}/${cities.length}`, Math.round(((i+1)/cities.length)*100), masterJobId]);
       }
-      
+
       await pool.query(`UPDATE content_jobs SET status='published', progress=100 WHERE id=$1`, [masterJobId]);
       console.log(`[service areas ${masterJobId}] all ${cities.length} pages complete`);
-      
+
     } catch (err) {
       console.error(`[service areas ${masterJobId}] error:`, err);
       await pool.query(`UPDATE content_jobs SET status='failed', error=$1 WHERE id=$2`, [err.message, masterJobId]);
@@ -13705,12 +13687,12 @@ app.get('/api/content/service-areas/:jobId', verifyEngineAccess, async (req, res
   try {
     const job = await pool.query(`SELECT * FROM content_jobs WHERE id=$1 AND profile_id=$2`, [req.params.jobId, req.user.id]);
     if (!job.rows.length) return res.status(404).json({ error: 'Not found' });
-    
+
     const articles = await pool.query(`
       SELECT id, title, slug, status, word_count, created_at 
       FROM content_articles WHERE job_id=$1 ORDER BY id
     `, [req.params.jobId]);
-    
+
     res.json({ job: job.rows[0], articles: articles.rows, total: articles.rows.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -13719,20 +13701,20 @@ app.post('/api/content/service-areas/:jobId/publish', verifyEngineAccess, async 
   try {
     const { articleIds, wpUrl, wpUser, wpPass } = req.body;
     if (!articleIds || !Array.isArray(articleIds)) return res.status(400).json({ error: 'articleIds required' });
-    
+
     const results = [];
     for (const articleId of articleIds) {
       const art = await pool.query(`SELECT * FROM content_articles WHERE id=$1`, [articleId]);
       if (!art.rows.length) continue;
-      
+
       const a = art.rows[0];
       const wpResult = await publishToWordPress(a.html_content, a.title, a.slug, wpUrl, wpUser, wpPass);
       results.push({ id: articleId, title: a.title, wpResult });
-      
+
       await pool.query(`UPDATE content_articles SET status='published', published_url=$1 WHERE id=$2`,
         [wpResult.url || null, articleId]);
     }
-    
+
     res.json({ success: true, published: results.length, results });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -16975,7 +16957,6 @@ app.get('/api/content/stats-studies/:profileId', verifyEngineAccess, async (req,
 });
 
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _SEO_AUDIT_FINAL_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -19614,7 +19595,6 @@ function deleteSelectedPages(){
   document.getElementById('bulkBar').style.display = 'none';
   toast('🗑 ' + ids.length + ' pages deleted');
 }
-
 
 
 function bulkSelectAll(){
@@ -22885,8 +22865,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <!-- SIDEBAR -->
             <nav id="sidebar">
                 <div class="sidebar-section-label">Lead Flow</div>
-                <button onclick="switchTab('scanner')" id="tabScannerBtn" class="sidebar-btn"><i class="fas fa-search"></i><span>Scanner</span></button>
-                <button onclick="switchTab('scanlog')" id="tabScanlogBtn" class="sidebar-btn"><i class="fas fa-table"></i><span>Scan Log</span></button>
+
+
                 <hr class="sidebar-divider">
                 <div class="sidebar-section-label">Admin</div>
                 <button onclick="switchTab('leaderboard')" id="tabLeaderboardBtn" class="sidebar-btn active"><i class="fas fa-trophy"></i><span>Leaderboard</span></button>
@@ -22896,7 +22876,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('tracker')" id="tabTrackerBtn" class="sidebar-btn"><i class="fas fa-chart-line"></i><span>Content Tracker</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
-                <button onclick="switchTab('messages')" id="tabMessagesBtn" class="sidebar-btn"><i class="fas fa-envelope"></i><span>Messages</span></button>
+
 
             </nav>
             <div id="tab-area">
@@ -23045,18 +23025,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
 
             <!-- MESSAGES -->
-            <div id="tab-messages" class="tab-content hidden">
-                <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-3xl font-bold">📧 Message History</h2>
-                        <button onclick="openMessageModal('all')" class="btn btn-primary"><i class="fas fa-paper-plane mr-2"></i> New Broadcast</button>
-                    </div>
-                    <div id="messagesContainer" class="space-y-4"></div>
-                </div>
-            </div>
 
-            <!-- PENDING -->
-            <div id="tab-pending" class="tab-content hidden">
+
                 <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-3xl font-bold">⏳ Pending Approvals</h2>
@@ -23074,128 +23044,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
 
 
-
             <!-- SCAN LOG -->
-            <div id="tab-scanlog" class="tab-content hidden">
-                <style>
-                    .sl-card { background: var(--sl-surface, #111827); border: 1px solid #1f2937; border-radius: 12px; padding: 24px; }
-                    .sl-stat { background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; padding: 12px 16px; }
-                    .sl-stat .val { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; line-height: 1; }
-                    .sl-stat .lbl { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
-                    .sl-filter { background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #e5e7eb; outline: none; }
-                    .sl-filter:focus { border-color: #7e22ce; }
-                    .sl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                    .sl-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; padding: 10px 12px; border-bottom: 1px solid #1f2937; text-align: left; white-space: nowrap; }
-                    .sl-table td { padding: 10px 12px; border-bottom: 1px solid #0d1117; vertical-align: middle; }
-                    .sl-table tr:hover td { background: #0d1117; }
-                    .sl-table tr.sl-new td { background: rgba(126,34,206,0.07); }
-                    .sl-score-pill { display:inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 99px; }
-                    .sl-src-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .05em; }
-                    .sl-new-dot { width: 7px; height: 7px; border-radius: 50%; background: #a78bfa; display: inline-block; margin-right: 6px; animation: sl-pulse 2s infinite; }
-                    @keyframes sl-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-                    .sl-empty { text-align:center; padding: 60px 20px; color: #6b7280; }
-                    .sl-action-btn { background: transparent; border: 1px solid #374151; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: #9ca3af; cursor: pointer; transition: all .15s; }
-                    .sl-action-btn:hover { border-color: #6b7280; color: #e5e7eb; }
-                    .sl-action-btn.danger:hover { border-color: #ef4444; color: #f87171; background: rgba(239,68,68,0.08); }
-                    .sl-action-btn.primary { background: #7e22ce; border-color: #7e22ce; color: #fff; }
-                    .sl-action-btn.primary:hover { background: #9333ea; }
-                </style>
-                <!-- Header -->
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Scan Log</h2>
-                            <span id="scanLogCount" style="font-size:11px;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:99px;padding:2px 10px;font-weight:600;"></span>
-                            <span id="scanNewBadge" style="display:none;font-size:11px;background:#2d1b4e;color:#c084fc;border:1px solid #7e22ce;border-radius:99px;padding:2px 10px;font-weight:600;"></span>
-                        </div>
-                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">Live lead scanner results — auto-refreshes every 30s</p>
-                    </div>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                        <button onclick="loadScanLog()" class="sl-action-btn" id="slRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
-                        <button id="exportScanBtn" onclick="exportScanLog()" class="sl-action-btn">Export CSV</button>
-                        <button onclick="pushToInstantly()" class="sl-action-btn" style="border-color:#1d4ed8;color:#60a5fa;">Push to Instantly</button>
-                        <button onclick="bulkDeleteScans()" class="sl-action-btn danger">Delete selected</button>
-                        <button onclick="deleteAllScans()" class="sl-action-btn danger">Delete all</button>
-                    </div>
-                </div>
-                <!-- Stats row -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px;" id="slStatsRow">
-                    <div class="sl-stat"><div class="val" id="slStatTotal">—</div><div class="lbl">Total scans</div></div>
-                    <div class="sl-stat"><div class="val" id="slStatEmails" style="color:#4ade80;">—</div><div class="lbl">Emails found</div></div>
-                    <div class="sl-stat"><div class="val" id="slStatAvgScore">—</div><div class="lbl">Avg score</div></div>
-                    <div class="sl-stat"><div class="val" id="slStatToday" style="color:#a78bfa;">—</div><div class="lbl">Today</div></div>
-                    <div class="sl-stat"><div class="val" id="slStatBulk">—</div><div class="lbl">Bulk / Single</div></div>
-                </div>
-                <!-- Filters -->
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-                    <input type="text" id="slSearch" class="sl-filter" placeholder="Search business, URL, email, city..." style="flex:1;min-width:220px;" oninput="filterScanLog()">
-                    <select id="slFilterSource" class="sl-filter" onchange="filterScanLog()">
-                        <option value="">All sources</option>
-                        <option value="single">Single</option>
-                        <option value="bulk">Bulk</option>
-                        <option value="discover">Discover</option>
-                    </select>
-                    <select id="slFilterEmail" class="sl-filter" onchange="filterScanLog()">
-                        <option value="">All</option>
-                        <option value="has_email">Email found</option>
-                        <option value="no_email">No email</option>
-                    </select>
-                    <select id="slFilterScore" class="sl-filter" onchange="filterScanLog()">
-                        <option value="">Any score</option>
-                        <option value="85">85+ Elite</option>
-                        <option value="70">70+ Good</option>
-                        <option value="50">50+ Average</option>
-                        <option value="0_50">Below 50</option>
-                    </select>
-                </div>
-                <!-- Table -->
-                <div style="overflow-x:auto;">
-                    <table class="sl-table">
-                        <thead>
-                            <tr>
-                                <th style="width:28px;"><input type="checkbox" id="slSelectAll" onchange="toggleAllScans(this.checked)"></th>
-                                <th></th>
-                                <th onclick="sortScanLog('created_at')" style="cursor:pointer;">Time <span id="slSortCreated">↓</span></th>
-                                <th>Source</th>
-                                <th onclick="sortScanLog('business_name')" style="cursor:pointer;">Business</th>
-                                <th onclick="sortScanLog('score')" style="cursor:pointer;">Score <span id="slSortScore"></span></th>
-                                <th>Location</th>
-                                <th>Email</th>
-                                <th>Niche</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="scanLogBody">
-                            <tr><td colspan="10" class="sl-empty"><i class="fas fa-database" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px;"></i>Click Refresh to load scans</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="slPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#6b7280;"></div>
-            </div>
 
-            <!-- SCANNER -->
-            <div id="tab-scanner" class="tab-content hidden">
-                <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                        <h3 class="text-xl font-bold">SEO Scanner</h3>
-                    </div>
-                    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
-                        <input type="text" id="adminScanUrl" placeholder="https://example.com" style="flex:1;min-width:280px;padding:12px 16px;background:#111827;border:1px solid #374151;border-radius:8px;font-size:0.95rem;" onkeydown="if(event.key==='Enter')adminRunScan()">
-                        <button onclick="adminRunScan()" id="adminScanBtn" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;border-radius:8px;padding:12px 28px;font-weight:700;cursor:pointer;">Scan</button>
-                    </div>
-                    <div id="adminScanProgress" style="display:none;margin-bottom:24px;">
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-                            <div style="width:18px;height:18px;border:3px solid #7e22ce;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-                            <span id="adminScanProgressText" style="color:#a78bfa;">Scanning...</span>
-                        </div>
-                        <div style="height:6px;background:#1f2937;border-radius:99px;overflow:hidden;"><div id="adminScanBar" style="height:100%;background:linear-gradient(90deg,#7e22ce,#be185d);border-radius:99px;width:0%;transition:width 0.4s;"></div></div>
-                    </div>
-                    <div id="adminScanResults" style="display:none;"></div>
-                </div>
-            </div>
 
-            <!-- CONTENT LIFECYCLE TRACKER -->
-            <div id="tab-tracker" class="tab-content hidden">
                 <style>
                     .tr-card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:18px; margin-bottom:12px; }
                     .tr-stat { background:#0d1117; border:1px solid #1f2937; border-radius:8px; padding:12px 16px; }
@@ -23644,12 +23495,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='messages') loadMessages();
             if (tab==='pending') loadPendingData();
 
-            
+
             if (tab==='enginecodes') loadEngineCodes();
             if (tab==='giveaccess') loadGiveAccess();
-            if (tab==='scanlog') { loadScanLog(); startScanLogAutoRefresh(); }
+
             else { stopScanLogAutoRefresh(); }
-            
+
         }
 
         function loadAllData() { loadLeaderboard(); loadFreelancers(); }
@@ -23961,1840 +23812,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         function openMessageModal(targetType, userId) { messageTarget=(targetType==='single')?userId:targetType; document.getElementById('messageModal').classList.add('active'); }
 
-        async function sendMessage() {
-            const subject=document.getElementById('msgSubject').value, body=document.getElementById('msgBody').value;
-            if (!subject||!body) return alert('Fill all fields');
-            try {
-                let payload={subject,body};
-                if (messageTarget==='all') payload.recipients='all';
-                else if (messageTarget==='selected') { payload.recipients='selected'; payload.user_ids=Array.from(selectedIds.users); }
-                else payload.recipientUserId=messageTarget;
-                await apiCall('/api/admin/messages/send','POST',payload);
-                closeModal('messageModal'); loadMessages();
-            } catch(e) { alert(e.message); }
-        }
-
-        async function loadMessages() {
-            try {
-                const data = await apiCall('/api/admin/messages');
-                const container = document.getElementById('messagesContainer');
-                if (!data.messages||!data.messages.length) { container.innerHTML='<p style="text-align:center;color:#9ca3af;">No messages yet.</p>'; return; }
-                container.innerHTML = data.messages.map(m =>
-                    '<div style="background:#1f2937;border-left:4px solid '+(m.sender_type==='admin'?'#10b981':'#3b82f6')+';border-radius:0.5rem;padding:1rem;margin-bottom:1rem;">' +
-                    '<div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#9ca3af;margin-bottom:4px;"><span>'+(m.sender_type==='admin'?'You':'User')+' • '+new Date(m.created_at).toLocaleString()+'</span><span style="font-weight:700;">'+(m.subject||'No Subject')+'</span></div>' +
-                    '<p style="font-size:0.875rem;">'+m.body+'</p></div>').join('');
-            } catch(e) { console.error(e); }
-        }
-
-        async function loadPendingData() {
-            try {
-                const lbData = await apiCall('/api/admin/leaderboard/pending');
-                const frData = await apiCall('/api/admin/freelancers/pending');
-                document.getElementById('pending-leaderboard-container').innerHTML = lbData.pending.length ? lbData.pending.map(p =>
-                    '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
-                    '<h4 style="font-weight:700;">'+(p.company_name||extractDomain(p.url))+'</h4>' +
-                    '<a href="'+p.url+'" target="_blank" style="color:#60a5fa;font-size:0.8rem;">'+p.url+'</a>' +
-                    '<div style="font-size:1.5rem;font-weight:900;color:'+(p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171')+';">'+p.score+'/100</div>' +
-                    '<div style="display:flex;gap:8px;margin-top:12px;">' +
-                    '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">✅ Approve</button>' +
-                    '<button onclick="apiCall(&apos;/api/admin/leaderboard/'+p.id+'/reject&apos;,&apos;POST&apos;).then(()=>loadPendingData())" class="btn btn-danger">✗ Reject</button>' +
-                    '</div></div>').join('') : '<p style="color:#9ca3af;">✅ No pending submissions</p>';
-                document.getElementById('pending-freelancers-container').innerHTML = frData.pending.length ? frData.pending.map(p =>
-                    '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
-                    '<h4 style="font-weight:700;">'+p.name+'</h4><p style="font-size:0.875rem;color:#9ca3af;">'+p.email+'</p>' +
-                    '<div style="display:flex;gap:8px;margin-top:8px;">' +
-                    '<button onclick="apiCall(&apos;/api/admin/freelancers/'+p.id+'/approve&apos;,&apos;POST&apos;).then(()=>{loadPendingData();loadFreelancers();})" class="btn btn-success" style="flex:1;">Approve</button>' +
-                    '<button onclick="apiCall(&apos;/api/admin/freelancers/'+p.id+'&apos;,&apos;DELETE&apos;).then(()=>loadPendingData())" class="btn btn-danger" style="flex:1;">Reject</button>' +
-                    '</div></div>').join('') : '<p style="color:#9ca3af;">No pending applications</p>';
-            } catch(e) { console.error(e); }
-        }
-
-        function approveLB(id) { apiCall('/api/admin/leaderboard/'+id+'/approve','POST',{final_country:null,city:null,niche:null}).then(()=>{ loadPendingData(); loadLeaderboard(); }); }
-        function deleteItem(type, id) { if (!confirm('Delete this item permanently?')) return; apiCall(type==='leaderboard'?'/api/admin/leaderboard/'+id:'/api/admin/freelancers/'+id,'DELETE').then(()=>loadAllData()).catch(e=>alert(e.message)); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?'📊 Show Rankings 16+':'📊 Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'▼':'▲'; }
-
-        // Scan log state
-        let allScanLogs = [], filteredScanLogs = [], selectedScanIds = new Set();
-        let slSortField = 'created_at', slSortDir = 'desc', slPage = 0, slPageSize = 100;
-        let slSeenIds = new Set(), slAutoRefreshTimer = null;
-
-        async function loadScanLog(silent=false) {
-            if(!silent){const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Loading...';}}
-            try {
-                const data = await apiCall('/api/admin/scan-log?limit=1000');
-                if (data.success) {
-                    const newIds = new Set(data.scans.map(s=>s.id));
-                    const brand_new = silent ? data.scans.filter(s=>!slSeenIds.has(s.id)) : [];
-                    allScanLogs = data.scans; slSeenIds = newIds;
-                    filterScanLog(); updateSlStats();
-                    const nb=document.getElementById('scanNewBadge');
-                    if(brand_new.length&&silent&&nb){nb.textContent='+'+brand_new.length+' new';nb.style.display='inline';setTimeout(()=>nb.style.display='none',8000);}
-                }
-            } catch(e) {
-                document.getElementById('scanLogBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</td></tr>';
-            } finally {
-                const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
-            }
-        }
-
-        function updateSlStats() {
-            const s=allScanLogs;
-            const withEmail=s.filter(x=>x.email_status==='has_email').length;
-            const scores=s.filter(x=>x.score!==null).map(x=>x.score);
-            const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
-            const today=new Date().toDateString();
-            const todayCount=s.filter(x=>new Date(x.created_at).toDateString()===today).length;
-            const bulkCount=s.filter(x=>(x.source||'single')==='bulk').length;
-            const el=id=>document.getElementById(id);
-            if(el('slStatTotal'))el('slStatTotal').textContent=s.length.toLocaleString();
-            if(el('slStatEmails'))el('slStatEmails').textContent=withEmail.toLocaleString();
-            if(el('slStatAvgScore'))el('slStatAvgScore').textContent=avg||'—';
-            if(el('slStatToday'))el('slStatToday').textContent=todayCount.toLocaleString();
-            if(el('slStatBulk'))el('slStatBulk').textContent=bulkCount+' / '+(s.length-bulkCount);
-            if(el('scanLogCount'))el('scanLogCount').textContent=s.length+' scans';
-        }
-
-        function filterScanLog() {
-            const q=(document.getElementById('slSearch')?.value||'').toLowerCase();
-            const src=document.getElementById('slFilterSource')?.value||'';
-            const em=document.getElementById('slFilterEmail')?.value||'';
-            const sc=document.getElementById('slFilterScore')?.value||'';
-            filteredScanLogs=allScanLogs.filter(s=>{
-                if(q&&!['business_name','business_url','email_found','city','niche'].some(k=>String(s[k]||'').toLowerCase().includes(q)))return false;
-                if(src&&(s.source||'single')!==src)return false;
-                if(em&&s.email_status!==em)return false;
-                if(sc){const sv=s.score||0;if(sc==='0_50'&&sv>=50)return false;else if(sc!=='0_50'&&sv<parseInt(sc))return false;}
-                return true;
-            });
-            sortAndRenderScanLog();
-        }
-
-        function sortScanLog(field) {
-            if(slSortField===field)slSortDir=slSortDir==='asc'?'desc':'asc';
-            else{slSortField=field;slSortDir='desc';}
-            sortAndRenderScanLog();
-        }
-
-        function sortAndRenderScanLog() {
-            const d=slSortDir==='asc'?1:-1;
-            filteredScanLogs.sort((a,b)=>{
-                const av=a[slSortField]||'', bv=b[slSortField]||'';
-                return typeof av==='number'?(av-bv)*d:String(av).localeCompare(String(bv))*d;
-            });
-            slPage=0; renderScanLogPage();
-        }
-
-        function renderScanLogPage() {
-            const tbody=document.getElementById('scanLogBody');
-            const start=slPage*slPageSize, chunk=filteredScanLogs.slice(start,start+slPageSize);
-            if(!chunk.length){
-                tbody.innerHTML='<tr><td colspan="10" class="sl-empty"><i class="fas fa-search" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px;"></i>'+(allScanLogs.length?'No results match your filters':'No scans yet')+'</td></tr>';
-                document.getElementById('slPagination').innerHTML=''; return;
-            }
-            const now=Date.now();
-            tbody.innerHTML=chunk.map(s=>{
-                const isNew=(now-new Date(s.created_at).getTime())<3600000;
-                const dt=new Date(s.created_at);
-                const timeAgo=getTimeAgo(dt);
-                const fullDate=dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-                const sv=s.score;
-                const [scoreColor,scoreBg]=sv===null?['#6b7280','#1f2937']:sv>=85?['#4ade80','#052e16']:sv>=70?['#a3e635','#1a2e05']:sv>=50?['#fbbf24','#2d1f00']:['#f87171','#2d0a0a'];
-                const score=sv!==null?'<span class="sl-score-pill" style="color:'+scoreColor+';background:'+scoreBg+';">'+sv+'</span>':'<span style="color:#4b5563;">—</span>';
-                const src=s.source||'single';
-                const srcColor=src==='bulk'?'#93c5fd':src==='discover'?'#86efac':'#c4b5fd';
-                const srcBg=src==='bulk'?'#0c2340':src==='discover'?'#0a2010':'#1e1b4b';
-                const emailBadge=s.email_status==='has_email'?'<span style="color:#4ade80;font-size:12px;">'+( s.email_found||'Found')+'</span>':'<span style="color:#4b5563;font-size:12px;">—</span>';
-                const loc=[s.city,s.country].filter(Boolean).join(', ')||'—';
-                const urlShort=s.business_url?s.business_url.replace(/^https?:[\/][\/](www\.)?/,'').split('/')[0]:'';
-                return '<tr class="'+(isNew?'sl-new':'')+'" style="border-bottom:1px solid #0d1117;">'
-                    +'<td style="padding:10px 12px;"><input type="checkbox" '+(selectedScanIds.has(String(s.id))?'checked':'')+' onchange="toggleScanRow('+s.id+',this.checked)"></td>'
-                    +'<td style="padding:10px 4px;">'+(isNew?'<span class="sl-new-dot" title="New"></span>':'')+'</td>'
-                    +'<td style="padding:10px 12px;white-space:nowrap;" title="'+fullDate+'">'
-                        +'<div style="font-size:12px;color:#e5e7eb;font-weight:500;">'+timeAgo+'</div>'
-                        +'<div style="font-size:11px;color:#6b7280;">'+dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+'</div></td>'
-                    +'<td style="padding:10px 12px;"><span class="sl-src-badge" style="color:'+srcColor+';background:'+srcBg+';">'+src+'</span></td>'
-                    +'<td style="padding:10px 12px;max-width:220px;">'
-                        +'<div style="font-weight:600;font-size:13px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(s.business_name||'<span style="color:#4b5563;">—</span>')+'</div>'
-                        +(urlShort?'<a href="'+s.business_url+'" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none;opacity:.8;">'+urlShort+'</a>':'')+'</td>'
-                    +'<td style="padding:10px 12px;">'+score+'</td>'
-                    +'<td style="padding:10px 12px;font-size:12px;color:#9ca3af;white-space:nowrap;">'+loc+'</td>'
-                    +'<td style="padding:10px 12px;">'+emailBadge+'</td>'
-                    +'<td style="padding:10px 12px;font-size:11px;color:#6b7280;">'+(s.niche||'—')+'</td>'
-                    +'<td style="padding:10px 12px;"><button onclick="deleteSingleScan('+s.id+',this)" class="sl-action-btn danger" style="padding:4px 8px;font-size:11px;">✕</button></td>'
-                    +'</tr>';
-            }).join('');
-            const total=filteredScanLogs.length, pages=Math.ceil(total/slPageSize);
-            const pag=document.getElementById('slPagination');
-            if(pag){pag.innerHTML=pages>1?'<span>Showing '+(start+1)+'–'+Math.min(start+slPageSize,total)+' of '+total+'</span><div style="display:flex;gap:6px;">'+(slPage>0?'<button onclick="slChangePage(-1)" class="sl-action-btn" style="padding:3px 10px;">← Prev</button>':'')+'<span style="align-self:center;">Page '+(slPage+1)+'/'+pages+'</span>'+(slPage<pages-1?'<button onclick="slChangePage(1)" class="sl-action-btn" style="padding:3px 10px;">Next →</button>':'')+'</div>':'';}
-        }
-
-        function slChangePage(dir){slPage=Math.max(0,slPage+dir);renderScanLogPage();}
-
-        function getTimeAgo(dt) {
-            const s=Math.floor((Date.now()-dt.getTime())/1000);
-            if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';
-            if(s<86400)return Math.floor(s/3600)+'h ago';if(s<604800)return Math.floor(s/86400)+'d ago';
-            return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-        }
-
-        function toggleScanRow(id,checked){if(checked)selectedScanIds.add(String(id));else selectedScanIds.delete(String(id));updateScanExportBtn();}
-        function toggleAllScans(checked){filteredScanLogs.slice(slPage*slPageSize,(slPage+1)*slPageSize).forEach(s=>checked?selectedScanIds.add(String(s.id)):selectedScanIds.delete(String(s.id)));updateScanExportBtn();renderScanLogPage();}
-        function updateScanExportBtn(){const btn=document.getElementById('exportScanBtn');const n=selectedScanIds.size;if(btn)btn.textContent=n>0?'Export '+n+' selected':'Export CSV';}
-
-        function exportScanLog(){
-            const toExport=allScanLogs.filter(s=>selectedScanIds.has(String(s.id)));
-            if(!toExport.length){alert('Select scans first.');return;}
-            const rows=[['first_name','business_name','email','website','score','city','country','niche','source','scan_date','scan_time']];
-            toExport.forEach(s=>{
-                let fn=s.business_name?s.business_name.split(' ')[0]:'';fn=fn.charAt(0).toUpperCase()+fn.slice(1).toLowerCase();
-                const dt=new Date(s.created_at);
-                rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',s.niche||'',s.source||'single',dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})]);
-            });
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
-            const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scans-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
-        }
-
-        async function bulkDeleteScans(){
-            const ids=Array.from(selectedScanIds);if(!ids.length){alert('Select scans first.');return;}if(!confirm('Delete '+ids.length+' scan(s)?'))return;
-            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids})});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
-        }
-
-        async function deleteSingleScan(id,btn){
-            if(!confirm('Delete this scan?'))return;if(btn){btn.disabled=true;btn.textContent='...';}
-            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids:[id]})});const d=await r.json();
-            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);filterScanLog();updateSlStats();}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='✕';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='✕';}}
-        }
-
-        async function deleteAllScans(){
-            if(!confirm('Delete ALL scans permanently?'))return;
-            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');allScanLogs=[];filteredScanLogs=[];selectedScanIds.clear();updateScanExportBtn();filterScanLog();updateSlStats();}catch(e){alert('❌ '+e.message);}
-        }
-
-        function startScanLogAutoRefresh(){
-            stopScanLogAutoRefresh();
-            slAutoRefreshTimer=setInterval(()=>{
-                if(document.getElementById('tab-scanlog')&&!document.getElementById('tab-scanlog').classList.contains('hidden')){loadScanLog(true);}
-            },30000);
-        }
-        function stopScanLogAutoRefresh(){if(slAutoRefreshTimer){clearInterval(slAutoRefreshTimer);slAutoRefreshTimer=null;}}
-
-        let adminLastScanResult=null;
-        function adminSetScanMode(mode){
-            document.getElementById('adminModeSingle').style.display=mode==='single'?'block':'none';
-            document.getElementById('adminModeBatch').style.display=mode==='batch'?'block':'none';
-            const sBtn=document.getElementById('adminScanModeBtn_single'),bBtn=document.getElementById('adminScanModeBtn_batch');
-            if(mode==='single'){sBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;';bBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;';}
-            else{bBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;';sBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;';}
-        }
-
-        async function adminRunScan(){
-            const url=document.getElementById('adminScanUrl').value.trim();if(!url)return;
-            const btn=document.getElementById('adminScanBtn'),prog=document.getElementById('adminScanProgress'),res=document.getElementById('adminScanResults');
-            btn.disabled=true;btn.textContent='⏳ Scanning...';prog.style.display='block';res.style.display='none';
-            let pct=0;const interval=setInterval(()=>{pct=Math.min(pct+Math.random()*12,90);document.getElementById('adminScanBar').style.width=pct+'%';},600);
-            try{
-                const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
-                const data=await r.json();clearInterval(interval);document.getElementById('adminScanBar').style.width='100%';
-                if(!data.success)throw new Error(data.error||'Scan failed');
-                adminLastScanResult=data;
-                setTimeout(()=>{prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';res.style.display='block';
-                    res.innerHTML='<div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;padding:28px;text-align:center;"><div style="font-size:5rem;font-weight:900;color:'+(data.score>=85?'#4ade80':data.score>=70?'#fbbf24':'#f87171')+';">'+data.score+'</div><div style="color:#6b7280;">/ 100</div><p style="color:#e5e7eb;margin-top:12px;">'+data.url+'</p></div>';},400);
-            }catch(e){clearInterval(interval);prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';alert('Scan failed: '+e.message);}
-        }
-
-        async function loadCampaignsList(){} // removed
-
-
-        // ── CONTENT LIFECYCLE TRACKER JS ────────────────────────────────────────
-        let allTrackerPages = [];
-        let _trProfileId = null;
-        let _trClientFilter = '';
-
-        async function loadTrackerPages() {
-            const btn = document.getElementById('trRefreshBtn');
-            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Refreshing...';}
-            try {
-                const data = await apiCall('/api/tracker/pages' + (_trProfileId ? '?profile_id='+_trProfileId : ''));
-                allTrackerPages = data.pages || [];
-                populateClientFilter();
-                renderTrackerStats();
-                renderTrackerPages();
-            } catch(e) {
-                document.getElementById('trPagesList').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</div>';
-            } finally {
-                if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
-            }
-        }
-
-        function populateClientFilter() {
-            const sel = document.getElementById('trClientFilter');
-            if(!sel) return;
-            // Collect unique clients
-            const clients = {};
-            allTrackerPages.forEach(function(p) {
-                const key = p.engine_client_name || '__admin__';
-                const label = p.engine_client_name || 'Admin';
-                clients[key] = label;
-            });
-            const prev = sel.value;
-            sel.innerHTML = '<option value="">All clients (' + allTrackerPages.length + ' pages)</option>';
-            Object.keys(clients).sort().forEach(function(k) {
-                const count = allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === k; }).length;
-                const opt = document.createElement('option');
-                opt.value = k;
-                opt.textContent = clients[k] + ' (' + count + ')';
-                sel.appendChild(opt);
-            });
-            sel.value = prev || '';
-        }
-
-        function filterTrackerByClient() {
-            const sel = document.getElementById('trClientFilter');
-            _trClientFilter = sel ? sel.value : '';
-            renderTrackerPages();
-        }
-
-        function renderTrackerStats() {
-            const pages = allTrackerPages;
-            const withLatest = pages.filter(p => p.latest_snapshot);
-            const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
-            const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
-            const today = new Date().toDateString();
-            const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
-            const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
-            const el = id => document.getElementById(id);
-            if(el('trStatPages')) el('trStatPages').textContent = pages.length;
-            if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
-            if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
-            if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
-            if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
-
-            // ── New aggregate KPIs ────────────────────────────────────────────────────
-            let pagesWithPos = 0, totalPosGain = 0;
-            let totalGraaf = 0, pagesWithGraaf = 0;
-            let citedCount = 0;
-            withLatest.forEach(p => {
-                const base = p.baseline_snapshot || {};
-                const curr = p.latest_snapshot || {};
-                if (base.google_position && curr.google_position) {
-                    pagesWithPos++;
-                    totalPosGain += (base.google_position - curr.google_position);
-                }
-                if (curr.score) { pagesWithGraaf++; totalGraaf += curr.score; }
-                if (curr.ai_google_overview_cited || curr.ai_perplexity_cited || curr.ai_bing_cited) citedCount++;
-            });
-            const avgPosGain = pagesWithPos ? (totalPosGain / pagesWithPos).toFixed(1) : null;
-            const avgGraaf = pagesWithGraaf ? Math.round(totalGraaf / pagesWithGraaf) : null;
-            const citationRate = withLatest.length ? Math.round((citedCount / withLatest.length) * 100) : 0;
-
-            if (el('trStatAvgPosGain')) {
-                if (avgPosGain !== null) {
-                    const gainNum = parseFloat(avgPosGain);
-                    el('trStatAvgPosGain').textContent = (gainNum > 0 ? '+' : '') + avgPosGain;
-                    el('trStatAvgPosGain').style.color = gainNum > 0 ? '#4ade80' : gainNum < 0 ? '#f87171' : '#e5e7eb';
-                } else {
-                    el('trStatAvgPosGain').textContent = '—';
-                    el('trStatAvgPosGain').style.color = '#e5e7eb';
-                }
-            }
-            if (el('trStatAvgGraaf')) {
-                if (avgGraaf !== null) {
-                    el('trStatAvgGraaf').textContent = avgGraaf + '/100';
-                    el('trStatAvgGraaf').style.color = avgGraaf >= 70 ? '#4ade80' : avgGraaf >= 50 ? '#fbbf24' : '#f87171';
-                } else {
-                    el('trStatAvgGraaf').textContent = '—';
-                    el('trStatAvgGraaf').style.color = '#e5e7eb';
-                }
-            }
-            if (el('trStatCitationRate')) el('trStatCitationRate').textContent = citationRate + '%';
-        }
-
-        function renderTrackerPages() {
-            const el = document.getElementById('trPagesList');
-            if(!allTrackerPages.length) {
-                el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
-                return;
-            }
-            // Apply client filter
-            const filtered = _trClientFilter
-                ? allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; })
-                : allTrackerPages;
-            const countEl = document.getElementById('trFilterCount');
-            if(countEl) countEl.textContent = _trClientFilter ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
-            if(!filtered.length) {
-                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages for this client.</div>';
-                return;
-            }
-            el.innerHTML = filtered.map(p => renderTrackerPageCard(p)).join('');
-        }
-
-        function renderTrackerPageCard(p) {
-            const snap = p.latest_snapshot;
-            const pending = parseInt(p.pending_changes||0);
-            const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
-            const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '—';
-            const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
-
-            // Position pill
-            let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
-            if(snap?.google_position) {
-                const pos = snap.google_position;
-                const posColor = pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
-                const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
-                posPill = '<span class="tr-badge" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;">#'+pos+'</span>';
-            }
-
-            // GRAAF score badge
-            const graafBadge = (snap?.score)
-                ? '<span class="tr-badge" style="background:#2e1065;color:#a78bfa;margin-left:6px;">🎯 '+snap.score+'/100</span>'
-                : '';
-
-            // GSC baseline badge
-            const gscBadge = (p.gsc_impressions || p.gsc_clicks || p.gsc_position)
-                ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;margin-left:6px;">📊 GSC</span>'
-                : '';
-
-            // Classification badge
-            let clsBadge = '';
-            if (p.latest_classification) {
-                const cls = p.latest_classification;
-                const clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
-                const clsEmoji = cls.status === 'healthy' ? '🟢' : cls.status === 'attention' ? '🟡' : cls.status === 'opportunity' ? '💡' : '🔴';
-                const clsLabel = cls.status === 'healthy' ? 'HEALTHY' : cls.status === 'attention' ? 'NEEDS REFRESH' : cls.status === 'opportunity' ? 'OPPORTUNITY' : 'NEEDS REWRITE';
-                clsBadge = '<span class="tr-badge" style="background:'+clsColor+'22;color:'+clsColor+';border:1px solid '+clsColor+'44;margin-left:6px;">'+clsEmoji+' '+clsLabel+' '+(cls.score||0)+'/100</span>';
-            }
-
-            // Fetch reliability warning
-            const fetchWarning = (p.fetch_reliable === false)
-                ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">⚠️ fetch unreliable</span>'
-                : '';
-
-            // AI citation badges
-            const gBadge = snap
-                ? (snap.ai_google_overview_cited
-                    ? '<span class="tr-badge cited">✦ AI Overview cited</span>'
-                    : snap.ai_google_overview_found
-                        ? '<span class="tr-badge notcited">AI Overview — not cited</span>'
-                        : '<span class="tr-badge notcited">No AI Overview</span>')
-                : '<span class="tr-badge notcited">Not checked</span>';
-
-            const pBadge = snap
-                ? (snap.ai_perplexity_cited
-                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;">✦ Perplexity cited</span>'
-                    : '<span class="tr-badge notcited">Perplexity — not cited</span>')
-                : '';
-
-            const bBadge = snap
-                ? (snap.ai_bing_cited
-                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;">✦ Bing cited</span>'
-                    : '')
-                : '';
-
-            // Pending changes button
-            const changesBtn = pending > 0
-                ? '<button onclick="openChangesModalById('+p.id+')" class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
-                : '';
-
-            // Manual HTML paste CTA for unreliable pages
-            const manualCta = (p.fetch_reliable === false && (!p.html_content || p.html_content.length < 500))
-                ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;">📋 Paste HTML manually for GRAAF scan</button></div>'
-                : '';
-
-            const borderColor = p.is_active ? '#7e22ce' : '#374151';
-            const dotHtml = p.is_active
-                ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
-                : '<span class="tr-change-dot" style="background:#374151;"></span>';
-            const kwHtml = p.keyword ? '<span style="font-size:11px;color:#6b7280;margin-left:8px;">keyword: '+p.keyword+'</span>' : '';
-            let _recs = snap && snap.recommendations ? snap.recommendations : null;
-            if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
-            const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
-            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';">'
-                +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
-                +'<div style="flex:1;min-width:0;">'
-                +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
-                +dotHtml
-                +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
-                +graafBadge+gscBadge+clsBadge+fetchWarning
-                +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
-                +'</div>'
-                +'<div style="margin-bottom:8px;">'
-                +'<a href="'+p.url+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;">'+p.url+'</a>'
-                +kwHtml
-                +'</div>'
-                +manualCta
-                +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-                +posPill+gBadge+pBadge+bBadge
-                +'</div></div>'
-                +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
-                +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
-                +changesBtn
-                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'">Check now</button>'
-                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn">Update HTML</button>'
-                +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
-                +'</div>'
-                +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
-                +'Last checked: '+lastCheck+' · Next: '+nextCheck+' · '+(p.snapshot_count||0)+' snapshots'
-                +'</div></div></div>'
-                +recsHtml
-                +'</div>';
-        }
-
-        function renderTrackerRecommendations(recs, pageId) {
-            if(!recs) return '';
-            if(typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { return ''; } }
-            if(!Array.isArray(recs)||!recs.length) return '';
-            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
-            const rows = recs.slice(0,3).map(function(r) {
-                const pc = priorityColor[r.priority]||'#6b7280';
-                return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1f2937;">'
-                    +'<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:'+pc+'22;color:'+pc+';white-space:nowrap;margin-top:1px;">'+(r.priority||'').toUpperCase()+'</span>'
-                    +'<div style="flex:1;">'
-                    +'<div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+(r.title||'')+'</div>'
-                    +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+(r.action||'')+'</div>'
-                    +'</div></div>';
-            }).join('');
-            const moreRow = recs.length > 3 ? '<div style="font-size:11px;color:#6b7280;margin-top:6px;">+'+(recs.length-3)+' more — click See changes to view all</div>' : '';
-            return '<div style="margin-top:14px;padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;">'
-                +'<div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Latest Recommendations</div>'
-                +rows+moreRow+'</div>';
-        }
-
-        async function runManualCheck(pageId) {
-            const btn = document.getElementById('trCheckBtn_'+pageId);
-            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:4px;"></i>Checking...';}
-            try {
-                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
-                // Show running indicator — poll for result
-                let polls = 0;
-                const poll = setInterval(async () => {
-                    polls++;
-                    if(polls > 12) { clearInterval(poll); if(btn){btn.disabled=false;btn.textContent='Check now';} return; }
-                    const data = await apiCall('/api/tracker/pages?profile_id='+(_trProfileId||'')).catch(()=>null);
-                    if(data?.pages) {
-                        const updated = data.pages.find(p=>p.id===pageId);
-                        if(updated?.last_checked_at && new Date(updated.last_checked_at) > new Date(Date.now()-120000)) {
-                            clearInterval(poll);
-                            allTrackerPages = data.pages;
-                            renderTrackerStats();
-                            renderTrackerPages();
-                            if(btn){btn.disabled=false;btn.textContent='Check now';}
-                        }
-                    }
-                }, 10000);
-            } catch(e) {
-                alert('Check failed: '+e.message);
-                if(btn){btn.disabled=false;btn.textContent='Check now';}
-            }
-        }
-
-        function openChangesModalById(pageId) {
-            const page = allTrackerPages.find(p => p.id === pageId);
-            const title = page ? (page.title || page.url || 'Page') : 'Page';
-            openChangesModal(pageId, title);
-        }
-
-        async function openChangesModal(pageId, title) {
-            document.getElementById('trChangesTitle').textContent = 'Changes — '+title;
-            document.getElementById('trChangesBody').innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-            document.getElementById('trChangesModal').style.display = 'flex';
-            try {
-                const [changesData, snapsData] = await Promise.all([
-                    apiCall('/api/tracker/pages/'+pageId+'/changes'),
-                    apiCall('/api/tracker/pages/'+pageId+'/snapshots')
-                ]);
-                const changes = changesData.changes || [];
-                const snaps = snapsData.snapshots || [];
-                if(!changes.length && !snaps.length) {
-                    document.getElementById('trChangesBody').innerHTML = '<p style="color:#6b7280;text-align:center;padding:30px;">No changes or snapshots yet. Run a check first.</p>';
-                    return;
-                }
-                renderChangesModal(changes, snaps, pageId);
-            } catch(e) {
-                document.getElementById('trChangesBody').innerHTML = '<p style="color:#f87171;">Error: '+e.message+'</p>';
-            }
-        }
-
-        function renderChangesModal(changes, snaps, pageId) {
-            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
-            const sigChanges = changes.filter(function(c){return c.is_significant;});
-            const latestSnap = snaps[0];
-            const recs = (latestSnap && latestSnap.recommendations) ? latestSnap.recommendations : [];
-
-            let html = '';
-
-            // History table
-            if(snaps.length) {
-                const rows = snaps.slice(0,10).map(function(s,i) {
-                    const prev = snaps[i+1];
-                    const posChange = (prev && prev.google_position && s.google_position) ? (prev.google_position - s.google_position) : null;
-                    const posArrow = posChange === null ? '' : posChange > 0
-                        ? '<span style="color:#4ade80;margin-left:4px;">↑'+posChange+'</span>'
-                        : posChange < 0 ? '<span style="color:#f87171;margin-left:4px;">↓'+Math.abs(posChange)+'</span>' : '';
-                    return '<tr style="border-bottom:1px solid #0d1117;">'
-                        +'<td style="padding:7px 10px;color:#9ca3af;">'+new Date(s.checked_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</td>'
-                        +'<td style="padding:7px 10px;font-weight:600;">'+(s.google_position?'#'+s.google_position:'—')+posArrow+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">✦ Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">—</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
-                        +'</tr>';
-                }).join('');
-                html += '<div style="margin-bottom:20px;">'
-                    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:12px;">Position & Citation History</div>'
-                    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
-                    +'<thead><tr style="border-bottom:1px solid #1f2937;color:#6b7280;">'
-                    +'<th style="padding:6px 10px;text-align:left;">Date</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Position</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Google AI</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Perplexity</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Bing</th>'
-                    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
-            }
-
-            // Significant changes
-            if(sigChanges.length) {
-                const changeRows = sigChanges.map(function(c) {
-                    const isGood = (c.change_type==='position'&&c.delta>0)||(c.change_type==='ai_citation'&&c.delta>0);
-                    const borderColor = isGood?'#4ade80':'#f87171';
-                    const doneBtn = !c.applied
-                        ? '<button onclick="markChangeApplied('+c.id+')" class="tr-btn" style="font-size:11px;padding:3px 10px;">Mark done</button>'
-                        : '<span style="font-size:11px;color:#4ade80;">✓ Applied</span>';
-                    return '<div style="padding:10px 12px;background:#0d1117;border-radius:6px;border-left:3px solid '+borderColor+';margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">'
-                        +'<div><div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+c.field_name.replace(/_/g,' ')+' — '+c.value_before+' → '+c.value_after+'</div>'
-                        +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+new Date(c.changed_at).toLocaleDateString('en-GB')+'</div></div>'
-                        +doneBtn+'</div>';
-                }).join('');
-                html += '<div style="margin-bottom:20px;">'
-                    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:10px;">Significant Changes</div>'
-                    +changeRows+'</div>';
-            }
-
-            // Recommendations
-            if(recs.length) {
-                const recRows = recs.map(function(r) {
-                    const pc = priorityColor[r.priority]||'#6b7280';
-                    return '<div style="padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;margin-bottom:8px;">'
-                        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-                        +'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:'+pc+'22;color:'+pc+';">'+(r.priority||'').toUpperCase()+'</span>'
-                        +'<span style="font-size:13px;font-weight:600;color:#f1f5f9;">'+(r.title||'')+'</span>'
-                        +'</div>'
-                        +'<div style="font-size:12px;color:#9ca3af;margin-bottom:4px;">'+(r.action||'')+'</div>'
-                        +(r.expected_impact?'<div style="font-size:11px;color:#6b7280;">Expected: '+r.expected_impact+'</div>':'')
-                        +'</div>';
-                }).join('');
-                html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:10px;">What to Do Next</div>'+recRows+'</div>';
-            }
-
-            document.getElementById('trChangesBody').innerHTML = html || '<p style="color:#6b7280;text-align:center;">No data yet.</p>';
-        }
-
-        async function markChangeApplied(changeId) {
-            try {
-                await apiCall('/api/tracker/changes/'+changeId+'/apply','PATCH');
-                loadTrackerPages();
-            } catch(e) { alert('Error: '+e.message); }
-        }
-
-        function openAddPageModal() {
-            document.getElementById('trAddUrl').value='';
-            document.getElementById('trAddKeyword').value='';
-            document.getElementById('trAddTitle').value='';
-            document.getElementById('trAddHtml').value='';
-            document.getElementById('trAddFreq').value='3days';
-            document.getElementById('trAddModal').style.display='flex';
-        }
-        function closeAddPageModal() { document.getElementById('trAddModal').style.display='none'; }
-
-        async function submitAddPage() {
-            const url = document.getElementById('trAddUrl').value.trim();
-            const keyword = document.getElementById('trAddKeyword').value.trim();
-            if(!url) return alert('URL is required');
-            const btn = document.getElementById('trAddSubmitBtn');
-            btn.disabled=true; btn.textContent='Adding...';
-            try {
-                const data = await apiCall('/api/tracker/pages','POST',{
-                    url, keyword, title: document.getElementById('trAddTitle').value.trim()||null,
-                    html_content: document.getElementById('trAddHtml').value.trim()||null,
-                    check_frequency: document.getElementById('trAddFreq').value,
-                    profile_id: _trProfileId||null
-                });
-                closeAddPageModal();
-                if(data.page) {
-                    // Run first check immediately
-                    await apiCall('/api/tracker/pages/'+data.page.id+'/check','POST').catch(()=>{});
-                    await loadTrackerPages();
-                }
-            } catch(e) { alert('Error: '+e.message); }
-            finally { btn.disabled=false; btn.textContent='Add & Run First Check'; }
-        }
-
-        function openHtmlModal(pageId, currentHtml) {
-            document.getElementById('trHtmlPageId').value = pageId;
-            document.getElementById('trHtmlContent').value = '';
-            document.getElementById('trHtmlModal').style.display = 'flex';
-        }
-
-        async function submitHtmlUpdate() {
-            const pageId = document.getElementById('trHtmlPageId').value;
-            const html = document.getElementById('trHtmlContent').value.trim();
-            if(!html) return alert('Paste your updated HTML first');
-            try {
-                await apiCall('/api/tracker/pages/'+pageId,'PATCH',{ html_content: html });
-                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
-                document.getElementById('trHtmlModal').style.display='none';
-                setTimeout(loadTrackerPages, 3000);
-            } catch(e) { alert('Error: '+e.message); }
-        }
-
-        async function deleteTrackerPage(pageId) {
-            if(!confirm('Remove this page from tracking?')) return;
-            try {
-                await apiCall('/api/tracker/pages/'+pageId,'DELETE');
-                loadTrackerPages();
-            } catch(e) { alert('Error: '+e.message); }
-        }
-
-        function showCreateEngineCode(){document.getElementById('createEngineCodeForm').style.display='block';}
-
-        async function loadEngineCodes(){
-            try{
-                const data=await apiCall('/api/admin/engine-codes');const codes=data.codes||[];const el=document.getElementById('engineCodesList');
-                if(!codes.length){el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:32px;">No engine access codes yet.</div>';return;}
-                el.innerHTML=codes.map(c=>{
-                    const isLifetime = c.deal_type === 'lifetime';
-                    const pkBadge = isLifetime
-                        ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#064e3b;color:#4ade80;margin-left:6px;">♾️ Lifetime'+(c.deal_label?' · '+c.deal_label:'')+'</span>'
-                        : c.use_platform_keys
-                            ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>'
-                            : '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#1e293b;color:#94a3b8;margin-left:6px;">Own Keys</span>';
-                    const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
-                    // ── API Cost Budget Display ───────────────────────────
-                    let creditBar = '';
-                    const costLimit = parseFloat(c.monthly_cost_limit) || 50;
-                    const costUsed = parseFloat(c.monthly_cost_used) || 0;
-                    const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
-                    const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
-                    const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥️ Platform' : '❓ Not set';
-                    creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
-                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
-                        '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">€' + costUsed.toFixed(2) + ' / €' + costLimit.toFixed(2) + '</span>' +
-                        '</div>' +
-                        '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:' + costColor + ';width:' + costPct + '%;transition:width .3s;"></div></div>' +
-                        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
-                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set € budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
-                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">✓ Set Budget</button>' +
-                        '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
-                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;">📋 Cost Log</button>' +
-                        '</div></div>';
-                    return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
-                    '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
-                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span>'+pkBadge+'</div>' +
-                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>'+keyInfo+creditBar+'</div>' +
-                    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
-                    '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
-                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy</button>' +
-                    '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
-                    '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
-                    '</div></div></div>';}).join('');
-            }catch(e){console.error('Failed to load engine codes:',e);}
-        }
-
-        async function setCostLimit(id){
-            const inp=document.getElementById('setlimit_'+id);
-            const limit=parseFloat(inp.value);
-            if(!limit||limit<1){alert('Enter a valid budget amount (minimum $1)');return;}
-            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{monthly_cost_limit:limit});
-            loadEngineCodes();
-        }
-        async function resetCostUsed(id){
-            if(!confirm('Reset cost used to $0.00 for this code?'))return;
-            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{reset_used:true});
-            loadEngineCodes();
-        }
-        async function showCostLog(id){
-            try{
-                const data=await apiCall('/api/admin/engine-codes/'+id+'/cost-log');
-                const logs=data.logs||[];
-                let html='<div style="max-height:300px;overflow-y:auto;">';
-                if(!logs.length){html+='<div style="color:#64748b;text-align:center;padding:16px;">No API costs yet.</div>';}
-                else{
-                    html+='<table style="width:100%;font-size:11px;border-collapse:collapse;">'+
-                        '<thead><tr style="color:#94a3b8;text-align:left;border-bottom:1px solid #334155;">'+
-                        '<th style="padding:4px;">Action</th><th style="padding:4px;">Model</th><th style="padding:4px;">Tokens</th><th style="padding:4px;text-align:right;">Cost</th><th style="padding:4px;">Time</th></tr></thead><tbody>';
-                    logs.forEach(function(l){
-                        html+='<tr style="border-bottom:1px solid #1e293b;">'+
-                            '<td style="padding:4px;color:#e2e8f0;">'+l.action+'</td>'+
-                            '<td style="padding:4px;color:#9ca3af;">'+l.model+'</td>'+
-                            '<td style="padding:4px;color:#9ca3af;">'+(l.input_tokens+l.output_tokens)+'</td>'+
-                            '<td style="padding:4px;color:#fbbf24;text-align:right;">$'+parseFloat(l.estimated_cost).toFixed(4)+'</td>'+
-                            '<td style="padding:4px;color:#64748b;">'+new Date(l.created_at).toLocaleDateString()+'</td></tr>';
-                    });
-                    html+='</tbody></table>';
-                }
-                html+='</div>';
-                // Show in a simple modal
-                const modal=document.createElement('div');
-                modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:99999;justify-content:center;align-items:center;display:flex;';
-                modal.innerHTML='<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">'+
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
-                    '<h3 style="font-size:1rem;color:#fbbf24;margin:0;">API Cost Log</h3>'+
-                    '<button class="costlog-close" style="background:none;border:none;color:#9ca3af;font-size:18px;cursor:pointer;">X</button></div>'+html+
-                    '<div style="margin-top:12px;text-align:right;"><button class="costlog-close" style="padding:6px 14px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;cursor:pointer;">Close</button></div></div>';
-                modal.className='modal-cost';
-                modal.onclick=function(e){if(e.target===modal)modal.remove();};
-                modal.querySelectorAll('.costlog-close').forEach(function(b){b.onclick=function(){modal.remove();};});
-                document.body.appendChild(modal);
-            }catch(e){console.error('Show cost log failed:',e);alert('Failed to load cost log');}
-        }
-
-        async function createEngineCode(){
-            const client_name=document.getElementById('ecClientName').value.trim();if(!client_name){alert('Enter a client name');return;}
-            try{
-                const use_platform_keys=document.getElementById('ecUsePlatformKeys').checked;
-                const costLimit=document.getElementById('ecCostLimit').value.trim();
-                const dealType=document.getElementById('ecDealType').value;
-                const dealLabel=document.getElementById('ecDealLabel')?.value.trim()||null;
-                const isLifetime=dealType==='lifetime';
-                const data=await apiCall('/api/admin/engine-codes','POST',{
-                    client_name,
-                    gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,
-                    claude_key:document.getElementById('ecClaudeKey').value.trim()||null,
-                    serpapi_key:document.getElementById('ecSerpapiKey').value.trim()||null,
-                    perplexity_key:document.getElementById('ecPerplexityKey').value.trim()||null,
-                    you_api_key:document.getElementById('ecYouApiKey').value.trim()||null,
-                    expires_at:isLifetime?null:(document.getElementById('ecExpires').value||null),
-                    notes:document.getElementById('ecNotes').value.trim()||null,
-                    use_platform_keys:isLifetime?false:use_platform_keys,
-                    api_key_mode:isLifetime?'byok':(use_platform_keys?'platform':'byok'),
-                    monthly_cost_limit:use_platform_keys&&!isLifetime?(parseFloat(costLimit)||5):null,
-                    deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
-                    deal_label:dealLabel||null
-                });
-                if(!data.success){alert('Error: '+data.error);return;}
-                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';document.getElementById('ecUsePlatformKeys').checked=false;toggleEcKeyFields(false);loadEngineCodes();
-            }catch(e){alert('Error: '+e.message);}
-        }
-
-        async function toggleEngineCode(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:newState});loadEngineCodes();}
-        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState});loadEngineCodes();}
-        async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
-        function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
-
-        function toggleEcKeyFields(usePlatform) {
-            const g=document.getElementById('ecGeminiWrap'), c=document.getElementById('ecClaudeWrap'), cr=document.getElementById('ecCreditsWrap');
-            if(g) g.style.display = usePlatform ? 'none' : '';
-            if(c) c.style.display = usePlatform ? 'none' : '';
-            if(cr) cr.style.display = usePlatform ? '' : 'none';
-        }
-        function toggleGaKeyFields(usePlatform) {
-            const g=document.getElementById('gaGeminiWrap'), c=document.getElementById('gaClaudeWrap'), cr=document.getElementById('gaCreditsWrap');
-            if(g) g.style.display = usePlatform ? 'none' : '';
-            if(c) c.style.display = usePlatform ? 'none' : '';
-            if(cr) cr.style.display = usePlatform ? '' : 'none';
-            if(!usePlatform) setGaDealType('credits'); // reset deal type when unchecking platform keys
-        }
-
-        function setEcDealType(type) {
-            document.getElementById('ecDealType').value = type;
-            const cp = document.getElementById('ecCreditPackWrap');
-            const lw = document.getElementById('ecLifetimeWrap');
-            const btnC = document.getElementById('ecDealCredits');
-            const btnL = document.getElementById('ecDealLifetime');
-            const gWrap = document.getElementById('ecGeminiWrap');
-            const cWrap = document.getElementById('ecClaudeWrap');
-            const isLifetime = type === 'lifetime';
-            // Credit pack: show credit fields, hide lifetime info, hide key fields (platform pays)
-            // Lifetime: show key fields (client brings own), show lifetime info, hide credit fields
-            cp.style.display = isLifetime ? 'none' : '';
-            lw.style.display = isLifetime ? '' : 'none';
-            if(gWrap) gWrap.style.display = isLifetime ? '' : 'none';
-            if(cWrap) cWrap.style.display = isLifetime ? '' : 'none';
-            btnC.style.cssText += ';background:'+(isLifetime?'#1e293b':'#0891b2')+';color:'+(isLifetime?'#94a3b8':'#fff')+';border-color:'+(isLifetime?'#334155':'#0284c7');
-            btnL.style.cssText += ';background:'+(isLifetime?'#064e3b':'#1e293b')+';color:'+(isLifetime?'#4ade80':'#94a3b8')+';border-color:'+(isLifetime?'#166534':'#334155');
-        }
-
-        function setGaDealType(type) {
-            document.getElementById('gaDealType').value = type;
-            const cp = document.getElementById('gaCreditPackWrap');
-            const lw = document.getElementById('gaLifetimeWrap');
-            const btnC = document.getElementById('gaDealCredits');
-            const btnL = document.getElementById('gaDealLifetime');
-            const gWrap = document.getElementById('gaGeminiWrap');
-            const cWrap = document.getElementById('gaClaudeWrap');
-            const isLifetime = type === 'lifetime';
-            cp.style.display = isLifetime ? 'none' : '';
-            lw.style.display = isLifetime ? '' : 'none';
-            if(gWrap) gWrap.style.display = isLifetime ? '' : 'none';
-            if(cWrap) cWrap.style.display = isLifetime ? '' : 'none';
-            btnC.style.cssText += ';background:'+(isLifetime?'#1e293b':'#0891b2')+';color:'+(isLifetime?'#94a3b8':'#fff')+';border-color:'+(isLifetime?'#334155':'#0284c7');
-            btnL.style.cssText += ';background:'+(isLifetime?'#064e3b':'#1e293b')+';color:'+(isLifetime?'#4ade80':'#94a3b8')+';border-color:'+(isLifetime?'#166534':'#334155');
-        }
-
-        async function doChangePassword(){
-            const current=document.getElementById('cpCurrent').value.trim(),newPw=document.getElementById('cpNew').value.trim(),conf=document.getElementById('cpConfirm').value.trim();
-            const msg=document.getElementById('cpMsg');
-            const showMsg=(text,ok)=>{msg.style.display='block';msg.style.background=ok?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)';msg.style.border=ok?'1px solid rgba(34,197,94,.3)':'1px solid rgba(239,68,68,.3)';msg.style.color=ok?'#4ade80':'#f87171';msg.textContent=text;};
-            if(!current||!newPw||!conf)return showMsg('All fields required',false);
-            if(newPw.length<8)return showMsg('Min. 8 characters',false);
-            if(newPw!==conf)return showMsg('Passwords do not match',false);
-            try{const res=await fetch('/api/admin/change-password',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({current_password:current,new_password:newPw})});const data=await res.json();
-            if(data.success){showMsg('✅ Password updated! Logging out...',true);setTimeout(()=>logout(),2000);}else{showMsg(data.error||'Failed',false);}}catch(e){showMsg('Connection error: '+e.message,false);}
-        }
-
-        async function loadGiveAccess(){
-            const el=document.getElementById('giveAccessCodesList');if(!el)return;
-            try{const data=await apiCall('/api/admin/engine-codes');const codes=(data.codes||[]).filter(c=>c.is_active);
-            if(!codes.length){el.innerHTML='<div style="color:#6b7280;text-align:center;padding:20px;">No active codes.</div>';return;}
-            el.innerHTML=codes.map(c=>{const loginUrl=window.location.origin+'/engine-login?code='+c.code;
-                return '<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid #0f766e;border-radius:10px;padding:18px 20px;margin-bottom:12px;">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
-                    '<div><span style="font-family:monospace;font-size:1.1rem;font-weight:800;color:#34d399;">'+c.code+'</span>' +
-                    '<span style="background:#064e3b;color:#6ee7b7;border-radius:99px;padding:2px 10px;font-size:0.72rem;margin-left:8px;">● Active</span>' +
-                    '<div style="font-weight:700;color:#f1f5f9;margin-top:4px;">'+c.client_name+'</div>' +
-                    '<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#64748b;">🔗 '+loginUrl+'</div></div>' +
-                    '<div style="display:flex;flex-direction:column;gap:8px;">' +
-                    '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;">📋 Copy Login URL</button>' +
-                    '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">✕ Revoke Access</button>' +
-                    '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
-        }
-
-        function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
-
-        async function gaRevoke(id){if(!confirm('Revoke this access code?'))return;try{await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:false});loadGiveAccess();loadEngineCodes();}catch(e){alert('Error: '+e.message);}}
-
-        async function gaCreateCode(){
-            const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
-            const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent='⏳ Creating...';
-            const use_platform_keys=document.getElementById('gaUsePlatformKeys').checked;
-            try{const pc=document.getElementById('gaPlatformCredits').value.trim();
-            const dealType=document.getElementById('gaDealType').value;
-            const dealLabel=document.getElementById('gaDealLabel')?.value.trim()||null;
-            const isLifetime=dealType==='lifetime';
-            const data=await apiCall('/api/admin/engine-codes','POST',{
-                client_name:name,
-                gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,
-                claude_key:document.getElementById('gaClaudeKey').value.trim()||null,
-                expires_at:isLifetime?null:(document.getElementById('gaExpires').value||null),
-                notes:document.getElementById('gaNotes').value.trim()||null,
-                use_platform_keys:isLifetime?false:use_platform_keys,
-                platform_credits:use_platform_keys&&pc&&!isLifetime?parseInt(pc):null,
-                deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
-                deal_label:dealLabel||null
-            });
-            if(!data.success){alert('Error: '+data.error);return;}
-            const code=data.code.code,url=window.location.origin+'/engine-login?code='+code;
-            document.getElementById('gaSuccessCode').textContent=code;
-            document.getElementById('gaSuccessUrl').textContent=url;
-            document.getElementById('gaSuccessName').textContent=name;
-            const keyTypeEl=document.getElementById('gaSuccessKeyType');
-            if(use_platform_keys){
-                const dealType=document.getElementById('gaDealType').value;
-                const pc=document.getElementById('gaPlatformCredits').value.trim();
-                const dealLabel=document.getElementById('gaDealLabel')?.value.trim();
-                if(dealType==='lifetime'){
-                    keyTypeEl.innerHTML='♾️ <strong style="color:#4ade80;">Lifetime Deal</strong>'+(dealLabel?' — '+dealLabel:'')+' · Own API keys · Never expires · Zero cost to you';
-                } else {
-                    keyTypeEl.innerHTML='🔑 <strong style="color:#38bdf8;">Platform API Keys</strong> — ' + (pc?'<strong style="color:#4ade80;">'+pc+' credits</strong> assigned':'<strong style="color:#38bdf8;">Unlimited credits</strong>');
-                }
-            } else {
-                keyTypeEl.innerHTML='🔑 <strong style="color:#a78bfa;">Own API Keys</strong> — no credit system, client uses their own Gemini/Claude keys';
-            }
-            document.getElementById('gaSuccessPanel').style.display='block';document.getElementById('gaCreateForm').style.display='none';loadGiveAccess();
-            }catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='🔑 Create & Get Login URL';}
-        }
-
-        function gaCopySuccess(){navigator.clipboard.writeText(document.getElementById('gaSuccessUrl').textContent).then(()=>alert('Login URL copied!'));}
-        function pushToInstantly(){alert('Select Instantly API key and campaign in the Scan Log settings panel.');}
-        function findEmailsForLeads(){alert('Find Emails feature - configure Apify token first.');}
-
-        console.log('✅ Admin Dashboard v2 loaded — all tabs ready');
-    <\/script>
-</body>
-</html>`;
-
-// Admin Dashboard route is registered at the top of the file (before static middleware)
-
-// ── TRACKER SERVER PERSISTENCE ─────────────────────────────────────────────
-app.post('/api/tracker/save', async (req, res) => {
-  const { key, pages, savedAt } = req.body;
-  if (!key) return res.status(400).json({ success: false, error: 'key required' });
-  const data = JSON.stringify({ pages, savedAt });
-  if (pool) {
-    try {
-      await pool.query(
-        `CREATE TABLE IF NOT EXISTS tracker_saves (
-          key VARCHAR(200) PRIMARY KEY,
-          data TEXT NOT NULL,
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        )`
-      );
-      await pool.query(
-        `INSERT INTO tracker_saves (key, data, updated_at) VALUES ($1, $2, NOW())
-         ON CONFLICT (key) DO UPDATE SET data = $2, updated_at = NOW()`,
-        [key, data]
-      );
-      return res.json({ success: true, key, storage: 'db' });
-    } catch (e) {
-      console.warn('[tracker] DB save failed:', e.message);
-    }
-  }
-  // Fallback to memory
-  if (!global._trackerStore) global._trackerStore = new Map();
-  global._trackerStore.set(key, { data, savedAt });
-  res.json({ success: true, key, storage: 'memory' });
-});
-
-app.get('/api/tracker/load', async (req, res) => {
-  const key = req.query.key;
-  if (!key) return res.status(400).json({ success: false, error: 'key required' });
-  if (pool) {
-    try {
-      const r = await pool.query('SELECT data FROM tracker_saves WHERE key = $1', [key]);
-      if (r.rows.length) {
-        const d = JSON.parse(r.rows[0].data);
-        return res.json({ success: true, data: d, storage: 'db' });
-      }
-    } catch (e) {
-      console.warn('[tracker] DB load failed:', e.message);
-    }
-  }
-  // Fallback to memory
-  if (global._trackerStore && global._trackerStore.has(key)) {
-    const entry = global._trackerStore.get(key);
-    return res.json({ success: true, data: JSON.parse(entry.data), storage: 'memory' });
-  }
-  res.json({ success: false, error: 'Not found: ' + key });
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// CONTENT LIFECYCLE TRACKER — Pages, Snapshots, AI Checks, Position Tracking
-// ══════════════════════════════════════════════════════════════════════════════
-
-// ── CRUD: tracker pages ──────────────────────────────────────────────────────
-
-app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
-  try {
-    // Guard: check if tracker_pages table exists
-    try {
-      await pool.query(`SELECT 1 FROM tracker_pages LIMIT 0`);
-    } catch(tableErr) {
-      if (/relation.*does not exist/i.test(tableErr.message)) {
-        return res.status(503).json({
-          success: false, pages: [],
-          error: 'Database tables initializing. Please wait 30 seconds and refresh.',
-          code: 'DB_INIT'
-        });
-      }
-      throw tableErr;
-    }
-    const profileId = req.query.profile_id;
-    const eu = req.engineUser;
-    const isAdmin = eu && eu.isAdmin;
-    const codeId = eu && eu.codeId;
-    const COLS = `p.*,
-           (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
-           (SELECT COUNT(*) FROM tracker_snapshots s WHERE s.page_id=p.id) AS snapshot_count,
-           (SELECT COUNT(*) FROM tracker_changes c WHERE c.page_id=p.id AND c.is_significant=TRUE AND c.applied=FALSE) AS pending_changes,
-           (SELECT row_to_json(tc) FROM tracker_classifications tc WHERE tc.page_id=p.id ORDER BY tc.classified_at DESC LIMIT 1) AS latest_classification`;
-    const ADMIN_COLS = COLS + `, ec.client_name AS engine_client_name, ec.code AS engine_code`;
-    let q, params = [];
-    if (isAdmin) {
-      // Admin sees all pages with client name, optionally filtered by profile
-      if (profileId) { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id WHERE p.profile_id=$1 OR p.profile_id IS NULL ORDER BY p.created_at DESC`; params = [profileId]; }
-      else { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id ORDER BY p.created_at DESC`; }
-    } else {
-      // Engine users see only their own pages
-      // profile_id filter: match exact profile_id OR pages with no profile assigned (backward compat)
-      // Also match pages whose domain matches the profile domain (handles pages saved before profile was set)
-      if (profileId) {
-        // Get profile domain for fallback matching
-        let profileDomain = null;
-        try {
-          const pdR = await pool.query(`SELECT domain FROM content_profiles WHERE id=$1`, [profileId]);
-          if (pdR.rows.length && pdR.rows[0].domain) {
-            profileDomain = pdR.rows[0].domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
-          }
-        } catch(e) {}
-        if (profileDomain) {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.profile_id IS NULL OR p.url ILIKE $3 OR p.url ILIKE $4) ORDER BY p.created_at DESC`;
-          params = [codeId, profileId, '%' + profileDomain + '%', '%' + profileDomain.replace(/^www\./, '') + '%'];
-        } else {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.profile_id IS NULL) ORDER BY p.created_at DESC`;
-          params = [codeId, profileId];
-        }
-      } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
-    }
-    const r = await pool.query(q, params);
-    res.json({ success: true, pages: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
-  const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days',
-          gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
-  if (!url) return res.status(400).json({ success: false, error: 'url required' });
-  try {
-    const eu = req.engineUser;
-    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
-    const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
-    const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
-
-    let r, isUpdate = false;
-    try {
-      // Try INSERT first
-      r = await pool.query(
-        `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-        [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
-         parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
-         gsc_queries ? JSON.stringify(gsc_queries) : null,
-         gsc_pages ? JSON.stringify(gsc_pages) : null,
-         gsc_keyword || null]
-      );
-    } catch(insertErr) {
-      // Unique constraint — URL already exists for this engine. Update instead.
-      if (insertErr.code === '23505' || /unique|duplicate/i.test(insertErr.message)) {
-        isUpdate = true;
-        r = await pool.query(
-          `UPDATE tracker_pages SET
-             profile_id = COALESCE($1, profile_id),
-             slug = COALESCE($2, slug),
-             title = COALESCE($3, title),
-             keyword = COALESCE($4, keyword),
-             html_content = COALESCE($5, html_content),
-             check_frequency = COALESCE($6, check_frequency),
-             gsc_impressions = COALESCE($7, gsc_impressions),
-             gsc_clicks = COALESCE($8, gsc_clicks),
-             gsc_position = COALESCE($9, gsc_position),
-             gsc_ctr = COALESCE($10, gsc_ctr),
-             gsc_queries = COALESCE($11, gsc_queries),
-             gsc_pages = COALESCE($12, gsc_pages),
-             gsc_keyword = COALESCE($13, gsc_keyword),
-             updated_at = NOW()
-           WHERE (engine_code_id = $14 OR ($14 IS NULL AND engine_code_id IS NULL))
-             AND url = $15
-           RETURNING *`,
-          [profile_id||null, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
-           parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
-           gsc_queries ? JSON.stringify(gsc_queries) : null,
-           gsc_pages ? JSON.stringify(gsc_pages) : null,
-           gsc_keyword || null,
-           codeId, cleanUrl]
-        );
-      } else {
-        throw insertErr;
-      }
-    }
-    res.json({ success: true, page: r.rows[0], action: isUpdate ? 'updated' : 'created' });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
-  const { url, title, keyword, html_content, check_frequency, is_active, is_done, gsc_connected,
-          gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
-  try {
-    // Ownership check for non-admins
-    const eu = req.engineUser;
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    const fields=[]; const vals=[]; let i=1;
-    if(url!==undefined){fields.push(`url=$${i++}`);vals.push(url);}
-    if(title!==undefined){fields.push(`title=$${i++}`);vals.push(title);}
-    if(keyword!==undefined){fields.push(`keyword=$${i++}`);vals.push(keyword);}
-    if(html_content!==undefined){fields.push(`html_content=$${i++}`);vals.push(html_content);}
-    if(check_frequency!==undefined){fields.push(`check_frequency=$${i++}`);vals.push(check_frequency);}
-    if(is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(!!is_active);}
-    if(gsc_connected!==undefined){fields.push(`gsc_connected=$${i++}`);vals.push(!!gsc_connected);}
-    if(gsc_impressions!==undefined){fields.push(`gsc_impressions=$${i++}`);vals.push(gsc_impressions===null?null:parseInt(gsc_impressions));}
-    if(gsc_clicks!==undefined){fields.push(`gsc_clicks=$${i++}`);vals.push(gsc_clicks===null?null:parseInt(gsc_clicks));}
-    if(gsc_position!==undefined){fields.push(`gsc_position=$${i++}`);vals.push(gsc_position===null?null:parseFloat(gsc_position));}
-    if(gsc_ctr!==undefined){fields.push(`gsc_ctr=$${i++}`);vals.push(gsc_ctr===null?null:parseFloat(gsc_ctr));}
-    if(gsc_queries!==undefined){fields.push(`gsc_queries=$${i++}`);vals.push(gsc_queries?JSON.stringify(gsc_queries):null);}
-    if(gsc_pages!==undefined){fields.push(`gsc_pages=$${i++}`);vals.push(gsc_pages?JSON.stringify(gsc_pages):null);}
-    if(gsc_keyword!==undefined){fields.push(`gsc_keyword=$${i++}`);vals.push(gsc_keyword);}
-    if(is_done!==undefined){fields.push(`is_done=$${i++}`);vals.push(!!is_done);}
-    if(!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
-    vals.push(req.params.id);
-    await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${i}`, vals);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// Update GSC data for a tracker page (manual override)
-app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (req, res) => {
-  const { gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, keyword } = req.body;
-  const eu = req.engineUser;
-  if (!eu) return res.status(401).json({ success: false, error: 'Not authenticated' });
-  const pageId = parseInt(req.params.id);
-  if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
-  if (!eu.isAdmin) {
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
-    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-  }
-
-  // Check which columns actually exist (defensive — migration may have failed)
-  let hasGscKeyword = true, hasUpdatedAt = true;
-  try {
-    await pool.query('SELECT gsc_keyword, updated_at FROM tracker_pages WHERE id=$1 LIMIT 0', [pageId]);
-  } catch(colErr) {
-    const msg = colErr.message || '';
-    if (msg.includes('gsc_keyword')) hasGscKeyword = false;
-    if (msg.includes('updated_at')) hasUpdatedAt = false;
-  }
-
-  const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
-  const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
-  if (keyword !== undefined && hasGscKeyword) {
-    fields.push('gsc_keyword=$' + (fields.length + 1));
-    vals.push(keyword || null);
-  }
-  if (keyword !== undefined) {
-    fields.push('keyword=$' + (fields.length + 1));
-    vals.push(keyword || null);
-  }
-  vals.push(pageId);
-  const setClause = fields.join(', ') + (hasUpdatedAt ? ', updated_at=NOW()' : '');
-  console.log('[GSC-save] pageId=' + pageId + ' fields=' + fields.length + ' hasGscKeyword=' + hasGscKeyword + ' hasUpdatedAt=' + hasUpdatedAt + ' keyword=' + (keyword || '(none)'));
-  await pool.query(
-    'UPDATE tracker_pages SET ' + setClause + ' WHERE id=$' + vals.length,
-    vals
-  );
-  res.json({ success: true, keyword_updated: keyword || null });
-}));
-
-app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// Bulk delete: clear ALL pages for a profile (with confirmation required)
-app.delete('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
-  try {
-    const { profile_id, confirm } = req.body;
-    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
-    if (confirm !== 'DELETE_ALL') return res.status(400).json({ success: false, error: 'confirm must be DELETE_ALL' });
-    const eu = req.engineUser;
-    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
-    // Count what will be deleted
-    const countR = codeId
-      ? await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId])
-      : await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE profile_id=$1', [profile_id]);
-    const count = parseInt(countR.rows[0].count) || 0;
-    if (count === 0) return res.json({ success: true, deleted: 0, message: 'No pages to delete' });
-    // Delete
-    if (codeId) {
-      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId]);
-    } else {
-      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1', [profile_id]);
-    }
-    res.json({ success: true, deleted: count });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Snapshots & change history for a page ───────────────────────────────────
-
-app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    const r = await pool.query(
-      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 50`,
-      [req.params.id]
-    );
-    res.json({ success: true, snapshots: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Push a scan result as a snapshot (from frontend scan → tracker) ─────────
-app.post('/api/tracker/pages/:id/snapshot', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    const pageId = parseInt(req.params.id);
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    const { score, metrics, graaf_score, craft_score, technical_score } = req.body;
-    const breakdown = metrics || (graaf_score !== undefined ? { graaf: graaf_score, craft: craft_score || 0, technical: technical_score || 0 } : null);
-    const r = await pool.query(
-      `INSERT INTO tracker_snapshots (page_id, checked_at, score, graaf_breakdown)
-       VALUES ($1, NOW(), $2, $3) RETURNING *`,
-      [pageId, score || null, breakdown]
-    );
-    res.json({ success: true, snapshot: r.rows[0] });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    const r = await pool.query(
-      `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at DESC LIMIT 100`,
-      [req.params.id]
-    );
-    res.json({ success: true, changes: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    if (!eu.isAdmin) {
-      // Verify the change belongs to a page owned by this engine user
-      const own = await pool.query(
-        `SELECT tc.id FROM tracker_changes tc JOIN tracker_pages tp ON tp.id=tc.page_id WHERE tc.id=$1 AND tp.engine_code_id=$2`,
-        [req.params.id, eu.codeId]
-      );
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    await pool.query(
-      `UPDATE tracker_changes SET applied=TRUE, applied_at=NOW() WHERE id=$1`,
-      [req.params.id]
-    );
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-app.patch('/api/tracker/changes/:id/apply', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    if (!eu.isAdmin) {
-      // Verify the change belongs to a page owned by this engine user
-      const own = await pool.query(
-        `SELECT tc.id FROM tracker_changes tc JOIN tracker_pages tp ON tp.id=tc.page_id WHERE tc.id=$1 AND tp.engine_code_id=$2`,
-        [req.params.id, eu.codeId]
-      );
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    await pool.query(
-      `UPDATE tracker_changes SET applied=TRUE, applied_at=NOW() WHERE id=$1`,
-      [req.params.id]
-    );
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// ── Report Generation ────────────────────────────────────────────────────────
-
-function safeJson(v, fallback) {
-  if (v == null) return fallback;
-  if (typeof v === 'object') return v;
-  try { return JSON.parse(v); } catch (_) { return fallback; }
-}
-
-function formatKpiDelta(before, after, type) {
-  if (before == null || after == null) return { text: '—', direction: 'neutral' };
-  const b = parseFloat(before), a = parseFloat(after);
-  if (isNaN(b) || isNaN(a)) return { text: '—', direction: 'neutral' };
-  const delta = type === 'position' ? b - a : a - b; // position: lower is better
-  const pct = b !== 0 ? Math.round((delta / Math.abs(b)) * 100) : 0;
-  const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
-  const color = type === 'position'
-    ? (delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : '#6b7280')
-    : (delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : '#6b7280');
-  return { text: `${arrow} ${Math.abs(delta)}${type !== 'position' ? ' (' + pct + '%)' : ''}`, direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral', color };
-}
-
-app.post('/api/tracker/pages/:id/report', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    const pageId = parseInt(req.params.id);
-    // ownership
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-    // get page with baseline
-    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
-    if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
-    const page = pageR.rows[0];
-
-    // get all snapshots, oldest first
-    const snapsR = await pool.query(
-      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at ASC`,
-      [pageId]
-    );
-    const snaps = snapsR.rows;
-    if (!snaps.length) return res.status(400).json({ success: false, error: 'No snapshots yet — run a check first' });
-
-    // Baseline = first snapshot (GSC baseline from rewrite), Current = latest
-    const baseline = snaps[0];
-    const current = snaps[snaps.length - 1];
-
-    // KPI calculations
-    const posDelta = formatKpiDelta(baseline.google_position, current.google_position, 'position');
-    const impDelta = formatKpiDelta(baseline.google_impressions, current.google_impressions, 'impressions');
-    const clkDelta = formatKpiDelta(baseline.google_clicks, current.google_clicks, 'clicks');
-    const ctrDelta = formatKpiDelta(baseline.google_ctr, current.google_ctr, 'ctr');
-
-    // AI citation tracking across history
-    const firstCitedG = snaps.findIndex(s => s.ai_google_overview_cited);
-    const firstCitedP = snaps.findIndex(s => s.ai_perplexity_cited);
-    const firstCitedY = snaps.findIndex(s => s.ai_bing_cited);
-
-    // Build changes list from tracker_changes table + snapshot diffs
-    const changesR = await pool.query(
-      `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at ASC`,
-      [pageId]
-    );
-    const dbChanges = changesR.rows.map(ch => ({
-      date: ch.changed_at,
-      type: ch.change_type,
-      field: ch.field_name,
-      before: ch.value_before,
-      after: ch.value_after,
-      delta: ch.delta,
-      significant: ch.is_significant,
-      applied: ch.applied
-    }));
-
-    // Also compute snapshot-to-snapshot deltas that weren't stored in tracker_changes
-    const snapshotDiffs = [];
-    for (let i = 1; i < snaps.length; i++) {
-      const prev = snaps[i-1], cur = snaps[i];
-      if (cur.google_position !== prev.google_position && cur.google_position != null) {
-        snapshotDiffs.push({
-          date: cur.checked_at, type: 'position', field: 'google_position',
-          before: String(prev.google_position || '—'), after: String(cur.google_position),
-          delta: (prev.google_position || 0) - cur.google_position,
-          significant: Math.abs((prev.google_position || 0) - cur.google_position) >= 3,
-          applied: false
-        });
-      }
-      if (cur.ai_google_overview_cited !== prev.ai_google_overview_cited) {
-        snapshotDiffs.push({
-          date: cur.checked_at, type: 'ai_citation', field: 'google_ai_overview',
-          before: prev.ai_google_overview_cited ? 'cited' : 'not cited',
-          after: cur.ai_google_overview_cited ? 'cited' : 'not cited',
-          delta: cur.ai_google_overview_cited ? 1 : -1,
-          significant: true, applied: false
-        });
-      }
-    }
-    const allChanges = [...dbChanges, ...snapshotDiffs].sort((a,b) => new Date(a.date) - new Date(b.date));
-
-    // Recommendations from latest snapshot + unapplied tracker_changes
-    const latestRecs = safeJson(current.recommendations, []);
-    const unappliedChanges = dbChanges.filter(c => c.significant && !c.applied);
-    const actionPlan = latestRecs.map((r, i) => ({
-      priority: r.priority || 'medium',
-      title: r.title || '',
-      action: r.action || r.text || '',
-      expected_impact: r.expected_impact || '',
-      done: false
-    }));
-    // Add significant unapplied changes as action items
-    unappliedChanges.forEach(c => {
-      actionPlan.push({
-        priority: 'high',
-        title: `Address ${c.field} change`,
-        action: `${c.field} moved from ${c.before} → ${c.after}. Investigate and fix.`,
-        expected_impact: 'Restore lost ranking or citation',
-        done: false
-      });
-    });
-
-    const summary = {
-      page_url: page.url,
-      keyword: page.keyword || '',
-      period_days: Math.round((new Date(current.checked_at) - new Date(baseline.checked_at)) / 86400000),
-      total_checks: snaps.length,
-      last_check: current.checked_at,
-      baseline_date: baseline.checked_at
-    };
-
-    const kpi = {
-      position: { before: baseline.google_position, after: current.google_position, delta: posDelta },
-      impressions: { before: baseline.google_impressions, after: current.google_impressions, delta: impDelta },
-      clicks: { before: baseline.google_clicks, after: current.google_clicks, delta: clkDelta },
-      ctr: { before: baseline.google_ctr, after: current.google_ctr, delta: ctrDelta },
-      ai_overview: { before: baseline.ai_google_overview_cited, after: current.ai_google_overview_cited, first_seen_check: firstCitedG >= 0 ? firstCitedG + 1 : null },
-      perplexity: { before: baseline.ai_perplexity_cited, after: current.ai_perplexity_cited, first_seen_check: firstCitedP >= 0 ? firstCitedP + 1 : null },
-      youcom: { before: baseline.ai_bing_cited, after: current.ai_bing_cited, first_seen_check: firstCitedY >= 0 ? firstCitedY + 1 : null }
-    };
-
-    // Generate email-ready body
-    const emailBody = generateTrackerEmail(summary, kpi, allChanges, actionPlan, page);
-
-    // Save report
-    const reportR = await pool.query(
-      `INSERT INTO tracker_reports (page_id, profile_id, report_type, period_start, period_end, baseline_snapshot_id, current_snapshot_id, summary, changes, recommendations, action_plan, kpi, email_body)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [pageId, page.profile_id || null, req.body.report_type || 'biweekly',
-       baseline.checked_at, current.checked_at, baseline.id, current.id,
-       JSON.stringify(summary), JSON.stringify(allChanges), JSON.stringify(latestRecs),
-       JSON.stringify(actionPlan), JSON.stringify(kpi), emailBody]
-    );
-
-    // ── SMART CLASSIFICATION: score 0-100 + next action ───────────────────────
-    const classification = computeTrackerClassification(page, baseline, current, kpi, allChanges, actionPlan);
-    await pool.query(
-      `INSERT INTO tracker_classifications (page_id, report_id, score, status, next_action, next_check_frequency, reason, metrics)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [pageId, reportR.rows[0].id, classification.score, classification.status,
-       classification.next_action, classification.next_check_frequency,
-       classification.reason, JSON.stringify(classification.metrics)]
-    );
-    // Update the page's check_frequency to match the classification
-    await pool.query(
-      `UPDATE tracker_pages SET check_frequency=$1 WHERE id=$2`,
-      [classification.next_check_frequency, pageId]
-    ).catch(()=>{});
-
-    res.json({ success: true, report: reportR.rows[0], classification, email_body: emailBody });
-  } catch(e) {
-    console.error('[tracker-report]', e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-function generateTrackerEmail(summary, kpi, changes, actionPlan, page) {
-  const gscBaseline = page.gsc_position || page.gsc_impressions || page.gsc_clicks
-    ? `Baseline GSC (at rewrite): Pos #${page.gsc_position || '—'}, ${(page.gsc_impressions||0).toLocaleString()} impressions, ${(page.gsc_clicks||0).toLocaleString()} clicks, ${page.gsc_ctr || '—'}% CTR\n`
-    : '';
-
-  let changesText = '';
-  const significant = changes.filter(c => c.significant);
-  if (significant.length) {
-    changesText = '\n📊 KEY CHANGES (' + significant.length + ' significant):\n' +
-      significant.map(c => {
-        const emoji = c.type === 'position' ? (c.delta > 0 ? '✅' : '❌') : (c.delta > 0 ? '✅' : '⚠️');
-        return `  ${emoji} ${c.field}: ${c.before} → ${c.after} (${c.date.split('T')[0]})`;
-      }).join('\n') + '\n';
-  }
-
-  let recsText = '';
-  const pending = actionPlan.filter(a => !a.done);
-  if (pending.length) {
-    recsText = '\n💡 TOP RECOMMENDATIONS (next 2 weeks):\n' +
-      pending.slice(0, 5).map((a, i) => {
-        const priEmoji = a.priority === 'high' ? '🔴' : a.priority === 'medium' ? '🟡' : '🟢';
-        return `  ${i+1}. ${priEmoji} ${a.title}\n     → ${a.action.substring(0, 120)}${a.action.length > 120 ? '...' : ''}\n     📈 Expected: ${a.expected_impact || 'Ranking improvement'}`;
-      }).join('\n') + '\n';
-  }
-
-  const aiSummary = [
-    kpi.ai_overview.after ? '✅ Google AI Overview: CITED' : (kpi.ai_overview.before ? '⚠️ Lost AI Overview citation' : '❌ Google AI Overview: Not cited'),
-    kpi.perplexity.after ? '✅ Perplexity: CITED' : (kpi.perplexity.before ? '⚠️ Lost Perplexity citation' : '❌ Perplexity: Not cited'),
-    kpi.youcom.after ? '✅ You.com: CITED' : (kpi.youcom.before ? '⚠️ Lost You.com citation' : '❌ You.com: Not cited')
-  ].join('\n');
-
-  return `Gab Tracker Report — ${summary.page_url}
-Keyword: "${summary.keyword}"
-Period: ${summary.period_days} days · ${summary.total_checks} checks
-
-${gscBaseline}Current: Pos #${kpi.position.after || '—'} · ${kpi.impressions.after ? kpi.impressions.after.toLocaleString() : '—'} impressions · ${kpi.clicks.after ? kpi.clicks.after.toLocaleString() : '—'} clicks · ${kpi.ctr.after || '—'}% CTR
-
-Position: ${kpi.position.before || '—'} → ${kpi.position.after || '—'} ${kpi.position.delta.text}
-Impressions: ${kpi.impressions.before || '—'} → ${kpi.impressions.after || '—'} ${kpi.impressions.delta.text}
-Clicks: ${kpi.clicks.before || '—'} → ${kpi.clicks.after || '—'} ${kpi.clicks.delta.text}
-CTR: ${kpi.ctr.before || '—'}% → ${kpi.ctr.after || '—'}% ${kpi.ctr.delta.text}
-
-${aiSummary}${changesText}${recsText}
----
-Generated by ContentScale Gab Tracker · ${new Date().toISOString().split('T')[0]}`;
-}
-
-// ── Smart Classification Engine ───────────────────────────────────────────────
-
-function computeTrackerClassification(page, baseline, current, kpi, allChanges, actionPlan) {
-  const bPos = parseFloat(baseline.google_position) || 100;
-  const cPos = parseFloat(current.google_position) || 100;
-  const posDelta = bPos - cPos; // positive = improved (lower number)
-  const bImp = parseInt(baseline.google_impressions) || 0;
-  const cImp = parseInt(current.google_impressions) || 0;
-  const bClk = parseInt(baseline.google_clicks) || 0;
-  const cClk = parseInt(current.google_clicks) || 0;
-
-  // Score components (0-100)
-  let score = 50; // start neutral
-  const reasons = [];
-  const metrics = { position_delta: posDelta, impression_delta: cImp - bImp, click_delta: cClk - bClk };
-
-  // Position scoring
-  if (cPos <= 3) { score += 25; reasons.push('Top 3 position'); }
-  else if (cPos <= 10) { score += 15; reasons.push('Page 1 position'); }
-  else if (cPos <= 20) { score += 0; reasons.push('Page 2 position'); }
-  else { score -= 15; reasons.push('Beyond page 2'); }
-
-  if (posDelta >= 3) { score += 15; reasons.push(`Position gained ${posDelta} spots`); }
-  else if (posDelta >= 1) { score += 8; reasons.push(`Position gained ${posDelta} spots`); }
-  else if (posDelta <= -3) { score -= 20; reasons.push(`Position lost ${Math.abs(posDelta)} spots`); }
-  else if (posDelta <= -1) { score -= 10; reasons.push(`Position lost ${Math.abs(posDelta)} spots`); }
-
-  // AI citation scoring
-  const aiBefore = (baseline.ai_google_overview_cited ? 1 : 0) + (baseline.ai_perplexity_cited ? 1 : 0) + (baseline.ai_bing_cited ? 1 : 0);
-  const aiAfter = (current.ai_google_overview_cited ? 1 : 0) + (current.ai_perplexity_cited ? 1 : 0) + (current.ai_bing_cited ? 1 : 0);
-  metrics.ai_citations_before = aiBefore;
-  metrics.ai_citations_after = aiAfter;
-
-  if (aiAfter >= 3) { score += 15; reasons.push('All 3 AI engines cite us'); }
-  else if (aiAfter === 2) { score += 10; reasons.push('2 AI engines cite us'); }
-  else if (aiAfter === 1) { score += 3; reasons.push('1 AI engine cites us'); }
-  else { score -= 10; reasons.push('No AI citations'); }
-
-  if (aiAfter < aiBefore) { score -= 15; reasons.push(`Lost ${aiBefore - aiAfter} AI citation(s)`); }
-
-  // Traffic scoring
-  if (cImp > bImp * 1.5) { score += 10; reasons.push('Impressions up >50%'); }
-  else if (cImp < bImp * 0.7 && bImp > 100) { score -= 10; reasons.push('Impressions down >30%'); }
-
-  if (cClk > bClk * 2) { score += 10; reasons.push('Clicks doubled'); }
-  else if (cClk < bClk * 0.5 && bClk > 10) { score -= 10; reasons.push('Clicks dropped >50%'); }
-
-  // Opportunity detection (high impressions, low position)
-  if (cImp > 5000 && cPos > 10) {
-    score += 5; // slight boost because high traffic potential
-    reasons.push(`Opportunity: ${cImp.toLocaleString()} impressions at pos #${cPos}`);
-  }
-
-  // Clamp score
-  score = Math.max(0, Math.min(100, score));
-  metrics.score = score;
-
-  // Determine status and next action
-  let status, nextAction, frequency, reason;
-
-  if (score >= 80) {
-    status = 'healthy';
-    nextAction = 'continue_monitoring';
-    frequency = 'weekly';
-    reason = `🟢 HEALTHY (${score}/100): ` + reasons.join(' · ');
-  } else if (score >= 50) {
-    status = 'attention';
-    nextAction = 'refresh_content';
-    frequency = '3days';
-    reason = `🟡 NEEDS REFRESH (${score}/100): ` + reasons.join(' · ');
-  } else if (cImp > 5000 && cPos > 10) {
-    status = 'opportunity';
-    nextAction = 'optimize_position';
-    frequency = '3days';
-    reason = `💡 OPPORTUNITY (${score}/100): ` + reasons.join(' · ');
-  } else {
-    status = 'critical';
-    nextAction = 'rewrite_needed';
-    frequency = 'daily';
-    reason = `🔴 NEEDS REWRITE (${score}/100): ` + reasons.join(' · ');
-  }
-
-  return {
-    score, status, next_action: nextAction,
-    next_check_frequency: frequency,
-    reason,
-    metrics
-  };
-}
-
-// ── Bulk profile report (all pages) ─────────────────────────────────────────
-app.get('/api/tracker/profile/:profileId/report', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    const profileId = parseInt(req.params.profileId);
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM content_profiles WHERE id=$1 AND (engine_code_id=$2 OR id IN (SELECT profile_id FROM engine_access_codes WHERE id=$2))', [profileId, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Access denied' });
-    }
-    // Get all pages for this profile with latest snapshots
-    const pagesR = await pool.query(
-      `SELECT p.*,
-        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
-        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at ASC LIMIT 1) AS baseline_snapshot
-       FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`,
-      [profileId]
-    );
-    const pages = pagesR.rows;
-    if (!pages.length) return res.json({ success: true, pages: [], summary: {} });
-
-    // Compute aggregate KPIs
-    let totalPages = pages.length;
-    let pagesWithPosition = 0, avgPositionImprovement = 0;
-    let pagesCitedGoogle = 0, pagesCitedPerplexity = 0, pagesCitedYou = 0;
-    let totalImpressionsBefore = 0, totalImpressionsAfter = 0;
-    let totalClicksBefore = 0, totalClicksAfter = 0;
-
-    const pageReports = pages.map(p => {
-      const base = p.baseline_snapshot || {};
-      const curr = p.latest_snapshot || {};
-      const posBefore = base.google_position || null;
-      const posAfter = curr.google_position || null;
-      const posDelta = (posBefore && posAfter) ? posBefore - posAfter : null;
-      if (posDelta !== null) { pagesWithPosition++; avgPositionImprovement += posDelta; }
-      if (curr.ai_google_overview_cited) pagesCitedGoogle++;
-      if (curr.ai_perplexity_cited) pagesCitedPerplexity++;
-      if (curr.ai_bing_cited) pagesCitedYou++;
-      totalImpressionsBefore += base.google_impressions || 0;
-      totalImpressionsAfter += curr.google_impressions || 0;
-      totalClicksBefore += base.google_clicks || 0;
-      totalClicksAfter += curr.google_clicks || 0;
-
-      return {
-        id: p.id, url: p.url, keyword: p.keyword, slug: p.slug,
-        baseline: { position: posBefore, impressions: base.google_impressions, clicks: base.google_clicks, ctr: base.google_ctr },
-        current: { position: posAfter, impressions: curr.google_impressions, clicks: curr.google_clicks, ctr: curr.google_ctr },
-        delta: { position: posDelta, impressions: (curr.google_impressions||0)-(base.google_impressions||0), clicks: (curr.google_clicks||0)-(base.google_clicks||0) },
-        ai: { google: curr.ai_google_overview_cited, perplexity: curr.ai_perplexity_cited, youcom: curr.ai_bing_cited },
-        snapshot_count: p.snapshot_count || 0,
-        gsc_baseline: { position: p.gsc_position, impressions: p.gsc_impressions, clicks: p.gsc_clicks, ctr: p.gsc_ctr }
-      };
-    });
-
-    const summary = {
-      total_pages: totalPages,
-      pages_tracked: pagesWithPosition,
-      avg_position_gain: pagesWithPosition ? (avgPositionImprovement / pagesWithPosition).toFixed(1) : null,
-      ai_citation_rate: {
-        google: Math.round((pagesCitedGoogle / totalPages) * 100),
-        perplexity: Math.round((pagesCitedPerplexity / totalPages) * 100),
-        youcom: Math.round((pagesCitedYou / totalPages) * 100)
-      },
-      total_impressions_delta: totalImpressionsAfter - totalImpressionsBefore,
-      total_clicks_delta: totalClicksAfter - totalClicksBefore,
-      report_generated_at: new Date().toISOString()
-    };
-
-    res.json({ success: true, pages: pageReports, summary });
-  } catch(e) {
-    console.error('[tracker-profile-report]', e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ── Export report as CSV ────────────────────────────────────────────────────
-app.get('/api/tracker/profile/:profileId/report.csv', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    const profileId = parseInt(req.params.profileId);
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM content_profiles WHERE id=$1 AND (engine_code_id=$2 OR id IN (SELECT profile_id FROM engine_access_codes WHERE id=$2))', [profileId, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Access denied' });
-    }
-    const pagesR = await pool.query(
-      `SELECT p.*,
-        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at DESC LIMIT 1) AS latest_snapshot,
-        (SELECT row_to_json(s) FROM tracker_snapshots s WHERE s.page_id=p.id ORDER BY s.checked_at ASC LIMIT 1) AS baseline_snapshot
-       FROM tracker_pages p WHERE p.profile_id=$1 ORDER BY p.created_at DESC`,
-      [profileId]
-    );
-    const pages = pagesR.rows;
-    const headers = ['URL','Keyword','Slug','Baseline_Position','Current_Position','Position_Change','Baseline_Impressions','Current_Impressions','Impressions_Change','Baseline_Clicks','Current_Clicks','Clicks_Change','Baseline_CTR','Current_CTR','AI_Overview_Cited','Perplexity_Cited','You.com_Cited','GSC_Baseline_Position','GSC_Baseline_Impressions','GSC_Baseline_Clicks','GSC_Baseline_CTR','Last_Checked'];
-    const rows = pages.map(p => {
-      const base = p.baseline_snapshot || {};
-      const curr = p.latest_snapshot || {};
-      const posChange = (base.google_position && curr.google_position) ? (base.google_position - curr.google_position) : '';
-      const impChange = ((curr.google_impressions||0) - (base.google_impressions||0));
-      const clkChange = ((curr.google_clicks||0) - (base.google_clicks||0));
-      return [
-        p.url, p.keyword||'', p.slug||'',
-        base.google_position||'', curr.google_position||'', posChange,
-        base.google_impressions||'', curr.google_impressions||'', impChange,
-        base.google_clicks||'', curr.google_clicks||'', clkChange,
-        base.google_ctr||'', curr.google_ctr||'',
-        curr.ai_google_overview_cited?'Yes':'No',
-        curr.ai_perplexity_cited?'Yes':'No',
-        curr.ai_bing_cited?'Yes':'No',
-        p.gsc_position||'', p.gsc_impressions||'', p.gsc_clicks||'', p.gsc_ctr||'',
-        p.last_checked_at ? new Date(p.last_checked_at).toISOString().split('T')[0] : ''
-      ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',');
-    });
-    const csv = headers.join(',') + '\n' + rows.join('\n');
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="tracker-report-profile-${profileId}-${new Date().toISOString().split('T')[0]}.csv"`);
-    res.send(csv);
-  } catch(e) {
-    console.error('[tracker-csv]', e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ── Refresh Content (lighter than rewrite) ──────────────────────────────────
-app.post('/api/tracker/pages/:id/refresh', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    const pageId = parseInt(req.params.id);
-    if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
-      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-    }
-
-    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
-    if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
-    const page = pageR.rows[0];
-
-    // Fetch latest snapshot for context
-    const snapR = await pool.query(
-      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]
-    );
-    const snap = snapR.rows[0] || {};
-    const recs = safeJson(snap.recommendations, []);
-
-    // Get the page's live HTML
-    let html = page.html_content || '';
-    if (!html && page.url) {
-      try {
-        const resp = await fetch(page.url, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale-Tracker/1.0)' },
-          signal: AbortSignal.timeout(15000)
-        });
-        if (resp.ok) html = await resp.text();
-      } catch(e) { /* ignore */ }
-    }
-
-    // Generate refresh instructions via Gemini
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) return res.status(503).json({ success: false, error: 'GEMINI_API_KEY not configured' });
-
-    const ourContent = html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ').trim()
-      .substring(0, 3000);
-
-    const recsBlock = recs.length
-      ? recs.map((r, i) => `${i + 1}. [${r.priority}] ${r.title}: ${r.action}`).join('\n')
-      : '(No prior recommendations)';
-
-    const prompt = `You are a content editor. The page below needs a REFRESH (not a full rewrite) — update key sections to improve ranking and AI citations.
-
-URL: ${page.url}
-KEYWORD: "${page.keyword || ''}"
-CURRENT POSITION: #${snap.google_position || 'unknown'}
-AI OVERVIEW: ${snap.ai_google_overview_cited ? 'CITED' : 'NOT CITED'}
-
-CURRENT CONTENT:
-${ourContent || '(no content available)'}
-
-PRIOR RECOMMENDATIONS:
-${recsBlock}
-
-TASK: Produce a "refresh brief" — specific edits to make (section by section). Focus on:
-1. Opening paragraph: does it answer the query directly in 1-2 sentences?
-2. H2 headers: are they question-based and keyword-rich?
-3. Missing FAQ items that competitors have
-4. A unique stat/claim no competitor has
-5. Schema markup suggestions (FAQ, HowTo)
-
-Return ONLY a JSON object:
-{"refresh_brief":{"sections_to_update":[{"section":"name","current_issue":"what is wrong","suggested_change":"exact new text or direction"}],"new_faqs_to_add":[{"question":"...","answer":"..."}],"schema_suggestions":["FAQPage","HowTo"],"priority":"high|medium|low","estimated_effort":"1-2 hours"}}
-`;
 
     const gemResp = await callGeminiWithFallback(geminiKey, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -26092,7 +24109,6 @@ app.post('/api/intelligence/ai-citation', verifyEngineAccess, async (req, res) =
 // ── DB migrations ────────────────────────────────────────────────────────────
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
-
 
 
 // ── Server-side GRAAF HTML analyser (no Puppeteer) ──────────────────────────
