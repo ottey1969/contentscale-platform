@@ -10691,15 +10691,9 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
   const geminiKey = resolveGeminiKey(req);
   if (!serpKey) return res.status(503).json({ success: false, error: 'SerpAPI key not configured' });
 
-  // Resolve geo from request (profile geo_focus or explicit location param)
-  const geoParam = req.query.location || req.query.geo || '';
-  const glParam  = req.query.gl || 'us';
-  // Auto-detect NJ/US state from keyword or geo
-  const locationStr = geoParam || (keyword.match(/\b(nj|new jersey)\b/i) ? 'New Jersey, United States' :
-    keyword.match(/\b(ny|new york)\b/i) ? 'New York, United States' :
-    keyword.match(/\b(ca|california)\b/i) ? 'California, United States' :
-    keyword.match(/\b(fl|florida)\b/i) ? 'Florida, United States' :
-    keyword.match(/near me/i) ? 'United States' : '');
+  // Geo: comes from profile geo_focus only — no hardcoding, no keyword sniffing
+  const locationStr = req.query.location || req.query.geo || '';
+  const glParam = req.query.gl || 'us';
 
   try {
     // 1. Fetch top 10 Google results
