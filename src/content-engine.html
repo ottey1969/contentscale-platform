@@ -1285,7 +1285,11 @@ function agentGreet() {
       'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks. ' +
       'Or tell me what we\'re working on — a page to rewrite, a keyword to target, or a content cluster to build.\n\nWhat are we working on?';
   } else {
-    greeting = '👋 Welcome! I\'m your SEO content agent.\n\n<strong>⚠️ Please select a profile from the dropdown above</strong> to load your business context, GSC data, and memory.\n\nOnce selected, I\'ll know your niche, target geo, conversion goals, and past work — so every recommendation is tailored to you.\n\nOr create a new profile if this is your first time.';
+    greeting = '👋 Welcome! I\'m your SEO content agent for ContentScale.\n\n'
+      + '<strong>⚠️ Please select a profile from the dropdown above</strong> to load your business context, GSC data, and memory.\n\n'
+      + 'Once selected, I\'ll know your niche, target geo, conversion goals, and past work — so every recommendation is tailored to you.\n\n'
+      + '📡 <strong>Best way to start:</strong> head to the <strong>Tracker</strong> — add your pages, import your GSC data, and let the system find your biggest wins automatically.\n\n'
+      + 'Or create a new profile if this is your first time.';
     // Highlight the profile selector visually
     var sel = document.getElementById('profileSelect');
     if (sel) {
