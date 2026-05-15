@@ -2782,7 +2782,9 @@ async function cmdAnalyse(url, keyword) {
   try {
     setProgress(prog, 30);
     var body = {
-      url: url, keyword: keyword || '',
+      url: url,
+      keyword: keyword || '',
+      gsc_keyword: keyword || _context.keyword || '',  // backend expects gsc_keyword
       profile_id: _context.profileId || (_profile && _profile.id) || null,
       gsc_impressions: _context.impressions,
       gsc_clicks: _context.clicks,
@@ -2802,9 +2804,11 @@ async function cmdAnalyse(url, keyword) {
     // Agent interpretation + risk check
     var pos = _context.position;
     var riskNote = pos > 0 && pos <= 20 ? '\n\nIMPORTANT: This page ranks at position ' + Number(pos).toFixed(1) + '. Mention ranking risk before suggesting rewrite.' : '';
-    var interp = await callClaude(buildSystemPrompt() + riskNote, [
+    var _kw = keyword || _context.keyword || '';
+    var kwNote = _kw ? '\n\nTARGET KEYWORD: "' + _kw + '". ALL title, H1, and meta recommendations MUST include this exact keyword. Do NOT suggest titles or headings for a different keyword.' : '';
+    var interp = await callClaude(buildSystemPrompt() + riskNote + kwNote, [
       ..._history,
-      { role: 'user', content: 'Analysis complete. What are the 2 most impactful actions? Surgical fix or full rewrite — which do you recommend and why? Be direct.' }
+      { role: 'user', content: 'Analysis complete for keyword "' + (_kw || 'unknown') + '". What are the 2 most impactful actions? Be specific to this keyword. Surgical fix or full rewrite — which do you recommend and why? Be direct.' }
     ]);
     addAgentMessage(interp);
     addActions([
