@@ -334,26 +334,35 @@
                </div>
                <div id="singleMode">
                   <div class="card max-w-3xl mx-auto">
-                     <!-- Toggle: URL vs Paste HTML -->
-                     <div class="flex gap-2 mb-4">
-                        <button id="singleUrlTab" onclick="setSingleInputMode('url')" class="flex-1 p-2 rounded text-sm font-semibold" style="background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;cursor:pointer;">🔗 Scan URL</button>
-                        <button id="singlePasteTab" onclick="setSingleInputMode('paste')" class="flex-1 p-2 rounded text-sm font-semibold" style="background:#374151;color:#d1d5db;border:none;cursor:pointer;">📋 Paste HTML</button>
+                     <!-- Paste HTML Only — URL scan hidden for cleaner UX -->
+                     <!-- Instructions -->
+                     <div style="background:rgba(79,70,229,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+                        <div style="font-size:0.82rem;font-weight:800;color:#a5b4fc;margin-bottom:8px;">📋 How to get your page source</div>
+                        <ol style="font-size:0.82rem;color:#d1d5db;line-height:2;margin:0;padding-left:18px;">
+                           <li>Open your page in the browser</li>
+                           <li>Right-click anywhere on the page</li>
+                           <li>Click <strong style="color:#a5b4fc;">View Page Source</strong></li>
+                           <li>Press <strong style="color:#a5b4fc;">Ctrl+A</strong> (select all) then <strong style="color:#a5b4fc;">Ctrl+C</strong> (copy)</li>
+                           <li>Paste below and click <strong style="color:#a5b4fc;">Scan</strong></li>
+                        </ol>
+                        <div style="margin-top:10px;padding:8px 12px;background:rgba(16,185,129,0.08);border-left:3px solid #10b981;border-radius:0 6px 6px 0;font-size:0.78rem;color:#6ee7b7;">
+                           ✅ <strong>Why page source?</strong> This is exactly what Google reads — more accurate than a URL scan which may be affected by caching or server configuration.
+                        </div>
                      </div>
-                     <!-- URL Input -->
-                     <div id="singleUrlWrap">
+                     <!-- URL Input (hidden) -->
+                     <div id="singleUrlWrap" style="display:none;">
                         <div class="flex flex-col sm:flex-row gap-3">
                            <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
                            <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary"><i class="fas fa-search"></i> Start Scan</button>
                         </div>
                      </div>
-                     <!-- Paste HTML Input -->
-                     <div id="singlePasteWrap" class="hidden">
-                        <textarea id="singlePasteInput" rows="8" placeholder="Paste full HTML here... (e.g. from Semrush article, WordPress editor, or browser DevTools → Elements → Copy outerHTML)" class="w-full p-3 rounded text-sm" style="font-family:monospace;font-size:0.78rem;line-height:1.6;"></textarea>
+                     <!-- Paste HTML Input (always visible) -->
+                     <div id="singlePasteWrap">
+                        <textarea id="singlePasteInput" rows="8" placeholder="Paste your page source here..." class="w-full p-3 rounded text-sm" style="font-family:monospace;font-size:0.78rem;line-height:1.6;"></textarea>
                         <div class="flex gap-3 mt-3">
                            <input type="text" id="singlePasteUrl" placeholder="https://example.com (optional — for report label)" class="flex-1 p-3 rounded text-sm">
-                           <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary"><i class="fas fa-search"></i> Scan Pasted HTML</button>
+                           <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#7e22ce,#be185d);"><i class="fas fa-search"></i> Scan</button>
                         </div>
-                        <p class="text-xs mt-2" style="color:#6b7280!important;">💡 Tip: Open DevTools → Elements → right-click &lt;html&gt; → Copy → Copy outerHTML</p>
                      </div>
                      <div id="singleProgress" class="hidden mt-4">
                         <div class="progress-bar">
