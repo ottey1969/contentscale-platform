@@ -23807,10 +23807,88 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function openMessageModal(targetType, userId) { messageTarget=(targetType==='single')?userId:targetType; document.getElementById('messageModal').classList.add('active'); }
 
 
+        console.log('\u2705 Admin Dashboard v2 loaded \u2014 all tabs ready');
+    <\/script>
+</body>
+</html>`;
+
+
+app.post('/api/tracker/pages/:id/refresh', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+
+    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
+    if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const page = pageR.rows[0];
+
+    // Fetch latest snapshot for context
+    const snapR = await pool.query(
+      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]
+    );
+    const snap = snapR.rows[0] || {};
+    const recs = safeJson(snap.recommendations, []);
+
+    // Get the page's live HTML
+    let html = page.html_content || '';
+    if (!html && page.url) {
+      try {
+        const resp = await fetch(page.url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale-Tracker/1.0)' },
+          signal: AbortSignal.timeout(15000)
+        });
+        if (resp.ok) html = await resp.text();
+      } catch(e) { /* ignore */ }
+    }
+
+    // Generate refresh instructions via Gemini
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(503).json({ success: false, error: 'GEMINI_API_KEY not configured' });
+
+    const ourContent = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ').trim()
+      .substring(0, 3000);
+
+    const recsBlock = recs.length
+      ? recs.map((r, i) => `${i + 1}. [${r.priority}] ${r.title}: ${r.action}`).join('\n')
+      : '(No prior recommendations)';
+
+    const prompt = `You are a content editor. The page below needs a REFRESH (not a full rewrite) — update key sections to improve ranking and AI citations.
+
+URL: ${page.url}
+KEYWORD: "${page.keyword || ''}"
+CURRENT POSITION: #${snap.google_position || 'unknown'}
+AI OVERVIEW: ${snap.ai_google_overview_cited ? 'CITED' : 'NOT CITED'}
+
+CURRENT CONTENT:
+${ourContent || '(no content available)'}
+
+PRIOR RECOMMENDATIONS:
+${recsBlock}
+
+TASK: Produce a "refresh brief" — specific edits to make (section by section). Focus on:
+1. Opening paragraph: does it answer the query directly in 1-2 sentences?
+2. H2 headers: are they question-based and keyword-rich?
+3. Missing FAQ items that competitors have
+4. A unique stat/claim no competitor has
+5. Schema markup suggestions (FAQ, HowTo)
+
+Return ONLY a JSON object:
+{"refresh_brief":{"sections_to_update":[{"section":"name","current_issue":"what is wrong","suggested_change":"exact new text or direction"}],"new_faqs_to_add":[{"question":"...","answer":"..."}],"schema_suggestions":["FAQPage","HowTo"],"priority":"high|medium|low","estimated_effort":"1-2 hours"}}
+`;
+
     const gemResp = await callGeminiWithFallback(geminiKey, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
     });
+
 
     let refreshBrief = null;
     if (gemResp.ok) {
@@ -23843,7 +23921,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     res.status(500).json({ success: false, error: e.message });
   }
 });
-`;
 
 // ── Push to Rewrite (pre-fills Rewrite tab with current data) ────────────────
 app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
