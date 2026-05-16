@@ -193,6 +193,13 @@
          .main-section { display: none !important; }
          .main-section.section-visible { display: block !important; }
          .page-tabs { display: flex; gap: 0; background: #1f2937; border-radius: 12px; padding: 4px; border: 1px solid #374151; flex-wrap: nowrap; }
+         @keyframes tabPulse {
+           0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+           50% { box-shadow: 0 0 20px 6px rgba(124,58,237,0.5), 0 0 40px 10px rgba(190,24,93,0.3); }
+         }
+         #tab-leaderboard {
+           animation: tabPulse 2s ease-in-out infinite;
+         }
          .page-tab { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; border: none; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.06); color: #d1d5db !important; text-align: center; white-space: nowrap; border: 1px solid rgba(255,255,255,0.08); }
          .page-tabs::-webkit-scrollbar { display:none; }
          .page-tab.active { background: linear-gradient(135deg, #7e22ce, #be185d); color: white !important; box-shadow: 0 2px 12px rgba(126,34,206,0.4); }
@@ -264,7 +271,6 @@
             </div>
             <div class="nav-desktop">
                <a href="#leaderboard" onclick="switchPageSection('leaderboard');return false;">Leaderboard</a>
-               <a href="#experts" onclick="switchPageSection('experts');return false;">Experts</a>
                <a href="/blog">Blog</a>
             </div>
             <div class="flex items-center gap-3">
@@ -274,7 +280,6 @@
          </div>
          <div class="mobile-menu" id="mobileMenu">
             <a href="#leaderboard" onclick="switchPageSection('leaderboard');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Leaderboard</a>
-            <a href="#experts" onclick="switchPageSection('experts');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Experts</a>
             <a href="/blog" class="py-2">Blog</a>
          </div>
       </nav>
@@ -289,85 +294,18 @@
          </span>
       </div>
       <main id="main-content" class="max-w-7xl mx-auto px-6 py-8">
-      <!-- H1 + Direct Answer + Article Content -->
+      <!-- H1 + Direct Answer + GRAAF/CRAFT -->
       <div style="max-width:860px;margin:0 auto 48px;">
-
-        <!-- H1 -->
         <h1 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:900;line-height:1.2;color:#f9fafb;margin-bottom:20px;letter-spacing:-0.5px;">
           Content Scale: Content at Scale for International SEO — GRAAF Framework
         </h1>
-
-        <!-- Direct Answer -->
         <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.35);border-radius:12px;padding:22px 28px;margin-bottom:24px;">
           <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">✓ Direct Answer</div>
-          <p style="font-size:15px;line-height:1.8;color:#d1d5db;margin:0;">
-            <strong style="color:#e9d5ff;">ContentScale</strong> (contentscale.site) is the free international SEO platform that replaced <strong style="color:#e9d5ff;">Content at Scale</strong> after it shut down in 2024. It combines the proprietary <strong style="color:#e9d5ff;">GRAAF Framework</strong> (50 points) with Julia McCoy's <strong style="color:#e9d5ff;">CRAFT Framework</strong> (30 points) plus Technical SEO (20 points) into a single 100-point <strong style="color:#e9d5ff;">ContentScore</strong> — delivered in 30 seconds, no account required. Includes a full <strong style="color:#e9d5ff;">international SEO checklist</strong>, AI Overview optimisation, and live page scanning across 47 countries.
-          </p>
-        </div>
-
-        <!-- GRAAF vs CRAFT -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
-          <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:12px;padding:18px 20px;">
-            <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">GRAAF Framework — 50 pts</div>
-            <div style="font-size:12px;color:#c084fc;font-weight:700;margin-bottom:8px;">By Ottmar J.G. Francisca · ContentScale</div>
-            <p style="font-size:13px;line-height:1.7;color:#9ca3af;margin:0 0 10px;">Scores the <em style="color:#c4b5fd;">trustworthiness</em> of content: Genuinely Credible, Relevant, Actionable, Accurate, Fresh. Built for AI Overview eligibility and international SEO.</p>
-            <ul style="font-size:12px;color:#6b7280;line-height:2;margin:0;padding-left:16px;">
-              <li>E-E-A-T signals &amp; author authority</li>
-              <li>AI Overview citation eligibility</li>
-              <li>International keyword relevance</li>
-            </ul>
-          </div>
-          <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:18px 20px;">
-            <div style="font-size:11px;font-weight:800;color:#38bdf8;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">CRAFT Framework — 30 pts</div>
-            <div style="font-size:12px;color:#7dd3fc;font-weight:700;margin-bottom:8px;">By Julia McCoy · Content Hacker</div>
-            <p style="font-size:13px;line-height:1.7;color:#9ca3af;margin:0 0 10px;">Scores the <em style="color:#7dd3fc;">writing quality</em>: Cut fluff, Review &amp; optimise, Add visuals, Fact-check, Trust-build. Human-first content production.</p>
-            <ul style="font-size:12px;color:#6b7280;line-height:2;margin:0;padding-left:16px;">
-              <li>Readability &amp; sentence structure</li>
-              <li>Fact-checking standards</li>
-              <li>Conversion &amp; trust signals</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Why use both -->
-        <div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:18px 24px;margin-bottom:24px;">
-          <div style="font-size:11px;font-weight:800;color:#34d399;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Why use GRAAF + CRAFT together?</div>
-          <p style="font-size:13px;line-height:1.7;color:#9ca3af;margin:0;">GRAAF tells you if Google <em style="color:#6ee7b7;">trusts</em> your page. CRAFT tells you if humans <em style="color:#6ee7b7;">want to read</em> it. Neither alone is enough. ContentScale combines both into one 100-point ContentScore — GRAAF (50 pts) + CRAFT (30 pts) + Technical SEO (20 pts) — predicting both rankings and conversions.</p>
-        </div>
-
-        <!-- Stats row -->
-        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;">
-            <div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">78%</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px;">traffic recovery rate</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;">
-            <div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">200+</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px;">sites scanned</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;">
-            <div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">47</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px;">countries</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;">
-            <div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">100pt</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:2px;">ContentScore</div>
-          </div>
-        </div>
-
-        <!-- Hero image -->
-        <figure style="margin:24px 0 0;">
-          <img src="https://contentscale.site/wp-content/uploads/2025/11/SEO-contentscore.jpg"
-               alt="ContentScale international SEO ContentScore — GRAAF Framework and CRAFT Framework combined for content at scale"
-               width="1155" height="753" loading="eager"
-               style="width:100%;height:auto;border-radius:12px;border:1px solid rgba(124,58,237,0.2);">
-        </figure>
+          <p style="font-size:15px;line-height:1.8;color:#d1d5db;margin:0;"><strong style="color:#e9d5ff;">ContentScale</strong> (contentscale.site) is the free international SEO platform that replaced <strong style="color:#e9d5ff;">Content at Scale</strong> after it shut down in 2024. It combines the proprietary <strong style="color:#e9d5ff;">GRAAF Framework</strong> (50 points) with Julia McCoy's <strong style="color:#e9d5ff;">CRAFT Framework</strong> (30 points) plus Technical SEO (20 points) into a single 100-point <strong style="color:#e9d5ff;">ContentScore</strong> — delivered in 30 seconds, no account required. Includes a full <strong style="color:#e9d5ff;">international SEO checklist</strong>, AI Overview optimisation, and live page scanning across 47 countries.</p>
       </div>
-      <!-- END H1 + Article Content -->
-
+      </div>
          <div class="page-tabs mb-8" role="tablist">
-            <button class="page-tab active" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">🏆 Leaderboard</button>
-            <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
+            <button class="page-tab active" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">📊 SEO Content Scan</button>
          </div>
          <!-- SCANNER SECTION -->
          <div id="lead-scanner" class="mb-16 main-section" data-section="scanner">
@@ -735,6 +673,9 @@
          </div>
          <!-- LEADERBOARD SECTION -->
          <div id="leaderboard" class="mb-16 main-section section-visible" data-section="leaderboard">
+            <div style="text-align:center;padding:24px 20px 4px;max-width:680px;margin:0 auto;">
+              <p style="font-size:1rem;color:#d1d5db;line-height:1.7;margin:0;"><strong style="color:#f9fafb;">SEO Content Scan:</strong> Content structure Google needs to see in your content. <strong style="color:#a78bfa;">Follow recommendations!</strong></p>
+            </div>
             <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
                <div class="text-center mb-6">
                   <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
@@ -948,82 +889,89 @@
             </div>
          </div>
 
-         <!-- FULL ARTICLE CONTENT — Content Scale, GRAAF vs CRAFT, International SEO -->
-         <div id="content-scale-article" style="max-width:860px;margin:48px auto 0;padding:0 0 60px;">
-           <style>
-             #content-scale-article h2 { font-size:clamp(20px,3vw,30px);font-weight:800;color:#f9fafb;margin:48px 0 14px;padding-bottom:12px;border-bottom:1px solid rgba(124,58,237,0.3); }
-             #content-scale-article h3 { font-size:clamp(16px,2.5vw,22px);font-weight:700;color:#e5e7eb;margin:28px 0 10px; }
-             #content-scale-article h4 { font-size:15px;font-weight:600;color:#d1d5db;margin:18px 0 8px; }
-             #content-scale-article p { font-size:15px;line-height:1.8;color:#9ca3af;margin-bottom:14px; }
-             #content-scale-article strong { color:#e5e7eb; }
-             #content-scale-article em { color:#c4b5fd; }
-             #content-scale-article a { color:#a78bfa; }
-             #content-scale-article a:hover { color:#c4b5fd; }
-             #content-scale-article ul,#content-scale-article ol { margin:14px 0;padding-left:22px;font-size:15px;color:#9ca3af;line-height:1.9; }
-             #content-scale-article li { padding:2px 0; }
-             #content-scale-article table { width:100%;border-collapse:collapse;margin:20px 0;font-size:13px; }
-             #content-scale-article th { background:rgba(124,58,237,0.15);padding:10px 14px;text-align:left;font-weight:700;color:#e9d5ff;border-bottom:1px solid rgba(124,58,237,0.3);font-size:11px;text-transform:uppercase;letter-spacing:.5px; }
-             #content-scale-article td { padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#9ca3af;vertical-align:top; }
-             #content-scale-article tr:hover td { background:rgba(255,255,255,0.02); }
-             #content-scale-article blockquote { border-left:4px solid #7c3aed;padding:18px 22px;margin:20px 0;background:rgba(124,58,237,0.06);border-radius:0 10px 10px 0;font-size:15px;font-style:italic;color:#c4b5fd; }
-             #content-scale-article blockquote cite { display:block;margin-top:6px;font-size:12px;color:#6b7280;font-style:normal; }
-             #content-scale-article .toc { background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(190,24,93,0.08));border-radius:12px;padding:24px 28px;margin:28px 0;border:1px solid rgba(124,58,237,0.4);box-shadow:0 0 28px rgba(124,58,237,0.1); }
-             #content-scale-article .toc-title { font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#a78bfa;margin-bottom:14px; }
-             #content-scale-article .toc ol { padding-left:20px;margin:0; }
-             #content-scale-article .toc li { padding:6px 0;font-size:14px;border-bottom:1px solid rgba(124,58,237,0.1); }
-             #content-scale-article .toc li:last-child { border-bottom:none; }
-             #content-scale-article .toc a { color:#c4b5fd!important;font-weight:500;text-decoration:underline;text-underline-offset:3px; }
-             #content-scale-article .callout { background:rgba(251,191,36,0.07);border-left:4px solid #fbbf24;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0; }
-             #content-scale-article .callout p { margin:0;font-size:14px;color:#fde68a; }
-             #content-scale-article .callout-purple { background:rgba(124,58,237,0.1);border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0;border:1px solid rgba(124,58,237,0.25); }
-             #content-scale-article .callout-purple p { margin:0;font-size:14px;color:#c4b5fd; }
-             #content-scale-article .stats-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin:20px 0; }
-             #content-scale-article .stat-box { background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:18px;text-align:center; }
-             #content-scale-article .stat-box .num { font-size:24px;font-weight:900;color:#a78bfa;line-height:1; }
-             #content-scale-article .stat-box .desc { font-size:11px;color:#6b7280;margin-top:4px;line-height:1.4; }
-             #content-scale-article .framework-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0; }
-             #content-scale-article .framework-card { border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px;background:rgba(255,255,255,0.02); }
-             #content-scale-article .framework-card h4 { color:#e5e7eb;margin-top:10px; }
-             #content-scale-article .framework-card p { font-size:13px;color:#6b7280;margin:0; }
-             #content-scale-article .letter { width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff; }
-             #content-scale-article .faq-item { border-bottom:1px solid rgba(255,255,255,0.06);padding:18px 0; }
-             #content-scale-article .faq-item:last-child { border-bottom:none; }
-             #content-scale-article .faq-q { font-size:15px;font-weight:700;color:#e5e7eb;margin-bottom:8px; }
-             #content-scale-article .faq-a { font-size:14px;color:#9ca3af;line-height:1.8; }
-             #content-scale-article .step { display:flex;gap:18px;padding:22px 0;border-bottom:1px solid rgba(255,255,255,0.05); }
-             #content-scale-article .step:last-child { border-bottom:none; }
-             #content-scale-article .step-num { width:38px;height:38px;background:linear-gradient(135deg,#7c3aed,#be185d);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff;flex-shrink:0; }
-             #content-scale-article .step-content h3 { margin:0 0 6px;font-size:16px;color:#f9fafb; }
-             #content-scale-article .step-content p { margin:0;color:#9ca3af; }
-             #content-scale-article .case-study { background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:22px;margin:20px 0; }
-             #content-scale-article .case-study .cs-label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#34d399;margin-bottom:6px; }
-             #content-scale-article .author-bio { display:flex;gap:18px;align-items:flex-start;padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin:36px 0; }
-             #content-scale-article .author-bio img { width:68px;height:68px;border-radius:50%;object-fit:cover;flex-shrink:0; }
-             #content-scale-article .bio-name { font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:3px; }
-             #content-scale-article .bio-title { font-size:12px;color:#a78bfa;margin-bottom:6px; }
-             #content-scale-article .bio-text { font-size:13px;color:#6b7280;margin:0; }
-             #content-scale-article .checklist { list-style:none;padding:0;margin:14px 0; }
-             #content-scale-article .checklist li { padding:7px 0 7px 26px;position:relative;font-size:14px;color:#9ca3af;border-bottom:1px solid rgba(255,255,255,0.04); }
-             #content-scale-article .checklist li::before { content:"✓";position:absolute;left:0;color:#34d399;font-weight:700; }
-             #content-scale-article .pricing-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:20px 0; }
-             #content-scale-article .price-card { background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:22px; }
-             #content-scale-article .price-card.featured { border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.08); }
-             #content-scale-article .price-card .tier { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px; }
-             #content-scale-article .price-card .price { font-size:26px;font-weight:900;color:#f9fafb;line-height:1; }
-             #content-scale-article .price-card .period { font-size:11px;color:#6b7280; }
-             #content-scale-article .cta-section { background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(190,24,93,0.1));border:1px solid rgba(124,58,237,0.3);border-radius:16px;padding:36px;margin:36px 0;text-align:center; }
-             #content-scale-article .cta-btn { display:inline-block;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:14px;font-weight:800;padding:13px 30px;border-radius:10px;text-decoration:none; }
-             #content-scale-article .img-placeholder { background:rgba(124,58,237,0.07);border:2px dashed rgba(124,58,237,0.3);border-radius:12px;padding:28px 18px;margin:20px 0;text-align:center;color:#6b7280;font-size:13px; }
-             #content-scale-article .img-placeholder .img-name { font-weight:700;color:#a78bfa;margin-bottom:5px; }
-             #content-scale-article .img-placeholder .img-alt { color:#9ca3af;margin-bottom:5px; }
-             #content-scale-article .voice-search { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:18px 22px;margin:18px 0; }
-             #content-scale-article .voice-search .label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;margin-bottom:6px; }
-             #content-scale-article .voice-search p { font-size:14px;font-style:italic;color:#9ca3af;margin:0; }
-             #content-scale-article .last-updated { display:inline-flex;align-items:center;gap:6px;background:rgba(251,191,36,0.1);color:#fbbf24;font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;margin-bottom:18px;border:1px solid rgba(251,191,36,0.2); }
-             #content-scale-article .post-meta { display:flex;align-items:center;gap:10px;padding:0 0 14px;font-size:13px;color:#6b7280;flex-wrap:wrap; }
-             #content-scale-article .post-meta .label { background:rgba(124,58,237,0.2);color:#a78bfa;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase; }
-             @media(max-width:640px) { #content-scale-article h2{font-size:20px} #content-scale-article h3{font-size:17px} }
-           </style>
+         <!-- FULL ARTICLE — Content Scale for International SEO -->
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
+          <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:12px;padding:18px 20px;">
+            <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">GRAAF Framework — 50 pts</div>
+            <div style="font-size:12px;color:#c084fc;font-weight:700;margin-bottom:8px;">By Ottmar J.G. Francisca · ContentScale</div>
+            <p style="font-size:13px;line-height:1.7;color:#9ca3af;margin:0 0 10px;">Scores the <em style="color:#c4b5fd;">trustworthiness</em> of content: Genuinely Credible, Relevant, Actionable, Accurate, Fresh. Built for AI Overview eligibility and international SEO.</p>
+            <ul style="font-size:12px;color:#6b7280;line-height:2;margin:0;padding-left:16px;"><li>E-E-A-T signals &amp; author authority</li><li>AI Overview citation eligibility</li><li>International keyword relevance</li></ul>
+          </div>
+          <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:18px 20px;">
+            <div style="font-size:11px;font-weight:800;color:#38bdf8;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">CRAFT Framework — 30 pts</div>
+            <div style="font-size:12px;color:#7dd3fc;font-weight:700;margin-bottom:8px;">By Julia McCoy · Content Hacker</div>
+            <p style="font-size:13px;line-height:1.7;color:#9ca3af;margin:0 0 10px;">Scores the <em style="color:#7dd3fc;">writing quality</em>: Cut fluff, Review &amp; optimise, Add visuals, Fact-check, Trust-build. Human-first content production.</p>
+            <ul style="font-size:12px;color:#6b7280;line-height:2;margin:0;padding-left:16px;"><li>Readability &amp; sentence structure</li><li>Fact-checking standards</li><li>Conversion &amp; trust signals</li></ul>
+          </div>
+        </div>
+        <div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:18px 24px;margin-bottom:24px;">
+          <div style="font-size:11px;font-weight:800;color:#34d399;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Why use GRAAF + CRAFT together?</div>
+          <p style="font-size:13px;line-height:1.7;color:#9ca3af;margin:0;">GRAAF tells you if Google <em style="color:#6ee7b7;">trusts</em> your page. CRAFT tells you if humans <em style="color:#6ee7b7;">want to read</em> it. ContentScale combines both into one 100-point ContentScore — GRAAF (50 pts) + CRAFT (30 pts) + Technical SEO (20 pts).</p>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;">
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;"><div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">78%</div><div style="font-size:11px;color:#6b7280;">traffic recovery</div></div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;"><div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">200+</div><div style="font-size:11px;color:#6b7280;">sites scanned</div></div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;"><div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">47</div><div style="font-size:11px;color:#6b7280;">countries</div></div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:80px;"><div style="font-size:1.5rem;font-weight:900;color:#a78bfa;">100pt</div><div style="font-size:11px;color:#6b7280;">ContentScore</div></div>
+        </div>
+        <figure style="margin:0;"><img src="https://contentscale.site/wp-content/uploads/2025/11/SEO-contentscore.jpg" alt="ContentScale international SEO ContentScore — GRAAF Framework and CRAFT Framework combined for content at scale" width="1155" height="753" loading="eager" style="width:100%;height:auto;border-radius:12px;border:1px solid rgba(124,58,237,0.2);"></figure>
+         <div id="csa" style="max-width:860px;margin:48px auto 0;padding:0 0 60px;">
+<style>
+#csa h2{font-size:clamp(20px,3vw,30px)!important;font-weight:800!important;color:#f9fafb!important;margin:48px 0 14px!important;padding-bottom:12px!important;border-bottom:1px solid rgba(124,58,237,0.3)!important}
+#csa h3{font-size:clamp(16px,2.5vw,22px)!important;font-weight:700!important;color:#e5e7eb!important;margin:28px 0 10px!important}
+#csa h4{font-size:15px!important;font-weight:600!important;color:#d1d5db!important}
+#csa p{font-size:15px;line-height:1.8;color:#9ca3af;margin-bottom:14px}
+#csa strong{color:#e5e7eb}#csa em{color:#c4b5fd}#csa a{color:#a78bfa}
+#csa ul,#csa ol{margin:14px 0;padding-left:22px;font-size:15px;color:#9ca3af;line-height:1.9}
+#csa table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
+#csa th{background:rgba(124,58,237,0.15);padding:10px 14px;text-align:left;font-weight:700;color:#e9d5ff;border-bottom:1px solid rgba(124,58,237,0.3);font-size:11px;text-transform:uppercase}
+#csa td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#9ca3af;vertical-align:top}
+#csa blockquote{border-left:4px solid #7c3aed;padding:18px 22px;margin:20px 0;background:rgba(124,58,237,0.06);border-radius:0 10px 10px 0;font-size:15px;font-style:italic;color:#c4b5fd}
+#csa .toc{background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(190,24,93,0.08));border-radius:12px;padding:24px 28px;margin:28px 0;border:1px solid rgba(124,58,237,0.4)}
+#csa .toc-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#a78bfa;margin-bottom:14px}
+#csa .toc ol{padding-left:20px;margin:0}
+#csa .toc li{padding:6px 0;font-size:14px;border-bottom:1px solid rgba(124,58,237,0.1)}
+#csa .toc a{color:#c4b5fd!important;font-weight:500;text-decoration:underline}
+#csa .callout{background:rgba(251,191,36,0.07);border-left:4px solid #fbbf24;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0}
+#csa .callout p{margin:0;font-size:14px;color:#fde68a}
+#csa .callout-purple{background:rgba(124,58,237,0.1);border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0;border:1px solid rgba(124,58,237,0.25)}
+#csa .callout-purple p{margin:0;font-size:14px;color:#c4b5fd}
+#csa .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin:20px 0}
+#csa .stat-box{background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:18px;text-align:center}
+#csa .stat-box .num{font-size:24px;font-weight:900;color:#a78bfa;line-height:1}
+#csa .stat-box .desc{font-size:11px;color:#6b7280;margin-top:4px}
+#csa .framework-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0}
+#csa .framework-card{border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px;background:rgba(255,255,255,0.02)}
+#csa .framework-card h4{color:#e5e7eb;margin-top:10px}
+#csa .framework-card p{font-size:13px;color:#6b7280;margin:0}
+#csa .letter{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff}
+#csa .faq-item{border-bottom:1px solid rgba(255,255,255,0.06);padding:18px 0}
+#csa .faq-q{font-size:15px;font-weight:700;color:#e5e7eb;margin-bottom:8px}
+#csa .faq-a{font-size:14px;color:#9ca3af;line-height:1.8}
+#csa .step{display:flex;gap:18px;padding:22px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+#csa .step-num{width:38px;height:38px;background:linear-gradient(135deg,#7c3aed,#be185d);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff;flex-shrink:0}
+#csa .step-content h3{margin:0 0 6px;font-size:16px;color:#f9fafb}
+#csa .step-content p{margin:0;color:#9ca3af}
+#csa .case-study{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:22px;margin:20px 0}
+#csa .case-study .cs-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#34d399;margin-bottom:6px}
+#csa .author-bio{display:flex;gap:18px;align-items:flex-start;padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin:36px 0}
+#csa .author-bio img{width:68px;height:68px;border-radius:50%;object-fit:cover;flex-shrink:0}
+#csa .bio-name{font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:3px}
+#csa .bio-title{font-size:12px;color:#a78bfa;margin-bottom:6px}
+#csa .bio-text{font-size:13px;color:#6b7280;margin:0}
+#csa .checklist{list-style:none;padding:0;margin:14px 0}
+#csa .checklist li{padding:7px 0 7px 26px;position:relative;font-size:14px;color:#9ca3af;border-bottom:1px solid rgba(255,255,255,0.04)}
+#csa .checklist li::before{content:"✓";position:absolute;left:0;color:#34d399;font-weight:700}
+#csa .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:20px 0}
+#csa .price-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:22px}
+#csa .price-card.featured{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.08)}
+#csa .cta-section{background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(190,24,93,0.1));border:1px solid rgba(124,58,237,0.3);border-radius:16px;padding:36px;margin:36px 0;text-align:center}
+#csa .cta-btn{display:inline-block;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:14px;font-weight:800;padding:13px 30px;border-radius:10px;text-decoration:none}
+#csa .img-placeholder{background:rgba(124,58,237,0.07);border:2px dashed rgba(124,58,237,0.3);border-radius:12px;padding:28px 18px;margin:20px 0;text-align:center;color:#6b7280;font-size:13px}
+#csa .voice-search{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:18px 22px;margin:18px 0}
+#csa .voice-search p{font-size:14px;font-style:italic;color:#9ca3af;margin:0}
+</style>
 <nav class="toc">
   <div class="toc-title">Table of Contents</div>
   <ol>
@@ -1574,8 +1522,7 @@
   </a>
 </div>
          </div>
-         <!-- END FULL ARTICLE CONTENT -->
-
+         <!-- END FULL ARTICLE -->
          <!-- SEO EXPERTS SECTION -->
          <div id="freelancers" class="mb-16 main-section" data-section="experts">
             <div class="text-center mb-8">
