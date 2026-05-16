@@ -23646,15 +23646,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
             if (tab==='tracker') loadTrackerPages();
-            if (tab==='messages') loadMessages();
             if (tab==='pending') loadPendingData();
-
-
             if (tab==='enginecodes') loadEngineCodes();
             if (tab==='giveaccess') loadGiveAccess();
-
-            else { stopScanLogAutoRefresh(); }
-
         }
 
         function loadAllData() { loadLeaderboard(); loadFreelancers(); }
@@ -23966,6 +23960,928 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         function openMessageModal(targetType, userId) { messageTarget=(targetType==='single')?userId:targetType; document.getElementById('messageModal').classList.add('active'); }
 
+
+        async function loadPendingData() {
+            try {
+                const lbData = await apiCall('/api/admin/leaderboard/pending');
+                const frData = await apiCall('/api/admin/freelancers/pending');
+                document.getElementById('pending-leaderboard-container').innerHTML = lbData.pending.length ? lbData.pending.map(p =>
+                    '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
+                    '<h4 style="font-weight:700;">'+(p.company_name||extractDomain(p.url))+'</h4>' +
+                    '<a href="'+p.url+'" target="_blank" style="color:#60a5fa;font-size:0.8rem;">'+p.url+'</a>' +
+                    '<div style="font-size:1.5rem;font-weight:900;color:'+(p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171')+';">'+p.score+'/100</div>' +
+                    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+                    '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">✅ Approve</button>' +
+                    '<button onclick="apiCall(&apos;/api/admin/leaderboard/'+p.id+'/reject&apos;,&apos;POST&apos;).then(()=>loadPendingData())" class="btn btn-danger">✗ Reject</button>' +
+                    '</div></div>').join('') : '<p style="color:#9ca3af;">✅ No pending submissions</p>';
+                document.getElementById('pending-freelancers-container').innerHTML = frData.pending.length ? frData.pending.map(p =>
+                    '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
+                    '<h4 style="font-weight:700;">'+p.name+'</h4><p style="font-size:0.875rem;color:#9ca3af;">'+p.email+'</p>' +
+                    '<div style="display:flex;gap:8px;margin-top:8px;">' +
+                    '<button onclick="apiCall(&apos;/api/admin/freelancers/'+p.id+'/approve&apos;,&apos;POST&apos;).then(()=>{loadPendingData();loadFreelancers();})" class="btn btn-success" style="flex:1;">Approve</button>' +
+                    '<button onclick="apiCall(&apos;/api/admin/freelancers/'+p.id+'&apos;,&apos;DELETE&apos;).then(()=>loadPendingData())" class="btn btn-danger" style="flex:1;">Reject</button>' +
+                    '</div></div>').join('') : '<p style="color:#9ca3af;">No pending applications</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        function approveLB(id) { apiCall('/api/admin/leaderboard/'+id+'/approve','POST',{final_country:null,city:null,niche:null}).then(()=>{ loadPendingData(); loadLeaderboard(); }); }
+        function deleteItem(type, id) { if (!confirm('Delete this item permanently?')) return; apiCall(type==='leaderboard'?'/api/admin/leaderboard/'+id:'/api/admin/freelancers/'+id,'DELETE').then(()=>loadAllData()).catch(e=>alert(e.message)); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?'📊 Show Rankings 16+':'📊 Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'▼':'▲'; }
+
+        // Scan log state
+        let allScanLogs = [], filteredScanLogs = [], selectedScanIds = new Set();
+        let slSortField = 'created_at', slSortDir = 'desc', slPage = 0, slPageSize = 100;
+        let slSeenIds = new Set(), slAutoRefreshTimer = null;
+
+        async function loadScanLog(silent=false) {
+            if(!silent){const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Loading...';}}
+            try {
+                const data = await apiCall('/api/admin/scan-log?limit=1000');
+                if (data.success) {
+                    const newIds = new Set(data.scans.map(s=>s.id));
+                    const brand_new = silent ? data.scans.filter(s=>!slSeenIds.has(s.id)) : [];
+                    allScanLogs = data.scans; slSeenIds = newIds;
+                    filterScanLog(); updateSlStats();
+                    const nb=document.getElementById('scanNewBadge');
+                    if(brand_new.length&&silent&&nb){nb.textContent='+'+brand_new.length+' new';nb.style.display='inline';setTimeout(()=>nb.style.display='none',8000);}
+                }
+            } catch(e) {
+                document.getElementById('scanLogBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</td></tr>';
+            } finally {
+                const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
+            }
+        }
+
+        function updateSlStats() {
+            const s=allScanLogs;
+            const withEmail=s.filter(x=>x.email_status==='has_email').length;
+            const scores=s.filter(x=>x.score!==null).map(x=>x.score);
+            const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+            const today=new Date().toDateString();
+            const todayCount=s.filter(x=>new Date(x.created_at).toDateString()===today).length;
+            const bulkCount=s.filter(x=>(x.source||'single')==='bulk').length;
+            const el=id=>document.getElementById(id);
+            if(el('slStatTotal'))el('slStatTotal').textContent=s.length.toLocaleString();
+            if(el('slStatEmails'))el('slStatEmails').textContent=withEmail.toLocaleString();
+            if(el('slStatAvgScore'))el('slStatAvgScore').textContent=avg||'—';
+            if(el('slStatToday'))el('slStatToday').textContent=todayCount.toLocaleString();
+            if(el('slStatBulk'))el('slStatBulk').textContent=bulkCount+' / '+(s.length-bulkCount);
+            if(el('scanLogCount'))el('scanLogCount').textContent=s.length+' scans';
+        }
+
+        function filterScanLog() {
+            const q=(document.getElementById('slSearch')?.value||'').toLowerCase();
+            const src=document.getElementById('slFilterSource')?.value||'';
+            const em=document.getElementById('slFilterEmail')?.value||'';
+            const sc=document.getElementById('slFilterScore')?.value||'';
+            filteredScanLogs=allScanLogs.filter(s=>{
+                if(q&&!['business_name','business_url','email_found','city','niche'].some(k=>String(s[k]||'').toLowerCase().includes(q)))return false;
+                if(src&&(s.source||'single')!==src)return false;
+                if(em&&s.email_status!==em)return false;
+                if(sc){const sv=s.score||0;if(sc==='0_50'&&sv>=50)return false;else if(sc!=='0_50'&&sv<parseInt(sc))return false;}
+                return true;
+            });
+            sortAndRenderScanLog();
+        }
+
+        function sortScanLog(field) {
+            if(slSortField===field)slSortDir=slSortDir==='asc'?'desc':'asc';
+            else{slSortField=field;slSortDir='desc';}
+            sortAndRenderScanLog();
+        }
+
+        function sortAndRenderScanLog() {
+            const d=slSortDir==='asc'?1:-1;
+            filteredScanLogs.sort((a,b)=>{
+                const av=a[slSortField]||'', bv=b[slSortField]||'';
+                return typeof av==='number'?(av-bv)*d:String(av).localeCompare(String(bv))*d;
+            });
+            slPage=0; renderScanLogPage();
+        }
+
+        function renderScanLogPage() {
+            const tbody=document.getElementById('scanLogBody');
+            const start=slPage*slPageSize, chunk=filteredScanLogs.slice(start,start+slPageSize);
+            if(!chunk.length){
+                tbody.innerHTML='<tr><td colspan="10" class="sl-empty"><i class="fas fa-search" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px;"></i>'+(allScanLogs.length?'No results match your filters':'No scans yet')+'</td></tr>';
+                document.getElementById('slPagination').innerHTML=''; return;
+            }
+            const now=Date.now();
+            tbody.innerHTML=chunk.map(s=>{
+                const isNew=(now-new Date(s.created_at).getTime())<3600000;
+                const dt=new Date(s.created_at);
+                const timeAgo=getTimeAgo(dt);
+                const fullDate=dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+                const sv=s.score;
+                const [scoreColor,scoreBg]=sv===null?['#6b7280','#1f2937']:sv>=85?['#4ade80','#052e16']:sv>=70?['#a3e635','#1a2e05']:sv>=50?['#fbbf24','#2d1f00']:['#f87171','#2d0a0a'];
+                const score=sv!==null?'<span class="sl-score-pill" style="color:'+scoreColor+';background:'+scoreBg+';">'+sv+'</span>':'<span style="color:#4b5563;">—</span>';
+                const src=s.source||'single';
+                const srcColor=src==='bulk'?'#93c5fd':src==='discover'?'#86efac':'#c4b5fd';
+                const srcBg=src==='bulk'?'#0c2340':src==='discover'?'#0a2010':'#1e1b4b';
+                const emailBadge=s.email_status==='has_email'?'<span style="color:#4ade80;font-size:12px;">'+( s.email_found||'Found')+'</span>':'<span style="color:#4b5563;font-size:12px;">—</span>';
+                const loc=[s.city,s.country].filter(Boolean).join(', ')||'—';
+                const urlShort=s.business_url?s.business_url.replace(/^https?:[\/][\/](www\.)?/,'').split('/')[0]:'';
+                return '<tr class="'+(isNew?'sl-new':'')+'" style="border-bottom:1px solid #0d1117;">'
+                    +'<td style="padding:10px 12px;"><input type="checkbox" '+(selectedScanIds.has(String(s.id))?'checked':'')+' onchange="toggleScanRow('+s.id+',this.checked)"></td>'
+                    +'<td style="padding:10px 4px;">'+(isNew?'<span class="sl-new-dot" title="New"></span>':'')+'</td>'
+                    +'<td style="padding:10px 12px;white-space:nowrap;" title="'+fullDate+'">'
+                        +'<div style="font-size:12px;color:#e5e7eb;font-weight:500;">'+timeAgo+'</div>'
+                        +'<div style="font-size:11px;color:#6b7280;">'+dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+'</div></td>'
+                    +'<td style="padding:10px 12px;"><span class="sl-src-badge" style="color:'+srcColor+';background:'+srcBg+';">'+src+'</span></td>'
+                    +'<td style="padding:10px 12px;max-width:220px;">'
+                        +'<div style="font-weight:600;font-size:13px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(s.business_name||'<span style="color:#4b5563;">—</span>')+'</div>'
+                        +(urlShort?'<a href="'+s.business_url+'" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none;opacity:.8;">'+urlShort+'</a>':'')+'</td>'
+                    +'<td style="padding:10px 12px;">'+score+'</td>'
+                    +'<td style="padding:10px 12px;font-size:12px;color:#9ca3af;white-space:nowrap;">'+loc+'</td>'
+                    +'<td style="padding:10px 12px;">'+emailBadge+'</td>'
+                    +'<td style="padding:10px 12px;font-size:11px;color:#6b7280;">'+(s.niche||'—')+'</td>'
+                    +'<td style="padding:10px 12px;"><button onclick="deleteSingleScan('+s.id+',this)" class="sl-action-btn danger" style="padding:4px 8px;font-size:11px;">✕</button></td>'
+                    +'</tr>';
+            }).join('');
+            const total=filteredScanLogs.length, pages=Math.ceil(total/slPageSize);
+            const pag=document.getElementById('slPagination');
+            if(pag){pag.innerHTML=pages>1?'<span>Showing '+(start+1)+'–'+Math.min(start+slPageSize,total)+' of '+total+'</span><div style="display:flex;gap:6px;">'+(slPage>0?'<button onclick="slChangePage(-1)" class="sl-action-btn" style="padding:3px 10px;">← Prev</button>':'')+'<span style="align-self:center;">Page '+(slPage+1)+'/'+pages+'</span>'+(slPage<pages-1?'<button onclick="slChangePage(1)" class="sl-action-btn" style="padding:3px 10px;">Next →</button>':'')+'</div>':'';}
+        }
+
+        function slChangePage(dir){slPage=Math.max(0,slPage+dir);renderScanLogPage();}
+
+        function getTimeAgo(dt) {
+            const s=Math.floor((Date.now()-dt.getTime())/1000);
+            if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';
+            if(s<86400)return Math.floor(s/3600)+'h ago';if(s<604800)return Math.floor(s/86400)+'d ago';
+            return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+        }
+
+        function toggleScanRow(id,checked){if(checked)selectedScanIds.add(String(id));else selectedScanIds.delete(String(id));updateScanExportBtn();}
+        function toggleAllScans(checked){filteredScanLogs.slice(slPage*slPageSize,(slPage+1)*slPageSize).forEach(s=>checked?selectedScanIds.add(String(s.id)):selectedScanIds.delete(String(s.id)));updateScanExportBtn();renderScanLogPage();}
+        function updateScanExportBtn(){const btn=document.getElementById('exportScanBtn');const n=selectedScanIds.size;if(btn)btn.textContent=n>0?'Export '+n+' selected':'Export CSV';}
+
+        function exportScanLog(){
+            const toExport=allScanLogs.filter(s=>selectedScanIds.has(String(s.id)));
+            if(!toExport.length){alert('Select scans first.');return;}
+            const rows=[['first_name','business_name','email','website','score','city','country','niche','source','scan_date','scan_time']];
+            toExport.forEach(s=>{
+                let fn=s.business_name?s.business_name.split(' ')[0]:'';fn=fn.charAt(0).toUpperCase()+fn.slice(1).toLowerCase();
+                const dt=new Date(s.created_at);
+                rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',s.niche||'',s.source||'single',dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})]);
+            });
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
+            const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scans-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+        }
+
+        async function bulkDeleteScans(){
+            const ids=Array.from(selectedScanIds);if(!ids.length){alert('Select scans first.');return;}if(!confirm('Delete '+ids.length+' scan(s)?'))return;
+            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids})});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
+        }
+
+        async function deleteSingleScan(id,btn){
+            if(!confirm('Delete this scan?'))return;if(btn){btn.disabled=true;btn.textContent='...';}
+            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids:[id]})});const d=await r.json();
+            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);filterScanLog();updateSlStats();}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='✕';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='✕';}}
+        }
+
+        async function deleteAllScans(){
+            if(!confirm('Delete ALL scans permanently?'))return;
+            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');allScanLogs=[];filteredScanLogs=[];selectedScanIds.clear();updateScanExportBtn();filterScanLog();updateSlStats();}catch(e){alert('❌ '+e.message);}
+        }
+
+        function startScanLogAutoRefresh(){
+            stopScanLogAutoRefresh();
+            slAutoRefreshTimer=setInterval(()=>{
+                if(document.getElementById('tab-scanlog')&&!document.getElementById('tab-scanlog').classList.contains('hidden')){loadScanLog(true);}
+            },30000);
+        }
+        function stopScanLogAutoRefresh(){if(slAutoRefreshTimer){clearInterval(slAutoRefreshTimer);slAutoRefreshTimer=null;}}
+
+        let adminLastScanResult=null;
+        function adminSetScanMode(mode){
+            document.getElementById('adminModeSingle').style.display=mode==='single'?'block':'none';
+            document.getElementById('adminModeBatch').style.display=mode==='batch'?'block':'none';
+            const sBtn=document.getElementById('adminScanModeBtn_single'),bBtn=document.getElementById('adminScanModeBtn_batch');
+            if(mode==='single'){sBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;border:none;';bBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;';}
+            else{bBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#b45309,#f59e0b);color:white;border:none;';sBtn.style.cssText='padding:7px 18px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;background:#1f2937;color:#9ca3af;border:1px solid #374151;';}
+        }
+
+        async function adminRunScan(){
+            const url=document.getElementById('adminScanUrl').value.trim();if(!url)return;
+            const btn=document.getElementById('adminScanBtn'),prog=document.getElementById('adminScanProgress'),res=document.getElementById('adminScanResults');
+            btn.disabled=true;btn.textContent='⏳ Scanning...';prog.style.display='block';res.style.display='none';
+            let pct=0;const interval=setInterval(()=>{pct=Math.min(pct+Math.random()*12,90);document.getElementById('adminScanBar').style.width=pct+'%';},600);
+            try{
+                const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+                const data=await r.json();clearInterval(interval);document.getElementById('adminScanBar').style.width='100%';
+                if(!data.success)throw new Error(data.error||'Scan failed');
+                adminLastScanResult=data;
+                setTimeout(()=>{prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';res.style.display='block';
+                    res.innerHTML='<div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;padding:28px;text-align:center;"><div style="font-size:5rem;font-weight:900;color:'+(data.score>=85?'#4ade80':data.score>=70?'#fbbf24':'#f87171')+';">'+data.score+'</div><div style="color:#6b7280;">/ 100</div><p style="color:#e5e7eb;margin-top:12px;">'+data.url+'</p></div>';},400);
+            }catch(e){clearInterval(interval);prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';alert('Scan failed: '+e.message);}
+        }
+
+        async function loadCampaignsList(){} // removed
+
+
+        // ── CONTENT LIFECYCLE TRACKER JS ────────────────────────────────────────
+        let allTrackerPages = [];
+        let _trProfileId = null;
+        let _trClientFilter = '';
+
+        async function loadTrackerPages() {
+            const btn = document.getElementById('trRefreshBtn');
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Refreshing...';}
+            try {
+                const data = await apiCall('/api/tracker/pages' + (_trProfileId ? '?profile_id='+_trProfileId : ''));
+                allTrackerPages = data.pages || [];
+                populateClientFilter();
+                renderTrackerStats();
+                renderTrackerPages();
+            } catch(e) {
+                document.getElementById('trPagesList').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</div>';
+            } finally {
+                if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
+            }
+        }
+
+        function populateClientFilter() {
+            const sel = document.getElementById('trClientFilter');
+            if(!sel) return;
+            // Collect unique clients
+            const clients = {};
+            allTrackerPages.forEach(function(p) {
+                const key = p.engine_client_name || '__admin__';
+                const label = p.engine_client_name || 'Admin';
+                clients[key] = label;
+            });
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">All clients (' + allTrackerPages.length + ' pages)</option>';
+            Object.keys(clients).sort().forEach(function(k) {
+                const count = allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === k; }).length;
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = clients[k] + ' (' + count + ')';
+                sel.appendChild(opt);
+            });
+            sel.value = prev || '';
+        }
+
+        function filterTrackerByClient() {
+            const sel = document.getElementById('trClientFilter');
+            _trClientFilter = sel ? sel.value : '';
+            renderTrackerPages();
+        }
+
+        function renderTrackerStats() {
+            const pages = allTrackerPages;
+            const withLatest = pages.filter(p => p.latest_snapshot);
+            const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
+            const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
+            const today = new Date().toDateString();
+            const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
+            const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
+            const el = id => document.getElementById(id);
+            if(el('trStatPages')) el('trStatPages').textContent = pages.length;
+            if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
+            if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
+            if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
+            if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
+
+            // ── New aggregate KPIs ────────────────────────────────────────────────────
+            let pagesWithPos = 0, totalPosGain = 0;
+            let totalGraaf = 0, pagesWithGraaf = 0;
+            let citedCount = 0;
+            withLatest.forEach(p => {
+                const base = p.baseline_snapshot || {};
+                const curr = p.latest_snapshot || {};
+                if (base.google_position && curr.google_position) {
+                    pagesWithPos++;
+                    totalPosGain += (base.google_position - curr.google_position);
+                }
+                if (curr.score) { pagesWithGraaf++; totalGraaf += curr.score; }
+                if (curr.ai_google_overview_cited || curr.ai_perplexity_cited || curr.ai_bing_cited) citedCount++;
+            });
+            const avgPosGain = pagesWithPos ? (totalPosGain / pagesWithPos).toFixed(1) : null;
+            const avgGraaf = pagesWithGraaf ? Math.round(totalGraaf / pagesWithGraaf) : null;
+            const citationRate = withLatest.length ? Math.round((citedCount / withLatest.length) * 100) : 0;
+
+            if (el('trStatAvgPosGain')) {
+                if (avgPosGain !== null) {
+                    const gainNum = parseFloat(avgPosGain);
+                    el('trStatAvgPosGain').textContent = (gainNum > 0 ? '+' : '') + avgPosGain;
+                    el('trStatAvgPosGain').style.color = gainNum > 0 ? '#4ade80' : gainNum < 0 ? '#f87171' : '#e5e7eb';
+                } else {
+                    el('trStatAvgPosGain').textContent = '—';
+                    el('trStatAvgPosGain').style.color = '#e5e7eb';
+                }
+            }
+            if (el('trStatAvgGraaf')) {
+                if (avgGraaf !== null) {
+                    el('trStatAvgGraaf').textContent = avgGraaf + '/100';
+                    el('trStatAvgGraaf').style.color = avgGraaf >= 70 ? '#4ade80' : avgGraaf >= 50 ? '#fbbf24' : '#f87171';
+                } else {
+                    el('trStatAvgGraaf').textContent = '—';
+                    el('trStatAvgGraaf').style.color = '#e5e7eb';
+                }
+            }
+            if (el('trStatCitationRate')) el('trStatCitationRate').textContent = citationRate + '%';
+        }
+
+        function renderTrackerPages() {
+            const el = document.getElementById('trPagesList');
+            if(!allTrackerPages.length) {
+                el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
+                return;
+            }
+            // Apply client filter
+            const filtered = _trClientFilter
+                ? allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; })
+                : allTrackerPages;
+            const countEl = document.getElementById('trFilterCount');
+            if(countEl) countEl.textContent = _trClientFilter ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
+            if(!filtered.length) {
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages for this client.</div>';
+                return;
+            }
+            el.innerHTML = filtered.map(p => renderTrackerPageCard(p)).join('');
+        }
+
+        function renderTrackerPageCard(p) {
+            const snap = p.latest_snapshot;
+            const pending = parseInt(p.pending_changes||0);
+            const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
+            const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '—';
+            const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
+
+            // Position pill
+            let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
+            if(snap?.google_position) {
+                const pos = snap.google_position;
+                const posColor = pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+                const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
+                posPill = '<span class="tr-badge" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;">#'+pos+'</span>';
+            }
+
+            // GRAAF score badge
+            const graafBadge = (snap?.score)
+                ? '<span class="tr-badge" style="background:#2e1065;color:#a78bfa;margin-left:6px;">🎯 '+snap.score+'/100</span>'
+                : '';
+
+            // GSC baseline badge
+            const gscBadge = (p.gsc_impressions || p.gsc_clicks || p.gsc_position)
+                ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;margin-left:6px;">📊 GSC</span>'
+                : '';
+
+            // Classification badge
+            let clsBadge = '';
+            if (p.latest_classification) {
+                const cls = p.latest_classification;
+                const clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
+                const clsEmoji = cls.status === 'healthy' ? '🟢' : cls.status === 'attention' ? '🟡' : cls.status === 'opportunity' ? '💡' : '🔴';
+                const clsLabel = cls.status === 'healthy' ? 'HEALTHY' : cls.status === 'attention' ? 'NEEDS REFRESH' : cls.status === 'opportunity' ? 'OPPORTUNITY' : 'NEEDS REWRITE';
+                clsBadge = '<span class="tr-badge" style="background:'+clsColor+'22;color:'+clsColor+';border:1px solid '+clsColor+'44;margin-left:6px;">'+clsEmoji+' '+clsLabel+' '+(cls.score||0)+'/100</span>';
+            }
+
+            // Fetch reliability warning
+            const fetchWarning = (p.fetch_reliable === false)
+                ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">⚠️ fetch unreliable</span>'
+                : '';
+
+            // AI citation badges
+            const gBadge = snap
+                ? (snap.ai_google_overview_cited
+                    ? '<span class="tr-badge cited">✦ AI Overview cited</span>'
+                    : snap.ai_google_overview_found
+                        ? '<span class="tr-badge notcited">AI Overview — not cited</span>'
+                        : '<span class="tr-badge notcited">No AI Overview</span>')
+                : '<span class="tr-badge notcited">Not checked</span>';
+
+            const pBadge = snap
+                ? (snap.ai_perplexity_cited
+                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;">✦ Perplexity cited</span>'
+                    : '<span class="tr-badge notcited">Perplexity — not cited</span>')
+                : '';
+
+            const bBadge = snap
+                ? (snap.ai_bing_cited
+                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;">✦ Bing cited</span>'
+                    : '')
+                : '';
+
+            // Pending changes button
+            const changesBtn = pending > 0
+                ? '<button onclick="openChangesModalById('+p.id+')" class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
+                : '';
+
+            // Manual HTML paste CTA for unreliable pages
+            const manualCta = (p.fetch_reliable === false && (!p.html_content || p.html_content.length < 500))
+                ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;">📋 Paste HTML manually for GRAAF scan</button></div>'
+                : '';
+
+            const borderColor = p.is_active ? '#7e22ce' : '#374151';
+            const dotHtml = p.is_active
+                ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
+                : '<span class="tr-change-dot" style="background:#374151;"></span>';
+            const kwHtml = p.keyword ? '<span style="font-size:11px;color:#6b7280;margin-left:8px;">keyword: '+p.keyword+'</span>' : '';
+            let _recs = snap && snap.recommendations ? snap.recommendations : null;
+            if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
+            const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
+            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';">'
+                +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
+                +'<div style="flex:1;min-width:0;">'
+                +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+                +dotHtml
+                +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
+                +graafBadge+gscBadge+clsBadge+fetchWarning
+                +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
+                +'</div>'
+                +'<div style="margin-bottom:8px;">'
+                +'<a href="'+p.url+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;">'+p.url+'</a>'
+                +kwHtml
+                +'</div>'
+                +manualCta
+                +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+                +posPill+gBadge+pBadge+bBadge
+                +'</div></div>'
+                +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
+                +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
+                +changesBtn
+                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'">Check now</button>'
+                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn">Update HTML</button>'
+                +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
+                +'</div>'
+                +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
+                +'Last checked: '+lastCheck+' · Next: '+nextCheck+' · '+(p.snapshot_count||0)+' snapshots'
+                +'</div></div></div>'
+                +recsHtml
+                +'</div>';
+        }
+
+        function renderTrackerRecommendations(recs, pageId) {
+            if(!recs) return '';
+            if(typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { return ''; } }
+            if(!Array.isArray(recs)||!recs.length) return '';
+            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
+            const rows = recs.slice(0,3).map(function(r) {
+                const pc = priorityColor[r.priority]||'#6b7280';
+                return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1f2937;">'
+                    +'<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:'+pc+'22;color:'+pc+';white-space:nowrap;margin-top:1px;">'+(r.priority||'').toUpperCase()+'</span>'
+                    +'<div style="flex:1;">'
+                    +'<div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+(r.title||'')+'</div>'
+                    +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+(r.action||'')+'</div>'
+                    +'</div></div>';
+            }).join('');
+            const moreRow = recs.length > 3 ? '<div style="font-size:11px;color:#6b7280;margin-top:6px;">+'+(recs.length-3)+' more — click See changes to view all</div>' : '';
+            return '<div style="margin-top:14px;padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;">'
+                +'<div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Latest Recommendations</div>'
+                +rows+moreRow+'</div>';
+        }
+
+        async function runManualCheck(pageId) {
+            const btn = document.getElementById('trCheckBtn_'+pageId);
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:4px;"></i>Checking...';}
+            try {
+                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
+                // Show running indicator — poll for result
+                let polls = 0;
+                const poll = setInterval(async () => {
+                    polls++;
+                    if(polls > 12) { clearInterval(poll); if(btn){btn.disabled=false;btn.textContent='Check now';} return; }
+                    const data = await apiCall('/api/tracker/pages?profile_id='+(_trProfileId||'')).catch(()=>null);
+                    if(data?.pages) {
+                        const updated = data.pages.find(p=>p.id===pageId);
+                        if(updated?.last_checked_at && new Date(updated.last_checked_at) > new Date(Date.now()-120000)) {
+                            clearInterval(poll);
+                            allTrackerPages = data.pages;
+                            renderTrackerStats();
+                            renderTrackerPages();
+                            if(btn){btn.disabled=false;btn.textContent='Check now';}
+                        }
+                    }
+                }, 10000);
+            } catch(e) {
+                alert('Check failed: '+e.message);
+                if(btn){btn.disabled=false;btn.textContent='Check now';}
+            }
+        }
+
+        function openChangesModalById(pageId) {
+            const page = allTrackerPages.find(p => p.id === pageId);
+            const title = page ? (page.title || page.url || 'Page') : 'Page';
+            openChangesModal(pageId, title);
+        }
+
+        async function openChangesModal(pageId, title) {
+            document.getElementById('trChangesTitle').textContent = 'Changes — '+title;
+            document.getElementById('trChangesBody').innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            document.getElementById('trChangesModal').style.display = 'flex';
+            try {
+                const [changesData, snapsData] = await Promise.all([
+                    apiCall('/api/tracker/pages/'+pageId+'/changes'),
+                    apiCall('/api/tracker/pages/'+pageId+'/snapshots')
+                ]);
+                const changes = changesData.changes || [];
+                const snaps = snapsData.snapshots || [];
+                if(!changes.length && !snaps.length) {
+                    document.getElementById('trChangesBody').innerHTML = '<p style="color:#6b7280;text-align:center;padding:30px;">No changes or snapshots yet. Run a check first.</p>';
+                    return;
+                }
+                renderChangesModal(changes, snaps, pageId);
+            } catch(e) {
+                document.getElementById('trChangesBody').innerHTML = '<p style="color:#f87171;">Error: '+e.message+'</p>';
+            }
+        }
+
+        function renderChangesModal(changes, snaps, pageId) {
+            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
+            const sigChanges = changes.filter(function(c){return c.is_significant;});
+            const latestSnap = snaps[0];
+            const recs = (latestSnap && latestSnap.recommendations) ? latestSnap.recommendations : [];
+
+            let html = '';
+
+            // History table
+            if(snaps.length) {
+                const rows = snaps.slice(0,10).map(function(s,i) {
+                    const prev = snaps[i+1];
+                    const posChange = (prev && prev.google_position && s.google_position) ? (prev.google_position - s.google_position) : null;
+                    const posArrow = posChange === null ? '' : posChange > 0
+                        ? '<span style="color:#4ade80;margin-left:4px;">↑'+posChange+'</span>'
+                        : posChange < 0 ? '<span style="color:#f87171;margin-left:4px;">↓'+Math.abs(posChange)+'</span>' : '';
+                    return '<tr style="border-bottom:1px solid #0d1117;">'
+                        +'<td style="padding:7px 10px;color:#9ca3af;">'+new Date(s.checked_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</td>'
+                        +'<td style="padding:7px 10px;font-weight:600;">'+(s.google_position?'#'+s.google_position:'—')+posArrow+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">✦ Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'</tr>';
+                }).join('');
+                html += '<div style="margin-bottom:20px;">'
+                    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:12px;">Position & Citation History</div>'
+                    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                    +'<thead><tr style="border-bottom:1px solid #1f2937;color:#6b7280;">'
+                    +'<th style="padding:6px 10px;text-align:left;">Date</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Position</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Google AI</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Perplexity</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Bing</th>'
+                    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+            }
+
+            // Significant changes
+            if(sigChanges.length) {
+                const changeRows = sigChanges.map(function(c) {
+                    const isGood = (c.change_type==='position'&&c.delta>0)||(c.change_type==='ai_citation'&&c.delta>0);
+                    const borderColor = isGood?'#4ade80':'#f87171';
+                    const doneBtn = !c.applied
+                        ? '<button onclick="markChangeApplied('+c.id+')" class="tr-btn" style="font-size:11px;padding:3px 10px;">Mark done</button>'
+                        : '<span style="font-size:11px;color:#4ade80;">✓ Applied</span>';
+                    return '<div style="padding:10px 12px;background:#0d1117;border-radius:6px;border-left:3px solid '+borderColor+';margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">'
+                        +'<div><div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+c.field_name.replace(/_/g,' ')+' — '+c.value_before+' → '+c.value_after+'</div>'
+                        +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+new Date(c.changed_at).toLocaleDateString('en-GB')+'</div></div>'
+                        +doneBtn+'</div>';
+                }).join('');
+                html += '<div style="margin-bottom:20px;">'
+                    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:10px;">Significant Changes</div>'
+                    +changeRows+'</div>';
+            }
+
+            // Recommendations
+            if(recs.length) {
+                const recRows = recs.map(function(r) {
+                    const pc = priorityColor[r.priority]||'#6b7280';
+                    return '<div style="padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;margin-bottom:8px;">'
+                        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                        +'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:'+pc+'22;color:'+pc+';">'+(r.priority||'').toUpperCase()+'</span>'
+                        +'<span style="font-size:13px;font-weight:600;color:#f1f5f9;">'+(r.title||'')+'</span>'
+                        +'</div>'
+                        +'<div style="font-size:12px;color:#9ca3af;margin-bottom:4px;">'+(r.action||'')+'</div>'
+                        +(r.expected_impact?'<div style="font-size:11px;color:#6b7280;">Expected: '+r.expected_impact+'</div>':'')
+                        +'</div>';
+                }).join('');
+                html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:10px;">What to Do Next</div>'+recRows+'</div>';
+            }
+
+            document.getElementById('trChangesBody').innerHTML = html || '<p style="color:#6b7280;text-align:center;">No data yet.</p>';
+        }
+
+        async function markChangeApplied(changeId) {
+            try {
+                await apiCall('/api/tracker/changes/'+changeId+'/apply','PATCH');
+                loadTrackerPages();
+            } catch(e) { alert('Error: '+e.message); }
+        }
+
+        function openAddPageModal() {
+            document.getElementById('trAddUrl').value='';
+            document.getElementById('trAddKeyword').value='';
+            document.getElementById('trAddTitle').value='';
+            document.getElementById('trAddHtml').value='';
+            document.getElementById('trAddFreq').value='3days';
+            document.getElementById('trAddModal').style.display='flex';
+        }
+        function closeAddPageModal() { document.getElementById('trAddModal').style.display='none'; }
+
+        async function submitAddPage() {
+            const url = document.getElementById('trAddUrl').value.trim();
+            const keyword = document.getElementById('trAddKeyword').value.trim();
+            if(!url) return alert('URL is required');
+            const btn = document.getElementById('trAddSubmitBtn');
+            btn.disabled=true; btn.textContent='Adding...';
+            try {
+                const data = await apiCall('/api/tracker/pages','POST',{
+                    url, keyword, title: document.getElementById('trAddTitle').value.trim()||null,
+                    html_content: document.getElementById('trAddHtml').value.trim()||null,
+                    check_frequency: document.getElementById('trAddFreq').value,
+                    profile_id: _trProfileId||null
+                });
+                closeAddPageModal();
+                if(data.page) {
+                    // Run first check immediately
+                    await apiCall('/api/tracker/pages/'+data.page.id+'/check','POST').catch(()=>{});
+                    await loadTrackerPages();
+                }
+            } catch(e) { alert('Error: '+e.message); }
+            finally { btn.disabled=false; btn.textContent='Add & Run First Check'; }
+        }
+
+        function openHtmlModal(pageId, currentHtml) {
+            document.getElementById('trHtmlPageId').value = pageId;
+            document.getElementById('trHtmlContent').value = '';
+            document.getElementById('trHtmlModal').style.display = 'flex';
+        }
+
+        async function submitHtmlUpdate() {
+            const pageId = document.getElementById('trHtmlPageId').value;
+            const html = document.getElementById('trHtmlContent').value.trim();
+            if(!html) return alert('Paste your updated HTML first');
+            try {
+                await apiCall('/api/tracker/pages/'+pageId,'PATCH',{ html_content: html });
+                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
+                document.getElementById('trHtmlModal').style.display='none';
+                setTimeout(loadTrackerPages, 3000);
+            } catch(e) { alert('Error: '+e.message); }
+        }
+
+        async function deleteTrackerPage(pageId) {
+            if(!confirm('Remove this page from tracking?')) return;
+            try {
+                await apiCall('/api/tracker/pages/'+pageId,'DELETE');
+                loadTrackerPages();
+            } catch(e) { alert('Error: '+e.message); }
+        }
+
+        function showCreateEngineCode(){document.getElementById('createEngineCodeForm').style.display='block';}
+
+        async function loadEngineCodes(){
+            try{
+                const data=await apiCall('/api/admin/engine-codes');const codes=data.codes||[];const el=document.getElementById('engineCodesList');
+                if(!codes.length){el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:32px;">No engine access codes yet.</div>';return;}
+                el.innerHTML=codes.map(c=>{
+                    const isLifetime = c.deal_type === 'lifetime';
+                    const pkBadge = isLifetime
+                        ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#064e3b;color:#4ade80;margin-left:6px;">♾️ Lifetime'+(c.deal_label?' · '+c.deal_label:'')+'</span>'
+                        : c.use_platform_keys
+                            ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>'
+                            : '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#1e293b;color:#94a3b8;margin-left:6px;">Own Keys</span>';
+                    const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
+                    // ── API Cost Budget Display ───────────────────────────
+                    let creditBar = '';
+                    const costLimit = parseFloat(c.monthly_cost_limit) || 50;
+                    const costUsed = parseFloat(c.monthly_cost_used) || 0;
+                    const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
+                    const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
+                    const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥️ Platform' : '❓ Not set';
+                    creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
+                        '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">€' + costUsed.toFixed(2) + ' / €' + costLimit.toFixed(2) + '</span>' +
+                        '</div>' +
+                        '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:' + costColor + ';width:' + costPct + '%;transition:width .3s;"></div></div>' +
+                        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
+                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set € budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
+                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">✓ Set Budget</button>' +
+                        '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
+                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;">📋 Cost Log</button>' +
+                        '</div></div>';
+                    return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
+                    '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
+                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span>'+pkBadge+'</div>' +
+                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>'+keyInfo+creditBar+'</div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
+                    '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
+                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy</button>' +
+                    '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
+                    '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
+                    '</div></div></div>';}).join('');
+            }catch(e){console.error('Failed to load engine codes:',e);}
+        }
+
+        async function setCostLimit(id){
+            const inp=document.getElementById('setlimit_'+id);
+            const limit=parseFloat(inp.value);
+            if(!limit||limit<1){alert('Enter a valid budget amount (minimum $1)');return;}
+            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{monthly_cost_limit:limit});
+            loadEngineCodes();
+        }
+        async function resetCostUsed(id){
+            if(!confirm('Reset cost used to $0.00 for this code?'))return;
+            await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{reset_used:true});
+            loadEngineCodes();
+        }
+        async function showCostLog(id){
+            try{
+                const data=await apiCall('/api/admin/engine-codes/'+id+'/cost-log');
+                const logs=data.logs||[];
+                let html='<div style="max-height:300px;overflow-y:auto;">';
+                if(!logs.length){html+='<div style="color:#64748b;text-align:center;padding:16px;">No API costs yet.</div>';}
+                else{
+                    html+='<table style="width:100%;font-size:11px;border-collapse:collapse;">'+
+                        '<thead><tr style="color:#94a3b8;text-align:left;border-bottom:1px solid #334155;">'+
+                        '<th style="padding:4px;">Action</th><th style="padding:4px;">Model</th><th style="padding:4px;">Tokens</th><th style="padding:4px;text-align:right;">Cost</th><th style="padding:4px;">Time</th></tr></thead><tbody>';
+                    logs.forEach(function(l){
+                        html+='<tr style="border-bottom:1px solid #1e293b;">'+
+                            '<td style="padding:4px;color:#e2e8f0;">'+l.action+'</td>'+
+                            '<td style="padding:4px;color:#9ca3af;">'+l.model+'</td>'+
+                            '<td style="padding:4px;color:#9ca3af;">'+(l.input_tokens+l.output_tokens)+'</td>'+
+                            '<td style="padding:4px;color:#fbbf24;text-align:right;">$'+parseFloat(l.estimated_cost).toFixed(4)+'</td>'+
+                            '<td style="padding:4px;color:#64748b;">'+new Date(l.created_at).toLocaleDateString()+'</td></tr>';
+                    });
+                    html+='</tbody></table>';
+                }
+                html+='</div>';
+                // Show in a simple modal
+                const modal=document.createElement('div');
+                modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:99999;justify-content:center;align-items:center;display:flex;';
+                modal.innerHTML='<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">'+
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
+                    '<h3 style="font-size:1rem;color:#fbbf24;margin:0;">API Cost Log</h3>'+
+                    '<button class="costlog-close" style="background:none;border:none;color:#9ca3af;font-size:18px;cursor:pointer;">X</button></div>'+html+
+                    '<div style="margin-top:12px;text-align:right;"><button class="costlog-close" style="padding:6px 14px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;cursor:pointer;">Close</button></div></div>';
+                modal.className='modal-cost';
+                modal.onclick=function(e){if(e.target===modal)modal.remove();};
+                modal.querySelectorAll('.costlog-close').forEach(function(b){b.onclick=function(){modal.remove();};});
+                document.body.appendChild(modal);
+            }catch(e){console.error('Show cost log failed:',e);alert('Failed to load cost log');}
+        }
+
+        async function createEngineCode(){
+            const client_name=document.getElementById('ecClientName').value.trim();if(!client_name){alert('Enter a client name');return;}
+            try{
+                const use_platform_keys=document.getElementById('ecUsePlatformKeys').checked;
+                const costLimit=document.getElementById('ecCostLimit').value.trim();
+                const dealType=document.getElementById('ecDealType').value;
+                const dealLabel=document.getElementById('ecDealLabel')?.value.trim()||null;
+                const isLifetime=dealType==='lifetime';
+                const data=await apiCall('/api/admin/engine-codes','POST',{
+                    client_name,
+                    gemini_key:document.getElementById('ecGeminiKey').value.trim()||null,
+                    claude_key:document.getElementById('ecClaudeKey').value.trim()||null,
+                    serpapi_key:document.getElementById('ecSerpapiKey').value.trim()||null,
+                    perplexity_key:document.getElementById('ecPerplexityKey').value.trim()||null,
+                    you_api_key:document.getElementById('ecYouApiKey').value.trim()||null,
+                    expires_at:isLifetime?null:(document.getElementById('ecExpires').value||null),
+                    notes:document.getElementById('ecNotes').value.trim()||null,
+                    use_platform_keys:isLifetime?false:use_platform_keys,
+                    api_key_mode:isLifetime?'byok':(use_platform_keys?'platform':'byok'),
+                    monthly_cost_limit:use_platform_keys&&!isLifetime?(parseFloat(costLimit)||5):null,
+                    deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
+                    deal_label:dealLabel||null
+                });
+                if(!data.success){alert('Error: '+data.error);return;}
+                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';document.getElementById('ecUsePlatformKeys').checked=false;toggleEcKeyFields(false);loadEngineCodes();
+            }catch(e){alert('Error: '+e.message);}
+        }
+
+        async function toggleEngineCode(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:newState});loadEngineCodes();}
+        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState});loadEngineCodes();}
+        async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
+        function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
+
+        function toggleEcKeyFields(usePlatform) {
+            const g=document.getElementById('ecGeminiWrap'), c=document.getElementById('ecClaudeWrap'), cr=document.getElementById('ecCreditsWrap');
+            if(g) g.style.display = usePlatform ? 'none' : '';
+            if(c) c.style.display = usePlatform ? 'none' : '';
+            if(cr) cr.style.display = usePlatform ? '' : 'none';
+        }
+        function toggleGaKeyFields(usePlatform) {
+            const g=document.getElementById('gaGeminiWrap'), c=document.getElementById('gaClaudeWrap'), cr=document.getElementById('gaCreditsWrap');
+            if(g) g.style.display = usePlatform ? 'none' : '';
+            if(c) c.style.display = usePlatform ? 'none' : '';
+            if(cr) cr.style.display = usePlatform ? '' : 'none';
+            if(!usePlatform) setGaDealType('credits'); // reset deal type when unchecking platform keys
+        }
+
+        function setEcDealType(type) {
+            document.getElementById('ecDealType').value = type;
+            const cp = document.getElementById('ecCreditPackWrap');
+            const lw = document.getElementById('ecLifetimeWrap');
+            const btnC = document.getElementById('ecDealCredits');
+            const btnL = document.getElementById('ecDealLifetime');
+            const gWrap = document.getElementById('ecGeminiWrap');
+            const cWrap = document.getElementById('ecClaudeWrap');
+            const isLifetime = type === 'lifetime';
+            // Credit pack: show credit fields, hide lifetime info, hide key fields (platform pays)
+            // Lifetime: show key fields (client brings own), show lifetime info, hide credit fields
+            cp.style.display = isLifetime ? 'none' : '';
+            lw.style.display = isLifetime ? '' : 'none';
+            if(gWrap) gWrap.style.display = isLifetime ? '' : 'none';
+            if(cWrap) cWrap.style.display = isLifetime ? '' : 'none';
+            btnC.style.cssText += ';background:'+(isLifetime?'#1e293b':'#0891b2')+';color:'+(isLifetime?'#94a3b8':'#fff')+';border-color:'+(isLifetime?'#334155':'#0284c7');
+            btnL.style.cssText += ';background:'+(isLifetime?'#064e3b':'#1e293b')+';color:'+(isLifetime?'#4ade80':'#94a3b8')+';border-color:'+(isLifetime?'#166534':'#334155');
+        }
+
+        function setGaDealType(type) {
+            document.getElementById('gaDealType').value = type;
+            const cp = document.getElementById('gaCreditPackWrap');
+            const lw = document.getElementById('gaLifetimeWrap');
+            const btnC = document.getElementById('gaDealCredits');
+            const btnL = document.getElementById('gaDealLifetime');
+            const gWrap = document.getElementById('gaGeminiWrap');
+            const cWrap = document.getElementById('gaClaudeWrap');
+            const isLifetime = type === 'lifetime';
+            cp.style.display = isLifetime ? 'none' : '';
+            lw.style.display = isLifetime ? '' : 'none';
+            if(gWrap) gWrap.style.display = isLifetime ? '' : 'none';
+            if(cWrap) cWrap.style.display = isLifetime ? '' : 'none';
+            btnC.style.cssText += ';background:'+(isLifetime?'#1e293b':'#0891b2')+';color:'+(isLifetime?'#94a3b8':'#fff')+';border-color:'+(isLifetime?'#334155':'#0284c7');
+            btnL.style.cssText += ';background:'+(isLifetime?'#064e3b':'#1e293b')+';color:'+(isLifetime?'#4ade80':'#94a3b8')+';border-color:'+(isLifetime?'#166534':'#334155');
+        }
+
+        async function doChangePassword(){
+            const current=document.getElementById('cpCurrent').value.trim(),newPw=document.getElementById('cpNew').value.trim(),conf=document.getElementById('cpConfirm').value.trim();
+            const msg=document.getElementById('cpMsg');
+            const showMsg=(text,ok)=>{msg.style.display='block';msg.style.background=ok?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)';msg.style.border=ok?'1px solid rgba(34,197,94,.3)':'1px solid rgba(239,68,68,.3)';msg.style.color=ok?'#4ade80':'#f87171';msg.textContent=text;};
+            if(!current||!newPw||!conf)return showMsg('All fields required',false);
+            if(newPw.length<8)return showMsg('Min. 8 characters',false);
+            if(newPw!==conf)return showMsg('Passwords do not match',false);
+            try{const res=await fetch('/api/admin/change-password',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({current_password:current,new_password:newPw})});const data=await res.json();
+            if(data.success){showMsg('✅ Password updated! Logging out...',true);setTimeout(()=>logout(),2000);}else{showMsg(data.error||'Failed',false);}}catch(e){showMsg('Connection error: '+e.message,false);}
+        }
+
+        async function loadGiveAccess(){
+            const el=document.getElementById('giveAccessCodesList');if(!el)return;
+            try{const data=await apiCall('/api/admin/engine-codes');const codes=(data.codes||[]).filter(c=>c.is_active);
+            if(!codes.length){el.innerHTML='<div style="color:#6b7280;text-align:center;padding:20px;">No active codes.</div>';return;}
+            el.innerHTML=codes.map(c=>{const loginUrl=window.location.origin+'/engine-login?code='+c.code;
+                return '<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid #0f766e;border-radius:10px;padding:18px 20px;margin-bottom:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
+                    '<div><span style="font-family:monospace;font-size:1.1rem;font-weight:800;color:#34d399;">'+c.code+'</span>' +
+                    '<span style="background:#064e3b;color:#6ee7b7;border-radius:99px;padding:2px 10px;font-size:0.72rem;margin-left:8px;">● Active</span>' +
+                    '<div style="font-weight:700;color:#f1f5f9;margin-top:4px;">'+c.client_name+'</div>' +
+                    '<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#64748b;">🔗 '+loginUrl+'</div></div>' +
+                    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+                    '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;">📋 Copy Login URL</button>' +
+                    '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">✕ Revoke Access</button>' +
+                    '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
+        }
+
+        function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
+
+        async function gaRevoke(id){if(!confirm('Revoke this access code?'))return;try{await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:false});loadGiveAccess();loadEngineCodes();}catch(e){alert('Error: '+e.message);}}
+
+        async function gaCreateCode(){
+            const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
+            const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent='⏳ Creating...';
+            const use_platform_keys=document.getElementById('gaUsePlatformKeys').checked;
+            try{const pc=document.getElementById('gaPlatformCredits').value.trim();
+            const dealType=document.getElementById('gaDealType').value;
+            const dealLabel=document.getElementById('gaDealLabel')?.value.trim()||null;
+            const isLifetime=dealType==='lifetime';
+            const data=await apiCall('/api/admin/engine-codes','POST',{
+                client_name:name,
+                gemini_key:document.getElementById('gaGeminiKey').value.trim()||null,
+                claude_key:document.getElementById('gaClaudeKey').value.trim()||null,
+                expires_at:isLifetime?null:(document.getElementById('gaExpires').value||null),
+                notes:document.getElementById('gaNotes').value.trim()||null,
+                use_platform_keys:isLifetime?false:use_platform_keys,
+                platform_credits:use_platform_keys&&pc&&!isLifetime?parseInt(pc):null,
+                deal_type:isLifetime?'lifetime':(use_platform_keys?dealType:null),
+                deal_label:dealLabel||null
+            });
+            if(!data.success){alert('Error: '+data.error);return;}
+            const code=data.code.code,url=window.location.origin+'/engine-login?code='+code;
+            document.getElementById('gaSuccessCode').textContent=code;
+            document.getElementById('gaSuccessUrl').textContent=url;
+            document.getElementById('gaSuccessName').textContent=name;
+            const keyTypeEl=document.getElementById('gaSuccessKeyType');
+            if(use_platform_keys){
+                const dealType=document.getElementById('gaDealType').value;
+                const pc=document.getElementById('gaPlatformCredits').value.trim();
+                const dealLabel=document.getElementById('gaDealLabel')?.value.trim();
+                if(dealType==='lifetime'){
+                    keyTypeEl.innerHTML='♾️ <strong style="color:#4ade80;">Lifetime Deal</strong>'+(dealLabel?' — '+dealLabel:'')+' · Own API keys · Never expires · Zero cost to you';
+                } else {
+                    keyTypeEl.innerHTML='🔑 <strong style="color:#38bdf8;">Platform API Keys</strong> — ' + (pc?'<strong style="color:#4ade80;">'+pc+' credits</strong> assigned':'<strong style="color:#38bdf8;">Unlimited credits</strong>');
+                }
+            } else {
+                keyTypeEl.innerHTML='🔑 <strong style="color:#a78bfa;">Own API Keys</strong> — no credit system, client uses their own Gemini/Claude keys';
+            }
+            document.getElementById('gaSuccessPanel').style.display='block';document.getElementById('gaCreateForm').style.display='none';loadGiveAccess();
+            }catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='🔑 Create & Get Login URL';}
+        }
+
+        function gaCopySuccess(){navigator.clipboard.writeText(document.getElementById('gaSuccessUrl').textContent).then(()=>alert('Login URL copied!'));}
+        function pushToInstantly(){alert('Select Instantly API key and campaign in the Scan Log settings panel.');}
 
         console.log('\u2705 Admin Dashboard v2 loaded \u2014 all tabs ready');
     <\/script>
