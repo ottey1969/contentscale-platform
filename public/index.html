@@ -677,6 +677,37 @@
                  </div>
                </div>
                <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
+               <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto 32px;">
+                 <div>
+                   <div style="text-align:center;margin-bottom:12px;font-size:0.72rem;font-weight:800;color:#fbbf24;letter-spacing:.08em;text-transform:uppercase;">🏅 Best Page · Top 3</div>
+                   <div id="lb-page-top3" style="display:flex;flex-direction:column;gap:10px;"></div>
+                   <div id="lb-page-more" style="display:none;flex-direction:column;gap:8px;margin-top:8px;"></div>
+                   <div id="lb-page-expand" style="text-align:center;margin-top:10px;display:none;">
+                     <button onclick="expandPool('page')" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:7px 20px;font-size:0.78rem;font-weight:700;cursor:pointer;">Show top 10</button>
+                   </div>
+                   <div id="lb-page-empty" style="display:none;text-align:center;padding:24px 0;color:rgba(255,255,255,0.3);font-size:0.82rem;">
+                     <div style="font-size:2rem;margin-bottom:8px;">🥇</div>Scan any page and score 70+ to claim your spot
+                   </div>
+                   <div style="text-align:center;margin-top:14px;">
+                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('single');},150);" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1f2937;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">📄 Scan a Page →</button>
+                   </div>
+                 </div>
+                 <div>
+                   <div style="text-align:center;margin-bottom:12px;font-size:0.72rem;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;">🏆 Best Site · Top 3</div>
+                   <div id="lb-site-top3" style="display:flex;flex-direction:column;gap:10px;"></div>
+                   <div id="lb-site-more" style="display:none;flex-direction:column;gap:8px;margin-top:8px;"></div>
+                   <div id="lb-site-expand" style="text-align:center;margin-top:10px;display:none;">
+                     <button onclick="expandPool('site')" style="background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:7px 20px;font-size:0.78rem;font-weight:700;cursor:pointer;">Show top 10</button>
+                   </div>
+                   <div id="lb-site-empty" style="display:none;text-align:center;padding:24px 0;color:rgba(255,255,255,0.3);font-size:0.82rem;">
+                     <div style="font-size:2rem;margin-bottom:8px;">🏆</div>Scan 25+ pages via sitemap to qualify
+                   </div>
+                   <div style="text-align:center;margin-top:14px;">
+                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('bulk');setTimeout(function(){setBulkMode('sitemap');},150);},150);" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">🗺️ Scan via Sitemap →</button>
+                   </div>
+                 </div>
+               </div>
+
                <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
                   <!-- SEARCH BAR -->
                   <div class="mb-3">
@@ -831,36 +862,6 @@
                      <span id="filterCount" class="text-xs" style="color:#9ca3af!important;"></span>
                      <button onclick="resetLeaderboardFilters()" class="text-xs px-3 py-1 rounded" style="background:rgba(139,92,246,0.2);color:#c084fc!important;border:1px solid #7c3aed;cursor:pointer;">Reset Filters</button>
                   </div>
-               </div>
-               <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto;">
-                 <div>
-                   <div style="text-align:center;margin-bottom:12px;font-size:0.72rem;font-weight:800;color:#fbbf24;letter-spacing:.08em;text-transform:uppercase;">🏅 Best Page · Top 3</div>
-                   <div id="lb-page-top3" style="display:flex;flex-direction:column;gap:10px;"></div>
-                   <div id="lb-page-more" style="display:none;flex-direction:column;gap:8px;margin-top:8px;"></div>
-                   <div id="lb-page-expand" style="text-align:center;margin-top:10px;display:none;">
-                     <button onclick="expandPool('page')" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:7px 20px;font-size:0.78rem;font-weight:700;cursor:pointer;">Show top 10</button>
-                   </div>
-                   <div id="lb-page-empty" style="display:none;text-align:center;padding:24px 0;color:rgba(255,255,255,0.3);font-size:0.82rem;">
-                     <div style="font-size:2rem;margin-bottom:8px;">🥇</div>Scan any page and score 70+ to claim your spot
-                   </div>
-                   <div style="text-align:center;margin-top:14px;">
-                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('single');},150);" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1f2937;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">📄 Scan a Page →</button>
-                   </div>
-                 </div>
-                 <div>
-                   <div style="text-align:center;margin-bottom:12px;font-size:0.72rem;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;">🏆 Best Site · Top 3</div>
-                   <div id="lb-site-top3" style="display:flex;flex-direction:column;gap:10px;"></div>
-                   <div id="lb-site-more" style="display:none;flex-direction:column;gap:8px;margin-top:8px;"></div>
-                   <div id="lb-site-expand" style="text-align:center;margin-top:10px;display:none;">
-                     <button onclick="expandPool('site')" style="background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:7px 20px;font-size:0.78rem;font-weight:700;cursor:pointer;">Show top 10</button>
-                   </div>
-                   <div id="lb-site-empty" style="display:none;text-align:center;padding:24px 0;color:rgba(255,255,255,0.3);font-size:0.82rem;">
-                     <div style="font-size:2rem;margin-bottom:8px;">🏆</div>Scan 25+ pages via sitemap to qualify
-                   </div>
-                   <div style="text-align:center;margin-top:14px;">
-                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('bulk');setTimeout(function(){setBulkMode('sitemap');},150);},150);" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">🗺️ Scan via Sitemap →</button>
-                   </div>
-                 </div>
                </div>
                <div id="leaderboardEmpty" class="hidden text-center py-8" style="color:#6b7280!important;">
                   <div class="text-4xl mb-3">🔍</div>
