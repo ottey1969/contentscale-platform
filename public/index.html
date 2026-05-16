@@ -870,7 +870,7 @@
                      Scan 25+ pages via sitemap to qualify
                    </div>
                    <div style="text-align:center;margin-top:14px;">
-                     <button onclick="switchPageSection('scanner');setTimeout(()=>document.getElementById('tab-bulk')&&document.getElementById('tab-bulk').click(),300)" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">🗺️ Scan via Sitemap →</button>
+                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('bulk');setTimeout(function(){var s=document.getElementById('sitemapModeSection');if(s)s.classList.remove('hidden');var m=document.querySelectorAll('.bulk-input-mode');m.forEach(function(el){el.classList.remove('active')});var sb=document.getElementById('bulkSitemapBtn');if(sb)sb.classList.add('active');},150);},150)" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">🗺️ Scan via Sitemap →</button>
                    </div>
                  </div>
                </div>
