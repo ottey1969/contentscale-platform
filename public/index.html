@@ -263,10 +263,8 @@
                <span class="hidden sm:inline-block text-xs px-2 py-1 bg-purple-600 rounded font-semibold" style="color:white!important;">Pro</span>
             </div>
             <div class="nav-desktop">
-               <a href="#lead-scanner" onclick="switchPageSection('scanner')">Scanner</a>
                <a href="#leaderboard" onclick="switchPageSection('leaderboard');return false;">Leaderboard</a>
                <a href="#experts" onclick="switchPageSection('experts');return false;">Experts</a>
-               <a href="#templates" onclick="switchPageSection('templates');return false;">Templates</a>
                <a href="/blog">Blog</a>
             </div>
             <div class="flex items-center gap-3">
@@ -275,10 +273,8 @@
             </div>
          </div>
          <div class="mobile-menu" id="mobileMenu">
-            <a href="#scanner" onclick="switchPageSection('scanner');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Scanner</a>
             <a href="#leaderboard" onclick="switchPageSection('leaderboard');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Leaderboard</a>
             <a href="#experts" onclick="switchPageSection('experts');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Experts</a>
-            <a href="#templates" onclick="switchPageSection('templates');toggleMobileMenu();return false;" class="py-2 border-b border-gray-800">Templates</a>
             <a href="/blog" class="py-2">Blog</a>
          </div>
       </nav>
@@ -294,10 +290,8 @@
       </div>
       <main id="main-content" class="max-w-7xl mx-auto px-6 py-8">
          <div class="page-tabs mb-8" role="tablist">
-            <button class="page-tab active" id="tab-scanner" onclick="switchPageSection('scanner')" role="tab">🎯 Scanner</button>
             <button class="page-tab" id="tab-leaderboard" onclick="switchPageSection('leaderboard')" role="tab">🏆 Leaderboard</button>
             <button class="page-tab" id="tab-experts" onclick="switchPageSection('experts')" role="tab">🎯 SEO Experts</button>
-            <button class="page-tab" id="tab-templates" onclick="switchPageSection('templates')" role="tab">✏️ Templates</button>
          </div>
          <!-- SCANNER SECTION -->
          <div id="lead-scanner" class="mb-16 main-section section-visible" data-section="scanner">
@@ -668,20 +662,7 @@
             <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 rounded-2xl p-8 border-2 border-purple-500">
                <div class="text-center mb-6">
                   <h2 class="text-4xl font-bold mb-2">🏆 Elite Leaderboard</h2>
-                  <p style="color:#e5e7eb!important;">Two trophies · Two ways to win</p>
-               </div>
-               <!-- TWO POOL HEADERS -->
-               <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;margin:0 auto 24px;text-align:center;">
-                 <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:14px 16px;">
-                   <div style="font-size:1.4rem;margin-bottom:4px;">🏅</div>
-                   <div style="font-size:0.85rem;font-weight:800;color:#fbbf24;letter-spacing:.06em;text-transform:uppercase;">Best Page</div>
-                   <div style="font-size:0.72rem;color:rgba(255,255,255,0.5);margin-top:4px;">Single page · highest score wins</div>
-                 </div>
-                 <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);border-radius:12px;padding:14px 16px;">
-                   <div style="font-size:1.4rem;margin-bottom:4px;">🏆</div>
-                   <div style="font-size:0.85rem;font-weight:800;color:#a78bfa;letter-spacing:.06em;text-transform:uppercase;">Best Site</div>
-                   <div style="font-size:0.72rem;color:rgba(255,255,255,0.5);margin-top:4px;">25+ pages sitemap · average score wins</div>
-                 </div>
+                  <p style="color:#e5e7eb!important;">Top performing websites · ContentScore 70–100</p>
                </div>
                <div id="leaderboardNicheHeader" class="hidden max-w-5xl mx-auto mb-2"></div>
                <div class="max-w-5xl mx-auto mb-8 p-4 rounded-xl" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);">
@@ -839,48 +820,12 @@
                      <button onclick="resetLeaderboardFilters()" class="text-xs px-3 py-1 rounded" style="background:rgba(139,92,246,0.2);color:#c084fc!important;border:1px solid #7c3aed;cursor:pointer;">Reset Filters</button>
                   </div>
                </div>
-               <!-- TWO LEADERBOARD POOLS -->
-               <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto;">
-                 <!-- BEST PAGE pool -->
-                 <div>
-                   <div style="text-align:center;margin-bottom:12px;font-size:0.72rem;font-weight:800;color:#fbbf24;letter-spacing:.08em;text-transform:uppercase;">🏅 Best Page · Top 3</div>
-                   <div id="lb-page-top3" style="display:flex;flex-direction:column;gap:10px;"></div>
-                   <div id="lb-page-more" style="display:none;flex-direction:column;gap:8px;margin-top:8px;"></div>
-                   <div id="lb-page-expand" style="text-align:center;margin-top:10px;display:none;">
-                     <button onclick="expandPool('page')" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:7px 20px;font-size:0.78rem;font-weight:700;cursor:pointer;">Show top 10</button>
-                   </div>
-                   <div id="lb-page-empty" style="display:none;text-align:center;padding:24px 0;color:rgba(255,255,255,0.3);font-size:0.82rem;">
-                     <div style="font-size:2rem;margin-bottom:8px;">🥇</div>
-                     Scan any page and score 70+ to claim your spot
-                   </div>
-                   <div style="text-align:center;margin-top:14px;">
-                     <button onclick="switchPageSection('scanner')" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1f2937;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">📄 Scan a Page →</button>
-                   </div>
-                 </div>
-                 <!-- BEST SITE pool -->
-                 <div>
-                   <div style="text-align:center;margin-bottom:12px;font-size:0.72rem;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;">🏆 Best Site · Top 3</div>
-                   <div id="lb-site-top3" style="display:flex;flex-direction:column;gap:10px;"></div>
-                   <div id="lb-site-more" style="display:none;flex-direction:column;gap:8px;margin-top:8px;"></div>
-                   <div id="lb-site-expand" style="text-align:center;margin-top:10px;display:none;">
-                     <button onclick="expandPool('site')" style="background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:7px 20px;font-size:0.78rem;font-weight:700;cursor:pointer;">Show top 10</button>
-                   </div>
-                   <div id="lb-site-empty" style="display:none;text-align:center;padding:24px 0;color:rgba(255,255,255,0.3);font-size:0.82rem;">
-                     <div style="font-size:2rem;margin-bottom:8px;">🏆</div>
-                     Scan 25+ pages via sitemap to qualify
-                   </div>
-                   <div style="text-align:center;margin-top:14px;">
-                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('bulk');setTimeout(function(){var s=document.getElementById('sitemapModeSection');if(s)s.classList.remove('hidden');var m=document.querySelectorAll('.bulk-input-mode');m.forEach(function(el){el.classList.remove('active')});var sb=document.getElementById('bulkSitemapBtn');if(sb)sb.classList.add('active');},150);},150)" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">🗺️ Scan via Sitemap →</button>
-                   </div>
-                 </div>
-               </div>
+               <div id="top3-container" class="top3-grid"></div>
+               <div id="rankings4to15Container" class="mt-8"></div>
                <div id="leaderboardEmpty" class="hidden text-center py-8" style="color:#6b7280!important;">
                   <div class="text-4xl mb-3">🔍</div>
                   <p>No entries match your filters. Try a different combination.</p>
                </div>
-               <!-- keep old containers hidden for filter compat -->
-               <div id="top3-container" style="display:none;"></div>
-               <div id="rankings4to15Container" style="display:none;"></div>
             </div>
          </div>
          <!-- SEO EXPERTS SECTION -->
@@ -3321,67 +3266,21 @@
          renderLeaderboard(allLeaderboardEntries);
          }
          function renderLeaderboard(entries) {
-         // Split into two pools
-         const pagePool = (entries || []).filter(e => !e.page_count || e.page_count < 25).sort((a,b) => b.score - a.score);
-         const sitePool = (entries || []).filter(e => e.page_count && e.page_count >= 25).sort((a,b) => b.score - a.score);
-         window._lbPagePool = pagePool;
-         window._lbSitePool = sitePool;
-         renderPool('page', pagePool, 3);
-         renderPool('site', sitePool, 3);
+         const activeNiche = document.getElementById('filterNiche')?.value || '';
+         const activeCountry = document.getElementById('filterCountry')?.value || '';
+         const nicheHeader = document.getElementById('leaderboardNicheHeader');
+         if (nicheHeader) {
+         if (activeNiche || activeCountry) {
+         const label = [activeNiche, activeCountry].filter(Boolean).join(' · ');
+         nicheHeader.innerHTML = `<div style="text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(124,58,237,0.15);border:1px solid #7c3aed;border-radius:12px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa!important;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Filtered View</div><div style="font-size:1.2rem;font-weight:800;color:#e9d5ff!important;">🏆 Top ${entries.length} · ${label}</div><div style="font-size:0.78rem;color:#7c3aed!important;margin-top:4px;">Showing ${entries.length} result${entries.length!==1?'s':''} · <button onclick="resetLeaderboardFilters()" style="background:none;border:none;color:#a78bfa!important;cursor:pointer;font-weight:700;font-size:0.78rem;text-decoration:underline;">Clear filters</button></div></div>`;
+         nicheHeader.classList.remove('hidden');
+         } else { nicheHeader.classList.add('hidden'); }
          }
-         function renderPool(pool, entries, show) {
-         const top3El  = document.getElementById('lb-' + pool + '-top3');
-         const moreEl  = document.getElementById('lb-' + pool + '-more');
-         const expBtn  = document.getElementById('lb-' + pool + '-expand');
-         const emptyEl = document.getElementById('lb-' + pool + '-empty');
-         if (!entries || entries.length === 0) {
-           top3El.innerHTML = ''; moreEl.style.display = 'none'; expBtn.style.display = 'none';
-           emptyEl.style.display = 'block'; return;
-         }
-         emptyEl.style.display = 'none';
-         const isPg = pool === 'page';
-         const accent = isPg ? '#fbbf24' : '#a78bfa';
-         const glow   = isPg ? 'rgba(251,191,36,0.15)' : 'rgba(167,139,250,0.15)';
-         const MEDALS = [
-           {label:'GOLD',   emoji:'🥇', bg:'linear-gradient(135deg,#78350f,#b45309)', border:'#fbbf24', score:'#fbbf24'},
-           {label:'SILVER', emoji:'🥈', bg:'linear-gradient(135deg,#1f2937,#374151)', border:'#9ca3af', score:'#e5e7eb'},
-           {label:'BRONZE', emoji:'🥉', bg:'linear-gradient(135deg,#431407,#9a3412)', border:'#f97316', score:'#fb923c'},
-         ];
-         const buildCard = (e, i) => {
-           const m = MEDALS[i] || {label:'#'+(i+1), emoji:'', bg:'#111827', border:'#374151', score:'#4ade80'};
-           const name = e.company_name || (() => { try { return new URL(e.url.startsWith('http')?e.url:'https://'+e.url).hostname; } catch(err) { return e.url; } })();
-           const hp   = (() => { try { const u=new URL(e.url.startsWith('http')?e.url:'https://'+e.url); return u.protocol+'//'+u.hostname; } catch(er) { return e.url; } })();
-           const tags = [e.niche, e.country].filter(Boolean);
-           return i < 3
-             ? `<div style="background:${m.bg};border:2px solid ${m.border};border-radius:14px;padding:18px 16px;text-align:center;box-shadow:0 0 20px ${glow};">
-                 <div style="font-size:0.6rem;font-weight:800;color:${m.score};letter-spacing:.1em;margin-bottom:4px;">${m.label}</div>
-                 <div style="font-size:2.2rem;line-height:1;margin-bottom:4px;">${m.emoji||'#'+(i+1)}</div>
-                 <div style="font-weight:800;font-size:0.9rem;color:#f9fafb;margin-bottom:4px;">${name}</div>
-                 <div style="font-size:2rem;font-weight:900;color:${m.score};line-height:1;">${e.score}</div>
-                 <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:6px;">${isPg ? '📄 page scan' : '🗺️ ' + e.page_count + ' pages avg'}</div>
-                 ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:3px;margin-bottom:8px;">${tags.map(t=>`<span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-size:0.62rem;padding:1px 6px;border-radius:99px;">${t}</span>`).join('')}</div>` : ''}
-                 <a href="${hp}" target="_blank" rel="noopener nofollow ugc" style="display:inline-block;font-size:0.7rem;font-weight:700;background:rgba(255,255,255,0.12);color:#f9fafb;padding:5px 14px;border-radius:8px;text-decoration:none;">🌐 Visit</a>
-               </div>`
-             : `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
-                 <span style="font-size:0.75rem;font-weight:800;color:${accent};min-width:24px;">#${i+1}</span>
-                 <span style="flex:1;font-size:0.82rem;font-weight:700;color:#e5e7eb;">${name}</span>
-                 <span style="font-size:0.72rem;color:rgba(255,255,255,0.4);">${isPg ? '📄' : '🗺️ ' + e.page_count + 'p'}</span>
-                 <span style="font-size:1rem;font-weight:900;color:${accent};">${e.score}</span>
-               </div>`;
-         };
-         top3El.innerHTML = entries.slice(0, 3).map((e,i) => buildCard(e,i)).join('');
-         const rest = entries.slice(3, 10);
-         if (rest.length > 0) {
-           moreEl.innerHTML = rest.map((e,i) => buildCard(e, i+3)).join('');
-           moreEl.style.display = 'none';
-           expBtn.style.display = show >= entries.length ? 'none' : 'block';
-         } else { moreEl.style.display = 'none'; expBtn.style.display = 'none'; }
-         }
-         function expandPool(pool) {
-           document.getElementById('lb-' + pool + '-more').style.display = 'flex';
-           document.getElementById('lb-' + pool + '-expand').style.display = 'none';
-         }
-         function _oldRenderLeaderboard_unused(entries) {
+         const top3Container = document.getElementById('top3-container');
+         const restContainer = document.getElementById('rankings4to15Container');
+         const emptyState = document.getElementById('leaderboardEmpty');
+         if (!entries || entries.length === 0) { top3Container.innerHTML = ''; restContainer.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
+         emptyState.classList.add('hidden');
          const top3 = entries.slice(0, 3);
          top3Container.innerHTML = top3.map((e, i) => {
          const m = MEDAL[i];
