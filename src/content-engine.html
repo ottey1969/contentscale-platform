@@ -271,24 +271,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="sidebar-section" style="padding-bottom:4px;">
       <div class="sidebar-label">How it works</div>
       <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.5;">
-        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Connect → select profile</div>
-        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → Import GSC</div>
-        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy → 📡 Deep Dive (existing)</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ ✍️ Research → Spy → Brief (new)</div>
-        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ 🌐 Feed External AI → Publish</div>
-      </div>
-    </div>
-
-    <!-- Quick Actions — hidden until welcome disappears -->
-    <div class="sidebar-section" id="quickActionsPanel" style="display:none;padding-bottom:8px;">
-      <div class="sidebar-label">Quick Actions</div>
-      <div style="display:flex;flex-direction:column;gap:5px;">
-        <button class="sidebar-btn" style="justify-content:flex-start;" onclick="sidebarStarter('I want to rank higher for a keyword')">📈 Rank higher for keyword</button>
-        <button class="sidebar-btn" style="justify-content:flex-start;" onclick="sidebarStarter('🔍 Scan my existing content')">🔍 Scan my existing content</button>
-        <button class="sidebar-btn" style="justify-content:flex-start;" onclick="sidebarStarter('📡 Deep Dive an existing page')">📡 Deep Dive existing page</button>
-        <button class="sidebar-btn" style="justify-content:flex-start;" onclick="sidebarStarter('✍️ Write a new page that ranks')">✍️ Write a new page</button>
-        <button class="sidebar-btn" style="justify-content:flex-start;" onclick="sidebarStarter('What pages should I prioritise?')">📋 Prioritise my pages</button>
-        <button class="sidebar-btn" style="justify-content:flex-start;" onclick="sidebarStarter('Help me get into AI Overviews')">🤖 Get into AI Overviews</button>
+        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
+        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
+        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ Rewrite → AI beats rank 1</div>
+        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker monitors</div>
       </div>
     </div>
 
@@ -333,29 +320,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <div class="welcome" id="welcomeScreen">
         <div class="welcome-icon">🧠</div>
         <div class="welcome-title"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div>
-        <div style="display:flex;gap:14px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
-          <div style="text-align:center;max-width:160px;">
+        <div style="display:flex;gap:18px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="text-align:center;max-width:180px;">
             <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">PULSE</div>
-            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, AI Overviews, AI systems and competitors in real time.</div>
+            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, and competitors in real time.</div>
           </div>
           <div style="width:1px;background:rgba(255,255,255,.08);"></div>
-          <div style="text-align:center;max-width:160px;">
+          <div style="text-align:center;max-width:180px;">
             <div style="font-size:11px;font-weight:800;color:#f56d00;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">NEXUS</div>
-            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews reward, builds a Deep Dive brief and feeds it to AI to beat rank 1 or write new pages from scratch.</div>
-          </div>
-          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
-          <div style="text-align:center;max-width:160px;">
-            <div style="font-size:11px;font-weight:800;color:#34d399;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">GRAAF ContentScore</div>
-            <div style="font-size:12px;color:#6b7280;">100-point scoring across GRAAF (50), CRAFT (30) and Technical (20) — scans every <strong>live</strong> page and tells you exactly what to fix.</div>
+            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward and writes to beat it.</div>
           </div>
         </div>
         <div class="welcome-starters">
           <button class="starter-btn" onclick="sendStarter(this)">I want to rank higher for a keyword</button>
-          <button class="starter-btn" onclick="sendStarter(this)">🔍 Scan my existing content</button>
-          <button class="starter-btn" onclick="sendStarter(this)">📡 Deep Dive an existing page</button>
-          <button class="starter-btn" onclick="sendStarter(this)">✍️ Write a new page that ranks</button>
+          <button class="starter-btn" onclick="sendStarter(this)">Rewrite an existing page</button>
           <button class="starter-btn" onclick="sendStarter(this)">What pages should I prioritise?</button>
+          <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
+          <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
         </div>
       </div>
     </div>
@@ -549,13 +531,10 @@ async function connect() {
       document.getElementById('profileSelect').value = '';
     }
 
-    // Show Agent first — welcome screen + quick actions visible
-    switchView('agent');
+    // Open Tracker first — it's the workflow starting point
+    switchView('tracker');
     updateWorkflowStep(1);
-    // Show quick actions immediately on connect
-    var _qa = document.getElementById('quickActionsPanel');
-    if (_qa) _qa.style.display = 'block';
-    // Agent greets
+    // Agent greets in background
     setTimeout(agentGreet, 300);
   } catch(e) {
     var msg = e.message || '';
@@ -1145,7 +1124,6 @@ function onProfileSwitch() {
   var id = sel && sel.value;
   if (!id) return;
   _profile = _allProfiles.find(function(p) { return String(p.id) === String(id); }) || null;
-  window._profile = _profile; // expose for copyMasterBrief
   if (!_profile) return;
 
   _context.profileId = _profile.id;
@@ -1282,31 +1260,11 @@ function agentGreet() {
       { label: 'Something else', fn: function(){ document.getElementById('chatInput').focus(); } }
     ]);
   } else if (profileLine) {
-    // Build profile info block — critical for posts and schema
-    var _pInfo = [];
-    if (_profile.niche)            _pInfo.push('🏷 <strong>Niche:</strong> ' + escHtml(_profile.niche));
-    if (_profile.geo_focus)        _pInfo.push('📍 <strong>Geo:</strong> ' + escHtml(_profile.geo_focus));
-    if (_profile.target_audience)  _pInfo.push('👥 <strong>Audience:</strong> ' + escHtml(_profile.target_audience));
-    if (_profile.primary_goal)     _pInfo.push('🎯 <strong>Goal:</strong> ' + escHtml(_profile.primary_goal));
-    if (_profile.author_name)      _pInfo.push('✍️ <strong>Author:</strong> ' + escHtml(_profile.author_name) + (_profile.author_location ? ' · ' + escHtml(_profile.author_location) : ''));
-    if (_profile.unique_selling_points) _pInfo.push('⚡ <strong>USPs:</strong> ' + escHtml(String(_profile.unique_selling_points).substring(0,120)) + '…');
-    if (_profile.service_areas)    _pInfo.push('🌍 <strong>Service areas:</strong> ' + escHtml(String(_profile.service_areas).substring(0,100)));
-    if (_profile.guarantee)        _pInfo.push('🛡 <strong>Guarantee:</strong> ' + escHtml(String(_profile.guarantee).substring(0,100)));
-    if (_profile.schema_type)      _pInfo.push('🏗 <strong>Schema:</strong> ' + escHtml(_profile.schema_type));
-    if (_profile.years_experience) _pInfo.push('📅 <strong>Experience:</strong> ' + escHtml(String(_profile.years_experience)) + ' years');
-    if (_profile.certifications)   _pInfo.push('🎓 <strong>Certifications:</strong> ' + escHtml(String(_profile.certifications).substring(0,100)));
-    var _pBlock = _pInfo.length
-      ? '\n\n<div style="background:rgba(167,139,250,.07);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:10px 14px;margin:6px 0;font-size:11px;line-height:1.8;">' + _pInfo.join('<br>') + '</div>'
-      : '';
-    greeting = 'Connected — working with ' + profileLine + '.' + _pBlock + '\n\n' +
-      (hasGSC ? '' : 'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks.\n\n') +
-      'This profile context is used for all content, posts and schema. What are we working on?';
+    greeting = 'Connected — working with ' + profileLine + '.\n\n' +
+      'Upload your GSC data (Pages + Queries CSV) in the sidebar for instant insight into where you\'re losing clicks. ' +
+      'Or tell me what we\'re working on — a page to rewrite, a keyword to target, or a content cluster to build.\n\nWhat are we working on?';
   } else {
-    greeting = '👋 Welcome! I\'m your SEO content agent for ContentScale.\n\n'
-      + '<strong>⚠️ Please select a profile from the dropdown above</strong> to load your business context, GSC data, and memory.\n\n'
-      + 'Once selected, I\'ll know your niche, target geo, conversion goals, and past work — so every recommendation is tailored to you.\n\n'
-      + '📡 <strong>Best way to start:</strong> head to the <strong>Tracker</strong> — add your pages, import your GSC data, and let the system find your biggest wins automatically.\n\n'
-      + 'Or create a new profile if this is your first time.';
+    greeting = '👋 Welcome! I\'m your SEO content agent.\n\n<strong>⚠️ Please select a profile from the dropdown above</strong> to load your business context, GSC data, and memory.\n\nOnce selected, I\'ll know your niche, target geo, conversion goals, and past work — so every recommendation is tailored to you.\n\nOr create a new profile if this is your first time.';
     // Highlight the profile selector visually
     var sel = document.getElementById('profileSelect');
     if (sel) {
@@ -1328,12 +1286,6 @@ function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
-function sidebarStarter(label) {
-  if (!_connected) { toast('Connect first', 'err'); return; }
-  // Simulate sendStarter with a fake btn object
-  sendStarter({ textContent: label });
-}
-
 function sendStarter(btn) {
   if (!_connected) { toast('Connect first', 'err'); return; }
   hideWelcome();
@@ -1346,7 +1298,7 @@ function sendStarter(btn) {
       (domain ? 'Domain: ' + domain + '. ' : '') +
       'Look at my top opportunities and tell me which keyword to target first and exactly what to do.',
 
-    '📡 Deep Dive an existing page': null, // handled separately below
+    'Rewrite an existing page': null, // handled separately below
 
     'What pages should I prioritise?':
       'Show me which pages I should work on first. ' +
@@ -1359,45 +1311,19 @@ function sendStarter(btn) {
 
     'Help me get into AI Overviews':
       'I want ' + (domain || profileName) + ' to be cited in Google AI Overviews. ' +
-      'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.',
-
-    '✍️ Write a new page that ranks': null, // handled separately below
-    '🔍 Scan my existing content': null  // handled separately below
+      'Tell me: which pages are closest to being cited, what signals they\'re missing, and what to add first. Be specific — schema types, section names, exact fixes.'
   };
   // "Rewrite an existing page" — go to Tracker if GSC loaded, else explain
-  if (label === '📡 Deep Dive an existing page') {
+  if (label === 'Rewrite an existing page') {
     if (_gscPages && _gscPages.length) {
       hideWelcome();
-      toast('Opening Tracker — run Spy + Deep Dive on your best opportunity', 3000, 'ok');
+      toast('Opening Tracker — your best rewrite opportunity is shown at the top', 3000, 'ok');
       switchView('tracker');
       return;
     } else {
-      userSend('I want to do a deep dive on an existing page to beat rank 1. I don\'t have GSC data loaded yet. What should I do first?');
+      userSend('I want to rewrite an existing page to rank higher. I don\'t have GSC data loaded yet. What should I do first to find the best page to rewrite?');
       return;
     }
-  }
-
-  // "Scan my existing content" — simple scan, score + recs only, no follow-up
-  if (label === '🔍 Scan my existing content') {
-    window._simpleScanMode = true;
-    userSend('Which URL do you want to scan? Give me the full URL.');
-    return;
-  }
-
-  // "Write a new page" — find keyword gap, no existing URL needed
-  if (label === '✍️ Write a new page that ranks') {
-    var newPageMsg = 'I want to write a NEW page that ranks — no existing URL. ';
-    if (_gscPages && _gscPages.length) {
-      newPageMsg += 'I have ' + _gscPages.length + ' GSC pages loaded for ' + (domain || profileName) + '. ' +
-        'Look for keyword gaps: queries getting impressions but with NO matching page on my site. ' +
-        'Find the best opportunity for a new page, run [INTELLIGENCE] on that keyword, and build me a content brief. ' +
-        'This is NOT a rewrite — there is no existing page. The Deep Dive brief goes to an external AI to write from scratch.';
-    } else {
-      newPageMsg += 'I don\'t have GSC data yet. Ask me for a keyword I want to target, then run [RESEARCH] and [INTELLIGENCE] on it. ' +
-        'This is a NEW page — no existing URL to scan. Build me a complete content brief for an external AI to write.';
-    }
-    userSend(newPageMsg);
-    return;
   }
 
   // "How does the Tracker work?"
@@ -1432,15 +1358,6 @@ async function sendMessage() {
   input.value = '';
   autoResize(input);
   addUserMessage(text);
-  // Simple scan mode: user gave us a URL — scan it and stop
-  if (window._simpleScanMode) {
-    var _sUrl = text.match(/https?:\/\/[^\s]+/);
-    if (_sUrl) {
-      window._simpleScanMode = false;
-      cmdScanSimple(_sUrl[0]);
-      return;
-    }
-  }
   processUserInput(text);
 }
 
@@ -1470,35 +1387,14 @@ async function processUserInput(text) {
     _history.push({ role: 'assistant', content: agentResp });
 
     // Display the message
-    var _agentMsgEl = addAgentMessage(parsed.message);
-
-    // After Deep Dive response — inject Beat Rank 1 action card
-    if (window._pendingDeepDive && window._lastSpyData) {
-    window._pendingDeepDive = false;
-      var _dd = document.createElement('div');
-      _dd.style.cssText = 'margin:8px 0 4px 44px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
-      _dd.innerHTML =
-        '<span style="font-size:10px;color:#6b7280;font-family:monospace;">Deep dive complete →</span>' +
-        '<button onclick="deepDiveThenBeatRank1()" style="padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Now Beat Rank 1</button>' +
-        '<button onclick="deepDiveSurgical()" style="padding:7px 12px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔧 Surgical Apply</button>' +
-        '<button onclick="copyAgentOutput(this)" style="padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">📋 Copy Brief</button>' +
-        '<button onclick="copyMasterBrief()" style="padding:7px 12px;border-radius:7px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07);color:#34d399;font-size:11px;font-weight:700;cursor:pointer;">🌐 Feed to External AI</button>';
-      document.getElementById('messages').appendChild(_dd);
-      scrollBottom();
-    }
+    addAgentMessage(parsed.message);
 
     // Execute any commands automatically + show clickable buttons for them
-    // Also suppress if research/intelligence already running (_newPageAutoMode)
-    // or if the commands duplicate what cmdNewPage already ran
-    var _autoBlocked = window._newPageAutoMode || 
-      (window._newPageMode && parsed.commands.some(function(c){ return ['RESEARCH','INTELLIGENCE','NEW_PAGE'].indexOf(c.cmd) > -1; }));
-    if (parsed.commands.length && !_autoBlocked) {
+    if (parsed.commands.length) {
       var cmdButtons = parsed.commands.map(function(c) {
         var label = c.cmd;
         if (c.cmd === 'SCAN' && c.args[0]) label = '🔍 Scan ' + (c.args[0].length > 30 ? c.args[0].substring(0, 30) + '…' : c.args[0]);
         if (c.cmd === 'META' && c.args[0]) label = '🏷 Meta: ' + c.args[0];
-        if (c.cmd === 'NEW_PAGE' && c.args[0]) label = '✍️ New Page: ' + c.args[0];
-        if (c.cmd === 'SCAN_SIMPLE' && c.args[0]) label = '🔍 Scan: ' + c.args[0];
         if (c.cmd === 'INTELLIGENCE' && c.args[0]) label = '🧠 Intel: ' + c.args[0];
         if (c.cmd === 'REWRITE' && c.args[0]) label = '✍ Rewrite ' + c.args[0];
         if (c.cmd === 'RESEARCH' && c.args[0]) label = '🔬 Research ' + c.args[0];
@@ -1560,10 +1456,8 @@ function buildSystemPrompt() {
 
 YOUR CAPABILITIES (you can trigger these with commands):
 - [SCAN url] — scan a page for GRAAF/CRAFT score + recommendations  
-- [SCAN_SIMPLE url] — simple scan: score + recommendations only, STOPS there. Use when _simpleScanMode is true. Fire immediately when user gives URL after clicking Scan my existing content.
 - [RESEARCH keyword profileId] — run keyword + competitor research
 - [INTELLIGENCE keyword url] — deep competitor content analysis + beat-them brief
-- [NEW_PAGE keyword] -- full new page: research + intelligence + action card (no existing URL, never use SCAN/ANALYSE)
 - [META keyword "current title"] — meta title + description research with CTR-optimized alternatives
 - [ANALYSE url keyword] — deep rewrite analysis (PAA, voice, competitors, AI Overviews)
 - [REWRITE id fixes] — apply targeted fixes. Use the EXACT rewrite ID number from the ANALYSE result above. NEVER use "123", "1234", or any placeholder — only the real ID the system gave you.
@@ -1572,25 +1466,9 @@ YOUR CAPABILITIES (you can trigger these with commands):
 WHEN YOU RECEIVE A [SPY BRIEF]:
 - You already have competitive intelligence. Do NOT repeat all findings.
 - Lead with ONE sentence: "The #1 thing that will move this page is [specific action]."
-- Answer both questions directly: what moves the needle + new sections vs replace.
-- Ask ONE question ONLY — give the user two clear options, e.g.:
-  "Should I (A) analyse the current page first to see exactly what's there, or (B) go straight to rewrite using this brief?"
-- STOP. Wait for their answer. Do NOT run [ANALYSE] or any command automatically.
-- Keep response under 100 words. No padding.
-- After user picks A → run [ANALYSE url keyword]
-- After user picks B → run [ANALYSE url keyword] anyway but tell them you're using spy brief as the strategy
-
-NEW PAGE CREATION FLOW (no existing URL):
-- When the user wants to WRITE A NEW PAGE, there is NO existing URL to scan — [SCAN] and [ANALYSE] do NOT apply.
-- The correct flow is: [RESEARCH keyword profileId] → [INTELLIGENCE keyword targetUrl] → generate Master Brief → external AI writes the page from scratch.
-- When scanning GSC data for new page opportunities, look for KEYWORD GAPS: queries with impressions but no matching page on the site. These are the best new page candidates.
-- A keyword gap = impressions in GSC for a query, but no page on the domain targeting that exact query as primary keyword.
-- For new pages: run [INTELLIGENCE keyword] on the top competitor URL for that keyword — this tells you what the new page needs to beat rank 1.
-- Use [NEW_PAGE keyword] to trigger the full new page flow automatically
-- NEVER suggest [ANALYSE] or [SCAN] for a new page — those commands need an existing URL. Use [RESEARCH] and [INTELLIGENCE] instead.
-- After [RESEARCH] and [INTELLIGENCE] complete, the brief IS DONE. Tell the user exactly this: 'Your brief is complete — click 🌐 Feed to External AI to copy it and paste into Claude.ai to write the full page.' Then STOP. Do NOT ask A or B. Do NOT suggest more steps. Do NOT offer to run [NEW_PAGE]. The intelligence output IS the brief.
-- NEVER ask A or B questions after intelligence completes for a new page. The user has everything they need.
-- The Deep Dive brief works for both EXISTING pages (supplement/improve) and NEW pages (create from scratch). Make clear which mode you're in.
+- Then give the complete brief: entity gaps, PAA answers, voice search answer, AI Overview blueprint, 6 priority tasks.
+- End with exactly: 'BRIEF COMPLETE — click 🌐 Copy Master Brief to export this to external AI.'
+- STOP. Do NOT ask A or B. Do NOT ask any question. Do NOT run [ANALYSE]. The user has action buttons.
 
 YOUR BEHAVIOUR:
 1. Ask ONE question at a time maximum. Never overwhelm.
@@ -1631,20 +1509,12 @@ ${(function() {
   if (p.owner_name) out += ' | Owner: ' + p.owner_name;
   if (p.years_experience) out += ' | Experience: ' + p.years_experience;
   if (p.guarantee) out += '\nGuarantee: ' + p.guarantee;
-  if (p.review_score) out += ' | Reviews: ' + p.review_score + '\u2605 (' + (p.review_count||0) + ')';
-  if (p.geo_focus) out += '\nGeo focus: ' + p.geo_focus;
-  if (p.target_audience) out += '\nTarget audience: ' + p.target_audience;
-  if (p.primary_goal) out += '\nPrimary goal: ' + p.primary_goal;
-  if (p.unique_selling_points) out += '\nUSPs (use in content):\n' + p.unique_selling_points;
-  if (p.certifications) out += '\nCertifications (use in schema + E-E-A-T):\n' + p.certifications;
-  if (p.service_areas) out += '\nService areas (use in LocalBusiness schema + geo content):\n' + p.service_areas;
-  if (p.schema_type) out += '\nPrimary schema type: ' + p.schema_type;
-  if (p.author_name) out += '\nAuthor: ' + p.author_name + (p.author_location ? ' (' + p.author_location + ')' : '');
-  if (p.author_bio) out += '\nAuthor bio (use in Article schema + E-E-A-T block): ' + p.author_bio;
-  if (p.business_info) out += '\nBusiness info: ' + p.business_info;
-  if (p.faq) out += '\nFAQ data (include in FAQPage schema): ' + p.faq;
+  if (p.review_score) out += ' | Reviews: ' + p.review_score + '★ (' + (p.review_count||0) + ')';
+  if (p.unique_selling_points) out += '\nUSPs: ' + p.unique_selling_points;
+  if (p.certifications) out += '\nCerts: ' + p.certifications;
+  if (p.service_areas) out += '\nService areas: ' + p.service_areas;
+  if (p.schema_type) out += ' | Schema: ' + p.schema_type;
   if (p.html_template) out += '\nHTML template: YES (' + Math.round(p.html_template.length/1024) + 'kb) — use this template layout when asked to write on template';
-  out += '\n\nIMPORTANT: Use ALL profile fields above in content, schema markup, and E-E-A-T signals. Service areas go in LocalBusiness schema. USPs go in the intro and meta. Certifications go in author block and schema. Guarantee goes in trust signals and FAQ.';
   return out;
 })()}`;
 }
@@ -1739,12 +1609,6 @@ async function executeCommand(cmd) {
       break;
     case 'META':
       await cmdMetaResearch(cmd.args[0], cmd.args[1]);
-      break;
-    case 'NEW_PAGE':
-      await cmdNewPage(cmd.args[0]);
-      break;
-    case 'SCAN_SIMPLE':
-      await cmdScanSimple(cmd.args[0]);
       break;
   }
 }
@@ -2050,7 +1914,17 @@ async function cmdScan(url) {
   var prog = addProgress('Scanning ' + url.replace(/^https?:\/\//,'') + '…', 0);
   try {
     setProgress(prog, 40);
-    var d = await api('/api/scan', 'POST', { url: url }); // api() includes engine token
+    var r = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    });
+    if (!r.ok) {
+      var errBody = await r.json().catch(function(){ return { error: 'Server error ' + r.status }; });
+      throw new Error(errBody.error || errBody.details || 'Scan failed (HTTP ' + r.status + ')');
+    }
+    var d = await r.json();
+
     setProgress(prog, 100);
     removeProgress(prog);
 
@@ -2060,8 +1934,10 @@ async function cmdScan(url) {
     _context.recs = parseRecs(d.recommendations);
     updateContext();
 
+    // Render scan results in chat
     addScanResult(d);
 
+    // Now ask agent to interpret — PASS THE ACTUAL SCAN DATA
     var scanReport = '[SYSTEM: Scan completed for ' + url + ']\n\n' +
       'SCORE: ' + d.score + '/100\n' +
       'QUALITY: ' + (d.quality || 'N/A') + '\n' +
@@ -2084,15 +1960,19 @@ async function cmdScan(url) {
     ]);
     addAgentMessage(interp);
 
+    // Auto-chain: if keyword is set, auto-run intelligence + show buttons
     var kw = _context.keyword || '';
     if (kw) {
       addAgentMessage('🔄 Auto-running intelligence for "' + kw + '"…');
-      setTimeout(function() { executeCommand({cmd:'INTELLIGENCE', args:[kw, url]}); }, 500);
+      setTimeout(function() {
+        executeCommand({cmd:'INTELLIGENCE', args:[kw, url]});
+      }, 500);
     }
+    // Always show follow-up buttons
     var followUp = [
-      { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first, then run intelligence.'); } },
-      { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first, then run meta research.'); } },
-      { label: '📡 Deep Dive → Agent', fn: function(){ openSerpSpy(_serpSpyPageId || null); } }
+      { label: '🧠 Intelligence: ' + (kw || url.replace(/^https?:\/\//,'').split('/')[0]), fn: function(){ if(kw) executeCommand({cmd:'INTELLIGENCE',args:[kw,url]}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run intelligence.'); } },
+      { label: '🏷 Meta Research: ' + kw, fn: function(){ if(kw) executeCommand({cmd:'META',args:[kw,d.title||'']}); else addAgentMessage('Set a keyword first (e.g. "target: drain cleaning new jersey"), then run meta research.'); } },
+      { label: '✍ Rewrite This Page', fn: function(){ openRewriteModal(); } }
     ];
     addActions(followUp);
 
@@ -2100,123 +1980,6 @@ async function cmdScan(url) {
     removeProgress(prog);
     addAgentMessage('Scan failed: ' + e.message + '. Can you check the URL is accessible?');
   }
-}
-
-// Simple scan — score + recommendations only, no follow-up (used by "Scan my existing content" button)
-async function cmdScanSimple(url) {
-  if (!url || url.length < 5) { addAgentMessage('Please provide a valid URL to scan.'); return; }
-  _context.url = url;
-  var prog = addProgress('Scanning ' + url.replace(/^https?:\/\//,'') + '…', 0);
-  try {
-    setProgress(prog, 40);
-    var d = await api('/api/scan', 'POST', { url: url });
-    setProgress(prog, 100);
-    removeProgress(prog);
-    if (!d || !d.score) throw new Error('Scan returned no score');
-    _context.score = d.score;
-    _context.recs = parseRecs(d.recommendations);
-    updateContext();
-    addScanResult(d); // score + full recommendations — done
-  } catch(e) {
-    removeProgress(prog);
-    addAgentMessage('Scan failed: ' + e.message + '. Can you check the URL is accessible?');
-  }
-}
-
-// NEW PAGE - fully automatic: Research + Intelligence + Spy + one button
-async function cmdNewPage(keyword) {
-  if (!keyword) { addAgentMessage('I need a keyword. Example: [NEW_PAGE roof leak repair New Jersey]'); return; }
-  _context.keyword = keyword;
-  window._newPageMode = true;
-  window._newPageAutoMode = true;
-  window._lastSpyKeyword = keyword;
-  window._lastSpyUrl = '';
-
-  // Step 1: Research
-  var prog1 = addProgress('New page research: "' + keyword + '" - scanning top 10, PAA, AI Overviews...', 0);
-  var pid = _context.profileId || (_profiles && _profiles.length && _profiles[0].id) || null;
-  var researchResult = null;
-  try {
-    if (pid) {
-      var startResp = await api('/api/content/research', 'POST', { profile_id: pid, seed_keyword: keyword });
-      if (startResp.success) {
-        var jobId = startResp.job_id || (startResp.job && startResp.job.id);
-        for (var i = 0; i < 45; i++) {
-          await sleep(2000);
-          setProgress(prog1, Math.min(10 + i * 2, 70));
-          var poll = await api('/api/content/research/' + jobId);
-          if (poll.status === 'completed') { researchResult = poll.research || poll.result; break; }
-          if (poll.status === 'error') break;
-        }
-      }
-    }
-    setProgress(prog1, 90);
-    if (researchResult) { addResearchResult(researchResult); _context.research = researchResult; }
-    setProgress(prog1, 100); removeProgress(prog1);
-  } catch(e) { removeProgress(prog1); }
-
-  // Step 2: Intelligence (silent — no agent call, no extra buttons)
-  var prog2 = addProgress('Step 2/3: Competitor intelligence for "' + keyword + '"...', 0);
-  try {
-    var _geo2 = (_profile && _profile.geo_focus) || '';
-    var _geoQ2 = _geo2 ? '&location=' + encodeURIComponent(_geo2) : '';
-    var intelData = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + _geoQ2);
-    setProgress(prog2, 100); removeProgress(prog2);
-    if (intelData && intelData.success) {
-      window._lastIntelligence = intelData;
-      var _iDiv = document.createElement('div');
-      _iDiv.className = 'msg agent';
-      var _comps = (intelData.competitors||[]).slice(0,5).map(function(c,i){
-        return '<div style="font-size:11px;color:#9ca3af;padding:2px 0;">'+(i+1)+'. '+escHtml((c.title||'').substring(0,50))+'</div>';
-      }).join('');
-      _iDiv.innerHTML = '<div class="msg-avatar">\U0001F9E0</div><div class="msg-body"><div class="msg-name">Intelligence: "'+escHtml(keyword)+'"</div><div class="bubble" style="padding:12px;"><div style="font-size:10px;color:#6b7280;margin-bottom:6px;">\U0001F310 TOP '+((intelData.competitors||[]).length)+' COMPETITORS</div>'+_comps+(intelData.content_gaps&&intelData.content_gaps.length?'<div style="font-size:10px;color:#f87171;margin-top:6px;">\u26a0\ufe0f '+intelData.content_gaps.length+' content gaps</div>':'')+'</div></div>';
-      document.getElementById('messages').appendChild(_iDiv);
-      scrollBottom();
-    }
-  } catch(e) { removeProgress(prog2); }
-
-  // Step 3: Spy rank 1 automatically
-  var prog3 = addProgress('Step 3/3: Spying on rank 1 for "' + keyword + '"...', 0);
-  try {
-    var spyResp = await api('/api/tracker/serp-spy', 'POST', { keyword: keyword, profile_url: '', page_id: null });
-    setProgress(prog3, 100); removeProgress(prog3);
-    if (spyResp && spyResp.success && spyResp.spy) {
-      window._lastSpyData = spyResp.spy;
-      var _sDiv = document.createElement('div');
-      _sDiv.className = 'msg agent';
-      _sDiv.innerHTML = '<div class="msg-avatar">\U0001F50D</div><div class="msg-body"><div class="msg-name">Spy Report</div><div class="bubble" style="padding:12px;overflow-x:auto;">' + renderSerpSpyReport(spyResp.spy) + '</div></div>';
-      document.getElementById('messages').appendChild(_sDiv);
-      scrollBottom();
-    }
-  } catch(e) { removeProgress(prog3); console.warn('[new page spy failed]', e && e.message); }
-
-  // All done — show done card, clear auto flags
-  window._newPageAutoMode = false;
-  window._newPageMode = false; // prevent agent re-triggering research
-  var _doneDiv = document.createElement('div');
-  _doneDiv.style.cssText = 'margin:10px 0 4px 44px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:14px 16px;';
-  _doneDiv.innerHTML =
-    '<div style="font-size:11px;font-weight:800;color:#34d399;margin-bottom:6px;">\u2705 BRIEF COMPLETE \u2014 "' + escHtml(keyword) + '"</div>' +
-    '<div style="font-size:11px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">Research + competitor intelligence + SERP spy complete. Your brief is ready.</div>' +
-    '<button onclick="copyMasterBrief()" style="padding:8px 20px;border-radius:7px;border:none;background:linear-gradient(135deg,#34d399,#0ea5e9);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">\U0001F310 Copy Master Brief \u2192 External AI</button>';
-  document.getElementById('messages').appendChild(_doneDiv);
-  scrollBottom();
-  updateContext();
-}
-
-function openNewPageSpy() {
-  var kw = window._lastSpyKeyword || _context.keyword || '';
-  if (!kw) { toast('No keyword set - run New Page research first', 'warn'); return; }
-  var modal = document.getElementById('serpSpyModal');
-  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
-  document.getElementById('serpSpyKeyword').value = kw;
-  document.getElementById('serpSpyUrl').value = '';
-  document.getElementById('serpSpyResult').innerHTML =
-    '<div style="padding:12px 16px;background:rgba(14,165,233,.06);border-radius:8px;border-left:3px solid #38bdf8;font-size:11px;color:#93c5fd;margin-bottom:12px;"><strong>New Page Mode</strong> - No existing URL. Spy analyses rank 1 and builds a creation brief.</div>';
-  document.getElementById('serpSpyStatus').textContent = '';
-  window._serpSpyAction = 'rewrite';
-  window._newPageMode = true;
-  modal.style.display = 'flex';
 }
 
 async function cmdResearch(keyword, profileId) {
@@ -2395,7 +2158,7 @@ async function cmdMetaResearch(keyword, currentTitle) {
     // Auto-chain: show follow-up action buttons
     var followUp = [
       { label: '🧠 Intelligence: ' + keyword, fn: function(){ executeCommand({cmd:'INTELLIGENCE',args:[keyword,'']}); } },
-      { label: '📡 Deep Dive → Agent', fn: function(){ trPushToAgent && window._lastSpyPageId ? trPushToAgent(window._lastSpyPageId) : userSend('Deep dive this page'); } }
+      { label: '🔬 Get Deeper Claude Suggestions', fn: function(){ userSend('Give me a complete content brief based on this meta research and intelligence. No A or B. Just the brief. End with BRIEF COMPLETE.'); } }
     ];
     addActions(followUp);
 
@@ -2406,13 +2169,13 @@ async function cmdMetaResearch(keyword, currentTitle) {
 }
 
 async function cmdIntelligence(keyword, url) {
+  if (window._intelRunning) { console.warn('[intel] skipping duplicate'); return; }
+  window._intelRunning = true;
   if (!keyword) { addAgentMessage('I need a keyword to run content intelligence. What keyword should I analyze?'); return; }
-  // Strip Google search URLs and other non-page URLs — pass nothing if no real client page exists
-  if (url && (url.indexOf('google.com/search') > -1 || url.indexOf('google.com/?') > -1 || url.trim() === '')) url = '';
 
   var prog = addProgress('Running content intelligence on "' + keyword + '" — analyzing top 10 competitors, content gaps, and generating beat-them brief…', 0);
   try {
-    var _geo = (_profile && _profile.geo_focus) || ''; var _geoQ = _geo ? '&location=' + encodeURIComponent(_geo) : ''; var data = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : '') + _geoQ);
+    var data = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
     if (!data.success) throw new Error(data.error || 'Intelligence failed');
 
     setProgress(prog, 50);
@@ -2569,17 +2332,14 @@ async function cmdIntelligence(keyword, url) {
     ]);
     addAgentMessage(summary);
 
-    // Store intelligence for Master Brief
-    window._lastIntelligence = data;
-    window._lastSpyKeyword = keyword;
     // Auto-chain: show follow-up action buttons
-    var _isNewPage = window._newPageMode || !url || url.indexOf('google.com/search') > -1;
+    var _isNewPg = window._newPageMode || !url || url.indexOf('google.com/search') > -1;
     var followUp = [];
-    if (_isNewPage) {
+    if (_isNewPg) {
       followUp.push({ label: '🌐 Copy Master Brief → External AI', fn: function(){ copyMasterBrief(); } });
     } else {
+      followUp.push({ label: '🔬 Get Deeper Claude Suggestions', fn: function(){ userSend('Based on this intelligence, give me a complete content brief: entity gaps, PAA answers, voice search answer, AI Overview blueprint, and 6 priority tasks. End with BRIEF COMPLETE.'); } });
       followUp.push({ label: '🏷 Meta Research: ' + keyword, fn: function(){ executeCommand({cmd:'META',args:[keyword,'']}); } });
-      followUp.push({ label: '📡 Deep Dive This Page', fn: function(){ openRewriteModal(); } });
       if (url) followUp.push({ label: '📊 Scan: ' + url.replace(/^https?:\/\//,'').split('/')[0], fn: function(){ executeCommand({cmd:'SCAN',args:[url]}); } });
     }
     addActions(followUp);
@@ -2587,7 +2347,9 @@ async function cmdIntelligence(keyword, url) {
   } catch(e) {
     removeProgress(prog);
     addAgentMessage('🧠 Intelligence error: ' + e.message + '. Try again or check your SerpAPI key.');
+    window._intelRunning = false;
   }
+  window._intelRunning = false;
 }
 
 async function cmdPipeline(keyword, url) {
@@ -2782,9 +2544,7 @@ async function cmdAnalyse(url, keyword) {
   try {
     setProgress(prog, 30);
     var body = {
-      url: url,
-      keyword: keyword || '',
-      gsc_keyword: keyword || _context.keyword || '',  // backend expects gsc_keyword
+      url: url, keyword: keyword || '',
       profile_id: _context.profileId || (_profile && _profile.id) || null,
       gsc_impressions: _context.impressions,
       gsc_clicks: _context.clicks,
@@ -2804,11 +2564,9 @@ async function cmdAnalyse(url, keyword) {
     // Agent interpretation + risk check
     var pos = _context.position;
     var riskNote = pos > 0 && pos <= 20 ? '\n\nIMPORTANT: This page ranks at position ' + Number(pos).toFixed(1) + '. Mention ranking risk before suggesting rewrite.' : '';
-    var _kw = keyword || _context.keyword || '';
-    var kwNote = _kw ? '\n\nTARGET KEYWORD: "' + _kw + '". ALL title, H1, and meta recommendations MUST include this exact keyword. Do NOT suggest titles or headings for a different keyword.' : '';
-    var interp = await callClaude(buildSystemPrompt() + riskNote + kwNote, [
+    var interp = await callClaude(buildSystemPrompt() + riskNote, [
       ..._history,
-      { role: 'user', content: 'Analysis complete for keyword "' + (_kw || 'unknown') + '". What are the 2 most impactful actions? Be specific to this keyword. Surgical fix or full rewrite — which do you recommend and why? Be direct.' }
+      { role: 'user', content: 'Analysis complete. What are the 2 most impactful actions? Surgical fix or full rewrite — which do you recommend and why? Be direct.' }
     ]);
     addAgentMessage(interp);
     addActions([
@@ -3027,14 +2785,13 @@ function addResearchResult(r) {
   var div = document.createElement('div');
   div.className = 'msg agent';
 
-  var _str=function(x){return typeof x==='string'?x:(x&&(x.tip||x.opportunity||x.recommendation||x.title||x.text||x.content||''))||'';};
-  var aiTips = parseRecs(r.ai_overview_tips).slice(0,3).map(function(t){var s=_str(t);return s?'<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ '+escHtml(s)+'</div>':''}).join('');
+  var aiTips = parseRecs(r.ai_overview_tips).slice(0,3).map(function(t){ return '<div style="font-size:12px;color:#c084fc;padding:2px 0;">✦ ' + t + '</div>'; }).join('');
   var paa = parseRecs(r.paa_questions).slice(0,4).map(function(q, i) {
     var text = typeof q === 'string' ? q : (q.question || q);
     return '<div style="font-size:12px;color:var(--accent2);padding:3px 0;"><span style="color:var(--muted);margin-right:6px;">' + (i+1) + '.</span>' + text + '</div>';
   }).join('');
-  var voice = parseRecs(r.voice_search_queries).slice(0,3).map(function(q){var s=_str(q);return s?'<div style="font-size:12px;color:#38bdf8;padding:2px 0;">🎙️ '+escHtml(s)+'</div>':''}).join('');
-  var sk = parseRecs(r.secondary_keywords).slice(0,8).map(function(k){var s=_str(k);return s?'<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:99px;padding:2px 8px;font-size:11px;margin:2px;display:inline-block;">'+escHtml(s)+'</span>':''}).join('');
+  var voice = parseRecs(r.voice_search_queries).slice(0,3).map(function(q){ return '<div style="font-size:12px;color:#38bdf8;padding:2px 0;">🎙️ ' + q + '</div>'; }).join('');
+  var sk = parseRecs(r.secondary_keywords).slice(0,8).map(function(k){ return '<span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:99px;padding:2px 8px;font-size:11px;margin:2px;display:inline-block;">' + k + '</span>'; }).join('');
   var title = r.recommended_title || '';
   var tl = title.length;
   var tc = tl >= 55 && tl <= 60 ? '#4ade80' : tl > 60 ? '#f87171' : '#fbbf24';
@@ -3209,21 +2966,6 @@ function updateContext() {
 }
 
 function formatMessage(text) {
-  // Highlight agent questions and A/B choices so they scan instantly
-  var lines = text.split('\n');
-  lines = lines.map(function(line) {
-    var trimmed = line.trim();
-    // A/B choice lines
-    if (/^(→\s*)?(A\)|B\)|Option A|Option B)/i.test(trimmed)) {
-      return '<span style="display:block;background:rgba(251,191,36,.10);border-left:3px solid #fbbf24;padding:4px 10px;border-radius:0 5px 5px 0;margin:2px 0;font-weight:700;color:#fde68a;">' + escHtml(line) + '</span>';
-    }
-    // Direct questions (lines ending with ?)
-    if (trimmed.endsWith('?') && trimmed.length > 15 && trimmed.length < 200) {
-      return '<span style="display:block;background:rgba(56,189,248,.08);border-left:3px solid #38bdf8;padding:5px 10px;border-radius:0 5px 5px 0;margin:4px 0;font-weight:700;color:#bae6fd;">' + line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>') + '</span>';
-    }
-    return line;
-  });
-  text = lines.join('\n');
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-family:DM Mono,monospace;font-size:11px;">$1</code>')
@@ -3242,16 +2984,7 @@ function setStatus(type, text) {
 
 function hideWelcome() {
   var w = document.getElementById('welcomeScreen');
-  if (w) {
-    w.style.transition = 'opacity .3s';
-    w.style.opacity = '0';
-    setTimeout(function(){
-      w.remove();
-      // Welcome gone — show quick actions in sidebar
-      var qa = document.getElementById('quickActionsPanel');
-      if (qa) { qa.style.display = 'block'; qa.style.animation = 'fadeIn .3s ease'; }
-    }, 300);
-  }
+  if (w) { w.style.transition = 'opacity .3s'; w.style.opacity = '0'; setTimeout(function(){ w.remove(); }, 300); }
 }
 
 function scrollBottom() {
@@ -3628,7 +3361,7 @@ function renderTrackerList() {
       var rAction = escHtml(String(_rawAction));
       recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
         '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
-        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction + '</div>' : '') +
+        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction.substring(0,140) + (rAction.length>140?'…':'') + '</div>' : '') +
         '</div>';
     }
 
@@ -3665,9 +3398,9 @@ function renderTrackerList() {
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
         (pri.action === 'rewrite' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:800;">📡 Spy & Deep Dive</button>'
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;cursor:pointer;font-weight:800;">🚀 Spy & Rewrite</button>'
         : pri.action === 'surgical' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;cursor:pointer;font-weight:800;">📡 Spy & Fix</button>'
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;cursor:pointer;font-weight:800;">🔧 Spy & Fix</button>'
         : pri.action === 'check' ?
           '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:rgba(124,58,237,.2);color:#a78bfa;cursor:pointer;font-weight:700;">▶ Check Now</button>'
         :
@@ -3912,26 +3645,7 @@ function trPushToAgent(pageId) {
 
   var scoreText = snap.score ? ' (current ContentScore: ' + snap.score + '/100)' : '';
   var kwText = page.keyword ? ' targeting keyword: "' + page.keyword + '"' : '';
-  // Build deep dive prompt — NOT a rewrite request
-  var allRecs = Array.isArray(recs) ? recs.map(function(r, i) {
-    var title  = r.title  || r.description || r.name || '';
-    var action = r.action || r.fix || r.recommendation || '';
-    var impact = r.expected_impact || '';
-    return (i+1) + '. [' + (r.priority||'?').toUpperCase() + '] ' + title + (action ? '\n   → ' + action : '') + (impact ? '\n   Impact: ' + impact : '');
-  }).join('\n') : '';
-  var text = '[DEEP DIVE REQUEST]\n' +
-    'Page: ' + page.url + kwText + scoreText + '\n' +
-    (page.title ? 'Title: ' + page.title + '\n' : '') +
-    '\n== TRACKER RECOMMENDATIONS ==\n' + (allRecs || '(none stored)') +
-    '\n\n== YOUR TASK ==\n' +
-    'Run [ANALYSE ' + page.url + ' "' + (page.keyword||'') + '"] to read the current page.\n' +
-    'Then do a deep dive:\n' +
-    '1. For each recommendation above: write the EXACT sentences/HTML to add — no generic advice\n' +
-    '2. Find PAA questions for this keyword → suggest which to add to FAQ section\n' +
-    '3. Voice search: rewrite 2-3 existing answers to natural spoken language (40 words max each)\n' +
-    '4. Citation signals: what specific data, stat, or unique claim should we add to get cited by AI Overviews?\n' +
-    '5. Supplemental content: what new section/angle would rank 1 NOT have — that we can own?\n' +
-    'DO NOT suggest a full rewrite. Surgical additions and enhancements only.';
+  var text = 'The tracker flagged this page' + scoreText + ': ' + page.url + kwText + '.' + recText + '\n\nPlease fix these specific issues and rewrite the affected sections.';
 
   switchView('agent');
   setTimeout(function() {
@@ -4080,10 +3794,9 @@ async function openTrackerDetail(pageId) {
     }
 
     body.innerHTML = scoreHtml + chartHtml + timelineHtml + recsHtml +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<div style="display:flex;gap:8px;">' +
       '<button onclick="runTrackerCheck('+pageId+',this)" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">▶ Run Check</button>' +
-      '<button onclick="trPushToAgent('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;border:none;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;">📡 Deep Dive → Agent</button>' +
-      '<button onclick="trCopyContext('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9ca3af;">📋 Copy</button>' +
+      '<button onclick="trPushToAgent('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">→ Push to Agent</button>' +
       '<button onclick="document.getElementById(\'trDetailModal\').style.display=\'none\'" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Close</button>' +
       '</div>';
   } catch(e) {
@@ -4577,7 +4290,6 @@ function useProfileFromList(profileId) {
     var p = _allProfiles.find(function(x){ return String(x.id) === String(profileId); });
     if (p) {
       _profile = p;
-      window._profile = _profile;
       _context.profileId = p.id;
       var sel = document.getElementById('profileSelect');
       if (sel) sel.value = String(p.id);
@@ -4834,7 +4546,6 @@ async function saveProfile() {
     // If new profile, switch to it automatically
     if (!_editingProfileId && d.profile) {
       _profile = d.profile;
-      window._profile = _profile;
       _context.profileId = d.profile.id;
       var sel = document.getElementById('profileSelect');
       if (sel) { sel.value = String(d.profile.id); }
@@ -5451,7 +5162,7 @@ async function runRewriteFromModal() {
       setProgress(prog, 55);
       addAgentMessage('🔬 Fetching competitive intelligence for ' + modeNames + '…');
       try {
-        var _geo = (_profile && _profile.geo_focus) || ''; var _geoQ = _geo ? '&location=' + encodeURIComponent(_geo) : ''; var intel = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : '') + _geoQ);
+        var intel = await api('/api/serp/intelligence?keyword=' + encodeURIComponent(keyword) + (url ? '&url=' + encodeURIComponent(url) : ''));
         if (intel && intel.success) {
           intelContext = intel;
           _context.intelBrief = intel.intelligence_brief;
@@ -6480,13 +6191,12 @@ async function runSerpSpy() {
       var _spyAct = window._serpSpyAction || 'rewrite';
       var _spyRec = window._serpSpyRecommended || '';
       actDiv.innerHTML =
-        '<button onclick="spyDeepDiveToAgent()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#7c3aed);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">📡 Deep Dive → Agent</button>' +
         (_spyAct === 'surgical' ?
-          '<button onclick="spyApplySurgical()" style="padding:8px 14px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔧 Surgical Fixes</button>' :
-          '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Gap Analysis</button>'
+          '<button onclick="spyApplySurgical()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔧 Apply Surgical Fixes</button>' :
+          '<button onclick="spyOpenRewrite()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Rewrite to Beat Rank 1</button>'
         ) +
-        '<button onclick="copySpyReport()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">📋 Copy</button>' +
-        '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;font-size:11px;cursor:pointer;">✕ Close</button>' +
+        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Analyse with Agent</button>' +
+        '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
         (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
       // Store spy data for button handlers
@@ -6575,404 +6285,6 @@ function spySendToAgentWithHtml() {
 }
 
 // ── Spy → Agent: sends full brief to agent with context ──────────────────────
-// ── NEW: spyDeepDiveToAgent — full context deep dive, no rewrite ─────────────
-function spyDeepDiveToAgent() {
-  var spy = window._lastSpyData;
-  var kw  = window._lastSpyKeyword || '';
-  var url = window._lastSpyUrl || '';
-  if (!spy) { toast('No spy data \u2014 run Spy first', 'warn'); return; }
-
-  var formula   = (spy.step2_pattern && spy.step2_pattern.the_ranking_formula) || '';
-  var format    = (spy.step2_pattern && spy.step2_pattern.dominant_content_format) || '';
-  var schema    = (spy.step2_pattern && spy.step2_pattern.dominant_schema) || '';
-  var wordCount = (spy.content_brief && spy.content_brief.recommended_word_count) || (spy.step2_pattern && spy.step2_pattern.dominant_word_count_range) || '';
-  var aiBlueprint = spy.ai_overview_blueprint || '';
-  var clientGap = spy.client_vs_best || '';
-
-  var entityGaps = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,6).map(function(e, i) {
-    return (i+1) + '. "' + (e.entity||e) + '"' + (e.in_competitor_pages ? ' (in '+e.in_competitor_pages+' competitors)' : '');
-  }).join('\n');
-
-  var missing = (spy.step4_missing || []).slice(0,4).map(function(m) {
-    return '\u2022 ' + (m.gap||'') + ' \u2192 ' + (m.how_to_exploit||'');
-  }).join('\n');
-
-  var quickWins = (spy.quick_wins || []).slice(0,4).map(function(w) {
-    return '\u2022 ' + (w.win||w) + (w.effort ? ' [effort:'+w.effort+']' : '');
-  }).join('\n');
-
-  var paaQuestions = (spy.paa_questions || []).slice(0,5).map(function(q, i) {
-    return (i+1) + '. ' + (q.question||q);
-  }).join('\n');
-
-  var competitors = (spy.step1_serp || []).slice(0,3).map(function(c, i) {
-    return (i+1) + '. ' + (c.title||'') + ' \u2014 ' + (c.url||'');
-  }).join('\n');
-
-  var aiCit  = spy._client_ai_citation;
-  var aiScore = aiCit ? ' | AI Score: ' + aiCit.score + '/100 (' + aiCit.eligibility + ')' : '';
-
-  var msg = '[INTELLIGENT DEEP DIVE \u2014 NO REWRITE]\n' +
-    'Keyword: "' + kw + '" | Page: ' + url + aiScore + '\n' +
-    '\n=== WHY RANK 1 WINS ===\n' + (formula || '\u2014') +
-    '\n\n=== CLIENT GAP vs RANK 1 ===\n' + (clientGap && clientGap !== 'no client URL' ? clientGap : '(run ANALYSE to determine)') +
-    '\n\n=== MISSING ENTITIES (competitors have, we don\'t) ===\n' + (entityGaps || '\u2014') +
-    '\n\n=== NOBODY COVERS (first-mover opportunity) ===\n' + (missing || '\u2014') +
-    '\n\n=== QUICK WINS ===\n' + (quickWins || '\u2014') +
-    '\n\n=== PAA QUESTIONS IN SERP ===\n' + (paaQuestions || '\u2014') +
-    '\n\n=== AI OVERVIEW BLUEPRINT ===\n' + (aiBlueprint || '\u2014') +
-    '\n\n=== CONTENT BRIEF ===\nFormat: ' + (format||'\u2014') + ' | Schema: ' + (schema||'\u2014') + ' | Target: ~' + (wordCount||'?') + ' words' +
-    '\n\n=== TOP COMPETITORS ===\n' + (competitors || '\u2014') +
-    '\n\n=== YOUR DEEP DIVE TASKS ===\n' +
-    'Run [ANALYSE ' + url + ' "' + kw + '"] first to read the current page. Then:\n' +
-    '1. MISSING ENTITIES \u2014 for each entity gap above: write the exact sentence(s) to add and WHERE on the page\n' +
-    '2. PAA \u2192 FAQ \u2014 convert the PAA questions above into concise FAQ answers (50-80 words each, conversational/voice-ready)\n' +
-    '3. VOICE SEARCH \u2014 rewrite 2-3 key answers to natural spoken language (how Google Assistant would read them)\n' +
-    '4. AI OVERVIEW \u2014 what specific data point, statistic, or unique claim gets us cited? Write it.\n' +
-    '5. FIRST-MOVER SECTION \u2014 write a short outline for the angle nobody covers yet\n' +
-    '6. SCHEMA \u2014 recommend exact FAQPage/HowTo/Speakable schema additions with the markup\n' +
-    '\nDO NOT suggest a full rewrite. Surgical additions ONLY. Be specific \u2014 exact copy, not strategy.';
-
-  closeSerpSpy();
-  switchView('agent');
-  window._pendingDeepDive = true;
-  setTimeout(function() {
-    var inp = document.getElementById('chatInput');
-    if (inp) { inp.value = msg; sendMessage(); }
-  }, 300);
-}
-
-// ── NEW: deepDiveThenBeatRank1 — rewrite using enriched spy + agent brief ─────
-function deepDiveThenBeatRank1() {
-  if (!window._lastSpyData) { toast('No spy data — run Spy first', 'warn'); return; }
-  _context.intelligence_context = {
-    ranking_formula: window._lastSpyData.step2_pattern && window._lastSpyData.step2_pattern.the_ranking_formula,
-    entity_gaps: window._lastSpyData._entity_gaps || window._lastSpyData.entity_gaps_priority,
-    content_brief: window._lastSpyData.content_brief,
-    ai_citation: window._lastSpyData._client_ai_citation,
-    ai_overview_blueprint: window._lastSpyData.ai_overview_blueprint,
-    paa_questions: window._lastSpyData.paa_questions || [],
-    quick_wins: window._lastSpyData.quick_wins || [],
-    spy_keyword: window._lastSpyKeyword,
-    deep_dive_enriched: true // signal to rewrite modal: agent already did deep dive
-  };
-  openRewriteModal();
-  setTimeout(function() {
-    var kwInp = document.getElementById('rewriteKeyword');
-    if (kwInp && !kwInp.value && window._lastSpyKeyword) kwInp.value = window._lastSpyKeyword;
-    var urlInp = document.getElementById('rewriteUrl');
-    if (urlInp && !urlInp.value && window._lastSpyUrl) urlInp.value = window._lastSpyUrl;
-  }, 200);
-  toast('Deep dive brief loaded into rewrite — all signals included', 3000, 'ok');
-}
-
-// ── NEW: deepDiveSurgical — apply surgical fixes using enriched brief ─────────
-function deepDiveSurgical() {
-  if (!window._lastSpyData) { toast('No spy data', 'warn'); return; }
-  _context.intelligence_context = {
-    ranking_formula: window._lastSpyData.step2_pattern && window._lastSpyData.step2_pattern.the_ranking_formula,
-    entity_gaps: window._lastSpyData._entity_gaps || window._lastSpyData.entity_gaps_priority,
-    content_brief: window._lastSpyData.content_brief,
-    paa_questions: window._lastSpyData.paa_questions || [],
-    spy_keyword: window._lastSpyKeyword,
-    deep_dive_enriched: true
-  };
-  openRewriteModalWithMode('surgical');
-  toast('Spy brief loaded — surgical mode with enriched context', 3000, 'ok');
-}
-
-// ── NEW: copyAgentOutput — copies last agent response to clipboard ─────────────
-function copyAgentOutput() {
-  var msgs = document.getElementById('messages');
-  var bubbles = msgs.querySelectorAll('.msg.agent .bubble');
-  if (!bubbles.length) { toast('No agent output to copy', 'warn'); return; }
-  var last = bubbles[bubbles.length - 1];
-  var txt = last.innerText || last.textContent || '';
-  navigator.clipboard.writeText(txt).then(function() {
-    toast('Agent output copied', 2000, 'ok');
-  }).catch(function() { toast('Copy failed', 'warn'); });
-}
-
-// ── MASTER BRIEF — complete external AI feed (paste into Claude/ChatGPT) ──────
-async function copyMasterBrief() {
-  var spy  = window._lastSpyData;
-  var kw   = window._lastSpyKeyword || _context.keyword || '';
-  var url  = window._lastSpyUrl || _context.url || '';
-  // Strip Google search URLs
-  if (url && url.indexOf('google.com/search') > -1) url = '';
-  // Allow brief from intelligence data even without spy
-  var hasIntel = _context.research || window._lastIntelligence;
-  if (!spy && !hasIntel && !kw) { toast('Run Intelligence or Spy + Deep Dive first', 'warn'); return; }
-
-  // Auto-scan the URL if we have one and no scan data yet
-  var scanData = null;
-  if (url && (_context.score === null || _context.score === undefined)) {
-    try {
-      toast('Scanning page for ContentScore...', 2000);
-      scanData = await api('/api/scan', 'POST', { url: url });
-      if (scanData && scanData.score) {
-        _context.score = scanData.score;
-        _context.recs  = parseRecs(scanData.recommendations);
-      }
-    } catch(e) { console.warn('[copyMasterBrief] scan failed:', e.message); }
-  } else if (_context.score) {
-    scanData = { score: _context.score, recommendations: _context.recs };
-  }
-
-  // Pull last agent output (the deep dive analysis)
-  var agentOutput = '';
-  var bubbles = document.getElementById('messages').querySelectorAll('.msg.agent .bubble');
-  if (bubbles.length) agentOutput = (bubbles[bubbles.length-1].innerText || '').trim();
-
-  // Spy data
-  // Use spy data if available, else fall back to intelligence data
-  var intel = window._lastIntelligence || {};
-  var intelBrief = intel.intelligence_brief || {};
-  var formula   = (spy && spy.step2_pattern && spy.step2_pattern.the_ranking_formula) || '';
-  var format    = (spy && spy.step2_pattern && spy.step2_pattern.dominant_content_format) || '';
-  var schema    = (spy && spy.step2_pattern && spy.step2_pattern.dominant_schema) || (intelBrief.schema_to_add && intelBrief.schema_to_add.join(', ')) || '';
-  var wordCount = (spy && spy.content_brief && spy.content_brief.recommended_word_count) || intelBrief.target_word_count || '';
-  var aiBlueprint = (spy && spy.ai_overview_blueprint) || '';
-  var clientGap = (spy && spy.client_vs_best) || '';
-  if (!clientGap || clientGap === 'no client URL') clientGap = '';
-  var aiCit     = spy ? spy._client_ai_citation : null;
-  // Intelligence-only additions
-  var intelH2s  = (intelBrief.recommended_h2s || []).join('\n');
-  var intelTopics = (intelBrief.topics_to_cover || []).join('\n');
-  var intelMeta = intelBrief.meta_title ? 'Meta title: ' + intelBrief.meta_title + '\nMeta desc: ' + (intelBrief.meta_description||'') : '';
-  var intelVoice = intelBrief.voice_search_answer || '';
-  var intelPriority = (intelBrief.priority_actions || intel.priority_actions || []).slice(0,6).map(function(a){ return '• ['+((a.priority||'').toUpperCase())+'] '+(a.action||a); }).join('\n');
-  var aiScore   = aiCit ? aiCit.score + '/100 (' + aiCit.eligibility + ')' : 'unknown';
-
-  var _spyGaps = spy ? (spy.entity_gaps_priority || spy._entity_gaps || []) : [];
-  var _intelGaps = (intel.content_gaps || []).map(function(g){ return {entity: g}; });
-  var entityGaps = (_spyGaps.length ? _spyGaps : _intelGaps).slice(0,8)
-    .map(function(e,i){ return (i+1)+'. "'+( e.entity||e)+'"'+(e.in_competitor_pages?' ('+e.in_competitor_pages+' competitors)':''); }).join('\n');
-
-  var paa = ((spy && spy.paa_questions) || intel.people_also_ask || []).slice(0,6)
-    .map(function(q,i){ return (i+1)+'. '+(q.question||q); }).join('\n');
-
-  var competitors = ((spy && spy.step1_serp) || (intel.competitors || []).map(function(c){ return {title:c.title,url:c.url}; })).slice(0,5)
-    .map(function(c,i){ return (i+1)+'. '+( c.title||'')+' — '+(c.url||''); }).join('\n');
-
-  var missing = ((spy && spy.step4_missing) || intel.content_gaps && intel.content_gaps.slice(0,4).map(function(g){return{gap:g,how_to_exploit:''};}) || []).slice(0,4)
-    .map(function(m){ return '• '+(m.gap||m||'')+((m.how_to_exploit)?' → '+m.how_to_exploit:''); }).join('\n');
-
-  var quickWins = ((spy && spy.quick_wins) || []).slice(0,5)
-    .map(function(w){ return '• '+(w.win||w); }).join('\n');
-
-  // Business profile block for schemas and content
-// GRAAF ContentScore audit section
-  var _scanSection = '';
-  if (scanData && scanData.score) {
-    var _recs = parseRecs(scanData.recommendations || _context.recs || []);
-    var _highRecs = _recs.filter(function(r){ return (r.priority||'').toLowerCase() === 'high'; }).slice(0,6);
-    var _medRecs  = _recs.filter(function(r){ return (r.priority||'').toLowerCase() === 'medium'; }).slice(0,4);
-    var _allRecs  = _highRecs.concat(_medRecs);
-    _scanSection = [
-      '━━━ CURRENT PAGE AUDIT (GRAAF ContentScore) ━━━━━━━━━━━━━━━━━━━━━',
-      'URL: ' + url,
-      'ContentScore: ' + scanData.score + '/100',
-      (scanData.metrics ? 'GRAAF: ' + (scanData.metrics.graaf||0) + '/50 | CRAFT: ' + (scanData.metrics.craft||0) + '/30 | Technical: ' + (scanData.metrics.technical||0) + '/20' : ''),
-      (scanData.content_stats ? 'Words: ' + (scanData.content_stats.total_words||0) + ' | H2s: ' + (scanData.content_stats.headings||0) + ' | Images: ' + (scanData.content_stats.images||0) : ''),
-      '',
-      'WHAT TO FIX (priority order):',
-      _allRecs.length ? _allRecs.map(function(r,i){
-        var t = r.title || r.description || r.name || '';
-        var a = r.action || r.fix || r.recommendation || '';
-        var im = r.expected_impact || '';
-        return (i+1) + '. [' + (r.priority||'?').toUpperCase() + '] ' + t + (a ? ' → ' + a : '') + (im ? ' (Impact: ' + im + ')' : '');
-      }).join('\n') : 'No recommendations available',
-      '',
-      'INSTRUCTION: The external AI MUST fix ALL issues listed above in the new content.',
-      'Do not just write new content — ensure every recommendation above is addressed.',
-      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-    ].filter(Boolean).join('\n');
-  }
-
-  var _p = window._profile || _profile || {};
-  var profileBlock = '';
-  if (_p && (_p.name || _p.domain)) {
-    profileBlock = [
-      '━━━ BUSINESS PROFILE (use in ALL schema & content) ━━━━━━━━━━━━',
-      _p.name             ? 'Business name: ' + _p.name : '',
-      _p.domain           ? 'Domain: ' + _p.domain : '',
-      _p.niche            ? 'Niche: ' + _p.niche : '',
-      _p.geo_focus        ? 'Target geo: ' + _p.geo_focus : '',
-      _p.schema_type      ? 'Schema type: ' + _p.schema_type : '',
-      _p.author_name      ? 'Author: ' + _p.author_name + (_p.author_location ? ', ' + _p.author_location : '') : '',
-      _p.years_experience ? 'Years in business: ' + _p.years_experience : '',
-      _p.certifications   ? 'Certifications: ' + _p.certifications : '',
-      _p.service_areas    ? 'Service areas: ' + _p.service_areas : '',
-      _p.guarantee        ? 'Guarantee: ' + _p.guarantee : '',
-      _p.unique_selling_points ? 'Unique selling points:\n' + _p.unique_selling_points : '',
-      _p.target_audience  ? 'Target audience: ' + _p.target_audience : '',
-      _p.primary_goal     ? 'Primary goal: ' + _p.primary_goal : '',
-      'INSTRUCTION: Replace [Your Company Name] with the business name above. Use geo in LocalBusiness schema.'
-    ].filter(Boolean).join('\n');
-  }
-
-  var prompt = [
-    profileBlock ? profileBlock + '\n' : '',
-'╔══════════════════════════════════════════════════════════════════╗',
-'  CONTENTSCALE MASTER BRIEF — PUBLISH-READY CONTENT REQUEST',
-'  Generated by ContentScale PULSE + NEXUS · GRAAF Framework',
-'╚══════════════════════════════════════════════════════════════════╝',
-'',
-'KEYWORD: "' + kw + '"',
-'PAGE TO IMPROVE: ' + url,
-'AI OVERVIEW ELIGIBILITY: ' + aiScore,
-'TARGET FORMAT: ' + (format||'—') + ' | Schema: ' + (schema||'—') + ' | ~' + (wordCount||'?') + ' words',
-'',
-'━━━ 1. SERP INTELLIGENCE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-'WHY RANK 1 WINS:',
-formula || '—',
-'',
-'CLIENT GAP vs RANK 1:',
-(clientGap && clientGap !== 'no client URL') ? clientGap : '(analyse current page)',
-'',
-'TOP COMPETITORS:',
-competitors || '—',
-'',
-'━━━ 2. ENTITY GAPS (competitors have — we don\'t) ━━━━━━━━━━━━━━━━',
-entityGaps || '—',
-'',
-'━━━ 3. PAA QUESTIONS TO EMBED IN FAQ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-paa || '—',
-'',
-'━━━ 4. FIRST-MOVER GAPS (nobody covers) ━━━━━━━━━━━━━━━━━━━━━━━━━',
-missing || '—',
-'',
-'━━━ 5. QUICK WINS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-quickWins || '—',
-'',
-'━━━ 6. AI OVERVIEW BLUEPRINT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-aiBlueprint || '—',
-'',
-(agentOutput ? '╋╋╋ 7. DEEP DIVE AGENT ANALYSIS ╋╋╋╋╋╋╋╋╋╋╋╋╋╋╋╋\n' + agentOutput + '\n' : ''),
-
-
-(intelH2s ? '━━━ RECOMMENDED H2 STRUCTURE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : ''),
-(intelH2s ? intelH2s : ''),
-(intelTopics ? '━━━ TOPICS TO COVER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : ''),
-(intelTopics ? intelTopics : ''),
-(intelMeta ? '━━━ META (READY TO USE) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : ''),
-(intelMeta ? intelMeta : ''),
-(intelVoice ? '━━━ VOICE SEARCH ANSWER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : ''),
-(intelVoice ? intelVoice : ''),
-(intelPriority ? '━━━ PRIORITY ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : ''),
-(intelPriority ? intelPriority : ''),
-'',
-  '━━━ SCORING FRAMEWORK (GRAAF + CRAFT + TECHNICAL) ━━━━━━━━━━━━━━━',
-'The output must score 85+/100 on this system:',
-'',
-'GRAAF (50 pts) — Genuinely Credible, Relevant, Actionable, Accurate, Fresh:',
-'• Genuinely Credible (12p): Author bio with credentials, first-person experience, verifiable claims',
-'• Relevant (12p): Keyword in H1/first 100 words, entity coverage, search intent match',
-'• Actionable (10p): Step-by-step guidance, clear CTAs, tools/resources linked',
-'• Accurate (10p): Stats with source + year, no vague claims, specific numbers',
-'• Fresh (6p): Current year references, recent data, "Updated [month year]" signal',
-'',
-'CRAFT (30 pts) — Content depth, Readability, Authority, Format, Trust:',
-'• Depth: covers subtopics competitors miss, addresses follow-up questions',
-'• Readability: sentences < 20 words avg, no jargon, Flesch > 60',
-'• Authority: cite 2+ authoritative sources, expert quotes if possible',
-'• Format: H2/H3 hierarchy, bullet lists, tables where useful',
-'• Trust: testimonials, case studies, specific results',
-'',
-'TECHNICAL SEO (20 pts):',
-'• Title tag: keyword first, < 60 chars, CTR-optimized',
-'• Meta description: keyword + benefit + CTA, < 155 chars',
-'• H1: exact match or close variant of keyword',
-'• URL: short, keyword slug',
-'• Internal links: 3-5 contextual links to related pages',
-'• Image alt text: descriptive + keyword where natural',
-'',
-'━━━ OUTPUT REQUIREMENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-'Produce a SINGLE publish-ready HTML file with:',
-'',
-'[1] DIRECT ANSWER — first paragraph (40-60 words), answers "' + kw + '" immediately.',
-'    This is what Google reads for AI Overview. Make it factual and specific.',
-'',
-'[2] BODY CONTENT — ' + (wordCount||'1500+') + ' words, H2/H3 structure, covers all entity gaps above.',
-'    Write every H2 section as if it\'s the definitive answer to a sub-question.',
-'',
-'[3] FAQ SECTION — answer ALL PAA questions listed above.',
-'    Each answer: 50-80 words, conversational, voice-search ready.',
-'    Format as <div class="faq-item"><h3>Q?</h3><p>A.</p></div>',
-'',
-'[4] VOICE SEARCH — mark 3-4 key answers with <div class="speakable">',
-'    These should be 30-40 words, start with the question keyword, use natural spoken language.',
-'',
-'[5] SCHEMA MARKUP — include in <script type="application/ld+json">:',
-'    • Article schema (with author, datePublished, dateModified)',
-'    • FAQPage schema (all FAQ questions above)',
-'    • Speakable schema (pointing to .speakable selectors)',
-'    • If how-to content: HowToStep schema',
-'',
-'[6] AI OVERVIEW SIGNAL — one clear, citable statistic or unique claim',
-'    that no competitor has. Place it in the first 150 words.',
-'    Format: <strong>[STAT/CLAIM]</strong> with source attribution inline.',
-'',
-'[7] E-E-A-T BLOCK — author byline at top:',
-'    <div class="author-bio">Written by [Name], [Credential]. [1-2 sentences experience].</div>',
-'',
-'[8] TITLE TAG + META:',
-'    <title>[keyword-first title, < 60 chars]</title>',
-'    <meta name="description" content="[benefit + CTA, < 155 chars]">',
-'',
-'OUTPUT FORMAT: Valid HTML only. No markdown. No explanations outside the HTML.',
-'Start with <!DOCTYPE html> and end with </html>.',
-'The content should beat rank 1 by covering what they miss, not by copying them.',
-    _scanSection ? '\n' + _scanSection : ''
-].join('\n');
-
-  navigator.clipboard.writeText(prompt).then(function() {
-    toast('Master Brief copied — paste into Claude, ChatGPT, or Perplexity', 3500, 'ok');
-  }).catch(function() { toast('Copy failed — try again', 'warn'); });
-}
-
-// ── NEW: copySpyReport — copies spy brief to clipboard ───────────────────────
-function copySpyReport() {
-  var spy = window._lastSpyData;
-  var kw  = window._lastSpyKeyword || '';
-  if (!spy) { toast('No spy data', 'warn'); return; }
-  var txt = 'SERP SPY: "' + kw + '"\n\n' + JSON.stringify(spy, null, 2);
-  navigator.clipboard.writeText(txt).then(function() {
-    toast('Spy report copied to clipboard', 2000, 'ok');
-  }).catch(function() {
-    toast('Copy failed — use manual select', 'warn');
-  });
-}
-
-// ── NEW: trCopyContext — copies tracker page context to clipboard ─────────────
-async function trCopyContext(pageId) {
-  var page = (_trPages || []).find(function(p){ return p.id === pageId; });
-  if (!page) { toast('Page not found', 'warn'); return; }
-  try {
-    var data = await api('/api/tracker/page-detail/' + pageId, 'GET');
-    var snap = (data.snapshots && data.snapshots[0]) || {};
-    var recs = snap.recommendations || [];
-    var lines = [
-      'PAGE: ' + (page.url || ''),
-      'KEYWORD: ' + (page.keyword || '—'),
-      'SCORE: ' + (snap.score || '—') + '/100',
-      '',
-      'RECOMMENDATIONS:',
-    ].concat(recs.map(function(r, i) {
-      var t = r.title || r.description || r.name || '';
-      var a = r.action || r.fix || r.recommendation || '';
-      var im = r.expected_impact || '';
-      return (i+1) + '. [' + (r.priority||'?').toUpperCase() + '] ' + t +
-        (a ? '\n   \u2192 ' + a : '') + (im ? '\n   Impact: ' + im : '');
-    }));
-    var txt = lines.join('\n');
-    navigator.clipboard.writeText(txt).then(function() {
-      toast('Context copied to clipboard', 2000, 'ok');
-    }).catch(function() { toast('Copy failed', 'warn'); });
-  } catch(e) { toast('Error: ' + e.message, 'warn'); }
-}
-
 function spyPushToAgent() {
   var spy = window._lastSpyData;
   var kw = window._lastSpyKeyword || '';
@@ -7032,10 +6344,9 @@ function spyPushToAgent() {
 
   // The ONE question — agent must stop and wait, not run commands
   msg += '\n\n---\n' +
-    '1. What is the #1 thing that will move this page to position 1?\n' +
-    '2. New sections or replace existing content?\n' +
-    'Then ask me ONE question with two options — A or B — before doing anything.\n' +
-    'IMPORTANT: Do NOT run [ANALYSE] or any command. Wait for my answer first.';
+    'Give me the complete content brief now: entity gaps, PAA answers with 40-60 word responses, voice search answer, AI Overview blueprint, 6 priority tasks in order.\n' +
+    'End with: BRIEF COMPLETE — click 🌐 Copy Master Brief to export.\n' +
+    'Do NOT ask A or B. Do NOT suggest next steps. The brief is the final output.';
 
   closeSerpSpy();
   switchView('agent');
