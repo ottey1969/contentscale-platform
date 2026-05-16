@@ -23194,10 +23194,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
             </div>
 
-
-
-            <!-- SCAN LOG -->
-
             <div id="tab-tracker" class="tab-content hidden">
                 <style>
                     .tr-card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:18px; margin-bottom:12px; }
