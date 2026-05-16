@@ -844,7 +844,7 @@
                      <div style="font-size:2rem;margin-bottom:8px;">🥇</div>Scan any page and score 70+ to claim your spot
                    </div>
                    <div style="text-align:center;margin-top:14px;">
-                     <a href="https://app.contentscale.site" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1f2937;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;">📄 Scan a Page →</a>
+                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('single');},150);" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1f2937;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">📄 Scan a Page →</button>
                    </div>
                  </div>
                  <div>
@@ -858,7 +858,7 @@
                      <div style="font-size:2rem;margin-bottom:8px;">🏆</div>Scan 25+ pages via sitemap to qualify
                    </div>
                    <div style="text-align:center;margin-top:14px;">
-                     <a href="https://app.contentscale.site/lead-crawler" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;">🗺️ Scan via Sitemap →</a>
+                     <button onclick="switchPageSection('scanner');setTimeout(function(){switchMode('bulk');setTimeout(function(){setBulkMode('sitemap');},150);},150);" style="background:linear-gradient(135deg,#7e22ce,#a78bfa);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:0.78rem;font-weight:800;cursor:pointer;">🗺️ Scan via Sitemap →</button>
                    </div>
                  </div>
                </div>
