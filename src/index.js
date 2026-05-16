@@ -2600,7 +2600,7 @@ res.status(500).json({ success: false, error: e.message });
 app.get('/api/leaderboard', async (req, res) => {
 if (!pool) return res.json({ success: true, entries: [], stats: {} });
 try {
-const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, business_type, page_count, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE ORDER BY score DESC LIMIT 100`);
+const r = await pool.query(`SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC) as rank, company_name, url, score, country, niche, business_type, page_count, is_verified as is_claimed, admin_verified, created_at FROM leaderboard WHERE score IS NOT NULL AND is_opted_out = FALSE AND (admin_verified = TRUE OR admin_verified IS NULL) ORDER BY score DESC LIMIT 100`);
 // Strip sitemap paths — only expose homepage URL publicly to prevent fraud
 const rows = r.rows.map(row => {
 try {
@@ -23177,6 +23177,166 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
 
             <!-- ENGINE ACCESS CODES -->
+            <div id="tab-pending" class="tab-content hidden">
+                <div class="bg-gradient-to-br from-yellow-900 via-orange-900 to-yellow-800 rounded-2xl p-8 border-2 border-yellow-500">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">⏳ Pending Approvals</h2>
+                        <button onclick="loadPendingData()" class="btn btn-warning"><i class="fas fa-sync-alt mr-2"></i> Refresh</button>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4" style="color:#fbbf24;">🏆 Pending Leaderboard Submissions</h3>
+                        <div id="pending-leaderboard-container" class="space-y-4"></div>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4" style="color:#fbbf24;">🎯 Pending Freelancer Applications</h3>
+                        <div id="pending-freelancers-container" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- SCAN LOG -->
+
+            <div id="tab-tracker" class="tab-content hidden">
+                <style>
+                    .tr-card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:18px; margin-bottom:12px; }
+                    .tr-stat { background:#0d1117; border:1px solid #1f2937; border-radius:8px; padding:12px 16px; }
+                    .tr-stat .val { font-size:1.4rem; font-weight:700; color:#f1f5f9; }
+                    .tr-stat .lbl { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+                    .tr-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; }
+                    .tr-badge.up { background:#052e16; color:#4ade80; }
+                    .tr-badge.down { background:#2d0a0a; color:#f87171; }
+                    .tr-badge.cited { background:#0c4a6e; color:#38bdf8; }
+                    .tr-badge.notcited { background:#1f2937; color:#6b7280; }
+                    .tr-badge.new { background:#1e1b4b; color:#a78bfa; }
+                    .tr-btn { background:transparent; border:1px solid #374151; border-radius:5px; padding:5px 12px; font-size:12px; font-weight:600; color:#9ca3af; cursor:pointer; }
+                    .tr-btn:hover { border-color:#6b7280; color:#e5e7eb; }
+                    .tr-btn.primary { background:#7e22ce; border-color:#7e22ce; color:#fff; }
+                    .tr-btn.primary:hover { background:#9333ea; }
+                    .tr-btn.green { border-color:#166534; color:#4ade80; }
+                    .tr-btn.danger { border-color:#7f1d1d; color:#f87171; }
+                    .tr-input { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:8px 12px; font-size:13px; color:#e5e7eb; outline:none; width:100%; }
+                    .tr-input:focus { border-color:#7e22ce; }
+                    .tr-select { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:8px 10px; font-size:13px; color:#e5e7eb; outline:none; }
+                    .tr-change-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+                    .tr-pulse { animation: tr-blink 2s infinite; }
+                    @keyframes tr-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+                    .tr-timeline { border-left:2px solid #1f2937; margin-left:12px; padding-left:18px; }
+                    .tr-timeline-item { position:relative; padding:10px 0; }
+                    .tr-timeline-item::before { content:''; position:absolute; left:-23px; top:14px; width:8px; height:8px; border-radius:50%; background:#374151; }
+                    .tr-timeline-item.sig::before { background:#a78bfa; }
+                </style>
+
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Content Lifecycle Tracker</h2>
+                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">Track Google position, AI Overview citations, and content changes over time</p>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="loadTrackerPages()" class="tr-btn" id="trRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
+                        <button onclick="openAddPageModal()" class="tr-btn primary">+ Add URL</button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+                    <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">AI Overview cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgGraaf" style="color:#e5e7eb;">—</div><div class="lbl">Avg GRAAF score</div></div>
+                </div>
+
+                <!-- Client filter -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Filter by client:</label>
+                    <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
+                        <option value="">All clients</option>
+                    </select>
+                    <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
+                </div>
+
+                <!-- Pages list -->
+                <div id="trPagesList"></div>
+
+                <!-- Add URL modal -->
+                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(580px,95vw);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="font-weight:700;font-size:1rem;">Add URL to Tracker</h3>
+                            <button onclick="closeAddPageModal()" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:14px;">
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">URL (with slug) *</label>
+                                <input id="trAddUrl" type="url" class="tr-input" placeholder="https://yoursite.com/blog/your-article">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Target Keyword *</label>
+                                <input id="trAddKeyword" type="text" class="tr-input" placeholder="e.g. best SEO tools 2025">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Page Title</label>
+                                <input id="trAddTitle" type="text" class="tr-input" placeholder="Optional — auto-detected if empty">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Check Frequency</label>
+                                <select id="trAddFreq" class="tr-select" style="width:100%;">
+                                    <option value="1day">Daily (heavy usage)</option>
+                                    <option value="3days" selected>Every 3 days ← recommended</option>
+                                    <option value="1week">Weekly</option>
+                                    <option value="2weeks">Every 2 weeks (stable pages)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Paste Current HTML (optional — enables change detection)</label>
+                                <textarea id="trAddHtml" class="tr-input" rows="4" placeholder="Paste the current published HTML of this page..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:4px;">
+                                <button onclick="submitAddPage()" class="tr-btn primary" id="trAddSubmitBtn">Add & Run First Check</button>
+                                <button onclick="closeAddPageModal()" class="tr-btn">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Changes popup -->
+                <div id="trChangesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trChangesModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 id="trChangesTitle" style="font-weight:700;">Changes & Recommendations</h3>
+                            <button onclick="document.getElementById('trChangesModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div id="trChangesBody"></div>
+                    </div>
+                </div>
+
+                <!-- HTML update modal -->
+                <div id="trHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trHtmlModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="font-weight:700;">Update Page HTML</h3>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Paste the updated published HTML. The system will detect what changed and generate new recommendations.</p>
+                        <input type="hidden" id="trHtmlPageId">
+                        <textarea id="trHtmlContent" class="tr-input" rows="10" placeholder="Paste new HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                        <div style="display:flex;gap:10px;margin-top:14px;">
+                            <button onclick="submitHtmlUpdate()" class="tr-btn primary">Save & Re-check</button>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" class="tr-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ENGINE ACCESS CODES -->
+            <div id="tab-enginecodes" class="tab-content hidden">
+
             <div id="tab-enginecodes" class="tab-content hidden">
                 <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
                     <div class="flex justify-between items-center mb-6">
