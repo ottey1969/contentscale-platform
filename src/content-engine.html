@@ -3191,9 +3191,10 @@ async function loadTrackerPages() {
   try { _tok3 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
   if (!_tok3) { renderTrackerList(); return; }
 
-  // Show skeleton loading animation immediately
+  // Show skeleton only when a profile is selected
   var skelEl = document.getElementById('trPagesList');
-  if (skelEl) {
+  var _hasProfile = _context.profileId || (_profile && _profile.id);
+  if (skelEl && _hasProfile) {
     var skelHtml = '';
     for (var si = 0; si < 6; si++) {
       skelHtml += '<div class="tracker-skeleton-row">'
