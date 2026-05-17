@@ -2766,7 +2766,8 @@ async function copyMasterBrief() {
   
   try {
     await navigator.clipboard.writeText(briefText);
-    toast('✅ Brief copied! Paste into Claude.ai or ChatGPT to write the HTML.', 4000, 'ok');
+    updateWorkflowStep(5);
+  toast('✅ Brief copied! Paste into Claude.ai or ChatGPT to write the HTML.', 4000, 'ok');
   } catch(e) {
     // Fallback: show in a prompt
     var ta = document.createElement('textarea');
@@ -3238,6 +3239,7 @@ async function loadTrackerPages() {
 
     renderTrackerKpis();
     renderTrackerList();
+    if (_trPages && _trPages.length > 0 && (_context.profileId || (_profile && _profile.id))) updateWorkflowStep(2);
   } catch(e) {
     var el = document.getElementById('trPagesList');
     if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">Failed: ' + e.message + '</div>';
@@ -6292,6 +6294,7 @@ async function runSerpSpy() {
     });
     clearInterval(stepTimer);
     stat.textContent = '✓ Analysis complete';
+    updateWorkflowStep(3);
     btn.disabled = false;
     btn.textContent = '🔍 Run Spy';
 
