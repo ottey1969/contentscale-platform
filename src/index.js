@@ -4299,6 +4299,27 @@ httpServer.on('upgrade', (req, socket, head) => {
   }
 });
 
+
+// ── Auto-assign profile_id to tracker pages missing it ──────────────────────
+async function migrateTrackerPageProfiles() {
+  try {
+    const profiles = await pool.query(`SELECT id, domain, engine_code_id FROM content_profiles WHERE domain IS NOT NULL AND domain != ''`);
+    if (!profiles.rows.length) return;
+    let assigned = 0;
+    for (const profile of profiles.rows) {
+      const domain = profile.domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+      if (!domain) continue;
+      const r = await pool.query(
+        `UPDATE tracker_pages SET profile_id=$1 WHERE profile_id IS NULL AND engine_code_id=$2 AND (url ILIKE $3 OR url ILIKE $4) RETURNING id`,
+        [profile.id, profile.engine_code_id, '%' + domain + '%', '%www.' + domain + '%']
+      );
+      assigned += r.rowCount;
+    }
+    if (assigned > 0) console.log(`[migration] Auto-assigned profile_id to ${assigned} tracker pages`);
+    else console.log('[migration] All tracker pages already have profile_id assigned');
+  } catch(e) { console.error('[migration] profile assign error:', e.message); }
+}
+
 async function startServer() {
 console.log('🚀 =====================================');
 console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
@@ -4313,6 +4334,7 @@ console.log('🚀  34 Recommendation Checks');
 console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
+  migrateTrackerPageProfiles(); // auto-assign missing profile_ids on startup
 const dbConnected = await waitForDatabase();
   if (!dbConnected) {
     console.log('⚠️  Database NOT connected at startup — starting auto-reconnect timer');
@@ -24877,13 +24899,10 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
             profileDomain = pdR.rows[0].domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
           }
         } catch(e) {}
-        if (profileDomain) {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.profile_id=$2 OR p.url ILIKE $3 OR p.url ILIKE $4) ORDER BY p.created_at DESC`;
-          params = [codeId, profileId, '%' + profileDomain + '%', '%' + profileDomain.replace(/^www\./, '') + '%'];
-        } else {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`;
-          params = [codeId, profileId];
-        }
+        // Strict: only show pages with exact profile_id match
+        // Domain fallback removed — prevents cross-profile bleed
+        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`;
+        params = [codeId, profileId];
       } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
     }
     const r = await pool.query(q, params);
