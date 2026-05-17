@@ -25299,7 +25299,7 @@ function scoreAICitation(html, bodyText, keyword) {
 
 // ── POST /api/tracker/serp-spy ───────────────────────────────────────────────
 app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
-  const { keyword, profile_url, page_id } = req.body;
+  const { keyword, profile_url, page_id, live_html } = req.body;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
@@ -25338,7 +25338,20 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   }
   if (!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment'});
   const top5 = serpUrls.slice(0,5);
-  const [clientScrape,...compScrapes] = await Promise.all([myUrl?scrapeBodyText(myUrl,8000):Promise.resolve({text:'',status:0,fullHtml:''}), ...top5.map(e=>scrapeBodyText(e.url,6000))]);
+  // If user pasted live HTML, use it directly — more accurate than parser
+  let clientScrape;
+  if (live_html && live_html.trim().length > 100) {
+    // Extract text from live HTML
+    const liveText = live_html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
+      .replace(/<[^>]+>/g,' ')
+      .replace(/\s+/g,' ').trim().substring(0, 8000);
+    clientScrape = { text: liveText, status: 200, fullHtml: live_html };
+    console.log('[serp-spy] Using pasted live HTML for client page (' + live_html.length + ' chars)');
+  } else {
+    clientScrape = myUrl ? await scrapeBodyText(myUrl, 8000) : { text: '', status: 0, fullHtml: '' };
+  }
+  const compScrapes = await Promise.all(top5.map(e=>scrapeBodyText(e.url,6000)));
   const clientAI = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
   const stops = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','was','this','that','it','we','you','they','not','can','all','from']);
   const clientWords = new Set((clientScrape.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!stops.has(w)));

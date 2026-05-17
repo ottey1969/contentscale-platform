@@ -2540,11 +2540,13 @@ function _updateStage(pipelineId, stageId, state, output) {
 async function cmdAnalyse(url, keyword) {
   // Fallback: use spy URL or tracker URL — never let it scan the wrong page
   if (!url || url.trim() === '') {
-    url = window._lastSpyUrl || _context.url || '';
+    url = window._lastSpyUrl || (_context && _context.url) || '';
   }
   if (!url) { addAgentMessage('⚠️ No URL to analyse. Open Spy first or enter a URL.'); return; }
-  // Also inherit keyword from spy if not passed
-  if (!keyword && window._lastSpyKeyword) keyword = window._lastSpyKeyword;
+  // Keyword: spy keyword takes priority over context keyword (prevents wrong keyword from app default)
+  if (!keyword || keyword.trim() === '') {
+    keyword = window._lastSpyKeyword || (_context && _context.keyword) || '';
+  }
   _context.url = url; _context.keyword = keyword;
   var prog = addProgress('Deep analysis — scanning page, checking competitors, AI Overviews…', 0);
   try {
@@ -2691,6 +2693,68 @@ function removeProgress(id) {
 // Global action handler registry for quick buttons
 var _actionRegistry = {};
 var _actionIdCounter = 0;
+
+// ── Copy Master Brief to clipboard ─────────────────────────────────────────
+async function copyMasterBrief() {
+  // Build brief from conversation history + spy data + analysis
+  var parts = [];
+  
+  // Add spy brief if available
+  if (window._lastSpyData && window._lastSpyKeyword) {
+    var spy = window._lastSpyData;
+    var kw = window._lastSpyKeyword;
+    var url = window._lastSpyUrl || (_context && _context.url) || '';
+    parts.push('=== CONTENT BRIEF FOR EXTERNAL AI ===');
+    parts.push('Keyword: "' + kw + '"');
+    if (url) parts.push('Page: ' + url);
+    if (spy.step2_pattern && spy.step2_pattern.the_ranking_formula) {
+      parts.push('\nRANKING FORMULA: ' + spy.step2_pattern.the_ranking_formula);
+    }
+    var entities = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,5)
+      .map(function(e){ return '"' + (e.entity||e) + '"'; }).join(', ');
+    if (entities) parts.push('MISSING ENTITIES: ' + entities);
+    var missing = (spy.step4_missing || []).slice(0,3)
+      .map(function(m){ return '• ' + (m.gap||'') + ': ' + (m.how_to_exploit||''); }).join('\n');
+    if (missing) parts.push('GAPS:\n' + missing);
+    var wins = (spy.quick_wins || []).slice(0,3)
+      .map(function(w){ return '• ' + (w.win||w); }).join('\n');
+    if (wins) parts.push('QUICK WINS:\n' + wins);
+    if (spy.ai_overview_blueprint) parts.push('AI OVERVIEW: ' + spy.ai_overview_blueprint);
+    parts.push('');
+  }
+  
+  // Add full conversation (agent analysis + HTML snippets)
+  if (_history && _history.length) {
+    parts.push('=== AGENT ANALYSIS & HTML SNIPPETS ===');
+    _history.forEach(function(h) {
+      if (h.role === 'assistant' && h.content && h.content.length > 50) {
+        parts.push(h.content);
+        parts.push('---');
+      }
+    });
+  }
+  
+  if (parts.length === 0) {
+    parts.push('No brief generated yet. Run Spy + Get Deeper Claude Suggestions first.');
+  }
+  
+  var briefText = parts.join('\n');
+  
+  try {
+    await navigator.clipboard.writeText(briefText);
+    toast('✅ Brief copied! Paste into Claude.ai or ChatGPT to write the HTML.', 4000, 'ok');
+  } catch(e) {
+    // Fallback: show in a prompt
+    var ta = document.createElement('textarea');
+    ta.value = briefText;
+    ta.style.cssText = 'position:fixed;top:10px;left:10px;width:80%;height:80%;z-index:99999;font-size:12px;padding:12px;';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('✅ Brief copied to clipboard!', 3000, 'ok');
+  }
+}
 
 function addActions(actions) {
   var msgs = document.getElementById('messages');
@@ -6172,10 +6236,12 @@ async function runSerpSpy() {
   }, 8000);
 
   try {
+    var liveHtml = (document.getElementById('serpSpyHtml') || {}).value || '';
     var d = await api('/api/tracker/serp-spy', 'POST', {
       keyword: kw,
       profile_url: url,
-      page_id: _serpSpyPageId
+      page_id: _serpSpyPageId,
+      live_html: liveHtml.trim() || null  // null if empty — backend falls back to URL fetch
     });
     clearInterval(stepTimer);
     stat.textContent = '✓ Analysis complete';
@@ -6196,11 +6262,8 @@ async function runSerpSpy() {
       var _spyAct = window._serpSpyAction || 'rewrite';
       var _spyRec = window._serpSpyRecommended || '';
       actDiv.innerHTML =
-        (_spyAct === 'surgical' ?
-          '<button onclick="spyApplySurgical()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🔧 Apply Surgical Fixes</button>' :
-          '<button onclick="spyOpenRewrite()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#f56d00,#c2410c);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🚀 Rewrite to Beat Rank 1</button>'
-        ) +
-        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🧠 Analyse with Agent</button>' +
+        '<button onclick="copyMasterBrief()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🌐 Copy Master Brief → External AI</button>' +
+        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Claude Suggestions</button>' +
         '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
         (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
@@ -7234,6 +7297,17 @@ function renderSerpSpyReport(s) {
         <input id="serpSpyUrl" type="text" placeholder="https://yoursite.com/page" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;">
       </div>
       <button id="serpSpyRunBtn" onclick="runSerpSpy()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🔍 Run Spy</button>
+    </div>
+    <!-- Live HTML paste (collapsible) -->
+    <div style="padding:0 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">
+      <button onclick="var el=document.getElementById('spyHtmlPanel');el.style.display=el.style.display==='none'?'block':'none';" style="background:none;border:none;color:#6b7280;font-size:10px;cursor:pointer;padding:6px 0;font-weight:700;letter-spacing:.05em;">
+        📋 PASTE LIVE HTML (optional — more accurate than URL parsing) ▾
+      </button>
+      <div id="spyHtmlPanel" style="display:none;padding-bottom:10px;">
+        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;">Right-click → View Page Source on your page → Ctrl+A → Ctrl+C → paste here. Parser sees exactly what Google sees.</div>
+        <textarea id="serpSpyHtml" rows="4" placeholder="Paste your page HTML source here (Ctrl+U → Ctrl+A → Ctrl+C)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#9ca3af;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
+        <div style="font-size:9px;color:#34d399;margin-top:3px;">✓ When pasted, Spy uses this HTML directly — bypasses parser limitations completely.</div>
+      </div>
     </div>
     <div style="padding:6px 20px;flex-shrink:0;font-size:10px;color:#34d399;min-height:18px;" id="serpSpyStatus"></div>
     <!-- Result scrollable -->
