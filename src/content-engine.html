@@ -3405,6 +3405,7 @@ function renderTrackerList() {
 
   // ── Filter state (persisted in memory) ──────────────────────────────────
   if (!window._trFilter) window._trFilter = { priority: 'all', status: 'all', score: 'all', search: '' };
+  if (!window._trSelected) window._trSelected = new Set();
 
   var summaryBar = '<div style="display:flex;gap:8px;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">' +
     '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Priority:</span>' +
@@ -3444,6 +3445,14 @@ function renderTrackerList() {
     '</select>' +
     '<button onclick="window._trFilter={priority:\'all\',status:\'all\',score:\'all\',search:\'\'};renderTrackerList()" style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Clear</button>' +
     '<button onclick="scanAllImported()" title="Run ContentScore scan on all pages that have never been scanned" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;margin-left:auto;">📊 Scan All Imported</button>' +
+  '</div>' +
+  // Bulk actions bar (visible only when items selected)
+  '<div id="trBulkBar" style="display:' + (window._trSelected.size > 0 ? 'flex' : 'none') + ';gap:8px;padding:6px 16px 8px;align-items:center;background:rgba(124,58,237,0.08);border-bottom:1px solid rgba(124,58,237,0.2);">' +
+    '<span style="font-size:11px;color:#a78bfa;font-weight:700;">' + window._trSelected.size + ' selected</span>' +
+    '<button onclick="scanSelected()" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;">📊 Scan Selected</button>' +
+    '<button onclick="deleteSelected()" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3);cursor:pointer;">🗑 Delete Selected</button>' +
+    '<button onclick="window._trSelected.clear();renderTrackerList()" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Deselect all</button>' +
+    '<label style="margin-left:auto;font-size:11px;color:#6b7280;cursor:pointer;"><input type="checkbox" id="trSelectAll" onchange="toggleSelectAll(this.checked)" style="margin-right:4px;">Select all visible</label>' +
   '</div>';
 
   // Split active vs done — active get numbered, done go to bottom with separate section
@@ -3498,6 +3507,10 @@ function renderTrackerList() {
     var activeNum = idx + 1;
     // Number badge — START HERE on #1, number on rest
     // Number sits to the LEFT of the card — clear vertical counter
+    var _isSelected = window._trSelected.has(p.id);
+    var cbx = '<div style="width:24px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;">' +
+      '<input type="checkbox" ' + (_isSelected ? 'checked' : '') + ' onchange="toggleSelectPage(' + p.id + ',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;">' +
+      '</div>';
     var numBadge = (idx === 0 && pri.score > 100) ?
       '<div style="width:36px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:2px;gap:3px;">' +
         '<span style="font-size:13px;font-weight:900;color:' + pri.color + ';line-height:1;">1</span>' +
@@ -3575,7 +3588,7 @@ function renderTrackerList() {
     var doneStyle = p.is_done ? 'opacity:0.45;' : '';
     return '<div style="' + doneStyle + 'padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;">' +
     '<div style="display:flex;gap:0;align-items:flex-start;">' +
-      numBadge +
+      cbx + numBadge +
       '<div style="flex:1;min-width:0;border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:10px;">' +
         '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + (imprLabel||'') + '</div>' +
         '<div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
@@ -3689,6 +3702,60 @@ async function submitTrackerAdd() {
 
 // ── Force Check All — resets schedule and checks every page immediately ─────
 // ── Scan All Imported — ContentScore scan on every page with no scan yet ──
+// ── Selection helpers ────────────────────────────────────────────────────
+function toggleSelectPage(pageId, checked) {
+  if (checked) window._trSelected.add(pageId);
+  else window._trSelected.delete(pageId);
+  // Update bulk bar without full re-render
+  var bar = document.getElementById('trBulkBar');
+  if (bar) bar.style.display = window._trSelected.size > 0 ? 'flex' : 'none';
+  var countEl = bar && bar.querySelector('span');
+  if (countEl) countEl.textContent = window._trSelected.size + ' selected';
+}
+
+function toggleSelectAll(checked) {
+  var visibleIds = (_trPages||[]).filter(function(p){ return !p.is_done; }).map(function(p){ return p.id; });
+  if (checked) visibleIds.forEach(function(id){ window._trSelected.add(id); });
+  else window._trSelected.clear();
+  renderTrackerList();
+}
+
+async function scanSelected() {
+  var ids = Array.from(window._trSelected);
+  if (!ids.length) { toast('No pages selected', 2000, 'warn'); return; }
+  var pages = (_trPages||[]).filter(function(p){ return ids.indexOf(p.id) > -1; });
+  toast('📊 Scanning ' + pages.length + ' selected pages…', 3000, 'info');
+  var done = 0; var failed = 0;
+  for (var i = 0; i < pages.length; i++) {
+    try {
+      var r = await api('/api/tracker/pages/' + pages[i].id + '/check', 'POST');
+      if (r.success) { await waitForCheck(pages[i].id); done++; }
+      else failed++;
+    } catch(e) { failed++; }
+    await new Promise(function(res){ setTimeout(res, 1000); });
+  }
+  window._trSelected.clear();
+  await loadTrackerPages();
+  toast('✅ ' + done + ' pages scanned' + (failed?' · '+failed+' failed':''), 3000, 'ok');
+}
+
+async function deleteSelected() {
+  var ids = Array.from(window._trSelected);
+  if (!ids.length) { toast('No pages selected', 2000, 'warn'); return; }
+  if (!confirm('Delete ' + ids.length + ' selected pages? This cannot be undone.')) return;
+  var done = 0; var failed = 0;
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var r = await api('/api/tracker/pages/' + ids[i], 'DELETE');
+      if (r.success) { done++; _trPages = _trPages.filter(function(p){ return p.id !== ids[i]; }); }
+      else failed++;
+    } catch(e) { failed++; }
+  }
+  window._trSelected.clear();
+  renderTrackerList();
+  toast('🗑 ' + done + ' pages deleted' + (failed?' · '+failed+' failed':''), 3000, 'ok');
+}
+
 async function scanAllImported() {
   var noScore = (_trPages||[]).filter(function(p){
     var snap = p.latest_snapshot || {};
