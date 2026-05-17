@@ -3404,7 +3404,7 @@ function renderTrackerList() {
   }).length;
 
   // ── Filter state (persisted in memory) ──────────────────────────────────
-  if (!window._trFilter) window._trFilter = { priority: 'all', status: 'all', score: 'all', search: '' };
+  if (!window._trFilter) window._trFilter = { priority: 'all', status: 'all', score: 'all', search: '', domain: 'all' };
   if (!window._trSelected) window._trSelected = new Set();
 
   var summaryBar = '<div style="display:flex;gap:8px;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">' +
@@ -3421,8 +3421,8 @@ function renderTrackerList() {
 
   // ── Filter bar ──────────────────────────────────────────────────────────
   var filterBar = '<div style="display:flex;gap:6px;padding:6px 16px 10px;flex-wrap:wrap;align-items:center;">' +
-    '<input id="trSearchInput" type="text" placeholder="🔍 Search URL or keyword…" value="' + (window._trFilter.search||'') + '" oninput="window._trFilter.search=this.value;renderTrackerList()" style="flex:1;min-width:140px;max-width:220px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;outline:none;">' +
-    '<select onchange="window._trFilter.priority=this.value;renderTrackerList()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
+    '<input id="trSearchInput" type="text" placeholder="🔍 Search URL or keyword…" value="' + (window._trFilter.search||'') + '" oninput="window._trFilter.search=this.value;renderTrackerList()" style="flex:1;min-width:140px;max-width:220px;background:#1f2937;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;outline:none;">' +
+    '<select onchange="window._trFilter.priority=this.value;renderTrackerList()" style="background:#1f2937;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
       '<option value="all"' + (window._trFilter.priority==='all'?' selected':'') + '>All priorities</option>' +
       '<option value="quickwin"' + (window._trFilter.priority==='quickwin'?' selected':'') + '>🔥 Quick Win</option>' +
       '<option value="ai"' + (window._trFilter.priority==='ai'?' selected':'') + '>⚡ AI Citation</option>' +
@@ -3430,20 +3430,34 @@ function renderTrackerList() {
       '<option value="boost"' + (window._trFilter.priority==='boost'?' selected':'') + '>📈 Boost</option>' +
       '<option value="winning"' + (window._trFilter.priority==='winning'?' selected':'') + '>✅ Winning</option>' +
     '</select>' +
-    '<select onchange="window._trFilter.status=this.value;renderTrackerList()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
+    '<select onchange="window._trFilter.status=this.value;renderTrackerList()" style="background:#1f2937;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
       '<option value="all"' + (window._trFilter.status==='all'?' selected':'') + '>All status</option>' +
       '<option value="never"' + (window._trFilter.status==='never'?' selected':'') + '>⚠️ Never checked</option>' +
       '<option value="due"' + (window._trFilter.status==='due'?' selected':'') + '>🔴 Due now</option>' +
       '<option value="ok"' + (window._trFilter.status==='ok'?' selected':'') + '>✅ Up to date</option>' +
     '</select>' +
-    '<select onchange="window._trFilter.score=this.value;renderTrackerList()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
+    '<select onchange="window._trFilter.score=this.value;renderTrackerList()" style="background:#1f2937;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
       '<option value="all"' + (window._trFilter.score==='all'?' selected':'') + '>All scores</option>' +
       '<option value="low"' + (window._trFilter.score==='low'?' selected':'') + '>❌ Below 70</option>' +
       '<option value="mid"' + (window._trFilter.score==='mid'?' selected':'') + '>🟡 70–85</option>' +
       '<option value="high"' + (window._trFilter.score==='high'?' selected':'') + '>✅ 85+</option>' +
       '<option value="none"' + (window._trFilter.score==='none'?' selected':'') + '>— No score</option>' +
     '</select>' +
-    '<button onclick="window._trFilter={priority:\'all\',status:\'all\',score:\'all\',search:\'\'};renderTrackerList()" style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Clear</button>' +
+    // Domain selector — only show if mixed domains detected
+    (function(){
+      var _doms = [];
+      (_trPages||[]).forEach(function(p){
+        if (!p.url) return;
+        try { var d=new URL(p.url.startsWith('http')?p.url:'https://'+p.url).hostname.replace(/^www\./,''); if(_doms.indexOf(d)===-1)_doms.push(d); } catch(e){}
+      });
+      if (_doms.length <= 1) return '';
+      _doms.sort();
+      return '<select onchange="window._trFilter.domain=this.value;renderTrackerList()" title="Filter by domain" style="background:#1f2937;border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:5px 8px;color:#f87171;font-size:11px;cursor:pointer;outline:none;font-weight:700;">' +
+        '<option value="all"' + (window._trFilter.domain==='all'?' selected':'') + '>⚠️ All domains</option>' +
+        _doms.map(function(d){ return '<option value="'+d+'"'+(window._trFilter.domain===d?' selected':'')+'>'+d+'</option>'; }).join('') +
+      '</select>';
+    })() +
+    '<button onclick="window._trFilter={priority:\'all\',status:\'all\',score:\'all\',search:\'\',domain:\'all\'};renderTrackerList()" style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Clear</button>' +
     '<button onclick="scanAllImported()" title="Run ContentScore scan on all pages that have never been scanned" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;margin-left:auto;">📊 Scan All Imported</button>' +
   '</div>' +
   // Bulk actions bar (visible only when items selected)
@@ -3490,6 +3504,14 @@ function renderTrackerList() {
       if (f.score === 'mid' && (cs < 70 || cs > 85)) return false;
       if (f.score === 'high' && cs < 85) return false;
       if (f.score === 'none' && cs > 0) return false;
+    }
+
+    // Domain filter
+    if (f.domain && f.domain !== 'all') {
+      try {
+        var _pd = new URL((p.url||'').startsWith('http')?(p.url||''):'https://'+(p.url||'')).hostname.replace(/^www\./, '');
+        if (_pd !== f.domain) return false;
+      } catch(e) { return false; }
     }
 
     // Search filter
