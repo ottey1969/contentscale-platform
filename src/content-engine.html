@@ -6442,6 +6442,18 @@ var _serpSpyPageId = null;
 
 // ── Meta Intelligence: get best title / description / H1 ─────────────────
 async function getMetaIntel(pageId, url, keyword, btn) {
+  // If no keyword, derive from URL slug or prompt user
+  if (!keyword || !keyword.trim()) {
+    var _urlClean = (url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+    var slug = _urlClean.split('/').pop().replace(/[-_]/g, ' ').trim();
+    // Homepage (no slug) always needs a prompt
+    keyword = slug || prompt('No keyword set. Enter the target keyword for\n' + url + '\n\nExample: "emergency roof repair nj"');
+    if (!keyword) return;
+    // Save keyword to page
+    api('/api/tracker/pages/' + pageId, 'PATCH', { keyword: keyword }).catch(function(){});
+    var pg = (_trPages || []).find(function(p){ return p.id === pageId; });
+    if (pg) pg.keyword = keyword;
+  }
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Analysing…'; }
   try {
     var serperKey = null; // backend handles API
