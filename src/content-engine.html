@@ -3403,22 +3403,97 @@ function renderTrackerList() {
     return next <= now;
   }).length;
 
-  var summaryBar = '<div style="display:flex;gap:8px;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">' +
+  // ── Filter state (persisted in memory) ──────────────────────────────────
+  if (!window._trFilter) window._trFilter = { priority: 'all', status: 'all', score: 'all', search: '' };
+
+  var summaryBar = '<div style="display:flex;gap:8px;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">' +
     '<span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Priority:</span>' +
     (qwCount ? '<span style="font-size:11px;font-weight:700;background:rgba(245,109,0,.12);border:1px solid rgba(245,109,0,.3);color:#f56d00;padding:3px 10px;border-radius:20px;">🔥 ' + qwCount + ' Quick Win' + (qwCount > 1 ? 's' : '') + '</span>' : '') +
     (aiCount ? '<span style="font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:3px 10px;border-radius:20px;">⚡ ' + aiCount + ' AI Citation</span>' : '') +
     (dueCount ? '<span id="checkAllDueBadge" style="font-size:11px;font-weight:700;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:3px 10px;border-radius:20px;">🔴 ' + dueCount + ' due</span>' : '<span style="font-size:11px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);color:#34d399;padding:3px 10px;border-radius:20px;">✅ All checked</span>') +
     '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
     (dueCount ? '<button onclick="checkAllDue()" id="checkAllDueBtn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;cursor:pointer;">▶ Check All Due (' + dueCount + ')</button>' : '') +
+    '<button onclick="forceCheckAll()" title="Force-check ALL pages now, ignoring schedule" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.07);color:#fbbf24;cursor:pointer;">↻ Force All</button>' +
     '<span style="font-size:10px;color:#4b5563;">Sorted highest opportunity first</span>' +
     '</div>' +
     '</div>';
 
+  // ── Filter bar ──────────────────────────────────────────────────────────
+  var filterBar = '<div style="display:flex;gap:6px;padding:6px 16px 10px;flex-wrap:wrap;align-items:center;">' +
+    '<input id="trSearchInput" type="text" placeholder="🔍 Search URL or keyword…" value="' + (window._trFilter.search||'') + '" oninput="window._trFilter.search=this.value;renderTrackerList()" style="flex:1;min-width:140px;max-width:220px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;outline:none;">' +
+    '<select onchange="window._trFilter.priority=this.value;renderTrackerList()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
+      '<option value="all"' + (window._trFilter.priority==='all'?' selected':'') + '>All priorities</option>' +
+      '<option value="quickwin"' + (window._trFilter.priority==='quickwin'?' selected':'') + '>🔥 Quick Win</option>' +
+      '<option value="ai"' + (window._trFilter.priority==='ai'?' selected':'') + '>⚡ AI Citation</option>' +
+      '<option value="surgical"' + (window._trFilter.priority==='surgical'?' selected':'') + '>🔧 Surgical Fix</option>' +
+      '<option value="boost"' + (window._trFilter.priority==='boost'?' selected':'') + '>📈 Boost</option>' +
+      '<option value="winning"' + (window._trFilter.priority==='winning'?' selected':'') + '>✅ Winning</option>' +
+    '</select>' +
+    '<select onchange="window._trFilter.status=this.value;renderTrackerList()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
+      '<option value="all"' + (window._trFilter.status==='all'?' selected':'') + '>All status</option>' +
+      '<option value="never"' + (window._trFilter.status==='never'?' selected':'') + '>⚠️ Never checked</option>' +
+      '<option value="due"' + (window._trFilter.status==='due'?' selected':'') + '>🔴 Due now</option>' +
+      '<option value="ok"' + (window._trFilter.status==='ok'?' selected':'') + '>✅ Up to date</option>' +
+    '</select>' +
+    '<select onchange="window._trFilter.score=this.value;renderTrackerList()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:11px;cursor:pointer;outline:none;">' +
+      '<option value="all"' + (window._trFilter.score==='all'?' selected':'') + '>All scores</option>' +
+      '<option value="low"' + (window._trFilter.score==='low'?' selected':'') + '>❌ Below 70</option>' +
+      '<option value="mid"' + (window._trFilter.score==='mid'?' selected':'') + '>🟡 70–85</option>' +
+      '<option value="high"' + (window._trFilter.score==='high'?' selected':'') + '>✅ 85+</option>' +
+      '<option value="none"' + (window._trFilter.score==='none'?' selected':'') + '>— No score</option>' +
+    '</select>' +
+    '<button onclick="window._trFilter={priority:\'all\',status:\'all\',score:\'all\',search:\'\'};renderTrackerList()" style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Clear</button>' +
+    '<button onclick="scanAllImported()" title="Run ContentScore scan on all pages that have never been scanned" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;margin-left:auto;">📊 Scan All Imported</button>' +
+  '</div>';
+
   // Split active vs done — active get numbered, done go to bottom with separate section
-  var activePages = trData.filter(function(p){ return !p.is_done; });
+  var activePages = trData.filter(function(p) {
+    if (p.is_done) return false;
+    var f = window._trFilter || {};
+    var snap = p.latest_snapshot || {};
+    var cs = parseInt(snap.score || 0);
+    var pri = p._priority || {};
+
+    // Priority filter
+    if (f.priority && f.priority !== 'all') {
+      var lbl = (pri.label||'').toLowerCase();
+      var act = (pri.action||'');
+      if (f.priority === 'quickwin' && !lbl.includes('quick win')) return false;
+      if (f.priority === 'ai' && !lbl.includes('ai cited') && !lbl.includes('ai citation')) return false;
+      if (f.priority === 'surgical' && act !== 'surgical') return false;
+      if (f.priority === 'boost' && !lbl.includes('boost') && !lbl.includes('gap')) return false;
+      if (f.priority === 'winning' && !lbl.includes('winning')) return false;
+    }
+
+    // Status filter
+    if (f.status && f.status !== 'all') {
+      var now = Date.now();
+      var checked = !!p.last_checked_at;
+      var nextAt = p.next_check_at ? new Date(p.next_check_at).getTime() : (checked ? (new Date(p.last_checked_at).getTime() + 3*86400000) : 0);
+      if (f.status === 'never' && checked) return false;
+      if (f.status === 'due' && (checked && nextAt > now)) return false;
+      if (f.status === 'ok' && (!checked || nextAt <= now)) return false;
+    }
+
+    // Score filter
+    if (f.score && f.score !== 'all') {
+      if (f.score === 'low' && (cs === 0 || cs >= 70)) return false;
+      if (f.score === 'mid' && (cs < 70 || cs > 85)) return false;
+      if (f.score === 'high' && cs < 85) return false;
+      if (f.score === 'none' && cs > 0) return false;
+    }
+
+    // Search filter
+    if (f.search && f.search.trim()) {
+      var s = f.search.trim().toLowerCase();
+      if (!(p.url||'').toLowerCase().includes(s) && !(p.keyword||'').toLowerCase().includes(s)) return false;
+    }
+
+    return true;
+  });
   var donePages   = trData.filter(function(p){ return p.is_done; });
 
-  el.innerHTML = '<div style="padding:0 16px;">' + summaryBar + activePages.map(function(p, idx) {
+  el.innerHTML = '<div style="padding:0 16px;">' + summaryBar + filterBar + activePages.map(function(p, idx) {
     var pri = p._priority;
     var activeNum = idx + 1;
     // Number badge — START HERE on #1, number on rest
@@ -3513,6 +3588,14 @@ function renderTrackerList() {
       '</div>' +
       '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
       '</div>' +
+      // ── Meta Intelligence row ──────────────────────────────────────────
+      (p.meta_intel ? '<div style="margin:6px 0 2px;padding:8px 12px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.2);border-radius:8px;">' +
+        '<div style="font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">📋 META INTELLIGENCE' + (p.meta_intel_at ? ' · <span style="color:#4b5563;font-weight:400;">' + new Date(p.meta_intel_at).toLocaleDateString() + '</span>' : '') + '</div>' +
+        (p.meta_intel.title ? '<div style="font-size:11px;color:#e5e7eb;margin-bottom:3px;"><span style="color:#a78bfa;font-weight:700;">Title:</span> ' + escHtml(p.meta_intel.title) + '</div>' : '') +
+        (p.meta_intel.description ? '<div style="font-size:11px;color:#9ca3af;margin-bottom:3px;"><span style="color:#7dd3fc;font-weight:700;">Desc:</span> ' + escHtml(p.meta_intel.description) + '</div>' : '') +
+        (p.meta_intel.h1 ? '<div style="font-size:11px;color:#9ca3af;"><span style="color:#34d399;font-weight:700;">H1:</span> ' + escHtml(p.meta_intel.h1) + '</div>' : '') +
+        '<button onclick="refreshMetaIntel(' + p.id + ',this)" style="margin-top:6px;font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:transparent;color:#a78bfa;cursor:pointer;">↻ Refresh</button>' +
+      '</div>' : '<button onclick="getMetaIntel(' + p.id + ',\'' + escHtml(p.url||'') + '\',\'' + escHtml(p.keyword||'') + '\',this)" style="margin:4px 0 2px;font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid rgba(124,58,237,.2);background:rgba(124,58,237,.06);color:#a78bfa;cursor:pointer;font-weight:700;">📋 Get Best Title / Desc / H1</button>') +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
         (pri.action === 'rewrite' ?
@@ -3520,7 +3603,7 @@ function renderTrackerList() {
         : pri.action === 'surgical' ?
           '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">🔍 Spy & Brief</button>'
         : pri.action === 'check' ?
-          '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:rgba(124,58,237,.2);color:#a78bfa;cursor:pointer;font-weight:700;">▶ Check Now</button>'
+          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">🔍 Spy & Brief</button>'
         :
           '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>'
         ) +
@@ -3604,6 +3687,44 @@ async function submitTrackerAdd() {
   finally { btn.disabled = false; btn.textContent = 'Add & Start Tracking'; }
 }
 
+// ── Force Check All — resets schedule and checks every page immediately ─────
+// ── Scan All Imported — ContentScore scan on every page with no scan yet ──
+async function scanAllImported() {
+  var noScore = (_trPages||[]).filter(function(p){
+    var snap = p.latest_snapshot || {};
+    return !p.is_done && !snap.score;
+  });
+  if (!noScore.length) { toast('✅ All pages already have a ContentScore', 3000, 'ok'); return; }
+  if (!confirm('Run ContentScore scan on ' + noScore.length + ' pages with no score yet? This may take several minutes.')) return;
+
+  toast('📊 Starting ContentScore scans for ' + noScore.length + ' pages…', 3000, 'info');
+  var done = 0; var failed = 0;
+  for (var i = 0; i < noScore.length; i++) {
+    var p = noScore[i];
+    try {
+      var r = await api('/api/tracker/pages/' + p.id + '/check', 'POST', { scan_only: true });
+      if (r.success) {
+        await waitForCheck(p.id);
+        done++;
+        toast('📊 ' + done + '/' + noScore.length + ' scanned', 1500, 'info');
+      } else { failed++; }
+    } catch(e) { failed++; }
+    await new Promise(function(res){ setTimeout(res, 1200); });
+  }
+  await loadTrackerPages();
+  toast('✅ Scanned ' + done + ' pages' + (failed?' · '+failed+' failed':'') + ' — ContentScores updated', 4000, 'ok');
+}
+
+async function forceCheckAll() {
+  if (_checkAllRunning) { toast('Already running', 3000, 'warn'); return; }
+  var active = (_trPages||[]).filter(function(p){ return !p.is_done; });
+  if (!active.length) { toast('No pages to check', 2000, 'info'); return; }
+  if (!confirm('Force-check all ' + active.length + ' pages now? This ignores the 3-day schedule and may take a while.')) return;
+  // Reset next_check_at for all pages so checkAllDue picks them up
+  active.forEach(function(p){ p.next_check_at = null; p.last_checked_at = null; });
+  await checkAllDue();
+}
+
 // ── Check All Due — runs all overdue/never-checked pages, then re-sorts ────────
 var _checkAllRunning = false;
 async function checkAllDue() {
@@ -3637,6 +3758,10 @@ async function checkAllDue() {
       if (r.success) {
         // Wait for this check to complete before starting next
         await waitForCheck(p.id);
+        // Smart frequency: set based on priority after first check
+        var _pri2 = getPagePriority(p);
+        var _newFreq = (_pri2.action === 'rewrite' || (_pri2.label||'').includes('Quick Win') || (_pri2.label||'').includes('AI Cited')) ? '1day' : ((_pri2.label||'').includes('Winning') ? 'weekly' : '3days');
+        api('/api/tracker/pages/' + p.id, 'PATCH', { check_frequency: _newFreq }).catch(function(){});
         done++;
         // Update the page in local array so due indicator refreshes
         var idx = _trPages.findIndex(function(x){ return x.id === p.id; });
@@ -6225,6 +6350,34 @@ function syncGscToTracker() {
 
 // ── SERP SPY ─────────────────────────────────────────────────────────────────
 var _serpSpyPageId = null;
+
+// ── Meta Intelligence: get best title / description / H1 ─────────────────
+async function getMetaIntel(pageId, url, keyword, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analysing…'; }
+  try {
+    var serperKey = null; // backend handles API
+    var r = await api('/api/tracker/meta-intel', 'POST', { page_id: pageId, url: url, keyword: keyword });
+    if (r.success && r.meta_intel) {
+      // Update the page in _trPages
+      var pg = (_trPages || []).find(function(p){ return p.id === pageId; });
+      if (pg) { pg.meta_intel = r.meta_intel; pg.meta_intel_at = new Date().toISOString(); }
+      renderTrackerList();
+      toast('✅ Meta intelligence updated', 2000, 'ok');
+    } else {
+      toast('⚠️ ' + (r.error || 'Could not get meta intel'), 3000, 'warn');
+      if (btn) { btn.disabled = false; btn.textContent = '📋 Get Best Title / Desc / H1'; }
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 3000, 'warn');
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Get Best Title / Desc / H1'; }
+  }
+}
+
+async function refreshMetaIntel(pageId, btn) {
+  var pg = (_trPages || []).find(function(p){ return p.id === pageId; });
+  if (!pg) return;
+  await getMetaIntel(pageId, pg.url, pg.keyword, btn);
+}
 
 function openSerpSpy(pageId) {
   updateWorkflowStep(3);
