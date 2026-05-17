@@ -198,6 +198,30 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .pg-kpi-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 14px;text-align:center;}
 .pg-kpi-val{font-size:22px;font-weight:900;color:var(--text);}
 .pg-kpi-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px;}
+
+/* ── tracker skeleton loader ── */
+@keyframes trackerShimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+.tracker-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 600px 100%;
+  animation: trackerShimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+  height: 14px;
+  display: block;
+}
+.tracker-skeleton-row {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 </style>
 <base target="_blank">
 </head>
@@ -3166,6 +3190,28 @@ async function loadTrackerPages() {
   var _tok3 = '';
   try { _tok3 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
   if (!_tok3) { renderTrackerList(); return; }
+
+  // Show skeleton loading animation immediately
+  var skelEl = document.getElementById('trPagesList');
+  if (skelEl) {
+    var skelHtml = '';
+    for (var si = 0; si < 6; si++) {
+      skelHtml += '<div class="tracker-skeleton-row">'
+        + '<div style="display:flex;gap:10px;align-items:center;">'
+        + '<span class="tracker-skeleton" style="width:60px;height:20px;border-radius:6px;flex-shrink:0;"></span>'
+        + '<span class="tracker-skeleton" style="width:55%;height:13px;"></span>'
+        + '<span class="tracker-skeleton" style="width:80px;height:13px;margin-left:auto;"></span>'
+        + '</div>'
+        + '<span class="tracker-skeleton" style="width:40%;height:11px;"></span>'
+        + '</div>';
+    }
+    skelEl.innerHTML = '<div style="padding:4px 0;">'
+      + '<div style="font-size:10px;color:#4b5563;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;">'
+      + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;animation:trackerShimmer 1s ease-in-out infinite;"></span>'
+      + 'Loading pages…</div>'
+      + skelHtml + '</div>';
+  }
+
   try {
     var profileId = _context.profileId || (_profile && _profile.id) || null;
     var profileFilter = profileId ? '?profile_id=' + profileId : '';
