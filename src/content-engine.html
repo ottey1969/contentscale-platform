@@ -6632,9 +6632,11 @@ function closeSerpSpy() {
 }
 
 async function runSerpSpy() {
+  if (window._spyRunning) { toast('Spy is already running — please wait', 3000, 'warn'); return; }
   var kw  = document.getElementById('serpSpyKeyword').value.trim();
   var url = document.getElementById('serpSpyUrl').value.trim();
   if (!kw) { toast('Enter a keyword to spy on', 3000, 'warn'); return; }
+  window._spyRunning = true;
 
   var btn = document.getElementById('serpSpyRunBtn');
   var stat = document.getElementById('serpSpyStatus');
@@ -6656,19 +6658,33 @@ async function runSerpSpy() {
   ];
   var si = 0;
   var stepTimer = setInterval(function() {
-    si = (si + 1) % steps.length;
-    stat.textContent = steps[si];
+    if (si < steps.length - 1) {
+      si++;
+      stat.textContent = steps[si];
+    }
+    // Stays on last step — does NOT loop back
   }, 8000);
 
   try {
     var liveHtml = (document.getElementById('serpSpyHtml') || {}).value || '';
+    var _spyTimeout = setTimeout(function() {
+      if (window._spyRunning) {
+        window._spyRunning = false;
+        btn.disabled = false;
+        btn.textContent = '🔍 Run Spy';
+        stat.textContent = '⚠️ Timeout — try again';
+        result.innerHTML = '<div style="color:#f87171;padding:20px;">Spy took too long (90s). The SERP API may be slow. Try again.</div>';
+      }
+    }, 90000);
     var d = await api('/api/tracker/serp-spy', 'POST', {
       keyword: kw,
       profile_url: url,
       page_id: _serpSpyPageId,
-      live_html: liveHtml.trim() || null  // null if empty — backend falls back to URL fetch
+      live_html: liveHtml.trim() || null
     });
+    clearTimeout(_spyTimeout);
     clearInterval(stepTimer);
+    window._spyRunning = false;
     stat.textContent = '✓ Analysis complete';
     updateWorkflowStep(3);
     btn.disabled = false;
@@ -6702,6 +6718,7 @@ async function runSerpSpy() {
     }
   } catch(e) {
     clearInterval(stepTimer);
+    window._spyRunning = false;
     btn.disabled = false;
     btn.textContent = '🔍 Run Spy';
     stat.textContent = '';
@@ -7726,13 +7743,11 @@ function renderSerpSpyReport(s) {
     </div>
     <!-- Live HTML paste (collapsible) -->
     <div style="padding:0 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">
-      <button onclick="var el=document.getElementById('spyHtmlPanel');el.style.display=el.style.display==='none'?'block':'none';" style="background:none;border:none;color:#6b7280;font-size:10px;cursor:pointer;padding:6px 0;font-weight:700;letter-spacing:.05em;">
-        📋 PASTE LIVE HTML (optional — more accurate than URL parsing) ▾
-      </button>
-      <div id="spyHtmlPanel" style="display:none;padding-bottom:10px;">
-        <div style="font-size:9px;color:#6b7280;margin-bottom:4px;">Right-click → View Page Source on your page → Ctrl+A → Ctrl+C → paste here. Parser sees exactly what Google sees.</div>
-        <textarea id="serpSpyHtml" rows="4" placeholder="Paste your page HTML source here (Ctrl+U → Ctrl+A → Ctrl+C)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#9ca3af;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
-        <div style="font-size:9px;color:#34d399;margin-top:3px;">✓ When pasted, Spy uses this HTML directly — bypasses parser limitations completely.</div>
+      <div style="padding-bottom:10px;">
+        <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;letter-spacing:.04em;">📋 PASTE LIVE HTML <span style="font-weight:400;color:#6b7280;font-size:9px;">— more accurate than URL parsing</span></div>
+        <div style="font-size:9px;color:#6b7280;margin-bottom:6px;">In Chrome: go to your page → <strong style="color:#9ca3af;">Ctrl+U</strong> → Ctrl+A → Ctrl+C → paste below</div>
+        <textarea id="serpSpyHtml" rows="3" placeholder="Paste page HTML here (optional — leave empty to fetch by URL)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#e2e8f0;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
+        <div style="font-size:9px;color:#34d399;margin-top:4px;">✓ When pasted — Spy uses this directly, bypasses parser. Leave empty to fetch by URL.</div>
       </div>
     </div>
     <div style="padding:6px 20px;flex-shrink:0;font-size:10px;color:#34d399;min-height:18px;" id="serpSpyStatus"></div>
