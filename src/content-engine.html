@@ -2538,7 +2538,13 @@ function _updateStage(pipelineId, stageId, state, output) {
 }
 
 async function cmdAnalyse(url, keyword) {
-  if (!url) return;
+  // Fallback: use spy URL or tracker URL — never let it scan the wrong page
+  if (!url || url.trim() === '') {
+    url = window._lastSpyUrl || _context.url || '';
+  }
+  if (!url) { addAgentMessage('⚠️ No URL to analyse. Open Spy first or enter a URL.'); return; }
+  // Also inherit keyword from spy if not passed
+  if (!keyword && window._lastSpyKeyword) keyword = window._lastSpyKeyword;
   _context.url = url; _context.keyword = keyword;
   var prog = addProgress('Deep analysis — scanning page, checking competitors, AI Overviews…', 0);
   try {
@@ -2566,13 +2572,12 @@ async function cmdAnalyse(url, keyword) {
     var riskNote = pos > 0 && pos <= 20 ? '\n\nIMPORTANT: This page ranks at position ' + Number(pos).toFixed(1) + '. Mention ranking risk before suggesting rewrite.' : '';
     var interp = await callClaude(buildSystemPrompt() + riskNote, [
       ..._history,
-      { role: 'user', content: 'Analysis complete. What are the 2 most impactful actions? Surgical fix or full rewrite — which do you recommend and why? Be direct.' }
+      { role: 'user', content: 'Analysis complete. Give me the 2 most impactful surgical fixes as exact HTML snippets I can copy-paste. End with BRIEF COMPLETE.' }
     ]);
     addAgentMessage(interp);
+    // After analysis brief — only Copy Master Brief. External AI does the writing.
     addActions([
-      { label: '🔧 Apply surgical fixes', fn: function(){ runDirectSurgicalFixes(); } },
-      { label: '🔄 Full rewrite', fn: function(){ openRewriteModalWithMode('complete'); } },
-      { label: '💡 Explain more first', fn: function(){ userSend('Explain what the analysis found before we do anything'); } }
+      { label: '🌐 Copy Master Brief → External AI', fn: function(){ copyMasterBrief(); } }
     ]);
 
   } catch(e) {
@@ -6265,9 +6270,9 @@ function spySendToAgentWithHtml() {
   parts.push('I need you to analyse the gap between my page and rank 1.');
   if (hasHtml) {
     parts.push('You have access to the current page HTML via [ANALYSE ' + url + ' "' + kw + '"].');
-    parts.push('Run [ANALYSE] then tell me: for each missing entity and gap above, write the EXACT text/HTML I need to add — specific sentences, not generic advice.');
+    parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] then tell me: for each missing entity and gap above, write the EXACT text/HTML I need to add — specific sentences, not generic advice. Do NOT rewrite the page. Surgical additions only.');
   } else {
-    parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] to see my current page, then for each missing entity and gap above, write the EXACT text/HTML I need to add.');
+    parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] to see my current page. For each missing entity and gap above, write the EXACT HTML to add. Surgical only — do NOT rewrite. End with BRIEF COMPLETE.');
   }
   parts.push('Focus only on surgical additions — do NOT suggest a full rewrite.');
 
