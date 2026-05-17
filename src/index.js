@@ -25379,6 +25379,79 @@ Return ONLY valid JSON:
   } catch(e){console.error('[serp-spy]',e.message);res.status(502).json({success:false,error:e.message});}
 });
 
+// ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────
+app.post('/api/tracker/meta-intel', verifyEngineAccess, async (req, res) => {
+  const { page_id, url, keyword } = req.body;
+  if (!url || !keyword) return res.status(400).json({ success: false, error: 'url and keyword required' });
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
+  const serperKey = process.env.SERPAPI_KEY;
+  
+  try {
+    // Fetch top 3 SERP titles for this keyword
+    let serpTitles = [];
+    if (serperKey) {
+      const ctrl = new AbortController(); setTimeout(()=>ctrl.abort(), 12000);
+      const r = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: keyword, num: 5, hl: 'en', gl: 'us' }),
+        signal: ctrl.signal
+      });
+      if (r.ok) {
+        const d = await r.json();
+        serpTitles = (d.organic || []).slice(0,5).map((r,i) => `#${i+1}: "${r.title}" — ${r.snippet||''}`).join('\n');
+      }
+    }
+    
+    const prompt = `You are an elite SEO specialist. Generate the optimal meta title, meta description, and H1 for this page.
+
+Keyword: "${keyword}"
+Page URL: ${url}
+Top SERP results:
+${serpTitles || 'Not available'}
+
+Rules:
+- Title: 50-60 chars, keyword in first 3 words, include unique differentiator
+- Description: 145-155 chars, include keyword, clear CTA, specific benefit
+- H1: Matches search intent, includes keyword, compelling, unique angle vs competitors
+
+Return ONLY valid JSON:
+{"title":"...","description":"...","h1":"...","title_length":55,"description_length":150}`;
+
+    const ctrl2 = new AbortController(); setTimeout(()=>ctrl2.abort(), 25000);
+    const r2 = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl2.signal
+    });
+    const d2 = await r2.json().catch(()=>({}));
+    if (!r2.ok) throw new Error((d2.error && d2.error.message) || 'Claude ' + r2.status);
+    
+    const rawText = (d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    let metaIntel = null;
+    try { const m = rawText.match(/\{[\s\S]*\}/); if (m) metaIntel = JSON.parse(m[0]); } catch(e) {}
+    if (!metaIntel) throw new Error('Could not parse response');
+    
+    // Save to DB
+    if (page_id) {
+      await pool.query(
+        `UPDATE tracker_pages SET meta_intel=$1, meta_intel_at=NOW() WHERE id=$2`,
+        [JSON.stringify(metaIntel), page_id]
+      ).catch(e => {
+        // Column may not exist yet — run migration
+        pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS meta_intel JSONB, ADD COLUMN IF NOT EXISTS meta_intel_at TIMESTAMPTZ`).catch(()=>{});
+      });
+    }
+    
+    res.json({ success: true, meta_intel: metaIntel });
+  } catch(e) {
+    console.error('[meta-intel]', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+});
+
 // ── GET /api/intelligence/context ───────────────────────────────────────────
 app.get('/api/intelligence/context', verifyEngineAccess, async (req, res) => {
   const {url,profile_id,keyword}=req.query;
