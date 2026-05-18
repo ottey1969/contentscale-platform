@@ -4312,11 +4312,12 @@ httpServer.on('upgrade', (req, socket, head) => {
 async function migrateTrackerPageProfiles() {
   try {
     // Get all profiles with domains
-    const profiles = await pool.query(`
-      SELECT p.id, p.domain, p.engine_code_id 
-      FROM content_profiles p 
-      WHERE p.domain IS NOT NULL AND p.domain != ''
-    `);
+    // Check which columns exist on content_profiles
+    const cpCols = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='content_profiles'`);
+    const cpColNames = cpCols.rows.map(r => r.column_name);
+    const hasEngineCol = cpColNames.includes('engine_code_id');
+    
+    const profiles = await pool.query(`SELECT id, domain ${hasEngineCol ? ', engine_code_id' : ''} FROM content_profiles WHERE domain IS NOT NULL AND domain != ''`);
     if (!profiles.rows.length) { 
       console.log('[migration] No profiles with domain found'); 
       return; 
@@ -4331,7 +4332,7 @@ async function migrateTrackerPageProfiles() {
       // Try with engine_code_id filter first, then without
       let r;
       try {
-        if (profile.engine_code_id) {
+        if (hasEngineCol && profile.engine_code_id) {
           r = await pool.query(
             `UPDATE tracker_pages SET profile_id=$1 
              WHERE profile_id IS NULL 
