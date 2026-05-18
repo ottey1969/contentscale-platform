@@ -1477,55 +1477,50 @@ function buildSystemPrompt() {
     contextStr += '\nTop recommendations from GRAAF scan:\n' + parseRecs(_context.recs).slice(0,5).map(function(r){ return '- ['+r.priority+'] ' + (r.title||r.description||''); }).join('\n');
   }
 
-  return `You are an elite SEO Intelligence Agent for ContentScale. You are concise, direct, and genuinely expert — not generic. You think like a senior SEO consultant who has seen thousands of sites.
+  return `You are a senior SEO strategist embedded in ContentScale. You think like the best consultant a client has ever had — someone who has seen thousands of pages, knows what actually moves rankings, and has no patience for generic advice.
 
-YOUR ROLE — BRIEF BUILDER, NOT WRITER:
-You do NOT write or rewrite content inside this tool. Your job is to build a complete, actionable brief that the user copies to an external AI (Claude.ai, ChatGPT) to do the actual writing. When someone says "write me a page" or "rewrite this page" — you build the brief and end with "BRIEF COMPLETE — click 🌐 Copy Master Brief."
+YOUR ONLY JOB:
+Strategic judgment. The Spy already found the gaps. The checklist already shows what's done vs missing. Your job is the one layer neither of those can do: decide what to fix first, explain why that order matters, and give exact implementation — not a list of everything, a ranked plan of the highest-leverage moves.
 
-YOUR CAPABILITIES (you can trigger these with commands):
-- [SCAN url] — scan a page for GRAAF/CRAFT score + recommendations
-- [RESEARCH keyword profileId] — run keyword + competitor research
-- [INTELLIGENCE keyword url] — deep competitor content analysis + beat-them brief
-- [META keyword "current title"] — meta title + description research with CTR-optimized alternatives
-- [ANALYSE url keyword] — analyse gap between page and rank 1, output exact HTML to add (surgical only)
-- [SHOW_OPPORTUNITIES] — show GSC page opportunities
+WHAT YOU ARE NOT:
+- Not a chatbot that lists what the Spy already showed
+- Not a generic SEO tool that outputs the same advice for every page
+- Not a writer — you build briefs, external AI writes the content
 
-WHEN USER SAYS "WRITE", "REWRITE", OR "CREATE A PAGE":
-- Do NOT write the content yourself.
-- Run [INTELLIGENCE keyword url] to get competitive data.
-- Then give the complete brief: H1, meta title, meta description, entity gaps, PAA answers, voice search answer, AI Overview blueprint, content structure, word count target, schema to add.
-- End with: 'BRIEF COMPLETE — click 🌐 Copy Master Brief to export this to external AI.'
-- The user pastes the brief into Claude.ai or ChatGPT which writes the actual HTML.
+YOUR COMMANDS:
+- [SCAN url] — ContentScore scan
+- [INTELLIGENCE keyword url] — deep competitor analysis
+- [META keyword "title"] — meta title/description research
+- [ANALYSE url keyword] — gap analysis with exact HTML
+- [SHOW_OPPORTUNITIES] — GSC opportunities
 
-WHEN YOU RECEIVE A [SPY BRIEF]:
-- You already have competitive intelligence. Do NOT repeat all findings.
-- Lead with ONE sentence: "The #1 thing that will move this page is [specific action]."
-- Give the complete brief: entity gaps, PAA answers, voice search answer, AI Overview blueprint, exact HTML snippets for surgical additions.
-- End with: 'BRIEF COMPLETE — click 🌐 Copy Master Brief to export this to external AI.'
-- STOP. Do NOT ask A or B. Do NOT ask any question. The user has action buttons.
+WHEN YOU RECEIVE SPY DATA (THREE-LAYER RULE):
+The system tells you what's already on the page (Layer 1), what the Spy already flagged (Layer 2). You only speak about Layer 3 — what neither the page nor the Spy addressed.
 
-WHEN [ANALYSE] COMPLETES:
-- Give 2-3 exact HTML snippets to add (surgical only — no full rewrite).
-- End with: 'BRIEF COMPLETE — click 🌐 Copy Master Brief to export this to external AI.'
-- Do NOT open or suggest any rewrite modal.
+Layer 3 is strategic judgment:
+- Which of the spy gaps moves the needle MOST and why
+- The correct implementation ORDER — fix A before B because doing B without A wastes the effort
+- What the spy cannot see: is the page matching the right intent? Is the content structure right for conversion? Does the H1 do the job the page needs?
+- Conflict detection: "Don't add TL;DR — your direct answer box already does that job, adding both creates duplicate intent signals"
+- Score gap analysis: "You score 66, rank 1 scores 71 — the 5-point gap is entirely in Freshness. One stat update closes it. Everything else is wasted effort until you fix that."
 
-YOUR BEHAVIOUR:
-1. Ask ONE question at a time maximum. Never overwhelm.
-2. When you have enough info, ACT IMMEDIATELY — output the [COMMAND] and execute it. Never ask "would you like me to scan?" — just scan.
-3. Always explain WHY before WHAT. The user needs to understand the logic.
-4. For every scan/analysis, interpret the numbers in plain language. "43/100 means your page exists but wouldn't convince Google or a reader to trust it."
-5. Be specific about the opportunity: "Position 14 with 2,800 impressions — one well-executed page outranks everything above it. Here's the brief."
-6. Prioritise: AI Overview opportunities > CTR improvements > new pages > rewrites.
-7. You know the GRAAF framework (Genuinely Credible, Relevant, Actionable, Accurate, Fresh — 50pts) and CRAFT (30pts). Reference them by name.
-8. Keep responses under 150 words unless presenting data or a brief. Brevity is intelligence.
-9. NEVER mention "rewrite modal", "apply fixes", or internal rewriting tools. The pipeline is: Spy → Brief → Copy → External AI → Publish.
+If you find nothing beyond what Spy already covered: say "The Spy brief covers the critical gaps. Fix them in this order: [specific sequence with rationale for the order]." That is still strategic value.
 
-CRITICAL — COMMAND FORMAT & AUTO-EXECUTION:
-- Output commands in EXACTLY this format: [SCAN https://example.com] or [INTELLIGENCE "keyword" "https://url.com"]
-- NEVER say "I can scan" — just output [SCAN url] and it runs instantly.
-- Chain commands in a single response: [SCAN url] [INTELLIGENCE "keyword" url]
-- Always use real URLs from the conversation, never placeholders.
-- For META: [META "target keyword" "current page title"]
+WHEN USER SAYS "WRITE" OR "REWRITE":
+Run [INTELLIGENCE keyword url] → build complete brief (H1, meta, entities, PAA, AI Overview structure, word count, schema) → end with BRIEF COMPLETE. External AI writes it.
+
+RULES:
+- Never repeat what the Spy already showed
+- Never mention what's already on the page (user knows)
+- Never give generic advice that would fit any page
+- Never ask clarifying questions when you can act
+- Never suggest a full rewrite when surgical fixes will do
+- Keep every response under 200 words unless giving a full brief
+- End briefs with: BRIEF COMPLETE — click 🌐 Copy Master Brief
+
+PIPELINE: Spy → Brief → Copy → External AI → Publish → Tracker monitors
+
+You know GRAAF (50pts: Genuinely Credible, Relevant, Actionable, Accurate, Fresh) and CRAFT (30pts). Reference by name when scoring gaps.
 ${gscSummary}${contextStr}
 
 ${(function() {
@@ -2606,7 +2601,7 @@ async function cmdAnalyse(url, keyword) {
     var riskNote = pos > 0 && pos <= 20 ? '\n\nIMPORTANT: This page ranks at position ' + Number(pos).toFixed(1) + '. Mention ranking risk before suggesting rewrite.' : '';
     var interp = await callClaude(buildSystemPrompt() + riskNote, [
       ..._history,
-      { role: 'user', content: 'Analysis complete. Give me the 2 most impactful surgical fixes as exact HTML snippets I can copy-paste. End with BRIEF COMPLETE.' }
+      { role: 'user', content: 'Analysis complete for keyword "' + (window._lastSpyKeyword || keyword || '') + '". Give me the 2 most impactful surgical HTML additions for THIS keyword only. Do not suggest generic SEO fixes. End with BRIEF COMPLETE.' }
     ]);
     addAgentMessage(interp);
     // After analysis brief — only Copy Master Brief. External AI does the writing.
@@ -2830,6 +2825,46 @@ async function copyMasterBrief() {
     });
   }
   
+  // ── Add ContentScore structural requirements ──────────────────────────
+  if (_context && _context.recs && _context.recs.length > 0) {
+    var scanUrl = (_context.url || (window._lastSpyUrl) || '');
+    parts.push('\n');
+    parts.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    parts.push('📊 CONTENTSCORE STRUCTURAL REQUIREMENTS (separate from brief above)');
+    parts.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    parts.push('These come from the ContentScale ContentScore scanner — not from the competitive Spy.');
+    parts.push('Include ALL of the following structural signals in the page. The page will be re-scanned after publishing. Target: 85+ ContentScore.');
+    if (scanUrl) parts.push('Page scanned: ' + scanUrl);
+    var failingRecs = (_context.recs || []).filter(function(r){ return r.priority === 'high' || r.priority === 'medium'; }).slice(0,12);
+    failingRecs.forEach(function(r) {
+      var label = r.priority === 'high' ? '🔴' : '🟡';
+      parts.push(label + ' ' + (r.title || r.description || '') + (r.action ? '\n   → ' + r.action : '') + (r.target ? ' [Target: ' + r.target + ']' : ''));
+    });
+    parts.push('\nWhen writing, ensure every item above is addressed. Paste the brief AND these requirements together into Claude.ai or ChatGPT.');
+  } else {
+    // No scan yet — add instruction to scan first
+    var scanUrl2 = window._lastSpyUrl || (_context && _context.url) || '';
+    parts.push('\n');
+    parts.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    parts.push('📊 CONTENTSCORE STRUCTURAL REQUIREMENTS (separate from brief above)');
+    parts.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (scanUrl2) {
+      // Existing page — can scan
+      parts.push('⚠️ ContentScore scan not yet run on this page.');
+      parts.push('This scanner only works on existing live pages with a URL.');
+      parts.push('BEFORE pasting this brief into Claude.ai:');
+      parts.push('1. Go to https://app.contentscale.site');
+      parts.push('2. Scan this URL: ' + scanUrl2);
+      parts.push('3. Copy the failing recommendations (🔴 High + 🟡 Medium priority)');
+      parts.push('4. Paste them below this brief, then paste everything into Claude.ai together');
+    } else {
+      // New page — no URL to scan
+      parts.push('ℹ️ New page — no URL to scan yet (ContentScore only works on existing live pages).');
+      parts.push('After publishing, scan the new page at: https://app.contentscale.site');
+      parts.push('Fix any failing GRAAF signals to reach 85+ ContentScore.');
+    }
+  }
+
   if (parts.length === 0) {
     parts.push('No brief generated yet. Run Spy + Get Deeper Claude Suggestions first.');
   }
@@ -3132,11 +3167,71 @@ function updateContext() {
 }
 
 function formatMessage(text) {
+  if (!text) return '';
+
+  // ── Detect and render BRIEF COMPLETE marker ──────────────────────────
+  text = text.replace(/BRIEF COMPLETE[^\n]*/g,
+    '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:6px 12px;margin:8px 0;font-size:11px;font-weight:700;color:#34d399;font-family:DM Mono,monospace;">✅ BRIEF COMPLETE — click 🌐 Copy Master Brief</div>');
+
+  // ── Code blocks ──────────────────────────────────────────────────────
+  text = text.replace(/```(?:html)?([\s\S]*?)```/g, function(_, code) {
+    code = code.trim();
+    var uid = 'cb' + Math.random().toString(36).slice(2,8);
+    return '<div style="position:relative;margin:10px 0;">'
+      + '<pre id="' + uid + '" style="background:#0a0a0a;border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:12px 14px;overflow-x:auto;font-family:DM Mono,monospace;font-size:11px;color:#a78bfa;white-space:pre-wrap;line-height:1.7;margin:0;">' + escHtml(code) + '</pre>'
+      + '<button onclick="var el=this.previousSibling;navigator.clipboard.writeText(el.textContent).then(function(){},function(){});this.textContent=\'✓\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},1500);" style="position:absolute;top:6px;right:8px;font-size:9px;font-family:DM Mono,monospace;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.12);color:#a78bfa;cursor:pointer;">Copy</button>'
+      + '</div>';
+  });
+
+  // ── Inline code ──────────────────────────────────────────────────────
+  text = text.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:1px 6px;border-radius:4px;font-family:DM Mono,monospace;font-size:11px;color:#c4b5fd;">$1</code>');
+
+  // ── Numbered lists ───────────────────────────────────────────────────
+  text = text.replace(/((?:^|\n)\d+\. .+)+/g, function(block) {
+    var items = block.trim().split(/\n/).filter(function(l){ return /^\d+\./.test(l.trim()); });
+    return '<ol style="margin:10px 0 10px 4px;padding-left:0;list-style:none;">' +
+      items.map(function(item, i) {
+        var txt = item.replace(/^\d+\.\s*/, '');
+        return '<li style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
+          '<span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(124,58,237,.25);color:#a78bfa;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;">' + (i+1) + '</span>' +
+          '<span style="font-size:12px;color:#d1d5db;line-height:1.7;">' + formatInline(txt) + '</span></li>';
+      }).join('') + '</ol>';
+  });
+
+  // ── Bullet lists ─────────────────────────────────────────────────────
+  text = text.replace(/((?:^|\n)[\-\*] .+)+/g, function(block) {
+    var items = block.trim().split(/\n/).filter(function(l){ return /^[\-\*] /.test(l.trim()); });
+    return '<ul style="margin:8px 0;padding:0;list-style:none;">' +
+      items.map(function(item) {
+        var txt = item.replace(/^[\-\*]\s*/, '');
+        return '<li style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;">' +
+          '<span style="flex-shrink:0;color:#e85d26;margin-top:4px;font-size:10px;">→</span>' +
+          '<span style="font-size:12px;color:#d1d5db;line-height:1.7;">' + formatInline(txt) + '</span></li>';
+      }).join('') + '</ul>';
+  });
+
+  // ── H3 headings ──────────────────────────────────────────────────────
+  text = text.replace(/###\s*(.+)/g, '<div style="font-size:13px;font-weight:700;color:#f9fafb;margin:14px 0 6px;border-left:2px solid #e85d26;padding-left:10px;">$1</div>');
+
+  // ── H2/bold section headers (** at start of line) ───────────────────
+  text = text.replace(/^\*\*([^*]+)\*\*:\s*/gm, '<div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#e85d26;margin:14px 0 4px;font-family:DM Mono,monospace;">$1</div>');
+
+  // ── Inline bold ──────────────────────────────────────────────────────
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#f9fafb;">$1</strong>');
+  text = text.replace(/\*(.+?)\*/g, '<em style="color:#c4b5fd;">$1</em>');
+
+  // ── Paragraphs ───────────────────────────────────────────────────────
+  text = text.replace(/\n\n/g, '</p><p style="margin:8px 0;font-size:12px;color:#d1d5db;line-height:1.8;">');
+  text = text.replace(/\n/g, '<br>');
+
+  return '<p style="margin:0;font-size:12px;color:#d1d5db;line-height:1.8;">' + text + '</p>';
+}
+
+// Inline formatting helper (no block-level)
+function formatInline(text) {
   return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-family:DM Mono,monospace;font-size:11px;">$1</code>')
-    .replace(/\n\n/g, '</p><p style="margin-top:8px;">')
-    .replace(/\n/g, '<br>');
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#f9fafb;">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;font-family:DM Mono,monospace;font-size:10px;color:#c4b5fd;">$1</code>');
 }
 
 // escHtml defined below with full quote escaping — do not duplicate here
@@ -3264,7 +3359,11 @@ function switchView(view) {
 // ════════════════════════════════════════════════════════════════
 var _trPages = [];
 
+var _loadTrackerTimer = null;
 async function loadTrackerPages() {
+  // Debounce — prevent multiple simultaneous calls
+  if (window._loadTrackerRunning) return;
+  window._loadTrackerRunning = true;
   var _tok3 = '';
   try { _tok3 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
   if (!_tok3) { renderTrackerList(); return; }
@@ -4745,6 +4844,8 @@ function useProfileFromList(profileId) {
     if (p) {
       _profile = p;
       _context.profileId = p.id;
+      if (window._trSelected) window._trSelected.clear();
+      window._trFilter = { priority: 'all', status: 'all', score: 'all', search: '', domain: 'all' };
       var sel = document.getElementById('profileSelect');
       if (sel) sel.value = String(p.id);
       // Re-render profile selector if needed
@@ -6703,11 +6804,22 @@ async function runSerpSpy() {
       // Show the right action based on page priority
       var _spyAct = window._serpSpyAction || 'rewrite';
       var _spyRec = window._serpSpyRecommended || '';
+      var _scanInBrief = _context && _context.recs && _context.recs.length > 0;
       actDiv.innerHTML =
         '<button onclick="copyMasterBrief()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🌐 Copy Master Brief → External AI</button>' +
-        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Claude Suggestions</button>' +
+        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Suggestions</button>' +
         '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
-        (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
+        '<div style="width:100%;margin-top:10px;">' +
+          '<div style="font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#4b5563;margin-bottom:5px;font-family:DM Mono,monospace;">📊 ContentScore — Separate from Spy Brief</div>' +
+          '<div style="padding:8px 10px;background:' + (_scanInBrief ? 'rgba(16,185,129,.06)' : 'rgba(245,109,0,.06)') + ';border:1px solid ' + (_scanInBrief ? 'rgba(16,185,129,.2)' : 'rgba(245,109,0,.2)') + ';border-radius:6px;font-size:10px;color:' + (_scanInBrief ? '#34d399' : '#f56d00') + ';">' +
+          (_scanInBrief
+            ? '✅ ContentScore scan included — brief contains ' + (_context.recs.filter(function(r){return r.priority==="high"||r.priority==="medium";}).length) + ' structural requirements. Ready to copy.'
+            : (url
+                ? '⚠️ Existing page — scan it first for structural requirements. ContentScore only works on live URLs. <a onclick="closeSerpSpy()" style="color:#f56d00;text-decoration:underline;cursor:pointer;">Close → scan at app.contentscale.site → re-open spy</a>'
+                : 'ℹ️ New page — ContentScore scan not possible yet (no live URL). After publishing, scan the page and fix failing signals.'
+              )
+          ) + '</div></div>' +
+        (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:4px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
       // Store spy data for button handlers
       window._lastSpyData = d.spy;
@@ -6774,6 +6886,62 @@ function spySendToAgentWithHtml() {
 
   parts.push('\n---');
   parts.push('I need you to analyse the gap between my page and rank 1.');
+  // Build full three-layer context — spy found X, live page has Y, agent adds only Z
+  if (window._lastSpyData) {
+    var s = window._lastSpyData;
+    var liveHtml = ((document.getElementById('serpSpyHtml') || {}).value || '').toLowerCase();
+    var liveText = liveHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ');
+    var hasLive = liveText.length > 100;
+
+    // What spy found
+    var spyEntities = (s.entity_gaps_priority || s._entity_gaps || []).slice(0,8)
+      .map(function(e){ return (e.entity||e||'').toLowerCase().trim(); })
+      .filter(function(e){ return e; });
+
+    var spyGaps = (s.step4_missing || []).slice(0,4)
+      .map(function(g){ return (g.gap||'').substring(0,80); });
+
+    var spyWins = (s.quick_wins || []).slice(0,4)
+      .map(function(w){ return (w.win||w||'').substring(0,80); });
+
+    // What live page already has (checked)
+    var alreadyDone = [];
+    var stillMissing = [];
+
+    if (hasLive) {
+      spyEntities.forEach(function(e) {
+        if (liveText.includes(e)) alreadyDone.push('entity "' + e + '"');
+        else stillMissing.push('entity "' + e + '"');
+      });
+      // Schema checks
+      ['faqpage','howto','localbusiness'].forEach(function(sc) {
+        var found = liveHtml.includes('"@type":"' + sc + '"') || liveHtml.includes('"@type": "' + sc + '"');
+        if (found) alreadyDone.push(sc + ' schema');
+        else stillMissing.push(sc + ' schema');
+      });
+      if (liveText.includes('24/7') || liveText.includes('24 hours')) alreadyDone.push('24/7 messaging');
+      else stillMissing.push('24/7 messaging');
+      if (liveHtml.includes('direct-answer') || liveHtml.includes('quick-answer')) alreadyDone.push('direct answer box');
+      else stillMissing.push('direct answer box');
+    }
+
+    parts.push('\n=== THREE-LAYER CONTEXT — READ CAREFULLY ===');
+    parts.push('LAYER 1 — LIVE PAGE ALREADY HAS (user does NOT need to hear these again):');
+    parts.push(alreadyDone.length ? alreadyDone.join(', ') : 'Unknown — no live HTML pasted');
+
+    parts.push('\nLAYER 2 — SPY FOUND MISSING (user already sees these in the Spy report — do NOT repeat them):');
+    parts.push([...stillMissing, ...spyGaps, ...spyWins].join(' | ') || 'None');
+
+    parts.push('\nLAYER 3 — YOUR JOB (agent only shows this layer):');
+    parts.push('Go deeper than the Spy. The Spy shows WHAT is missing. You explain WHY it matters, in what ORDER to fix it, and give EXACT HTML for things Spy cannot determine:');
+    parts.push('- Content structure and section order');
+    parts.push('- Intent alignment — is the page matching transactional/informational/navigational intent correctly?');
+    parts.push('- AI Overview eligibility — specific structural requirements the page needs');
+    parts.push('- Which fix moves the needle MOST — prioritise by impact, not just list everything');
+    parts.push('- Implementation sequence — fix A before B because X');
+    parts.push('\nSTRICT RULE: Never mention Layer 1 items (already done). Never list Layer 2 items (spy already showed them). Start directly with Layer 3 insights. If you find nothing new beyond spy, say "The Spy brief covers the critical gaps — focus on implementing those in this order: [give order + rationale]."');
+  }
+
   if (hasHtml) {
     parts.push('You have access to the current page HTML via [ANALYSE ' + url + ' "' + kw + '"].');
     parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] then tell me: for each missing entity and gap above, write the EXACT text/HTML I need to add — specific sentences, not generic advice. Do NOT rewrite the page. Surgical additions only.');
@@ -6896,10 +7064,22 @@ function spyOpenRewrite() {
 }
 
 function renderSerpSpyReport(s) {
+  // Pre-compute live HTML state for filtering
+  var _liveHtmlLower = ((document.getElementById('serpSpyHtml') || {}).value || '').toLowerCase();
+  var _liveTextOnly = _liveHtmlLower.replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ');
+  var _hasLiveHtml = _liveTextOnly.length > 100;
+  var _inPage = function(str) {
+    if (!_hasLiveHtml) return false;
+    return _liveTextOnly.includes((str||'').toLowerCase().trim());
+  };
   var priorityColor = { high: '#ef4444', medium: '#f59e0b', low: '#6b7280' };
   var effortColor   = { low: '#34d399', medium: '#f59e0b', high: '#f87171' };
   var catIcon = { rank_fast:'⚡', ai_overview:'🤖', paa:'❓', voice:'🎙', content_gap:'📝', technical:'🔧', schema:'🗂' };
   var gapImpact = { high:'#ef4444', medium:'#f59e0b', low:'#6b7280' };
+  var _entityInPage = function(entity) {
+    if (!_liveTextOnly || _liveTextOnly.length < 50) return false;
+    return _liveTextOnly.includes((entity||'').toLowerCase().trim());
+  };
 
   var html = '<div style="font-family:monospace;font-size:11px;color:#e2e8f0;">';
 
@@ -7014,6 +7194,7 @@ function renderSerpSpyReport(s) {
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">' +
         '<div style="color:#e2e8f0;font-weight:700;font-size:10px;">' + escHtml(g.gap||'') + '</div>' +
         '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:'+(isOpp?'rgba(16,185,129,.15)':'rgba(248,113,113,.1)')+';color:'+(isOpp?'#34d399':'#f87171')+';white-space:nowrap;margin-left:8px;">'+(isOpp?'OPPORTUNITY':'WARNING')+'</span>' +
+        (_inPage(g.gap) ? '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,.12);color:#34d399;white-space:nowrap;margin-left:4px;">✅ ON PAGE</span>' : '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,.1);color:#f87171;white-space:nowrap;margin-left:4px;">⬜ TO DO</span>') +
         '</div>' +
         '<div style="color:#9ca3af;font-size:10px;margin-bottom:4px;">' + escHtml(g.why||'') + '</div>' +
         (g.how_to_exploit ? '<div style="color:'+(isOpp?'#34d399':'#fbbf24')+';font-size:10px;">→ ' + escHtml(g.how_to_exploit) + '</div>' : '') +
@@ -7064,6 +7245,102 @@ function renderSerpSpyReport(s) {
         '<div style="color:#9ca3af;font-size:10px;">' + escHtml(s.voice_search_angle) + '</div>' +
         '</div>';
     }
+    html += '</div>';
+  }
+
+  // ── AUTOMATED PAGE CHECKLIST ────────────────────────────────────────────
+  // Check pasted live HTML against spy findings — show what's done vs todo
+  var liveHtml = ((document.getElementById('serpSpyHtml') || {}).value || '').toLowerCase();
+  var liveText = liveHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ');
+  var hasLiveHtml = liveHtml.length > 200;
+
+  if (hasLiveHtml) {
+    var checks = [];
+
+    // Schema checks
+    var schemas = ['faqpage','howto','localbusiness','service','breadcrumb'];
+    var schemaLabels = {faqpage:'FAQPage schema', howto:'HowTo schema', localbusiness:'LocalBusiness schema', service:'Service schema', breadcrumb:'BreadcrumbList schema'};
+    schemas.forEach(function(sc) {
+      var found = liveHtml.includes('"@type":"'+sc+'"') || liveHtml.includes('"@type": "'+sc+'"');
+      checks.push({ label: schemaLabels[sc], done: found, category: 'Schema' });
+    });
+
+    // Entity gap checks — from spy data
+    var entityGaps = (s.entity_gaps_priority || s._entity_gaps || []).slice(0, 8);
+    entityGaps.forEach(function(e) {
+      var entity = (e.entity || e || '').toLowerCase().trim();
+      if (!entity) return;
+      var found = liveText.includes(entity);
+      checks.push({ label: 'Entity: "' + entity + '"', done: found, category: 'Entity' });
+    });
+
+    // Direct answer / quick answer box — check for class in div/section, not scripts
+    var _hasDA = /<(?:div|section)[^>]*class="[^"]*(?:direct.answer|quick.answer)[^"]*"/.test(liveHtml);
+    checks.push({ label: 'Direct answer box', done: _hasDA, category: 'Content' });
+
+    // TL;DR
+    checks.push({ label: 'TL;DR section', done: liveText.includes('tl;dr') || liveText.includes('tldr') || liveHtml.includes('tldr'), category: 'Content' });
+
+    // Phone in content
+    // Phone: must appear in body content (not just footer) — check first 60% of text
+    var bodyText = liveText.substring(0, Math.floor(liveText.length * 0.6));
+    var hasPhone = bodyText.includes('862') || (liveText.match(/tel:/g) || []).length >= 2;
+    checks.push({ label: 'Phone number in content', done: hasPhone, category: 'Content' });
+
+    // 24/7 mention
+    checks.push({ label: '24/7 availability messaging', done: liveText.includes('24/7') || liveText.includes('24 hours') || liveText.includes('24-hour'), category: 'Content' });
+
+    // County coverage
+    var counties = ['bergen county','essex county','passaic county','hudson county','morris county','middlesex county','union county','monmouth county','ocean county'];
+    // Also accept bare county name when followed by space/comma/punctuation
+    var countyCount = counties.filter(function(c){
+      var bare = c.replace(' county','');
+      return liveText.includes(c) || new RegExp('\\b' + bare + '\\b').test(liveText);
+    }).length;
+    checks.push({ label: 'County coverage (' + countyCount + '/9 checked)', done: countyCount >= 5, category: 'Content' });
+
+    // Quick wins from spy
+    (s.quick_wins || []).slice(0,4).forEach(function(w) {
+      var win = (w.win || w || '').toLowerCase();
+      // Check if win is likely already done
+      var winWords = win.replace(/[^a-z0-9 ]/g,'').split(' ').filter(function(w){ return w.length > 4; });
+      var winDone = winWords.length > 0 && winWords.every(function(word){ return liveText.includes(word); });
+      checks.push({ label: 'Quick win: ' + (w.win || w).substring(0,60), done: winDone, category: 'Quick Win' });
+    });
+
+    var done = checks.filter(function(c){ return c.done; }).length;
+    var total = checks.length;
+    var pct = Math.round(done/total*100);
+
+    // Group by category
+    var cats = {};
+    checks.forEach(function(c) {
+      if (!cats[c.category]) cats[c.category] = [];
+      cats[c.category].push(c);
+    });
+
+    html += '<div style="background:#0a0a0a;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px 18px;margin-bottom:12px;">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+    html += '<div style="font-size:12px;font-weight:800;color:#f9fafb;letter-spacing:-.01em;">📋 Page Checklist — vs Your Live HTML</div>';
+    html += '<div style="font-size:11px;color:' + (pct >= 70 ? '#34d399' : pct >= 40 ? '#fbbf24' : '#f87171') + ';font-weight:700;">' + done + '/' + total + ' done (' + pct + '%)</div>';
+    html += '</div>';
+    // Progress bar
+    html += '<div style="background:#1f2937;border-radius:4px;height:5px;margin-bottom:14px;overflow:hidden;">';
+    html += '<div style="height:100%;width:' + pct + '%;background:' + (pct >= 70 ? '#34d399' : pct >= 40 ? '#fbbf24' : '#ef4444') + ';border-radius:4px;transition:width .3s;"></div></div>';
+
+    Object.keys(cats).forEach(function(cat) {
+      html += '<div style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#4b5563;margin-bottom:6px;">' + cat + '</div>';
+      cats[cat].forEach(function(c) {
+        html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+        html += '<span style="flex-shrink:0;font-size:13px;margin-top:-1px;">' + (c.done ? '✅' : '⬜') + '</span>';
+        html += '<span style="font-size:11px;color:' + (c.done ? '#6b7280;text-decoration:line-through;' : '#e2e8f0;') + '">' + escHtml(c.label) + '</span>';
+        if (!c.done) html += '<span style="margin-left:auto;font-size:9px;background:rgba(239,68,68,.1);color:#f87171;padding:2px 6px;border-radius:3px;flex-shrink:0;white-space:nowrap;">TO DO</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    html += '<div style="font-size:9px;color:#4b5563;margin-top:8px;">✓ Auto-detected from your pasted live HTML · Re-paste after updates to refresh</div>';
     html += '</div>';
   }
 
