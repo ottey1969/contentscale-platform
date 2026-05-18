@@ -4311,40 +4311,66 @@ httpServer.on('upgrade', (req, socket, head) => {
 
 async function migrateTrackerPageProfiles() {
   try {
-    // Check which columns exist on tracker_pages
-    const colCheck = await pool.query(`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name='tracker_pages' AND column_name IN ('engine_code_id','code_id','engine_id')
+    // Get all profiles with domains
+    const profiles = await pool.query(`
+      SELECT p.id, p.domain, p.engine_code_id 
+      FROM content_profiles p 
+      WHERE p.domain IS NOT NULL AND p.domain != ''
     `);
-    const engineCol = colCheck.rows.length ? colCheck.rows[0].column_name : null;
-    console.log(`[migration] tracker_pages engine column: ${engineCol || 'none found'}`);
-
-    // Get profiles with domain
-    const profiles = await pool.query(`SELECT id, domain FROM content_profiles WHERE domain IS NOT NULL AND domain != ''`);
-    if (!profiles.rows.length) { console.log('[migration] No profiles with domain found'); return; }
+    if (!profiles.rows.length) { 
+      console.log('[migration] No profiles with domain found'); 
+      return; 
+    }
 
     let assigned = 0;
     for (const profile of profiles.rows) {
       const domain = profile.domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
       if (!domain) continue;
+      
+      // Update pages with NULL profile_id that match this domain
+      // Try with engine_code_id filter first, then without
       let r;
-      if (engineCol) {
-        // Use engine column if available
-        r = await pool.query(
-          `UPDATE tracker_pages SET profile_id=$1 WHERE profile_id IS NULL AND (url ILIKE $2 OR url ILIKE $3) RETURNING id`,
-          [profile.id, '%' + domain + '%', '%www.' + domain + '%']
-        );
-      } else {
-        // Fallback: match by URL domain only (no engine filter)
-        r = await pool.query(
-          `UPDATE tracker_pages SET profile_id=$1 WHERE profile_id IS NULL AND (url ILIKE $2 OR url ILIKE $3) RETURNING id`,
-          [profile.id, '%' + domain + '%', '%www.' + domain + '%']
-        );
+      try {
+        if (profile.engine_code_id) {
+          r = await pool.query(
+            `UPDATE tracker_pages SET profile_id=$1 
+             WHERE profile_id IS NULL 
+             AND engine_code_id=$2 
+             AND (url ILIKE $3 OR url ILIKE $4) 
+             RETURNING id`,
+            [profile.id, profile.engine_code_id, 
+             '%' + domain + '%', '%www.' + domain + '%']
+          );
+        } else {
+          r = await pool.query(
+            `UPDATE tracker_pages SET profile_id=$1 
+             WHERE profile_id IS NULL 
+             AND (url ILIKE $2 OR url ILIKE $3) 
+             RETURNING id`,
+            [profile.id, '%' + domain + '%', '%www.' + domain + '%']
+          );
+        }
+        assigned += r.rowCount;
+        if (r.rowCount > 0) {
+          console.log(`[migration] Assigned ${r.rowCount} pages to profile "${profile.domain}"`);
+        }
+      } catch(profileErr) {
+        // Try without engine_code_id if it fails
+        try {
+          r = await pool.query(
+            `UPDATE tracker_pages SET profile_id=$1 
+             WHERE profile_id IS NULL 
+             AND (url ILIKE $2 OR url ILIKE $3) 
+             RETURNING id`,
+            [profile.id, '%' + domain + '%', '%www.' + domain + '%']
+          );
+          assigned += r.rowCount;
+        } catch(e2) { console.error('[migration] profile assign skip:', e2.message); }
       }
-      assigned += r.rowCount;
     }
-    if (assigned > 0) console.log(`[migration] Auto-assigned profile_id to ${assigned} tracker pages`);
-    else console.log('[migration] All tracker pages already have profile_id assigned');
+    
+    if (assigned > 0) console.log(`[migration] ✅ Auto-assigned profile_id to ${assigned} tracker pages total`);
+    else console.log('[migration] All tracker pages already have profile_id — no action needed');
   } catch(e) { console.error('[migration] profile assign error:', e.message); }
 }
 
@@ -4362,7 +4388,8 @@ console.log('🚀  34 Recommendation Checks');
 console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
 console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
 console.log('🚀 =====================================\n');
-  migrateTrackerPageProfiles(); // auto-assign missing profile_ids on startup
+  // Run migration after a short delay to ensure tables are fully created
+  setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);
 const dbConnected = await waitForDatabase();
   if (!dbConnected) {
     console.log('⚠️  Database NOT connected at startup — starting auto-reconnect timer');
@@ -24783,8 +24810,8 @@ app.post('/api/tracker/pages/:id/refresh', verifyEngineAccess, async (req, res) 
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
 
-    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
-    if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+    if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
     const page = pageR.rows[0];
 
     // Fetch latest snapshot for context
@@ -24927,10 +24954,21 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
             profileDomain = pdR.rows[0].domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
           }
         } catch(e) {}
-        // Strict: only show pages with exact profile_id match
-        // Domain fallback removed — prevents cross-profile bleed
-        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`;
-        params = [codeId, profileId];
+        // Show pages with exact profile_id match OR pages with NULL profile_id
+        // that belong to this engine AND match the profile domain (backward compat for old pages)
+        if (profileDomain) {
+          q = `SELECT ${COLS} FROM tracker_pages p 
+               WHERE p.engine_code_id=$1 
+               AND (
+                 p.profile_id=$2 
+                 OR (p.profile_id IS NULL AND (p.url ILIKE $3 OR p.url ILIKE $4))
+               )
+               ORDER BY p.created_at DESC`;
+          params = [codeId, profileId, '%' + profileDomain + '%', '%www.' + profileDomain + '%'];
+        } else {
+          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`;
+          params = [codeId, profileId];
+        }
       } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
     }
     const r = await pool.query(q, params);
@@ -25080,7 +25118,7 @@ app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
       const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
-    await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
+    await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -26447,6 +26485,8 @@ function startTrackerScheduler() {
       const due = await pool.query(
         `SELECT p.* FROM tracker_pages p
          WHERE (p.next_check_at <= NOW() OR p.next_check_at IS NULL)
+         AND p.is_done IS NOT TRUE
+         AND p.engine_code_id IS NOT NULL
          ORDER BY
            CASE p.check_frequency
              WHEN 'daily' THEN 1
