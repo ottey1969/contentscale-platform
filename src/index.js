@@ -4301,18 +4301,46 @@ httpServer.on('upgrade', (req, socket, head) => {
 
 
 // ── Auto-assign profile_id to tracker pages missing it ──────────────────────
+// Ensure meta_intel columns exist on startup
+(async function ensureMetaIntelColumns() {
+  try {
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS meta_intel JSONB, ADD COLUMN IF NOT EXISTS meta_intel_at TIMESTAMPTZ');
+    console.log('[startup] meta_intel columns ready');
+  } catch(e) { console.warn('[startup] meta_intel column check:', e.message); }
+})();
+
 async function migrateTrackerPageProfiles() {
   try {
-    const profiles = await pool.query(`SELECT id, domain, engine_code_id FROM content_profiles WHERE domain IS NOT NULL AND domain != ''`);
-    if (!profiles.rows.length) return;
+    // Check which columns exist on tracker_pages
+    const colCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name='tracker_pages' AND column_name IN ('engine_code_id','code_id','engine_id')
+    `);
+    const engineCol = colCheck.rows.length ? colCheck.rows[0].column_name : null;
+    console.log(`[migration] tracker_pages engine column: ${engineCol || 'none found'}`);
+
+    // Get profiles with domain
+    const profiles = await pool.query(`SELECT id, domain FROM content_profiles WHERE domain IS NOT NULL AND domain != ''`);
+    if (!profiles.rows.length) { console.log('[migration] No profiles with domain found'); return; }
+
     let assigned = 0;
     for (const profile of profiles.rows) {
       const domain = profile.domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
       if (!domain) continue;
-      const r = await pool.query(
-        `UPDATE tracker_pages SET profile_id=$1 WHERE profile_id IS NULL AND engine_code_id=$2 AND (url ILIKE $3 OR url ILIKE $4) RETURNING id`,
-        [profile.id, profile.engine_code_id, '%' + domain + '%', '%www.' + domain + '%']
-      );
+      let r;
+      if (engineCol) {
+        // Use engine column if available
+        r = await pool.query(
+          `UPDATE tracker_pages SET profile_id=$1 WHERE profile_id IS NULL AND (url ILIKE $2 OR url ILIKE $3) RETURNING id`,
+          [profile.id, '%' + domain + '%', '%www.' + domain + '%']
+        );
+      } else {
+        // Fallback: match by URL domain only (no engine filter)
+        r = await pool.query(
+          `UPDATE tracker_pages SET profile_id=$1 WHERE profile_id IS NULL AND (url ILIKE $2 OR url ILIKE $3) RETURNING id`,
+          [profile.id, '%' + domain + '%', '%www.' + domain + '%']
+        );
+      }
       assigned += r.rowCount;
     }
     if (assigned > 0) console.log(`[migration] Auto-assigned profile_id to ${assigned} tracker pages`);
