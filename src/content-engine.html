@@ -1215,6 +1215,7 @@ function onProfileSwitch() {
 
   // Reload pages for this profile (Pages + Tracker tabs)
   loadPagesOverview();
+  window._loadTrackerRunning = false; window._loadTrackerStarted = 0; // reset before profile reload
   loadTrackerPages();
 
   // Clear conversation and re-greet with new profile
@@ -3432,22 +3433,8 @@ async function loadTrackerPages() {
     var d = await api('/api/tracker/pages' + profileFilter);
     _trPages = d.pages || [];
 
-    // Fallback: if profile-filtered query returns empty but we have a domain,
-    // try fetching all pages for this engine and filter client-side.
-    // This catches pages from previous profiles for the same domain.
-    var profileDomain = (_profile && _profile.domain) || '';
-    if (!_trPages.length && profileId && profileDomain) {
-      try {
-        var d2 = await api('/api/tracker/pages'); // no profile filter
-        var allPages = d2.pages || [];
-        _trPages = allPages.filter(function(p) {
-          if (!p.url) return false;
-          try {
-            return normalizeDomain(new URL(p.url).hostname) === normalizeDomain(profileDomain);
-          } catch(e) { return false; }
-        });
-      } catch(e2) { /* ignore fallback error */ }
-    }
+    // NO domain fallback — it causes cross-profile mixing.
+    // If profile returns empty: show empty state. Deploy index.js migration to fix root cause.
 
     renderTrackerKpis();
     renderTrackerList();
@@ -3455,6 +3442,7 @@ async function loadTrackerPages() {
   } catch(e) {
     var el = document.getElementById('trPagesList');
     if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">Failed: ' + e.message + '</div>';
+    window._loadTrackerRunning = false; window._loadTrackerStarted = 0;
   }
 }
 
@@ -5893,28 +5881,8 @@ async function loadPagesOverview(forceRefresh) {
   // try fetching all pages for this engine and filter client-side.
   var profileDomain = (_profile && _profile.domain) || '';
   if (!pages.length && profileId && profileDomain) {
-    try {
-      var d2 = await api('/api/tracker/pages'); // no profile filter
-      var allPages = d2.pages || [];
-      pages = allPages.filter(function(p) {
-        if (!p.url) return false;
-        try {
-          return normalizeDomain(new URL(p.url.startsWith('http') ? p.url : 'https://'+profileDomain+p.url).hostname) === normalizeDomain(profileDomain);
-        } catch(e) { return true; } // relative URL = belongs to this domain
-      });
-    } catch(e2) { /* ignore fallback error */ }
-  }
 
-  // Normalize URL helper — strips trailing slashes for comparison
-    function normalizeUrl(u) {
-      try {
-        var parsed = new URL(u);
-        // Keep trailing slash for homepage only (path === '/')
-        if (parsed.pathname === '/') return parsed.origin + '/';
-        // For all other paths, strip trailing slash
-        return (parsed.origin + parsed.pathname).replace(/\/+$/, '');
-      } catch(e) { return u.replace(/\/+$/, ''); }
-    }
+    // Domain fallback removed — causes cross-profile mixing
     // Step 1: Count normalized URLs to detect duplicates BEFORE merging
     var rawUrlCounts = {};
     pages.forEach(function(tp) { var nu = normalizeUrl(tp.url); rawUrlCounts[nu] = (rawUrlCounts[nu] || 0) + 1; });
