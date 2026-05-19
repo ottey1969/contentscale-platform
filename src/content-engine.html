@@ -160,7 +160,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .input-hint{font-size:10px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;}
 
 /* ── WELCOME STATE ── */
-.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;text-align:center;padding:40px;}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;text-align:center;padding:0 40px 80px;}
 .welcome-icon{font-size:48px;filter:drop-shadow(0 0 20px rgba(124,58,237,.4));}
 .welcome-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;background:linear-gradient(90deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .welcome-sub{font-size:13px;color:var(--muted);max-width:400px;line-height:1.7;}
@@ -232,7 +232,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <header class="topbar">
     <div style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
     <div class="topbar-sep"></div>
-    <div class="topbar-title" id="topbarTitle"><span style="color:#a78bfa;">PULSE</span> + <span style="color:#f56d00;">NEXUS</span> · <span id="topbarContext">Intelligence Agent</span></div>
+    <div class="topbar-title" id="topbarTitle"><span id="topbarContext">Intelligence Agent</span></div>
     <div style="display:flex;gap:4px;margin-left:8px;">
       <button id="navTracker" onclick="switchView('tracker')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">📡 Tracker</button>
       <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
@@ -343,18 +343,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     <div class="messages" id="messages">
       <!-- Welcome -->
       <div class="welcome" id="welcomeScreen">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#e85d26;opacity:.85;line-height:1.9;margin-bottom:-8px;">The only way to Get Cited and Ranked in 2026 and beyond<br><span style="font-size:9px;opacity:.6;letter-spacing:.12em;">(Analyse the Image)</span></div>
         <div class="welcome-icon">🧠</div>
         <div class="welcome-title"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div>
-        <div style="display:flex;gap:18px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:10px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#34d399;">GRAAF SEO ContentScan</div>
+          <div style="font-size:12px;color:#6b7280;max-width:420px;line-height:1.6;">Free SEO ContentScore for Structure, E-E-A-T, Schema&#8217;s and more</div>
+        </div>
+        <div style="display:flex;gap:18px;justify-content:center;margin-bottom:8px;flex-wrap:wrap;">
           <div style="text-align:center;max-width:180px;">
             <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">PULSE</div>
-            <div style="font-size:12px;color:#6b7280;">Live Audit & Researcher — reads your pages, GSC data, and competitors in real time.</div>
+            <div style="font-size:12px;color:#6b7280;line-height:1.5;">Live Audit &amp; Researcher — reads your pages, GSC data, and competitors in real time.</div>
           </div>
           <div style="width:1px;background:rgba(255,255,255,.08);"></div>
           <div style="text-align:center;max-width:180px;">
             <div style="font-size:11px;font-weight:800;color:#f56d00;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">NEXUS</div>
-            <div style="font-size:12px;color:#6b7280;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward and writes to beat it.</div>
+            <div style="font-size:12px;color:#6b7280;line-height:1.5;">Elite Reverse Engineer — decodes what Google and AI Overviews actually reward and writes to beat it.</div>
           </div>
+        </div>
+        <div style="display:flex;justify-content:center;align-items:center;margin:4px 0 0;">
+          <img src="/blog/images/contentscale-is-the-solution.jpg"
+               alt="ContentScale is the solution — brief-first SEO intelligence for Google and AI Overviews"
+               style="max-width:100%;width:560px;border-radius:10px;display:block;"
+               loading="lazy">
         </div>
         <div class="welcome-starters">
           <button class="starter-btn" onclick="sendStarter(this)">I want to rank higher for a keyword</button>
@@ -2229,7 +2240,7 @@ async function cmdMetaResearch(keyword, currentTitle) {
 async function cmdIntelligence(keyword, url) {
   if (window._intelRunning) { console.warn('[intel] skipping duplicate'); return; }
   window._intelRunning = true;
-  if (!keyword) { addAgentMessage('I need a keyword to run content intelligence. What keyword should I analyze?'); return; }
+  if (!keyword) { addAgentMessage('I need a keyword to run content intelligence. What keyword should I analyse?'); return; }
 
   var prog = addProgress('Running content intelligence on "' + keyword + '" — analyzing top 10 competitors, content gaps, and generating beat-them brief…', 0);
   try {
@@ -6222,7 +6233,7 @@ function pushPageToAgent(url) {
 
     ctx += '\n' +
       '🎯 **YOUR MISSION — Beat the competition:**\n' +
-      '1. Analyze the TOP 5 competitors above — what are they doing that our page is NOT?\n' +
+      '1. Analyse the TOP 5 competitors above — what are they doing that our page is NOT?\n' +
       '2. Check if our page answers the PEOPLE ALSO ASK questions better than them\n' +
       '3. Identify EXACTLY what to change to outrank each competitor\n' +
       '4. Write the improved content section (headings, body, meta) — ready to paste\n' +
