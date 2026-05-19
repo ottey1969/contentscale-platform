@@ -5877,13 +5877,8 @@ async function loadPagesOverview(forceRefresh) {
     pages = d.pages || [];
   } catch(e) { /* primary fetch failed, try fallback */ }
 
-  // Fallback: if profile-filtered query returns empty but we have a domain,
-  // try fetching all pages for this engine and filter client-side.
-  var profileDomain = (_profile && _profile.domain) || '';
-  if (!pages.length && profileId && profileDomain) {
-
-    // Domain fallback removed — causes cross-profile mixing
-    // Step 1: Count normalized URLs to detect duplicates BEFORE merging
+  // Domain fallback removed — causes cross-profile mixing
+  // Step 1: Count normalized URLs to detect duplicates BEFORE merging
     var rawUrlCounts = {};
     pages.forEach(function(tp) { var nu = normalizeUrl(tp.url); rawUrlCounts[nu] = (rawUrlCounts[nu] || 0) + 1; });
     // Step 2: Merge duplicate URLs — keep the entry with the most data
