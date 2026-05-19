@@ -1063,7 +1063,6 @@
 
          
          <!-- FULL ARTICLE — Content Scale for International SEO -->
-        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
           <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:12px;padding:18px 20px;">
             <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">GRAAF Framework — 50 pts</div>
@@ -4138,5 +4137,128 @@
     </div>
   </div>
 </footer>
-   </body>
+   
+<script>
+/* ── FORCE-APPLY #csa STYLES — runs after DOM is fully parsed ── */
+(function() {
+  function styleCSA() {
+    var csa = document.getElementById('csa');
+    if (!csa) return;
+
+    /* Tables */
+    csa.querySelectorAll('table').forEach(function(el) {
+      el.style.cssText += 'width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;border-radius:10px;overflow:hidden;';
+    });
+    csa.querySelectorAll('th').forEach(function(el) {
+      el.style.cssText += 'background:rgba(124,58,237,0.25);padding:12px 16px;text-align:left;font-weight:700;color:#e9d5ff;border-bottom:2px solid rgba(124,58,237,0.4);font-size:11px;text-transform:uppercase;letter-spacing:.06em;';
+    });
+    csa.querySelectorAll('td').forEach(function(el) {
+      el.style.cssText += 'padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.06);color:#9ca3af;vertical-align:top;';
+    });
+
+    /* Stat boxes */
+    csa.querySelectorAll('.stats-grid').forEach(function(el) {
+      el.style.cssText += 'display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin:24px 0;';
+    });
+    csa.querySelectorAll('.stat-box').forEach(function(el) {
+      el.style.cssText += 'background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.35);border-radius:12px;padding:20px;text-align:center;';
+    });
+    csa.querySelectorAll('.stat-box .num').forEach(function(el) {
+      el.style.cssText += 'font-size:2rem;font-weight:900;color:#a78bfa;line-height:1;display:block;';
+    });
+    csa.querySelectorAll('.stat-box .desc').forEach(function(el) {
+      el.style.cssText += 'font-size:11px;color:#9ca3af;margin-top:6px;line-height:1.5;display:block;';
+    });
+
+    /* Blockquotes */
+    csa.querySelectorAll('blockquote').forEach(function(el) {
+      el.style.cssText += 'border-left:4px solid #7c3aed;padding:18px 22px;margin:24px 0;background:rgba(124,58,237,0.08);border-radius:0 10px 10px 0;font-size:15px;font-style:italic;color:#c4b5fd;';
+    });
+    csa.querySelectorAll('blockquote cite').forEach(function(el) {
+      el.style.cssText += 'display:block;margin-top:8px;font-size:13px;font-style:normal;color:#7c3aed;';
+    });
+
+    /* Headings */
+    csa.querySelectorAll('h2').forEach(function(el) {
+      el.style.cssText += 'font-size:clamp(20px,3vw,28px);font-weight:800;color:#f9fafb;margin:44px 0 14px;padding-bottom:12px;border-bottom:1px solid rgba(124,58,237,0.3);';
+    });
+    csa.querySelectorAll('h3').forEach(function(el) {
+      if (!el.closest('.toc') && !el.closest('.faq-item') && !el.closest('.step-content')) {
+        el.style.cssText += 'font-size:clamp(16px,2.5vw,22px);font-weight:700;color:#e5e7eb;margin:28px 0 10px;';
+      }
+    });
+
+    /* TOC */
+    var toc = csa.querySelector('.toc');
+    if (toc) {
+      toc.style.cssText += 'background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(190,24,93,0.08));border-radius:12px;padding:24px 28px;margin:28px 0;border:1px solid rgba(124,58,237,0.4);';
+      var tocTitle = toc.querySelector('.toc-title');
+      if (tocTitle) tocTitle.style.cssText += 'font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#a78bfa;margin-bottom:14px;display:block;';
+      toc.querySelectorAll('li').forEach(function(el) {
+        el.style.cssText += 'padding:6px 0;font-size:14px;border-bottom:1px solid rgba(124,58,237,0.1);color:#c4b5fd;';
+      });
+      toc.querySelectorAll('a').forEach(function(el) {
+        el.style.cssText += 'color:#c4b5fd;font-weight:500;text-decoration:underline;';
+      });
+    }
+
+    /* Callouts */
+    csa.querySelectorAll('.callout').forEach(function(el) {
+      el.style.cssText += 'background:rgba(251,191,36,0.07);border-left:4px solid #fbbf24;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0;';
+    });
+    csa.querySelectorAll('.callout-purple').forEach(function(el) {
+      el.style.cssText += 'background:rgba(124,58,237,0.1);border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:18px 22px;margin:20px 0;border:1px solid rgba(124,58,237,0.25);';
+    });
+
+    /* FAQ */
+    csa.querySelectorAll('.faq-item').forEach(function(el) {
+      el.style.cssText += 'border-bottom:1px solid rgba(255,255,255,0.06);padding:18px 0;';
+    });
+
+    /* CTA box */
+    csa.querySelectorAll('.cta-section, .cta-box').forEach(function(el) {
+      el.style.cssText += 'background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(190,24,93,0.1));border:1px solid rgba(124,58,237,0.3);border-radius:16px;padding:36px;margin:36px 0;text-align:center;';
+    });
+    csa.querySelectorAll('.cta-btn').forEach(function(el) {
+      el.style.cssText += 'display:inline-block;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:14px;font-weight:800;padding:13px 30px;border-radius:10px;text-decoration:none;margin:6px;';
+    });
+
+    /* Author bio */
+    var bio = csa.querySelector('.author-bio');
+    if (bio) {
+      bio.style.cssText += 'display:flex;gap:18px;align-items:flex-start;padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin:36px 0;flex-wrap:wrap;';
+    }
+
+    /* Paragraphs & lists */
+    csa.querySelectorAll('p').forEach(function(el) {
+      if (!el.closest('.toc') && !el.closest('.callout') && !el.closest('.callout-purple') && !el.closest('.stat-box')) {
+        el.style.cssText += 'font-size:15px;line-height:1.8;color:#9ca3af;margin-bottom:14px;';
+      }
+    });
+
+    /* Framework grid */
+    csa.querySelectorAll('.framework-grid').forEach(function(el) {
+      el.style.cssText += 'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0;';
+    });
+    csa.querySelectorAll('.framework-card').forEach(function(el) {
+      el.style.cssText += 'border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px;background:rgba(255,255,255,0.02);';
+    });
+
+    /* Case study */
+    csa.querySelectorAll('.case-study').forEach(function(el) {
+      el.style.cssText += 'background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:22px;margin:20px 0;';
+    });
+
+    console.log('[ContentScale] #csa styles force-applied to ' +
+      csa.querySelectorAll('*').length + ' elements');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', styleCSA);
+  } else {
+    styleCSA();
+  }
+})();
+</script>
+</body>
 </html>
