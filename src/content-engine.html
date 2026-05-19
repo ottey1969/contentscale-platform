@@ -395,6 +395,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 // STATE
 // ══════════════════════════════════════════════════════════════
 var _connected   = false;
+
+// Normalise URL for deduplication — strips protocol, www, trailing slash
+function normalizeUrl(url) {
+  if (!url) return '';
+  try {
+    var u = url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+    return u;
+  } catch(e) { return url.toLowerCase(); }
+}
 var _allProfiles = [];
 var _profile     = null;
 var _gscPages    = [];
