@@ -2773,68 +2773,150 @@ var _actionRegistry = {};
 var _actionIdCounter = 0;
 
 // ── Copy Master Brief to clipboard ─────────────────────────────────────────
-// ── Video → Brief functions ──────────────────────────────────────────────────
+// ── Video Intelligence Brief ─────────────────────────────────────────────────
+function vbStep(n) {
+  [1,2,3,4].forEach(function(i) {
+    var el = document.getElementById('vb-step-' + i);
+    if (!el) return;
+    if (i < n) { el.style.background = 'rgba(52,211,153,.1)'; el.style.color = '#34d399'; }
+    else if (i === n) { el.style.background = 'rgba(124,58,237,.15)'; el.style.color = '#a78bfa'; }
+    else { el.style.background = '#111'; el.style.color = '#4b5563'; }
+  });
+}
+function vbStatus(msg) {
+  var el = document.getElementById('videoBriefStatusText');
+  if (el) el.textContent = msg;
+}
+function vbShowProgress(show) {
+  var el = document.getElementById('videoBriefProgress');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
 async function searchVideos() {
   var q = (document.getElementById('videoSearchInput')||{}).value.trim();
   if (!q) { toast('Enter a search topic', 2000, 'warn'); return; }
   var el = document.getElementById('videoResults');
-  el.innerHTML = '<div style="color:#6b7280;font-size:12px;padding:20px 0;">🔍 Searching YouTube…</div>';
+  el.innerHTML = '<div style="color:#6b7280;font-size:12px;padding:12px 0;">Searching YouTube\u2026</div>';
   try {
     var r = await api('/api/content/video-search', 'POST', { query: q });
-    if (!r.success || !r.videos.length) { el.innerHTML = '<div style="color:#f87171;font-size:12px;">No videos found. Try a different search.</div>'; return; }
-    el.innerHTML = r.videos.map(function(v) {
-      return '<div style="display:flex;gap:12px;padding:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;margin-bottom:8px;cursor:pointer;align-items:center;" onclick="briefFromVideoId(\'' + v.id + '\',\'' + escHtml(v.title) + '\')">' +
-        (v.thumbnail ? '<img src="'+v.thumbnail+'" width="120" height="68" style="border-radius:6px;flex-shrink:0;object-fit:cover;">' : '') +
+    if (!r.success || !r.videos || !r.videos.length) {
+      el.innerHTML = '<div style="color:#f87171;font-size:12px;">No videos found. Try a different search term.</div>';
+      return;
+    }
+    var html = '';
+    r.videos.forEach(function(v, idx) {
+      window._videoList = window._videoList || [];
+      window._videoList[idx] = { id: v.id, title: v.title || '', channel: v.channel || '', views: v.views };
+      html += '<div onclick="selectVideo(' + idx + ')" ' +
+        'style="display:flex;gap:10px;padding:10px;background:rgba(255,255,255,.02);border:1px solid #1a1a1a;border-radius:8px;margin-bottom:6px;cursor:pointer;" ' +
+        'onmouseover="this.style.borderColor=\'rgba(124,58,237,.4)\'" onmouseout="this.style.borderColor=\'#1a1a1a\'">' +
+        (v.thumbnail ? '<img src="' + v.thumbnail + '" width="100" height="56" style="border-radius:5px;flex-shrink:0;object-fit:cover;">' : '') +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(v.title)+'</div>' +
-          '<div style="font-size:11px;color:#6b7280;">' + escHtml(v.channel) + (v.duration?' · '+v.duration:'') + (v.views?' · '+v.views.toLocaleString()+' views':'') + '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:#f0ede8;line-height:1.4;">' + escHtml((v.title||'').substring(0,90)) + '</div>' +
+          '<div style="font-size:10px;color:#4b5563;margin-top:3px;">' + escHtml(v.channel||'') + (v.views ? ' \u00b7 ' + Number(v.views).toLocaleString() + ' views' : '') + '</div>' +
         '</div>' +
-        '<button style="flex-shrink:0;padding:6px 14px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">📋 Brief</button>' +
+        '<span style="flex-shrink:0;font-size:9px;font-weight:700;font-family:DM Mono,monospace;padding:4px 10px;border-radius:4px;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.2);">SELECT</span>' +
       '</div>';
-    }).join('');
-  } catch(e) { el.innerHTML = '<div style="color:#f87171;">Error: '+e.message+'</div>'; }
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#f87171;font-size:12px;">Error: ' + escHtml(e.message) + '</div>';
+  }
 }
 
-async function briefFromUrl() {
+function selectVideo(idx) {
+  var v = (window._videoList || [])[idx];
+  if (!v) return;
+  document.getElementById('videoUrlInput').value = 'https://www.youtube.com/watch?v=' + v.id;
+  if (!document.getElementById('videoKeywordInput').value) {
+    var clean = (v.title || '').replace(/[|\u2013\u2014-]/g, '|').split('|')[0].trim().substring(0, 60);
+    document.getElementById('videoKeywordInput').value = clean;
+  }
+  toast('Video selected \u2014 click \ud83d\udccb Build Brief', 2500, 'ok');
+}
+
+async function buildVideoBrief() {
   var url = (document.getElementById('videoUrlInput')||{}).value.trim();
+  var kw  = (document.getElementById('videoKeywordInput')||{}).value.trim() ||
+             (document.getElementById('videoSearchInput')||{}).value.trim() ||
+             window._lastSpyKeyword || '';
+  if (!url) { toast('Paste a YouTube URL or search and select a video', 2500, 'warn'); return; }
   var m = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (!m) { toast('Enter a valid YouTube URL', 2000, 'warn'); return; }
-  await briefFromVideoId(m[1], url);
-}
+  var videoId = m[1];
 
-async function briefFromVideoId(videoId, title) {
   var el = document.getElementById('videoBrief');
-  el.innerHTML = '<div style="color:#6b7280;font-size:12px;padding:20px 0;">📋 Fetching transcript and building brief… (30–60 seconds)</div>';
+  el.innerHTML = '';
+  vbShowProgress(true);
+  vbStep(1); vbStatus('① Fetching transcript…');
+
   try {
-    var kw = (document.getElementById('videoSearchInput')||{}).value.trim() ||
-             (window._lastSpyKeyword) || (_context && _context.keyword) || '';
+    var profileId = (_context && _context.profileId) || (_profile && _profile.id) || null;
+
+    // Step 1+2+3+4: server does all intelligence in one call
+    vbStep(2); vbStatus('② Researching competition on SERP…');
     var r = await api('/api/content/video-rewrite', 'POST', {
       video_id: videoId,
       keyword: kw,
-      profile_id: _context && _context.profileId,
+      profile_id: profileId,
       brief_only: true
     });
-    if (!r.success) { el.innerHTML = '<div style="color:#f87171;">Error: '+(r.error||'failed')+'</div>'; return; }
-    // Show the brief with copy button
-    var briefText = r.brief || r.article || r.content || JSON.stringify(r, null, 2);
-    el.innerHTML =
-      '<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:20px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-          '<div style="font-size:12px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;">📋 Video Brief Ready</div>' +
-          '<button onclick="copyVideoBrief()" style="padding:6px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:11px;font-weight:800;cursor:pointer;">🌐 Copy → External AI</button>' +
-        '</div>' +
-        '<div id="videoBriefText" style="font-size:12px;color:#9ca3af;line-height:1.8;white-space:pre-wrap;max-height:400px;overflow-y:auto;">' + escHtml(briefText) + '</div>' +
-      '</div>';
+
+    vbStep(3); vbStatus('③ Analysing competitive gaps…');
+    await new Promise(function(res){ setTimeout(res, 400); });
+    vbStep(4); vbStatus('④ Building intelligence brief…');
+    await new Promise(function(res){ setTimeout(res, 400); });
+
+    vbShowProgress(false);
+
+    if (!r.success) {
+      el.innerHTML = '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:20px;color:#f87171;font-size:13px;">' +
+        '<strong>Failed:</strong> ' + escHtml(r.error || 'Unknown error') + '<br><br>' +
+        '<span style="font-size:11px;color:#6b7280;">Try a different video — some channels disable captions.</span></div>';
+      return;
+    }
+
+    var briefText = r.brief || r.content || '';
     window._lastVideoBrief = briefText;
-    toast('✅ Brief ready — copy to external AI to write the article', 3000, 'ok');
-  } catch(e) { el.innerHTML = '<div style="color:#f87171;">Error: '+e.message+'</div>'; }
+
+    el.innerHTML =
+      '<div style="background:#0d0d0d;border:1px solid rgba(124,58,237,.25);border-radius:12px;overflow:hidden;">' +
+        '<div style="padding:14px 18px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:800;color:#a78bfa;letter-spacing:.04em;">📋 Video Intelligence Brief</div>' +
+            (r.title ? '<div style="font-size:11px;color:#4b5563;margin-top:2px;">' + escHtml(r.title.substring(0,80)) + '</div>' : '') +
+          '</div>' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button onclick="sendVideoBriefToAgent()" style="padding:7px 14px;border-radius:6px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;font-weight:700;cursor:pointer;">💬 Discuss with Agent</button>' +
+            '<button onclick="copyVideoBrief()" style="padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:11px;font-weight:800;cursor:pointer;">🌐 Copy → External AI</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="padding:18px;font-size:12px;color:#d1d5db;line-height:1.9;white-space:pre-wrap;max-height:600px;overflow-y:auto;font-family:DM Mono,monospace;">' +
+          escHtml(briefText) +
+        '</div>' +
+      '</div>';
+
+    toast('✅ Brief ready — copy to Claude.ai or ChatGPT', 3000, 'ok');
+
+  } catch(e) {
+    vbShowProgress(false);
+    el.innerHTML = '<div style="color:#f87171;padding:16px;background:rgba(248,113,113,.08);border-radius:8px;">Error: ' + escHtml(e.message) + '</div>';
+  }
 }
 
 async function copyVideoBrief() {
   var text = window._lastVideoBrief || '';
-  if (!text) return;
-  try { await navigator.clipboard.writeText(text); toast('✅ Brief copied! Paste into Claude.ai to write the article.', 3000, 'ok'); }
+  if (!text) { toast('No brief to copy — build one first', 2000, 'warn'); return; }
+  try { await navigator.clipboard.writeText(text); toast('✅ Brief copied — paste into Claude.ai or ChatGPT', 3000, 'ok'); }
   catch(e) { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('✅ Copied!', 2000, 'ok'); }
+}
+
+function sendVideoBriefToAgent() {
+  var text = window._lastVideoBrief || '';
+  if (!text) return;
+  var msg = 'I have a video content brief:\n\n' + text + '\n\nWhat should I prioritise and implement first?';
+  switchView('agent');
+  setTimeout(function() { addUserMessage(msg); sendMessage(); }, 300);
 }
 
 async function copyMasterBrief() {
@@ -8050,6 +8132,66 @@ function renderSerpSpyReport(s) {
     <!-- Result scrollable -->
     <div id="serpSpyResult" style="flex:1;overflow-y:auto;padding:0 20px 20px;"></div>
   </div>
+</div>
+
+<!-- VIDEO INTELLIGENCE VIEW -->
+<div id="view-video" style="display:none;position:fixed;top:52px;left:260px;right:0;bottom:0;overflow-y:auto;padding:24px 28px;background:#07090e;">
+
+  <!-- Header -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:16px;font-weight:800;color:#f9fafb;">🎥 Video Intelligence Brief</div>
+    <div style="font-size:12px;color:#4b5563;margin-top:4px;">Search or paste a YouTube URL → engine fetches transcript + researches competition → outputs a complete content brief. No writing. No agent. Just intelligence.</div>
+  </div>
+
+  <!-- Two-column input -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+
+    <!-- Search column -->
+    <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:16px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;color:#4b5563;text-transform:uppercase;margin-bottom:10px;">Search YouTube</div>
+      <div style="display:flex;gap:8px;">
+        <input id="videoSearchInput" type="text" placeholder="Topic or keyword…" onkeydown="if(event.key==='Enter')searchVideos()"
+          style="flex:1;background:#111;border:1px solid #1e1e1e;border-radius:6px;padding:8px 12px;color:#f9fafb;font-size:13px;outline:none;">
+        <button onclick="searchVideos()"
+          style="padding:8px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">🔍 Search</button>
+      </div>
+      <div id="videoResults" style="margin-top:12px;max-height:280px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- URL paste column -->
+    <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:16px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;color:#4b5563;text-transform:uppercase;margin-bottom:10px;">Paste YouTube URL</div>
+      <div style="display:flex;gap:8px;">
+        <input id="videoUrlInput" type="text" placeholder="https://youtube.com/watch?v=…" onkeydown="if(event.key==='Enter')buildVideoBrief()"
+          style="flex:1;background:#111;border:1px solid #1e1e1e;border-radius:6px;padding:8px 12px;color:#f9fafb;font-size:13px;outline:none;">
+        <button onclick="buildVideoBrief()"
+          style="padding:8px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#e85d26,#7c3aed);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Build Brief</button>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;color:#4b5563;text-transform:uppercase;margin-bottom:6px;">Keyword Focus (optional)</div>
+        <input id="videoKeywordInput" type="text" placeholder="Target keyword for SERP research…"
+          style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:6px;padding:7px 12px;color:#f9fafb;font-size:13px;outline:none;box-sizing:border-box;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress indicator -->
+  <div id="videoBriefProgress" style="display:none;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:16px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div id="videoBriefSpinner" style="width:14px;height:14px;border:2px solid rgba(124,58,237,.3);border-top-color:#7c3aed;border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0;"></div>
+      <div id="videoBriefStatusText" style="font-size:12px;color:#9ca3af;font-family:'JetBrains Mono',monospace;">Fetching transcript…</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <div id="vb-step-1" style="font-size:10px;text-align:center;padding:6px;border-radius:6px;background:#111;color:#4b5563;">① Transcript</div>
+      <div id="vb-step-2" style="font-size:10px;text-align:center;padding:6px;border-radius:6px;background:#111;color:#4b5563;">② SERP Research</div>
+      <div id="vb-step-3" style="font-size:10px;text-align:center;padding:6px;border-radius:6px;background:#111;color:#4b5563;">③ Competitive Gaps</div>
+      <div id="vb-step-4" style="font-size:10px;text-align:center;padding:6px;border-radius:6px;background:#111;color:#4b5563;">④ Brief Build</div>
+    </div>
+  </div>
+
+  <!-- Brief output -->
+  <div id="videoBrief"></div>
+
 </div>
 
 
