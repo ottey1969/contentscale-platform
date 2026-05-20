@@ -2940,6 +2940,30 @@ async function copyMasterBrief() {
     parts.push('');
   }
 
+  // SECTION 0: BUSINESS PROFILE DATA (always include if profile loaded)
+  if (_profile) {
+    var p = _profile;
+    parts.push('=== BUSINESS PROFILE ===');
+    if (p.name)    parts.push('Business: ' + p.name);
+    if (p.domain)  parts.push('Website: https://' + p.domain);
+    if (p.phone)   parts.push('Phone: ' + p.phone);
+    if (p.email)   parts.push('Email: ' + p.email);
+    if (p.address) parts.push('Address: ' + p.address + (p.city ? ', ' + p.city : ''));
+    if (p.niche)   parts.push('Niche: ' + p.niche);
+    if (p.schema_type) parts.push('Schema type: ' + p.schema_type);
+    if (p.owner_name)  parts.push('Owner: ' + p.owner_name);
+    if (p.years_experience) parts.push('Experience: ' + p.years_experience + ' years');
+    if (p.guarantee)   parts.push('Guarantee: ' + p.guarantee);
+    if (p.review_score) parts.push('Reviews: ' + p.review_score + ' stars (' + (p.review_count||0) + ' reviews)');
+    if (p.free_consultation) parts.push('Free consultation: Yes');
+    var usps = p.unique_selling_points ? (typeof p.unique_selling_points === 'string' ? p.unique_selling_points.split('\n') : p.unique_selling_points) : [];
+    if (usps.length) parts.push('USPs: ' + usps.filter(Boolean).join(' | '));
+    var certs = p.certifications ? (typeof p.certifications === 'string' ? p.certifications.split('\n') : p.certifications) : [];
+    if (certs.length) parts.push('Certifications: ' + certs.filter(Boolean).join(', '));
+    parts.push('NOTE: Use the real phone, address, and business name above in ALL HTML output. Never use placeholder data.');
+    parts.push('');
+  }
+
   // SECTION 1: FULL SERP SPY
   if (window._lastSpyData && window._lastSpyKeyword) {
     var spy = window._lastSpyData;
