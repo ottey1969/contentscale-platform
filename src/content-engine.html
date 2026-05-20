@@ -2920,10 +2920,27 @@ function sendVideoBriefToAgent() {
 }
 
 async function copyMasterBrief() {
-  var parts = [];
-  var sep  = '\u2501'.repeat(65);
+  var parts   = [];
+  var sep     = new Array(66).join('\u2501');
+  var hasScan = _context && _context.recs && _context.recs.length > 0;
+  var hasUrl  = !!(window._lastSpyUrl || (_context && _context.url));
 
-  // ── SECTION 1: FULL SERP SPY ────────────────────────────────────
+  // SCAN GATE
+  if (hasUrl && !hasScan) {
+    var proceed = confirm(
+      'ContentScore scan MISSING\n\n' +
+      'Brief will be incomplete without structural requirements.\n\n' +
+      'Best practice:\n1. Close spy\n2. Scan page at app.contentscale.site\n3. Re-open spy and copy\n\n' +
+      'Copy without scan? (not recommended)'
+    );
+    if (!proceed) return;
+    parts.push('WARNING: ContentScore scan NOT included. Brief is incomplete.');
+    parts.push('Scan ' + (window._lastSpyUrl||'') + ' at app.contentscale.site');
+    parts.push('Add High + Medium results below before writing HTML.');
+    parts.push('');
+  }
+
+  // SECTION 1: FULL SERP SPY
   if (window._lastSpyData && window._lastSpyKeyword) {
     var spy = window._lastSpyData;
     var kw  = window._lastSpyKeyword;
@@ -2936,206 +2953,179 @@ async function copyMasterBrief() {
     parts.push('Confidence: ' + (spy.confidence || 'high'));
     parts.push('');
 
-    // STEP 1: Full SERP catalog
     parts.push(sep);
-    parts.push('\ud83d\udd0d STEP 1 \u00b7 SERP CATALOG');
+    parts.push('STEP 1 - SERP CATALOG');
     parts.push(sep);
     (spy.step1_catalog || []).forEach(function(r, i) {
       parts.push((i+1) + '. ' + (r.domain || r.url || ''));
       parts.push('   "' + (r.title || '') + '"');
-      parts.push('   Type: ' + (r.content_type || 'service page') + ' \u00b7 ~' + (r.estimated_word_count || '?') + ' words \u00b7 ' + (r.freshness || ''));
-      if ((r.serp_features || []).length) parts.push('   Features: ' + r.serp_features.join(', '));
-      if ((r.schema_types || []).length)  parts.push('   Schema: '   + r.schema_types.map(function(s){ return '\ud83d\uddf2 '+s; }).join(' '));
-      if (r.ai_overview_eligible)          parts.push('   \ud83e\udd16 AI eligible');
-      if (r.snippet_text)                  parts.push('   "' + r.snippet_text + '"');
+      parts.push('   Type: ' + (r.content_type||'service page') + ' ~' + (r.estimated_word_count||'?') + ' words ' + (r.freshness||''));
+      if ((r.serp_features||[]).length) parts.push('   Features: ' + r.serp_features.join(', '));
+      if ((r.schema_types||[]).length)  parts.push('   Schema: '   + r.schema_types.join(', '));
+      if (r.ai_overview_eligible)        parts.push('   AI eligible');
+      if (r.snippet_text)                parts.push('   "' + r.snippet_text + '"');
       parts.push('');
     });
 
-    // STEP 2: Ranking formula + pattern
     var p2 = spy.step2_pattern || {};
     parts.push(sep);
-    parts.push('\ud83c\udfc6 STEP 2 \u00b7 RANKING FORMULA');
+    parts.push('STEP 2 - RANKING FORMULA');
     parts.push(sep);
-    parts.push('THE RANKING FORMULA:');
     parts.push(p2.the_ranking_formula || '');
     parts.push('');
-    if ((p2.top3_shared_traits || []).length) {
-      parts.push('\u2713 TOP 3 SHARE:');
-      p2.top3_shared_traits.forEach(function(t){ parts.push('\u2022 ' + t); });
+    if ((p2.top3_shared_traits||[]).length) {
+      parts.push('TOP 3 SHARE:');
+      p2.top3_shared_traits.forEach(function(t){parts.push('* ' + t);});
       parts.push('');
     }
-    if ((p2.bottom_missing_traits || []).length) {
-      parts.push('\u2717 BOTTOM 7 MISSING:');
-      p2.bottom_missing_traits.forEach(function(t){ parts.push('\u2022 ' + t); });
+    if ((p2.bottom_missing_traits||[]).length) {
+      parts.push('BOTTOM 7 MISSING:');
+      p2.bottom_missing_traits.forEach(function(t){parts.push('* ' + t);});
       parts.push('');
     }
-    parts.push('Format: '    + (p2.dominant_content_format || ''));
-    parts.push('Schema: '    + (p2.dominant_schema || ''));
-    parts.push('Words: '     + (p2.dominant_word_count_range || ''));
-    parts.push('Freshness: ' + (p2.freshness_pattern || ''));
+    parts.push('Format: '+(p2.dominant_content_format||''));
+    parts.push('Schema: '+(p2.dominant_schema||''));
+    parts.push('Words: ' +(p2.dominant_word_count_range||''));
 
-    // STEP 3: Outlier
     var o3 = spy.step3_outlier;
     if (o3) {
-      parts.push('');
+      parts.push(''); parts.push(sep);
+      parts.push('STEP 3 - OUTLIER Rank #' + (o3.rank||4));
       parts.push(sep);
-      parts.push('\ud83d\udfe2 STEP 3 \u00b7 OUTLIER \u2014 Rank #' + (o3.rank || 4));
-      parts.push(sep);
-      parts.push('Domain: '         + (o3.domain || ''));
-      parts.push('Why it ranks: '   + (o3.why_it_ranks_anyway || ''));
-      parts.push('Breaks pattern: ' + (o3.why_breaks_pattern || ''));
-      parts.push('What to learn: '  + (o3.what_to_learn || ''));
+      parts.push('Domain: '         + (o3.domain||''));
+      parts.push('Why it ranks: '   + (o3.why_it_ranks_anyway||''));
+      parts.push('Breaks pattern: ' + (o3.why_breaks_pattern||''));
+      parts.push('Lesson: '         + (o3.what_to_learn||''));
     }
 
-    // STEP 4: Gaps + entities
-    parts.push('');
+    parts.push(''); parts.push(sep);
+    parts.push('STEP 4 - GAPS & MISSING ENTITIES');
     parts.push(sep);
-    parts.push('\u26a0\ufe0f STEP 4 \u00b7 GAPS & MISSING ENTITIES');
-    parts.push(sep);
-    var entities = (spy.entity_gaps_priority || spy._entity_gaps || []).slice(0,8)
-      .map(function(e){ return '"' + (e.entity||e) + '"'; }).join(', ');
+    var entities = (spy.entity_gaps_priority||spy._entity_gaps||[]).slice(0,8)
+      .map(function(e){return '"'+(e.entity||e)+'"';}).join(', ');
     if (entities) parts.push('MISSING ENTITIES: ' + entities);
     parts.push('');
-    (spy.step4_missing || []).forEach(function(m) {
-      parts.push((m.gap_type === 'warning' ? '\u26a0\ufe0f WARNING' : '\ud83d\udfe2 OPPORTUNITY') + ': ' + (m.gap || ''));
-      parts.push('\u2192 ' + (m.how_to_exploit || ''));
+    (spy.step4_missing||[]).forEach(function(m) {
+      parts.push((m.gap_type==='warning' ? 'WARNING' : 'OPPORTUNITY') + ': ' + (m.gap||''));
+      parts.push('-> ' + (m.how_to_exploit||''));
       parts.push('');
     });
 
-    // PAA + AI Blueprint
     parts.push(sep);
-    parts.push('\ud83e\udd16 AI OVERVIEW BLUEPRINT');
+    parts.push('AI OVERVIEW BLUEPRINT');
     parts.push(sep);
-    parts.push(spy.ai_overview_blueprint || 'Answer PAA questions in step-by-step format for AI citation eligibility.');
+    parts.push(spy.ai_overview_blueprint || 'Answer PAA in step-by-step format for AI citation.');
     parts.push('');
-    if ((spy.paa_questions || []).length) {
-      parts.push('\u2753 PAA QUESTIONS TO ANSWER:');
-      spy.paa_questions.forEach(function(q){ parts.push('\u2022 ' + q); });
+    if ((spy.paa_questions||[]).length) {
+      parts.push('PAA QUESTIONS TO ANSWER:');
+      spy.paa_questions.forEach(function(q){parts.push('* ' + q);});
       parts.push('');
     }
 
-    // Content brief specs
     var cb = spy.content_brief || {};
     if (cb.recommended_format || cb.recommended_schema) {
-      parts.push(sep);
-      parts.push('\ud83d\udccb CONTENT BRIEF SPECS');
-      parts.push(sep);
-      if (cb.recommended_format)    parts.push('Format: '     + cb.recommended_format);
-      if (cb.recommended_word_count)parts.push('Word count: ' + cb.recommended_word_count);
+      parts.push(sep); parts.push('CONTENT BRIEF SPECS'); parts.push(sep);
+      if (cb.recommended_format)      parts.push('Format: ' + cb.recommended_format);
+      if (cb.recommended_word_count)  parts.push('Words: '  + cb.recommended_word_count);
       if ((cb.recommended_schema||[]).length) parts.push('Schema: ' + cb.recommended_schema.join(', '));
-      if ((cb.must_have_h2s||[]).length)      parts.push('Must-have H2s:\n' + cb.must_have_h2s.map(function(h){ return '  \u2022 ' + h; }).join('\n'));
+      if ((cb.must_have_h2s||[]).length) { parts.push('Must-have H2s:'); cb.must_have_h2s.forEach(function(h){parts.push('  * ' + h);}); }
       if ((cb.must_cover_entities||[]).length) parts.push('Must cover: ' + cb.must_cover_entities.join(', '));
-      if ((cb.faq_questions||[]).length)       parts.push('FAQs:\n' + cb.faq_questions.map(function(q){ return '  \u2022 ' + q; }).join('\n'));
+      if ((cb.faq_questions||[]).length) { parts.push('FAQs:'); cb.faq_questions.forEach(function(q){parts.push('  * ' + q);}); }
       parts.push('');
     }
 
-    // Quick wins
-    parts.push(sep);
-    parts.push('\u26a1 QUICK WINS \u2014 Do Today');
-    parts.push(sep);
-    (spy.quick_wins || []).forEach(function(w) {
-      parts.push('\u2713 ' + (w.win || w) + (w.reason ? ' \u2014 ' + w.reason : ''));
+    parts.push(sep); parts.push('QUICK WINS - Do Today'); parts.push(sep);
+    (spy.quick_wins||[]).forEach(function(w){
+      parts.push('-> ' + (w.win||w) + (w.reason ? ' -- ' + w.reason : ''));
     });
-
-    // Action plan
     parts.push('');
-    parts.push('\ud83d\udccb ACTION PLAN:');
-    (spy.action_plan || []).forEach(function(a, i) {
+    parts.push('ACTION PLAN:');
+    (spy.action_plan||[]).forEach(function(a, i) {
       parts.push((i+1) + '. [' + (a.priority||'HIGH').toUpperCase() + '] ' + (a.action||''));
-      parts.push('   Effort: ' + (a.effort||'medium') + ' \u00b7 ' + (a.time_to_impact||'days'));
+      parts.push('   Effort: ' + (a.effort||'medium') + ' -- ' + (a.time_to_impact||'days'));
     });
     parts.push('');
   }
 
-  // ── SECTION 2: AGENT ANALYSIS ──────────────────────────────────
+  // SECTION 2: AGENT ANALYSIS
   if (_history && _history.length) {
     var agentMsgs = _history.filter(function(h) {
       return h.role === 'assistant' && h.content && h.content.length > 50;
     });
     if (agentMsgs.length) {
       parts.push(sep);
-      parts.push('\ud83e\udde0 AGENT STRATEGIC ANALYSIS (PULSE + NEXUS)');
+      parts.push('AGENT STRATEGIC ANALYSIS (PULSE + NEXUS)');
       parts.push(sep);
-      agentMsgs.forEach(function(h) {
-        parts.push(h.content);
-        parts.push('---');
-      });
+      agentMsgs.forEach(function(h) { parts.push(h.content); parts.push('---'); });
       parts.push('');
     }
   }
 
-  // ── SECTION 3: CONTENTSCORE SCAN ──────────────────────────────
+  // SECTION 3: CONTENTSCORE SCAN (most important structural layer)
   if (_context && _context.recs && _context.recs.length > 0) {
     var scanUrl = _context.url || window._lastSpyUrl || '';
     var score   = _context.score || 0;
     parts.push(sep);
-    parts.push('\ud83d\udcca CONTENTSCORE SCAN' + (scanUrl ? ' \u2014 ' + scanUrl : '') + (score ? '  Score: ' + score + '/100' : ''));
+    parts.push('CONTENTSCORE SCAN' + (scanUrl ? ' -- ' + scanUrl : '') + (score ? '  Score: ' + score + '/100' : ''));
+    parts.push('Target: 85+ ContentScore. Apply ALL items below in your HTML before publishing.');
     parts.push(sep);
-    parts.push('Target: 85+ ContentScore. Fix ALL items below before publishing.');
-    parts.push('');
-    var high = (_context.recs || []).filter(function(r){ return r.priority === 'high'; });
-    var med  = (_context.recs || []).filter(function(r){ return r.priority === 'medium'; });
+    var high = (_context.recs||[]).filter(function(r){return r.priority==='high';});
+    var med  = (_context.recs||[]).filter(function(r){return r.priority==='medium';});
     if (high.length) {
-      parts.push('\ud83d\udd34 HIGH PRIORITY \u2014 Fix These First:');
+      parts.push('[HIGH PRIORITY] Fix These First:');
       high.forEach(function(r, i) {
-        parts.push((i+1) + '. ' + (r.title || r.description || ''));
-        if (r.action)  parts.push('   ACTION: ' + r.action);
-        if (r.learning)parts.push('   WHY: '    + r.learning);
-        if (r.target)  parts.push('   TARGET: ' + r.target);
+        parts.push((i+1) + '. ' + (r.title||r.description||''));
+        if (r.action)   parts.push('   ACTION: ' + r.action);
+        if (r.learning) parts.push('   WHY: '    + r.learning);
+        if (r.target)   parts.push('   TARGET: ' + r.target);
         parts.push('');
       });
     }
     if (med.length) {
-      parts.push('\ud83d\udfe1 MEDIUM PRIORITY:');
+      parts.push('[MEDIUM PRIORITY]:');
       med.forEach(function(r, i) {
-        parts.push((i+1) + '. ' + (r.title || r.description || ''));
-        if (r.action)  parts.push('   ACTION: ' + r.action);
-        if (r.learning)parts.push('   WHY: '    + r.learning);
+        parts.push((i+1) + '. ' + (r.title||r.description||''));
+        if (r.action)   parts.push('   ACTION: ' + r.action);
+        if (r.learning) parts.push('   WHY: '    + r.learning);
         parts.push('');
       });
     }
   } else {
     var scanUrl2 = window._lastSpyUrl || (_context && _context.url) || '';
     parts.push(sep);
-    parts.push('\ud83d\udcca CONTENTSCORE \u2014 SCAN REQUIRED');
+    parts.push('CONTENTSCORE -- SCAN REQUIRED BEFORE WRITING HTML');
     parts.push(sep);
     if (scanUrl2) {
-      parts.push('\u26a0\ufe0f ContentScore scan not yet run on this page.');
-      parts.push('BEFORE pasting into Claude.ai:');
+      parts.push('[STOP] Do not write HTML without ContentScore requirements.');
       parts.push('1. Go to https://app.contentscale.site');
       parts.push('2. Scan: ' + scanUrl2);
-      parts.push('3. Copy \ud83d\udd34 High + \ud83d\udfe1 Medium recommendations');
-      parts.push('4. Paste below this brief, then paste everything into Claude.ai together');
+      parts.push('3. Copy High + Medium priority recommendations');
+      parts.push('4. Paste below this brief');
+      parts.push('5. Paste everything into Claude.ai / ChatGPT together');
     } else {
-      parts.push('\u2139\ufe0f New page \u2014 no URL to scan yet.');
-      parts.push('After publishing, scan at: https://app.contentscale.site');
+      parts.push('New page -- no URL yet. After publishing: scan at app.contentscale.site');
     }
   }
 
-  parts.push('');
-  parts.push(sep);
-
-  if (parts.length < 3) {
-    parts.push('No brief generated yet. Run Spy + Get Deeper Suggestions first.');
-  }
+  parts.push(''); parts.push(sep);
+  if (parts.length < 5) { parts.push('No brief yet. Run Spy + Get Deeper Suggestions first.'); }
 
   var briefText = parts.join('\n');
-
   try {
     await navigator.clipboard.writeText(briefText);
     updateWorkflowStep(5);
-    toast('\u2705 Full brief copied \u2014 Spy + Agent + Scan in one block', 4000, 'ok');
+    var msg = hasScan
+      ? 'Complete brief copied -- Spy + Agent + Scan (' + (_context.recs.filter(function(r){return r.priority==="high"||r.priority==="medium";}).length) + ' requirements)'
+      : 'Brief copied WITHOUT ContentScore scan -- incomplete';
+    toast(msg, 4000, hasScan ? 'ok' : 'warn');
   } catch(e) {
     var ta = document.createElement('textarea');
-    ta.value = briefText;
-    ta.style.cssText = 'position:fixed;opacity:0;';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast('\u2705 Brief copied to clipboard!', 3000, 'ok');
+    ta.value = briefText; ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Brief copied!', 3000, 'ok');
   }
 }
+
 
 function addActions(actions) {
   var msgs = document.getElementById('messages');
@@ -7023,7 +7013,7 @@ async function runSerpSpy() {
       var _spyRec = window._serpSpyRecommended || '';
       var _scanInBrief = _context && _context.recs && _context.recs.length > 0;
       actDiv.innerHTML =
-        '<button onclick="copyMasterBrief()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#be185d);color:#fff;font-size:12px;font-weight:800;cursor:pointer;">🌐 Copy Master Brief → External AI</button>' +
+        '<button onclick="' + (_scanInBrief || !url ? 'copyMasterBrief()' : 'if(!confirm(\'Run ContentScore scan first for best results. Copy anyway?\')) return; copyMasterBrief()') + '" style="padding:8px 18px;border-radius:7px;border:none;background:' + (_scanInBrief ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,#7c3aed,#be185d)') + ';color:#fff;font-size:12px;font-weight:800;cursor:pointer;">' + (_scanInBrief ? '✅ Copy Master Brief (Spy + Agent + Scan)' : '🌐 Copy Master Brief → External AI') + '</button>' +
         '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Suggestions</button>' +
         '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
         '<div style="width:100%;margin-top:10px;">' +
