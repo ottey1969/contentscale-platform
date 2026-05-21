@@ -26588,7 +26588,7 @@ Return ONLY a valid JSON array of exactly 6 strings. No explanation, no markdown
 }));
 
 // ── ADMIN PAGES ───────────────────────────────────────────────────────────
-app.get('/boost-admin', (req, res) => res.sendFile('boost-admin.html', { root: __dirname }));
+app.get('/boost-admin', (req, res) => res.sendFile(path.join(__dirname, '../public', 'boost-admin.html')));
 
 app.get('/boost/api/sessions', asyncHandler(async (req, res) => {
   const r = await pool.query(
@@ -26633,7 +26633,7 @@ app.get('/boost/:id', async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   } else {
-    res.sendFile('boost.html', { root: __dirname });
+    res.sendFile(path.join(__dirname, '../public', 'boost.html'));
   }
 });
 
