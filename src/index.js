@@ -26511,6 +26511,139 @@ function startTrackerScheduler() {
   console.log('[tracker-scheduler] Started (adaptive, every 15min)');
 }
 
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VIRAL BOOST SYSTEM — contentscale-boost
+// Routes: /boost/create  /boost/:id  /boost/:id/engage  /boost-admin  /boost/api/sessions
+// Files needed in project root: boost.html, boost-admin.html
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── CREATE BOOST SESSION (Ottmar only) ────────────────────────────────────
+app.post('/boost/create', asyncHandler(async (req, res) => {
+  const { postText, postUrl, clientName, apiKey } = req.body;
+  if (!postText) return res.status(400).json({ error: 'postText required' });
+
+  const claudeKey = apiKey || process.env.ANTHROPIC_API_KEY;
+  if (!claudeKey) return res.status(400).json({ error: 'Claude API key required' });
+
+  const prompt = `Generate 6 diverse LinkedIn comments for this post.
+
+Post: "${postText}"
+Author/Client: ${clientName || 'ContentScale'}
+
+Rules for ALL 6 comments:
+- Each comment must be completely different in angle, length and voice
+- Written as if by different LinkedIn users (marketer, founder, consultant, analyst, manager, strategist)
+- NEVER start with "Great post", "Love this", "This resonates", "That's exactly", "So true", "Absolutely"
+- No hashtags, no emojis
+- 1-3 sentences max each
+- Add genuine value, a new angle, a question, or a concrete data point
+- Sound like real humans, not AI
+- In the SAME LANGUAGE as the post
+
+Return ONLY a valid JSON array of exactly 6 strings. No explanation, no markdown:
+["comment1","comment2","comment3","comment4","comment5","comment6"]`;
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1200,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!r.ok) {
+    const err = await r.text();
+    return res.status(500).json({ error: 'Claude API error: ' + err.substring(0, 200) });
+  }
+
+  const json = await r.json();
+  const raw = json.content?.[0]?.text?.trim() || '';
+  let comments = [];
+  try {
+    const match = raw.match(/\[([\s\S]*)\]/);
+    comments = JSON.parse(match ? '[' + match[1] + ']' : raw);
+  } catch {
+    return res.status(500).json({ error: 'Could not parse AI response', raw: raw.substring(0, 300) });
+  }
+
+  if (!pool) return res.status(500).json({ error: 'Database not connected' });
+
+  const result = await pool.query(
+    `INSERT INTO boost_sessions (post_url, post_text, client_name, comments)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [postUrl || '', postText, clientName || 'ContentScale', JSON.stringify(comments)]
+  );
+
+  const sessionId = result.rows[0].id;
+  console.log('[Boost] Session created:', sessionId, '| client:', clientName);
+  res.json({ success: true, sessionId, boostUrl: '/boost/' + sessionId, comments });
+}));
+
+// ── GET BOOST SESSION ─────────────────────────────────────────────────────
+app.get('/boost/:id', async (req, res) => {
+  const { id } = req.params;
+  // UUID check
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(404).send('Not found');
+
+  if (req.headers.accept?.includes('application/json')) {
+    try {
+      const s = await pool.query('SELECT * FROM boost_sessions WHERE id=$1 AND active=TRUE', [id]);
+      if (!s.rows.length) return res.status(404).json({ error: 'Session not found or expired' });
+      const e = await pool.query(
+        'SELECT participant, comment_idx, engaged_at FROM boost_engagements WHERE session_id=$1 ORDER BY engaged_at DESC',
+        [id]
+      );
+      res.json({ session: s.rows[0], engagements: e.rows });
+    } catch(err) {
+      res.status(500).json({ error: err.message });
+    }
+  } else {
+    res.sendFile('boost.html', { root: __dirname });
+  }
+});
+
+// ── REGISTER ENGAGEMENT ───────────────────────────────────────────────────
+app.post('/boost/:id/engage', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { participant, commentIdx, commentText } = req.body;
+  if (!participant) return res.status(400).json({ error: 'participant required' });
+  await pool.query(
+    'INSERT INTO boost_engagements (session_id, participant, comment_idx, comment_text) VALUES ($1,$2,$3,$4)',
+    [id, participant, commentIdx || 0, commentText || '']
+  );
+  res.json({ success: true });
+}));
+
+// ── ADMIN PAGES ───────────────────────────────────────────────────────────
+app.get('/boost-admin', (req, res) => res.sendFile('boost-admin.html', { root: __dirname }));
+
+app.get('/boost/api/sessions', asyncHandler(async (req, res) => {
+  const r = await pool.query(
+    `SELECT s.id, s.post_url, LEFT(s.post_text,100) as preview, s.client_name,
+            s.created_at, s.active, COUNT(e.id) as engagement_count
+     FROM boost_sessions s
+     LEFT JOIN boost_engagements e ON e.session_id=s.id
+     GROUP BY s.id ORDER BY s.created_at DESC LIMIT 50`
+  );
+  res.json(r.rows);
+}));
+
+app.post('/boost/:id/close', asyncHandler(async (req, res) => {
+  await pool.query('UPDATE boost_sessions SET active=FALSE WHERE id=$1', [req.params.id]);
+  res.json({ success: true });
+}));
+
+console.log('[ContentScale] Boost routes loaded ✅');
+// ═══════════════════════════════════════════════════════════════════════════
+
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
