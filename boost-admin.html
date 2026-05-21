@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ContentScale Boost Admin</title>
+<style>
+  :root { --blue:#0a66c2; --purple:#6b21a8; --green:#15803d; --red:#dc2626; --border:#e5e7eb; --muted:#6b7280; --bg:#f9fafb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: #1a1a1a; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg,#0a66c2,#6b21a8); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 1.1rem; font-weight: 700; }
+  .header small { opacity: .8; font-size: 12px; }
+
+  .wrap { max-width: 700px; margin: 0 auto; padding: 24px 16px; }
+
+  .card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 5px; margin-top: 12px; }
+  label:first-child { margin-top: 0; }
+  input, textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 14px; font-family: inherit;
+    background: white; outline: none; transition: border .2s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--blue); }
+  textarea { height: 120px; resize: vertical; }
+
+  .btn {
+    padding: 11px 20px; border: none; border-radius: 7px;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .btn-primary { background: var(--purple); color: white; width: 100%; margin-top: 16px; font-size: 15px; }
+  .btn-primary:hover { background: #581c87; }
+  .btn-primary:disabled { background: #9ca3af; cursor: default; }
+  .btn-danger { background: var(--red); color: white; padding: 6px 12px; font-size: 12px; }
+  .btn-copy-link { background: var(--blue); color: white; padding: 8px 16px; font-size: 13px; }
+
+  #status { text-align: center; margin-top: 12px; font-size: 13px; font-weight: 600; min-height: 20px; }
+  #status.success { color: var(--green); }
+  #status.error { color: var(--red); }
+
+  /* Result box */
+  .result-box {
+    background: #f0fdf4; border: 2px solid var(--green);
+    border-radius: 10px; padding: 20px; margin-top: 20px; display: none;
+  }
+  .result-url { font-size: 15px; font-weight: 700; color: var(--blue); word-break: break-all; margin: 8px 0 16px; }
+  .result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .result-wa {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #16a34a; color: white; padding: 10px 18px;
+    border-radius: 7px; font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: background .15s;
+  }
+  .result-wa:hover { background: #15803d; }
+
+  /* Preview comments */
+  .preview-comment {
+    background: #f9fafb; border: 1px solid var(--border);
+    border-radius: 7px; padding: 12px 14px; margin-bottom: 8px;
+    font-size: 13px; line-height: 1.6; color: #374151;
+  }
+  .preview-comment strong { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* Sessions list */
+  .session-item {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 10px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .session-info { flex: 1; }
+  .session-preview { font-size: 13px; color: #374151; margin-bottom: 4px; }
+  .session-meta { font-size: 11px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge-engaged { background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .badge-inactive { background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🚀 ContentScale Boost Admin</h1>
+  <small>Ottmar Francisca · contentscale.site</small>
+</div>
+
+<div class="wrap">
+
+  <!-- Settings -->
+  <div class="card">
+    <h2>Settings</h2>
+    <label>Claude API Key (stored locally)</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
+    <label>Your server URL</label>
+    <input type="text" id="serverUrl" placeholder="https://app.contentscale.site" value="https://app.contentscale.site">
+    <button class="btn btn-primary" style="background:var(--blue);margin-top:12px;" onclick="saveSettings()">Save Settings</button>
+  </div>
+
+  <!-- Create new boost -->
+  <div class="card">
+    <h2>Create New Boost Session</h2>
+
+    <label>Client / Author Name</label>
+    <select id="clientName">
+      <option value="ContentScale">ContentScale — Ottmar Francisca</option>
+      <option value="Perfect Roofing Team">Perfect Roofing Team NJ</option>
+      <option value="Custom">Custom (type below)</option>
+    </select>
+
+    <label>Custom client name (if Custom selected)</label>
+    <input type="text" id="customClient" placeholder="Company name...">
+
+    <label>LinkedIn Post URL (optional)</label>
+    <input type="url" id="postUrl" placeholder="https://www.linkedin.com/posts/...">
+
+    <label>Post Text (paste the full post)</label>
+    <textarea id="postText" placeholder="Paste your LinkedIn post text here..."></textarea>
+
+    <button class="btn btn-primary" id="btnCreate" onclick="createBoost()">
+      ⚡ Generate Boost Comments
+    </button>
+    <div id="status"></div>
+
+    <!-- Result -->
+    <div class="result-box" id="resultBox">
+      <div style="font-weight:700;color:var(--green);margin-bottom:4px;">✅ Boost session created!</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Share this link:</div>
+      <div class="result-url" id="resultUrl"></div>
+      <div class="result-actions">
+        <button class="btn btn-copy-link" onclick="copyLink()">📋 Copy Link</button>
+        <a class="result-wa" id="resultWa" href="#" target="_blank">💬 Share via WhatsApp</a>
+      </div>
+      <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;">GENERATED COMMENTS PREVIEW:</div>
+      <div id="commentsPreview"></div>
+    </div>
+  </div>
+
+  <!-- Active sessions -->
+  <div class="card">
+    <h2>Active Sessions</h2>
+    <div id="sessionsList"><div style="color:var(--muted);font-size:13px;">Loading...</div></div>
+    <button class="btn" style="background:#f3f4f6;color:#374151;margin-top:12px;font-size:13px;" onclick="loadSessions()">↻ Refresh</button>
+  </div>
+
+</div>
+
+<script>
+let currentBoostUrl = '';
+
+function saveSettings() {
+  localStorage.setItem('boostApiKey', document.getElementById('apiKey').value);
+  localStorage.setItem('boostServerUrl', document.getElementById('serverUrl').value);
+  setStatus('Settings saved!', 'success');
+}
+
+function loadSettings() {
+  const key = localStorage.getItem('boostApiKey');
+  const srv = localStorage.getItem('boostServerUrl');
+  if (key) document.getElementById('apiKey').value = key;
+  if (srv) document.getElementById('serverUrl').value = srv;
+}
+
+function setStatus(msg, type='') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+}
+
+async function createBoost() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const serverUrl = document.getElementById('serverUrl').value.trim();
+  const postText = document.getElementById('postText').value.trim();
+  const postUrl = document.getElementById('postUrl').value.trim();
+  const clientSel = document.getElementById('clientName').value;
+  const customClient = document.getElementById('customClient').value.trim();
+  const clientName = clientSel === 'Custom' ? customClient : clientSel;
+
+  if (!apiKey) { setStatus('Enter your Claude API key first', 'error'); return; }
+  if (!postText) { setStatus('Paste your post text', 'error'); return; }
+
+  const btn = document.getElementById('btnCreate');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  setStatus('Calling Claude to generate 6 comments...', '');
+  document.getElementById('resultBox').style.display = 'none';
+
+  try {
+    const r = await fetch(`${serverUrl}/boost/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postText, postUrl, clientName, apiKey })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Server error');
+
+    const fullUrl = `${serverUrl}${data.boostUrl}`;
+    currentBoostUrl = fullUrl;
+
+    document.getElementById('resultUrl').textContent = fullUrl;
+    const waMsg = encodeURIComponent(`🚀 Hey! Help boost my LinkedIn post — takes 2 minutes:\n${fullUrl}\n\nPick a comment, copy it, paste it on LinkedIn. Thanks! 🙏`);
+    document.getElementById('resultWa').href = `https://wa.me/?text=${waMsg}`;
+
+    // Show comment previews
+    const preview = document.getElementById('commentsPreview');
+    preview.innerHTML = (data.comments || []).map((c, i) => `
+      <div class="preview-comment">
+        <strong>Option ${i+1}</strong>${c}
+      </div>
+    `).join('');
+
+    document.getElementById('resultBox').style.display = 'block';
+    setStatus('', '');
+    loadSessions();
+  } catch(e) {
+    setStatus('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Generate Boost Comments';
+  }
+}
+
+function copyLink() {
+  if (!currentBoostUrl) return;
+  navigator.clipboard?.writeText(currentBoostUrl).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = currentBoostUrl;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+  const btn = event.target;
+  btn.textContent = '✅ Copied!';
+  setTimeout(() => btn.textContent = '📋 Copy Link', 2000);
+}
+
+async function loadSessions() {
+  const serverUrl = document.getElementById('serverUrl').value.trim();
+  const el = document.getElementById('sessionsList');
+  try {
+    const r = await fetch(`${serverUrl}/boost/api/sessions`);
+    const sessions = await r.json();
+    if (!sessions.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;">No sessions yet.</div>';
+      return;
+    }
+    el.innerHTML = sessions.map(s => `
+      <div class="session-item">
+        <div class="session-info">
+          <div class="session-preview">${s.preview}...</div>
+          <div class="session-meta">
+            <span>${s.client_name}</span>
+            <span>${new Date(s.created_at).toLocaleDateString()}</span>
+            <span class="badge-engaged">${s.engagement_count} engaged</span>
+            ${!s.active ? '<span class="badge-inactive">Closed</span>' : ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+          <button class="btn btn-copy-link" style="font-size:11px;padding:5px 10px;" onclick="copySessionLink('${s.id}')">Copy link</button>
+          ${s.active ? `<button class="btn btn-danger" onclick="closeSession('${s.id}')">Close</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Could not load sessions.</div>';
+  }
+}
+
+function copySessionLink(id) {
+  const serverUrl = document.getElementById('serverUrl').value.trim();
+  const url = `${serverUrl}/boost/${id}`;
+  navigator.clipboard?.writeText(url) || (() => {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  })();
+}
+
+async function closeSession(id) {
+  if (!confirm('Close this boost session?')) return;
+  const serverUrl = document.getElementById('serverUrl').value.trim();
+  await fetch(`${serverUrl}/boost/${id}/close`, { method: 'POST' });
+  loadSessions();
+}
+
+loadSettings();
+loadSessions();
+</script>
+</body>
+</html>
