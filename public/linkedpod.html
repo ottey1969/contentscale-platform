@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkedPod — Viral Boost Network by ContentScale</title>
+<meta name="description" content="Real people, real comments, real reach. LinkedPod is the engagement pod network where your LinkedIn posts go viral — built by ContentScale.">
+<style>
+/* ── RESET & BASE ───────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#0a66c2;--purple:#7c3aed;--purple-dark:#5b21b6;
+  --green:#10b981;--ink:#0f0f0f;--muted:#6b7280;
+  --bg:#050510;--card:rgba(255,255,255,.04);
+  --border:rgba(255,255,255,.08);--glow:rgba(124,58,237,.4);
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#f0ede8;overflow-x:hidden;min-height:100vh}
+
+/* ── ANIMATED BACKGROUND ────────────────────────────────────────── */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35;animation:drift 20s ease-in-out infinite}
+.orb1{width:600px;height:600px;background:var(--purple);top:-200px;left:-100px;animation-delay:0s}
+.orb2{width:500px;height:500px;background:#0a66c2;bottom:-150px;right:-100px;animation-delay:-7s}
+.orb3{width:400px;height:400px;background:#10b981;top:40%;left:40%;animation-delay:-14s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.05)}66%{transform:translate(-20px,40px) scale(.95)}}
+
+/* ── NOISE OVERLAY ──────────────────────────────────────────────── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");opacity:.4;pointer-events:none;z-index:1}
+
+/* ── ALL CONTENT ABOVE BACKGROUND ──────────────────────────────── */
+.wrap,.nav,.footer{position:relative;z-index:2}
+
+/* ── NAV ────────────────────────────────────────────────────────── */
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;max-width:1100px;margin:0 auto;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px);background:rgba(5,5,16,.7);border-bottom:1px solid var(--border)}
+.logo{font-size:18px;font-weight:800;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;display:flex;align-items:center;gap:8px}
+.logo-icon{font-size:20px;-webkit-text-fill-color:initial}
+.nav-links{display:flex;gap:6px;align-items:center}
+.nav-link{font-size:13px;color:rgba(255,255,255,.6);text-decoration:none;padding:7px 14px;border-radius:6px;transition:all .2s}
+.nav-link:hover{color:#fff;background:var(--border)}
+.nav-cta{background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;box-shadow:0 0 20px var(--glow)}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 30px var(--glow)}
+
+/* ── HERO ───────────────────────────────────────────────────────── */
+.hero{max-width:880px;margin:0 auto;padding:100px 24px 80px;text-align:center}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px;animation:fadeUp .6s ease both}
+.hero-kicker::before{content:'';width:6px;height:6px;border-radius:50%;background:#a78bfa;animation:pulse-dot 1.5s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+.hero h1{font-size:clamp(2.4rem,7vw,4.5rem);font-weight:900;line-height:1.06;letter-spacing:-.03em;margin-bottom:24px;animation:fadeUp .7s .1s ease both}
+.hero h1 .grad{background:linear-gradient(135deg,#a78bfa 0%,#60a5fa 50%,#34d399 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(1rem,2.5vw,1.2rem);color:rgba(255,255,255,.6);max-width:560px;margin:0 auto 40px;line-height:1.75;animation:fadeUp .7s .2s ease both}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:fadeUp .7s .3s ease both}
+.btn-hero{padding:15px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.btn-hero-primary{background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;box-shadow:0 0 40px var(--glow)}
+.btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 8px 40px var(--glow)}
+.btn-hero-ghost{border:1px solid var(--border);color:rgba(255,255,255,.7);background:rgba(255,255,255,.05)}
+.btn-hero-ghost:hover{border-color:rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.08)}
+.hero-trust{display:flex;gap:24px;justify-content:center;margin-top:32px;font-size:13px;color:rgba(255,255,255,.4);flex-wrap:wrap;animation:fadeUp .7s .4s ease both}
+.trust-item{display:flex;align-items:center;gap:6px}
+.trust-item::before{content:'✓';color:var(--green);font-weight:700}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── COUNTER STRIP ──────────────────────────────────────────────── */
+.counter-strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:28px 24px;display:flex;justify-content:center;gap:64px;flex-wrap:wrap;background:rgba(255,255,255,.02)}
+.counter{text-align:center}
+.counter-num{font-size:2rem;font-weight:900;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block}
+.counter-lbl{font-size:12px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase}
+
+/* ── SECTION ────────────────────────────────────────────────────── */
+.section{max-width:1100px;margin:0 auto;padding:80px 24px}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:rgba(124,58,237,.8);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px}
+.section-title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;letter-spacing:-.02em;margin-bottom:16px;line-height:1.15}
+.section-sub{font-size:16px;color:rgba(255,255,255,.5);max-width:520px;line-height:1.75}
+
+/* ── HOW IT WORKS ───────────────────────────────────────────────── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2px;margin-top:48px}
+.step{background:var(--card);border:1px solid var(--border);padding:32px 28px;position:relative;transition:all .3s;cursor:default}
+.step:first-child{border-radius:16px 0 0 16px}
+.step:last-child{border-radius:0 16px 16px 0}
+.step:hover{background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.3);transform:translateY(-4px);z-index:1}
+.step-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(124,58,237,.6);letter-spacing:.12em;margin-bottom:16px}
+.step-icon{font-size:32px;margin-bottom:16px;display:block}
+.step h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.step p{font-size:14px;color:rgba(255,255,255,.5);line-height:1.65}
+.step-arrow{position:absolute;right:-14px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.15);font-size:20px;z-index:2}
+@media(max-width:768px){.step{border-radius:10px!important;}.step-arrow{display:none}}
+
+/* ── FEATURES GRID ──────────────────────────────────────────────── */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:48px}
+.feature{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;transition:all .3s}
+.feature:hover{background:rgba(124,58,237,.06);border-color:rgba(124,58,237,.25);transform:translateY(-3px)}
+.feature-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px}
+.fi-purple{background:rgba(124,58,237,.2)}
+.fi-blue{background:rgba(10,102,194,.2)}
+.fi-green{background:rgba(16,185,129,.2)}
+.fi-amber{background:rgba(245,158,11,.2)}
+.feature h3{font-size:15px;font-weight:700;margin-bottom:8px}
+.feature p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.65}
+
+/* ── PRICING ────────────────────────────────────────────────────── */
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:48px;align-items:start}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .3s;position:relative}
+.price-card.featured{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(10,102,194,.1));border-color:rgba(124,58,237,.4);box-shadow:0 0 60px rgba(124,58,237,.15)}
+.price-card.featured .price-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;font-size:11px;font-weight:700;padding:4px 16px;border-radius:20px;white-space:nowrap;letter-spacing:.06em;text-transform:uppercase}
+.price-tier{font-size:12px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.price-amount{font-size:2.4rem;font-weight:900;line-height:1;margin-bottom:6px}
+.price-amount span{font-size:15px;color:rgba(255,255,255,.4);font-weight:400}
+.price-desc{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:24px;line-height:1.6}
+.price-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.price-features li{font-size:13px;color:rgba(255,255,255,.7);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.price-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
+.price-features li.no::before{content:'—';color:rgba(255,255,255,.2)}
+.price-features li.no{color:rgba(255,255,255,.25)}
+.btn-price{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:block;text-align:center;transition:all .2s}
+.btn-price-primary{background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;box-shadow:0 4px 20px var(--glow)}
+.btn-price-primary:hover{transform:translateY(-1px);box-shadow:0 8px 32px var(--glow)}
+.btn-price-ghost{border:1px solid var(--border);color:rgba(255,255,255,.6);background:rgba(255,255,255,.04)}
+.btn-price-ghost:hover{border-color:rgba(255,255,255,.3);color:#fff}
+
+/* ── ALL LINKS ──────────────────────────────────────────────────── */
+.links-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:40px}
+.link-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-decoration:none;color:inherit;transition:all .25s;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.link-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--purple),var(--blue));opacity:0;transition:opacity .25s}
+.link-card:hover{border-color:rgba(124,58,237,.4);transform:translateY(-3px);box-shadow:0 8px 30px rgba(124,58,237,.15)}
+.link-card:hover::before{opacity:.06}
+.link-card-icon{font-size:24px;position:relative}
+.link-card-title{font-size:14px;font-weight:700;position:relative}
+.link-card-desc{font-size:12px;color:rgba(255,255,255,.4);line-height:1.55;position:relative}
+.link-card-url{font-size:11px;color:rgba(124,58,237,.7);font-family:'JetBrains Mono',monospace;position:relative;margin-top:4px}
+.link-card-badge{position:absolute;top:14px;right:14px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;color:#a78bfa;letter-spacing:.06em}
+.admin-badge{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:#fbbf24}
+.new-badge{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.3);color:#34d399}
+
+/* ── CTA SECTION ────────────────────────────────────────────────── */
+.cta-section{max-width:640px;margin:0 auto;padding:80px 24px 100px;text-align:center}
+.cta-section h2{font-size:clamp(1.8rem,5vw,2.8rem);font-weight:900;letter-spacing:-.02em;margin-bottom:16px;line-height:1.1}
+.cta-section p{font-size:16px;color:rgba(255,255,255,.5);margin-bottom:32px;line-height:1.7}
+
+/* ── FOOTER ─────────────────────────────────────────────────────── */
+.footer{border-top:1px solid var(--border);padding:32px 24px;text-align:center;font-size:13px;color:rgba(255,255,255,.3)}
+.footer a{color:rgba(124,58,237,.7);text-decoration:none}
+.footer a:hover{color:#a78bfa}
+
+/* ── SCROLL ANIMATIONS ──────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+@media(max-width:600px){
+  .nav{padding:14px 16px}
+  .nav-links .nav-link{display:none}
+  .hero{padding:70px 16px 50px}
+  .counter-strip{gap:32px}
+  .section{padding:60px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <a href="/boost-platform" class="logo"><span class="logo-icon">🚀</span>LinkedPod</a>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="#links" class="nav-link">All links</a>
+    <a href="/boost-register" class="nav-cta">Request Access →</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-kicker">🚀 Viral Boost Network · by ContentScale</div>
+  <h1>Your LinkedIn posts<br><span class="grad">go viral. Together.</span></h1>
+  <p class="hero-sub">LinkedPod is the engagement pod where real people with real LinkedIn accounts comment on your posts — and you return the favour. No bots. No fake accounts. Just organised reach.</p>
+  <div class="hero-actions">
+    <a href="/boost-register" class="btn-hero btn-hero-primary">🚀 Request Access</a>
+    <a href="#how" class="btn-hero btn-hero-ghost">How it works ↓</a>
+  </div>
+  <div class="hero-trust">
+    <span class="trust-item">Real LinkedIn accounts only</span>
+    <span class="trust-item">Credits system — give to receive</span>
+    <span class="trust-item">Sound alerts for new sessions</span>
+    <span class="trust-item">Built by ContentScale</span>
+  </div>
+</section>
+
+<!-- ── COUNTER STRIP ── -->
+<div class="counter-strip reveal">
+  <div class="counter"><span class="counter-num">100+</span><span class="counter-lbl">Members</span></div>
+  <div class="counter"><span class="counter-num">6×</span><span class="counter-lbl">Comments per post</span></div>
+  <div class="counter"><span class="counter-num">2 min</span><span class="counter-lbl">To boost a post</span></div>
+  <div class="counter"><span class="counter-num">+2</span><span class="counter-lbl">Credits per boost</span></div>
+</div>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section" id="how">
+  <div class="reveal">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">From post to viral<br>in 3 steps</h2>
+    <p class="section-sub">LinkedPod turns your network into a coordinated reach machine — without ever touching LinkedIn's automation rules.</p>
+  </div>
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num">STEP 01</div>
+      <span class="step-icon">📝</span>
+      <h3>You post on LinkedIn</h3>
+      <p>Create a boost session — paste your post text. AI generates 6 diverse, human-sounding comments instantly.</p>
+      <div class="step-arrow">›</div>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 02</div>
+      <span class="step-icon">🔔</span>
+      <h3>Members get alerted</h3>
+      <p>Everyone in the pod hears a sound alert. They open the session, pick a comment, copy it, paste on LinkedIn — from their own account.</p>
+      <div class="step-arrow">›</div>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 03</div>
+      <span class="step-icon">📈</span>
+      <h3>LinkedIn algorithm fires</h3>
+      <p>6–15 real comments in the first hour signals quality to LinkedIn. Post gets boosted in the feed. You earn reach without buying ads.</p>
+      <div class="step-arrow">›</div>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 04</div>
+      <span class="step-icon">🔄</span>
+      <h3>You return the favour</h3>
+      <p>Every boost earns +2 credits. Use credits to launch your own sessions. The more you give, the more you receive.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="section" id="features" style="padding-top:20px;">
+  <div class="reveal">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need<br>to dominate your feed</h2>
+  </div>
+  <div class="features reveal">
+    <div class="feature">
+      <div class="feature-icon fi-purple">🔔</div>
+      <h3>Sound Alerts</h3>
+      <p>New session = chime sound + tab notification. Hear it, open it, engage. First hour engagement is everything.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-blue">🤖</div>
+      <h3>AI-Generated Comments</h3>
+      <p>Claude generates 6 diverse, human-sounding comments per session — different voices, different angles, same topic.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-green">⚡</div>
+      <h3>Credits System</h3>
+      <p>Help others = earn credits. Spend credits to create sessions. Everyone participates — nobody free-loads.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-amber">👤</div>
+      <h3>Real Accounts Only</h3>
+      <p>Every comment comes from a real LinkedIn user — their own account, their own session. Zero automation risk.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-purple">🎯</div>
+      <h3>Multi-Client Ready</h3>
+      <p>Boost posts for your own brand or your clients. Each session shows the right client name to participants.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-blue">📊</div>
+      <h3>Admin Dashboard</h3>
+      <p>Full control: approve members, add credits, set time limits, upgrade tiers, monitor all sessions.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section class="section" id="pricing" style="padding-top:20px;">
+  <div class="reveal">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Simple, fair, credits-based</h2>
+    <p class="section-sub">Start free. Upgrade when you're ready. Or message Ottmar to get unlocked.</p>
+  </div>
+  <div class="pricing reveal">
+    <div class="price-card">
+      <div class="price-tier">Free</div>
+      <div class="price-amount">€0 <span>/ forever</span></div>
+      <div class="price-desc">Perfect for individuals who want to grow their LinkedIn reach.</div>
+      <ul class="price-features">
+        <li>10 credits on signup</li>
+        <li>1 boost session per week</li>
+        <li>Participate in all community sessions</li>
+        <li>+2 credits per post you boost</li>
+        <li>Sound alerts</li>
+        <li class="no">Multiple client profiles</li>
+        <li class="no">Unlimited sessions</li>
+      </ul>
+      <a href="/boost-register" class="btn-price btn-price-ghost">Request Free Access</a>
+    </div>
+
+    <div class="price-card featured">
+      <div class="price-badge">MOST POPULAR</div>
+      <div class="price-tier">Pro</div>
+      <div class="price-amount">€9 <span>/ month</span></div>
+      <div class="price-desc">For serious LinkedIn creators and agencies who post regularly.</div>
+      <ul class="price-features">
+        <li>Unlimited credits</li>
+        <li>Unlimited boost sessions</li>
+        <li>Multiple client profiles</li>
+        <li>Priority in community feed</li>
+        <li>Sound alerts</li>
+        <li>Admin unlocks on request</li>
+      </ul>
+      <a href="https://wa.me/31628073996?text=Hi Ottmar! I want the Pro plan for LinkedPod." target="_blank" class="btn-price btn-price-primary">Get Pro →</a>
+    </div>
+
+    <div class="price-card">
+      <div class="price-tier">Agency</div>
+      <div class="price-amount">€29 <span>/ month</span></div>
+      <div class="price-desc">For agencies boosting posts for multiple clients at scale.</div>
+      <ul class="price-features">
+        <li>Unlimited credits</li>
+        <li>Unlimited sessions</li>
+        <li>Unlimited client profiles</li>
+        <li>Client-branded sessions</li>
+        <li>Sound alerts</li>
+        <li>Direct Ottmar support</li>
+      </ul>
+      <a href="https://wa.me/31628073996?text=Hi Ottmar! I want the Agency plan for LinkedPod." target="_blank" class="btn-price btn-price-ghost">Contact Ottmar →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── ALL LINKS ── -->
+<section class="section" id="links" style="padding-top:20px;">
+  <div class="reveal">
+    <div class="section-label">All links</div>
+    <h2 class="section-title">Everything in one place</h2>
+    <p class="section-sub">Bookmark this page. All LinkedPod pages in one overview.</p>
+  </div>
+  <div class="links-grid reveal">
+
+    <a href="/boost-platform" class="link-card">
+      <span class="link-card-icon">🚀</span>
+      <div class="link-card-title">Boost Platform</div>
+      <div class="link-card-desc">Main platform — community sessions, create your own boost, see credits & history.</div>
+      <div class="link-card-url">/boost-platform</div>
+      <div class="link-card-badge new-badge">MAIN</div>
+    </a>
+
+    <a href="/boost-register" class="link-card">
+      <span class="link-card-icon">✍️</span>
+      <div class="link-card-title">Request Access</div>
+      <div class="link-card-desc">New members sign up here. Ottmar reviews and sends your personal access link.</div>
+      <div class="link-card-url">/boost-register</div>
+    </a>
+
+    <a href="/boost-admin" class="link-card">
+      <span class="link-card-icon">⚙️</span>
+      <div class="link-card-title">Admin Dashboard</div>
+      <div class="link-card-desc">Manage users, approve registrations, add credits, set time limits, create boost sessions.</div>
+      <div class="link-card-url">/boost-admin</div>
+      <div class="link-card-badge admin-badge">ADMIN</div>
+    </a>
+
+    <a href="https://app.contentscale.site" target="_blank" class="link-card">
+      <span class="link-card-icon">🎯</span>
+      <div class="link-card-title">ContentScore Scanner</div>
+      <div class="link-card-desc">Free SEO content scanner — GRAAF + CRAFT + Technical. Score any page in 30 seconds.</div>
+      <div class="link-card-url">app.contentscale.site</div>
+    </a>
+
+    <a href="https://contentscale.site" target="_blank" class="link-card">
+      <span class="link-card-icon">🌐</span>
+      <div class="link-card-title">ContentScale.site</div>
+      <div class="link-card-desc">Main website — GRAAF Framework, services, blog, resources, about Ottmar.</div>
+      <div class="link-card-url">contentscale.site</div>
+    </a>
+
+    <a href="https://wa.me/31628073996?text=Hi Ottmar!" target="_blank" class="link-card">
+      <span class="link-card-icon">💬</span>
+      <div class="link-card-title">WhatsApp Ottmar</div>
+      <div class="link-card-desc">Questions, upgrades, access requests — direct line to Ottmar Francisca, Amsterdam.</div>
+      <div class="link-card-url">wa.me/31628073996</div>
+    </a>
+
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<div class="cta-section reveal">
+  <h2>Ready to go <span style="background:linear-gradient(135deg,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">viral?</span></h2>
+  <p>Join the LinkedPod network. Request your access — Ottmar reviews within hours and sends your personal link via WhatsApp.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="/boost-register" class="btn-hero btn-hero-primary">🚀 Request Access Now</a>
+    <a href="https://wa.me/31628073996?text=Hi Ottmar! I want to join LinkedPod." target="_blank" class="btn-hero btn-hero-ghost">💬 Message Ottmar</a>
+  </div>
+  <p style="margin-top:20px;font-size:13px;color:rgba(255,255,255,.3);">
+    Built by <a href="https://contentscale.site" style="color:rgba(124,58,237,.6);text-decoration:none;">ContentScale.site</a> · GRAAF Framework · Amsterdam, NL
+  </p>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <p>LinkedPod by <a href="https://contentscale.site">ContentScale.site</a> · Ottmar J.G. Francisca · Amsterdam · © 2026</p>
+  <p style="margin-top:8px;"><a href="/boost-platform">Platform</a> · <a href="/boost-register">Register</a> · <a href="/boost-admin">Admin</a> · <a href="https://contentscale.site/privacy-policy/">Privacy</a></p>
+</footer>
+
+<script>
+// ── SCROLL REVEAL ─────────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── COUNTER ANIMATION ─────────────────────────────────────────────
+function animateCounters() {
+  document.querySelectorAll('.counter-num').forEach(el => {
+    const target = el.textContent;
+    if (target.includes('+') || target.includes('×') || target.includes('min')) return;
+    // Only animate pure numbers
+  });
+}
+
+// ── SMOOTH PARALLAX ON ORBS ────────────────────────────────────────
+let ticking = false;
+document.addEventListener('mousemove', e => {
+  if (ticking) return;
+  requestAnimationFrame(() => {
+    const x = (e.clientX / window.innerWidth - .5) * 20;
+    const y = (e.clientY / window.innerHeight - .5) * 20;
+    document.querySelector('.orb1').style.transform = `translate(${x}px,${y}px)`;
+    document.querySelector('.orb2').style.transform = `translate(${-x*.7}px,${-y*.7}px)`;
+    ticking = false;
+  });
+  ticking = true;
+});
+</script>
+</body>
+</html>
