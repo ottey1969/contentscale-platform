@@ -2,507 +2,586 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ContentScale Boost Platform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ContentScale Boost</title>
 <style>
 :root{--blue:#0a66c2;--purple:#6b21a8;--green:#15803d;--red:#dc2626;--amber:#b45309;--border:#e5e7eb;--muted:#6b7280;--bg:#f3f4f6;--card:#fff}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#111;min-height:100vh}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#111;min-height:100vh;max-width:100vw;overflow-x:hidden}
 
-.header{background:linear-gradient(135deg,#0a66c2,#6b21a8);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
-.header h1{font-size:1.05rem;font-weight:700}
-.user-pill{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 14px;font-size:12px;display:flex;align-items:center;gap:6px}
-.credits-badge{background:#fbbf24;color:#78350f;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
+/* HEADER */
+.header{background:linear-gradient(135deg,#0a66c2,#6b21a8);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:10px}
+.header h1{font-size:15px;font-weight:700}
+.credits-pill{background:rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+
+/* SOUND ALERT BANNER */
+#alertBanner{display:none;background:#fef3c7;border-bottom:2px solid #f59e0b;padding:10px 16px;display:none;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:56px;z-index:99}
+#alertBanner.visible{display:flex}
+.alert-text{font-size:13px;font-weight:600;color:#92400e}
+.alert-dismiss{background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+
+/* SOUND TOGGLE */
+.sound-btn{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px}
 
 /* LOGIN */
-#loginScreen{max-width:400px;margin:60px auto;padding:0 16px}
-.login-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px;text-align:center}
-.login-card h2{font-size:1.3rem;font-weight:700;margin-bottom:6px}
-.login-card p{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6}
-.login-card input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:10px;outline:none}
+#loginScreen{max-width:420px;margin:40px auto;padding:0 16px}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 20px;text-align:center}
+.login-card h2{font-size:1.2rem;font-weight:700;margin-bottom:6px}
+.login-card p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.login-card input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:15px;margin-bottom:10px;outline:none;text-align:center}
 .login-card input:focus{border-color:var(--blue)}
-.btn{padding:11px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-primary{background:var(--purple);color:#fff;width:100%}
-.btn-primary:hover{background:#581c87}
-.btn-blue{background:var(--blue);color:#fff}
-.btn-blue:hover{background:#085194}
-.btn-green{background:var(--green);color:#fff}
-.btn-green:hover{background:#166534}
-.btn-sm{padding:7px 14px;font-size:12px}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 14px;font-size:12px}
 
-/* MAIN */
-#mainScreen{display:none;max-width:680px;margin:0 auto;padding:16px}
+/* TABS */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:98}
+.tab{padding:12px 4px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--purple);border-bottom-color:var(--purple)}
 
-.tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px}
-.tab-btn{flex:1;padding:9px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
-.tab-btn.active{background:var(--purple);color:#fff}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 12px 0}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.stat-n{font-size:20px;font-weight:700}
+.stat-l{font-size:10px;color:var(--muted)}
 
-/* STATS BAR */
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
-.stat-num{font-size:22px;font-weight:700;color:#111}
-.stat-lbl{font-size:11px;color:var(--muted)}
+/* CONTENT */
+.content{padding:12px}
 
 /* SESSION CARDS */
-.session-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
-.session-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
-.session-client{font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
-.session-preview{font-size:13px;color:#374151;line-height:1.55;flex:1}
-.session-meta{display:flex;gap:8px;font-size:11px;color:var(--muted);margin:8px 0;flex-wrap:wrap}
-.badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
-.badge-green{background:#dcfce7;color:#15803d}
-.badge-blue{background:#dbeafe;color:#1d4ed8}
-.badge-amber{background:#fef3c7;color:#92400e}
-.badge-done{background:#f3f4f6;color:#6b7280}
+.session{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.session.new-session{border-color:#f59e0b;box-shadow:0 0 0 2px #fef3c7}
+.s-client{font-size:10px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.s-text{font-size:13px;color:#374151;line-height:1.55;margin-bottom:8px}
+.s-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.badge{padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.b-green{background:#dcfce7;color:#15803d}
+.b-blue{background:#dbeafe;color:#1d4ed8}
+.b-amber{background:#fef3c7;color:#92400e}
+.b-gray{background:#f3f4f6;color:#6b7280}
+.b-new{background:#fef3c7;color:#92400e;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 
-.comments-grid{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-.comment-opt{border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-size:13px;line-height:1.55;color:#374151;position:relative}
+/* COMMENT OPTIONS */
+.comment-opt{border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:8px}
 .comment-opt.picked{border-color:var(--green);background:#f0fdf4}
-.comment-opt-num{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em}
-.comment-actions{display:flex;gap:6px;margin-top:8px}
+.opt-num{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.opt-text{font-size:13px;line-height:1.6;color:#374151}
+.opt-actions{display:flex;gap:8px;margin-top:10px}
 
-/* CREATE FORM */
-.form-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:12px}
-.form-card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#111}
-label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 4px}
-label:first-of-type{margin-top:0}
-input[type=text],input[type=url],textarea,select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;outline:none;transition:border .15s;background:#fff}
-input:focus,textarea:focus,select:focus{border-color:var(--blue)}
-textarea{height:100px;resize:vertical}
-.credit-cost{font-size:12px;color:var(--amber);font-weight:600;margin-top:6px}
+/* BUTTONS */
+.btn{padding:10px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-primary{background:var(--purple);color:#fff;width:100%}
+.btn-blue{background:var(--blue);color:#fff;flex:1}
+.btn-green{background:var(--green);color:#fff;flex:1}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);flex:1}
+.btn-sm{padding:7px 12px;font-size:12px}
+.btn:active{transform:scale(.97)}
+
+/* FORM */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px}
+.form-card h3{font-size:14px;font-weight:700;margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 5px;display:block}
+.form-label:first-of-type{margin-top:0}
+.form-input{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none}
+.form-input:focus{border-color:var(--blue)}
+textarea.form-input{height:90px;resize:vertical}
 
 /* PROFILE */
-.profile-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:12px}
-.profile-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
-.profile-row:last-child{border-bottom:none}
-.profile-label{color:var(--muted);font-size:12px}
-.tier-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
-.tier-free{background:#f3f4f6;color:#374151}
-.tier-pro{background:#ede9fe;color:#6b21a8}
-.tier-admin{background:#fef9c3;color:#854d0e}
+.p-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.p-row:last-child{border-bottom:none}
+.p-label{font-size:12px;color:var(--muted)}
+.tier-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.t-free{background:#f3f4f6;color:#374151}
+.t-pro{background:#ede9fe;color:#6b21a8}
+.t-admin{background:#fef9c3;color:#854d0e}
 
-/* EMPTY STATE */
-.empty{text-align:center;padding:40px 20px;color:var(--muted)}
-.empty h3{font-size:15px;margin-bottom:6px;color:#374151}
+/* EMPTY */
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.empty h3{font-size:15px;color:#374151;margin-bottom:6px}
 .empty p{font-size:13px}
 
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:9999;white-space:nowrap}
-#loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--purple);font-weight:700;z-index:999;display:none}
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:9999;white-space:nowrap;max-width:90vw;text-align:center}
 
-@media(max-width:480px){
-  .stats-row{grid-template-columns:1fr 1fr}
-  .header h1{font-size:.95rem}
-}
+/* LOADING */
+#loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:999;font-size:14px;color:var(--purple);font-weight:700}
+.spinner{width:32px;height:32px;border:3px solid #e9d5ff;border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:360px){.tab{font-size:10px;padding:10px 2px}}
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
-<div id="loading-overlay">Generating smart comments...</div>
+<div id="loadingOverlay"><div class="spinner"></div><span>Generating comments...</span></div>
 
-<!-- ── HEADER ── -->
+<!-- HEADER -->
 <div class="header">
-  <h1>🚀 ContentScale Boost</h1>
-  <div class="user-pill" id="userPill" style="display:none;">
-    <span id="userName">—</span>
-    <span class="credits-badge" id="userCredits">—</span>
+  <div class="header-left">
+    <h1>🚀 Boost</h1>
+    <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔔 ON</button>
+  </div>
+  <div id="userPill" style="display:none;" class="credits-pill">
+    <span id="hCredits">—</span> credits
   </div>
 </div>
 
-<!-- ── LOGIN ── -->
+<!-- ALERT BANNER -->
+<div id="alertBanner">
+  <span class="alert-text" id="alertText">🔔 New boost session available!</span>
+  <button class="alert-dismiss" onclick="dismissAlert()">Dismiss</button>
+</div>
+
+<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
-    <h2>Join the Boost Network</h2>
-    <p>Enter your personal access token to join the engagement pod. Don't have one? Contact Ottmar.</p>
-    <input type="text" id="tokenInput" placeholder="Your access token (e.g. sarah-boost-2026)" autocomplete="off">
+    <h2>ContentScale Boost</h2>
+    <p>Enter your personal access token</p>
+    <input type="text" id="tokenInput" placeholder="your-token-here" autocomplete="off" autocapitalize="none">
     <input type="text" id="nameInput" placeholder="Your name">
-    <button class="btn btn-primary" onclick="login()">Enter Platform</button>
-    <p style="margin-top:14px;font-size:12px;color:var(--muted);">💬 <a href="https://wa.me/31628073996?text=Hi Ottmar! I want a Boost token." target="_blank" style="color:var(--blue);">Request token via WhatsApp</a></p>
+    <button class="btn btn-primary" onclick="login()">Enter</button>
+    <p style="margin-top:14px;font-size:12px;color:var(--muted);">
+      No token? <a href="/boost-register" style="color:var(--blue);">Request access →</a>
+    </p>
   </div>
 </div>
 
-<!-- ── MAIN ── -->
-<div id="mainScreen">
+<!-- MAIN -->
+<div id="mainScreen" style="display:none;">
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('community')">Community</button>
-    <button class="tab-btn" onclick="switchTab('create')">+ New Boost</button>
-    <button class="tab-btn" onclick="switchTab('mine')">My Sessions</button>
-    <button class="tab-btn" onclick="switchTab('profile')">Profile</button>
+    <button class="tab active" onclick="switchTab('community')">Community</button>
+    <button class="tab" onclick="switchTab('create')">+ Create</button>
+    <button class="tab" onclick="switchTab('mine')">Mine</button>
+    <button class="tab" onclick="switchTab('profile')">Profile</button>
   </div>
 
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-num" id="s-credits">—</div><div class="stat-lbl">Credits</div></div>
-    <div class="stat-card"><div class="stat-num" id="s-engaged">—</div><div class="stat-lbl">Posts boosted</div></div>
-    <div class="stat-card"><div class="stat-num" id="s-sessions">—</div><div class="stat-lbl">My sessions</div></div>
+  <div class="stats" id="statsBar">
+    <div class="stat"><div class="stat-n" id="sCredits">—</div><div class="stat-l">Credits</div></div>
+    <div class="stat"><div class="stat-n" id="sEngaged">—</div><div class="stat-l">Boosted</div></div>
+    <div class="stat"><div class="stat-n" id="sSessions">—</div><div class="stat-l">My sessions</div></div>
   </div>
 
-  <!-- COMMUNITY TAB -->
-  <div id="tab-community">
-    <div id="communityList"><div class="empty"><h3>Loading community sessions...</h3></div></div>
+  <!-- COMMUNITY -->
+  <div id="tabCommunity" class="content">
+    <div id="communityList"><div class="empty"><h3>Loading...</h3></div></div>
   </div>
 
-  <!-- CREATE TAB -->
-  <div id="tab-create" style="display:none;">
+  <!-- CREATE -->
+  <div id="tabCreate" class="content" style="display:none;">
     <div class="form-card">
       <h3>Create a Boost Session</h3>
-      <div id="creditWarning" class="credit-cost" style="margin-bottom:12px;display:none;"></div>
-      <label>LinkedIn Post URL (optional)</label>
-      <input type="url" id="newPostUrl" placeholder="https://www.linkedin.com/posts/...">
-      <label>Post Text (paste the full text)</label>
-      <textarea id="newPostText" placeholder="Paste your LinkedIn post here..."></textarea>
-      <label>Language / Tone hint (optional)</label>
-      <input type="text" id="newTone" placeholder="e.g. Dutch, professional, SEO audience">
-      <div class="credit-cost" style="margin-top:10px;">💡 Creating a session costs 5 credits. You earn 2 credits per post you help boost.</div>
-      <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="createSession()">⚡ Generate Comments & Create Session</button>
+      <div id="createInfo" style="font-size:12px;color:var(--amber);font-weight:600;margin-bottom:12px;"></div>
+      <label class="form-label">LinkedIn post URL (optional)</label>
+      <input class="form-input" type="url" id="newUrl" placeholder="https://linkedin.com/posts/...">
+      <label class="form-label">Post text (paste full post)</label>
+      <textarea class="form-input" id="newText" placeholder="Paste your LinkedIn post here..."></textarea>
+      <label class="form-label">Language / tone hint (optional)</label>
+      <input class="form-input" type="text" id="newTone" placeholder="e.g. Dutch, roofing industry, urgent">
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Creating costs 5 credits. You earn 2 per post you boost.</p>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="createSession()">⚡ Generate & Launch</button>
     </div>
   </div>
 
-  <!-- MY SESSIONS TAB -->
-  <div id="tab-mine" style="display:none;">
-    <div id="mineList"><div class="empty"><h3>No sessions yet</h3><p>Create your first boost session above.</p></div></div>
+  <!-- MINE -->
+  <div id="tabMine" class="content" style="display:none;">
+    <div id="mineList"><div class="empty"><h3>No sessions yet</h3><p>Create your first boost above.</p></div></div>
   </div>
 
-  <!-- PROFILE TAB -->
-  <div id="tab-profile" style="display:none;">
-    <div class="profile-card">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">My Profile</h3>
-      <div class="profile-row"><span class="profile-label">Name</span><strong id="p-name">—</strong></div>
-      <div class="profile-row"><span class="profile-label">Tier</span><span class="tier-badge tier-free" id="p-tier">free</span></div>
-      <div class="profile-row"><span class="profile-label">Credits</span><strong id="p-credits">—</strong></div>
-      <div class="profile-row"><span class="profile-label">Posts boosted</span><strong id="p-engaged">—</strong></div>
-      <div class="profile-row"><span class="profile-label">Token</span><span id="p-token" style="font-family:monospace;font-size:12px;color:var(--muted);">—</span></div>
+  <!-- PROFILE -->
+  <div id="tabProfile" class="content" style="display:none;">
+    <div class="form-card">
+      <h3>My Profile</h3>
+      <div class="p-row"><span class="p-label">Name</span><strong id="pName">—</strong></div>
+      <div class="p-row"><span class="p-label">Tier</span><span class="tier-badge t-free" id="pTier">free</span></div>
+      <div class="p-row"><span class="p-label">Credits</span><strong id="pCredits">—</strong></div>
+      <div class="p-row"><span class="p-label">Posts boosted</span><strong id="pEngaged">—</strong></div>
     </div>
-    <div class="profile-card">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">LinkedIn Profile</h3>
-      <label>Your LinkedIn URL (so others can verify you're real)</label>
-      <input type="url" id="linkedinUrl" placeholder="https://www.linkedin.com/in/yourname">
-      <button class="btn btn-blue btn-sm" style="margin-top:10px;" onclick="saveLinkedIn()">Save</button>
+    <div class="form-card">
+      <h3>LinkedIn URL</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Add your LinkedIn so others know you're real.</p>
+      <input class="form-input" type="url" id="linkedinInput" placeholder="https://linkedin.com/in/yourname">
+      <button class="btn btn-blue" style="margin-top:10px;width:auto;padding:9px 20px;" onclick="saveLinkedIn()">Save</button>
     </div>
-    <div style="text-align:center;margin-top:8px;">
-      <button class="btn btn-ghost" onclick="logout()">Log out</button>
+    <div class="form-card" style="text-align:center;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Want more sessions or clients?</p>
+      <a href="https://wa.me/31628073996?text=Hi Ottmar! I want to upgrade my Boost account." target="_blank" class="btn btn-primary" style="width:100%;text-decoration:none;">💬 Message Ottmar to upgrade</a>
+      <button class="btn btn-ghost" style="margin-top:8px;width:100%;" onclick="logout()">Log out</button>
     </div>
   </div>
 </div>
 
 <script>
-const API = '';
+// ── SOUND SYSTEM ─────────────────────────────────────────────────────────
+let soundOn = localStorage.getItem('boostSound') !== 'off';
+let alarmInterval = null;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playChime() {
+  try {
+    const ctx = getAudioCtx();
+    const notes = [880, 1100, 1320];
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.5);
+    });
+  } catch(e) {}
+}
+
+function startAlarm(msg) {
+  if (!soundOn) return;
+  document.getElementById('alertText').textContent = msg || '🔔 New boost session available!';
+  document.getElementById('alertBanner').classList.add('visible');
+  document.title = '🔔 NEW BOOST! — ContentScale';
+  playChime();
+  if (alarmInterval) clearInterval(alarmInterval);
+  alarmInterval = setInterval(() => { if (soundOn) playChime(); }, 4000);
+}
+
+function dismissAlert() {
+  clearInterval(alarmInterval);
+  alarmInterval = null;
+  document.getElementById('alertBanner').classList.remove('visible');
+  document.title = 'ContentScale Boost';
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem('boostSound', soundOn ? 'on' : 'off');
+  document.getElementById('soundBtn').textContent = soundOn ? '🔔 ON' : '🔕 OFF';
+  if (!soundOn && alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+  else if (soundOn) playChime();
+}
+
+document.getElementById('soundBtn').textContent = soundOn ? '🔔 ON' : '🔕 OFF';
+
+// ── STATE ────────────────────────────────────────────────────────────────
 let user = null;
 let myToken = '';
-let allSessions = [];
-let myEngagements = new Set();
+let sessions = [];
+let myEngaged = new Set();
 let myStats = { engaged: 0, sessions: 0 };
+let knownSessionIds = new Set();
+let pollTimer = null;
 
-// ── AUTH ────────────────────────────────────────────────────────────
-function login() {
+// ── AUTH ─────────────────────────────────────────────────────────────────
+async function login() {
   const token = document.getElementById('tokenInput').value.trim();
   const name  = document.getElementById('nameInput').value.trim();
   if (!token) { toast('Enter your token'); return; }
-
-  fetch(`${API}/boost/auth`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token, name })
-  })
-  .then(r => r.json())
-  .then(data => {
+  try {
+    const r = await fetch('/boost/auth', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token, name })
+    });
+    const data = await r.json();
     if (data.error) { toast(data.error, true); return; }
-    user = data.user;
-    myToken = token;
+    user = data.user; myToken = token;
     localStorage.setItem('boostToken', token);
     showMain();
-  })
-  .catch(() => toast('Connection error', true));
+  } catch { toast('Connection error', true); }
 }
 
 function logout() {
   localStorage.removeItem('boostToken');
-  user = null;
+  user = null; myToken = '';
+  if (pollTimer) clearInterval(pollTimer);
   document.getElementById('loginScreen').style.display = 'block';
   document.getElementById('mainScreen').style.display = 'none';
   document.getElementById('userPill').style.display = 'none';
 }
 
-function autoLogin() {
+async function autoLogin() {
   const saved = localStorage.getItem('boostToken');
   if (!saved) return;
-  fetch(`${API}/boost/auth`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: saved })
-  })
-  .then(r => r.json())
-  .then(data => {
+  try {
+    const r = await fetch('/boost/auth', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: saved })
+    });
+    const data = await r.json();
     if (data.error) { localStorage.removeItem('boostToken'); return; }
-    user = data.user;
-    myToken = saved;
+    user = data.user; myToken = saved;
     showMain();
-  }).catch(() => {});
+  } catch {}
 }
 
 function showMain() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainScreen').style.display = 'block';
   document.getElementById('userPill').style.display = 'flex';
-  document.getElementById('userName').textContent = user.name;
-  document.getElementById('userCredits').textContent = (user.tier === 'admin' ? '∞' : user.credits) + ' credits';
+  updateHeader();
   updateProfile();
   loadCommunity();
   loadMySessions();
+  startPolling();
 }
 
-// ── TABS ────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const tabs = ['community','create','mine','profile'];
-    b.classList.toggle('active', tabs[i] === tab);
-  });
-  ['community','create','mine','profile'].forEach(t => {
-    document.getElementById('tab-'+t).style.display = t === tab ? 'block' : 'none';
-  });
-  if (tab === 'community') loadCommunity();
-  if (tab === 'mine') loadMySessions();
-  if (tab === 'create') checkCredits();
+// ── POLLING FOR NEW SESSIONS ─────────────────────────────────────────────
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollForNew, 30000);
 }
 
-function checkCredits() {
-  if (!user) return;
-  if (user.tier === 'admin') return;
-  const warn = document.getElementById('creditWarning');
-  if (user.credits < 5) {
-    warn.style.display = 'block';
-    warn.textContent = `⚠️ You need 5 credits to create a session. You have ${user.credits}. Help boost others first!`;
-  } else {
-    warn.style.display = 'none';
-  }
+async function pollForNew() {
+  if (!myToken) return;
+  try {
+    const r = await fetch(`/boost/sessions?token=${myToken}`);
+    const data = await r.json();
+    const fresh = (data.sessions || []).filter(s => s.active);
+
+    // Detect genuinely new sessions
+    const newOnes = fresh.filter(s => !knownSessionIds.has(s.id));
+    if (newOnes.length > 0 && knownSessionIds.size > 0) {
+      const n = newOnes[0];
+      const isOwn = n.created_by_token === myToken;
+      if (!isOwn) {
+        startAlarm(`🔔 New boost: "${(n.post_text||'').substring(0,50)}..."`);
+        renderCommunity(fresh, data.myEngagements);
+      }
+    }
+    fresh.forEach(s => knownSessionIds.add(s.id));
+  } catch {}
 }
 
-// ── COMMUNITY ───────────────────────────────────────────────────────
-function loadCommunity() {
-  fetch(`${API}/boost/sessions?token=${myToken}`)
-  .then(r => r.json())
-  .then(data => {
-    allSessions = data.sessions || [];
-    myEngagements = new Set((data.myEngagements || []).map(e => e.session_id));
+// ── COMMUNITY ────────────────────────────────────────────────────────────
+async function loadCommunity() {
+  try {
+    const r = await fetch(`/boost/sessions?token=${myToken}`);
+    const data = await r.json();
+    sessions = (data.sessions || []).filter(s => s.active);
+    myEngaged = new Set((data.myEngagements || []).map(e => e.session_id));
     myStats.engaged = data.myEngagements?.length || 0;
-    renderCommunity();
+    sessions.forEach(s => knownSessionIds.add(s.id));
+    renderCommunity(sessions, data.myEngagements);
     updateStats();
-  }).catch(() => {});
+  } catch { toast('Error loading sessions', true); }
 }
 
-function renderCommunity() {
+function renderCommunity(sess, engs) {
   const el = document.getElementById('communityList');
-  const active = allSessions.filter(s => s.active);
-  if (!active.length) {
+  if (!sess || !sess.length) {
     el.innerHTML = '<div class="empty"><h3>No active sessions</h3><p>Be the first to create one!</p></div>';
     return;
   }
-  el.innerHTML = active.map(s => sessionCard(s)).join('');
+  el.innerHTML = sess.map(s => sessionCard(s)).join('');
 }
 
 function sessionCard(s) {
-  const done = myEngagements.has(s.id);
-  const comments = s.comments || [];
+  const done  = myEngaged.has(s.id);
   const isOwn = s.created_by_token === myToken;
-  return `
-  <div class="session-card" id="sc-${s.id}">
-    <div class="session-header">
-      <div style="flex:1">
-        <div class="session-client">${s.client_name || 'ContentScale'}</div>
-        <div class="session-preview">${(s.post_text||'').substring(0,180)}${s.post_text?.length > 180 ? '…' : ''}</div>
-      </div>
-    </div>
-    <div class="session-meta">
-      <span class="badge ${done ? 'badge-done' : 'badge-green'}">${done ? '✅ You engaged' : '🎯 Needs engagement'}</span>
-      <span class="badge badge-blue">${s.engagement_count || 0} engaged</span>
-      ${isOwn ? '<span class="badge badge-amber">Your post</span>' : ''}
-      ${s.post_url ? `<a href="${s.post_url}" target="_blank" style="font-size:11px;color:var(--blue);">Open on LinkedIn ↗</a>` : ''}
+  const comments = s.comments || [];
+  const isNew = /* just added */ false;
+
+  return `<div class="session${isNew?' new-session':''}">
+    <div class="s-client">${s.client_name||'ContentScale'}</div>
+    <div class="s-text">${esc((s.post_text||'').substring(0,200))}${s.post_text?.length>200?'…':''}</div>
+    <div class="s-meta">
+      ${done ? '<span class="badge b-gray">✅ Done</span>' : '<span class="badge b-green">Needs you</span>'}
+      <span class="badge b-blue">${s.engagement_count||0} engaged</span>
+      ${isOwn ? '<span class="badge b-amber">Your post</span>' : ''}
+      ${s.post_url ? `<a href="${esc(s.post_url)}" target="_blank" style="font-size:11px;color:var(--blue);">Open LinkedIn ↗</a>` : ''}
     </div>
     ${!done && !isOwn ? `
-    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">Pick a comment → copy → paste on LinkedIn → mark done (+2 credits)</div>
-    <div class="comments-grid">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">Pick → Copy → Paste on LinkedIn → Mark Done (+2 credits)</p>
       ${comments.map((c,i) => `
         <div class="comment-opt" id="co-${s.id}-${i}">
-          <div class="comment-opt-num">Option ${i+1}</div>
-          <div>${c}</div>
-          <div class="comment-actions">
-            <button class="btn btn-ghost btn-sm" onclick="copyComment('${s.id}',${i})">Copy</button>
-            <button class="btn btn-green btn-sm" onclick="markDone('${s.id}',${i},'${encodeURIComponent(c)}')">✅ Mark as Done (+2 credits)</button>
+          <div class="opt-num">Option ${i+1}</div>
+          <div class="opt-text">${esc(c)}</div>
+          <div class="opt-actions">
+            <button class="btn btn-ghost btn-sm" onclick="copyOpt('${s.id}',${i})">Copy</button>
+            <button class="btn btn-green btn-sm" onclick="markDone('${s.id}',${i})">✅ Done +2cr</button>
           </div>
         </div>
       `).join('')}
-    </div>` : done ? `<div style="font-size:13px;color:var(--green);font-weight:600;margin-top:6px;">✅ You've already boosted this post. Thank you!</div>` : ''}
+    ` : done ? '<p style="font-size:13px;color:var(--green);font-weight:600;">✅ You boosted this! Thank you.</p>' : ''}
   </div>`;
 }
 
-function copyComment(sessionId, idx) {
-  const el = document.getElementById(`co-${sessionId}-${idx}`);
-  const text = el.querySelectorAll('div')[1].textContent.trim();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => toast('Copied! Now paste on LinkedIn'));
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    toast('Copied!');
-  }
+function copyOpt(sid, idx) {
+  const el = document.getElementById(`co-${sid}-${idx}`);
+  if (!el) return;
+  const text = el.querySelector('.opt-text').textContent.trim();
+  doCopy(text);
+  toast('Copied! Paste on LinkedIn 👍');
 }
 
-async function markDone(sessionId, commentIdx, commentEncoded) {
-  const comment = decodeURIComponent(commentEncoded);
-  const r = await fetch(`${API}/boost/engage`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: myToken, sessionId, commentIdx, commentText: comment })
-  });
-  const data = await r.json();
-  if (data.error) { toast(data.error, true); return; }
-  user.credits = data.newCredits;
-  document.getElementById('userCredits').textContent = user.credits + ' credits';
-  myEngagements.add(sessionId);
-  myStats.engaged++;
-  toast('+2 credits earned! 🎉');
-  loadCommunity();
-  updateStats();
+async function markDone(sid, idx) {
+  const el = document.getElementById(`co-${sid}-${idx}`);
+  const text = el ? el.querySelector('.opt-text').textContent.trim() : '';
+  try {
+    const r = await fetch('/boost/engage', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: myToken, sessionId: sid, commentIdx: idx, commentText: text })
+    });
+    const data = await r.json();
+    if (data.error) { toast(data.error, true); return; }
+    user.credits = data.newCredits;
+    myEngaged.add(sid);
+    myStats.engaged++;
+    updateHeader(); updateStats();
+    toast('+2 credits earned! 🎉');
+    loadCommunity();
+  } catch { toast('Error', true); }
 }
 
-// ── CREATE SESSION ───────────────────────────────────────────────────
+// ── CREATE ────────────────────────────────────────────────────────────────
 async function createSession() {
-  if (!user) return;
-  if (user.tier !== 'admin' && user.credits < 5) {
-    toast('Not enough credits (need 5)', true); return;
+  const text = document.getElementById('newText').value.trim();
+  const url  = document.getElementById('newUrl').value.trim();
+  const tone = document.getElementById('newTone').value.trim();
+  if (!text) { toast('Paste your post text', true); return; }
+  if (user?.tier !== 'admin' && user?.credits < 5) { toast('Need 5 credits. Boost others first!', true); return; }
+
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  try {
+    const r = await fetch('/boost/create-session', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: myToken, postText: text, postUrl: url, tone })
+    });
+    const data = await r.json();
+    document.getElementById('loadingOverlay').style.display = 'none';
+    if (data.error) { toast(data.error, true); return; }
+    user.credits = data.newCredits;
+    updateHeader(); updateStats();
+    const shareUrl = `${location.origin}/boost-platform`;
+    doCopy(shareUrl);
+    toast('Session live! Link copied 🚀');
+    document.getElementById('newText').value = '';
+    switchTab('community');
+    loadCommunity();
+  } catch {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    toast('Error creating session', true);
   }
-  const postText = document.getElementById('newPostText').value.trim();
-  if (!postText) { toast('Paste your post text first', true); return; }
-
-  const postUrl  = document.getElementById('newPostUrl').value.trim();
-  const tone     = document.getElementById('newTone').value.trim();
-
-  document.getElementById('loading-overlay').style.display = 'flex';
-
-  const r = await fetch(`${API}/boost/create-session`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token: myToken, postText, postUrl, tone })
-  });
-  const data = await r.json();
-  document.getElementById('loading-overlay').style.display = 'none';
-
-  if (data.error) { toast(data.error, true); return; }
-
-  user.credits = data.newCredits;
-  document.getElementById('userCredits').textContent = (user.tier === 'admin' ? '∞' : user.credits) + ' credits';
-
-  // Share link
-  const link = `${window.location.origin}/boost-platform?token=${myToken}`;
-  toast('Session created! Sharing link copied 🚀');
-  if (navigator.clipboard) navigator.clipboard.writeText(link);
-
-  document.getElementById('newPostText').value = '';
-  document.getElementById('newPostUrl').value = '';
-  switchTab('community');
 }
 
-// ── MY SESSIONS ──────────────────────────────────────────────────────
-function loadMySessions() {
-  fetch(`${API}/boost/my-sessions?token=${myToken}`)
-  .then(r => r.json())
-  .then(data => {
-    const sessions = data.sessions || [];
-    myStats.sessions = sessions.length;
+// ── MY SESSIONS ───────────────────────────────────────────────────────────
+async function loadMySessions() {
+  try {
+    const r = await fetch(`/boost/my-sessions?token=${myToken}`);
+    const data = await r.json();
+    const sess = data.sessions || [];
+    myStats.sessions = sess.length;
     updateStats();
     const el = document.getElementById('mineList');
-    if (!sessions.length) {
-      el.innerHTML = '<div class="empty"><h3>No sessions yet</h3><p>Create your first boost!</p></div>';
-      return;
-    }
-    el.innerHTML = sessions.map(s => `
-      <div class="session-card">
-        <div class="session-client">${s.client_name}</div>
-        <div class="session-preview">${(s.post_text||'').substring(0,150)}…</div>
-        <div class="session-meta">
-          <span class="badge badge-blue">${s.engagement_count} engaged</span>
-          <span class="badge ${s.active ? 'badge-green' : 'badge-done'}">${s.active ? 'Active' : 'Closed'}</span>
-          <span style="font-size:11px;color:var(--muted);">${new Date(s.created_at).toLocaleDateString()}</span>
+    if (!sess.length) { el.innerHTML = '<div class="empty"><h3>No sessions yet</h3><p>Create your first boost!</p></div>'; return; }
+    el.innerHTML = sess.map(s => `
+      <div class="session">
+        <div class="s-client">${esc(s.client_name)}</div>
+        <div class="s-text">${esc((s.post_text||'').substring(0,150))}…</div>
+        <div class="s-meta">
+          <span class="badge b-blue">${s.engagement_count} engaged</span>
+          <span class="badge ${s.active?'b-green':'b-gray'}">${s.active?'Active':'Closed'}</span>
         </div>
-        <div style="margin-top:8px;display:flex;gap:6px;">
-          <button class="btn btn-ghost btn-sm" onclick="copySessionLink('${s.id}')">Copy link</button>
-          <button class="btn btn-ghost btn-sm" onclick="shareWhatsApp('${s.id}')">Share WhatsApp</button>
-          ${s.active ? `<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="closeSession('${s.id}')">Close</button>` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="shareSession('${s.id}')">Share WhatsApp</button>
+          ${s.active?`<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="closeSession('${s.id}')">Close</button>`:''}
         </div>
       </div>
     `).join('');
-  }).catch(() => {});
+  } catch {}
 }
 
-function copySessionLink(id) {
-  const url = `${window.location.origin}/boost-platform?session=${id}&token=${myToken}`;
-  navigator.clipboard?.writeText(url);
-  toast('Link copied!');
-}
-
-function shareWhatsApp(id) {
-  const url = `${window.location.origin}/boost-platform?session=${id}&token=${myToken}`;
-  const msg = encodeURIComponent(`🚀 Help boost my LinkedIn post — takes 2 min!\n${url}\n\nPick a comment, paste on LinkedIn. Thank you! 🙏`);
+function shareSession(id) {
+  const url = `${location.origin}/boost-platform`;
+  const msg = encodeURIComponent(`🚀 Help boost my LinkedIn post!\n${url}\n\nPick a comment, paste on LinkedIn. Takes 2 min. +2 credits for you! 🙏`);
   window.open(`https://wa.me/?text=${msg}`, '_blank');
 }
 
 async function closeSession(id) {
   if (!confirm('Close this session?')) return;
-  await fetch(`${API}/boost/${id}/close`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
+  await fetch(`/boost/${id}/close`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ token: myToken })
   });
   toast('Session closed');
   loadMySessions();
 }
 
-// ── PROFILE ──────────────────────────────────────────────────────────
+// ── PROFILE ──────────────────────────────────────────────────────────────
 function updateProfile() {
   if (!user) return;
-  document.getElementById('p-name').textContent = user.name;
-  document.getElementById('p-credits').textContent = user.tier === 'admin' ? '∞' : user.credits;
-  document.getElementById('p-token').textContent = myToken;
-  const tierEl = document.getElementById('p-tier');
-  tierEl.textContent = user.tier;
-  tierEl.className = `tier-badge tier-${user.tier}`;
-  if (user.linkedin_url) document.getElementById('linkedinUrl').value = user.linkedin_url;
+  document.getElementById('pName').textContent = user.name;
+  document.getElementById('pCredits').textContent = user.tier==='admin' ? '∞' : user.credits;
+  document.getElementById('pEngaged').textContent = myStats.engaged;
+  const t = document.getElementById('pTier');
+  t.textContent = user.tier;
+  t.className = `tier-badge t-${user.tier}`;
+  if (user.linkedin_url) document.getElementById('linkedinInput').value = user.linkedin_url;
 }
 
 async function saveLinkedIn() {
-  const url = document.getElementById('linkedinUrl').value.trim();
-  await fetch(`${API}/boost/update-profile`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
+  const url = document.getElementById('linkedinInput').value.trim();
+  await fetch('/boost/update-profile', {
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ token: myToken, linkedinUrl: url })
   });
-  toast('LinkedIn URL saved ✅');
+  toast('Saved ✅');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function updateHeader() {
+  document.getElementById('hCredits').textContent = user?.tier==='admin' ? '∞' : (user?.credits||0);
+  updateProfile();
 }
 
 function updateStats() {
-  document.getElementById('s-credits').textContent = user?.tier === 'admin' ? '∞' : (user?.credits || 0);
-  document.getElementById('s-engaged').textContent = myStats.engaged;
-  document.getElementById('s-sessions').textContent = myStats.sessions;
+  document.getElementById('sCredits').textContent = user?.tier==='admin' ? '∞' : (user?.credits||0);
+  document.getElementById('sEngaged').textContent = myStats.engaged;
+  document.getElementById('sSessions').textContent = myStats.sessions;
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────────
-function toast(msg, isError = false) {
+function switchTab(tab) {
+  ['community','create','mine','profile'].forEach((t,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', t===tab);
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).style.display = t===tab?'block':'none';
+  });
+  if (tab==='community') loadCommunity();
+  if (tab==='mine') loadMySessions();
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function doCopy(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else fallbackCopy(text);
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+}
+
+function toast(msg, err=false) {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.style.background = isError ? '#dc2626' : '#111';
+  el.style.background = err ? '#dc2626' : '#111';
   el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
+  setTimeout(() => el.style.display='none', 3000);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────
-// Check for session-specific link
+// ── INIT ──────────────────────────────────────────────────────────────────
 const urlParams = new URLSearchParams(location.search);
-const sessionParam = urlParams.get('session');
-const tokenParam   = urlParams.get('token');
-if (tokenParam) {
-  localStorage.setItem('boostToken', tokenParam);
-}
+if (urlParams.get('token')) localStorage.setItem('boostToken', urlParams.get('token'));
 autoLogin();
 </script>
 </body>
