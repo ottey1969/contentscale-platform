@@ -26513,82 +26513,270 @@ function startTrackerScheduler() {
 
 
 
+
 // ═══════════════════════════════════════════════════════════════════════════
-// VIRAL BOOST SYSTEM — contentscale-boost
-// Routes: /boost/create  /boost/:id  /boost/:id/engage  /boost-admin  /boost/api/sessions
-// Files needed in project root: boost.html, boost-admin.html
+// BOOST PLATFORM v2 — Full routes block
+// Replace the v1 boost block in index.js with this entire section
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── CREATE BOOST SESSION (Ottmar only) ────────────────────────────────────
-app.post('/boost/create', asyncHandler(async (req, res) => {
-  const { postText, postUrl, clientName, apiKey } = req.body;
-  if (!postText) return res.status(400).json({ error: 'postText required' });
-
-  const claudeKey = apiKey || process.env.ANTHROPIC_API_KEY;
-  if (!claudeKey) return res.status(400).json({ error: 'Claude API key required' });
-
+// ── HELPERS ───────────────────────────────────────────────────────────────
+async function generateBoostComments(postText, clientName, tone, claudeKey) {
+  const lang = tone ? `Language/tone hint: ${tone}.` : '';
   const prompt = `Generate 6 diverse LinkedIn comments for this post.
 
-Post: "${postText}"
-Author/Client: ${clientName || 'ContentScale'}
+Post: "${postText.substring(0, 800)}"
+Author: ${clientName || 'ContentScale'}
+${lang}
 
 Rules for ALL 6 comments:
-- Each comment must be completely different in angle, length and voice
-- Written as if by different LinkedIn users (marketer, founder, consultant, analyst, manager, strategist)
+- Each completely different: angle, length, voice, perspective
+- Written as if by different people (marketer, founder, consultant, analyst, manager, entrepreneur)
 - NEVER start with "Great post", "Love this", "This resonates", "That's exactly", "So true", "Absolutely"
-- No hashtags, no emojis
+- No hashtags. No emojis. No generic openers.
 - 1-3 sentences max each
-- Add genuine value, a new angle, a question, or a concrete data point
-- Sound like real humans, not AI
-- In the SAME LANGUAGE as the post
+- Add a new angle, data point, question, or honest pushback
+- Sound like real humans. Add genuine value.
+- SAME LANGUAGE as the post text above.
 
-Return ONLY a valid JSON array of exactly 6 strings. No explanation, no markdown:
+Return ONLY a valid JSON array of exactly 6 strings. No markdown, no explanation:
 ["comment1","comment2","comment3","comment4","comment5","comment6"]`;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': claudeKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1200,
-      messages: [{ role: 'user', content: prompt }]
-    })
+    headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
   });
-
-  if (!r.ok) {
-    const err = await r.text();
-    return res.status(500).json({ error: 'Claude API error: ' + err.substring(0, 200) });
-  }
-
   const json = await r.json();
   const raw = json.content?.[0]?.text?.trim() || '';
-  let comments = [];
-  try {
-    const match = raw.match(/\[([\s\S]*)\]/);
-    comments = JSON.parse(match ? '[' + match[1] + ']' : raw);
-  } catch {
-    return res.status(500).json({ error: 'Could not parse AI response', raw: raw.substring(0, 300) });
+  const match = raw.match(/\[[\s\S]*\]/);
+  return JSON.parse(match ? match[0] : raw);
+}
+
+async function getUser(pool, token, ip) {
+  const r = await pool.query('SELECT * FROM boost_users WHERE token=$1 AND active=TRUE', [token]);
+  if (!r.rows.length) return null;
+  const user = r.rows[0];
+  // Store first IP (soft lock)
+  if (!user.first_ip && ip) {
+    await pool.query('UPDATE boost_users SET first_ip=$1 WHERE id=$2', [ip, user.id]);
   }
+  // Reset weekly session count if needed
+  if (user.week_reset_at && new Date(user.week_reset_at) < new Date()) {
+    await pool.query('UPDATE boost_users SET sessions_week=0, week_reset_at=NOW()+INTERVAL \'7 days\' WHERE id=$1', [user.id]);
+    user.sessions_week = 0;
+  }
+  return user;
+}
 
-  if (!pool) return res.status(500).json({ error: 'Database not connected' });
-
-  const result = await pool.query(
-    `INSERT INTO boost_sessions (post_url, post_text, client_name, comments)
-     VALUES ($1, $2, $3, $4) RETURNING id`,
-    [postUrl || '', postText, clientName || 'ContentScale', JSON.stringify(comments)]
-  );
-
-  const sessionId = result.rows[0].id;
-  console.log('[Boost] Session created:', sessionId, '| client:', clientName);
-  res.json({ success: true, sessionId, boostUrl: '/boost/' + sessionId, comments });
+// ── AUTH ─────────────────────────────────────────────────────────────────
+app.post('/boost/auth', asyncHandler(async (req, res) => {
+  const { token, name } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token required' });
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+  const user = await getUser(pool, token, ip);
+  if (!user) return res.status(401).json({ error: 'Invalid or inactive token. Contact Ottmar for access.' });
+  // Update name if provided
+  if (name && name !== user.name) {
+    await pool.query('UPDATE boost_users SET name=$1 WHERE id=$2', [name, user.id]);
+    user.name = name;
+  }
+  res.json({ user: { id: user.id, name: user.name, tier: user.tier, credits: user.credits, linkedin_url: user.linkedin_url } });
 }));
 
-// ── ADMIN PAGES ───────────────────────────────────────────────────────────
-app.get('/boost-admin', (req, res) => res.sendFile(path.join(__dirname, '../public', 'boost-admin.html')));
+// ── GET COMMUNITY SESSIONS ────────────────────────────────────────────────
+app.get('/boost/sessions', asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(401).json({ error: 'Token required' });
+  const user = await getUser(pool, token, null);
+  if (!user) return res.status(401).json({ error: 'Invalid token' });
+
+  const sessions = await pool.query(
+    `SELECT s.id, s.post_url, s.post_text, s.client_name, s.comments,
+            s.created_at, s.active, s.created_by_user,
+            u.token as created_by_token,
+            COUNT(e.id) as engagement_count
+     FROM boost_sessions s
+     LEFT JOIN boost_engagements e ON e.session_id = s.id
+     LEFT JOIN boost_users u ON u.id = s.created_by_user
+     WHERE s.active = TRUE AND s.expires_at > NOW()
+     GROUP BY s.id, u.token
+     ORDER BY s.created_at DESC LIMIT 30`
+  );
+
+  const myEngagements = await pool.query(
+    'SELECT session_id FROM boost_engagements WHERE user_id=$1', [user.id]
+  );
+
+  res.json({ sessions: sessions.rows, myEngagements: myEngagements.rows });
+}));
+
+// ── CREATE SESSION (any user with credits) ────────────────────────────────
+app.post('/boost/create-session', asyncHandler(async (req, res) => {
+  const { token, postText, postUrl, tone } = req.body;
+  if (!token || !postText) return res.status(400).json({ error: 'token and postText required' });
+
+  const user = await getUser(pool, token, null);
+  if (!user) return res.status(401).json({ error: 'Invalid token' });
+
+  // Credit check (admin = unlimited)
+  if (user.tier !== 'admin' && user.tier !== 'pro') {
+    if (user.credits < 5) return res.status(403).json({ error: `Not enough credits. You need 5, you have ${user.credits}. Boost others first!` });
+    if (user.sessions_week >= 1) return res.status(403).json({ error: 'Free tier: 1 session per week. Contact Ottmar to upgrade.' });
+  }
+
+  const claudeKey = process.env.ANTHROPIC_API_KEY;
+  if (!claudeKey) return res.status(500).json({ error: 'Server API key not configured' });
+
+  const comments = await generateBoostComments(postText, user.name, tone, claudeKey);
+
+  const result = await pool.query(
+    `INSERT INTO boost_sessions (post_url, post_text, client_name, comments, created_by_user)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [postUrl || '', postText, user.name, JSON.stringify(comments), user.id]
+  );
+
+  // Deduct credits + increment session count
+  if (user.tier !== 'admin') {
+    await pool.query('UPDATE boost_users SET credits=credits-5, sessions_week=sessions_week+1 WHERE id=$1', [user.id]);
+    await pool.query(
+      'INSERT INTO boost_credits_log (user_id, amount, reason, session_id) VALUES ($1,-5,\'Created boost session\',$2)',
+      [user.id, result.rows[0].id]
+    );
+  }
+
+  const newCredits = user.tier === 'admin' ? 999999 : user.credits - 5;
+  console.log('[Boost] Session created by:', user.name, '| id:', result.rows[0].id);
+  res.json({ success: true, sessionId: result.rows[0].id, newCredits, comments });
+}));
+
+// ── CREATE SESSION (admin with own API key) ───────────────────────────────
+app.post('/boost/create', asyncHandler(async (req, res) => {
+  const { postText, postUrl, clientName, apiKey, tone } = req.body;
+  if (!postText) return res.status(400).json({ error: 'postText required' });
+  const claudeKey = apiKey || process.env.ANTHROPIC_API_KEY;
+  if (!claudeKey) return res.status(400).json({ error: 'API key required' });
+
+  const comments = await generateBoostComments(postText, clientName, tone, claudeKey);
+  const result = await pool.query(
+    `INSERT INTO boost_sessions (post_url, post_text, client_name, comments) VALUES ($1,$2,$3,$4) RETURNING id`,
+    [postUrl || '', postText, clientName || 'ContentScale', JSON.stringify(comments)]
+  );
+  console.log('[Boost] Admin session:', result.rows[0].id);
+  res.json({ success: true, sessionId: result.rows[0].id, boostUrl: '/boost-platform', comments });
+}));
+
+// ── ENGAGE ────────────────────────────────────────────────────────────────
+app.post('/boost/engage', asyncHandler(async (req, res) => {
+  const { token, sessionId, commentIdx, commentText } = req.body;
+  if (!token || !sessionId) return res.status(400).json({ error: 'token and sessionId required' });
+
+  const user = await getUser(pool, token, null);
+  if (!user) return res.status(401).json({ error: 'Invalid token' });
+
+  // Check not already engaged
+  const existing = await pool.query(
+    'SELECT id FROM boost_engagements WHERE session_id=$1 AND user_id=$2', [sessionId, user.id]
+  );
+  if (existing.rows.length) return res.status(409).json({ error: 'Already engaged with this session' });
+
+  // Check not own session
+  const session = await pool.query('SELECT created_by_user FROM boost_sessions WHERE id=$1', [sessionId]);
+  if (session.rows[0]?.created_by_user === user.id) return res.status(403).json({ error: 'Cannot engage with your own session' });
+
+  await pool.query(
+    'INSERT INTO boost_engagements (session_id, user_id, comment_idx, comment_text) VALUES ($1,$2,$3,$4)',
+    [sessionId, user.id, commentIdx || 0, commentText || '']
+  );
+
+  // Award credits
+  if (user.tier !== 'admin') {
+    await pool.query('UPDATE boost_users SET credits=credits+2 WHERE id=$1', [user.id]);
+    await pool.query(
+      'INSERT INTO boost_credits_log (user_id, amount, reason, session_id) VALUES ($1,2,\'Boosted a post\',$2)',
+      [user.id, sessionId]
+    );
+  }
+
+  const newCredits = user.tier === 'admin' ? 999999 : user.credits + 2;
+  res.json({ success: true, newCredits });
+}));
+
+// ── MY SESSIONS ───────────────────────────────────────────────────────────
+app.get('/boost/my-sessions', asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  const user = await getUser(pool, token, null);
+  if (!user) return res.status(401).json({ error: 'Invalid token' });
+
+  const r = await pool.query(
+    `SELECT s.id, s.post_url, s.post_text, s.client_name, s.created_at, s.active,
+            COUNT(e.id) as engagement_count
+     FROM boost_sessions s
+     LEFT JOIN boost_engagements e ON e.session_id=s.id
+     WHERE s.created_by_user=$1
+     GROUP BY s.id ORDER BY s.created_at DESC`,
+    [user.id]
+  );
+  res.json({ sessions: r.rows });
+}));
+
+// ── UPDATE PROFILE ────────────────────────────────────────────────────────
+app.post('/boost/update-profile', asyncHandler(async (req, res) => {
+  const { token, linkedinUrl } = req.body;
+  const user = await getUser(pool, token, null);
+  if (!user) return res.status(401).json({ error: 'Invalid token' });
+  await pool.query('UPDATE boost_users SET linkedin_url=$1 WHERE id=$2', [linkedinUrl, user.id]);
+  res.json({ success: true });
+}));
+
+// ── CLOSE SESSION ─────────────────────────────────────────────────────────
+app.post('/boost/:id/close', asyncHandler(async (req, res) => {
+  const { token, adminToken } = req.body;
+  const t = adminToken || token;
+  if (!t) return res.status(400).json({ error: 'Token required' });
+  await pool.query('UPDATE boost_sessions SET active=FALSE WHERE id=$1', [req.params.id]);
+  res.json({ success: true });
+}));
+
+// ── ADMIN ROUTES ──────────────────────────────────────────────────────────
+app.get('/boost/admin/users', asyncHandler(async (req, res) => {
+  const r = await pool.query('SELECT * FROM boost_users ORDER BY created_at DESC');
+  res.json({ users: r.rows });
+}));
+
+app.post('/boost/admin/create-user', asyncHandler(async (req, res) => {
+  const { name, token, email, tier, notes } = req.body;
+  if (!name || !token) return res.status(400).json({ error: 'name and token required' });
+  try {
+    const r = await pool.query(
+      `INSERT INTO boost_users (name, token, email, tier, notes, credits)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [name, token, email||null, tier||'free', notes||null, tier==='pro'?999:10]
+    );
+    res.json({ success: true, user: r.rows[0] });
+  } catch(e) {
+    if (e.code === '23505') return res.status(409).json({ error: 'Token already exists' });
+    throw e;
+  }
+}));
+
+app.post('/boost/admin/update-user', asyncHandler(async (req, res) => {
+  const { token, tier, active } = req.body;
+  const updates = [];
+  const vals = [];
+  let i = 1;
+  if (tier !== undefined)   { updates.push(`tier=$${i++}`);   vals.push(tier); }
+  if (active !== undefined) { updates.push(`active=$${i++}`); vals.push(active); }
+  if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
+  vals.push(token);
+  await pool.query(`UPDATE boost_users SET ${updates.join(',')} WHERE token=$${i}`, vals);
+  res.json({ success: true });
+}));
+
+app.post('/boost/admin/add-credits', asyncHandler(async (req, res) => {
+  const { token, amount } = req.body;
+  await pool.query('UPDATE boost_users SET credits=credits+$1 WHERE token=$2', [amount, token]);
+  res.json({ success: true });
+}));
 
 app.get('/boost/api/sessions', asyncHandler(async (req, res) => {
   const r = await pool.query(
@@ -26601,13 +26789,24 @@ app.get('/boost/api/sessions', asyncHandler(async (req, res) => {
   res.json(r.rows);
 }));
 
-app.post('/boost/:id/close', asyncHandler(async (req, res) => {
-  await pool.query('UPDATE boost_sessions SET active=FALSE WHERE id=$1', [req.params.id]);
-  res.json({ success: true });
-}));
+// ── PLATFORM PAGES ────────────────────────────────────────────────────────
+app.get('/boost-platform', (req, res) =>
+  res.sendFile(path.join(__dirname, '../public', 'boost-platform.html'))
+);
+app.get('/boost-admin', (req, res) =>
+  res.sendFile(path.join(__dirname, '../public', 'boost-admin-v2.html'))
+);
 
-console.log('[ContentScale] Boost routes loaded ✅');
+// Legacy boost/:id redirect to platform
+app.get('/boost/:id', (req, res) => {
+  const { id } = req.params;
+  if (id === 'api') return res.status(404).json({ error: 'Not found' });
+  res.redirect(302, `/boost-platform?session=${id}`);
+});
+
+console.log('[ContentScale] Boost Platform v2 routes loaded ✅');
 // ═══════════════════════════════════════════════════════════════════════════
+
 
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
