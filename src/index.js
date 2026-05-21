@@ -26587,6 +26587,33 @@ Return ONLY a valid JSON array of exactly 6 strings. No explanation, no markdown
   res.json({ success: true, sessionId, boostUrl: '/boost/' + sessionId, comments });
 }));
 
+// ── ADMIN PAGES ───────────────────────────────────────────────────────────
+app.get('/boost-admin', (req, res) => res.sendFile('boost-admin.html', { root: __dirname }));
+
+app.get('/boost/api/sessions', asyncHandler(async (req, res) => {
+  const r = await pool.query(
+    `SELECT s.id, s.post_url, LEFT(s.post_text,100) as preview, s.client_name,
+            s.created_at, s.active, COUNT(e.id) as engagement_count
+     FROM boost_sessions s
+     LEFT JOIN boost_engagements e ON e.session_id=s.id
+     GROUP BY s.id ORDER BY s.created_at DESC LIMIT 50`
+  );
+  res.json(r.rows);
+}));
+
+app.post('/boost/:id/close', asyncHandler(async (req, res) => {
+  await pool.query('UPDATE boost_sessions SET active=FALSE WHERE id=$1', [req.params.id]);
+  res.json({ success: true });
+}));
+
+console.log('[ContentScale] Boost routes loaded ✅');
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Start scheduler after DB is ready (called from startServer)
+setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
+
+  // ── Start server ───────────────────────────────────────────────────────────
+startServer();
 // ── GET BOOST SESSION ─────────────────────────────────────────────────────
 app.get('/boost/:id', async (req, res) => {
   const { id } = req.params;
@@ -26622,30 +26649,3 @@ app.post('/boost/:id/engage', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
-// ── ADMIN PAGES ───────────────────────────────────────────────────────────
-app.get('/boost-admin', (req, res) => res.sendFile('boost-admin.html', { root: __dirname }));
-
-app.get('/boost/api/sessions', asyncHandler(async (req, res) => {
-  const r = await pool.query(
-    `SELECT s.id, s.post_url, LEFT(s.post_text,100) as preview, s.client_name,
-            s.created_at, s.active, COUNT(e.id) as engagement_count
-     FROM boost_sessions s
-     LEFT JOIN boost_engagements e ON e.session_id=s.id
-     GROUP BY s.id ORDER BY s.created_at DESC LIMIT 50`
-  );
-  res.json(r.rows);
-}));
-
-app.post('/boost/:id/close', asyncHandler(async (req, res) => {
-  await pool.query('UPDATE boost_sessions SET active=FALSE WHERE id=$1', [req.params.id]);
-  res.json({ success: true });
-}));
-
-console.log('[ContentScale] Boost routes loaded ✅');
-// ═══════════════════════════════════════════════════════════════════════════
-
-// Start scheduler after DB is ready (called from startServer)
-setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
-
-  // ── Start server ───────────────────────────────────────────────────────────
-startServer();
