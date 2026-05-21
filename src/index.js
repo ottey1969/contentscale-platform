@@ -26657,6 +26657,42 @@ app.post('/boost/create', asyncHandler(async (req,res) => {
   res.json({success:true, sessionId:r.rows[0].id, boostUrl:'/boost-platform', comments});
 }));
 
+
+// ── GET MY PERSONALIZED COMMENT ──────────────────────────────────────────────
+app.post('/boost/my-comment', asyncHandler(async (req,res) => {
+  const {token, sessionId} = req.body;
+  if (!token || !sessionId) return res.status(400).json({error:'token and sessionId required'});
+  const u = await getBoostUser(token, null);
+  if (!u) return res.status(401).json({error:'Invalid token'});
+
+  const cached = await pool.query(
+    'SELECT personal_comment FROM boost_engagements WHERE session_id=$1 AND user_id=$2',
+    [sessionId, u.id]
+  );
+  if (cached.rows.length && cached.rows[0].personal_comment) {
+    return res.json({comment: cached.rows[0].personal_comment, cached: true});
+  }
+
+  const sess = await pool.query('SELECT post_text, client_name FROM boost_sessions WHERE id=$1',[sessionId]);
+  if (!sess.rows.length) return res.status(404).json({error:'Session not found'});
+  const claudeKey = process.env.ANTHROPIC_API_KEY;
+  if (!claudeKey) return res.status(500).json({error:'API key not configured'});
+
+  const userCtx = [u.name&&('Name: '+u.name), u.linkedin_url&&('LinkedIn: '+u.linkedin_url), u.notes&&('Background: '+u.notes)].filter(Boolean).join('\n');
+  const prompt = 'Generate 1 unique LinkedIn comment for this person.\n\nPOST by '+sess.rows[0].client_name+':\n"'+sess.rows[0].post_text.substring(0,600)+'"\n\nCOMMENTER:\n'+(userCtx||'A LinkedIn professional')+'\n\nRules:\n- 1-3 sentences, adds real value\n- NEVER start with Great post/Love this/This resonates/That\'s exactly/Absolutely\n- No hashtags, no emojis\n- Same language as post\n- Unique to this person\n\nReturn ONLY the comment text.';
+
+  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:prompt}]})});
+  const json = await r.json();
+  const comment = json.content?.[0]?.text?.trim()||'';
+
+  await pool.query(
+    'INSERT INTO boost_engagements (session_id,user_id,comment_idx,personal_comment,comment_text) VALUES ($1,$2,-1,$3,$3) ON CONFLICT DO NOTHING',
+    [sessionId, u.id, comment]
+  );
+  console.log('[Boost] Personal comment for:', u.name);
+  res.json({comment, cached: false});
+}));
+
 // ── ENGAGE ────────────────────────────────────────────────────────────────
 app.post('/boost/engage', asyncHandler(async (req,res) => {
   const {token,sessionId,commentIdx,commentText} = req.body;
@@ -26669,7 +26705,21 @@ app.post('/boost/engage', asyncHandler(async (req,res) => {
   const sess = await pool.query('SELECT created_by_user FROM boost_sessions WHERE id=$1',[sessionId]);
   if (sess.rows[0]?.created_by_user===u.id) return res.status(403).json({error:'Cannot engage your own session'});
 
-  await pool.query('INSERT INTO boost_engagements (session_id,user_id,comment_idx,comment_text) VALUES ($1,$2,$3,$4)',[sessionId,u.id,commentIdx||0,commentText||'']);
+  // Update existing row (from my-comment) or insert new
+  const existingEng = await pool.query(
+    'SELECT id FROM boost_engagements WHERE session_id=$1 AND user_id=$2',[sessionId,u.id]
+  );
+  if (existingEng.rows.length) {
+    await pool.query(
+      'UPDATE boost_engagements SET comment_idx=$1,comment_text=$2,engaged_at=NOW() WHERE session_id=$3 AND user_id=$4',
+      [commentIdx||0, commentText||'', sessionId, u.id]
+    );
+  } else {
+    await pool.query(
+      'INSERT INTO boost_engagements (session_id,user_id,comment_idx,comment_text) VALUES ($1,$2,$3,$4)',
+      [sessionId,u.id,commentIdx||0,commentText||'']
+    );
+  }
 
   if (!isAdmin(u)) {
     await pool.query('UPDATE boost_users SET credits=credits+2 WHERE id=$1',[u.id]);
