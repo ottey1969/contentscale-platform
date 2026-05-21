@@ -26567,6 +26567,22 @@ async function getBoostUser(token, ip) {
 const ADMIN_TOKENS = ['ottmar-admin-2026'];
 function isAdmin(u) { return u && (u.tier==='admin' || ADMIN_TOKENS.includes(u.token)); }
 
+
+// ── WHATSAPP NOTIFICATION (CallMeBot) ────────────────────────────────────
+async function notifyOttmarWhatsApp(message) {
+  const phone  = process.env.CALLMEBOT_PHONE;
+  const apiKey = process.env.CALLMEBOT_KEY;
+  if (!phone || !apiKey) return; // silently skip if not configured
+
+  try {
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(message)}&apikey=${apiKey}`;
+    await fetch(url);
+    console.log('[Notify] WhatsApp sent to Ottmar');
+  } catch(e) {
+    console.warn('[Notify] WhatsApp failed:', e.message);
+  }
+}
+
 // ── SELF REGISTRATION ────────────────────────────────────────────────────
 app.post('/boost/register', asyncHandler(async (req,res) => {
   const {name, linkedinUrl, whatsapp, reason} = req.body;
@@ -26577,6 +26593,18 @@ app.post('/boost/register', asyncHandler(async (req,res) => {
     [name, linkedinUrl, whatsapp, reason||'']
   );
   console.log('[Boost] New registration:', name, whatsapp);
+
+  // Notify Ottmar via WhatsApp
+  const adminMsg = `🔔 New LinkedPod registration!
+
+👤 ${name}
+🔗 ${linkedinUrl || 'No LinkedIn'}
+📱 ${whatsapp || 'No WhatsApp'}
+${reason ? '💬 "' + reason.substring(0,100) + '"' : ''}
+
+👉 Approve at: https://app.contentscale.site/boost-admin`;
+
+  notifyOttmarWhatsApp(adminMsg).catch(()=>{});
   res.json({success:true, id: r.rows[0].id});
 }));
 
