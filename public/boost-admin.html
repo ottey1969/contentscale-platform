@@ -437,6 +437,37 @@ function toast(msg, err=false) {
   el.style.display='block'; setTimeout(()=>el.style.display='none',3000);
 }
 
+async function setExpiry(token, name) {
+  const options = [
+    ['7 days', 7], ['14 days', 14], ['1 month', 30],
+    ['3 months', 90], ['6 months', 180], ['1 year', 365], ['Unlimited', 0]
+  ];
+  const choice = prompt(
+    `Set expiry for ${name}:\n` +
+    options.map((o,i) => `${i+1}. ${o[0]}`).join('\n') +
+    '\n\nEnter number (1-7):',
+    '3'
+  );
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (idx < 0 || idx >= options.length) { toast('Invalid choice', true); return; }
+
+  const [label, days] = options[idx];
+  let expires_at = null;
+  if (days > 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    expires_at = d.toISOString();
+  }
+
+  await fetch(`${srv}/boost/admin/update-user`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ adminToken: ADMIN_TOKEN, token, expires_at })
+  });
+  toast(`${name}: expires ${days > 0 ? 'in ' + label : 'never (unlimited)'}`);
+  loadUsers();
+}
+
 function loadAll() { loadRegistrations(); loadUsers(); loadSessions(); }
 loadAll();
 </script>
