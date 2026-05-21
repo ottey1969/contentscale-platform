@@ -26552,7 +26552,7 @@ Return ONLY a valid JSON array of exactly 6 strings, no markdown:
 
 // ── GET USER ─────────────────────────────────────────────────────────────
 async function getBoostUser(token, ip) {
-  const r = await pool.query('SELECT * FROM boost_users WHERE token=$1 AND active=TRUE',[token]);
+  const r = await pool.query('SELECT * FROM boost_users WHERE token=$1 AND active=TRUE AND (expires_at IS NULL OR expires_at > NOW())',[token]);
   if (!r.rows.length) return null;
   const u = r.rows[0];
   if (!u.first_ip && ip) await pool.query('UPDATE boost_users SET first_ip=$1,last_seen_at=NOW() WHERE id=$2',[ip,u.id]);
@@ -26758,9 +26758,10 @@ app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
 app.post('/boost/admin/update-user', asyncHandler(async (req,res) => {
   const {token,tier,active,credits} = req.body;
   const updates=[]; const vals=[]; let i=1;
-  if (tier!==undefined)    {updates.push(`tier=$${i++}`);    vals.push(tier);}
-  if (active!==undefined)  {updates.push(`active=$${i++}`);  vals.push(active);}
-  if (credits!==undefined) {updates.push(`credits=$${i++}`); vals.push(credits);}
+  if (tier!==undefined)       {updates.push(`tier=$${i++}`);       vals.push(tier);}
+  if (active!==undefined)     {updates.push(`active=$${i++}`);     vals.push(active);}
+  if (credits!==undefined)    {updates.push(`credits=$${i++}`);    vals.push(credits);}
+  if (req.body.expires_at!==undefined) {updates.push(`expires_at=$${i++}`); vals.push(req.body.expires_at||null);}
   if (!updates.length) return res.status(400).json({error:'Nothing to update'});
   vals.push(token);
   await pool.query(`UPDATE boost_users SET ${updates.join(',')} WHERE token=$${i}`,vals);
@@ -26786,6 +26787,8 @@ app.get('/boost/api/sessions', asyncHandler(async (req,res) => {
 app.get('/boost-platform', (_,res) => res.sendFile(path.join(__dirname,'../public','boost-platform.html')));
 app.get('/boost-admin',    (_,res) => res.sendFile(path.join(__dirname,'../public','boost-admin.html')));
 app.get('/boost-register', (_,res) => res.sendFile(path.join(__dirname,'../public','boost-register.html')));
+app.get('/linkedpod',      (_,res) => res.sendFile(path.join(__dirname,'../public','linkedpod.html')));
+app.get('/boost',          (_,res) => res.redirect(302,'/linkedpod'));
 app.get('/boost/:id',      (req,res) => {
   const {id} = req.params;
   if (id==='api'||id==='admin') return res.status(404).json({error:'Not found'});
