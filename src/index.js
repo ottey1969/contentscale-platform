@@ -26850,6 +26850,126 @@ console.log('[ContentScale] Boost Platform v3 ✅ — 100+ users ready');
 
 
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LINKEDPOD — APPSUMO LICENSE SYSTEM
+// Add to index.js before startServer()
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PLAN_TIERS = {
+  plan_a: { tier: 'free',   credits: 500,   label: 'Plan A' },
+  plan_b: { tier: 'pro',    credits: 99999, label: 'Plan B' },
+  plan_c: { tier: 'agency', credits: 99999, label: 'Plan C' },
+};
+
+// Generate a license key: LNKD-XXXX-XXXX-XXXX
+function genLicenseKey(plan) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const seg = () => Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  return `${plan.slice(-1).toUpperCase()}${seg()}-${seg()}-${seg()}`;
+}
+
+// ── ACTIVATE PAGE ─────────────────────────────────────────────────────────
+app.get('/linkedpod/activate', (_,res) =>
+  res.sendFile(path.join(__dirname,'../public','linkedpod-activate.html'))
+);
+
+// ── REDEEM LICENSE KEY ────────────────────────────────────────────────────
+app.post('/linkedpod/redeem', asyncHandler(async (req,res) => {
+  const {key, name, linkedinUrl} = req.body;
+  if (!key || !name) return res.status(400).json({error:'License key and name required'});
+
+  // Validate key
+  const lic = await pool.query('SELECT * FROM linkedpod_licenses WHERE key=$1',[key.toUpperCase()]);
+  if (!lic.rows.length)    return res.status(404).json({error:'License key not found. Check your AppSumo email.'});
+  if (lic.rows[0].status === 'used')     return res.status(409).json({error:'This key has already been activated. Contact support if this is an error.'});
+  if (lic.rows[0].status === 'refunded') return res.status(403).json({error:'This license has been refunded and is no longer valid.'});
+
+  const plan = PLAN_TIERS[lic.rows[0].plan] || PLAN_TIERS.plan_a;
+
+  // Generate unique token
+  const token = name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') + '-' + Date.now().toString(36);
+
+  // Create user
+  const user = await pool.query(
+    `INSERT INTO boost_users (name, token, linkedin_url, tier, credits, notes, approval_status)
+     VALUES ($1,$2,$3,$4,$5,$6,'approved') RETURNING id`,
+    [name, token, linkedinUrl||null, plan.tier, plan.credits, `AppSumo ${plan.label}`]
+  );
+
+  // Mark license as used
+  await pool.query(
+    'UPDATE linkedpod_licenses SET status=\'used\', used_by=$1, used_at=NOW() WHERE key=$2',
+    [user.rows[0].id, key.toUpperCase()]
+  );
+
+  console.log('[AppSumo] License redeemed:', key, '→', name, '(', plan.label, ')');
+  res.json({success:true, token, tier: plan.tier, name, plan: plan.label});
+}));
+
+// ── ADMIN: GENERATE LICENSE KEYS ─────────────────────────────────────────
+app.post('/linkedpod/admin/generate-keys', asyncHandler(async (req,res) => {
+  const {plan, count} = req.body;
+  if (!PLAN_TIERS[plan]) return res.status(400).json({error:'Invalid plan. Use plan_a, plan_b, or plan_c'});
+
+  const n = Math.min(parseInt(count)||100, 500);
+  const keys = [];
+  for (let i=0; i<n; i++) {
+    const key = genLicenseKey(plan);
+    try {
+      await pool.query('INSERT INTO linkedpod_licenses (key,plan,tier) VALUES ($1,$2,$3)',
+        [key, plan, PLAN_TIERS[plan].tier]);
+      keys.push(key);
+    } catch { /* skip duplicate */ }
+  }
+
+  console.log('[AppSumo] Generated', keys.length, plan, 'keys');
+  res.json({success:true, count: keys.length, plan, keys});
+}));
+
+// ── ADMIN: LIST ALL KEYS ──────────────────────────────────────────────────
+app.get('/linkedpod/admin/keys', asyncHandler(async (req,res) => {
+  const r = await pool.query(
+    `SELECT l.key, l.plan, l.status, l.created_at, l.used_at,
+            u.name as used_by_name, u.linkedin_url
+     FROM linkedpod_licenses l
+     LEFT JOIN boost_users u ON u.id = l.used_by
+     ORDER BY l.created_at DESC LIMIT 1000`
+  );
+  res.json({keys: r.rows});
+}));
+
+// ── APPSUMO REFUND WEBHOOK ────────────────────────────────────────────────
+app.post('/appsumo/webhook', asyncHandler(async (req,res) => {
+  const {event, license_key, plan} = req.body;
+
+  if (event === 'refund' || event === 'deactivate') {
+    await pool.query('UPDATE linkedpod_licenses SET status=\'refunded\' WHERE key=$1',[license_key]);
+    // Deactivate the user
+    const lic = await pool.query('SELECT used_by FROM linkedpod_licenses WHERE key=$1',[license_key]);
+    if (lic.rows[0]?.used_by) {
+      await pool.query('UPDATE boost_users SET active=FALSE WHERE id=$1',[lic.rows[0].used_by]);
+    }
+    console.log('[AppSumo] Refund processed:', license_key);
+  }
+
+  if (event === 'upgrade') {
+    const newPlan = PLAN_TIERS[plan] || PLAN_TIERS.plan_a;
+    const lic = await pool.query('SELECT used_by FROM linkedpod_licenses WHERE key=$1',[license_key]);
+    if (lic.rows[0]?.used_by) {
+      await pool.query('UPDATE boost_users SET tier=$1,credits=$2 WHERE id=$3',
+        [newPlan.tier, newPlan.credits, lic.rows[0].used_by]);
+    }
+    await pool.query('UPDATE linkedpod_licenses SET plan=$1 WHERE key=$2',[plan, license_key]);
+    console.log('[AppSumo] Upgrade processed:', license_key, '→', plan);
+  }
+
+  res.json({success:true});
+}));
+
+console.log('[LinkedPod] AppSumo routes loaded ✅');
+// ═══════════════════════════════════════════════════════════════════════════
+
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
