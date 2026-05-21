@@ -379,6 +379,9 @@ function renderCommunity(sess, engs) {
     return;
   }
   el.innerHTML = sess.map(s => sessionCard(s)).join('');
+  // Generate personal comments for sessions that need engagement
+  sess.filter(s => s.active && !myEngaged.has(s.id) && s.created_by_token !== myToken)
+      .forEach(s => setTimeout(() => getPersonalComment(s.id), 300));
 }
 
 function sessionCard(s) {
@@ -397,17 +400,14 @@ function sessionCard(s) {
       ${s.post_url ? `<a href="${esc(s.post_url)}" target="_blank" style="font-size:11px;color:var(--blue);">Open LinkedIn ↗</a>` : ''}
     </div>
     ${!done && !isOwn ? `
-      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">Pick → Copy → Paste on LinkedIn → Mark Done (+2 credits)</p>
-      ${comments.map((c,i) => `
-        <div class="comment-opt" id="co-${s.id}-${i}">
-          <div class="opt-num">Option ${i+1}</div>
-          <div class="opt-text">${esc(c)}</div>
-          <div class="opt-actions">
-            <button class="btn btn-ghost btn-sm" onclick="copyOpt('${s.id}',${i})">Copy</button>
-            <button class="btn btn-green btn-sm" onclick="markDone('${s.id}',${i})">✅ Done +2cr</button>
-          </div>
+      <div class="comment-opt" id="personal-${s.id}">
+        <div class="opt-num">🤖 Your personal comment (loading...)</div>
+        <div class="opt-text" id="pt-${s.id}" style="color:var(--muted);font-style:italic;">Generating your unique comment...</div>
+        <div class="opt-actions" id="pa-${s.id}" style="display:none;">
+          <button class="btn btn-ghost btn-sm" onclick="copyPersonal('${s.id}')">Copy</button>
+          <button class="btn btn-green btn-sm" onclick="markDone('${s.id}')">✅ Done +2cr</button>
         </div>
-      `).join('')}
+      </div>
     ` : done ? '<p style="font-size:13px;color:var(--green);font-weight:600;">✅ You boosted this! Thank you.</p>' : ''}
   </div>`;
 }
@@ -420,9 +420,35 @@ function copyOpt(sid, idx) {
   toast('Copied! Paste on LinkedIn 👍');
 }
 
+function copyPersonal(sid) {
+  const el = document.getElementById(`pt-${sid}`);
+  if (!el) return;
+  doCopy(el.textContent.trim());
+  toast('Copied! Paste on LinkedIn 👍');
+}
+
+async function getPersonalComment(sid) {
+  try {
+    const r = await fetch('/boost/my-comment', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: myToken, sessionId: sid })
+    });
+    const data = await r.json();
+    if (data.error) { document.getElementById(`pt-${sid}`).textContent = 'Error: ' + data.error; return; }
+    const textEl = document.getElementById(`pt-${sid}`);
+    const actEl  = document.getElementById(`pa-${sid}`);
+    const numEl  = document.getElementById(`personal-${sid}`)?.querySelector('.opt-num');
+    if (textEl) { textEl.textContent = data.comment; textEl.style.fontStyle='normal'; textEl.style.color=''; }
+    if (actEl)  actEl.style.display = 'flex';
+    if (numEl)  numEl.textContent = data.cached ? '✨ Your comment (saved)' : '✨ Your unique comment';
+  } catch { document.getElementById(`pt-${sid}`).textContent = 'Could not generate. Try again.'; }
+}
+
 async function markDone(sid, idx) {
-  const el = document.getElementById(`co-${sid}-${idx}`);
-  const text = el ? el.querySelector('.opt-text').textContent.trim() : '';
+  // Get text from personal comment or option
+  const personalEl = document.getElementById(`pt-${sid}`);
+  const text = personalEl ? personalEl.textContent.trim() :
+    (document.getElementById(`co-${sid}-${idx||0}`)?.querySelector('.opt-text')?.textContent?.trim() || '');
   try {
     const r = await fetch('/boost/engage', {
       method:'POST', headers:{'Content-Type':'application/json'},
