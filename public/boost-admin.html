@@ -57,7 +57,25 @@ textarea{height:80px;resize:vertical}
 </head>
 <body>
 <div id="toast"></div>
-<div id="overlay" style="display:none;"><div class="spinner"></div><span style="color:var(--purple);font-weight:700;">Generating comments...</span></div>
+
+<!-- REGISTRATION ALERT BANNER -->
+<div id="regAlert" style="display:none;background:#fef3c7;border-bottom:2px solid #f59e0b;padding:12px 20px;position:sticky;top:0;z-index:200;display:none;align-items:center;justify-content:space-between;gap:12px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px;" id="regAlertIcon">🔔</span>
+    <span style="font-size:14px;font-weight:700;color:#92400e;" id="regAlertText">New registration!</span>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button onclick="switchTab('registrations');dismissRegAlert();" class="btn btn-amber btn-sm">Review now →</button>
+    <button onclick="dismissRegAlert()" style="background:none;border:none;cursor:pointer;color:#92400e;font-size:18px;padding:0 4px;">✕</button>
+  </div>
+</div>
+
+<!-- SOUND TOGGLE -->
+<div style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button id="adminSoundBtn" onclick="toggleAdminSound()" style="background:#1f2937;color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3);">🔔 Alert ON</button>
+</div>
+
+<div id="overlay" style="display:none"> style="display:none;"><div class="spinner"></div><span style="color:var(--purple);font-weight:700;">Generating comments...</span></div>
 
 <div class="header">
   <h1 style="font-size:15px;font-weight:700;">🚀 Boost Admin — Ottmar</h1>
@@ -311,14 +329,39 @@ async function approveReg(id, tier) {
   });
   const data = await r.json();
   if (data.error) { toast(data.error, true); return; }
-  toast(`✅ ${data.name} approved as ${tier}`);
-  // Open WhatsApp automatically
+
   const link = `${srv}/boost-platform?token=${data.token}`;
-  const num = (data.whatsapp||'').replace(/[^0-9]/g,'');
-  const msg = encodeURIComponent(`Hi ${data.name}! 🚀 Your ContentScale Boost access is ready:\n\n${link}\n\nJoin the community, boost posts, earn credits. Welcome!`);
-  if (num) window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+  const num  = (data.whatsapp||'').replace(/[^0-9]/g,'');
+  const msg  = encodeURIComponent(`Hi ${data.name}! 🚀 Je LinkedPod toegang is klaar:\n\n${link}\n\nJoin de community, boost posts, verdien credits. Welkom!`);
+  const waUrl = num ? `https://wa.me/${num}?text=${msg}` : null;
+
+  // Show prominent WhatsApp send button (popup blocker bypass)
+  showWaPrompt(data.name, waUrl, link);
   loadRegistrations();
   loadUsers();
+}
+
+function showWaPrompt(name, waUrl, link) {
+  const existing = document.getElementById('waPrompt');
+  if (existing) existing.remove();
+
+  const div = document.createElement('div');
+  div.id = 'waPrompt';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  div.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:420px;width:100%;text-align:center;">
+      <div style="font-size:48px;margin-bottom:12px;">✅</div>
+      <h3 style="font-size:18px;font-weight:700;color:#111;margin-bottom:8px;">${name} approved!</h3>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.6;">Click the button below to send their access link via WhatsApp.</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:11px;color:#6b7280;word-break:break-all;margin-bottom:20px;">${link}</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${waUrl ? `<a href="${waUrl}" target="_blank" onclick="document.getElementById('waPrompt').remove()" style="display:block;padding:14px;background:#25D366;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;">💬 Send WhatsApp to ${name}</a>` : '<p style="color:#dc2626;font-size:13px;">⚠️ No WhatsApp number on file</p>'}
+        <button onclick="navigator.clipboard?.writeText('${link}');this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy link only',2000);" style="padding:12px;background:transparent;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">📋 Copy link only</button>
+        <button onclick="document.getElementById('waPrompt').remove()" style="padding:10px;background:transparent;border:none;font-size:13px;color:#9ca3af;cursor:pointer;">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div);
 }
 
 async function rejectReg(id) {
@@ -570,8 +613,102 @@ function switchTab(tab) {
   if (tab==='appsumo')       loadKeys();
 }
 
+
+// ── ADMIN SOUND SYSTEM (different from platform) ─────────────────────────
+let adminSoundOn = localStorage.getItem('adminSound') !== 'off';
+let adminAudioCtx = null;
+let adminPollTimer = null;
+let knownPendingCount = -1; // -1 = first load, don't alert
+let adminAlertTimer = null;
+
+document.getElementById('adminSoundBtn').textContent = adminSoundOn ? '🔔 Alert ON' : '🔕 Alert OFF';
+
+function getAdminAudio() {
+  if (!adminAudioCtx) adminAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return adminAudioCtx;
+}
+
+function playAdminAlert() {
+  // Different from platform: deep descending two-tone + pulse
+  try {
+    const ctx = getAdminAudio();
+    // First: low "bong" - 440Hz triangle wave
+    const osc1  = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1); gain1.connect(ctx.destination);
+    osc1.type = 'triangle';
+    osc1.frequency.value = 440;
+    gain1.gain.setValueAtTime(0, ctx.currentTime);
+    gain1.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.8);
+
+    // Second: higher "ping" at 660Hz
+    const osc2  = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.value = 660;
+    gain2.gain.setValueAtTime(0, ctx.currentTime + 0.15);
+    gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.2);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+    osc2.start(ctx.currentTime + 0.15);
+    osc2.stop(ctx.currentTime + 0.9);
+  } catch(e) {}
+}
+
+function startAdminAlarm(count) {
+  const banner = document.getElementById('regAlert');
+  const text   = document.getElementById('regAlertText');
+  text.textContent = count === 1 ? '1 new registration waiting!' : `${count} new registrations waiting!`;
+  banner.style.display = 'flex';
+  document.title = `🔔 (${count}) New Registration — Boost Admin`;
+
+  if (adminSoundOn) {
+    playAdminAlert();
+    if (adminAlertTimer) clearInterval(adminAlertTimer);
+    adminAlertTimer = setInterval(() => { if (adminSoundOn) playAdminAlert(); }, 5000);
+  }
+}
+
+function dismissRegAlert() {
+  document.getElementById('regAlert').style.display = 'none';
+  document.title = 'Boost Admin — ContentScale';
+  if (adminAlertTimer) { clearInterval(adminAlertTimer); adminAlertTimer = null; }
+}
+
+function toggleAdminSound() {
+  adminSoundOn = !adminSoundOn;
+  localStorage.setItem('adminSound', adminSoundOn ? 'on' : 'off');
+  document.getElementById('adminSoundBtn').textContent = adminSoundOn ? '🔔 Alert ON' : '🔕 Alert OFF';
+  if (adminSoundOn) playAdminAlert(); // preview the sound
+  else if (adminAlertTimer) { clearInterval(adminAlertTimer); adminAlertTimer = null; }
+}
+
+// ── POLL FOR NEW REGISTRATIONS EVERY 30s ─────────────────────────────────
+async function pollRegistrations() {
+  try {
+    const r = await fetch(`${srv}/boost/admin/registrations`);
+    const data = await r.json();
+    const pending = (data.registrations||[]).filter(r => r.status==='pending').length;
+
+    document.getElementById('stPending').textContent = pending;
+    document.getElementById('pendingBanner').style.display = pending > 0 ? 'flex' : 'none';
+
+    // Alert only if count increased since last check
+    if (knownPendingCount >= 0 && pending > knownPendingCount) {
+      startAdminAlarm(pending);
+    }
+    knownPendingCount = pending;
+  } catch {}
+}
+
 function loadAll() { loadRegistrations(); loadUsers(); loadSessions(); }
 loadAll();
+pollRegistrations(); // first check (silent, sets baseline)
+adminPollTimer = setInterval(pollRegistrations, 30000);
+
 </script>
 </body>
 </html>
