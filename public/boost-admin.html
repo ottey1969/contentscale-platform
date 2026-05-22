@@ -405,8 +405,11 @@ textarea{height:80px;resize:vertical}
   <div id="tabBoost" style="display:none;">
     <div class="card">
       <h2>Create Boost Session (Your Post)</h2>
-      <label>LinkedIn Post URL (optional)</label>
-      <input type="url" id="postUrl" placeholder="https://www.linkedin.com/posts/...">
+      <label>LinkedIn Post URL <span style="color:var(--red);font-size:11px;">* required</span></label>
+      <input type="url" id="postUrl" placeholder="https://www.linkedin.com/posts/..." required>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.6;">
+        📌 On your post → click <strong>···</strong> → <strong>Copy link to post</strong>
+      </div>
       <label>Post Text</label>
       <textarea id="postText" placeholder="Paste your LinkedIn post..."></textarea>
       <label>Client Name</label>
@@ -741,7 +744,9 @@ async function toggleU(token, active) {
 
 // ── CREATE BOOST ──────────────────────────────────────────────────────────
 async function createBoost() {
-  const postText = document.getElementById('postText').value.trim();
+  const postText   = document.getElementById('postText').value.trim();
+  const postUrlVal = document.getElementById('postUrl').value.trim();
+  if (!postUrlVal) { toast('Paste the LinkedIn post URL first (··· → Copy link to post)', true); document.getElementById('postUrl').focus(); return; }
   if (!postText) { toast('Paste post text', true); return; }
   document.getElementById('overlay').style.display = 'flex';
   const r = await fetch(`${srv}/boost/create`, {
