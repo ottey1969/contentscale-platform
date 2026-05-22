@@ -214,8 +214,7 @@ textarea{height:80px;resize:vertical}
   0%   { transform: translateX(0); }
   100% { transform: translateX(-33.333%); }
 }
-#lpBanner { display: none; }
-#lpBanner.active { display: flex !important; }
+#lpBanner { display: none !important; visibility: hidden; }
 </style>
 <script>
 (function() {
@@ -223,12 +222,19 @@ textarea{height:80px;resize:vertical}
   var BANNER_POLL_MS   = 60000; // check every 60s
 
   function showBanner(text) {
-    if (!text) { document.getElementById('lpBanner').classList.remove('active'); return; }
-    // Triple the text for seamless loop
+    var el = document.getElementById('lpBanner');
+    if (!el) return;
+    if (!text) {
+      el.style.display = 'none';
+      return;
+    }
     ['lpBannerText1','lpBannerText2','lpBannerText3'].forEach(function(id) {
-      document.getElementById(id).textContent = text;
+      var span = document.getElementById(id);
+      if (span) span.textContent = text;
     });
-    document.getElementById('lpBanner').classList.add('active');
+    el.style.setProperty('display', 'flex', 'important');
+    el.style.setProperty('visibility', 'visible', 'important');
+    el.style.setProperty('opacity', '1', 'important');
   }
 
   function fetchBanner() {
@@ -1052,7 +1058,7 @@ function testBannerLocally() {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   });
-  if (banner) { banner.classList.add('active'); banner.style.display = 'flex'; }
+  if (banner) { banner.style.setProperty('display','flex','important'); banner.style.setProperty('visibility','visible','important'); }
   toast('Banner preview active on this page 👁');
 }
 
