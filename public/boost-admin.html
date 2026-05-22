@@ -1006,7 +1006,8 @@ async function pollRegistrations() {
   try {
     const r = await fetch(`${srv}/boost/admin/registrations`);
     const data = await r.json();
-    const pending = (data.registrations||[]).filter(r => r.status==='pending').length;
+    const regs = data.registrations || [];
+    const pending = regs.filter(r => r.status==='pending').length;
 
     document.getElementById('stPending').textContent = pending;
     document.getElementById('pendingBanner').style.display = pending > 0 ? 'flex' : 'none';
@@ -1016,6 +1017,12 @@ async function pollRegistrations() {
       startAdminAlarm(pending);
     }
     knownPendingCount = pending;
+
+    // Auto-refresh registrations list if that tab is active
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab && activeTab.textContent.includes('Registration')) {
+      loadRegistrations();
+    }
   } catch {}
 }
 
