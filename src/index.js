@@ -26865,8 +26865,12 @@ app.get('/boost/api/sessions', asyncHandler(async (req,res) => {
 app.get('/boost-platform', (_,res) => res.sendFile(path.join(__dirname,'../public','boost-platform.html')));
 app.get('/boost-admin',    (_,res) => res.sendFile(path.join(__dirname,'../public','boost-admin.html')));
 app.get('/boost-register', (_,res) => res.sendFile(path.join(__dirname,'../public','boost-register.html')));
-app.get('/linkedpod',      (_,res) => res.sendFile(path.join(__dirname,'../public','linkedpod.html')));
-app.get('/boost',          (_,res) => res.redirect(302,'/linkedpod'));
+app.get('/linkedpod',         (_,res) => res.sendFile(path.join(__dirname,'../public','linkedpod.html')));
+app.get('/linkedpod.html',    (_,res) => res.redirect(301,'/linkedpod'));
+app.get('/boost-platform.html',(_,res) => res.redirect(301,'/boost-platform'));
+app.get('/boost-admin.html',  (_,res) => res.redirect(301,'/boost-admin'));
+app.get('/boost-register.html',(_,res) => res.redirect(301,'/boost-register'));
+app.get('/boost',             (_,res) => res.redirect(302,'/linkedpod'));
 app.get('/boost/:id',      (req,res) => {
   const {id} = req.params;
   if (id==='api'||id==='admin') return res.status(404).json({error:'Not found'});
