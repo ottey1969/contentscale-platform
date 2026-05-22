@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Boost Admin v3 — ContentScale</title>
 <style>
 :root{--blue:#0a66c2;--purple:#6b21a8;--green:#15803d;--red:#dc2626;--amber:#b45309;--border:#e5e7eb;--muted:#6b7280;--bg:#f3f4f6;--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#111;min-height:100vh}
+body{overflow-x:hidden;max-width:100vw;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:#111;min-height:100vh}
 .header{background:linear-gradient(135deg,#0a66c2,#6b21a8);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
 .wrap{max-width:800px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
@@ -163,6 +163,33 @@ textarea{height:80px;resize:vertical}
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
+    }
+
+    /* ── MOBILE COMPLETENESS PATCH ── */
+    html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+
+    @media (max-width: 480px) {
+      /* Tighter spacing on small phones */
+      .wrap, .main { padding: 10px !important; }
+      .card, .form-card, .session, .profile-card { padding: 14px !important; border-radius: 10px !important; }
+      .btn, button[class*="btn"] { min-height: 48px !important; font-size: 14px !important; }
+      h1 { font-size: 1.5rem !important; }
+      h2 { font-size: 1.1rem !important; }
+      .tabs { top: 50px !important; }
+      .tab { font-size: 10px !important; padding: 9px 2px !important; }
+      textarea { min-height: 80px !important; }
+      /* Stack all flex rows */
+      .row, .comment-actions, .opt-actions, .result-actions, .hero-actions { flex-direction: column !important; }
+      .row-actions { width: 100% !important; }
+      .row-actions .btn { width: 100% !important; flex: none !important; }
+      /* Stats */
+      .stats-row, .grid4 { grid-template-columns: 1fr 1fr !important; }
+      /* Tables/grids → 1 col */
+      .grid2, .pricing, .features, .links-grid, .steps { grid-template-columns: 1fr !important; }
+      /* Nav */
+      .nav-links .nav-link { display: none !important; }
+      /* Counters */
+      .counter-strip { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
     }
   </style>
 </head>
@@ -378,10 +405,13 @@ textarea{height:80px;resize:vertical}
 
 <script>
 const ADMIN_TOKEN = 'ottmar-admin-2026';
-let srv = localStorage.getItem('boostSrv') || 'https://app.contentscale.site';
+// Use relative URLs so it always works regardless of domain
+let srv = localStorage.getItem('boostSrv') || '';
 let apiKey = localStorage.getItem('boostAdminKey') || '';
 if (apiKey) document.getElementById('apiKey').value = apiKey;
-if (srv) document.getElementById('serverUrl').value = srv;
+// Default server input to current origin
+document.getElementById('serverUrl').value = srv || window.location.origin;
+srv = srv || '';  // empty = use relative paths
 
 function saveSettings() {
   apiKey = document.getElementById('apiKey').value.trim();

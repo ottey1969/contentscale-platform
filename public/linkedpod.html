@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>LinkedPod — Viral Boost Network by ContentScale</title>
 <meta name="description" content="Real people, real comments, real reach. LinkedPod is the engagement pod network where your LinkedIn posts go viral — built by ContentScale.">
 <style>
@@ -297,7 +297,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .faq-item.open .faq-icon{transform:rotate(45deg);color:#a78bfa}
 .faq-item.open .faq-q{background:rgba(124,58,237,.06)}
 @media(max-width:768px){.faq-q{font-size:14px;padding:15px 16px}.faq-a{font-size:13px}.faq-item.open .faq-a{padding:0 16px 16px}}
-</style>
+
+    @media (max-width: 480px) { html { overflow-x: hidden; } }
+    </style>
 </head>
 <body>
 
