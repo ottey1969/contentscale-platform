@@ -26592,6 +26592,27 @@ const ADMIN_TOKENS = ['ottmar-admin-2026'];
 function isAdmin(u) { return u && (u.tier==='admin' || ADMIN_TOKENS.includes(u.token)); }
 
 
+
+// ── NOTIFY ALL USERS WITH CALLMEBOT ──────────────────────────────────────
+async function notifyAllUsers(message) {
+  if (!pool) return;
+  try {
+    const r = await pool.query(
+      "SELECT whatsapp, callmebot_key FROM boost_users WHERE active=TRUE AND callmebot_key IS NOT NULL AND callmebot_key != ''"
+    );
+    console.log(`[Notify] Sending to ${r.rows.length} users with CallMeBot`);
+    for (const user of r.rows) {
+      try {
+        const phone = (user.whatsapp||'').replace(/[^0-9]/g,'');
+        if (!phone) continue;
+        const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(message)}&apikey=${user.callmebot_key}`;
+        await fetch(url);
+        await new Promise(r => setTimeout(r, 500)); // 500ms between calls
+      } catch(e) { console.warn('[Notify] User notify failed:', e.message); }
+    }
+  } catch(e) { console.warn('[Notify] notifyAllUsers error:', e.message); }
+}
+
 // ── WHATSAPP NOTIFICATION (CallMeBot) ────────────────────────────────────
 async function notifyOttmarWhatsApp(message) {
   const phone  = process.env.CALLMEBOT_PHONE;
@@ -26691,6 +26712,14 @@ app.post('/boost/create-session', asyncHandler(async (req,res) => {
   }
 
   const newCredits = isAdmin(u) ? 999999 : u.credits-5;
+
+  // Auto-notify Ottmar via WhatsApp
+  // Notify Ottmar
+  notifyOttmarWhatsApp(`🚀 New LinkedPod boost!\n\n👤 ${u.name}\n📝 "${postText.substring(0,80)}..."\n\n👉 Broadcast: https://app.contentscale.site/boost-admin`).catch(()=>{});
+  // Notify ALL users with their own CallMeBot key
+  const sessionLink = `https://app.contentscale.site/boost-platform`;
+  notifyAllUsers(`🚀 New boost session!\n\n${u.name} posted:\n"${postText.substring(0,80)}..."\n\n👉 Open LinkedPod, pick your comment, earn +2 credits:\n${sessionLink}`).catch(()=>{});
+
   res.json({success:true, sessionId:r.rows[0].id, newCredits, comments});
 }));
 
@@ -26706,6 +26735,9 @@ app.post('/boost/create', asyncHandler(async (req,res) => {
     'INSERT INTO boost_sessions (post_url,post_text,client_name,comments) VALUES ($1,$2,$3,$4) RETURNING id',
     [postUrl||'', postText, clientName||'ContentScale', JSON.stringify(comments)]
   );
+  // Notify Ottmar to broadcast
+  notifyOttmarWhatsApp(`🚀 Admin boost session ready!\n\n📝 "${postText.substring(0,80)}..."\n\n👉 Broadcast now: https://app.contentscale.site/boost-admin`).catch(()=>{});
+
   res.json({success:true, sessionId:r.rows[0].id, boostUrl:'/boost-platform', comments});
 }));
 
@@ -26800,7 +26832,17 @@ app.post('/boost/update-profile', asyncHandler(async (req,res) => {
   const {token,linkedinUrl} = req.body;
   const u = await getBoostUser(token, null);
   if (!u) return res.status(401).json({error:'Invalid token'});
-  await pool.query('UPDATE boost_users SET linkedin_url=$1 WHERE id=$2',[linkedinUrl,u.id]);
+  const linkedinUrl2 = req.body.linkedinUrl;
+  const callmebotKey = req.body.callmebotKey;
+  const updates = [];
+  const vals = [];
+  let pi = 1;
+  if (linkedinUrl2 !== undefined) { updates.push(`linkedin_url=$${pi++}`); vals.push(linkedinUrl2); }
+  if (callmebotKey !== undefined) { updates.push(`callmebot_key=$${pi++}`); vals.push(callmebotKey||null); }
+  if (updates.length) {
+    vals.push(u.id);
+    await pool.query(`UPDATE boost_users SET ${updates.join(',')} WHERE id=$${pi}`, vals);
+  }
   res.json({success:true});
 }));
 
